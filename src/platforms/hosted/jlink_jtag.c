@@ -41,25 +41,9 @@ static void jtagtap_tdi_tdo_seq(uint8_t *data_out, bool final_tms, const uint8_t
 static void jtagtap_tdi_seq(bool final_tms, const uint8_t *data_in, size_t clock_cycles);
 static bool jtagtap_next(bool tms, bool tdi);
 
-/*
- * In this file, command buffers with the command code JLINK_CMD_IO_TRANSACT are built.
- * These have the following format:
- * ┌─────────┬─────────┬───────────────┬─────────┐
- * │    0    │    1    │       2       │    3    │
- * ├╌╌╌╌╌╌╌╌╌┼╌╌╌╌╌╌╌╌╌┼╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌┼╌╌╌╌╌╌╌╌╌┤
- * │ Command │ Unknown │  Cycle count  │ Unknown │
- * ├─────────┼─────────┼───────────────┼─────────┤
- * │    4    │    …    │ 4 + tms_bytes │    …    │
- * ├╌╌╌╌╌╌╌╌╌┼╌╌╌╌╌╌╌╌╌┼╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌┼╌╌╌╌╌╌╌╌╌┤
- * │  TMS data bytes…  │     TDI data bytes…     │
- * └─────────┴─────────┴───────────────┴─────────┘
- * where the byte counts for each of TDI and TMS are defined by:
- * count = ⌈cycle_count / 8⌉
- *
- * ⌈⌉ is defined as the ceiling function.
- */
+static const uint8_t jlink_switch_to_jtag_seq[9U] = {0xffU, 0xffU, 0xffU, 0xffU, 0xffU, 0xffU, 0xffU, 0x3cU, 0xe7U};
 
-bool jlink_jtagtap_init(bmp_info_s *const info)
+bool jlink_jtag_init(void)
 {
 	DEBUG_PROBE("jtap_init\n");
 	uint8_t res[4];
@@ -71,22 +55,12 @@ bool jlink_jtagtap_init(bmp_info_s *const info)
 	platform_delay(10);
 	/* Set adaptor JTAG frequency to 256 kHz */
 	jlink_set_frequency(2000);
-
-	uint8_t cmd[22];
-	memset(cmd, 0, 22);
-	cmd[0] = JLINK_CMD_IO_TRANSACT;
-	/* write 9 bytes */
-	cmd[2] = 9U * 8U;
-	memset(cmd + 4U, 0xffU, 7);
-	cmd[11] = 0x3c;
-	cmd[12] = 0xe7;
-	bmda_usb_transfer(info->usb_link, cmd, 22, cmd, 9);
-	bmda_usb_transfer(info->usb_link, NULL, 0, res, 1);
-
-	if (res[0] != 0) {
+	/* Ensure we're in JTAG mode */
+	if (!jlink_transfer(sizeof(jlink_switch_to_jtag_seq) * 8U, jlink_switch_to_jtag_seq, NULL, NULL)) {
 		DEBUG_ERROR("Switch to JTAG failed\n");
 		return false;
 	}
+
 	jtag_proc.jtagtap_reset = jtagtap_reset;
 	jtag_proc.jtagtap_next = jtagtap_next;
 	jtag_proc.jtagtap_tms_seq = jtagtap_tms_seq;

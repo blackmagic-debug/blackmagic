@@ -238,7 +238,7 @@ bool platform_jtagtap_init(void)
 		return ftdi_jtag_init();
 
 	case BMP_TYPE_JLINK:
-		return jlink_jtagtap_init(&info);
+		return jlink_jtag_init();
 
 	case BMP_TYPE_CMSIS_DAP:
 		return dap_jtag_init();

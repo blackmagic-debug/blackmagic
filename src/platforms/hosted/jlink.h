@@ -27,7 +27,7 @@
 
 bool jlink_init(void);
 uint32_t jlink_swdp_scan(bmp_info_s *info);
-bool jlink_jtagtap_init(bmp_info_s *info);
+bool jlink_jtag_init(void);
 const char *jlink_target_voltage(void);
 void jlink_nrst_set_val(bool assert);
 bool jlink_nrst_get_val(void);
