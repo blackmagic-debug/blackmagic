@@ -62,18 +62,12 @@ static bool jtagtap_next(bool tms, bool tdi);
 bool jlink_jtagtap_init(bmp_info_s *const info)
 {
 	DEBUG_PROBE("jtap_init\n");
-	uint8_t cmd_switch[2] = {
-		CMD_GET_SELECT_IF,
-		JLINK_IF_GET_AVAILABLE,
-	};
 	uint8_t res[4];
-	bmda_usb_transfer(info->usb_link, cmd_switch, 2, res, sizeof(res));
-	if (!(res[0] & JLINK_IF_JTAG)) {
+	if (jlink_simple_request(CMD_GET_SELECT_IF, JLINK_IF_GET_AVAILABLE, res, sizeof(res)) < 0 ||
+		!(res[0] & JLINK_IF_JTAG) || jlink_simple_request(CMD_GET_SELECT_IF, SELECT_IF_JTAG, res, sizeof(res)) < 0) {
 		DEBUG_ERROR("JTAG not available\n");
 		return false;
 	}
-	cmd_switch[1] = SELECT_IF_JTAG;
-	bmda_usb_transfer(info->usb_link, cmd_switch, 2, res, sizeof(res));
 	platform_delay(10);
 	/* Set speed 256 kHz*/
 	const uint16_t speed = 2000;
