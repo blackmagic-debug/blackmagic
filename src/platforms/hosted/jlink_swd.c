@@ -72,8 +72,10 @@ static bool line_reset(bmp_info_s *const info)
 	return true;
 }
 
-static bool jlink_swdptap_init(void)
+bool jlink_swd_init(adiv5_debug_port_s *dp)
 {
+	DEBUG_PROBE("-> jlink_swd_init(%u)\n", dp->dev_index);
+	/* Try to switch the adaptor into SWD mode */
 	uint8_t res[4];
 	if (jlink_simple_request(JLINK_CMD_TARGET_IF, JLINK_IF_GET_AVAILABLE, res, sizeof(res)) < 0 ||
 		!(res[0] & JLINK_IF_SWD) || jlink_simple_request(JLINK_CMD_TARGET_IF, SELECT_IF_SWD, res, sizeof(res)) < 0) {
@@ -81,15 +83,29 @@ static bool jlink_swdptap_init(void)
 		return false;
 	}
 	platform_delay(10);
-	/* SWD speed is fixed. Do not set it here */
+
+	/* Set up the accelerated SWD functions for basic target operations */
+	dp->dp_low_write = jlink_adiv5_swdp_write_nocheck;
+	dp->dp_read = firmware_swdp_read;
+	dp->error = jlink_adiv5_swdp_error;
+	dp->low_access = jlink_adiv5_swdp_low_access;
+	dp->abort = jlink_adiv5_swdp_abort;
 	return true;
 }
 
 uint32_t jlink_swdp_scan(bmp_info_s *const info)
 {
-	target_list_free();
-	if (!jlink_swdptap_init())
+	adiv5_debug_port_s *dp = calloc(1, sizeof(*dp));
+	if (!dp) { /* calloc failed: heap exhaustion */
+		DEBUG_ERROR("calloc: failed in %s\n", __func__);
 		return 0;
+	}
+
+	target_list_free();
+	if (!jlink_swd_init(dp)) {
+		free(dp);
+		return 0;
+	}
 
 	uint8_t cmd[44];
 	memset(cmd, 0, sizeof(cmd));
@@ -111,20 +127,9 @@ uint32_t jlink_swdp_scan(bmp_info_s *const info)
 
 	if (res[0] != 0) {
 		DEBUG_ERROR("Line reset failed\n");
+		free(dp);
 		return 0;
 	}
-
-	adiv5_debug_port_s *dp = calloc(1, sizeof(*dp));
-	if (!dp) { /* calloc failed: heap exhaustion */
-		DEBUG_ERROR("calloc: failed in %s\n", __func__);
-		return 0;
-	}
-
-	dp->dp_low_write = jlink_adiv5_swdp_write_nocheck;
-	dp->dp_read = firmware_swdp_read;
-	dp->error = jlink_adiv5_swdp_error;
-	dp->low_access = jlink_adiv5_swdp_low_access;
-	dp->abort = jlink_adiv5_swdp_abort;
 
 	adiv5_dp_error(dp);
 	adiv5_dp_init(dp, 0);
