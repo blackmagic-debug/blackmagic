@@ -35,11 +35,11 @@
 #include "jlink_protocol.h"
 #include "cli.h"
 
-static void jtagtap_reset(void);
-static void jtagtap_tms_seq(uint32_t tms_states, size_t clock_cycles);
-static void jtagtap_tdi_tdo_seq(uint8_t *data_out, bool final_tms, const uint8_t *data_in, size_t clock_cycles);
-static void jtagtap_tdi_seq(bool final_tms, const uint8_t *data_in, size_t clock_cycles);
-static bool jtagtap_next(bool tms, bool tdi);
+static void jlink_jtag_reset(void);
+static void jlink_jtag_tms_seq(uint32_t tms_states, size_t clock_cycles);
+static void jlink_jtag_tdi_tdo_seq(uint8_t *data_out, bool final_tms, const uint8_t *data_in, size_t clock_cycles);
+static void jlink_jtag_tdi_seq(bool final_tms, const uint8_t *data_in, size_t clock_cycles);
+static bool jlink_jtag_next(bool tms, bool tdi);
 
 static const uint8_t jlink_switch_to_jtag_seq[9U] = {0xffU, 0xffU, 0xffU, 0xffU, 0xffU, 0xffU, 0xffU, 0x3cU, 0xe7U};
 
@@ -57,26 +57,27 @@ bool jlink_jtag_init(void)
 	/* Set adaptor JTAG frequency to 256 kHz */
 	jlink_set_frequency(2000);
 	/* Ensure we're in JTAG mode */
+	DEBUG_PROBE("%s: Switch to JTAG\n", __func__);
 	if (!jlink_transfer(sizeof(jlink_switch_to_jtag_seq) * 8U, jlink_switch_to_jtag_seq, NULL, NULL)) {
 		DEBUG_ERROR("Switch to JTAG failed\n");
 		return false;
 	}
 
 	/* Set up the underlying JTAG functions using the implementation below */
-	jtag_proc.jtagtap_reset = jtagtap_reset;
-	jtag_proc.jtagtap_next = jtagtap_next;
-	jtag_proc.jtagtap_tms_seq = jtagtap_tms_seq;
-	jtag_proc.jtagtap_tdi_tdo_seq = jtagtap_tdi_tdo_seq;
-	jtag_proc.jtagtap_tdi_seq = jtagtap_tdi_seq;
+	jtag_proc.jtagtap_reset = jlink_jtag_reset;
+	jtag_proc.jtagtap_next = jlink_jtag_next;
+	jtag_proc.jtagtap_tms_seq = jlink_jtag_tms_seq;
+	jtag_proc.jtagtap_tdi_tdo_seq = jlink_jtag_tdi_tdo_seq;
+	jtag_proc.jtagtap_tdi_seq = jlink_jtag_tdi_seq;
 	return true;
 }
 
-static void jtagtap_reset(void)
+static void jlink_jtag_reset(void)
 {
 	jtagtap_soft_reset();
 }
 
-static void jtagtap_tms_seq(const uint32_t tms_states, const size_t clock_cycles)
+static void jlink_jtag_tms_seq(const uint32_t tms_states, const size_t clock_cycles)
 {
 	/* Ensure the transaction's not too long */
 	if (clock_cycles > 32U)
@@ -91,7 +92,7 @@ static void jtagtap_tms_seq(const uint32_t tms_states, const size_t clock_cycles
 		raise_exception(EXCEPTION_ERROR, "tagtap_tms_seq failed");
 }
 
-static void jtagtap_tdi_tdo_seq(
+static void jlink_jtag_tdi_tdo_seq(
 	uint8_t *const data_out, const bool final_tms, const uint8_t *const data_in, const size_t clock_cycles)
 {
 	const bool result = jlink_transfer_fixed_tms(clock_cycles, final_tms, data_in, data_out);
@@ -100,7 +101,7 @@ static void jtagtap_tdi_tdo_seq(
 		raise_exception(EXCEPTION_ERROR, "jtagtap_tdi_tdo_seq failed");
 }
 
-static void jtagtap_tdi_seq(const bool final_tms, const uint8_t *const data_in, const size_t clock_cycles)
+static void jlink_jtag_tdi_seq(const bool final_tms, const uint8_t *const data_in, const size_t clock_cycles)
 {
 	const bool result = jlink_transfer_fixed_tms(clock_cycles, final_tms, data_in, NULL);
 	DEBUG_PROBE("jtagtap_tdi_seq %zu, %02x\n", clock_cycles, data_in[0]);
@@ -108,7 +109,7 @@ static void jtagtap_tdi_seq(const bool final_tms, const uint8_t *const data_in, 
 		raise_exception(EXCEPTION_ERROR, "jtagtap_tdi_seq failed");
 }
 
-static bool jtagtap_next(bool tms, bool tdi)
+static bool jlink_jtag_next(bool tms, bool tdi)
 {
 	const uint8_t tms_byte = tms ? 1 : 0;
 	const uint8_t tdi_byte = tdi ? 1 : 0;
