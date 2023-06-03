@@ -38,6 +38,7 @@
 #include "cli.h"
 
 static uint32_t jlink_swd_seq_in(size_t clock_cycles);
+static void jlink_swd_seq_out(uint32_t tms_states, size_t clock_cycles);
 
 static bool jlink_adiv5_swdp_write_nocheck(uint16_t addr, uint32_t data);
 static uint32_t jlink_adiv5_swdp_read_nocheck(uint16_t addr);
@@ -89,6 +90,7 @@ bool jlink_swd_init(adiv5_debug_port_s *dp)
 
 	/* Set up the underlying SWD functions using the implementation below */
 	swd_proc.seq_in = jlink_swd_seq_in;
+	swd_proc.seq_out = jlink_swd_seq_out;
 
 	/* Set up the accelerated SWD functions for basic target operations */
 	dp->dp_low_write = jlink_adiv5_swdp_write_nocheck;
@@ -140,6 +142,19 @@ uint32_t jlink_swdp_scan(bmp_info_s *const info)
 	adiv5_dp_error(dp);
 	adiv5_dp_init(dp, 0);
 	return target_list ? 1U : 0U;
+}
+
+static void jlink_swd_seq_out(const uint32_t tms_states, const size_t clock_cycles)
+{
+	DEBUG_PROBE("%s %zu clock_cycles: %08" PRIx32 "\n", __func__, clock_cycles, tms_states);
+	/* Encode the sequence data appropriately */
+	uint8_t data[4];
+	write_le4(data, 0, tms_states);
+	/* Attempt the transfer */
+	if (!jlink_transfer_swd(clock_cycles, JLINK_SWD_OUT, data, NULL)) {
+		/* If things go wrong, report it */
+		DEBUG_ERROR("jlink_swd_seq_out failed\n");
+	}
 }
 
 static uint32_t jlink_swd_seq_in(const size_t clock_cycles)
