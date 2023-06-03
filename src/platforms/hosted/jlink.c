@@ -121,6 +121,31 @@ bool jlink_transfer(const uint16_t clock_cycles, const uint8_t *const tms, const
 	return buffer[byte_count] == 0U;
 }
 
+bool jlink_transfer_fixed_tms(
+	const uint16_t clock_cycles, const bool final_tms, const uint8_t *const tdi, uint8_t *const tdo)
+{
+	if (!clock_cycles)
+		return true;
+	/*
+	 * The max number of bits to transfer is one shy of 64kib, meaning byte_count tops out at 8kiB.
+	 * However, we impose an "artificial" limit that it's not allowed to exceed 512B (4096b)
+	 * as we shouldn't be generating anything larger anyway.
+	 */
+	const size_t byte_count = (clock_cycles + 7U) >> 3U;
+	if (byte_count > 512U)
+		return false;
+	/* Set up the buffer for TMS */
+	uint8_t tms[512] = {0};
+	/* Figure out the position of the final bit in the sequence */
+	const size_t cycles = clock_cycles - 1U;
+	const size_t final_byte = cycles >> 3U;
+	const uint8_t final_bit = cycles & 7U;
+	/* Mark the appropriate bit in the buffer with the value of final_tms */
+	tms[final_byte] |= (final_tms ? 1U : 0U) << final_bit;
+	/* Run the transfer */
+	return jlink_transfer(clock_cycles, tms, tdi, tdo);
+}
+
 static bool jlink_print_version(void)
 {
 	uint8_t len_str[2];
