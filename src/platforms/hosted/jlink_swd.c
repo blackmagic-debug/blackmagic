@@ -38,6 +38,7 @@
 #include "cli.h"
 
 static uint32_t jlink_swd_seq_in(size_t clock_cycles);
+static bool jlink_swd_seq_in_parity(uint32_t *result, size_t clock_cycles);
 static void jlink_swd_seq_out(uint32_t tms_states, size_t clock_cycles);
 static void jlink_swd_seq_out_parity(uint32_t tms_states, size_t clock_cycles);
 
@@ -91,6 +92,7 @@ bool jlink_swd_init(adiv5_debug_port_s *dp)
 
 	/* Set up the underlying SWD functions using the implementation below */
 	swd_proc.seq_in = jlink_swd_seq_in;
+	swd_proc.seq_in_parity = jlink_swd_seq_in_parity;
 	swd_proc.seq_out = jlink_swd_seq_out;
 	swd_proc.seq_out_parity = jlink_swd_seq_out_parity;
 
@@ -189,6 +191,29 @@ static uint32_t jlink_swd_seq_in(const size_t clock_cycles)
 	const uint32_t result = read_le4(data_out, 0);
 	DEBUG_PROBE("%s %zu clock_cycles: %08" PRIx32 "\n", __func__, clock_cycles, result);
 	return result;
+}
+
+static bool jlink_swd_seq_in_parity(uint32_t *const result, const size_t clock_cycles)
+{
+	/* Create a buffer to hold the result of the transfer */
+	uint8_t data_out[5] = {0};
+	/* Attempt the transfer */
+	if (!jlink_transfer_swd(clock_cycles + 1U, JLINK_SWD_IN, NULL, data_out)) {
+		DEBUG_ERROR("jlink_swd_seq_in_parity failed\n");
+		return false;
+	}
+
+	/* Everything went well, so pull out the sequence result and store it */
+	const uint32_t data = read_le4(data_out, 0);
+	/* Compute the parity and validate it */
+	const size_t byte = clock_cycles >> 3U;
+	const uint8_t bit = clock_cycles & 7U;
+	uint8_t parity = __builtin_parity(data) & 1U;
+	parity ^= (data_out[byte] >> bit) & 1U;
+	/* Retrn the result of the calculation */
+	DEBUG_PROBE("%s %zu clock_cycles: %08" PRIx32 " %s\n", __func__, clock_cycles, data, parity ? "ERR" : "OK");
+	*result = data;
+	return !parity;
 }
 
 static void jlink_adiv5_swdp_make_packet_request(
