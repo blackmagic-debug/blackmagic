@@ -72,30 +72,23 @@ static bool line_reset(bmp_info_s *const info)
 	return true;
 }
 
-static bool jlink_swdptap_init(bmp_info_s *const info)
+static bool jlink_swdptap_init(void)
 {
-	uint8_t cmd[2] = {
-		JLINK_CMD_TARGET_IF,
-		JLINK_IF_GET_AVAILABLE,
-	};
 	uint8_t res[4];
-	bmda_usb_transfer(info->usb_link, cmd, 2, res, sizeof(res));
-
-	if (!(res[0] & JLINK_IF_SWD))
+	if (jlink_simple_request(JLINK_CMD_TARGET_IF, JLINK_IF_GET_AVAILABLE, res, sizeof(res)) < 0 ||
+		!(res[0] & JLINK_IF_SWD) || jlink_simple_request(JLINK_CMD_TARGET_IF, SELECT_IF_SWD, res, sizeof(res)) < 0) {
+		DEBUG_ERROR("SWD not available\n");
 		return false;
-
-	cmd[1] = SELECT_IF_SWD;
-	bmda_usb_transfer(info->usb_link, cmd, 2, res, sizeof(res));
-
+	}
 	platform_delay(10);
-	/* SWD speed is fixed. Do not set it here*/
+	/* SWD speed is fixed. Do not set it here */
 	return true;
 }
 
 uint32_t jlink_swdp_scan(bmp_info_s *const info)
 {
 	target_list_free();
-	if (!jlink_swdptap_init(info))
+	if (!jlink_swdptap_init())
 		return 0;
 
 	uint8_t cmd[44];
