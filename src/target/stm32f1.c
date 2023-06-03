@@ -790,8 +790,8 @@ static bool stm32f1_cmd_option(target_s *target, int argc, const char **argv)
 			return false;
 	} else if (argc == 3) {
 		/* If 3 arguments are given, assume the second is an address, and the third a value */
-		const uint32_t addr = strtol(argv[1], NULL, 0);
-		const uint32_t val = strtol(argv[2], NULL, 0);
+		const uint32_t addr = strtoul(argv[1], NULL, 0);
+		const uint32_t val = strtoul(argv[2], NULL, 0);
 		/* Try and program the new option value to the requested option byte */
 		if (!stm32f1_option_write(target, addr, val))
 			return false;

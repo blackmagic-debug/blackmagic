@@ -245,7 +245,7 @@ bool cmd_swdp_scan(target_s *t, int argc, const char **argv)
 	(void)t;
 	volatile uint32_t targetid = 0;
 	if (argc > 1)
-		targetid = strtol(argv[1], NULL, 0);
+		targetid = strtoul(argv[1], NULL, 0);
 	if (platform_target_voltage())
 		gdb_outf("Target voltage: %s\n", platform_target_voltage());
 
