@@ -39,6 +39,7 @@
 
 static uint32_t jlink_swd_seq_in(size_t clock_cycles);
 static void jlink_swd_seq_out(uint32_t tms_states, size_t clock_cycles);
+static void jlink_swd_seq_out_parity(uint32_t tms_states, size_t clock_cycles);
 
 static bool jlink_adiv5_swdp_write_nocheck(uint16_t addr, uint32_t data);
 static uint32_t jlink_adiv5_swdp_read_nocheck(uint16_t addr);
@@ -91,6 +92,7 @@ bool jlink_swd_init(adiv5_debug_port_s *dp)
 	/* Set up the underlying SWD functions using the implementation below */
 	swd_proc.seq_in = jlink_swd_seq_in;
 	swd_proc.seq_out = jlink_swd_seq_out;
+	swd_proc.seq_out_parity = jlink_swd_seq_out_parity;
 
 	/* Set up the accelerated SWD functions for basic target operations */
 	dp->dp_low_write = jlink_adiv5_swdp_write_nocheck;
@@ -154,6 +156,23 @@ static void jlink_swd_seq_out(const uint32_t tms_states, const size_t clock_cycl
 	if (!jlink_transfer_swd(clock_cycles, JLINK_SWD_OUT, data, NULL)) {
 		/* If things go wrong, report it */
 		DEBUG_ERROR("jlink_swd_seq_out failed\n");
+	}
+}
+
+static void jlink_swd_seq_out_parity(const uint32_t tms_states, const size_t clock_cycles)
+{
+	DEBUG_PROBE("%s %zu clock_cycles: %08" PRIx32 "\n", __func__, clock_cycles, tms_states);
+	/* Encode the sequence data appropriately */
+	uint8_t data[5] = {0};
+	write_le4(data, 0, tms_states);
+	/* Construct the parity bit */
+	const size_t byte = clock_cycles >> 3U;
+	const uint8_t bit = clock_cycles & 7U;
+	data[byte] |= (__builtin_parity(tms_states) & 1U) << bit;
+	/* Attempt the transfer */
+	if (!jlink_transfer_swd(clock_cycles + 1U, JLINK_SWD_OUT, data, NULL)) {
+		/* If things go wrong, report it */
+		DEBUG_ERROR("jlink_swd_seq_out_parity failed\n");
 	}
 }
 
