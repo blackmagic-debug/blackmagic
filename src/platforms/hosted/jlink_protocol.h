@@ -65,6 +65,7 @@ typedef struct jlink_io_transact {
 int jlink_simple_query(uint8_t command, void *rx_buffer, size_t rx_len);
 int jlink_simple_request(uint8_t command, uint8_t operation, void *rx_buffer, size_t rx_len);
 bool jlink_transfer(uint16_t clock_cycles, const uint8_t *tms, const uint8_t *tdi, uint8_t *tdo);
+bool jlink_transfer_fixed_tms(uint16_t clock_cycles, bool final_tms, const uint8_t *tdi, uint8_t *tdo);
 bool jlink_set_frequency(uint16_t frequency_khz);
 
 #endif /*PLATFORMS_HOSTED_JLINK_PROTOCOL_H*/
