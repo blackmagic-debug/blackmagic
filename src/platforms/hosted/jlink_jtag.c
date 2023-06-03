@@ -45,7 +45,8 @@ static const uint8_t jlink_switch_to_jtag_seq[9U] = {0xffU, 0xffU, 0xffU, 0xffU,
 
 bool jlink_jtag_init(void)
 {
-	DEBUG_PROBE("jtap_init\n");
+	DEBUG_PROBE("-> jlink_jtag_init\n");
+	/* Try to switch the adaptor into JTAG mode */
 	uint8_t res[4];
 	if (jlink_simple_request(JLINK_CMD_TARGET_IF, JLINK_IF_GET_AVAILABLE, res, sizeof(res)) < 0 ||
 		!(res[0] & JLINK_IF_JTAG) || jlink_simple_request(JLINK_CMD_TARGET_IF, SELECT_IF_JTAG, res, sizeof(res)) < 0) {
@@ -61,6 +62,7 @@ bool jlink_jtag_init(void)
 		return false;
 	}
 
+	/* Set up the underlying JTAG functions using the implementation below */
 	jtag_proc.jtagtap_reset = jtagtap_reset;
 	jtag_proc.jtagtap_next = jtagtap_next;
 	jtag_proc.jtagtap_tms_seq = jtagtap_tms_seq;
@@ -76,24 +78,16 @@ static void jtagtap_reset(void)
 
 static void jtagtap_tms_seq(const uint32_t tms_states, const size_t clock_cycles)
 {
+	/* Ensure the transaction's not too long */
 	if (clock_cycles > 32U)
 		return;
 	DEBUG_PROBE("jtagtap_tms_seq 0x%08" PRIx32 ", clock cycles: %zu\n", tms_states, clock_cycles);
-	const size_t len = (clock_cycles + 7U) / 8U;
-	uint8_t cmd[12];
-	memset(cmd, 0, sizeof(cmd));
-	cmd[0] = JLINK_CMD_IO_TRANSACT;
-	cmd[2] = clock_cycles;
-	const size_t total_chunks = (clock_cycles >> 3U) + ((clock_cycles & 7U) ? 1U : 0U);
-	for (size_t cycle = 0; cycle < clock_cycles; cycle += 8U) {
-		const size_t index = 4 + (cycle >> 3U);
-		cmd[index] = (tms_states >> cycle) & 0xffU;
-		cmd[index + total_chunks] = cmd[index];
-	}
-	uint8_t result[4];
-	bmda_usb_transfer(info.usb_link, cmd, 4U + (total_chunks * 2U), result, len);
-	bmda_usb_transfer(info.usb_link, NULL, 0, result, 1);
-	if (result[0] != 0)
+	/* Set up a buffer for tms_states to make sure the values are in the proper order */
+	uint8_t tms[4] = {0};
+	for (size_t cycle = 0; cycle < clock_cycles; cycle += 8U)
+		tms[cycle >> 3U] = (tms_states >> cycle) & 0xffU;
+	/* Attempt the transaction, check for errors and raise an exception if there is one */
+	if (!jlink_transfer(clock_cycles, tms, tms, NULL))
 		raise_exception(EXCEPTION_ERROR, "tagtap_tms_seq failed");
 }
 
