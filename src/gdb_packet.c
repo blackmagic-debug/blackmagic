@@ -125,7 +125,7 @@ size_t gdb_getpacket(char *const packet, const size_t size)
 		recv_csum[2] = 0;
 
 		/* Return packet if checksum matches */
-		if (csum == strtol(recv_csum, NULL, 16))
+		if (csum == strtoul(recv_csum, NULL, 16))
 			break;
 
 		/* Get here if checksum fails */
