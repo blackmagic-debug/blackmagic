@@ -146,6 +146,18 @@ bool jlink_transfer_fixed_tms(
 	return jlink_transfer(clock_cycles, tms, tdi, tdo);
 }
 
+bool jlink_transfer_swd(
+	const uint16_t clock_cycles, const jlink_swd_dir_e direction, const uint8_t *const data_in, uint8_t *const data_out)
+{
+	/* Define a buffer to hold the request direction information */
+	uint8_t dir[8] = {0};
+	/* Fill the direction buffer appropriately for the requested transfer direction */
+	memset(dir, direction == JLINK_SWD_IN ? 0x00U : 0xffU, sizeof(dir));
+	/* Run the resulting transfer */
+	/* NOLINTNEXTLINE(readability-suspicious-call-argument) */
+	return jlink_transfer(clock_cycles, dir, data_in, data_out);
+}
+
 static bool jlink_print_version(void)
 {
 	uint8_t len_str[2];
