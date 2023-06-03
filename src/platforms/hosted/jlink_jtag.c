@@ -54,8 +54,6 @@ bool jlink_jtag_init(void)
 		return false;
 	}
 	platform_delay(10);
-	/* Set adaptor JTAG frequency to 256 kHz */
-	jlink_set_frequency(2000);
 	/* Ensure we're in JTAG mode */
 	DEBUG_PROBE("%s: Switch to JTAG\n", __func__);
 	if (!jlink_transfer(sizeof(jlink_switch_to_jtag_seq) * 8U, jlink_switch_to_jtag_seq, NULL, NULL)) {
