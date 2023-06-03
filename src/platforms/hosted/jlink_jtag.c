@@ -94,34 +94,10 @@ static void jtagtap_tms_seq(const uint32_t tms_states, const size_t clock_cycles
 static void jtagtap_tdi_tdo_seq(
 	uint8_t *const data_out, const bool final_tms, const uint8_t *const data_in, const size_t clock_cycles)
 {
-	if (!clock_cycles)
-		return;
-	const size_t total_chunks = (clock_cycles >> 3U) + ((clock_cycles & 7U) ? 1U : 0U);
-	DEBUG_PROBE("jtagtap_tdi_tdo final tms: %u, clock cycles: %zu, data_in: ", final_tms ? 1 : 0, clock_cycles);
-	for (size_t i = 0; i < total_chunks; ++i)
-		DEBUG_PROBE("%02x", data_in[i]);
-	DEBUG_PROBE("\n");
-	const size_t cmd_len = 4 + (total_chunks * 2U);
-	uint8_t *cmd = calloc(1, cmd_len);
-	cmd[0] = JLINK_CMD_IO_TRANSACT;
-	cmd[2] = clock_cycles;
-	if (final_tms) {
-		const size_t bit_offset = (clock_cycles - 1U) & 7U;
-		cmd[4 + total_chunks - 1U] |= 1U << bit_offset;
-	}
-	if (data_in) {
-		for (size_t cycle = 0; cycle < clock_cycles; cycle += 8U) {
-			const size_t chunk = cycle >> 3U;
-			const size_t index = 4 + total_chunks + chunk;
-			cmd[index] = data_in[chunk];
-		}
-	}
-	uint8_t result[4];
-	bmda_usb_transfer(info.usb_link, cmd, cmd_len, data_out ? data_out : result, total_chunks);
-	bmda_usb_transfer(info.usb_link, NULL, 0, result, 1);
-	free(cmd);
-	if (result[0] != 0)
-		raise_exception(EXCEPTION_ERROR, "jtagtap_tdi_tdi failed");
+	const bool result = jlink_transfer_fixed_tms(clock_cycles, final_tms, data_in, data_out);
+	DEBUG_PROBE("jtagtap_tdi_tdo_seq %zu, %02x -> %02x\n", clock_cycles, data_in[0], data_out ? data_out[0] : 0);
+	if (!result)
+		raise_exception(EXCEPTION_ERROR, "jtagtap_tdi_tdo_seq failed");
 }
 
 static void jtagtap_tdi_seq(const bool final_tms, const uint8_t *const data_in, const size_t clock_cycles)
