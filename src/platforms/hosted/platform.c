@@ -153,15 +153,13 @@ uint32_t platform_adiv5_swdp_scan(uint32_t targetid)
 	case BMP_TYPE_BMP:
 	case BMP_TYPE_LIBFTDI:
 	case BMP_TYPE_CMSIS_DAP:
+	case BMP_TYPE_JLINK:
 		return adiv5_swdp_scan(targetid);
 		break;
 
 #if HOSTED_BMP_ONLY == 0
 	case BMP_TYPE_STLINKV2:
 		return stlink_swd_scan();
-
-	case BMP_TYPE_JLINK:
-		return jlink_swdp_scan(&info);
 #endif
 
 	default:
@@ -183,8 +181,10 @@ bool platform_swdptap_init(adiv5_debug_port_s *dp)
 		return dap_swd_init(dp);
 
 	case BMP_TYPE_STLINKV2:
-	case BMP_TYPE_JLINK:
 		return 0;
+
+	case BMP_TYPE_JLINK:
+		return jlink_swd_init(dp);
 
 	case BMP_TYPE_LIBFTDI:
 		return ftdi_swd_init();

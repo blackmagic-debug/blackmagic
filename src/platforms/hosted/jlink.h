@@ -22,11 +22,10 @@
 #ifndef PLATFORMS_HOSTED_JLINK_H
 #define PLATFORMS_HOSTED_JLINK_H
 
-#include <stdbool.h>
 #include "bmp_hosted.h"
 
 bool jlink_init(void);
-uint32_t jlink_swdp_scan(bmp_info_s *info);
+bool jlink_swd_init(adiv5_debug_port_s *dp);
 bool jlink_jtag_init(void);
 const char *jlink_target_voltage(void);
 void jlink_nrst_set_val(bool assert);

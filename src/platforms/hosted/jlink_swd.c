@@ -105,49 +105,6 @@ bool jlink_swd_init(adiv5_debug_port_s *dp)
 	return true;
 }
 
-uint32_t jlink_swdp_scan(bmp_info_s *const info)
-{
-	adiv5_debug_port_s *dp = calloc(1, sizeof(*dp));
-	if (!dp) { /* calloc failed: heap exhaustion */
-		DEBUG_ERROR("calloc: failed in %s\n", __func__);
-		return 0;
-	}
-
-	target_list_free();
-	if (!jlink_swd_init(dp)) {
-		free(dp);
-		return 0;
-	}
-
-	uint8_t cmd[44];
-	memset(cmd, 0, sizeof(cmd));
-
-	cmd[0] = JLINK_CMD_IO_TRANSACT;
-	/* write 18 Bytes.*/
-	cmd[2] = 17U * 8U;
-	uint8_t *direction = cmd + 4U;
-	memset(direction, 0xffU, 17U);
-	uint8_t *data = direction + 17U;
-	memset(data, 0xffU, 7U);
-	data[7] = 0x9eU;
-	data[8] = 0xe7U;
-	memset(data + 9U, 0xffU, 6U);
-
-	uint8_t res[18];
-	bmda_usb_transfer(info->usb_link, cmd, 38U, res, 17U);
-	bmda_usb_transfer(info->usb_link, NULL, 0U, res, 1U);
-
-	if (res[0] != 0) {
-		DEBUG_ERROR("Line reset failed\n");
-		free(dp);
-		return 0;
-	}
-
-	adiv5_dp_error(dp);
-	adiv5_dp_init(dp, 0);
-	return target_list ? 1U : 0U;
-}
-
 static void jlink_swd_seq_out(const uint32_t tms_states, const size_t clock_cycles)
 {
 	DEBUG_PROBE("%s %zu clock_cycles: %08" PRIx32 "\n", __func__, clock_cycles, tms_states);
