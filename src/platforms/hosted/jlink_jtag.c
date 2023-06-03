@@ -126,17 +126,10 @@ static void jtagtap_tdi_tdo_seq(
 
 static void jtagtap_tdi_seq(const bool final_tms, const uint8_t *const data_in, const size_t clock_cycles)
 {
-	DEBUG_PROBE("jtagtap_tdi_seq final tms: %u, data_in: ", final_tms ? 1 : 0);
-	for (size_t cycle = 0; cycle < clock_cycles; cycle += 8U) {
-		const size_t chunk = cycle >> 3U;
-		if (chunk > 16U) {
-			DEBUG_PROBE(" ...");
-			break;
-		}
-		DEBUG_PROBE(" %02x", data_in[chunk]);
-	}
-	DEBUG_PROBE("\n");
-	return jtagtap_tdi_tdo_seq(NULL, final_tms, data_in, clock_cycles);
+	const bool result = jlink_transfer_fixed_tms(clock_cycles, final_tms, data_in, NULL);
+	DEBUG_PROBE("jtagtap_tdi_seq %zu, %02x\n", clock_cycles, data_in[0]);
+	if (!result)
+		raise_exception(EXCEPTION_ERROR, "jtagtap_tdi_seq failed");
 }
 
 static bool jtagtap_next(bool tms, bool tdi)
