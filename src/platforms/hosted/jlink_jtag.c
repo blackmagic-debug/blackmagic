@@ -141,20 +141,12 @@ static void jtagtap_tdi_seq(const bool final_tms, const uint8_t *const data_in, 
 
 static bool jtagtap_next(bool tms, bool tdi)
 {
-	DEBUG_PROBE("jtagtap_next tms: %u, tdi %u\n", tms ? 1 : 0, tdi ? 1 : 0);
-	uint8_t cmd[6];
-	memset(cmd, 0, sizeof(cmd));
-	cmd[0] = JLINK_CMD_IO_TRANSACT;
-	cmd[2] = 1;
-	if (tms)
-		cmd[4] = 1;
-	if (tdi)
-		cmd[5] = 1;
-	uint8_t tdo;
-	bmda_usb_transfer(info.usb_link, cmd, 6, &tdo, 1);
-	uint8_t result;
-	bmda_usb_transfer(info.usb_link, NULL, 0, &result, 1);
-	if (result != 0)
+	const uint8_t tms_byte = tms ? 1 : 0;
+	const uint8_t tdi_byte = tdi ? 1 : 0;
+	uint8_t tdo = 0;
+	const bool result = jlink_transfer(1U, &tms_byte, &tdi_byte, &tdo);
+	DEBUG_PROBE("jtagtap_next tms=%u tdi=%u tdo=%u\n", tms_byte, tdi_byte, tdo);
+	if (!result)
 		raise_exception(EXCEPTION_ERROR, "jtagtap_next failed");
-	return tdo & 1U;
+	return tdo;
 }
