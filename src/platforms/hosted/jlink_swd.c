@@ -315,24 +315,19 @@ static uint32_t jlink_adiv5_swdp_error(adiv5_debug_port_s *const dp, const bool 
 
 static uint32_t jlink_adiv5_swdp_low_read(adiv5_debug_port_s *const dp)
 {
-	uint8_t cmd[14];
-	uint8_t result[6];
-	memset(cmd, 0, sizeof(cmd));
-	cmd[0] = JLINK_CMD_IO_TRANSACT;
-	cmd[2] = 33U + 2U; /* 2 idle cycles */
-	cmd[8] = 0xfe;
-	bmda_usb_transfer(info.usb_link, cmd, 14, result, 5);
-	bmda_usb_transfer(info.usb_link, NULL, 0, result + 5U, 1);
-
-	if (result[5] != 0)
-		raise_exception(EXCEPTION_ERROR, "Low access read failed");
-
-	const uint32_t response = result[0] | result[1] << 8U | result[2] << 16U | result[3] << 24U;
-
-	const uint8_t parity = result[4] & 1U;
-	const uint32_t bit_count = __builtin_popcount(response) + parity;
-	if (bit_count & 1U) /* Give up on parity error */
-	{
+	uint8_t result[5] = {0};
+	/* Try to receive the result payload */
+	if (!jlink_transfer(33U + 2U, jlink_adiv5_read_request, NULL, result)) {
+		DEBUG_ERROR("jlink_swd_raw_read failed\n");
+		return 0U;
+	}
+	/* Extract the data phase */
+	const uint32_t response = read_le4(result, 0);
+	/* Calculate and do a parity check */
+	uint8_t parity = __builtin_parity(response) & 1U;
+	parity ^= result[4] & 1U;
+	/* If that fails, turn it into an error */
+	if (parity) {
 		dp->fault = 1;
 		DEBUG_ERROR("SWD access resulted in parity error\n");
 		raise_exception(EXCEPTION_ERROR, "SWD parity error");
