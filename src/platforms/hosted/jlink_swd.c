@@ -335,25 +335,20 @@ static uint32_t jlink_adiv5_swdp_low_read(adiv5_debug_port_s *const dp)
 	return response;
 }
 
-static void jlink_adiv5_swdp_low_write(const uint32_t value)
+static uint32_t jlink_adiv5_swdp_low_write(const uint32_t request_value)
 {
-	uint8_t cmd[16];
-	uint8_t result[6];
-	memset(cmd, 0, sizeof(cmd));
-	cmd[2] = 33U + 8U; /* 8 idle cycle  to move data through SW-DP */
-	memset(cmd + 4U, 0xffU, 6);
-	cmd[10] = value & 0xffU;
-	cmd[11] = (value >> 8U) & 0xffU;
-	cmd[12] = (value >> 16U) & 0xffU;
-	cmd[13] = (value >> 24U) & 0xffU;
-	const uint8_t bit_count = __builtin_popcount(value);
-	cmd[14] = bit_count & 1U;
-
-	bmda_usb_transfer(info.usb_link, cmd, 16, result, 6);
-	bmda_usb_transfer(info.usb_link, NULL, 0, result, 1);
-
-	if (result[0] != 0)
-		raise_exception(EXCEPTION_ERROR, "Low access write failed");
+	/* Build the response payload buffer */
+	uint8_t request[6] = {0};
+	write_le4(request, 0, request_value);
+	request[4] = __builtin_popcount(request_value) & 1U;
+	/* Allocate storage for the result */
+	uint8_t result[6] = {0};
+	/* Try sending the data to the device */
+	if (!jlink_transfer(33U + 8U, jlink_adiv5_write_request, request, result))
+		raise_exception(EXCEPTION_ERROR, "jlink_swd_raw_write failed\n");
+	/* Unpack the result */
+	const uint32_t result_value = read_le4(result, 0);
+	return result_value;
 }
 
 static uint32_t jlink_adiv5_swdp_low_access(
