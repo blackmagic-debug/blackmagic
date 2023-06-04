@@ -37,6 +37,41 @@
 #include "buffer_utils.h"
 #include "cli.h"
 
+/*
+ * The first byte in this defines 8 OUT bits to write the request out.
+ * The second then defines 1 IN bit for turn-around to read the status response
+ * followed by either 2 (read) or 3 (write) IN bits to read the response.
+ * Read only uses the first 3 bits of the second byte.
+ * Write uses the first 5 and defines the last bit it uses as an OUT bit
+ * for the final turn-around to write the request data.
+ */
+static const uint8_t jlink_adiv5_request[2] = {0xffU, 0xf0U};
+
+/* Direction sequence for the data phase of a write transaction */
+static const uint8_t jlink_adiv5_write_request[6] = {
+	/* clang-format off */
+	/* 32 OUT cycles */
+	0xffU, 0xffU, 0xffU, 0xffU,
+	/* 1 more OUT cycle (parity) followed by 8 OUT (idle) cycles */
+	0xffU, 0x01U,
+	/* clang-format on */
+};
+
+/* Direction sequence for the dta phase of a read transaction */
+static const uint8_t jlink_adiv5_read_request[5] = {
+	/* clang-format off */
+	/* 32 IN cycles */
+	0x00U, 0x00U, 0x00U, 0x00U,
+	/* 1 more IN cycle (parity) followed by 2 OUT (idle) cycles */
+	0xfeU,
+	/* clang-format on */
+};
+
+/* 60 cycles of SWDIO held high + 4 cycles of it low (idle) */
+static const uint8_t jlink_line_reset_data[8] = {0xffU, 0xffU, 0xffU, 0xffU, 0xffU, 0xffU, 0xffU, 0xf0U};
+/* Define the direction as output for the entire lot */
+static const uint8_t jlink_line_reset_dir[8] = {0xffU, 0xffU, 0xffU, 0xffU, 0xffU, 0xffU, 0xffU, 0xffU};
+
 static uint32_t jlink_swd_seq_in(size_t clock_cycles);
 static bool jlink_swd_seq_in_parity(uint32_t *result, size_t clock_cycles);
 static void jlink_swd_seq_out(uint32_t tms_states, size_t clock_cycles);
@@ -141,36 +176,6 @@ static bool jlink_swd_seq_in_parity(uint32_t *const result, const size_t clock_c
 	return !parity;
 }
 
-/*
- * The first byte in this defines 8 OUT bits to write the request out.
- * The second then defines 1 IN bit for turn-around to read the status response
- * followed by either 2 (read) or 3 (write) IN bits to read the response.
- * Read only uses the first 3 bits of the second byte.
- * Write uses the first 5 and defines the last bit it uses as an OUT bit
- * for the final turn-around to write the request data.
- */
-static const uint8_t jlink_adiv5_request[2] = {0xffU, 0xf0U};
-
-/* Direction sequence for the data phase of a write transaction */
-static const uint8_t jlink_adiv5_write_request[6] = {
-	/* clang-format off */
-	/* 32 OUT cycles */
-	0xffU, 0xffU, 0xffU, 0xffU,
-	/* 1 more OUT cycle (parity) followed by 8 OUT (idle) cycles */
-	0xffU, 0x01U,
-	/* clang-format on */
-};
-
-/* Direction sequence for the dta phase of a read transaction */
-static const uint8_t jlink_adiv5_read_request[5] = {
-	/* clang-format off */
-	/* 32 IN cycles */
-	0x00U, 0x00U, 0x00U, 0x00U,
-	/* 1 more IN cycle (parity) followed by 2 OUT (idle) cycles */
-	0xfeU,
-	/* clang-format on */
-};
-
 static bool jlink_adiv5_raw_write_no_check(const uint16_t addr, const uint32_t data)
 {
 	DEBUG_PROBE("jlink_adiv5_raw_write_no_check %04x <- %08" PRIx32 "\n", addr, data);
@@ -220,11 +225,6 @@ static uint32_t jlink_adiv5_raw_read_no_check(const uint16_t addr)
 		__builtin_parity(data) ^ response[4] ? "ERR" : "OK");
 	return ack == SWDP_ACK_OK ? data : 0U;
 }
-
-/* 60 cycles of SWDIO held high + 4 cycles of it low (idle) */
-static const uint8_t jlink_line_reset_data[8] = {0xffU, 0xffU, 0xffU, 0xffU, 0xffU, 0xffU, 0xffU, 0xf0U};
-/* Define the direction as output for the entire lot */
-static const uint8_t jlink_line_reset_dir[8] = {0xffU, 0xffU, 0xffU, 0xffU, 0xffU, 0xffU, 0xffU, 0xffU};
 
 static bool jlink_swd_line_reset(void)
 {
