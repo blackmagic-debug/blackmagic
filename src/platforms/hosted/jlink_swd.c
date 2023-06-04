@@ -47,36 +47,6 @@ static uint32_t jlink_adiv5_raw_read_no_check(uint16_t addr);
 static uint32_t jlink_adiv5_clear_error(adiv5_debug_port_s *dp, bool protocol_recovery);
 static uint32_t jlink_adiv5_raw_access(adiv5_debug_port_s *dp, uint8_t rnw, uint16_t addr, uint32_t request_value);
 
-/*
- * Write at least 50 bits high, two bits low and read DP_IDR and put
- * idle cycles at the end
- */
-static bool jlink_swd_line_reset(bmp_info_s *const info)
-{
-	uint8_t cmd[44];
-	memset(cmd, 0, sizeof(cmd));
-
-	cmd[0] = JLINK_CMD_IO_TRANSACT;
-	/* write 19 bytes */
-	cmd[2] = 19U * 8U;
-	uint8_t *const direction = cmd + 4U;
-	memset(direction + 5U, 0xffU, 9U);
-	direction[18] = 0xe0U;
-	uint8_t *const data = direction + 19U;
-	memset(data + 5U, 0xffU, 7U);
-	data[13] = 0xa5U;
-
-	uint8_t res[19];
-	bmda_usb_transfer(info->usb_link, cmd, 42U, res, 19U);
-	bmda_usb_transfer(info->usb_link, NULL, 0U, res, 1U);
-
-	if (res[0] != 0) {
-		DEBUG_ERROR("Line reset failed\n");
-		return false;
-	}
-	return true;
-}
-
 bool jlink_swd_init(adiv5_debug_port_s *dp)
 {
 	DEBUG_PROBE("-> jlink_swd_init(%u)\n", dp->dev_index);
@@ -251,6 +221,24 @@ static uint32_t jlink_adiv5_raw_read_no_check(const uint16_t addr)
 	return ack == SWDP_ACK_OK ? data : 0U;
 }
 
+/* 60 cycles of SWDIO held high + 4 cycles of it low (idle) */
+static const uint8_t jlink_line_reset_data[8] = {0xffU, 0xffU, 0xffU, 0xffU, 0xffU, 0xffU, 0xffU, 0xf0U};
+/* Define the direction as output for the entire lot */
+static const uint8_t jlink_line_reset_dir[8] = {0xffU, 0xffU, 0xffU, 0xffU, 0xffU, 0xffU, 0xffU, 0xffU};
+
+static bool jlink_swd_line_reset(void)
+{
+	/*
+	 * We have to send at least 50 cycles (actually at least 51 because of non-conformance
+	 * in STM32 devices) of SWDIO held high to perform the line reset, then 4 cycles of it low
+	 * to complete the reset and put the device back in idle
+	 */
+	const bool result = jlink_transfer(64U, jlink_line_reset_dir, jlink_line_reset_data, NULL);
+	if (!result)
+		DEBUG_ERROR("%s failed\n", __func__);
+	return result;
+}
+
 static uint32_t jlink_adiv5_clear_error(adiv5_debug_port_s *const dp, const bool protocol_recovery)
 {
 	DEBUG_PROBE("jlink_adiv5_clear_error (protocol recovery? %s)\n", protocol_recovery ? "true" : "false");
@@ -262,7 +250,7 @@ static uint32_t jlink_adiv5_clear_error(adiv5_debug_port_s *const dp, const bool
 		 * we must then re-select the target to bring the device back
 		 * into the expected state.
 		 */
-		jlink_swd_line_reset(&info);
+		jlink_swd_line_reset();
 		if (dp->version >= 2)
 			jlink_adiv5_raw_write_no_check(ADIV5_DP_TARGETSEL, dp->targetsel);
 		jlink_adiv5_raw_read_no_check(ADIV5_DP_DPIDR);
