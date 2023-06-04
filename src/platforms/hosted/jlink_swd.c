@@ -46,7 +46,6 @@ static bool jlink_adiv5_swdp_write_nocheck(uint16_t addr, uint32_t data);
 static uint32_t jlink_adiv5_swdp_read_nocheck(uint16_t addr);
 static uint32_t jlink_adiv5_swdp_error(adiv5_debug_port_s *dp, bool protocol_recovery);
 static uint32_t jlink_adiv5_swdp_low_access(adiv5_debug_port_s *dp, uint8_t RnW, uint16_t addr, uint32_t value);
-static void jlink_adiv5_swdp_abort(adiv5_debug_port_s *dp, uint32_t abort);
 
 /*
  * Write at least 50 bits high, two bits low and read DP_IDR and put
@@ -101,7 +100,6 @@ bool jlink_swd_init(adiv5_debug_port_s *dp)
 	dp->dp_read = firmware_swdp_read;
 	dp->error = jlink_adiv5_swdp_error;
 	dp->low_access = jlink_adiv5_swdp_low_access;
-	dp->abort = jlink_adiv5_swdp_abort;
 	return true;
 }
 
@@ -414,9 +412,4 @@ static uint32_t jlink_adiv5_swdp_low_access(
 		return jlink_adiv5_swdp_low_read(dp);
 	jlink_adiv5_swdp_low_write(value);
 	return 0;
-}
-
-static void jlink_adiv5_swdp_abort(adiv5_debug_port_s *const dp, const uint32_t abort)
-{
-	adiv5_dp_write(dp, ADIV5_DP_ABORT, abort);
 }
