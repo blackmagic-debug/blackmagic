@@ -193,6 +193,16 @@ static const uint8_t jlink_adiv5_write_request[6] = {
 	/* clang-format on */
 };
 
+/* Direction sequence for the dta phase of a read transaction */
+static const uint8_t jlink_adiv5_read_request[5] = {
+	/* clang-format off */
+	/* 32 IN cycles */
+	0x00U, 0x00U, 0x00U, 0x00U,
+	/* 1 more IN cycle (parity) followed by 2 OUT (idle) cycles */
+	0xfeU,
+	/* clang-format on */
+};
+
 static void jlink_adiv5_swdp_make_packet_request(
 	uint8_t *cmd, size_t cmd_length, const uint8_t RnW, const uint16_t addr)
 {
@@ -245,24 +255,27 @@ static bool jlink_adiv5_swdp_write_nocheck(const uint16_t addr, const uint32_t d
 
 static uint32_t jlink_adiv5_swdp_read_nocheck(const uint16_t addr)
 {
-	uint8_t result[6];
-	uint8_t request[8];
-	jlink_adiv5_swdp_make_packet_request(request, sizeof(request), ADIV5_LOW_READ, addr & 0xfU);
-	bmda_usb_transfer(info.usb_link, request, 8U, result, 2U);
-	bmda_usb_transfer(info.usb_link, NULL, 0U, result + 2U, 1U);
+	/* Build the request buffer */
+	const uint8_t request[2] = {make_packet_request(ADIV5_LOW_READ, addr)};
+	uint8_t result[2] = {0};
+	/* Try making a request to the device (11 cycles, we start reading on the 12th) */
+	if (!jlink_transfer(11U, jlink_adiv5_request, request, result)) {
+		DEBUG_ERROR("jlink_swd_read_no_check failed\n");
+		return 0U;
+	}
 	const uint8_t ack = result[1] & 7U;
 
-	uint8_t response[14];
-	memset(response, 0, sizeof(response));
-	response[0] = JLINK_CMD_IO_TRANSACT;
-	response[2] = 33U + 2U; /* 2 idle cycles */
-	response[8] = 0xfe;
-	bmda_usb_transfer(info.usb_link, response, 14, result, 5);
-	bmda_usb_transfer(info.usb_link, NULL, 0, result + 5U, 1);
-	if (result[5] != 0)
-		raise_exception(EXCEPTION_ERROR, "Low access read failed");
-	const uint32_t data = result[0] | result[1] << 8U | result[2] << 16U | result[3] << 24U;
-	return ack == SWDP_ACK_OK ? data : 0;
+	uint8_t response[5] = {0};
+	/* Try to receive the response payload */
+	if (!jlink_transfer(33U + 2U, jlink_adiv5_read_request, NULL, response)) {
+		DEBUG_ERROR("jlink_swd_read_no_check failed\n");
+		return 0U;
+	}
+	/* Extract the data phase and return it if the transaction suceeded */
+	const uint32_t data = read_le4(response, 0);
+	DEBUG_PROBE("jlink_swd_read_reg_no_check %04x -> %08" PRIx32 " %s\n", addr, data,
+		__builtin_parity(data) ^ response[4] ? "ERR" : "OK");
+	return ack == SWDP_ACK_OK ? data : 0U;
 }
 
 static uint32_t jlink_adiv5_swdp_error(adiv5_debug_port_s *const dp, const bool protocol_recovery)
