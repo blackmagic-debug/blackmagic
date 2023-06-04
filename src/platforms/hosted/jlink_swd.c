@@ -249,12 +249,22 @@ static uint32_t jlink_adiv5_swdp_read_nocheck(const uint16_t addr)
 
 static uint32_t jlink_adiv5_swdp_error(adiv5_debug_port_s *const dp, const bool protocol_recovery)
 {
-	if (dp->version >= 2 || protocol_recovery) {
+	DEBUG_PROBE("jlink_swd_clear_error (protocol recovery? %s)\n", protocol_recovery ? "true" : "false");
+	/* Only do the comms reset dance on DPv2+ w/ fault or to perform protocol recovery. */
+	if ((dp->version >= 2 && dp->fault) || protocol_recovery) {
+		/*
+		 * Note that on DPv2+ devices, during a protocol error condition
+		 * the target becomes deselected during line reset. Once reset,
+		 * we must then re-select the target to bring the device back
+		 * into the expected state.
+		 */
 		line_reset(&info);
+		if (dp->version >= 2)
+			jlink_adiv5_swdp_write_nocheck(ADIV5_DP_TARGETSEL, dp->targetsel);
 		jlink_adiv5_swdp_read_nocheck(ADIV5_DP_DPIDR);
-		jlink_adiv5_swdp_write_nocheck(ADIV5_DP_TARGETSEL, dp->targetsel);
+		/* Exception here is unexpected, so do not catch */
 	}
-	uint32_t err = jlink_adiv5_swdp_read_nocheck(ADIV5_DP_CTRLSTAT) &
+	const uint32_t err = jlink_adiv5_swdp_read_nocheck(ADIV5_DP_CTRLSTAT) &
 		(ADIV5_DP_CTRLSTAT_STICKYORUN | ADIV5_DP_CTRLSTAT_STICKYCMP | ADIV5_DP_CTRLSTAT_STICKYERR |
 			ADIV5_DP_CTRLSTAT_WDATAERR);
 	uint32_t clr = 0;
@@ -268,9 +278,8 @@ static uint32_t jlink_adiv5_swdp_error(adiv5_debug_port_s *const dp, const bool 
 	if (err & ADIV5_DP_CTRLSTAT_WDATAERR)
 		clr |= ADIV5_DP_ABORT_WDERRCLR;
 
-	jlink_adiv5_swdp_write_nocheck(ADIV5_DP_ABORT, clr);
-	if (dp->fault)
-		err |= 0x8000U;
+	if (clr)
+		jlink_adiv5_swdp_write_nocheck(ADIV5_DP_ABORT, clr);
 	dp->fault = 0;
 	return err;
 }
