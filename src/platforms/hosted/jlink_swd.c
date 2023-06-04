@@ -42,16 +42,16 @@ static bool jlink_swd_seq_in_parity(uint32_t *result, size_t clock_cycles);
 static void jlink_swd_seq_out(uint32_t tms_states, size_t clock_cycles);
 static void jlink_swd_seq_out_parity(uint32_t tms_states, size_t clock_cycles);
 
-static bool jlink_adiv5_swdp_write_nocheck(uint16_t addr, uint32_t data);
-static uint32_t jlink_adiv5_swdp_read_nocheck(uint16_t addr);
-static uint32_t jlink_adiv5_swdp_error(adiv5_debug_port_s *dp, bool protocol_recovery);
-static uint32_t jlink_adiv5_swdp_low_access(adiv5_debug_port_s *dp, uint8_t rnw, uint16_t addr, uint32_t request_value);
+static bool jlink_adiv5_raw_write_no_check(uint16_t addr, uint32_t data);
+static uint32_t jlink_adiv5_raw_read_no_check(uint16_t addr);
+static uint32_t jlink_adiv5_clear_error(adiv5_debug_port_s *dp, bool protocol_recovery);
+static uint32_t jlink_adiv5_raw_access(adiv5_debug_port_s *dp, uint8_t rnw, uint16_t addr, uint32_t request_value);
 
 /*
  * Write at least 50 bits high, two bits low and read DP_IDR and put
  * idle cycles at the end
  */
-static bool line_reset(bmp_info_s *const info)
+static bool jlink_swd_line_reset(bmp_info_s *const info)
 {
 	uint8_t cmd[44];
 	memset(cmd, 0, sizeof(cmd));
@@ -96,10 +96,10 @@ bool jlink_swd_init(adiv5_debug_port_s *dp)
 	swd_proc.seq_out_parity = jlink_swd_seq_out_parity;
 
 	/* Set up the accelerated SWD functions for basic target operations */
-	dp->dp_low_write = jlink_adiv5_swdp_write_nocheck;
+	dp->dp_low_write = jlink_adiv5_raw_write_no_check;
 	dp->dp_read = firmware_swdp_read;
-	dp->error = jlink_adiv5_swdp_error;
-	dp->low_access = jlink_adiv5_swdp_low_access;
+	dp->error = jlink_adiv5_clear_error;
+	dp->low_access = jlink_adiv5_raw_access;
 	return true;
 }
 
@@ -201,15 +201,15 @@ static const uint8_t jlink_adiv5_read_request[5] = {
 	/* clang-format on */
 };
 
-static bool jlink_adiv5_swdp_write_nocheck(const uint16_t addr, const uint32_t data)
+static bool jlink_adiv5_raw_write_no_check(const uint16_t addr, const uint32_t data)
 {
-	DEBUG_PROBE("jlink_swd_write_reg_no_check %04x <- %08" PRIx32 "\n", addr, data);
+	DEBUG_PROBE("jlink_adiv5_raw_write_no_check %04x <- %08" PRIx32 "\n", addr, data);
 	/* Build the request buffer */
 	const uint8_t request[2] = {make_packet_request(ADIV5_LOW_WRITE, addr)};
 	uint8_t result[2] = {0};
 	/* Try making a request to the device (13 cycles, we start writing on the 14th) */
 	if (!jlink_transfer(13U, jlink_adiv5_request, request, result)) {
-		DEBUG_ERROR("jlink_swd_write_no_check failed\n");
+		DEBUG_ERROR("jlink_adiv5_raw_write_no_check failed\n");
 		return false;
 	}
 	const uint8_t ack = result[1] & 7U;
@@ -220,20 +220,20 @@ static bool jlink_adiv5_swdp_write_nocheck(const uint16_t addr, const uint32_t d
 	response[4] = __builtin_popcount(data) & 1U;
 	/* Try sending the data to the device */
 	if (!jlink_transfer(33U + 8U, jlink_adiv5_write_request, response, NULL)) {
-		DEBUG_ERROR("jlink_swd_write_no_check failed\n");
+		DEBUG_ERROR("jlink_adiv5_raw_write_no_check failed\n");
 		return false;
 	}
 	return ack != SWDP_ACK_OK;
 }
 
-static uint32_t jlink_adiv5_swdp_read_nocheck(const uint16_t addr)
+static uint32_t jlink_adiv5_raw_read_no_check(const uint16_t addr)
 {
 	/* Build the request buffer */
 	const uint8_t request[2] = {make_packet_request(ADIV5_LOW_READ, addr)};
 	uint8_t result[2] = {0};
 	/* Try making a request to the device (11 cycles, we start reading on the 12th) */
 	if (!jlink_transfer(11U, jlink_adiv5_request, request, result)) {
-		DEBUG_ERROR("jlink_swd_read_no_check failed\n");
+		DEBUG_ERROR("jlink_adiv5_raw_read_no_check failed\n");
 		return 0U;
 	}
 	const uint8_t ack = result[1] & 7U;
@@ -241,19 +241,19 @@ static uint32_t jlink_adiv5_swdp_read_nocheck(const uint16_t addr)
 	uint8_t response[5] = {0};
 	/* Try to receive the response payload */
 	if (!jlink_transfer(33U + 2U, jlink_adiv5_read_request, NULL, response)) {
-		DEBUG_ERROR("jlink_swd_read_no_check failed\n");
+		DEBUG_ERROR("jlink_adiv5_raw_read_no_check failed\n");
 		return 0U;
 	}
 	/* Extract the data phase and return it if the transaction suceeded */
 	const uint32_t data = read_le4(response, 0);
-	DEBUG_PROBE("jlink_swd_read_reg_no_check %04x -> %08" PRIx32 " %s\n", addr, data,
+	DEBUG_PROBE("jlink_adiv5_raw_read_no_check %04x -> %08" PRIx32 " %s\n", addr, data,
 		__builtin_parity(data) ^ response[4] ? "ERR" : "OK");
 	return ack == SWDP_ACK_OK ? data : 0U;
 }
 
-static uint32_t jlink_adiv5_swdp_error(adiv5_debug_port_s *const dp, const bool protocol_recovery)
+static uint32_t jlink_adiv5_clear_error(adiv5_debug_port_s *const dp, const bool protocol_recovery)
 {
-	DEBUG_PROBE("jlink_swd_clear_error (protocol recovery? %s)\n", protocol_recovery ? "true" : "false");
+	DEBUG_PROBE("jlink_adiv5_clear_error (protocol recovery? %s)\n", protocol_recovery ? "true" : "false");
 	/* Only do the comms reset dance on DPv2+ w/ fault or to perform protocol recovery. */
 	if ((dp->version >= 2 && dp->fault) || protocol_recovery) {
 		/*
@@ -262,13 +262,13 @@ static uint32_t jlink_adiv5_swdp_error(adiv5_debug_port_s *const dp, const bool 
 		 * we must then re-select the target to bring the device back
 		 * into the expected state.
 		 */
-		line_reset(&info);
+		jlink_swd_line_reset(&info);
 		if (dp->version >= 2)
-			jlink_adiv5_swdp_write_nocheck(ADIV5_DP_TARGETSEL, dp->targetsel);
-		jlink_adiv5_swdp_read_nocheck(ADIV5_DP_DPIDR);
+			jlink_adiv5_raw_write_no_check(ADIV5_DP_TARGETSEL, dp->targetsel);
+		jlink_adiv5_raw_read_no_check(ADIV5_DP_DPIDR);
 		/* Exception here is unexpected, so do not catch */
 	}
-	const uint32_t err = jlink_adiv5_swdp_read_nocheck(ADIV5_DP_CTRLSTAT) &
+	const uint32_t err = jlink_adiv5_raw_read_no_check(ADIV5_DP_CTRLSTAT) &
 		(ADIV5_DP_CTRLSTAT_STICKYORUN | ADIV5_DP_CTRLSTAT_STICKYCMP | ADIV5_DP_CTRLSTAT_STICKYERR |
 			ADIV5_DP_CTRLSTAT_WDATAERR);
 	uint32_t clr = 0;
@@ -283,17 +283,17 @@ static uint32_t jlink_adiv5_swdp_error(adiv5_debug_port_s *const dp, const bool 
 		clr |= ADIV5_DP_ABORT_WDERRCLR;
 
 	if (clr)
-		jlink_adiv5_swdp_write_nocheck(ADIV5_DP_ABORT, clr);
+		jlink_adiv5_raw_write_no_check(ADIV5_DP_ABORT, clr);
 	dp->fault = 0;
 	return err;
 }
 
-static uint32_t jlink_adiv5_swdp_low_read(adiv5_debug_port_s *const dp)
+static uint32_t jlink_adiv5_raw_read(adiv5_debug_port_s *const dp)
 {
 	uint8_t result[5] = {0};
 	/* Try to receive the result payload */
 	if (!jlink_transfer(33U + 2U, jlink_adiv5_read_request, NULL, result)) {
-		DEBUG_ERROR("jlink_swd_raw_read failed\n");
+		DEBUG_ERROR("jlink_adiv5_raw_read failed\n");
 		return 0U;
 	}
 	/* Extract the data phase */
@@ -310,7 +310,7 @@ static uint32_t jlink_adiv5_swdp_low_read(adiv5_debug_port_s *const dp)
 	return response;
 }
 
-static uint32_t jlink_adiv5_swdp_low_write(const uint32_t request_value)
+static uint32_t jlink_adiv5_raw_write(const uint32_t request_value)
 {
 	/* Build the response payload buffer */
 	uint8_t request[6] = {0};
@@ -320,13 +320,13 @@ static uint32_t jlink_adiv5_swdp_low_write(const uint32_t request_value)
 	uint8_t result[6] = {0};
 	/* Try sending the data to the device */
 	if (!jlink_transfer(33U + 8U, jlink_adiv5_write_request, request, result))
-		raise_exception(EXCEPTION_ERROR, "jlink_swd_raw_write failed\n");
+		raise_exception(EXCEPTION_ERROR, "jlink_adiv5_raw_write failed\n");
 	/* Unpack the result */
 	const uint32_t result_value = read_le4(result, 0);
 	return result_value;
 }
 
-static uint32_t jlink_adiv5_swdp_low_access(
+static uint32_t jlink_adiv5_raw_access(
 	adiv5_debug_port_s *const dp, const uint8_t rnw, const uint16_t addr, const uint32_t request_value)
 {
 	if ((addr & ADIV5_APnDP) && dp->fault)
@@ -343,7 +343,7 @@ static uint32_t jlink_adiv5_swdp_low_access(
 	do {
 		/* Try making a request to the device */
 		if (!jlink_transfer(rnw ? 11U : 13U, jlink_adiv5_request, request, result))
-			raise_exception(EXCEPTION_ERROR, "jlink_swd_raw_access failed\n");
+			raise_exception(EXCEPTION_ERROR, "jlink_adiv5_raw_access failed\n");
 		ack = result[1] & 7U;
 		/* If we got a fault, do a proper retry */
 		if (ack == SWDP_ACK_FAULT) {
@@ -382,11 +382,11 @@ static uint32_t jlink_adiv5_swdp_low_access(
 
 	/* Dispatch based on whether we should read or write */
 	if (rnw) {
-		const uint32_t result_value = jlink_adiv5_swdp_low_read(dp);
+		const uint32_t result_value = jlink_adiv5_raw_read(dp);
 		DEBUG_PROBE("%s: addr %04x -> %08" PRIx32 "\n", __func__, addr, result_value);
 		return result_value;
 	}
-	const uint32_t result_value = jlink_adiv5_swdp_low_write(request_value);
+	const uint32_t result_value = jlink_adiv5_raw_write(request_value);
 	DEBUG_PROBE("%s: addr %04x <- %08" PRIx32 "\n", __func__, addr, request_value);
 	return result_value;
 }
