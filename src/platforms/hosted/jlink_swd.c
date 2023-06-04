@@ -45,7 +45,7 @@ static void jlink_swd_seq_out_parity(uint32_t tms_states, size_t clock_cycles);
 static bool jlink_adiv5_swdp_write_nocheck(uint16_t addr, uint32_t data);
 static uint32_t jlink_adiv5_swdp_read_nocheck(uint16_t addr);
 static uint32_t jlink_adiv5_swdp_error(adiv5_debug_port_s *dp, bool protocol_recovery);
-static uint32_t jlink_adiv5_swdp_low_access(adiv5_debug_port_s *dp, uint8_t RnW, uint16_t addr, uint32_t value);
+static uint32_t jlink_adiv5_swdp_low_access(adiv5_debug_port_s *dp, uint8_t rnw, uint16_t addr, uint32_t request_value);
 
 /*
  * Write at least 50 bits high, two bits low and read DP_IDR and put
@@ -201,31 +201,6 @@ static const uint8_t jlink_adiv5_read_request[5] = {
 	/* clang-format on */
 };
 
-static void jlink_adiv5_swdp_make_packet_request(
-	uint8_t *cmd, size_t cmd_length, const uint8_t RnW, const uint16_t addr)
-{
-	assert(cmd_length == 8U);
-	memset(cmd, 0, cmd_length);
-	cmd[0] = JLINK_CMD_IO_TRANSACT;
-
-	/*
-	 * It seems that JLink samples the data to read at the end of the
-	 * previous clock cycle, so reading target data must start at the
-	 * 12th clock cycle, while writing starts as expected at the 14th
-	 * clock cycle (8 cmd, 3 response, 2 turn around).
-	 */
-	cmd[2] = RnW ? 11 : 13;
-
-	cmd[4] = 0xffU; /* 8 bits command OUT */
-	/*
-	 * one IN bit to turn around to read, read 2
-	 * (read) or 3 (write) IN bits for response and
-	 * and one OUT bit to turn around to write on write
-	 */
-	cmd[5] = 0xf0U;
-	cmd[6] = make_packet_request(RnW, addr);
-}
-
 static bool jlink_adiv5_swdp_write_nocheck(const uint16_t addr, const uint32_t data)
 {
 	DEBUG_PROBE("jlink_swd_write_reg_no_check %04x <- %08" PRIx32 "\n", addr, data);
@@ -352,26 +327,25 @@ static uint32_t jlink_adiv5_swdp_low_write(const uint32_t request_value)
 }
 
 static uint32_t jlink_adiv5_swdp_low_access(
-	adiv5_debug_port_s *const dp, const uint8_t RnW, const uint16_t addr, const uint32_t value)
+	adiv5_debug_port_s *const dp, const uint8_t rnw, const uint16_t addr, const uint32_t request_value)
 {
 	if ((addr & ADIV5_APnDP) && dp->fault)
 		return 0;
 
-	uint8_t cmd[8];
-	jlink_adiv5_swdp_make_packet_request(cmd, sizeof(cmd), RnW, addr);
-
-	uint8_t res[3];
+	DEBUG_PROBE("%s: Attempting access to addr %04x\n", __func__, addr);
+	/* Build the request buffer */
+	const uint8_t request[2] = {make_packet_request(rnw, addr)};
+	uint8_t result[2] = {0};
+	/* Set up to repeatedly try the initial request */
 	platform_timeout_s timeout;
 	platform_timeout_set(&timeout, 2000);
 	uint8_t ack = SWDP_ACK_WAIT;
 	while (ack == SWDP_ACK_WAIT && !platform_timeout_is_expired(&timeout)) {
-		bmda_usb_transfer(info.usb_link, cmd, 8U, res, 2U);
-		bmda_usb_transfer(info.usb_link, NULL, 0U, res + 2U, 1U);
-
-		if (res[2] != 0)
-			raise_exception(EXCEPTION_ERROR, "Low access setup failed");
-		ack = res[1] & 7U;
-	};
+		/* Try making a request to the device */
+		if (!jlink_transfer(rnw ? 11U : 13U, jlink_adiv5_request, request, result))
+			raise_exception(EXCEPTION_ERROR, "jlink_swd_raw_access failed\n");
+		ack = result[1] & 7U;
+	}
 
 	if (ack == SWDP_ACK_WAIT) {
 		DEBUG_WARN("SWD access resulted in wait, aborting\n");
@@ -397,9 +371,13 @@ static uint32_t jlink_adiv5_swdp_low_access(
 		raise_exception(EXCEPTION_ERROR, "SWD invalid ACK");
 	}
 
-	/* Always append 8 idle cycles (SWDIO = 0)! */
-	if (RnW)
-		return jlink_adiv5_swdp_low_read(dp);
-	jlink_adiv5_swdp_low_write(value);
-	return 0;
+	/* Dispatch based on whether we should read or write */
+	if (rnw) {
+		const uint32_t result_value = jlink_adiv5_swdp_low_read(dp);
+		DEBUG_PROBE("%s: addr %04x -> %08" PRIx32 "\n", __func__, addr, result_value);
+		return result_value;
+	}
+	const uint32_t result_value = jlink_adiv5_swdp_low_write(request_value);
+	DEBUG_PROBE("%s: addr %04x <- %08" PRIx32 "\n", __func__, addr, request_value);
+	return result_value;
 }
