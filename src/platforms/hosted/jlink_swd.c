@@ -173,6 +173,26 @@ static bool jlink_swd_seq_in_parity(uint32_t *const result, const size_t clock_c
 	return !parity;
 }
 
+/*
+ * The first byte in this defines 8 OUT bits to write the request out.
+ * The second then defines 1 IN bit for turn-around to read the status response
+ * followed by either 2 (read) or 3 (write) IN bits to read the response.
+ * Read only uses the first 3 bits of the second byte.
+ * Write uses the first 5 and defines the last bit it uses as an OUT bit
+ * for the final turn-around to write the request data.
+ */
+static const uint8_t jlink_adiv5_request[2] = {0xffU, 0xf0U};
+
+/* Direction sequence for the data phase of a write transaction */
+static const uint8_t jlink_adiv5_write_request[6] = {
+	/* clang-format off */
+	/* 32 OUT cycles */
+	0xffU, 0xffU, 0xffU, 0xffU,
+	/* 1 more OUT cycle (parity) followed by 8 OUT (idle) cycles */
+	0xffU, 0x01U,
+	/* clang-format on */
+};
+
 static void jlink_adiv5_swdp_make_packet_request(
 	uint8_t *cmd, size_t cmd_length, const uint8_t RnW, const uint16_t addr)
 {
@@ -200,28 +220,26 @@ static void jlink_adiv5_swdp_make_packet_request(
 
 static bool jlink_adiv5_swdp_write_nocheck(const uint16_t addr, const uint32_t data)
 {
-	uint8_t result[3];
-	uint8_t request[8];
-	jlink_adiv5_swdp_make_packet_request(request, sizeof(request), ADIV5_LOW_WRITE, addr & 0xfU);
-	bmda_usb_transfer(info.usb_link, request, 8U, result, 2U);
-	bmda_usb_transfer(info.usb_link, NULL, 0U, result + 2U, 1U);
+	DEBUG_PROBE("jlink_swd_write_reg_no_check %04x <- %08" PRIx32 "\n", addr, data);
+	/* Build the request buffer */
+	const uint8_t request[2] = {make_packet_request(ADIV5_LOW_WRITE, addr)};
+	uint8_t result[2] = {0};
+	/* Try making a request to the device (13 cycles, we start writing on the 14th) */
+	if (!jlink_transfer(13U, jlink_adiv5_request, request, result)) {
+		DEBUG_ERROR("jlink_swd_write_no_check failed\n");
+		return false;
+	}
 	const uint8_t ack = result[1] & 7U;
 
-	uint8_t response[16];
-	memset(response, 0, sizeof(response));
-	response[2] = 33U + 8U; /* 8 idle cycle  to move data through SW-DP */
-	memset(response + 4U, 0xffU, 6);
-	response[10] = data & 0xffU;
-	response[11] = (data >> 8U) & 0xffU;
-	response[12] = (data >> 16U) & 0xffU;
-	response[13] = (data >> 24U) & 0xffU;
-	const uint8_t bit_count = __builtin_popcount(data);
-	response[14] = bit_count & 1U;
-
-	bmda_usb_transfer(info.usb_link, response, 16, result, 6);
-	bmda_usb_transfer(info.usb_link, NULL, 0, result, 1);
-	if (result[0] != 0)
-		raise_exception(EXCEPTION_ERROR, "Low access write failed");
+	/* Build the response payload buffer */
+	uint8_t response[6] = {0};
+	write_le4(response, 0, data);
+	response[4] = __builtin_popcount(data) & 1U;
+	/* Try sending the data to the device */
+	if (!jlink_transfer(33U + 8U, jlink_adiv5_write_request, response, NULL)) {
+		DEBUG_ERROR("jlink_swd_write_no_check failed\n");
+		return false;
+	}
 	return ack != SWDP_ACK_OK;
 }
 
