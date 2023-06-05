@@ -31,6 +31,7 @@
 
 #include <ftdi.h>
 #include "ftdi_bmp.h"
+#include "buffer_utils.h"
 
 typedef enum swdio_status {
 	SWDIO_STATUS_DRIVE,
@@ -235,7 +236,7 @@ static bool ftdi_swd_seq_in_parity_mpsse(uint32_t *const result, const size_t cl
 {
 	uint8_t data_out[5] = {};
 	ftdi_jtag_tdi_tdo_seq(data_out, false, NULL, clock_cycles + 1U);
-	const uint32_t data = data_out[0] + (data_out[1] << 8U) + (data_out[2] << 16U) + (data_out[3] << 24U);
+	const uint32_t data = read_le4(data_out, 0);
 	uint8_t parity = __builtin_parity(data & ((UINT64_C(1) << clock_cycles) - 1U));
 	parity ^= data_out[4] & 1U;
 	DEBUG_PROBE("%s %zu clock_cycles: %08" PRIx32 " %s\n", __func__, clock_cycles, data, parity ? "ERR" : "OK");
@@ -329,12 +330,8 @@ static uint32_t ftdi_swd_seq_in(size_t clock_cycles)
 static void ftdi_swd_seq_out_mpsse(const uint32_t tms_states, const size_t clock_cycles)
 {
 	DEBUG_PROBE("%s %zu clock_cycles: %08" PRIx32 "\n", __func__, clock_cycles, tms_states);
-	const uint8_t data_in[4] = {
-		tms_states & 0xffU,
-		(tms_states >> 8U) & 0xffU,
-		(tms_states >> 16U) & 0xffU,
-		(tms_states >> 24U) & 0xffU,
-	};
+	uint8_t data_in[4] = {0};
+	write_le4(data_in, 0, tms_states);
 	ftdi_jtag_tdi_tdo_seq(NULL, false, data_in, clock_cycles);
 }
 
@@ -376,14 +373,8 @@ static void ftdi_swd_seq_out(const uint32_t tms_states, const size_t clock_cycle
 static void ftdi_swd_seq_out_parity_mpsse(const uint32_t tms_states, const uint8_t parity, const size_t clock_cycles)
 {
 	DEBUG_PROBE("%s %zu clock_cycles: %08" PRIx32 "\n", __func__, clock_cycles, tms_states);
-	uint8_t data_in[6] = {
-		tms_states & 0xffU,
-		(tms_states >> 8U) & 0xffU,
-		(tms_states >> 16U) & 0xffU,
-		(tms_states >> 24U) & 0xffU,
-		0,
-		0,
-	};
+	uint8_t data_in[6] = {0};
+	write_le4(data_in, 0, tms_states);
 	/* Figure out which byte we should write the parity to */
 	const size_t parity_offset = clock_cycles >> 3U;
 	/* Then which bit in that byte */
