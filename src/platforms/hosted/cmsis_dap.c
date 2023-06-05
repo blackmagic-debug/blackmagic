@@ -196,20 +196,20 @@ static bool dap_init_hid(const bmp_info_s *const info)
 	return true;
 }
 
-static bool dap_init_bulk(const bmp_info_s *const info)
+static bool dap_init_bulk(void)
 {
 	DEBUG_INFO("Using bulk transfer\n");
-	int res = libusb_open(info->libusb_dev, &usb_handle);
+	int res = libusb_open(info.libusb_dev, &usb_handle);
 	if (res != LIBUSB_SUCCESS) {
 		DEBUG_ERROR("libusb_open() failed (%d): %s\n", res, libusb_error_name(res));
 		return false;
 	}
-	if (libusb_claim_interface(usb_handle, info->interface_num) < 0) {
+	if (libusb_claim_interface(usb_handle, info.interface_num) < 0) {
 		DEBUG_ERROR("libusb_claim_interface() failed\n");
 		return false;
 	}
-	in_ep = info->in_ep;
-	out_ep = info->out_ep;
+	in_ep = info.in_ep;
+	out_ep = info.out_ep;
 	return true;
 }
 
@@ -223,7 +223,7 @@ bool dap_init(bmp_info_s *const info)
 			return false;
 	} else {
 		type = CMSIS_TYPE_HID;
-		if (!dap_init_hid(info))
+		if (!dap_init_hid())
 			return false;
 	}
 
