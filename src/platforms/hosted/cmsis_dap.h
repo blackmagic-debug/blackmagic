@@ -24,7 +24,7 @@
 #include "adiv5.h"
 #include "cli.h"
 
-bool dap_init(bmp_info_s *info);
+bool dap_init(void);
 void dap_exit_function(void);
 void dap_adiv5_dp_defaults(adiv5_debug_port_s *dp);
 bool dap_jtag_init(void);

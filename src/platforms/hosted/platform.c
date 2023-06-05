@@ -114,7 +114,7 @@ void platform_init(int argc, char **argv)
 		break;
 
 	case BMP_TYPE_CMSIS_DAP:
-		if (!dap_init(&info))
+		if (!dap_init())
 			exit(-1);
 		break;
 
