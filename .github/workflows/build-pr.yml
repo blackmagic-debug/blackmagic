@@ -31,6 +31,8 @@ jobs:
         compiler:
           - 'clang-15'
           - 'gcc-11'
+        arm-compiler:
+          - '12.2.Rel1'
       fail-fast: false
 
     # Steps represent a sequence of tasks that will be executed as part of the job
@@ -76,7 +78,9 @@ jobs:
 
       # Setup and use a suitable ARM GCC for the firmware
       - name: Setup ARM GCC
-        uses: numworks/setup-arm-toolchain@2020-q4
+        uses: carlosperate/arm-none-eabi-gcc-action@v1
+        with:
+          release: ${{ matrix.arm-compiler }}
 
       # Record the versions of all the tools used in the build
       - name: Version tools
@@ -206,7 +210,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: numworks/setup-arm-toolchain@2020-q4
+      # Setup and use a suitable ARM GCC for the firmware
+      - name: Setup ARM GCC
+        uses: carlosperate/arm-none-eabi-gcc-action@v1
+        with:
+          release: '12.2.Rel1'
 
       - uses: actions/checkout@v3
         with:
