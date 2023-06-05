@@ -328,21 +328,24 @@ static uint32_t jlink_adiv5_raw_access(
 	platform_timeout_s timeout;
 	platform_timeout_set(&timeout, 250);
 	uint8_t ack = SWDP_ACK_WAIT;
+	bool first_try = true;
 	do {
 		/* Try making a request to the device */
 		if (!jlink_transfer(rnw ? 11U : 13U, jlink_adiv5_request, request, result))
 			raise_exception(EXCEPTION_ERROR, "jlink_adiv5_raw_access failed\n");
 		ack = result[1] & 7U;
-		/* If we got a fault, do a proper retry */
-		if (ack == SWDP_ACK_FAULT) {
+		/* If we got a fault first try, do a proper retry */
+		if (ack == SWDP_ACK_FAULT && first_try) {
 			DEBUG_ERROR("SWD access resulted in fault, retrying\n");
 			/* On fault, abort the request and repeat */
 			/* Yes, this is self-recursive.. no, we can't think of a better option */
-			adiv5_dp_write(dp, ADIV5_DP_ABORT,
+			jlink_adiv5_raw_write_no_check(ADIV5_DP_ABORT,
 				ADIV5_DP_ABORT_ORUNERRCLR | ADIV5_DP_ABORT_WDERRCLR | ADIV5_DP_ABORT_STKERRCLR |
 					ADIV5_DP_ABORT_STKCMPCLR);
+			first_try = false;
+			ack = SWDP_ACK_WAIT;
 		}
-	} while ((ack == SWDP_ACK_WAIT || ack == SWDP_ACK_FAULT) && !platform_timeout_is_expired(&timeout));
+	} while (ack == SWDP_ACK_WAIT && !platform_timeout_is_expired(&timeout));
 
 	if (ack == SWDP_ACK_WAIT) {
 		DEBUG_WARN("SWD access resulted in wait, aborting\n");
@@ -353,6 +356,9 @@ static uint32_t jlink_adiv5_raw_access(
 
 	if (ack == SWDP_ACK_FAULT) {
 		DEBUG_ERROR("SWD access resulted in fault\n");
+		/* On fault, abort the request */
+		jlink_adiv5_raw_write_no_check(ADIV5_DP_ABORT,
+			ADIV5_DP_ABORT_ORUNERRCLR | ADIV5_DP_ABORT_WDERRCLR | ADIV5_DP_ABORT_STKERRCLR | ADIV5_DP_ABORT_STKCMPCLR);
 		dp->fault = ack;
 		return 0;
 	}
