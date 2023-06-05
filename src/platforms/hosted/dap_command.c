@@ -60,6 +60,7 @@ static size_t dap_encode_transfer(
 	return 5U;
 }
 
+/* https://www.keil.com/pack/doc/CMSIS/DAP/html/group__DAP__Transfer.html */
 bool perform_dap_transfer(adiv5_debug_port_s *const target_dp, const dap_transfer_request_s *const transfer_requests,
 	const size_t requests, uint32_t *const response_data, const size_t responses)
 {
@@ -109,6 +110,7 @@ bool perform_dap_transfer_recoverable(adiv5_debug_port_s *const target_dp,
 	return perform_dap_transfer(target_dp, transfer_requests, requests, response_data, responses);
 }
 
+/* https://www.keil.com/pack/doc/CMSIS/DAP/html/group__DAP__TransferBlock.html */
 bool perform_dap_transfer_block_read(
 	adiv5_debug_port_s *const target_dp, const uint8_t reg, const uint16_t block_count, uint32_t *const blocks)
 {
@@ -180,6 +182,7 @@ bool perform_dap_transfer_block_write(
 	return false;
 }
 
+/* https://www.keil.com/pack/doc/CMSIS/DAP/html/group__DAP__SWJ__Sequence.html */
 bool perform_dap_swj_sequence(size_t clock_cycles, const uint8_t *data)
 {
 	/* Validate that clock_cycles is in range for the request (spec limits it to 256) */
