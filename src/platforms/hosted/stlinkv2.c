@@ -437,27 +437,27 @@ bool stlink_init(void)
 	}
 	link->ep_rx = 1U;
 	int config;
-	int r = libusb_get_configuration(link->device_handle, &config);
-	if (r) {
-		DEBUG_ERROR("ST-Link libusb_get_configuration failed %d: %s\n", r, libusb_strerror(r));
+	result = libusb_get_configuration(link->device_handle, &config);
+	if (result) {
+		DEBUG_ERROR("ST-Link libusb_get_configuration failed %d: %s\n", result, libusb_strerror(result));
 		return false;
 	}
 	if (config != 1) {
-		r = libusb_set_configuration(link->device_handle, 0);
-		if (r) {
-			DEBUG_ERROR("ST-Link libusb_set_configuration failed %d: %s\n", r, libusb_strerror(r));
+		result = libusb_set_configuration(link->device_handle, 0);
+		if (result) {
+			DEBUG_ERROR("ST-Link libusb_set_configuration failed %d: %s\n", result, libusb_strerror(result));
 			return false;
 		}
 	}
-	r = libusb_claim_interface(link->device_handle, 0);
-	if (r) {
-		DEBUG_ERROR("ST-Link libusb_claim_interface failed %s\n", libusb_strerror(r));
+	result = libusb_claim_interface(link->device_handle, 0);
+	if (result) {
+		DEBUG_ERROR("ST-Link libusb_claim_interface failed %s\n", libusb_strerror(result));
 		return false;
 	}
 	stlink_version();
 	if ((stlink.ver_stlink < 3U && stlink.ver_jtag < 32U) || (stlink.ver_stlink == 3U && stlink.ver_jtag < 3U)) {
 		/* Maybe the adapter is in some strange state. Try to reset */
-		int result = libusb_reset_device(link->device_handle);
+		result = libusb_reset_device(link->device_handle);
 		DEBUG_WARN("Trying ST-Link reset\n");
 		if (result == LIBUSB_ERROR_BUSY) { /* Try again */
 			platform_delay(50);
