@@ -157,20 +157,20 @@ static void dap_hid_print_permissions(const uint16_t vid, const uint16_t pid, co
 }
 #endif
 
-static bool dap_init_hid(const bmp_info_s *const info)
+static bool dap_init_hid(void)
 {
 	DEBUG_INFO("Using hid transfer\n");
 	if (hid_init())
 		return false;
 
-	const size_t size = mbslen(info->serial);
+	const size_t size = mbslen(info.serial);
 	if (size > 64U) {
 		DEBUG_ERROR("Serial number invalid, aborting\n");
 		hid_exit();
 		return false;
 	}
 	wchar_t serial[65] = {0};
-	if (mbstowcs(serial, info->serial, size) != size) {
+	if (mbstowcs(serial, info.serial, size) != size) {
 		DEBUG_ERROR("Serial number conversion failed, aborting\n");
 		hid_exit();
 		return false;
@@ -180,15 +180,15 @@ static bool dap_init_hid(const bmp_info_s *const info)
 	 * Special-case devices that do not work with 513 byte report length
 	 * FIXME: Find a solution to decipher from the device.
 	 */
-	if (info->vid == 0x1fc9U && info->pid == 0x0132U) {
+	if (info.vid == 0x1fc9U && info.pid == 0x0132U) {
 		DEBUG_WARN("Device does not work with the normal report length, activating quirk\n");
 		report_size = 64U + 1U;
 	}
-	handle = hid_open(info->vid, info->pid, serial[0] ? serial : NULL);
+	handle = hid_open(info.vid, info.pid, serial[0] ? serial : NULL);
 	if (!handle) {
 		DEBUG_ERROR("hid_open failed: %ls\n", hid_error(NULL));
 #ifdef __linux__
-		dap_hid_print_permissions(info->vid, info->pid, serial[0] ? serial : NULL);
+		dap_hid_print_permissions(info.vid, info.pid, serial[0] ? serial : NULL);
 #endif
 		hid_exit();
 		return false;
@@ -219,7 +219,7 @@ bool dap_init(bmp_info_s *const info)
 	/* Initialise the adaptor via a suitable protocol */
 	if (info->in_ep && info->out_ep) {
 		type = CMSIS_TYPE_BULK;
-		if (!dap_init_bulk(info))
+		if (!dap_init_bulk())
 			return false;
 	} else {
 		type = CMSIS_TYPE_HID;
