@@ -54,7 +54,7 @@ static void dap_swd_seq_out_parity(uint32_t tms_states, size_t clock_cycles);
 
 static bool dap_swd_configure(dap_swd_turnaround_cycles_e turnaround, dap_swd_fault_cfg_e fault_cfg);
 static bool dap_write_reg_no_check(uint16_t addr, uint32_t data);
-static uint32_t swd_clear_error(adiv5_debug_port_s *target_dp, bool protocol_recovery);
+static uint32_t dap_swd_clear_error(adiv5_debug_port_s *target_dp, bool protocol_recovery);
 
 bool dap_swd_init(adiv5_debug_port_s *target_dp)
 {
@@ -83,7 +83,7 @@ bool dap_swd_init(adiv5_debug_port_s *target_dp)
 		target_dp->dp_low_write = NULL;
 	/* Set up the accelerated SWD functions for basic target operations */
 	target_dp->dp_read = dap_dp_read_reg;
-	target_dp->error = swd_clear_error;
+	target_dp->error = dap_swd_clear_error;
 	target_dp->low_access = dap_dp_low_access;
 	target_dp->abort = dap_dp_abort;
 	return true;
@@ -224,9 +224,9 @@ static bool dap_write_reg_no_check(uint16_t addr, const uint32_t data)
 	return ack != SWDP_ACK_OK;
 }
 
-static uint32_t swd_clear_error(adiv5_debug_port_s *const target_dp, const bool protocol_recovery)
+static uint32_t dap_swd_clear_error(adiv5_debug_port_s *const target_dp, const bool protocol_recovery)
 {
-	DEBUG_PROBE("swd_clear_error (protocol recovery? %s)\n", protocol_recovery ? "true" : "false");
+	DEBUG_PROBE("dap_swd_clear_error (protocol recovery? %s)\n", protocol_recovery ? "true" : "false");
 	/* Only do the comms reset dance on DPv2+ w/ fault or to perform protocol recovery. */
 	if ((target_dp->version >= 2 && target_dp->fault) || protocol_recovery) {
 		/*
