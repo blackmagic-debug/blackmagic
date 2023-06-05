@@ -214,10 +214,10 @@ static bool dap_init_bulk(void)
 }
 
 /* LPC845 Breakout Board Rev. 0 reports an invalid response with > 65 bytes */
-bool dap_init(bmp_info_s *const info)
+bool dap_init(void)
 {
 	/* Initialise the adaptor via a suitable protocol */
-	if (info->in_ep && info->out_ep) {
+	if (info.in_ep && info.out_ep) {
 		type = CMSIS_TYPE_BULK;
 		if (!dap_init_bulk())
 			return false;
