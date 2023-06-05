@@ -46,6 +46,7 @@
  * for the final turn-around to write the request data.
  */
 static const uint8_t jlink_adiv5_request[2] = {0xffU, 0xf0U};
+static const uint8_t jlink_adiv5_out_turnaround = 0x2U;
 
 /* Direction sequence for the data phase of a write transaction */
 static const uint8_t jlink_adiv5_write_request[6] = {
@@ -334,6 +335,14 @@ static uint32_t jlink_adiv5_raw_access(
 		if (!jlink_transfer(rnw ? 11U : 13U, jlink_adiv5_request, request, result))
 			raise_exception(EXCEPTION_ERROR, "jlink_adiv5_raw_access failed\n");
 		ack = result[1] & 7U;
+		if (ack != SWDP_ACK_OK && rnw) {
+			/*
+			 * When setting up for a read, and getting something other than OK, run an input-to-output
+			 * turnaround to re-legalise everything, otherwise we'll end up out of step with the hardware
+			 */
+			if (!jlink_transfer(2U, &jlink_adiv5_out_turnaround, NULL, NULL))
+				raise_exception(EXCEPTION_ERROR, "jlink_adiv5_raw_access failed\n");
+		}
 		/* If we got a fault first try, do a proper retry */
 		if (ack == SWDP_ACK_FAULT && first_try) {
 			DEBUG_ERROR("SWD access resulted in fault, retrying\n");
