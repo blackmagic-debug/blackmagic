@@ -117,24 +117,24 @@ extern const cable_desc_s cable_desc[];
 extern cable_desc_s active_cable;
 extern data_desc_s active_state;
 
-#define libftdi_buffer_write_arr(array) libftdi_buffer_write(array, sizeof(array))
-#define libftdi_buffer_write_val(value) libftdi_buffer_write(&(value), sizeof(value))
-#define libftdi_buffer_read_arr(array)  libftdi_buffer_read(array, sizeof(array))
-#define libftdi_buffer_read_val(value)  libftdi_buffer_read(&(value), sizeof(value))
+#define ftdi_buffer_write_arr(array) ftdi_buffer_write(array, sizeof(array))
+#define ftdi_buffer_write_val(value) ftdi_buffer_write(&(value), sizeof(value))
+#define ftdi_buffer_read_arr(array)  ftdi_buffer_read(array, sizeof(array))
+#define ftdi_buffer_read_val(value)  ftdi_buffer_read(&(value), sizeof(value))
 
 bool ftdi_bmp_init(bmda_cli_options_s *cl_opts);
 bool ftdi_swd_init(void);
 bool ftdi_jtag_init(void);
-void libftdi_buffer_flush(void);
-size_t libftdi_buffer_write(const void *buffer, size_t size);
-size_t libftdi_buffer_read(void *buffer, size_t size);
-const char *libftdi_target_voltage(void);
-void ftdi_jtag_tdi_tdo_seq(uint8_t *data_out, bool final_tms, const uint8_t *data_in, size_t ticks);
+void ftdi_buffer_flush(void);
+size_t ftdi_buffer_write(const void *buffer, size_t size);
+size_t ftdi_buffer_read(void *buffer, size_t size);
+const char *ftdi_target_voltage(void);
+void ftdi_jtag_tdi_tdo_seq(uint8_t *data_out, bool final_tms, const uint8_t *data_in, size_t clock_cycles);
 bool ftdi_swd_possible(void);
-void libftdi_max_frequency_set(uint32_t freq);
+void ftdi_max_frequency_set(uint32_t freq);
 uint32_t libftdi_max_frequency_get(void);
 void libftdi_nrst_set_val(bool assert);
-bool libftdi_nrst_get_val(void);
+bool ftdi_nrst_get_val(void);
 
 #define MPSSE_SK 1
 #define PIN0     1

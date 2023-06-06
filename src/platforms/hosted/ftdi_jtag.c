@@ -95,8 +95,8 @@ bool ftdi_jtag_init(void)
 		active_state.data_high,
 		active_state.ddr_high,
 	};
-	libftdi_buffer_write_arr(cmd);
-	libftdi_buffer_flush();
+	ftdi_buffer_write_arr(cmd);
+	ftdi_buffer_flush();
 	/* Write out start condition and pull garbage from read buffer.
 	 * FT2232D otherwise misbehaves on runs following the first run.*/
 	ftdi_jtag_drain_potential_garbage();
@@ -122,7 +122,7 @@ static void ftdi_jtag_tms_seq(uint32_t tms_states, const size_t clock_cycles)
 			0x80U | (tms_states & 0x7fU),
 		};
 		tms_states >>= 7U;
-		libftdi_buffer_write_arr(cmd);
+		ftdi_buffer_write_arr(cmd);
 	}
 }
 
@@ -138,9 +138,9 @@ static bool ftdi_jtag_next(const bool tms, const bool tdi)
 		0,
 		(tdi ? 0x80U : 0U) | (tms ? 0x01U : 0U),
 	};
-	libftdi_buffer_write_arr(cmd);
+	ftdi_buffer_write_arr(cmd);
 
 	uint8_t ret = 0;
-	libftdi_buffer_read_val(ret);
+	ftdi_buffer_read_val(ret);
 	return ret & 0x80U;
 }

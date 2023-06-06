@@ -327,7 +327,7 @@ const char *platform_target_voltage(void)
 		return stlink_target_voltage();
 
 	case BMP_TYPE_FTDI:
-		return libftdi_target_voltage();
+		return ftdi_target_voltage();
 
 	case BMP_TYPE_JLINK:
 		return jlink_target_voltage();
@@ -377,7 +377,7 @@ bool platform_nrst_get_val(void)
 		return jlink_nrst_get_val();
 
 	case BMP_TYPE_FTDI:
-		return libftdi_nrst_get_val();
+		return ftdi_nrst_get_val();
 #endif
 
 	default:
@@ -401,7 +401,7 @@ void platform_max_frequency_set(uint32_t freq)
 		break;
 
 	case BMP_TYPE_FTDI:
-		libftdi_max_frequency_set(freq);
+		ftdi_max_frequency_set(freq);
 		break;
 
 	case BMP_TYPE_STLINK_V2:
@@ -508,7 +508,7 @@ void platform_buffer_flush(void)
 	switch (info.bmp_type) {
 #if HOSTED_BMP_ONLY == 0
 	case BMP_TYPE_FTDI:
-		return libftdi_buffer_flush();
+		return ftdi_buffer_flush();
 #endif
 
 	default:
