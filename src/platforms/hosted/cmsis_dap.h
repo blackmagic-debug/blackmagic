@@ -30,7 +30,7 @@ void dap_adiv5_dp_defaults(adiv5_debug_port_s *dp);
 bool dap_jtag_init(void);
 bool dap_swd_init(adiv5_debug_port_s *dp);
 void dap_jtag_dp_init(adiv5_debug_port_s *dp);
-uint32_t dap_swj_clock(uint32_t clock);
+uint32_t dap_max_frequency(uint32_t clock);
 void dap_swd_configure(uint8_t cfg);
 void dap_nrst_set_val(bool assert);
 
