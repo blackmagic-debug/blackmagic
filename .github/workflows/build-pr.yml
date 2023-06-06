@@ -102,9 +102,26 @@ jobs:
       - name: Clean
         run: make clean
 
-      # Build all the firmware variants with RTT enabled
-      - name: Build all platform variants firmware with RTT
-        run: make all_platforms HOSTED_BMP_ONLY=1 ENABLE_RTT=1
+      # Build all the firmware variants that have more than 128kiB of Flash, with RTT enabled
+      - name: Build firmware with RTT
+        run: |
+          make PROBE_HOST=96b_carbon ENABLE_RTT=1
+          make -C src clean
+          make PROBE_HOST=blackpill-f401cc ENABLE_RTT=1
+          make -C src clean
+          make PROBE_HOST=blackpill-f401ce ENABLE_RTT=1
+          make -C src clean
+          make PROBE_HOST=blackpill-f411ce ENABLE_RTT=1
+          make -C src clean
+          make PROBE_HOST=f3 ENABLE_RTT=1
+          make -C src clean
+          make PROBE_HOST=f4discovery ENABLE_RTT=1
+          make -C src clean
+          make PROBE_HOST=hydrabus ENABLE_RTT=1
+          make -C src clean
+          make PROBE_HOST=launchpad-icdi ENABLE_RTT=1
+          make -C src clean
+          make PROBE_HOST=stlinkv3 ENABLE_RTT=1
 
       - name: Clean
         run: make clean
