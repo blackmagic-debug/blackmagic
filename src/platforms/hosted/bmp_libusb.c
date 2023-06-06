@@ -29,7 +29,7 @@
 void bmp_ident(bmp_info_s *info)
 {
 	DEBUG_INFO("Black Magic Debug App %s\n for Black Magic Probe, ST-Link v2 and v3, CMSIS-DAP, "
-			   "JLink and libftdi/MPSSE\n",
+			   "J-Link and FTDI (MPSSE)\n",
 		FIRMWARE_VERSION);
 	if (info && info->vid && info->pid) {
 		DEBUG_INFO("Using %04x:%04x %s %s\n %s\n", info->vid, info->pid,
