@@ -28,34 +28,31 @@
 #include "platform.h"
 
 uintptr_t app_address = 0x08004000U;
-extern uint32_t _ebss; // NOLINT(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp)
+volatile uint32_t magic[2] __attribute__((section(".noinit")));
 
 void dfu_detach(void)
 {
 	scb_reset_system();
 }
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Warray-bounds"
-
 int main(void)
 {
-	volatile uint32_t *magic = (uint32_t *)&_ebss;
 	rcc_periph_clock_enable(RCC_GPIOA);
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Warray-bounds"
-	if (gpio_get(GPIOA, GPIO0) || (magic[0] == BOOTMAGIC0 && magic[1] == BOOTMAGIC1)) {
+	/* Blackpill board has a floating button on PA0. Pull it up and use as active-low. */
+	gpio_mode_setup(GPIOA, GPIO_MODE_INPUT, GPIO_PUPD_PULLUP, GPIO0);
+
+	if (!gpio_get(GPIOA, GPIO0) || (magic[0] == BOOTMAGIC0 && magic[1] == BOOTMAGIC1)) {
 		magic[0] = 0;
 		magic[1] = 0;
-	} else
+	} else {
 		dfu_jump_app_if_valid();
-#pragma GCC diagnostic pop
+	}
 
-	rcc_clock_setup_pll(&rcc_hse_8mhz_3v3[RCC_CLOCK_3V3_168MHZ]);
+	rcc_clock_setup_pll(&rcc_hse_25mhz_3v3[RCC_CLOCK_3V3_84MHZ]);
 
 	/* Assert blue LED as indicator we are in the bootloader */
-	rcc_periph_clock_enable(RCC_GPIOD);
+	rcc_periph_clock_enable(RCC_GPIOC);
 	gpio_mode_setup(LED_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, LED_BOOTLOADER);
 	gpio_set(LED_PORT, LED_BOOTLOADER);
 
@@ -68,10 +65,9 @@ int main(void)
 
 	dfu_protect(false);
 	dfu_init(&USB_DRIVER);
+
 	dfu_main();
 }
-
-#pragma GCC diagnostic pop
 
 void dfu_event(void)
 {
