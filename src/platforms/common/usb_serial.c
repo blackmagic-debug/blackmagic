@@ -64,6 +64,8 @@ typedef struct stat stat_s;
 #include <libopencm3/stm32/rcc.h>
 #include <libopencm3/stm32/dma.h>
 #endif
+#include <libopencm3/cm3/scb.h>
+#include <libopencm3/cm3/scs.h>
 
 static bool gdb_serial_dtr = true;
 
@@ -408,12 +410,13 @@ int isatty(const int file)
 
 typedef struct ex_frame {
 	uint32_t r0;
-	const uint32_t *params;
+	uint32_t r1;
 	uint32_t r2;
 	uint32_t r3;
 	uint32_t r12;
 	uintptr_t lr;
 	uintptr_t return_address;
+//	uint32_t psr;
 } ex_frame_s;
 
 void debug_monitor_handler(void) __attribute__((used)) __attribute__((naked));
@@ -444,6 +447,123 @@ void debug_monitor_handler(void)
 		frame->r0 = UINT32_MAX;
 	}
 	__asm__("bx lr");
+}
+
+#define AngelSWI 0xAB //Thumb16
+#define SCB_DFSR_BKPT (1ul << 1)
+#define SCB_DFSR_HALTED (1ul << 0)
+int is_semihosting(ex_frame_s* frame, uint16_t insn);
+
+/*
+ * This catches the semihosting breakpoints when a debugger is missing.
+ */
+__attribute__((naked))
+void hard_fault_handler(void)
+{
+	__asm__(
+	" tst lr,#4 \n"
+	" ite eq \n"
+	" mrseq r0,msp \n"
+	" mrsne r0,psp \n"
+	" mov r1,lr \n"
+	" ldr r2,=hard_fault_handler_c \n"
+	" bx r2"
+	:::);
+}
+void hard_fault_handler_c(ex_frame_s* frame, uint32_t lr __attribute__((unused)))
+{
+#if 0
+// TODO: load from MSP/PSP
+	ex_frame_s *frame;
+	__asm__("mov %[frame], sp" : [frame] "=r"(frame));
+#endif
+// Micro-OS++ IIIe version (with CMSIS)
+#if 0
+	if ( ((SCB->DFSR & SCB_DFSR_BKPT_Msk) != 0)
+		&& ((SCB->HFSR & SCB_HFSR_DEBUGEVT_Msk) != 0))
+	{
+		if (is_semihosting(frame, 0xBE00 + (AngelSWI & 0xFF)))
+		{
+			SCB->HFSR = SCB_HFSR_DEBUGEVT_Msk;
+			return;
+		}
+	}
+#endif
+// Rewritten version for BMP (on libopencm3)
+	/* Was this HardFault caused by Debug Event? */
+	if ( ((SCB_DFSR & SCB_DFSR_BKPT) != 0)
+	&& ((SCB_HFSR & SCB_HFSR_DEBUG_VT) != 0))
+	{
+		/* Load the faulting instruction */
+		uint16_t *insn = (uint16_t *) frame->return_address;
+		/* Is this a semihosting breakpoint? */
+		if (*insn == (0xBE00 + 0xAB))
+		{
+			/* Handle call failure (spoof arguments) */
+			is_semihosting(frame, 0xBEAB);
+			/* Clear the debug event exception cause */
+			SCB_HFSR = SCB_HFSR_DEBUG_VT;
+			/* Resume execution after that breakpoint */
+			return;
+		}
+	}
+
+	/* Other reason. Try to throw another breakpoint, if upstream debugger is available */
+	if ((SCS_DHCSR & SCS_DHCSR_C_DEBUGEN) != 0)
+	{
+		__asm__("bkpt 0");
+	}
+
+	/* Block here, or reboot */
+	while(1);
+}
+/*
+ * Handle the required semihosting calls locally
+ * Return 1 on a valid semihosting call, 0 otherwise
+ */
+int is_semihosting(ex_frame_s* frame, uint16_t insn)
+{
+	uint16_t* pw = (uint16_t*) frame->return_address;
+	if (*pw != insn)
+	{
+		return 0;
+	}
+	uint32_t r0 = frame->r0;
+	uint32_t r1 = frame->r1;
+	uint32_t *blk = (uint32_t *) r1;
+
+	switch (r0)
+	{
+	case RDI_SYS_OPEN:
+		/* Process only stdio and return 1/2/3 */
+		if (strcmp( (char*)blk[0], ":tt") == 0)
+		{
+			if ((blk[1] == 0))
+			{
+				frame->r0 = 1;
+				break;
+			}
+			else if ((blk[1] == 4))
+			{
+				frame->r0 = 2;
+				break;
+			}
+			else if ((blk[1] == 8))
+			{
+				frame->r0 = 3;
+				break;
+			}
+		}
+		/* Unsuccessful or unsupported call */
+		frame->r0 = -1U;
+		break;
+// TODO: implement failsafe stubs for other calls
+	default:
+		return 0;
+	}
+	/* Step over the breakpoint */
+	frame->return_address += 2;
+	return 1;
 }
 #else
 /* This defines stubs for the newlib fake file IO layer for compatability with GCC 12 `-spec=nosys.spec` */
