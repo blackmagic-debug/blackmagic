@@ -97,40 +97,40 @@ void platform_init(int argc, char **argv)
 	if (cl_opts.opt_device)
 		info.bmp_type = BMP_TYPE_BMP;
 	else if (find_debuggers(&cl_opts, &info))
-		exit(-1);
+		exit(1);
 
 	bmp_ident(&info);
 
 	switch (info.bmp_type) {
 	case BMP_TYPE_BMP:
 		if (!serial_open(&cl_opts, info.serial) || !remote_init(cl_opts.opt_tpwr))
-			exit(-1);
+			exit(1);
 		break;
 
 #if HOSTED_BMP_ONLY == 0
 	case BMP_TYPE_STLINK_V2:
 		if (!stlink_init())
-			exit(-1);
+			exit(1);
 		break;
 
 	case BMP_TYPE_CMSIS_DAP:
 		if (!dap_init())
-			exit(-1);
+			exit(1);
 		break;
 
 	case BMP_TYPE_FTDI:
 		if (!ftdi_bmp_init(&cl_opts))
-			exit(-1);
+			exit(1);
 		break;
 
 	case BMP_TYPE_JLINK:
 		if (!jlink_init())
-			exit(-1);
+			exit(1);
 		break;
 #endif
 
 	default:
-		exit(-1);
+		exit(1);
 	}
 
 	if (cl_opts.opt_mode != BMP_MODE_DEBUG)
