@@ -249,7 +249,7 @@ bool platform_jtagtap_init(void)
 	}
 }
 
-void platform_adiv5_dp_defaults(adiv5_debug_port_s *dp)
+void bmda_adiv5_dp_init(adiv5_debug_port_s *const dp)
 {
 	switch (info.bmp_type) {
 	case BMP_TYPE_BMP:
@@ -257,14 +257,14 @@ void platform_adiv5_dp_defaults(adiv5_debug_port_s *dp)
 			DEBUG_WARN("Not using HL commands\n");
 			return;
 		}
-		return remote_adiv5_dp_defaults(dp);
+		return remote_adiv5_dp_init(dp);
 
 #if HOSTED_BMP_ONLY == 0
 	case BMP_TYPE_STLINK_V2:
-		return stlink_adiv5_dp_defaults(dp);
+		return stlink_adiv5_dp_init(dp);
 
 	case BMP_TYPE_CMSIS_DAP:
-		return dap_adiv5_dp_defaults(dp);
+		return dap_adiv5_dp_init(dp);
 #endif
 
 	default:

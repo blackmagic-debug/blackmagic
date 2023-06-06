@@ -59,7 +59,7 @@ void remote_max_frequency_set(uint32_t freq);
 uint32_t remote_max_frequency_get(void);
 void remote_target_clk_output_enable(bool enable);
 
-void remote_adiv5_dp_defaults(adiv5_debug_port_s *dp);
+void remote_adiv5_dp_init(adiv5_debug_port_s *dp);
 void remote_add_jtag_dev(uint32_t dev_index, const jtag_dev_s *jtag_dev);
 
 uint64_t remote_decode_response(const char *response, size_t digits);

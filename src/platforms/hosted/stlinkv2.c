@@ -764,7 +764,7 @@ static uint32_t stlink_ap_read(adiv5_access_port_s *ap, uint16_t addr)
 	return ret;
 }
 
-void stlink_adiv5_dp_defaults(adiv5_debug_port_s *dp)
+void stlink_adiv5_dp_init(adiv5_debug_port_s *dp)
 {
 	dp->ap_regs_read = stlink_regs_read;
 	dp->ap_reg_read = stlink_reg_read;
