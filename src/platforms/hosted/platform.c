@@ -167,14 +167,14 @@ uint32_t platform_adiv5_swdp_scan(uint32_t targetid)
 	}
 }
 
-bool platform_swdptap_init(adiv5_debug_port_s *dp)
+bool bmda_swd_dp_init(adiv5_debug_port_s *dp)
 {
 #if HOSTED_BMP_ONLY == 1
 	(void)dp;
 #endif
 	switch (info.bmp_type) {
 	case BMP_TYPE_BMP:
-		return remote_swdptap_init();
+		return remote_swd_init();
 
 #if HOSTED_BMP_ONLY == 0
 	case BMP_TYPE_CMSIS_DAP:
@@ -272,7 +272,7 @@ void bmda_adiv5_dp_init(adiv5_debug_port_s *const dp)
 	}
 }
 
-void platform_jtag_dp_init(adiv5_debug_port_s *dp)
+void bmda_jtag_dp_init(adiv5_debug_port_s *dp)
 {
 #if HOSTED_BMP_ONLY == 0
 	switch (info.bmp_type) {

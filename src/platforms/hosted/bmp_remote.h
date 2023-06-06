@@ -48,7 +48,7 @@ bool platform_buffer_write(const void *data, size_t size);
 int platform_buffer_read(void *data, size_t size);
 
 bool remote_init(bool power_up);
-bool remote_swdptap_init(void);
+bool remote_swd_init(void);
 bool remote_jtagtap_init(void);
 bool remote_target_get_power(void);
 const char *remote_target_voltage(void);
