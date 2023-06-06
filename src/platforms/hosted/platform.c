@@ -195,10 +195,10 @@ bool platform_swdptap_init(adiv5_debug_port_s *dp)
 	}
 }
 
-void platform_add_jtag_dev(uint32_t i, const jtag_dev_s *jtag_dev)
+void platform_add_jtag_dev(const uint32_t dev_index, const jtag_dev_s *const jtag_dev)
 {
 	if (info.bmp_type == BMP_TYPE_BMP)
-		remote_add_jtag_dev(i, jtag_dev);
+		remote_add_jtag_dev(dev_index, jtag_dev);
 }
 
 uint32_t platform_jtag_scan(void)
