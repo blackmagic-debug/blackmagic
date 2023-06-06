@@ -22,6 +22,7 @@
 #include <libopencm3/stm32/rcc.h>
 #include <libopencm3/stm32/gpio.h>
 #include <libopencm3/cm3/scb.h>
+#include <libopencm3/usb/dwc/otg_fs.h>
 
 #include "usbdfu.h"
 #include "general.h"
@@ -65,6 +66,10 @@ int main(void)
 
 	dfu_protect(false);
 	dfu_init(&USB_DRIVER);
+
+	/* https://github.com/libopencm3/libopencm3/pull/1256#issuecomment-779424001 */
+	OTG_FS_GCCFG |= OTG_GCCFG_NOVBUSSENS | OTG_GCCFG_PWRDWN;
+	OTG_FS_GCCFG &= ~(OTG_GCCFG_VBUSBSEN | OTG_GCCFG_VBUSASEN);
 
 	dfu_main();
 }
