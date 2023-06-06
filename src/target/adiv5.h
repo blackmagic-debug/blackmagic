@@ -355,8 +355,8 @@ void platform_add_jtag_dev(uint32_t dev_index, const jtag_dev_s *jtag_dev);
 
 void adiv5_jtag_dp_handler(uint8_t jd_index);
 #if PC_HOSTED == 1
-void platform_jtag_dp_init(adiv5_debug_port_s *dp);
-bool platform_swdptap_init(adiv5_debug_port_s *dp);
+void bmda_jtag_dp_init(adiv5_debug_port_s *dp);
+bool bmda_swd_dp_init(adiv5_debug_port_s *dp);
 #endif
 
 void adiv5_mem_write(adiv5_access_port_s *ap, uint32_t dest, const void *src, size_t len);

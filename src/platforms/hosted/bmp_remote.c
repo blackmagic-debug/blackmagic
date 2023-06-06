@@ -199,7 +199,7 @@ bool remote_jtagtap_init(void)
 	return remote_funcs.jtag_init();
 }
 
-bool remote_swdptap_init(void)
+bool remote_swd_init(void)
 {
 	return remote_funcs.swd_init();
 }

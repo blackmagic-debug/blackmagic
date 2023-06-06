@@ -101,7 +101,7 @@ uint32_t adiv5_swdp_scan(uint32_t targetid)
 #if PC_HOSTED == 0
 	swdptap_init();
 #else
-	if (!platform_swdptap_init(initial_dp))
+	if (!bmda_swd_dp_init(initial_dp))
 		return 0;
 #endif
 
