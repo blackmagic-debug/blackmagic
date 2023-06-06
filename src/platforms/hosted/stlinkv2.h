@@ -35,7 +35,7 @@ int stlink_hwversion(void);
 const char *stlink_target_voltage(void);
 void stlink_nrst_set_val(bool assert);
 bool stlink_nrst_get_val(void);
-void stlink_adiv5_dp_defaults(adiv5_debug_port_s *dp);
+void stlink_adiv5_dp_init(adiv5_debug_port_s *dp);
 void stlink_jtag_dp_init(adiv5_debug_port_s *dp);
 void stlink_exit_function(bmp_info_s *info);
 void stlink_max_frequency_set(uint32_t freq);

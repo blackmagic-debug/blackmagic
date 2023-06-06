@@ -529,7 +529,7 @@ static void dap_mem_write(adiv5_access_port_s *ap, uint32_t dest, const void *sr
 	adiv5_dp_read(ap->dp, ADIV5_DP_RDBUFF);
 }
 
-void dap_adiv5_dp_defaults(adiv5_debug_port_s *target_dp)
+void dap_adiv5_dp_init(adiv5_debug_port_s *target_dp)
 {
 	/* Setup the access functions for this adaptor */
 	target_dp->ap_read = dap_ap_read;

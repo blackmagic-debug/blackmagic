@@ -773,7 +773,7 @@ static void adiv5_dp_clear_sticky_errors(adiv5_debug_port_s *dp)
 		adiv5_dp_error(dp);
 }
 
-void adiv5_dp_init(adiv5_debug_port_s *dp, const uint32_t idcode)
+void adiv5_dp_init(adiv5_debug_port_s *const dp, const uint32_t idcode)
 {
 	/*
 	 * We have to initialse the DP routines up front before any adiv5_* functions are called or
@@ -784,7 +784,7 @@ void adiv5_dp_init(adiv5_debug_port_s *dp, const uint32_t idcode)
 	dp->mem_read = advi5_mem_read_bytes;
 	dp->mem_write = adiv5_mem_write_bytes;
 #if PC_HOSTED == 1
-	platform_adiv5_dp_defaults(dp);
+	bmda_adiv5_dp_init(dp);
 #endif
 
 	/*

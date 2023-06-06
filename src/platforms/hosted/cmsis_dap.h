@@ -26,7 +26,7 @@
 
 bool dap_init(void);
 void dap_exit_function(void);
-void dap_adiv5_dp_defaults(adiv5_debug_port_s *dp);
+void dap_adiv5_dp_init(adiv5_debug_port_s *dp);
 bool dap_jtag_init(void);
 bool dap_swd_init(adiv5_debug_port_s *dp);
 void dap_jtag_dp_init(adiv5_debug_port_s *dp);

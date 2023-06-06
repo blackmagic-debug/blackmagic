@@ -67,5 +67,5 @@ void remote_v1_add_jtag_dev(const uint32_t dev_index, const jtag_dev_s *const jt
 		jtag_dev->dr_postscan, jtag_dev->ir_len, jtag_dev->ir_prescan, jtag_dev->ir_postscan, jtag_dev->current_ir);
 	platform_buffer_write(buffer, length);
 	(void)platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
-	/* Don't need to check for error here - it's already done in remote_adiv5_dp_defaults */
+	/* Don't need to check for error here - it's already done in remote_adiv5_dp_init */
 }
