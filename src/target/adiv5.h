@@ -351,7 +351,7 @@ adiv5_access_port_s *adiv5_new_ap(adiv5_debug_port_s *dp, uint8_t apsel);
 void remote_jtag_dev(const jtag_dev_s *jtag_dev);
 void adiv5_ap_ref(adiv5_access_port_s *ap);
 void adiv5_ap_unref(adiv5_access_port_s *ap);
-void platform_add_jtag_dev(uint32_t dev_index, const jtag_dev_s *jtag_dev);
+void bmda_add_jtag_dev(uint32_t dev_index, const jtag_dev_s *jtag_dev);
 
 void adiv5_jtag_dp_handler(uint8_t jd_index);
 #if PC_HOSTED == 1

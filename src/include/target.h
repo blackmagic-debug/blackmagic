@@ -36,7 +36,7 @@ typedef struct target_controller target_controller_s;
 
 #if PC_HOSTED == 1
 uint32_t platform_adiv5_swdp_scan(uint32_t targetid);
-uint32_t platform_jtag_scan(void);
+uint32_t bmda_jtag_scan(void);
 #endif
 uint32_t adiv5_swdp_scan(uint32_t targetid);
 uint32_t jtag_scan(void);
