@@ -25,8 +25,8 @@ endif
 
 SRC =              \
 	adiv5.c        \
-	adiv5_jtagdp.c \
-	adiv5_swdp.c   \
+	adiv5_jtag.c   \
+	adiv5_swd.c    \
 	command.c      \
 	cortexa.c      \
 	cortexm.c      \
