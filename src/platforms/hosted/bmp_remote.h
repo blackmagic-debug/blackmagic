@@ -49,7 +49,7 @@ int platform_buffer_read(void *data, size_t size);
 
 bool remote_init(bool power_up);
 bool remote_swd_init(void);
-bool remote_jtagtap_init(void);
+bool remote_jtag_init(void);
 bool remote_target_get_power(void);
 const char *remote_target_voltage(void);
 bool remote_target_set_power(bool power);

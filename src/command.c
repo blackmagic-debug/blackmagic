@@ -215,7 +215,7 @@ static bool cmd_jtag_scan(target_s *target, int argc, const char **argv)
 	volatile exception_s e;
 	TRY_CATCH (e, EXCEPTION_ALL) {
 #if PC_HOSTED == 1
-		devs = platform_jtag_scan();
+		devs = bmda_jtag_scan();
 #else
 		devs = jtag_scan();
 #endif
@@ -300,7 +300,7 @@ bool cmd_auto_scan(target_s *t, int argc, const char **argv)
 	volatile exception_s e;
 	TRY_CATCH (e, EXCEPTION_ALL) {
 #if PC_HOSTED == 1
-		devs = platform_jtag_scan();
+		devs = bmda_jtag_scan();
 #else
 		devs = jtag_scan();
 #endif

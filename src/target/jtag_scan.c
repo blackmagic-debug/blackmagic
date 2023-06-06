@@ -87,7 +87,7 @@ uint32_t jtag_scan(void)
 	 */
 	DEBUG_INFO("Resetting TAP\n");
 #if PC_HOSTED == 1
-	if (!platform_jtagtap_init()) {
+	if (!bmda_jtag_init()) {
 		DEBUG_ERROR("JTAG not available\n");
 		return 0;
 	}
@@ -123,7 +123,7 @@ uint32_t jtag_scan(void)
 #if PC_HOSTED == 1
 	/*Transfer needed device information to firmware jtag_devs */
 	for (size_t device = 0; device < jtag_dev_count; ++device)
-		platform_add_jtag_dev(device, jtag_devs + device);
+		bmda_add_jtag_dev(device, jtag_devs + device);
 #endif
 
 	jtag_display_idcodes();

@@ -195,13 +195,13 @@ bool bmda_swd_dp_init(adiv5_debug_port_s *dp)
 	}
 }
 
-void platform_add_jtag_dev(const uint32_t dev_index, const jtag_dev_s *const jtag_dev)
+void bmda_add_jtag_dev(const uint32_t dev_index, const jtag_dev_s *const jtag_dev)
 {
 	if (info.bmp_type == BMP_TYPE_BMP)
 		remote_add_jtag_dev(dev_index, jtag_dev);
 }
 
-uint32_t platform_jtag_scan(void)
+uint32_t bmda_jtag_scan(void)
 {
 	info.is_jtag = true;
 
@@ -224,11 +224,11 @@ uint32_t platform_jtag_scan(void)
 	}
 }
 
-bool platform_jtagtap_init(void)
+bool bmda_jtag_init(void)
 {
 	switch (info.bmp_type) {
 	case BMP_TYPE_BMP:
-		return remote_jtagtap_init();
+		return remote_jtag_init();
 
 #if HOSTED_BMP_ONLY == 0
 	case BMP_TYPE_STLINK_V2:
