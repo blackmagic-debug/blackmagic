@@ -397,7 +397,7 @@ void platform_max_frequency_set(uint32_t freq)
 
 #if HOSTED_BMP_ONLY == 0
 	case BMP_TYPE_CMSIS_DAP:
-		dap_swj_clock(freq);
+		dap_max_frequency(freq);
 		break;
 
 	case BMP_TYPE_LIBFTDI:
@@ -436,7 +436,7 @@ uint32_t platform_max_frequency_get(void)
 
 #if HOSTED_BMP_ONLY == 0
 	case BMP_TYPE_CMSIS_DAP:
-		return dap_swj_clock(0);
+		return dap_max_frequency(0);
 
 	case BMP_TYPE_LIBFTDI:
 		return libftdi_max_frequency_get();

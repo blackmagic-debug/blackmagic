@@ -150,7 +150,7 @@ bool dap_led(const dap_led_type_e type, const bool state)
  * Accessor for the current JTAG/SWD clock frequency.
  * When called with clock == 0, it only returns the current value.
  */
-uint32_t dap_swj_clock(const uint32_t clock)
+uint32_t dap_max_frequency(const uint32_t clock)
 {
 	/* Fast-return if clock is 0 */
 	if (!clock)
