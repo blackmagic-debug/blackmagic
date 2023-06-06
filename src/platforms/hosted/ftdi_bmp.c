@@ -504,8 +504,8 @@ bool ftdi_bmp_init(bmda_cli_options_s *const cl_opts)
 	ftdi_init[index++] = SET_BITS_HIGH;
 	ftdi_init[index++] = active_state.data_high;
 	ftdi_init[index++] = active_state.ddr_high;
-	libftdi_buffer_write(ftdi_init, index);
-	libftdi_buffer_flush();
+	ftdi_buffer_write(ftdi_init, index);
+	ftdi_buffer_flush();
 	garbage = ftdi_read_data(ctx, ftdi_init, sizeof(ftdi_init));
 	if (garbage > 0) {
 		DEBUG_WARN("FTDI init garbage at end:");
@@ -570,8 +570,8 @@ static void libftdi_set_data(data_desc_s *data)
 	}
 	/* If any adjustments needed to be made, send the commands and flush */
 	if (index) {
-		libftdi_buffer_write(cmd, index);
-		libftdi_buffer_flush();
+		ftdi_buffer_write(cmd, index);
+		ftdi_buffer_flush();
 	}
 }
 
@@ -583,7 +583,7 @@ void libftdi_nrst_set_val(bool assert)
 		libftdi_set_data(&active_cable.deassert_nrst);
 }
 
-bool libftdi_nrst_get_val(void)
+bool ftdi_nrst_get_val(void)
 {
 	uint8_t cmd;
 	uint8_t pin = 0;
@@ -600,8 +600,8 @@ bool libftdi_nrst_get_val(void)
 		return false;
 
 	uint8_t data;
-	libftdi_buffer_write_val(cmd);
-	libftdi_buffer_read_val(data);
+	ftdi_buffer_write_val(cmd);
+	ftdi_buffer_read_val(data);
 	bool res = false;
 	if (pin < 0x7fU || pin == PIN7)
 		res = data & pin;
@@ -614,7 +614,7 @@ bool libftdi_nrst_get_val(void)
 static ftdi_transfer_control_s *tc_write = NULL;
 #endif
 
-void libftdi_buffer_flush(void)
+void ftdi_buffer_flush(void)
 {
 	if (!bufptr)
 		return;
@@ -629,10 +629,10 @@ void libftdi_buffer_flush(void)
 	bufptr = 0;
 }
 
-size_t libftdi_buffer_write(const void *const buffer, const size_t size)
+size_t ftdi_buffer_write(const void *const buffer, const size_t size)
 {
 	if ((bufptr + size) / BUF_SIZE > 0)
-		libftdi_buffer_flush();
+		ftdi_buffer_flush();
 
 	const uint8_t *const data = (const uint8_t *)buffer;
 	DEBUG_WIRE("%s: %zu bytes:", __func__, size);
@@ -647,12 +647,12 @@ size_t libftdi_buffer_write(const void *const buffer, const size_t size)
 	return size;
 }
 
-size_t libftdi_buffer_read(void *const buffer, const size_t size)
+size_t ftdi_buffer_read(void *const buffer, const size_t size)
 {
 	if (bufptr) {
 		const uint8_t cmd = SEND_IMMEDIATE;
-		libftdi_buffer_write(&cmd, 1);
-		libftdi_buffer_flush();
+		ftdi_buffer_write(&cmd, 1);
+		ftdi_buffer_flush();
 	}
 
 	uint8_t *const data = (uint8_t *)buffer;
@@ -702,20 +702,20 @@ void ftdi_jtag_tdi_tdo_seq(uint8_t *data_out, const bool final_tms, const uint8_
 	if (bytes) {
 		ftdi_mpsse_cmd_s command = {cmd};
 		write_le2(command.length, 0, bytes - 1U);
-		libftdi_buffer_write_val(command);
+		ftdi_buffer_write_val(command);
 		/* If there's data to send, queue it */
 		if (data_in)
-			libftdi_buffer_write(data_in, bytes);
+			ftdi_buffer_write(data_in, bytes);
 	}
 
 	/* Now set up a transfer for the residual bits needed */
 	if (bits - (final_tms ? 1U : 0U)) {
 		/* Set up the bitwise command and its length */
 		const ftdi_mpsse_cmd_bits_s command = {cmd | MPSSE_BITMODE, bits - (final_tms ? 2U : 1U)};
-		libftdi_buffer_write_val(command);
+		ftdi_buffer_write_val(command);
 		/* If there's data to send, queue it */
 		if (data_in)
-			libftdi_buffer_write_val(data_in[bytes]);
+			ftdi_buffer_write_val(data_in[bytes]);
 	}
 
 	/* Finally, if TMS should be 1 after we get done, set up the final command to do this. */
@@ -723,7 +723,7 @@ void ftdi_jtag_tdi_tdo_seq(uint8_t *data_out, const bool final_tms, const uint8_
 		/* The command length byte is 0 after this, indicating 1 bit to go */
 		ftdi_mpsse_cmd_bits_s command = {
 			MPSSE_WRITE_TMS | (data_out ? MPSSE_DO_READ : 0) | MPSSE_LSB | MPSSE_BITMODE | MPSSE_WRITE_NEG};
-		libftdi_buffer_write_val(command);
+		ftdi_buffer_write_val(command);
 		/* The LSb determins what TMS gets set to */
 		uint8_t data = 1U;
 		/* If there's data to send, queue it */
@@ -733,17 +733,17 @@ void ftdi_jtag_tdi_tdo_seq(uint8_t *data_out, const bool final_tms, const uint8_
 			data |= value << 7U;
 		}
 		/* Queue the data portion of the operation */
-		libftdi_buffer_write_val(data);
+		ftdi_buffer_write_val(data);
 	}
 
 	/* If we're expecting data back, start reading */
 	if (data_out) {
 		/* Read the whole bytes */
 		if (bytes)
-			libftdi_buffer_read(data_out, bytes);
+			ftdi_buffer_read(data_out, bytes);
 		/* Read the residual bits */
 		if (bits) {
-			libftdi_buffer_read_val(data_out[bytes]);
+			ftdi_buffer_read_val(data_out[bytes]);
 			/* Because of a quirk in how the FTDI device works, the bits will be MSb aligned, so shift them down */
 			const size_t shift = bits - (final_tms ? 1U : 0U);
 			data_out[bytes] >>= 8U - shift;
@@ -751,19 +751,19 @@ void ftdi_jtag_tdi_tdo_seq(uint8_t *data_out, const bool final_tms, const uint8_
 		/* And read the data assocated with the TMS transaction and adjust the final byte */
 		if (final_tms) {
 			uint8_t value = 0;
-			libftdi_buffer_read_val(value);
+			ftdi_buffer_read_val(value);
 			data_out[final_byte] |= (value & 0x80U) >> (7U - final_bit);
 		}
 	}
 }
 
-const char *libftdi_target_voltage(void)
+const char *ftdi_target_voltage(void)
 {
 	uint8_t pin = active_cable.target_voltage_pin;
 	if (active_cable.target_voltage_cmd && pin) {
-		libftdi_buffer_write(&active_cable.target_voltage_cmd, 1);
+		ftdi_buffer_write(&active_cable.target_voltage_cmd, 1);
 		uint8_t data[1];
-		libftdi_buffer_read(data, 1);
+		ftdi_buffer_read(data, 1);
 		bool res = false;
 		if (pin < 0x7fU || pin == PIN7)
 			res = data[0] & pin;
@@ -778,7 +778,7 @@ const char *libftdi_target_voltage(void)
 
 static uint16_t divisor;
 
-void libftdi_max_frequency_set(uint32_t freq)
+void ftdi_max_frequency_set(uint32_t freq)
 {
 	uint32_t clock;
 	if (info.ftdi_ctx->type == TYPE_2232C)
@@ -795,7 +795,7 @@ void libftdi_max_frequency_set(uint32_t freq)
 	buf[0] = TCK_DIVISOR;
 	buf[1] = divisor & 0xffU;
 	buf[2] = (divisor >> 8U) & 0xffU;
-	libftdi_buffer_write_arr(buf);
+	ftdi_buffer_write_arr(buf);
 }
 
 uint32_t libftdi_max_frequency_get(void)

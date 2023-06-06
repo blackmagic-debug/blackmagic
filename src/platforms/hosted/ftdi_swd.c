@@ -115,8 +115,8 @@ bool ftdi_swd_init(void)
 		active_state.data_high,
 		active_state.ddr_high,
 	};
-	libftdi_buffer_write_arr(cmd_write);
-	libftdi_buffer_flush();
+	ftdi_buffer_write_arr(cmd_write);
+	ftdi_buffer_flush();
 	olddir = SWDIO_STATUS_FLOAT;
 
 	swd_proc.seq_in = ftdi_swd_seq_in;
@@ -144,11 +144,11 @@ static void ftdi_swd_turnaround_mpsse(const swdio_status_e dir)
 			active_state.data_high,
 			active_state.ddr_high,
 		};
-		libftdi_buffer_write_arr(cmd_read);
+		ftdi_buffer_write_arr(cmd_read);
 	}
 	/* Run one idle clock cycle */
 	const ftdi_mpsse_cmd_s cmd = {MPSSE_TDO_SHIFT, {}};
-	libftdi_buffer_write_val(cmd);
+	ftdi_buffer_write_val(cmd);
 	/* If the turnaround should set SWDIO to an output */
 	if (dir == SWDIO_STATUS_DRIVE) {
 		active_state.data_low |= active_cable.mpsse_swd_write.set_data_low | MPSSE_DO;
@@ -165,7 +165,7 @@ static void ftdi_swd_turnaround_mpsse(const swdio_status_e dir)
 			active_state.data_high,
 			active_state.ddr_high,
 		};
-		libftdi_buffer_write_arr(cmd_write);
+		ftdi_buffer_write_arr(cmd_write);
 	}
 }
 
@@ -217,7 +217,7 @@ static void ftdi_swd_turnaround_raw(const swdio_status_e dir)
 		cmd[7] = active_state.data_high;
 		cmd[8] = active_state.ddr_high;
 	}
-	libftdi_buffer_write_arr(cmd);
+	ftdi_buffer_write_arr(cmd);
 }
 
 static void ftdi_swd_turnaround(const swdio_status_e dir)
@@ -253,10 +253,10 @@ static bool ftdi_swd_seq_in_parity_raw(uint32_t *const result, const size_t cloc
 		0,
 	};
 	for (size_t clock_cycle = 0; clock_cycle <= clock_cycles; ++clock_cycle)
-		libftdi_buffer_write_arr(cmd);
+		ftdi_buffer_write_arr(cmd);
 
 	uint8_t raw_data[33];
-	libftdi_buffer_read(raw_data, clock_cycles + 1U);
+	ftdi_buffer_read(raw_data, clock_cycles + 1U);
 	uint8_t parity = (raw_data[clock_cycles] & active_cable.bb_swdio_in_pin) ? 1 : 0;
 
 	uint32_t data = 0;
@@ -304,10 +304,10 @@ static uint32_t ftdi_swd_seq_in_raw(const size_t clock_cycles)
 		0U,
 	};
 	for (size_t clock_cycle = 0U; clock_cycle < clock_cycles; ++clock_cycle)
-		libftdi_buffer_write_arr(cmd);
+		ftdi_buffer_write_arr(cmd);
 
 	uint8_t data[32];
-	libftdi_buffer_read(data, clock_cycles);
+	ftdi_buffer_read(data, clock_cycles);
 	uint32_t result = 0U;
 	for (size_t clock_cycle = 0U; clock_cycle < clock_cycles; ++clock_cycle) {
 		if (data[clock_cycle] & active_cable.bb_swdio_in_pin)
@@ -346,7 +346,7 @@ static void ftdi_swd_seq_out_raw(uint32_t tms_states, const size_t clock_cycles)
 		cmd[offset + 1U] = cycles - 1U;
 		cmd[offset + 2U] = tms_states & 0x7fU;
 	}
-	libftdi_buffer_write(cmd, offset);
+	ftdi_buffer_write(cmd, offset);
 }
 
 static void ftdi_swd_seq_out(const uint32_t tms_states, const size_t clock_cycles)
@@ -421,7 +421,7 @@ static void ftdi_swd_seq_out_parity_raw(const uint32_t tms_states, const uint8_t
 		cmd[offset + 2U] = 0U;
 		offset += 3U;
 	}
-	libftdi_buffer_write(cmd, offset);
+	ftdi_buffer_write(cmd, offset);
 }
 
 static void ftdi_swd_seq_out_parity(uint32_t tms_states, size_t clock_cycles)
