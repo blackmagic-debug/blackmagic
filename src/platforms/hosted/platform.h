@@ -72,8 +72,8 @@ void platform_buffer_flush(void);
 typedef enum bmp_type_e {
 	BMP_TYPE_NONE = 0,
 	BMP_TYPE_BMP,
-	BMP_TYPE_STLINKV2,
-	BMP_TYPE_LIBFTDI,
+	BMP_TYPE_STLINK_V2,
+	BMP_TYPE_FTDI,
 	BMP_TYPE_CMSIS_DAP,
 	BMP_TYPE_JLINK
 } bmp_type_t;

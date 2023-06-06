@@ -108,7 +108,7 @@ void platform_init(int argc, char **argv)
 		break;
 
 #if HOSTED_BMP_ONLY == 0
-	case BMP_TYPE_STLINKV2:
+	case BMP_TYPE_STLINK_V2:
 		if (!stlink_init())
 			exit(-1);
 		break;
@@ -118,7 +118,7 @@ void platform_init(int argc, char **argv)
 			exit(-1);
 		break;
 
-	case BMP_TYPE_LIBFTDI:
+	case BMP_TYPE_FTDI:
 		if (!ftdi_bmp_init(&cl_opts))
 			exit(-1);
 		break;
@@ -151,14 +151,14 @@ uint32_t platform_adiv5_swdp_scan(uint32_t targetid)
 
 	switch (info.bmp_type) {
 	case BMP_TYPE_BMP:
-	case BMP_TYPE_LIBFTDI:
+	case BMP_TYPE_FTDI:
 	case BMP_TYPE_CMSIS_DAP:
 	case BMP_TYPE_JLINK:
 		return adiv5_swdp_scan(targetid);
 		break;
 
 #if HOSTED_BMP_ONLY == 0
-	case BMP_TYPE_STLINKV2:
+	case BMP_TYPE_STLINK_V2:
 		return stlink_swd_scan();
 #endif
 
@@ -180,13 +180,13 @@ bool platform_swdptap_init(adiv5_debug_port_s *dp)
 	case BMP_TYPE_CMSIS_DAP:
 		return dap_swd_init(dp);
 
-	case BMP_TYPE_STLINKV2:
+	case BMP_TYPE_STLINK_V2:
 		return 0;
 
 	case BMP_TYPE_JLINK:
 		return jlink_swd_init(dp);
 
-	case BMP_TYPE_LIBFTDI:
+	case BMP_TYPE_FTDI:
 		return ftdi_swd_init();
 #endif
 
@@ -209,13 +209,13 @@ uint32_t platform_jtag_scan(void)
 
 	switch (info.bmp_type) {
 	case BMP_TYPE_BMP:
-	case BMP_TYPE_LIBFTDI:
+	case BMP_TYPE_FTDI:
 	case BMP_TYPE_JLINK:
 	case BMP_TYPE_CMSIS_DAP:
 		return jtag_scan();
 
 #if HOSTED_BMP_ONLY == 0
-	case BMP_TYPE_STLINKV2:
+	case BMP_TYPE_STLINK_V2:
 		return stlink_jtag_scan();
 #endif
 
@@ -231,10 +231,10 @@ bool platform_jtagtap_init(void)
 		return remote_jtagtap_init();
 
 #if HOSTED_BMP_ONLY == 0
-	case BMP_TYPE_STLINKV2:
+	case BMP_TYPE_STLINK_V2:
 		return 0;
 
-	case BMP_TYPE_LIBFTDI:
+	case BMP_TYPE_FTDI:
 		return ftdi_jtag_init();
 
 	case BMP_TYPE_JLINK:
@@ -260,7 +260,7 @@ void platform_adiv5_dp_defaults(adiv5_debug_port_s *dp)
 		return remote_adiv5_dp_defaults(dp);
 
 #if HOSTED_BMP_ONLY == 0
-	case BMP_TYPE_STLINKV2:
+	case BMP_TYPE_STLINK_V2:
 		return stlink_adiv5_dp_defaults(dp);
 
 	case BMP_TYPE_CMSIS_DAP:
@@ -276,7 +276,7 @@ void platform_jtag_dp_init(adiv5_debug_port_s *dp)
 {
 #if HOSTED_BMP_ONLY == 0
 	switch (info.bmp_type) {
-	case BMP_TYPE_STLINKV2:
+	case BMP_TYPE_STLINK_V2:
 		stlink_jtag_dp_init(dp);
 		break;
 	case BMP_TYPE_CMSIS_DAP:
@@ -299,11 +299,11 @@ char *platform_ident(void)
 	case BMP_TYPE_BMP:
 		return "BMP";
 
-	case BMP_TYPE_STLINKV2:
+	case BMP_TYPE_STLINK_V2:
 		return "ST-Link v2";
 
-	case BMP_TYPE_LIBFTDI:
-		return "libFTDI";
+	case BMP_TYPE_FTDI:
+		return "FTDI";
 
 	case BMP_TYPE_CMSIS_DAP:
 		return "CMSIS-DAP";
@@ -323,10 +323,10 @@ const char *platform_target_voltage(void)
 		return remote_target_voltage();
 
 #if HOSTED_BMP_ONLY == 0
-	case BMP_TYPE_STLINKV2:
+	case BMP_TYPE_STLINK_V2:
 		return stlink_target_voltage();
 
-	case BMP_TYPE_LIBFTDI:
+	case BMP_TYPE_FTDI:
 		return libftdi_target_voltage();
 
 	case BMP_TYPE_JLINK:
@@ -345,13 +345,13 @@ void platform_nrst_set_val(bool assert)
 		return remote_nrst_set_val(assert);
 
 #if HOSTED_BMP_ONLY == 0
-	case BMP_TYPE_STLINKV2:
+	case BMP_TYPE_STLINK_V2:
 		return stlink_nrst_set_val(assert);
 
 	case BMP_TYPE_JLINK:
 		return jlink_nrst_set_val(assert);
 
-	case BMP_TYPE_LIBFTDI:
+	case BMP_TYPE_FTDI:
 		return libftdi_nrst_set_val(assert);
 
 	case BMP_TYPE_CMSIS_DAP:
@@ -370,13 +370,13 @@ bool platform_nrst_get_val(void)
 		return remote_nrst_get_val();
 
 #if HOSTED_BMP_ONLY == 0
-	case BMP_TYPE_STLINKV2:
+	case BMP_TYPE_STLINK_V2:
 		return stlink_nrst_get_val();
 
 	case BMP_TYPE_JLINK:
 		return jlink_nrst_get_val();
 
-	case BMP_TYPE_LIBFTDI:
+	case BMP_TYPE_FTDI:
 		return libftdi_nrst_get_val();
 #endif
 
@@ -400,11 +400,11 @@ void platform_max_frequency_set(uint32_t freq)
 		dap_max_frequency(freq);
 		break;
 
-	case BMP_TYPE_LIBFTDI:
+	case BMP_TYPE_FTDI:
 		libftdi_max_frequency_set(freq);
 		break;
 
-	case BMP_TYPE_STLINKV2:
+	case BMP_TYPE_STLINK_V2:
 		stlink_max_frequency_set(freq);
 		break;
 
@@ -438,10 +438,10 @@ uint32_t platform_max_frequency_get(void)
 	case BMP_TYPE_CMSIS_DAP:
 		return dap_max_frequency(0);
 
-	case BMP_TYPE_LIBFTDI:
+	case BMP_TYPE_FTDI:
 		return libftdi_max_frequency_get();
 
-	case BMP_TYPE_STLINKV2:
+	case BMP_TYPE_STLINK_V2:
 		return stlink_max_frequency_get();
 
 	case BMP_TYPE_JLINK:
@@ -507,7 +507,7 @@ void platform_buffer_flush(void)
 {
 	switch (info.bmp_type) {
 #if HOSTED_BMP_ONLY == 0
-	case BMP_TYPE_LIBFTDI:
+	case BMP_TYPE_FTDI:
 		return libftdi_buffer_flush();
 #endif
 

@@ -122,7 +122,7 @@ int find_debuggers(bmda_cli_options_s *cl_opts, bmp_info_s *info)
 			DEBUG_WARN("*: No auto-detection possible! Give cable name as argument!\n");
 			exit(0);
 		}
-		info->bmp_type = BMP_TYPE_LIBFTDI;
+		info->bmp_type = BMP_TYPE_FTDI;
 	}
 	ssize_t n_devs = libusb_get_device_list(info->libusb_ctx, &devs);
 	if (n_devs < 0) {
@@ -249,7 +249,7 @@ rescan:
 			case PRODUCT_ID_STLINKV3_BL:
 			case PRODUCT_ID_STLINKV3:
 			case PRODUCT_ID_STLINKV3E:
-				type = BMP_TYPE_STLINKV2;
+				type = BMP_TYPE_STLINK_V2;
 				break;
 			case PRODUCT_ID_STLINKV1:
 				DEBUG_WARN("STLINKV1 not supported\n");
@@ -284,7 +284,7 @@ rescan:
 				}
 				if (found) {
 					active_cable = cable->name;
-					type = BMP_TYPE_LIBFTDI;
+					type = BMP_TYPE_FTDI;
 					break;
 				}
 			}
@@ -311,7 +311,7 @@ rescan:
 	}
 	if (found_debuggers == 0 && ftdi_unknown && !cl_opts->opt_cable)
 		DEBUG_WARN("Generic FTDI MPSSE VID/PID found. Please specify exact type with \"-c <cable>\" !\n");
-	if (found_debuggers == 1U && !cl_opts->opt_cable && info->bmp_type == BMP_TYPE_LIBFTDI)
+	if (found_debuggers == 1U && !cl_opts->opt_cable && info->bmp_type == BMP_TYPE_FTDI)
 		cl_opts->opt_cable = active_cable;
 	if (!found_debuggers && cl_opts->opt_list_only)
 		DEBUG_ERROR("No usable debugger found\n");
