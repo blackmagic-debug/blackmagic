@@ -37,7 +37,7 @@
 
 #include "timing.h"
 
-char *platform_ident(void);
+char *bmda_adaptor_ident(void);
 void platform_buffer_flush(void);
 
 #define PLATFORM_IDENT "(Black Magic Debug App) "

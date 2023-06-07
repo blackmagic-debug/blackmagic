@@ -290,7 +290,7 @@ void bmda_jtag_dp_init(adiv5_debug_port_s *dp)
 #endif
 }
 
-char *platform_ident(void)
+char *bmda_adaptor_ident(void)
 {
 	switch (info.bmp_type) {
 	case BMP_TYPE_NONE:
