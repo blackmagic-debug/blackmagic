@@ -48,7 +48,8 @@ bool jlink_jtag_init(void)
 	DEBUG_PROBE("-> jlink_jtag_init\n");
 	/* Try to switch the adaptor into JTAG mode */
 	uint8_t res[4];
-	if (jlink_simple_request(JLINK_CMD_TARGET_IF, JLINK_IF_GET_AVAILABLE, res, sizeof(res)) < 0 ||
+	if (!(jlink_interfaces & JLINK_IF_JTAG) ||
+		jlink_simple_request(JLINK_CMD_TARGET_IF, JLINK_IF_GET_AVAILABLE, res, sizeof(res)) < 0 ||
 		!(res[0] & JLINK_IF_JTAG) || jlink_simple_request(JLINK_CMD_TARGET_IF, SELECT_IF_JTAG, res, sizeof(res)) < 0) {
 		DEBUG_ERROR("JTAG not available\n");
 		return false;

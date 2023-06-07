@@ -53,6 +53,7 @@ static uint32_t jlink_caps;
 static uint32_t jlink_freq_khz;
 static uint16_t jlink_min_divisor;
 static uint16_t jlink_current_divisor;
+uint8_t jlink_interfaces;
 
 int jlink_simple_query(const uint8_t command, void *const rx_buffer, const size_t rx_len)
 {
@@ -208,6 +209,7 @@ static bool jlink_print_interfaces(void)
 		jlink_simple_request(JLINK_CMD_TARGET_IF, JLINK_IF_GET_AVAILABLE, available_ifs, sizeof(available_ifs)) < 0)
 		return false;
 	++active_if[0];
+	jlink_interfaces = available_ifs[0];
 
 	if (active_if[0] == JLINK_IF_SWD)
 		DEBUG_INFO("SWD active");

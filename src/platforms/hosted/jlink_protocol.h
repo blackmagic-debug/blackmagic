@@ -67,6 +67,8 @@ typedef struct jlink_io_transact {
 	uint8_t clock_cycles[2];
 } jlink_io_transact_s;
 
+extern uint8_t jlink_interfaces;
+
 int jlink_simple_query(uint8_t command, void *rx_buffer, size_t rx_len);
 int jlink_simple_request(uint8_t command, uint8_t operation, void *rx_buffer, size_t rx_len);
 bool jlink_transfer(uint16_t clock_cycles, const uint8_t *tms, const uint8_t *tdi, uint8_t *tdo);
