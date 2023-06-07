@@ -49,10 +49,10 @@
 #define USB_PID_SEGGER_1015 0x1015U
 #define USB_PID_SEGGER_1020 0x1020U
 
-static uint32_t emu_caps;
-static uint32_t emu_speed_khz;
-static uint16_t emu_min_divisor;
-static uint16_t emu_current_divisor;
+static uint32_t jlink_caps;
+static uint32_t jlink_freq_khz;
+static uint16_t jlink_min_divisor;
+static uint16_t jlink_current_divisor;
 
 int jlink_simple_query(const uint8_t command, void *const rx_buffer, const size_t rx_len)
 {
@@ -175,10 +175,10 @@ static bool jlink_query_caps(void)
 	uint8_t caps[4];
 	if (jlink_simple_query(JLINK_CMD_GET_CAPABILITIES, caps, sizeof(caps)) < 0)
 		return false;
-	emu_caps = read_le4(caps, 0);
-	DEBUG_INFO("Caps %" PRIx32 "\n", emu_caps);
+	jlink_caps = read_le4(caps, 0);
+	DEBUG_INFO("Caps %" PRIx32 "\n", jlink_caps);
 
-	if (emu_caps & JLINK_CAP_GET_HW_VERSION) {
+	if (jlink_caps & JLINK_CAP_GET_HW_VERSION) {
 		uint8_t version[4];
 		if (jlink_simple_query(JLINK_CMD_GET_ADAPTOR_VERSION, version, sizeof(version)) < 0)
 			return false;
@@ -192,10 +192,10 @@ static bool jlink_query_speed(void)
 	uint8_t data[6];
 	if (jlink_simple_query(JLINK_CMD_GET_ADAPTOR_FREQS, data, sizeof(data)) < 0)
 		return false;
-	emu_speed_khz = read_le4(data, 0) / 1000U;
-	emu_min_divisor = read_le2(data, 4);
-	DEBUG_INFO("Emulator speed %ukHz, minimum divisor %u%s\n", emu_speed_khz, emu_min_divisor,
-		(emu_caps & JLINK_CAP_GET_SPEEDS) ? "" : ", fixed");
+	jlink_freq_khz = read_le4(data, 0) / 1000U;
+	jlink_min_divisor = read_le2(data, 4);
+	DEBUG_INFO("Emulator speed %ukHz, minimum divisor %u%s\n", jlink_freq_khz, jlink_min_divisor,
+		(jlink_caps & JLINK_CAP_GET_SPEEDS) ? "" : ", fixed");
 	return true;
 }
 
@@ -342,20 +342,20 @@ bool jlink_set_frequency(const uint16_t frequency_khz)
 
 void jlink_max_frequency_set(const uint32_t freq)
 {
-	if (!(emu_caps & JLINK_CAP_GET_SPEEDS) && !info.is_jtag)
+	if (!(jlink_caps & JLINK_CAP_GET_SPEEDS) && !info.is_jtag)
 		return;
 	const uint16_t freq_khz = freq / 1000U;
-	const uint16_t divisor = (emu_speed_khz + freq_khz - 1U) / freq_khz;
-	if (divisor > emu_min_divisor)
-		emu_current_divisor = divisor;
+	const uint16_t divisor = (jlink_freq_khz + freq_khz - 1U) / freq_khz;
+	if (divisor > jlink_min_divisor)
+		jlink_current_divisor = divisor;
 	else
-		emu_current_divisor = emu_min_divisor;
-	jlink_set_frequency(emu_speed_khz / emu_current_divisor);
+		jlink_current_divisor = jlink_min_divisor;
+	jlink_set_frequency(jlink_freq_khz / jlink_current_divisor);
 }
 
 uint32_t jlink_max_frequency_get(void)
 {
-	if ((emu_caps & JLINK_CAP_GET_SPEEDS) && info.is_jtag)
-		return (emu_speed_khz * 1000U) / emu_current_divisor;
+	if ((jlink_caps & JLINK_CAP_GET_SPEEDS) && info.is_jtag)
+		return (jlink_freq_khz * 1000U) / jlink_current_divisor;
 	return FREQ_FIXED;
 }
