@@ -419,12 +419,12 @@ uint32_t scan_for_targets(const bmda_cli_options_s *const opt)
 	if (opt->opt_scanmode == BMP_SCAN_JTAG)
 		return bmda_jtag_scan();
 	if (opt->opt_scanmode == BMP_SCAN_SWD)
-		return platform_adiv5_swdp_scan(opt->opt_targetid);
+		return bmp_swd_scan(opt->opt_targetid);
 	uint32_t num_targets = bmda_jtag_scan();
 	if (num_targets)
 		return num_targets;
 	DEBUG_WARN("JTAG scan found no devices, trying SWD.\n");
-	num_targets = platform_adiv5_swdp_scan(opt->opt_targetid);
+	num_targets = bmp_swd_scan(opt->opt_targetid);
 	if (num_targets)
 		return num_targets;
 	DEBUG_ERROR("SW-DP scan failed!\n");
