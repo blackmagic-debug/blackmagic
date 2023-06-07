@@ -258,7 +258,7 @@ bool cmd_swdp_scan(target_s *t, int argc, const char **argv)
 	volatile exception_s e;
 	TRY_CATCH (e, EXCEPTION_ALL) {
 #if PC_HOSTED == 1
-		devs = platform_adiv5_swdp_scan(targetid);
+		devs = bmp_swd_scan(targetid);
 #else
 		devs = adiv5_swdp_scan(targetid);
 #endif
@@ -309,7 +309,7 @@ bool cmd_auto_scan(target_s *t, int argc, const char **argv)
 		gdb_out("JTAG scan found no devices, trying SWD!\n");
 
 #if PC_HOSTED == 1
-		devs = platform_adiv5_swdp_scan(0);
+		devs = bmp_swd_scan(0);
 #else
 		devs = adiv5_swdp_scan(0);
 #endif
