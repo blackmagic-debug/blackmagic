@@ -1894,8 +1894,9 @@ static int cortexm_hostio_request(target_s *t)
 			if (time0_sec > sec)
 				time0_sec = sec; /* set sys_clock time origin */
 			sec -= time0_sec;
-			uint64_t csec64 = (sec * UINT64_C(1000000) + usec) / UINT64_C(10000);
-			uint32_t csec = csec64 & 0x7fffffffU;
+			/* Cast down microseconds to avoid u64 division */
+			uint32_t csec32 = ((uint32_t)usec / 10000U) + (sec * 100U);
+			int32_t csec = csec32 & 0x7fffffffU;
 			ret = csec;
 		}
 		break;
