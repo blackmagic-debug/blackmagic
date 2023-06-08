@@ -69,8 +69,6 @@
 #include <fcntl.h>
 #endif
 
-static const char cortexm_driver_str[] = "ARM Cortex-M";
-
 static bool cortexm_vector_catch(target_s *t, int argc, const char **argv);
 #if PC_HOSTED == 0
 static bool cortexm_redirect_stdout(target_s *t, int argc, const char **argv);
@@ -592,7 +590,7 @@ bool cortexm_probe(adiv5_access_port_s *ap)
 	t->mem_read = cortexm_mem_read;
 	t->mem_write = cortexm_mem_write;
 
-	t->driver = cortexm_driver_str;
+	t->driver = "ARM Cortex-M";
 
 	cortexm_read_cpuid(t, ap);
 
@@ -622,7 +620,7 @@ bool cortexm_probe(adiv5_access_port_s *ap)
 	t->breakwatch_set = cortexm_breakwatch_set;
 	t->breakwatch_clear = cortexm_breakwatch_clear;
 
-	target_add_commands(t, cortexm_cmd_list, cortexm_driver_str);
+	target_add_commands(t, cortexm_cmd_list, t->driver);
 
 	if (is_cortexmf) {
 		t->target_options |= TOPT_FLAVOUR_V7MF;
