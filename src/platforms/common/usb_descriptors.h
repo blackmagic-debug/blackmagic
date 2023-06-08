@@ -32,7 +32,9 @@
 #include "version.h"
 #include "usb_types.h"
 
-#define BOARD_IDENT "Black Magic Probe " PLATFORM_IDENT FIRMWARE_VERSION
+#define BOARD_IDENT         "Black Magic Probe " PLATFORM_IDENT FIRMWARE_VERSION
+#define GDB_IF_NAME_STRING  "Black Magic GDB Server"
+#define UART_IF_NAME_STRING "Black Magic UART Port"
 
 /* Top-level device descriptor */
 static const usb_device_descriptor_s dev_desc = {
@@ -421,8 +423,8 @@ static const char *const usb_strings[] = {
 	"Black Magic Debug",
 	BOARD_IDENT,
 	serial_no,
-	"Black Magic GDB Server",
-	"Black Magic UART Port",
+	GDB_IF_NAME_STRING,
+	UART_IF_NAME_STRING,
 	"Black Magic DFU",
 #ifdef PLATFORM_HAS_TRACESWO
 	"Black Magic Trace Capture",
