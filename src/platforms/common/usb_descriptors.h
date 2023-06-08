@@ -443,10 +443,28 @@ static const char *const usb_strings[] = {
  */
 #define DESCRIPTOR_SETS                1U
 #define PROPERTY_DEVICE_INTERFACE_GUID u"DeviceInterfaceGUID"
+#define PROPERTY_FRIENDLY_NAME         u"FriendlyName"
 #define VALUE_DFU_INTERFACE_GUID       u"{76be5ca1-e304-4b32-be5f-d9369d3d201a}"
 #ifdef PLATFORM_HAS_TRACESWO
 #define VALUE_TRACE_INTERFACE_GUID u"{76be5ca1-e305-4b32-be5f-d9369d3d201a}"
 #endif
+
+static const struct {
+	microsoft_os_feature_registry_property_descriptor friendly_name;
+} microsoft_os_gdb_if_features = {
+	.friendly_name =
+		{
+			.header =
+				{
+					.wDescriptorType = MICROSOFT_OS_FEATURE_REG_PROPERTY,
+				},
+			.wPropertyDataType = REG_SZ,
+			.wPropertyNameLength = ARRAY_LENGTH(PROPERTY_FRIENDLY_NAME) * 2U,
+			.PropertyName = PROPERTY_FRIENDLY_NAME,
+			.wPropertyDataLength = ARRAY_LENGTH(GDB_IF_NAME_STRING) * 2U,
+			.PropertyData = u"" GDB_IF_NAME_STRING,
+		},
+};
 
 static const struct {
 	microsoft_os_feature_compatible_id_descriptor driver_binding;
@@ -510,6 +528,16 @@ static const microsoft_os_descriptor_function_subset_header microsoft_os_descrip
 	{
 		.wLength = MICROSOFT_OS_DESCRIPTOR_FUNCTION_SUBSET_HEADER_SIZE,
 		.wDescriptorType = MICROSOFT_OS_SUBSET_HEADER_FUNCTION,
+		.bFirstInterface = GDB_IF_NO,
+		.bReserved = 0,
+		.wTotalLength = 0,
+
+		.feature_descriptors = &microsoft_os_gdb_if_features,
+		.num_feature_descriptors = 1,
+	},
+	{
+		.wLength = MICROSOFT_OS_DESCRIPTOR_FUNCTION_SUBSET_HEADER_SIZE,
+		.wDescriptorType = MICROSOFT_OS_SUBSET_HEADER_FUNCTION,
 		.bFirstInterface = DFU_IF_NO,
 		.bReserved = 0,
 		.wTotalLength = 0,
@@ -558,7 +586,9 @@ static const microsoft_os_descriptor_set_header microsoft_os_descriptor_sets[DES
 static const microsoft_os_descriptor_set_information microsoft_os_descriptor_set_info = {
 	.dwWindowsVersion = MICROSOFT_WINDOWS_VERSION_WINBLUE,
 	.wMSOSDescriptorSetTotalLength = MICROSOFT_OS_DESCRIPTOR_SET_HEADER_SIZE +
-		MICROSOFT_OS_DESCRIPTOR_CONFIG_SUBSET_HEADER_SIZE +
+		MICROSOFT_OS_DESCRIPTOR_CONFIG_SUBSET_HEADER_SIZE + MICROSOFT_OS_DESCRIPTOR_FUNCTION_SUBSET_HEADER_SIZE +
+		MICROSOFT_OS_FEATURE_REGISTRY_PROPERTY_DESCRIPTOR_SIZE_BASE + (ARRAY_LENGTH(PROPERTY_FRIENDLY_NAME) * 2U) +
+		(ARRAY_LENGTH(GDB_IF_NAME_STRING) * 2U) +
 #ifdef PLATFORM_HAS_TRACESWO
 		MICROSOFT_OS_DESCRIPTOR_FUNCTION_SUBSET_HEADER_SIZE + MICROSOFT_OS_FEATURE_COMPATIBLE_ID_DESCRIPTOR_SIZE +
 		MICROSOFT_OS_FEATURE_REGISTRY_PROPERTY_DESCRIPTOR_SIZE_BASE +
