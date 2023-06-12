@@ -141,7 +141,9 @@ int command_process(target_s *t, char *cmd)
 
 	/* Tokenize cmd to find argv */
 	argc = 0;
-	for (const char *part = strtok(cmd, " \t"); part; part = strtok(NULL, " \t"))
+	/* Reentrant strtok needs a state pointer to the unprocessed part */
+	char *token_state = NULL;
+	for (const char *part = strtok_r(cmd, " \t", &token_state); part; part = strtok_r(NULL, " \t", &token_state))
 		argv[argc++] = part;
 
 	/* Look for match and call handler */
