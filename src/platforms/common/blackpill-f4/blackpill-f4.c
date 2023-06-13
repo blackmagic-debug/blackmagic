@@ -131,17 +131,17 @@ const char *platform_target_voltage(void)
 	return NULL;
 }
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Warray-bounds"
-
+/*
+ * Write the bootloader flag and reboot.
+ * The platform_init() will see this and reboot a second time into ST BootROM.
+ * If BMPBootloader is enabled, then it will see this and initialize its DFU.
+ */
 void platform_request_boot(void)
 {
 	magic[0] = BOOTMAGIC0;
 	magic[1] = BOOTMAGIC1;
 	scb_reset_system();
 }
-
-#pragma GCC diagnostic pop
 
 #ifdef PLATFORM_HAS_POWER_SWITCH
 bool platform_target_get_power(void)
