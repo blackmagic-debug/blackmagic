@@ -46,9 +46,8 @@ int main(void)
 	if (!gpio_get(GPIOA, GPIO0) || (magic[0] == BOOTMAGIC0 && magic[1] == BOOTMAGIC1)) {
 		magic[0] = 0;
 		magic[1] = 0;
-	} else {
+	} else
 		dfu_jump_app_if_valid();
-	}
 
 	rcc_clock_setup_pll(&rcc_hse_25mhz_3v3[PLATFORM_CLOCK_FREQ]);
 
