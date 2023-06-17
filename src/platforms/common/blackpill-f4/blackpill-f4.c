@@ -151,7 +151,7 @@ bool platform_target_get_power(void)
 
 void platform_target_set_power(const bool power)
 {
-	gpio_set_val(PWR_BR_PORT, PWR_BR_PIN, !power);
+	gpio_set_val(PWR_BR_PORT, PWR_BR_PIN, power);
 }
 
 /*
