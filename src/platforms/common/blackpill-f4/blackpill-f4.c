@@ -96,7 +96,7 @@ void platform_init(void)
 	gpio_mode_setup(LED_PORT_UART, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, LED_UART);
 
 #ifdef PLATFORM_HAS_POWER_SWITCH
-	gpio_set(PWR_BR_PORT, PWR_BR_PIN);
+	gpio_clear(PWR_BR_PORT, PWR_BR_PIN); // Set the pin of the given GPIO port to 0.
 	gpio_mode_setup(PWR_BR_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, PWR_BR_PIN);
 #endif
 
@@ -146,7 +146,7 @@ void platform_request_boot(void)
 #ifdef PLATFORM_HAS_POWER_SWITCH
 bool platform_target_get_power(void)
 {
-	return !gpio_get(PWR_BR_PORT, PWR_BR_PIN);
+	return gpio_get(PWR_BR_PORT, PWR_BR_PIN);
 }
 
 void platform_target_set_power(const bool power)
