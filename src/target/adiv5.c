@@ -713,7 +713,7 @@ adiv5_access_port_s *adiv5_new_ap(adiv5_debug_port_s *dp, uint8_t apsel)
 	tmpap.csw |= ADIV5_AP_CSW_DBGSWENABLE;
 
 	if (tmpap.csw & ADIV5_AP_CSW_TRINPROG) {
-		DEBUG_ERROR("AP %d: Transaction in progress. AP is not usable!\n", apsel);
+		DEBUG_ERROR("AP %3u: Transaction in progress. AP is not usable!\n", apsel);
 		return NULL;
 	}
 
