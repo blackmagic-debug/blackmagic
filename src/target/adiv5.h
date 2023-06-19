@@ -132,7 +132,8 @@
 
 /* AP Control and Status Word (CSW) */
 #define ADIV5_AP_CSW_DBGSWENABLE (1U << 31U)
-/* Bits 30:24 - Prot, Implementation defined, for Cortex-M3: */
+/* Bits 30:24 - Prot, Implementation defined, for Cortex-M: */
+#define ADIV5_AP_CSW_HNOSEC           (1U << 30U)
 #define ADIV5_AP_CSW_MASTERTYPE_DEBUG (1U << 29U)
 #define ADIV5_AP_CSW_HPROT1           (1U << 25U)
 #define ADIV5_AP_CSW_SPIDEN           (1U << 23U)
