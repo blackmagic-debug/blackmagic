@@ -679,7 +679,7 @@ adiv5_access_port_s *adiv5_new_ap(adiv5_debug_port_s *dp, uint8_t apsel)
 	if (!tmpap.idr) /* IDR Invalid */
 		return NULL;
 	tmpap.csw = adiv5_ap_read(&tmpap, ADIV5_AP_CSW);
-	tmpap.csw &= ~(ADIV5_AP_CSW_SIZE_MASK | ADIV5_AP_CSW_ADDRINC_MASK);
+	tmpap.csw &= ~(ADIV5_AP_CSW_SIZE_MASK | ADIV5_AP_CSW_ADDRINC_MASK | ADIV5_AP_CSW_HNOSEC);
 	tmpap.csw |= ADIV5_AP_CSW_DBGSWENABLE;
 
 	if (tmpap.csw & ADIV5_AP_CSW_TRINPROG) {
