@@ -700,7 +700,8 @@ adiv5_access_port_s *adiv5_new_ap(adiv5_debug_port_s *dp, uint8_t apsel)
 	uint32_t cfg = adiv5_ap_read(ap, ADIV5_AP_CFG);
 	DEBUG_INFO("AP %3d: IDR=%08" PRIx32 " CFG=%08" PRIx32 " BASE=%08" PRIx32 " CSW=%08" PRIx32, apsel, ap->idr, cfg,
 		ap->base, ap->csw);
-	DEBUG_INFO(" (AHB-AP var%" PRIx32 " rev%" PRIx32 ")\n", (ap->idr >> 4U) & 0xfU, ap->idr >> 28U);
+	DEBUG_INFO(
+		" (AHB-AP var%" PRIx32 " rev%" PRIx32 ")\n", ADIV5_AP_IDR_VARIANT(ap->idr), ADIV5_AP_IDR_REVISION(ap->idr));
 #endif
 	adiv5_ap_ref(ap);
 	return ap;
