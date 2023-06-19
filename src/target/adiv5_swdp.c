@@ -187,7 +187,7 @@ uint32_t adiv5_swdp_scan(uint32_t targetid)
 
 			volatile uint32_t target_id = 0;
 			TRY_CATCH (e, EXCEPTION_ALL) {
-				target_id = adiv5_dp_read(initial_dp, ADIV5_DP_DPIDR);
+				target_id = adiv5_dp_low_access(initial_dp, ADIV5_LOW_READ, ADIV5_DP_DPIDR, 0U);
 			}
 			if (e.type || initial_dp->fault || !target_id)
 				continue;
