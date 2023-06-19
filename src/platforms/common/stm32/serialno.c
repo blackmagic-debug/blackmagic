@@ -59,7 +59,7 @@ void read_serial_number(void)
 			serial_no[idx] += 7; /* 'A' - '9' = 8, less 1 gives 7. */
 	}
 #else
-#WARNING "Unhandled DFU_SERIAL_LENGTH"
+#warning "Unhandled DFU_SERIAL_LENGTH"
 #endif
 	serial_no[DFU_SERIAL_LENGTH - 1] = '\0';
 }
