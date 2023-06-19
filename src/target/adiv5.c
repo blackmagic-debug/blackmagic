@@ -285,6 +285,27 @@ static const struct {
 	{0xfff, 0x00, 0, aa_end, cidc_unknown, ARM_COMPONENT_STR("end", "end")},
 };
 
+#ifdef ENABLE_DEBUG
+const char *adiv5_ap_type[16] = {
+	"JTAG-AP",
+	"COM-AP",
+	"AHB3-AP",
+	"APB2/3-AP",
+	"AXI3/4-AP",
+	"AHB5-AP",
+	"APB4/5-AP",
+	"AXI5-AP",
+	"AHB5-AP",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+};
+#endif
+
 /* Used to probe for a protected SAMX5X device */
 #define SAMX5X_DSU_CTRLSTAT 0x41002100U
 #define SAMX5X_STATUSB_PROT (1U << 16U)
