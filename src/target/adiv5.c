@@ -593,8 +593,8 @@ static void adiv5_component_probe(
 			DEBUG_ERROR("Fault reading ROM table entry\n");
 		}
 
-		DEBUG_INFO("ROM: Table BASE=0x%" PRIx32 " SYSMEM=0x%08" PRIx32 ", Manufacturer %3x Partno %3x\n", addr, memtype,
-			designer_code, part_number);
+		DEBUG_INFO("ROM: Table BASE=0x%" PRIx32 " SYSMEM=0x%08" PRIx32 ", Manufacturer %03x Partno %03x\n", addr,
+			memtype, designer_code, part_number);
 #endif
 		for (uint32_t i = 0; i < 960U; i++) {
 			adiv5_dp_error(ap->dp);
@@ -645,7 +645,7 @@ static void adiv5_component_probe(
 				arm_component_lut[i].arch_id != arch_id)
 				continue;
 
-			DEBUG_INFO("%s%" PRIu32 " 0x%" PRIx32 ": %s - %s %s (PIDR = 0x%08" PRIx32 "%08" PRIx32 "  DEVTYPE = 0x%02x "
+			DEBUG_INFO("%s%" PRIu32 " 0x%" PRIx32 ": %s - %s %s (PIDR = 0x%08" PRIx32 "%08" PRIx32 " DEVTYPE = 0x%02x "
 					   "ARCHID = 0x%04x)\n",
 				indent + 1, num_entry, addr, cidc_debug_strings[cid_class], arm_component_lut[i].type,
 				arm_component_lut[i].full, (uint32_t)(pidr >> 32U), (uint32_t)pidr, dev_type, arch_id);
