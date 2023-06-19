@@ -286,9 +286,7 @@ static const struct {
 };
 
 #ifdef ENABLE_DEBUG
-const char *adiv5_ap_type[16] = {
-	"JTAG-AP",
-	"COM-AP",
+const char *adiv5_ap_type[] = {
 	"AHB3-AP",
 	"APB2/3-AP",
 	"AXI3/4-AP",
@@ -296,14 +294,24 @@ const char *adiv5_ap_type[16] = {
 	"APB4/5-AP",
 	"AXI5-AP",
 	"AHB5-AP",
-	"Reserved",
-	"Reserved",
-	"Reserved",
-	"Reserved",
-	"Reserved",
-	"Reserved",
-	"Reserved",
 };
+
+const char *adiv5_ap_map_type(const uint8_t ap_type, const uint8_t ap_class)
+{
+	/* type 0 APs are determined by the class code */
+	if (ap_type == 0U) {
+		if (ap_class == 0U)
+			return "JTAG-AP";
+		if (ap_class == 1U)
+			return "COM-AP";
+		return "Reserved";
+	}
+	/* Anything type code less than 9U can be straight looked up in the table above */
+	if (ap_type < 9U)
+		return adiv5_ap_type[ap_type - 1U];
+	/* type 9U+ is reserved */
+	return "Reserved";
+}
 #endif
 
 /* Used to probe for a protected SAMX5X device */
@@ -700,6 +708,7 @@ adiv5_access_port_s *adiv5_new_ap(adiv5_debug_port_s *dp, uint8_t apsel)
 	if (!tmpap.idr) /* IDR Invalid */
 		return NULL;
 	tmpap.csw = adiv5_ap_read(&tmpap, ADIV5_AP_CSW);
+	// XXX: We might be able to use the type field in ap->idr to determine if the AP supports TrustZone
 	tmpap.csw &= ~(ADIV5_AP_CSW_SIZE_MASK | ADIV5_AP_CSW_ADDRINC_MASK | ADIV5_AP_CSW_HNOSEC);
 	tmpap.csw |= ADIV5_AP_CSW_DBGSWENABLE;
 
@@ -718,11 +727,20 @@ adiv5_access_port_s *adiv5_new_ap(adiv5_debug_port_s *dp, uint8_t apsel)
 	memcpy(ap, &tmpap, sizeof(*ap));
 
 #if defined(ENABLE_DEBUG)
+	/* Grab the config register to get a complete set */
 	uint32_t cfg = adiv5_ap_read(ap, ADIV5_AP_CFG);
-	DEBUG_INFO("AP %3d: IDR=%08" PRIx32 " CFG=%08" PRIx32 " BASE=%08" PRIx32 " CSW=%08" PRIx32, apsel, ap->idr, cfg,
+	DEBUG_INFO("AP %3u: IDR=%08" PRIx32 " CFG=%08" PRIx32 " BASE=%08" PRIx32 " CSW=%08" PRIx32, apsel, ap->idr, cfg,
 		ap->base, ap->csw);
-	DEBUG_INFO(
-		" (AHB-AP var%" PRIx32 " rev%" PRIx32 ")\n", ADIV5_AP_IDR_VARIANT(ap->idr), ADIV5_AP_IDR_REVISION(ap->idr));
+	/* Decode the AP designer code */
+	uint16_t designer = ADIV5_AP_IDR_DESIGNER(ap->idr);
+	designer = (designer & ADIV5_DP_DESIGNER_JEP106_CONT_MASK) << 1U | (designer & ADIV5_DP_DESIGNER_JEP106_CODE_MASK);
+	/* If this is an ARM-designed AP, map the AP type. Otherwise display "UNKNOWN" */
+	const char *const ap_type = designer == JEP106_MANUFACTURER_ARM ?
+		adiv5_ap_map_type(ADIV5_AP_IDR_TYPE(ap->idr), ADIV5_AP_IDR_CLASS(ap->idr)) :
+		"UNKNOWN";
+	/* Display the AP's type, variant and revision information */
+	DEBUG_INFO(" (%s var%" PRIx32 " rev%" PRIx32 ")\n", ap_type, ADIV5_AP_IDR_VARIANT(ap->idr),
+		ADIV5_AP_IDR_REVISION(ap->idr));
 #endif
 	adiv5_ap_ref(ap);
 	return ap;
