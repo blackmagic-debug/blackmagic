@@ -801,14 +801,16 @@ static void stlink_reg_write(adiv5_access_port_s *const ap, const uint8_t reg_nu
 
 static void stlink_ap_write(adiv5_access_port_s *ap, uint16_t addr, uint32_t value)
 {
+	DEBUG_PROBE("%s: addr %04x <- %08" PRIx32 "\n", __func__, addr, value);
 	stlink_write_dp_register(ap->apsel, addr, value);
 }
 
 static uint32_t stlink_ap_read(adiv5_access_port_s *ap, uint16_t addr)
 {
-	uint32_t ret = 0;
-	stlink_read_dp_register(ap->dp, ap->apsel, addr, &ret);
-	return ret;
+	uint32_t value = 0;
+	stlink_read_dp_register(ap->dp, ap->apsel, addr, &value);
+	DEBUG_PROBE("%s: addr %04x -> %08" PRIx32 "\n", __func__, addr, value);
+	return value;
 }
 
 void stlink_adiv5_dp_init(adiv5_debug_port_s *dp)
