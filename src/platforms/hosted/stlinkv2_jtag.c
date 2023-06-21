@@ -25,7 +25,7 @@
 
 #define STLINK_JTAG_MAX_DEVS 2U
 
-static int stlink_enter_debug_jtag(void);
+static bool stlink_enter_debug_jtag(void);
 static size_t stlink_read_idcodes(uint32_t *idcodes);
 
 bool stlink_jtag_scan(void)
@@ -35,7 +35,7 @@ bool stlink_jtag_scan(void)
 
 	jtag_dev_count = 0;
 	memset(jtag_devs, 0, sizeof(jtag_devs));
-	if (stlink_enter_debug_jtag())
+	if (!stlink_enter_debug_jtag())
 		return false;
 	jtag_dev_count = stlink_read_idcodes(idcodes);
 	/* Check for known devices and handle accordingly */
@@ -54,20 +54,20 @@ bool stlink_jtag_scan(void)
 	return jtag_dev_count > 0;
 }
 
-static int stlink_enter_debug_jtag(void)
+static bool stlink_enter_debug_jtag(void)
 {
 	stlink_leave_state();
 	uint8_t data[2];
 	stlink_simple_request(
 		STLINK_DEBUG_COMMAND, STLINK_DEBUG_APIV2_ENTER, STLINK_DEBUG_ENTER_JTAG_NO_RESET, data, sizeof(data));
-	return stlink_usb_error_check(data, true);
+	return stlink_usb_error_check(data, true) == STLINK_ERROR_OK;
 }
 
 static size_t stlink_read_idcodes(uint32_t *idcodes)
 {
 	uint8_t data[12];
 	stlink_simple_query(STLINK_DEBUG_COMMAND, STLINK_DEBUG_APIV2_READ_IDCODES, data, sizeof(data));
-	if (stlink_usb_error_check(data, true))
+	if (stlink_usb_error_check(data, true) != STLINK_ERROR_OK)
 		return 0;
 	idcodes[0] = data[4] | (data[5] << 8U) | (data[6] << 16U) | (data[7] << 24U);
 	idcodes[1] = data[8] | (data[9] << 8U) | (data[10] << 16U) | (data[11] << 24U);
