@@ -576,21 +576,43 @@ void platform_target_clk_output_enable(const bool enable)
 	}
 }
 
-static void decode_dp_access(const uint8_t addr, const uint8_t rnw)
+static void decode_dp_access(const uint8_t addr, const uint8_t rnw, const uint32_t value)
 {
+	/* How a DP address should be decoded depends on the bank that's presently selected, so make a note of that */
+	static uint8_t dp_bank = 0;
 	const char *reg = NULL;
+
+	/* Try to decode the requested address */
 	switch (addr) {
 	case 0x00U:
 		reg = rnw ? "DPIDR" : "ABORT";
 		break;
 	case 0x04U:
-		reg = "CTRL/STAT";
+		switch (dp_bank) {
+		case 0:
+			reg = rnw ? "STATUS" : "CTRL";
+			break;
+		case 1:
+			reg = "DLCR";
+			break;
+		case 2:
+			reg = "TARGETID";
+			break;
+		case 3:
+			reg = "DLPIDR";
+			break;
+		case 4:
+			reg = "EVENTSTAT";
+			break;
+		}
 		break;
 	case 0x08U:
+		if (!rnw)
+			dp_bank = value & 15U;
 		reg = rnw ? "RESEND" : "SELECT";
 		break;
 	case 0x0cU:
-		reg = "RDBUFF";
+		reg = rnw ? "RDBUFF" : "TARGETSEL";
 		break;
 	}
 
@@ -644,7 +666,7 @@ static void decode_ap_access(const uint8_t ap, const uint8_t addr)
 		DEBUG_PROTO("Reserved(%02x): ", addr);
 }
 
-static void decode_access(const uint16_t addr, const uint8_t rnw)
+static void decode_access(const uint16_t addr, const uint8_t rnw, const uint32_t value)
 {
 	if (rnw)
 		DEBUG_PROTO("Read ");
@@ -652,14 +674,14 @@ static void decode_access(const uint16_t addr, const uint8_t rnw)
 		DEBUG_PROTO("Write ");
 
 	if (addr < 0x100U)
-		decode_dp_access(addr & 0xffU, rnw);
+		decode_dp_access(addr & 0xffU, rnw, value);
 	else
 		decode_ap_access(addr >> 8U, addr & 0xffU);
 }
 
 void adiv5_dp_write(adiv5_debug_port_s *dp, uint16_t addr, uint32_t value)
 {
-	decode_access(addr, ADIV5_LOW_WRITE);
+	decode_access(addr, ADIV5_LOW_WRITE, value);
 	DEBUG_PROTO("0x%08" PRIx32 "\n", value);
 	dp->low_access(dp, ADIV5_LOW_WRITE, addr, value);
 }
@@ -667,7 +689,7 @@ void adiv5_dp_write(adiv5_debug_port_s *dp, uint16_t addr, uint32_t value)
 uint32_t adiv5_dp_read(adiv5_debug_port_s *dp, uint16_t addr)
 {
 	uint32_t ret = dp->dp_read(dp, addr);
-	decode_access(addr, ADIV5_LOW_READ);
+	decode_access(addr, ADIV5_LOW_READ, 0U);
 	DEBUG_PROTO("0x%08" PRIx32 "\n", ret);
 	return ret;
 }
@@ -682,7 +704,7 @@ uint32_t adiv5_dp_error(adiv5_debug_port_s *dp)
 uint32_t adiv5_dp_low_access(adiv5_debug_port_s *dp, uint8_t rnw, uint16_t addr, uint32_t value)
 {
 	uint32_t ret = dp->low_access(dp, rnw, addr, value);
-	decode_access(addr, rnw);
+	decode_access(addr, rnw, value);
 	DEBUG_PROTO("0x%08" PRIx32 "\n", rnw ? ret : value);
 	return ret;
 }
@@ -690,14 +712,14 @@ uint32_t adiv5_dp_low_access(adiv5_debug_port_s *dp, uint8_t rnw, uint16_t addr,
 uint32_t adiv5_ap_read(adiv5_access_port_s *ap, uint16_t addr)
 {
 	uint32_t ret = ap->dp->ap_read(ap, addr);
-	decode_access(addr, ADIV5_LOW_READ);
+	decode_access(addr, ADIV5_LOW_READ, 0U);
 	DEBUG_PROTO("0x%08" PRIx32 "\n", ret);
 	return ret;
 }
 
 void adiv5_ap_write(adiv5_access_port_s *ap, uint16_t addr, uint32_t value)
 {
-	decode_access(addr, ADIV5_LOW_WRITE);
+	decode_access(addr, ADIV5_LOW_WRITE, value);
 	DEBUG_PROTO("0x%08" PRIx32 "\n", value);
 	ap->dp->ap_write(ap, addr, value);
 }
