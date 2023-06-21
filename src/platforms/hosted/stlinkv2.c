@@ -504,8 +504,9 @@ int stlink_hwversion(void)
 	return stlink.ver_stlink;
 }
 
-uint32_t stlink_dp_error(adiv5_debug_port_s *dp, const bool protocol_recovery)
+uint32_t stlink_adiv5_clear_error(adiv5_debug_port_s *const dp, const bool protocol_recovery)
 {
+	DEBUG_PROBE("%s (protocol recovery: %s)\n", __func__, protocol_recovery ? "true" : "false");
 	if ((dp->version >= 2 && dp->fault) || protocol_recovery) {
 		/*
 		 * Note that on DPv2+ devices, during a protocol error condition
