@@ -108,6 +108,11 @@ int stlink_usb_error_check(uint8_t *const data, const bool verbose)
 	switch (data[0]) {
 	case STLINK_DEBUG_ERR_OK:
 		return STLINK_ERROR_OK;
+	case STLINK_ERROR_AP_WAIT:
+	case STLINK_ERROR_DP_WAIT:
+		if (verbose)
+			DEBUG_WARN("%s reported wait\n", data[0] == STLINK_ERROR_AP_WAIT ? "AP" : "DP");
+		return STLINK_ERROR_WAIT;
 	case STLINK_DEBUG_ERR_FAULT:
 	case STLINK_ERROR_AP_FAULT:
 	case STLINK_ERROR_DP_FAULT:
@@ -137,11 +142,6 @@ int stlink_usb_error_check(uint8_t *const data, const bool verbose)
 	case STLINK_JTAG_DBG_POWER_ERROR:
 		if (verbose)
 			DEBUG_ERROR("Failure powering DBG\n");
-		return STLINK_ERROR_WAIT;
-	case STLINK_ERROR_AP_WAIT:
-	case STLINK_ERROR_DP_WAIT:
-		if (verbose)
-			DEBUG_WARN("%s reported wait\n", data[0] == STLINK_ERROR_AP_WAIT ? "AP" : "DP");
 		return STLINK_ERROR_WAIT;
 	case STLINK_JTAG_WRITE_ERROR:
 		if (verbose)
