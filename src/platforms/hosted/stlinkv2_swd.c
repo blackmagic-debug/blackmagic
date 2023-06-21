@@ -47,7 +47,7 @@ bool stlink_swd_scan(void)
 	}
 
 	dp->dp_read = firmware_swdp_read;
-	dp->error = stlink_dp_error;
+	dp->error = stlink_adiv5_clear_error;
 	dp->low_access = stlink_raw_access;
 	dp->abort = stlink_dp_abort;
 

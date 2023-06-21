@@ -76,7 +76,7 @@ static size_t stlink_read_idcodes(uint32_t *idcodes)
 
 void stlink_jtag_dp_init(adiv5_debug_port_s *dp)
 {
-	dp->error = stlink_dp_error;
+	dp->error = stlink_adiv5_clear_error;
 	dp->low_access = stlink_raw_access;
 	dp->abort = stlink_dp_abort;
 }
