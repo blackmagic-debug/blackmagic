@@ -71,9 +71,6 @@ typedef struct stlink {
 	bool ap_error;
 } stlink_s;
 
-#define STLINK_ERROR_DP_FAULT (-2)
-#define STLINK_ERROR_AP_FAULT (-3)
-
 #define STLINK_V2_CPU_CLOCK_FREQ      (72U * 1000U * 1000U)
 #define STLINK_V2_JTAG_MUL_FACTOR     2U
 #define STLINK_V2_MAX_JTAG_CLOCK_FREQ (9U * 1000U * 1000U)
