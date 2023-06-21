@@ -585,11 +585,12 @@ static int stlink_write_dp_register(const uint16_t apsel, const uint16_t address
 	return stlink_usb_error_check(data, true);
 }
 
-uint32_t stlink_raw_access(adiv5_debug_port_s *dp, uint8_t rnw, uint16_t addr, uint32_t value)
+uint32_t stlink_raw_access(adiv5_debug_port_s *dp, uint8_t rnw, uint16_t addr, uint32_t request_value)
 {
-	uint32_t response = 0;
-	const int result = rnw ? stlink_read_dp_register(addr < 0x100U ? STLINK_DEBUG_PORT : 0U, addr, &response) :
-							 stlink_write_dp_register(addr < 0x100U ? STLINK_DEBUG_PORT : 0U, addr, value);
+	DEBUG_PROBE("%s: Attempting access to addr %04x\n", __func__, addr);
+	uint32_t result_value = 0;
+	const int result = rnw ? stlink_read_dp_register(addr < 0x100U ? STLINK_DEBUG_PORT : 0U, addr, &result_value) :
+							 stlink_write_dp_register(addr < 0x100U ? STLINK_DEBUG_PORT : 0U, addr, request_value);
 
 	if (result == STLINK_ERROR_WAIT) {
 		DEBUG_ERROR("SWD access resulted in wait, aborting\n");
@@ -599,13 +600,23 @@ uint32_t stlink_raw_access(adiv5_debug_port_s *dp, uint8_t rnw, uint16_t addr, u
 
 	if (result == STLINK_ERROR_DP_FAULT || result == STLINK_ERROR_AP_FAULT) {
 		DEBUG_ERROR("SWD access resulted in fault\n");
+		/* On fault, abort the request */
+		stlink_write_dp_register(STLINK_DEBUG_PORT, ADIV5_DP_ABORT,
+			ADIV5_DP_ABORT_ORUNERRCLR | ADIV5_DP_ABORT_WDERRCLR | ADIV5_DP_ABORT_STKERRCLR | ADIV5_DP_ABORT_STKCMPCLR);
 		dp->fault = SWDP_ACK_FAULT;
 		return 0;
 	}
 
-	if (result == STLINK_ERROR_FAIL)
+	if (result == STLINK_ERROR_FAIL) {
+		DEBUG_ERROR("SWD access has invalid ack %x\n", result);
 		raise_exception(EXCEPTION_ERROR, "SWD invalid ACK");
-	return response;
+	}
+
+	if (rnw)
+		DEBUG_PROBE("%s: addr %04x -> %08" PRIx32 "\n", __func__, addr, result_value);
+	else
+		DEBUG_PROBE("%s: addr %04x <- %08" PRIx32 "\n", __func__, addr, request_value);
+	return result_value;
 }
 
 static bool stlink_ap_setup(const uint8_t ap)
