@@ -37,7 +37,7 @@ bool stlink_swd_scan(void)
 	};
 	uint8_t data[2];
 	stlink_send_recv_retry(&command, sizeof(command), data, sizeof(data));
-	if (stlink_usb_error_check(data, true))
+	if (stlink_usb_error_check(data, true) != STLINK_ERROR_OK)
 		return false;
 
 	adiv5_debug_port_s *dp = calloc(1, sizeof(*dp));
