@@ -36,13 +36,13 @@
 #define STLINK_JTAG_COMMAND_ERROR      0x08U
 #define STLINK_JTAG_GET_IDCODE_ERROR   0x09U
 #define STLINK_JTAG_DBG_POWER_ERROR    0x0bU
-#define STLINK_SWD_AP_WAIT             0x10U
+#define STLINK_ERROR_AP_WAIT           0x10U
 #define STLINK_SWD_AP_FAULT            0x11U
 #define STLINK_SWD_AP_ERROR            0x12U
 #define STLINK_SWD_AP_PARITY_ERROR     0x13U
 #define STLINK_JTAG_WRITE_ERROR        0x0cU
 #define STLINK_JTAG_WRITE_VERIF_ERROR  0x0dU
-#define STLINK_SWD_DP_WAIT             0x14U
+#define STLINK_ERROR_DP_WAIT           0x14U
 #define STLINK_SWD_DP_FAULT            0x15U
 #define STLINK_SWD_DP_ERROR            0x16U
 #define STLINK_SWD_DP_PARITY_ERROR     0x17U
