@@ -241,8 +241,6 @@ struct adiv5_debug_port {
 	void (*abort)(adiv5_debug_port_s *dp, uint32_t abort);
 
 #if PC_HOSTED == 1
-	bool (*ap_setup)(uint8_t i);
-	void (*ap_cleanup)(uint8_t i);
 	void (*ap_regs_read)(adiv5_access_port_s *ap, void *data);
 	uint32_t (*ap_reg_read)(adiv5_access_port_s *ap, uint8_t reg_num);
 	void (*ap_reg_write)(adiv5_access_port_s *ap, uint8_t num, uint32_t value);

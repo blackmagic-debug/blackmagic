@@ -69,6 +69,7 @@ typedef struct stlink {
 	uint8_t ver_bridge;
 	uint16_t block_size;
 	bool ap_error;
+	uint16_t apsel;
 } stlink_s;
 
 #define STLINK_V2_CPU_CLOCK_FREQ      (72U * 1000U * 1000U)
@@ -79,12 +80,16 @@ typedef struct stlink {
 #define STLINK_V2_MAX_SWD_CLOCK_FREQ  (3600U * 1000U)
 #define STLINK_V2_MIN_SWD_CLOCK_FREQ  (4505U)
 
+#define STLINK_INVALID_AP 0xffffU
+
 static stlink_s stlink;
 
 static uint32_t stlink_v2_divisor;
 static unsigned int stlink_v3_freq[2];
 
 static int stlink_usb_get_rw_status(bool verbose);
+static bool stlink_ap_setup(uint8_t ap);
+static bool stlink_ap_cleanup(void);
 
 static stlink_mem_command_s stlink_memory_access(
 	const uint8_t operation, const uint32_t address, const uint16_t length, const uint8_t apsel)
@@ -466,8 +471,16 @@ bool stlink_init(void)
 		DEBUG_WARN("ST-Link board was in DFU mode. Restart\n");
 		return false;
 	}
+	stlink.apsel = STLINK_INVALID_AP;
 	stlink_reset_adaptor();
 	return true;
+}
+
+void stlink_deinit(void)
+{
+	if (stlink.apsel != STLINK_INVALID_AP)
+		stlink_ap_cleanup();
+	stlink_simple_query(STLINK_DEBUG_COMMAND, STLINK_DEBUG_EXIT, NULL, 0);
 }
 
 void stlink_nrst_set_val(bool assert)
@@ -530,9 +543,25 @@ void stlink_dp_abort(adiv5_debug_port_s *dp, uint32_t abort)
 	adiv5_dp_write(dp, ADIV5_DP_ABORT, abort);
 }
 
+static bool stlink_ensure_ap(const uint16_t apsel)
+{
+	if (apsel != STLINK_DEBUG_PORT && apsel != stlink.apsel) {
+		if (stlink.apsel != STLINK_INVALID_AP) {
+			if (!stlink_ap_cleanup())
+				return false;
+		}
+		if (!stlink_ap_setup(apsel))
+			return false;
+		stlink.apsel = apsel;
+	}
+	return true;
+}
+
 static int stlink_read_dp_register(
 	adiv5_debug_port_s *const dp, const uint16_t apsel, const uint16_t address, uint32_t *const reg)
 {
+	if (!stlink_ensure_ap(apsel))
+		return STLINK_ERROR_GENERAL;
 	stlink_adiv5_reg_read_s request = {
 		.command = STLINK_DEBUG_COMMAND,
 		.operation = STLINK_DEBUG_APIV2_READ_DAP_REG,
@@ -557,6 +586,8 @@ static int stlink_read_dp_register(
 
 static int stlink_write_dp_register(const uint16_t apsel, const uint16_t address, const uint32_t value)
 {
+	if (!stlink_ensure_ap(apsel))
+		return STLINK_ERROR_GENERAL;
 	if (apsel == STLINK_DEBUG_PORT && address == 8U) {
 		stlink.dap_select = value;
 		DEBUG_PROBE("Caching SELECT 0x%02" PRIx32 "\n", value);
@@ -611,28 +642,22 @@ uint32_t stlink_raw_access(adiv5_debug_port_s *dp, uint8_t rnw, uint16_t addr, u
 
 static bool stlink_ap_setup(const uint8_t ap)
 {
-	if (ap > 7)
-		return false;
-	const stlink_simple_request_s command = {
-		STLINK_DEBUG_COMMAND,
-		STLINK_DEBUG_APIV2_INIT_AP,
-		ap,
-	};
 	uint8_t data[2];
 	DEBUG_PROBE("%s: AP %u\n", __func__, ap);
-	stlink_send_recv_retry(&command, sizeof(command), data, sizeof(data));
-	int res = stlink_usb_error_check(data, true);
+	stlink_simple_request(STLINK_DEBUG_COMMAND, STLINK_DEBUG_APIV2_INIT_AP, ap, data, sizeof(data));
+	const int res = stlink_usb_error_check(data, true);
 	if (res && stlink.ver_hw == 30)
 		DEBUG_WARN("ST-Link v3 only connects to STM8/32!\n");
-	return !res;
+	return res == STLINK_ERROR_OK;
 }
 
-static void stlink_ap_cleanup(const uint8_t ap)
+static bool stlink_ap_cleanup(void)
 {
 	uint8_t data[2];
-	stlink_simple_request(STLINK_DEBUG_COMMAND, STLINK_DEBUG_APIV2_CLOSE_AP_DBG, ap, data, sizeof(data));
-	DEBUG_PROBE("%s: AP %u\n", __func__, ap);
-	stlink_usb_error_check(data, true);
+	stlink_simple_request(STLINK_DEBUG_COMMAND, STLINK_DEBUG_APIV2_CLOSE_AP_DBG, stlink.apsel, data, sizeof(data));
+	DEBUG_PROBE("%s: AP %u\n", __func__, stlink.apsel);
+	stlink.apsel = STLINK_INVALID_AP;
+	return stlink_usb_error_check(data, true) == STLINK_ERROR_OK;
 }
 
 static int stlink_usb_get_rw_status(bool verbose)
@@ -650,6 +675,8 @@ static void stlink_mem_read(adiv5_access_port_s *ap, void *dest, uint32_t src, s
 		DEBUG_WARN("Too large!\n");
 		return;
 	}
+	if (!stlink_ensure_ap(ap->apsel))
+		raise_exception(EXCEPTION_ERROR, "ST-Link AP selection error");
 
 	uint8_t type;
 	if ((src & 1U) || (len & 1U))
@@ -692,6 +719,9 @@ static void stlink_mem_write(
 {
 	if (len == 0)
 		return;
+	if (!stlink_ensure_ap(ap->apsel))
+		raise_exception(EXCEPTION_ERROR, "ST-Link AP selection error");
+
 	const uint8_t *const data = (const uint8_t *)src;
 	/* Chunk the write up into stlink.block_size blocks */
 	for (size_t offset = 0; offset < len; offset += stlink.block_size) {
@@ -775,8 +805,6 @@ void stlink_adiv5_dp_init(adiv5_debug_port_s *dp)
 	dp->ap_regs_read = stlink_regs_read;
 	dp->ap_reg_read = stlink_reg_read;
 	dp->ap_reg_write = stlink_reg_write;
-	dp->ap_setup = stlink_ap_setup;
-	dp->ap_cleanup = stlink_ap_cleanup;
 	dp->ap_write = stlink_ap_write;
 	dp->ap_read = stlink_ap_read;
 	dp->mem_read = stlink_mem_read;

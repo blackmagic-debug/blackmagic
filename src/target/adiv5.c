@@ -702,11 +702,6 @@ static void adiv5_component_probe(
 
 adiv5_access_port_s *adiv5_new_ap(adiv5_debug_port_s *dp, uint8_t apsel)
 {
-#if PC_HOSTED == 1
-	if (dp->ap_setup && !dp->ap_setup(apsel))
-		return NULL;
-#endif
-
 	adiv5_access_port_s tmpap = {0};
 	/* Assume valid and try to read IDR */
 	tmpap.dp = dp;
@@ -954,11 +949,8 @@ void adiv5_dp_init(adiv5_debug_port_s *const dp)
 		if (ap == NULL) {
 			/* Clear sticky errors in case scanning for this AP triggered any */
 			adiv5_dp_clear_sticky_errors(dp);
-#if PC_HOSTED == 1
-			if (dp->ap_cleanup)
-				dp->ap_cleanup(i);
-#endif
-			/* We have probably found all APs on this DP so no need to keep looking.
+			/*
+			 * We have probably found all APs on this DP so no need to keep looking.
 			 * Continue with rest of init function down below.
 			 */
 			if (++invalid_aps == 8U)

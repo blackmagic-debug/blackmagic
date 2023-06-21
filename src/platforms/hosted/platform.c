@@ -67,6 +67,11 @@ void gdb_ident(char *p, int count)
 
 static void exit_function(void)
 {
+#if HOSTED_BMP_ONLY == 0
+	if (bmda_probe_info.type == PROBE_TYPE_STLINK_V2)
+		stlink_deinit();
+#endif
+
 	libusb_exit_function(&bmda_probe_info);
 
 	switch (bmda_probe_info.type) {
