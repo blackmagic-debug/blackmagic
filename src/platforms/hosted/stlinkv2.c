@@ -646,15 +646,15 @@ static bool stlink_ap_setup(const uint8_t ap)
 	uint8_t data[2];
 	DEBUG_PROBE("%s: AP %u\n", __func__, ap);
 	stlink_simple_request(STLINK_DEBUG_COMMAND, STLINK_DEBUG_APIV2_INIT_AP, ap, data, sizeof(data));
-	const int res = stlink_usb_error_check(data, true);
-	if (res && stlink.ver_hw == 30) {
+	const int result = stlink_usb_error_check(data, true);
+	if (result && stlink.ver_hw == 30) {
 		if (data[0] == STLINK_ERROR_BAD_AP)
 			DEBUG_WARN("ST-Link v3's only support up to AP 8, tried to setup AP %u\n", ap);
 		else
 			// XXX: What is this even trying to tell the user? What is the purpose of this message?
 			DEBUG_WARN("ST-Link v3 only connects to STM8/32!\n");
 	}
-	return res == STLINK_ERROR_OK;
+	return result == STLINK_ERROR_OK;
 }
 
 static bool stlink_ap_cleanup(void)
