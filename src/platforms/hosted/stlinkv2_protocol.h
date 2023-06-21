@@ -26,13 +26,10 @@
 #include <stdbool.h>
 #include "adiv5.h"
 
-#define STLINK_SWIM_ERR_OK             0x00U
-#define STLINK_SWIM_BUSY               0x01U
 #define STLINK_DEBUG_ERR_OK            0x80U
 #define STLINK_DEBUG_ERR_FAULT         0x81U
 #define STLINK_JTAG_UNKNOWN_JTAG_CHAIN 0x04U
 #define STLINK_NO_DEVICE_CONNECTED     0x05U
-#define STLINK_JTAG_COMMAND_ERROR      0x08U
 #define STLINK_JTAG_COMMAND_ERROR      0x08U
 #define STLINK_JTAG_GET_IDCODE_ERROR   0x09U
 #define STLINK_JTAG_DBG_POWER_ERROR    0x0bU
@@ -46,7 +43,6 @@
 #define STLINK_ERROR_DP_FAULT          0x15U
 #define STLINK_ERROR_DP                0x16U
 #define STLINK_ERROR_DP_PARITY         0x17U
-
 #define STLINK_SWD_AP_WDATA_ERROR      0x18U
 #define STLINK_SWD_AP_STICKY_ERROR     0x19U
 #define STLINK_SWD_AP_STICKYORUN_ERROR 0x1aU
