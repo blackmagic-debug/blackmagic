@@ -532,7 +532,8 @@ void stlink_dp_abort(adiv5_debug_port_s *dp, uint32_t abort)
 	adiv5_dp_write(dp, ADIV5_DP_ABORT, abort);
 }
 
-static int stlink_read_dp_register(const uint16_t apsel, const uint16_t address, uint32_t *const reg)
+static int stlink_read_dp_register(
+	adiv5_debug_port_s *const dp, const uint16_t apsel, const uint16_t address, uint32_t *const reg)
 {
 	stlink_adiv5_reg_read_s request = {
 		.command = STLINK_DEBUG_COMMAND,
@@ -547,7 +548,11 @@ static int stlink_read_dp_register(const uint16_t apsel, const uint16_t address,
 	int result = stlink_send_recv_retry(&request, sizeof(request), data, sizeof(data));
 	if (result == STLINK_ERROR_OK)
 		*reg = read_le4(data, 4U);
-	else
+	else if (result == STLINK_ERROR_PARITY) {
+		dp->fault = 1;
+		DEBUG_ERROR("SWD access resulted in parity error\n");
+		raise_exception(EXCEPTION_ERROR, "SWD parity error");
+	} else
 		DEBUG_ERROR("%s error %d\n", __func__, result);
 	return result;
 }
@@ -576,7 +581,7 @@ uint32_t stlink_raw_access(adiv5_debug_port_s *dp, uint8_t rnw, uint16_t addr, u
 {
 	DEBUG_PROBE("%s: Attempting access to addr %04x\n", __func__, addr);
 	uint32_t result_value = 0;
-	const int result = rnw ? stlink_read_dp_register(addr < 0x100U ? STLINK_DEBUG_PORT : 0U, addr, &result_value) :
+	const int result = rnw ? stlink_read_dp_register(dp, addr < 0x100U ? STLINK_DEBUG_PORT : 0U, addr, &result_value) :
 							 stlink_write_dp_register(addr < 0x100U ? STLINK_DEBUG_PORT : 0U, addr, request_value);
 
 	if (result == STLINK_ERROR_WAIT) {
@@ -763,7 +768,7 @@ static void stlink_ap_write(adiv5_access_port_s *ap, uint16_t addr, uint32_t val
 static uint32_t stlink_ap_read(adiv5_access_port_s *ap, uint16_t addr)
 {
 	uint32_t ret = 0;
-	stlink_read_dp_register(ap->apsel, addr, &ret);
+	stlink_read_dp_register(ap->dp, ap->apsel, addr, &ret);
 	return ret;
 }
 
