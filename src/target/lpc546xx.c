@@ -78,6 +78,43 @@ const command_s lpc546xx_cmd_list[] = {
 	{NULL, NULL, NULL},
 };
 
+typedef struct lpc546xx_device {
+	uint32_t chipid;
+	const char *designator;
+	uint32_t flash_size;
+} lpc546xx_device_s;
+
+/*
+ * Reference: "LPC546XX Product data sheet" revision 2.6, 2018
+ * Part type number encoding: LPC546xxJyyy, where yyy is flash size, KiB
+ */
+static const lpc546xx_device_s lpc546xx_devices_lut[] = {
+	{0x7f954605U, "LPC54605J256", 0x40000},
+	{0x7f954606U, "LPC54606J256", 0x40000},
+	{0x7f954607U, "LPC54607J256", 0x40000},
+	{0x7f954616U, "LPC54616J256", 0x40000},
+	{0xfff54605U, "LPC54605J512", 0x80000},
+	{0xfff54606U, "LPC54606J512", 0x80000},
+	{0xfff54607U, "LPC54607J512", 0x80000},
+	{0xfff54608U, "LPC54608J512", 0x80000},
+	{0xfff54616U, "LPC54616J512", 0x80000},
+	{0xfff54618U, "LPC54618J512", 0x80000},
+	{0xfff54628U, "LPC54628J512", 0x80000},
+};
+
+/* Look up device parameters */
+static const lpc546xx_device_s *lpc546xx_get_device(const uint32_t chipid)
+{
+	/* Linear search through chips */
+	for (size_t i = 0; i < ARRAY_LENGTH(lpc546xx_devices_lut); i++) {
+		if (lpc546xx_devices_lut[i].chipid == chipid)
+			return lpc546xx_devices_lut + i;
+	}
+
+	/* Unknown chip */
+	return NULL;
+}
+
 static void lpc546xx_add_flash(
 	target_s *target, uint32_t iap_entry, uint8_t base_sector, uint32_t addr, size_t len, size_t erasesize)
 {
@@ -99,54 +136,12 @@ bool lpc546xx_probe(target_s *t)
 	const uint32_t chipid = target_mem_read32(t, LPC546XX_CHIPID);
 	uint32_t flash_size = 0;
 
-	switch (chipid) {
-	case 0x7f954605U:
-		t->driver = "LPC54605J256";
-		flash_size = 0x40000;
-		break;
-	case 0x7f954606U:
-		t->driver = "LPC54606J256";
-		flash_size = 0x40000;
-		break;
-	case 0x7f954607U:
-		t->driver = "LPC54607J256";
-		flash_size = 0x40000;
-		break;
-	case 0x7f954616U:
-		t->driver = "LPC54616J256";
-		flash_size = 0x40000;
-		break;
-	case 0xfff54605U:
-		t->driver = "LPC54605J512";
-		flash_size = 0x80000;
-		break;
-	case 0xfff54606U:
-		t->driver = "LPC54606J512";
-		flash_size = 0x80000;
-		break;
-	case 0xfff54607U:
-		t->driver = "LPC54607J512";
-		flash_size = 0x80000;
-		break;
-	case 0xfff54608U:
-		t->driver = "LPC54608J512";
-		flash_size = 0x80000;
-		break;
-	case 0xfff54616U:
-		t->driver = "LPC54616J512";
-		flash_size = 0x80000;
-		break;
-	case 0xfff54618U:
-		t->driver = "LPC54618J512";
-		flash_size = 0x80000;
-		break;
-	case 0xfff54628U:
-		t->driver = "LPC54628J512";
-		flash_size = 0x80000;
-		break;
-	default:
+	const lpc546xx_device_s *device = lpc546xx_get_device(chipid);
+	if (!device)
 		return false;
-	}
+
+	flash_size = device->flash_size;
+	t->driver = device->designator;
 
 	t->mass_erase = lpc546xx_mass_erase;
 	lpc546xx_add_flash(t, IAP_ENTRYPOINT_LOCATION, 0, 0x0, flash_size, 0x8000);
