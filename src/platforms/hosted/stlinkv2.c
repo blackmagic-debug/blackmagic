@@ -185,9 +185,10 @@ int stlink_usb_error_check(uint8_t *const data, const bool verbose)
 		if (verbose)
 			DEBUG_ERROR("STLINK_SWD_AP_STICKYORUN_ERROR\n");
 		return STLINK_ERROR_FAIL;
-	case STLINK_BAD_AP_ERROR:
-		/* ADIV5 probe 256 APs, most of them are non exisitant.*/
-		return STLINK_ERROR_FAIL;
+	case STLINK_ERROR_BAD_AP:
+		if (verbose)
+			DEBUG_ERROR("Failed to setup AP (bad AP)\n");
+		return STLINK_ERROR_GENERAL;
 	case STLINK_TOO_MANY_AP_ERROR:
 		/* TI TM4C duplicates AP. Error happens at AP9.*/
 		if (verbose)
@@ -646,8 +647,13 @@ static bool stlink_ap_setup(const uint8_t ap)
 	DEBUG_PROBE("%s: AP %u\n", __func__, ap);
 	stlink_simple_request(STLINK_DEBUG_COMMAND, STLINK_DEBUG_APIV2_INIT_AP, ap, data, sizeof(data));
 	const int res = stlink_usb_error_check(data, true);
-	if (res && stlink.ver_hw == 30)
-		DEBUG_WARN("ST-Link v3 only connects to STM8/32!\n");
+	if (res && stlink.ver_hw == 30) {
+		if (data[0] == STLINK_ERROR_BAD_AP)
+			DEBUG_WARN("ST-Link v3's only support up to AP 8, tried to setup AP %u\n", ap);
+		else
+			// XXX: What is this even trying to tell the user? What is the purpose of this message?
+			DEBUG_WARN("ST-Link v3 only connects to STM8/32!\n");
+	}
 	return res == STLINK_ERROR_OK;
 }
 
