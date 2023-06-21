@@ -109,9 +109,15 @@ int stlink_usb_error_check(uint8_t *const data, const bool verbose)
 	case STLINK_DEBUG_ERR_OK:
 		return STLINK_ERROR_OK;
 	case STLINK_DEBUG_ERR_FAULT:
+	case STLINK_ERROR_AP_FAULT:
+	case STLINK_ERROR_DP_FAULT:
+		stlink.ap_error |= data[0] == STLINK_ERROR_AP_FAULT;
 		if (verbose)
-			DEBUG_ERROR("SWD fault response (0x%x)\n", STLINK_DEBUG_ERR_FAULT);
-		return STLINK_ERROR_FAIL;
+			DEBUG_ERROR("%s reported fault\n",
+				data[0] == STLINK_DEBUG_ERR_FAULT    ? "Adaptor" :
+					data[0] == STLINK_ERROR_AP_FAULT ? "AP" :
+													   "DP");
+		return STLINK_ERROR_FAULT;
 	case STLINK_JTAG_UNKNOWN_JTAG_CHAIN:
 		if (verbose)
 			DEBUG_ERROR("Unknown JTAG chain\n");
@@ -145,16 +151,6 @@ int stlink_usb_error_check(uint8_t *const data, const bool verbose)
 		if (verbose)
 			DEBUG_ERROR("Write verify error, ignoring\n");
 		return STLINK_ERROR_OK;
-	case STLINK_SWD_AP_FAULT:
-		/* git://git.ac6.fr/openocd commit 657e3e885b9ee10
-			 * returns STLINK_ERROR_OK with the comment:
-			 * Change in error status when reading outside RAM.
-			 * This fix allows CDT plugin to visualize memory.
-			 */
-		stlink.ap_error = true;
-		if (verbose)
-			DEBUG_ERROR("STLINK_SWD_AP_FAULT\n");
-		return STLINK_ERROR_AP_FAULT;
 	case STLINK_SWD_AP_ERROR:
 		if (verbose)
 			DEBUG_ERROR("STLINK_SWD_AP_ERROR\n");
@@ -162,10 +158,6 @@ int stlink_usb_error_check(uint8_t *const data, const bool verbose)
 	case STLINK_SWD_AP_PARITY_ERROR:
 		if (verbose)
 			DEBUG_ERROR("STLINK_SWD_AP_PARITY_ERROR\n");
-		return STLINK_ERROR_FAIL;
-	case STLINK_SWD_DP_FAULT:
-		if (verbose)
-			DEBUG_ERROR("STLINK_SWD_DP_FAULT\n");
 		return STLINK_ERROR_FAIL;
 	case STLINK_SWD_DP_ERROR:
 		if (verbose)
@@ -592,7 +584,7 @@ uint32_t stlink_raw_access(adiv5_debug_port_s *dp, uint8_t rnw, uint16_t addr, u
 		return 0;
 	}
 
-	if (result == STLINK_ERROR_DP_FAULT || result == STLINK_ERROR_AP_FAULT) {
+	if (result == STLINK_ERROR_FAULT) {
 		DEBUG_ERROR("SWD access resulted in fault\n");
 		/* On fault, abort the request */
 		stlink_write_dp_register(STLINK_DEBUG_PORT, ADIV5_DP_ABORT,

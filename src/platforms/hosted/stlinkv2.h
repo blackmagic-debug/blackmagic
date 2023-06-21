@@ -24,11 +24,13 @@
 
 #include "bmp_hosted.h"
 
-#define STLINK_ERROR_OK       0
-#define STLINK_ERROR_WAIT     1
-#define STLINK_ERROR_FAIL     (-1)
-#define STLINK_ERROR_DP_FAULT (-2)
-#define STLINK_ERROR_AP_FAULT (-3)
+#define STLINK_ERROR_OK          0U
+#define STLINK_ERROR_WAIT        1U
+#define STLINK_ERROR_FAULT       2U
+#define STLINK_ERROR_PARITY      3U
+#define STLINK_ERROR_GENERAL     4U
+#define STLINK_ERROR_NO_RESPONSE 7U
+#define STLINK_ERROR_FAIL        (-1)
 
 bool stlink_init(void);
 bool stlink_swd_scan(void);
