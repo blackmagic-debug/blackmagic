@@ -459,11 +459,11 @@ int cl_execute(bmda_cli_options_s *opt)
 		DEBUG_ERROR("Given target number %" PRIu32 " not available max %zu\n", opt->opt_target_dev, num_targets);
 		return -1;
 	}
-	target_s *t = target_attach_n(opt->opt_target_dev, &cl_controller);
+	target_s *target = target_attach_n(opt->opt_target_dev, &cl_controller);
 
 	int res = 0;
 	int read_file = -1;
-	if (!t) {
+	if (!target) {
 		DEBUG_ERROR("Can not attach to target %" PRIu32 "\n", opt->opt_target_dev);
 		res = -1;
 		goto target_detach;
@@ -471,14 +471,14 @@ int cl_execute(bmda_cli_options_s *opt)
 
 	/* List each defined RAM region */
 	size_t ram_regions = 0;
-	for (target_ram_s *r = t->ram; r; r = r->next)
+	for (target_ram_s *ram = target->ram; ram; ram = ram->next)
 		++ram_regions;
 
 	for (size_t region = 0; region < ram_regions; ++region) {
-		target_ram_s *r = t->ram;
-		for (size_t i = ram_regions - 1U; r; r = r->next, --i) {
+		target_ram_s *ram = target->ram;
+		for (size_t i = ram_regions - 1U; ram; ram = ram->next, --i) {
 			if (region == i) {
-				DEBUG_INFO("RAM   Start: 0x%08" PRIx32 " length = 0x%zx\n", r->start, r->length);
+				DEBUG_INFO("RAM   Start: 0x%08" PRIx32 " length = 0x%zx\n", ram->start, ram->length);
 				break;
 			}
 		}
@@ -490,20 +490,20 @@ int cl_execute(bmda_cli_options_s *opt)
 	size_t lowest_flash_size = 0;
 
 	size_t flash_regions = 0;
-	for (target_flash_s *f = t->flash; f; f = f->next) {
+	for (target_flash_s *flash = target->flash; flash; flash = flash->next) {
 		++flash_regions;
-		if (f->start < lowest_flash_start) {
-			lowest_flash_start = f->start;
-			lowest_flash_size = f->length;
+		if (flash->start < lowest_flash_start) {
+			lowest_flash_start = flash->start;
+			lowest_flash_size = flash->length;
 		}
 	}
 
 	for (size_t region = 0; region < flash_regions; ++region) {
-		target_flash_s *f = t->flash;
-		for (size_t i = flash_regions - 1U; f; f = f->next, --i) {
+		target_flash_s *flash = target->flash;
+		for (size_t i = flash_regions - 1U; flash; flash = flash->next, --i) {
 			if (region == i) {
-				DEBUG_INFO(
-					"Flash Start: 0x%08" PRIx32 " length = 0x%zx blocksize 0x%zx\n", f->start, f->length, f->blocksize);
+				DEBUG_INFO("Flash Start: 0x%08" PRIx32 " length = 0x%zx blocksize 0x%zx\n", flash->start, flash->length,
+					flash->blocksize);
 				break;
 			}
 		}
@@ -519,12 +519,12 @@ int cl_execute(bmda_cli_options_s *opt)
 		 * XXX: This is bugprone - any core, even if it's not just a Cortex-M* that
 		 * matches on the first letter triggers this
 		 */
-		if (t->core[0] == 'M') {
+		if (target->core[0] == 'M') {
 			DEBUG_WARN("Continuous read/write-back DEMCR. Abort with ^C\n");
 			while (true) {
 				uint32_t demcr;
-				target_mem_read(t, &demcr, CORTEXM_DEMCR, 4);
-				target_mem_write32(t, CORTEXM_DEMCR, demcr);
+				target_mem_read(target, &demcr, CORTEXM_DEMCR, 4);
+				target_mem_write32(target, CORTEXM_DEMCR, demcr);
 				platform_delay(1); /* To allow trigger */
 			}
 		} else
@@ -554,31 +554,31 @@ int cl_execute(bmda_cli_options_s *opt)
 		/* restrict to size given on command line */
 		map.size = opt->opt_flash_size;
 	if (opt->opt_monitor) {
-		res = command_process(t, opt->opt_monitor);
+		res = command_process(target, opt->opt_monitor);
 		if (res)
 			DEBUG_ERROR("Command \"%s\" failed\n", opt->opt_monitor);
 	}
 	if (opt->opt_mode == BMP_MODE_RESET)
-		target_reset(t);
+		target_reset(target);
 	else if (opt->opt_mode == BMP_MODE_FLASH_ERASE) {
 		DEBUG_INFO("Erase %zu bytes at 0x%08" PRIx32 "\n", opt->opt_flash_size, opt->opt_flash_start);
-		if (!target_flash_erase(t, opt->opt_flash_start, opt->opt_flash_size)) {
+		if (!target_flash_erase(target, opt->opt_flash_start, opt->opt_flash_size)) {
 			DEBUG_ERROR("Flash erase failed!\n");
 			res = -1;
 			goto free_map;
 		}
-		target_reset(t);
+		target_reset(target);
 	} else if (opt->opt_mode == BMP_MODE_FLASH_WRITE || opt->opt_mode == BMP_MODE_FLASH_WRITE_VERIFY) {
 		DEBUG_INFO("Erasing %zu bytes at 0x%08" PRIx32 "\n", map.size, opt->opt_flash_start);
 		const uint32_t start_time = platform_time_ms();
-		if (!target_flash_erase(t, opt->opt_flash_start, map.size)) {
+		if (!target_flash_erase(target, opt->opt_flash_start, map.size)) {
 			DEBUG_ERROR("Flash erase failed!\n");
 			res = -1;
 			goto free_map;
 		}
 		DEBUG_INFO("Flashing %zu bytes at 0x%08" PRIx32 "\n", map.size, opt->opt_flash_start);
 		/* Buffered write cares for padding*/
-		if (!target_flash_write(t, opt->opt_flash_start, map.data, map.size) || !target_flash_complete(t)) {
+		if (!target_flash_write(target, opt->opt_flash_start, map.data, map.size) || !target_flash_complete(target)) {
 			DEBUG_ERROR("Flashing failed!\n");
 			res = -1;
 			goto free_map;
@@ -588,7 +588,7 @@ int cl_execute(bmda_cli_options_s *opt)
 		DEBUG_WARN(
 			"Flash Write succeeded for %zu bytes, %8.3fkiB/s\n", map.size, (double)map.size / (end_time - start_time));
 		if (opt->opt_mode != BMP_MODE_FLASH_WRITE_VERIFY) {
-			target_reset(t);
+			target_reset(target);
 			goto free_map;
 		}
 	}
@@ -606,7 +606,7 @@ int cl_execute(bmda_cli_options_s *opt)
 		const uint32_t start_time = platform_time_ms();
 		for (size_t offset = 0; offset < size; offset += WORKSIZE) {
 			const size_t worksize = MIN(size - offset, WORKSIZE);
-			int n_read = target_mem_read(t, data, flash_src + offset, worksize);
+			int n_read = target_mem_read(target, data, flash_src + offset, worksize);
 			if (n_read) {
 				if (opt->opt_flash_size == 0) /* we reached end of flash */
 					DEBUG_INFO("Reached end of flash at size %" PRIu32 "\n", flash_src - opt->opt_flash_start);
@@ -642,7 +642,7 @@ int cl_execute(bmda_cli_options_s *opt)
 		DEBUG_WARN("Read/Verify succeeded for %zu bytes, %8.3fkiB/s\n", bytes_read,
 			(double)bytes_read / (end_time - start_time));
 		if (opt->opt_mode == BMP_MODE_FLASH_WRITE_VERIFY)
-			target_reset(t);
+			target_reset(target);
 	}
 free_map:
 	if (map.size)
@@ -650,8 +650,8 @@ free_map:
 target_detach:
 	if (read_file != -1)
 		close(read_file);
-	if (t)
-		target_detach(t);
+	if (target)
+		target_detach(target);
 	target_list_free();
 	return res;
 }
