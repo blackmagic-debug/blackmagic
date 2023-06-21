@@ -377,7 +377,8 @@ static bool stm32h7_mass_erase(target_s *t)
 			psize = ((struct stm32h7_flash *)flash)->psize;
 	}
 	/* Send mass erase Flash start instruction */
-	if (!stm32h7_erase_bank(t, psize, BANK1_START, FPEC1_BASE) || stm32h7_erase_bank(t, psize, BANK2_START, FPEC2_BASE))
+	if (!stm32h7_erase_bank(t, psize, BANK1_START, FPEC1_BASE) ||
+		!stm32h7_erase_bank(t, psize, BANK2_START, FPEC2_BASE))
 		return false;
 
 	platform_timeout_s timeout;
