@@ -108,11 +108,13 @@ int stlink_usb_error_check(uint8_t *const data, const bool verbose)
 	switch (data[0]) {
 	case STLINK_DEBUG_ERR_OK:
 		return STLINK_ERROR_OK;
+
 	case STLINK_ERROR_AP_WAIT:
 	case STLINK_ERROR_DP_WAIT:
 		if (verbose)
 			DEBUG_WARN("%s reported wait\n", data[0] == STLINK_ERROR_AP_WAIT ? "AP" : "DP");
 		return STLINK_ERROR_WAIT;
+
 	case STLINK_DEBUG_ERR_FAULT:
 	case STLINK_ERROR_AP_FAULT:
 	case STLINK_ERROR_DP_FAULT:
@@ -123,6 +125,13 @@ int stlink_usb_error_check(uint8_t *const data, const bool verbose)
 					data[0] == STLINK_ERROR_AP_FAULT ? "AP" :
 													   "DP");
 		return STLINK_ERROR_FAULT;
+
+	case STLINK_ERROR_AP_PARITY:
+	case STLINK_ERROR_DP_PARITY:
+		if (verbose)
+			DEBUG_ERROR("Parity error on %s\n", data[0] == STLINK_ERROR_AP_PARITY ? "AP" : "DP");
+		return STLINK_ERROR_PARITY;
+
 	case STLINK_JTAG_UNKNOWN_JTAG_CHAIN:
 		if (verbose)
 			DEBUG_ERROR("Unknown JTAG chain\n");
@@ -155,18 +164,10 @@ int stlink_usb_error_check(uint8_t *const data, const bool verbose)
 		if (verbose)
 			DEBUG_ERROR("STLINK_SWD_AP_ERROR\n");
 		return STLINK_ERROR_FAIL;
-	case STLINK_SWD_AP_PARITY_ERROR:
-		if (verbose)
-			DEBUG_ERROR("STLINK_SWD_AP_PARITY_ERROR\n");
-		return STLINK_ERROR_FAIL;
 	case STLINK_SWD_DP_ERROR:
 		if (verbose)
 			DEBUG_ERROR("STLINK_SWD_DP_ERROR\n");
 		raise_exception(EXCEPTION_ERROR, "STLINK_SWD_DP_ERROR");
-		return STLINK_ERROR_FAIL;
-	case STLINK_SWD_DP_PARITY_ERROR:
-		if (verbose)
-			DEBUG_ERROR("STLINK_SWD_DP_PARITY_ERROR\n");
 		return STLINK_ERROR_FAIL;
 	case STLINK_SWD_AP_WDATA_ERROR:
 		if (verbose)
