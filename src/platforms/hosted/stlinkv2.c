@@ -164,14 +164,17 @@ int stlink_usb_error_check(uint8_t *const data, const bool verbose)
 		if (verbose)
 			DEBUG_ERROR("Failure powering DBG\n");
 		return STLINK_ERROR_WAIT;
-	case STLINK_JTAG_WRITE_ERROR:
+
+	case STLINK_ERROR_WRITE:
 		if (verbose)
 			DEBUG_ERROR("Write error\n");
-		return STLINK_ERROR_FAIL;
-	case STLINK_JTAG_WRITE_VERIF_ERROR:
+		return STLINK_ERROR_GENERAL;
+
+	case STLINK_ERROR_WRITE_VERIFY:
 		if (verbose)
 			DEBUG_ERROR("Write verify error, ignoring\n");
 		return STLINK_ERROR_OK;
+
 	case STLINK_SWD_AP_WDATA_ERROR:
 		if (verbose)
 			DEBUG_ERROR("STLINK_SWD_AP_WDATA_ERROR\n");
@@ -185,10 +188,12 @@ int stlink_usb_error_check(uint8_t *const data, const bool verbose)
 		if (verbose)
 			DEBUG_ERROR("STLINK_SWD_AP_STICKYORUN_ERROR\n");
 		return STLINK_ERROR_FAIL;
+
 	case STLINK_ERROR_BAD_AP:
 		if (verbose)
 			DEBUG_ERROR("Failed to setup AP (bad AP)\n");
 		return STLINK_ERROR_GENERAL;
+
 	case STLINK_TOO_MANY_AP_ERROR:
 		/* TI TM4C duplicates AP. Error happens at AP9.*/
 		if (verbose)
