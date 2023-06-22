@@ -90,17 +90,17 @@ typedef struct lpc546xx_device {
  * Part type number encoding: LPC546xxJyyy, where yyy is flash size, KiB
  */
 static const lpc546xx_device_s lpc546xx_devices_lut[] = {
-	{0x7f954605U, "LPC54605J256", 256, 32},
-	{0x7f954606U, "LPC54606J256", 256, 32},
-	{0x7f954607U, "LPC54607J256", 256, 32},
-	{0x7f954616U, "LPC54616J256", 256, 32},
-	{0xfff54605U, "LPC54605J512", 512, 96},
-	{0xfff54606U, "LPC54606J512", 512, 96},
-	{0xfff54607U, "LPC54607J512", 512, 96},
-	{0xfff54608U, "LPC54608J512", 512, 96},
-	{0xfff54616U, "LPC54616J512", 512, 96},
-	{0xfff54618U, "LPC54618J512", 512, 96},
-	{0xfff54628U, "LPC54628J512", 512, 96},
+	{0x7f954605U, "LPC546xxJ256", 256, 32},
+	{0x7f954606U, "LPC546xxJ256", 256, 32},
+	{0x7f954607U, "LPC546xxJ256", 256, 32},
+	{0x7f954616U, "LPC546xxJ256", 256, 32},
+	{0xfff54605U, "LPC546xxJ512", 512, 96},
+	{0xfff54606U, "LPC546xxJ512", 512, 96},
+	{0xfff54607U, "LPC546xxJ512", 512, 96},
+	{0xfff54608U, "LPC546xxJ512", 512, 96},
+	{0xfff54616U, "LPC546xxJ512", 512, 96},
+	{0xfff54618U, "LPC546xxJ512", 512, 96},
+	{0xfff54628U, "LPC546xxJ512", 512, 96},
 };
 
 /* Look up device parameters */
@@ -138,6 +138,7 @@ bool lpc546xx_probe(target_s *t)
 	uint32_t flash_size = 0;
 	uint32_t sram123_size = 0;
 
+	DEBUG_INFO("LPC546xx: Part ID 0x%08" PRIu32 "\n", chipid);
 	const lpc546xx_device_s *device = lpc546xx_get_device(chipid);
 	if (!device)
 		return false;
