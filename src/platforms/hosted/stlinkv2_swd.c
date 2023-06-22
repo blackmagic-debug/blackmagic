@@ -30,13 +30,9 @@ bool stlink_swd_scan(void)
 
 	stlink_leave_state();
 
-	const stlink_simple_request_s command = {
-		.command = STLINK_DEBUG_COMMAND,
-		.operation = STLINK_DEBUG_APIV2_ENTER,
-		.param = STLINK_DEBUG_ENTER_SWD_NO_RESET,
-	};
 	uint8_t data[2];
-	stlink_send_recv_retry(&command, sizeof(command), data, sizeof(data));
+	stlink_simple_request(
+		STLINK_DEBUG_COMMAND, STLINK_DEBUG_APIV2_ENTER, STLINK_DEBUG_ENTER_SWD_NO_RESET, data, sizeof(data));
 	if (stlink_usb_error_check(data, true) != STLINK_ERROR_OK)
 		return false;
 
