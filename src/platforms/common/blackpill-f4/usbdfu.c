@@ -19,9 +19,10 @@
 
 #include <string.h>
 #include <libopencm3/cm3/systick.h>
+#include <libopencm3/cm3/nvic.h>
+#include <libopencm3/cm3/scb.h>
 #include <libopencm3/stm32/rcc.h>
 #include <libopencm3/stm32/gpio.h>
-#include <libopencm3/cm3/scb.h>
 #include <libopencm3/usb/dwc/otg_fs.h>
 
 #include "usbdfu.h"
@@ -30,6 +31,8 @@
 
 uintptr_t app_address = 0x08004000U;
 volatile uint32_t magic[2] __attribute__((section(".noinit")));
+
+static void sys_tick_init(void);
 
 void dfu_detach(void)
 {
@@ -53,8 +56,11 @@ int main(void)
 
 	/* Assert blue LED as indicator we are in the bootloader */
 	rcc_periph_clock_enable(RCC_GPIOC);
-	gpio_mode_setup(LED_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, LED_BOOTLOADER);
-	gpio_set(LED_PORT, LED_BOOTLOADER);
+	gpio_mode_setup(LED_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, LED_BOOTLOADER | LED_IDLE_RUN);
+	gpio_clear(LED_PORT, LED_BOOTLOADER | LED_IDLE_RUN);
+
+	/* Run heartbeat on blue LED */
+	sys_tick_init();
 
 	/* Enable peripherals */
 	rcc_periph_clock_enable(RCC_OTGFS);
@@ -75,4 +81,21 @@ int main(void)
 
 void dfu_event(void)
 {
+}
+
+static void sys_tick_init(void)
+{
+	/* Use SysTick at 10Hz to toggle-blink the blue LED at 5 Hz */
+	systick_set_clocksource(STK_CSR_CLKSOURCE_AHB_DIV8);
+	systick_set_reload(rcc_ahb_frequency / 8U / 10U);
+	/* SYSTICK_IRQ with low priority */
+	nvic_set_priority(NVIC_SYSTICK_IRQ, 14U << 4U);
+	systick_interrupt_enable();
+	/* Start the heartbeat timer */
+	systick_counter_enable();
+}
+
+void sys_tick_handler(void)
+{
+	gpio_toggle(LED_PORT, LED_BOOTLOADER | LED_IDLE_RUN);
 }
