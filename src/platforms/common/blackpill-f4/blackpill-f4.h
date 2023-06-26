@@ -111,6 +111,15 @@
 #define LED_PORT_UART GPIOA
 #define LED_UART      PINOUT_SWITCH(GPIO4, GPIO1)
 
+/* SPI2: PA4/5/6/7 to onboard w25q64 */
+#define OB_SPI         SPI1
+#define OB_SPI_PORT    GPIOA
+#define OB_SPI_SCLK    GPIO5
+#define OB_SPI_MISO    GPIO6
+#define OB_SPI_MOSI    GPIO7
+#define OB_SPI_CS_PORT GPIOA
+#define OB_SPI_CS      GPIO4
+
 /* USART2 with PA2 and PA3 is selected as USBUSART. Alternatively USART1 with PB6 and PB7 can be used. */
 #define USBUSART               USBUSART2
 #define USBUSART_CR1           USBUSART2_CR1
