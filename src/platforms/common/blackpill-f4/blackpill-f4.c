@@ -37,6 +37,7 @@
 #include <libopencm3/cm3/systick.h>
 #include <libopencm3/cm3/cortex.h>
 #include <libopencm3/usb/dwc/otg_fs.h>
+#include <libopencm3/stm32/spi.h>
 
 jmp_buf fatal_error_jmpbuf;
 volatile uint32_t magic[2] __attribute__((section(".noinit")));
@@ -174,26 +175,69 @@ void platform_target_clk_output_enable(bool enable)
 
 bool platform_spi_init(const spi_bus_e bus)
 {
-	(void)bus;
-	return false;
+	if (bus != SPI_BUS_INTERNAL)
+		return false;
+
+	/* Set up onboard flash SPI GPIOs: PA5/6/7 as SPI1 in AF5, PA4 as nCS output push-pull */
+	const uint32_t gpioport = OB_SPI_PORT;
+	const uint16_t gpios = (OB_SPI_SCLK | OB_SPI_MISO | OB_SPI_MOSI);
+	gpio_mode_setup(gpioport, GPIO_MODE_AF, GPIO_PUPD_NONE, gpios);
+	gpio_mode_setup(gpioport, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, OB_SPI_CS);
+	gpio_set_output_options(gpioport, GPIO_OTYPE_PP, GPIO_OSPEED_50MHZ, gpios | OB_SPI_CS);
+	gpio_set_af(gpioport, GPIO_AF5, gpios);
+	/* Deselect the onboard flash chip */
+	gpio_set(gpioport, OB_SPI_CS);
+
+	rcc_periph_clock_enable(RCC_SPI1);
+	rcc_periph_reset_pulse(RST_SPI1);
+
+	const uint32_t controller = OB_SPI;
+	/* Set up hardware SPI: master, PCLK/8, Mode 0, 8-bit MSB first */
+	spi_init_master(controller, SPI_CR1_BAUDRATE_FPCLK_DIV_8, SPI_CR1_CPOL_CLK_TO_0_WHEN_IDLE,
+		SPI_CR1_CPHA_CLK_TRANSITION_1, SPI_CR1_DFF_8BIT, SPI_CR1_MSBFIRST);
+	spi_enable(controller);
+	return true;
 }
 
 bool platform_spi_deinit(const spi_bus_e bus)
 {
-	(void)bus;
-	return false;
+	if (bus != SPI_BUS_INTERNAL)
+		return false;
+	const uint32_t controller = OB_SPI;
+	spi_disable(controller);
+	/* Gate SPI1 APB clock */
+	rcc_periph_clock_disable(RCC_SPI1);
+	/* Unmap GPIOs */
+	const uint32_t gpioport = OB_SPI_PORT;
+	const uint16_t gpios = (OB_SPI_SCLK | OB_SPI_MISO | OB_SPI_MOSI);
+	gpio_mode_setup(gpioport, GPIO_MODE_INPUT, GPIO_PUPD_NONE, gpios | OB_SPI_CS);
+	return true;
 }
 
 bool platform_spi_chip_select(const uint8_t device_select)
 {
-	(void)device_select;
-	return false;
+	const uint8_t device = device_select & 0x7fU;
+	const bool select = !(device_select & 0x80U);
+	uint32_t port;
+	uint16_t pin;
+	switch (device) {
+	case SPI_DEVICE_INT_FLASH:
+		port = OB_SPI_CS_PORT;
+		pin = OB_SPI_CS;
+		break;
+	default:
+		return false;
+	}
+	gpio_set_val(port, pin, select);
+	return true;
 }
 
 uint8_t platform_spi_xfer(const spi_bus_e bus, const uint8_t value)
 {
-	(void)bus;
-	return value;
+	if (bus != SPI_BUS_INTERNAL)
+		return false;
+	const uint32_t controller = OB_SPI;
+	return spi_xfer(controller, value);
 }
 
 int platform_hwversion(void)
