@@ -414,39 +414,48 @@ static void lpc43x0_add_spi_flash(target_s *const target, const size_t length)
 
 static void lpc43x0_detect(target_s *const t, const lpc43xx_partid_s part_id)
 {
+	uint32_t sram1_size;
+	uint32_t sram2_size;
+	uint32_t sram_ahb_size;
 	target_add_ram(t, LPC43xx_SHADOW_BASE, LPC43xx_SHADOW_SIZE);
 	switch (part_id.part) {
 	case LPC43xx_PARTID_LPC4310:
 		t->driver = "LPC4310";
-		target_add_ram(t, LPC43xx_LOCAL_SRAM1_BASE, LPC4310_LOCAL_SRAM1_SIZE);
-		target_add_ram(t, LPC43xx_LOCAL_SRAM2_BASE, LPC43xx_LOCAL_SRAM2_SIZE);
-		target_add_ram(t, LPC43xx_AHB_SRAM_BASE, LPC43x2_AHB_SRAM_SIZE);
+		sram1_size = LPC4310_LOCAL_SRAM1_SIZE;
+		sram2_size = LPC43xx_LOCAL_SRAM2_SIZE;
+		sram_ahb_size = LPC43x2_AHB_SRAM_SIZE;
 		break;
 	case LPC43xx_PARTID_LPC4320:
 		t->driver = "LPC4320";
-		target_add_ram(t, LPC43xx_LOCAL_SRAM1_BASE, LPC4310_LOCAL_SRAM1_SIZE);
-		target_add_ram(t, LPC43xx_LOCAL_SRAM2_BASE, LPC43xx_LOCAL_SRAM2_SIZE);
-		target_add_ram(t, LPC43xx_AHB_SRAM_BASE, LPC43x5_AHB_SRAM_SIZE);
+		sram1_size = LPC4310_LOCAL_SRAM1_SIZE;
+		sram2_size = LPC43xx_LOCAL_SRAM2_SIZE;
+		sram_ahb_size = LPC43x5_AHB_SRAM_SIZE;
 		break;
 	case LPC43xx_PARTID_LPC4330:
 	case LPC43xx_PARTID_LPC4350:
 		t->driver = "LPC4330/50";
-		target_add_ram(t, LPC43xx_LOCAL_SRAM1_BASE, LPC4330_LOCAL_SRAM1_SIZE);
-		target_add_ram(t, LPC43xx_LOCAL_SRAM2_BASE, LPC43x0_LOCAL_SRAM2_SIZE);
-		target_add_ram(t, LPC43xx_AHB_SRAM_BASE, LPC43x5_AHB_SRAM_SIZE);
+		sram1_size = LPC4330_LOCAL_SRAM1_SIZE;
+		sram2_size = LPC43x0_LOCAL_SRAM2_SIZE;
+		sram_ahb_size = LPC43x5_AHB_SRAM_SIZE;
 		break;
 	case LPC43xx_PARTID_LPC4370:
 	case LPC43xx_PARTID_LPC4370_ERRATA:
 		t->driver = "LPC4370";
-		target_add_ram(t, LPC43xx_LOCAL_SRAM1_BASE, LPC4330_LOCAL_SRAM1_SIZE);
-		target_add_ram(t, LPC43xx_LOCAL_SRAM2_BASE, LPC43x0_LOCAL_SRAM2_SIZE);
+		sram1_size = LPC4330_LOCAL_SRAM1_SIZE;
+		sram2_size = LPC43x0_LOCAL_SRAM2_SIZE;
+		sram_ahb_size = LPC43x5_AHB_SRAM_SIZE;
 		target_add_ram(t, LPC4370_M0_SRAM_BASE, LPC4370_M0_SRAM_SIZE);
-		target_add_ram(t, LPC43xx_AHB_SRAM_BASE, LPC43x5_AHB_SRAM_SIZE);
 		break;
 	default:
 		DEBUG_WARN("Probable LPC43x0 with ID errata: %08" PRIx32 "\n", part_id.part);
-		break;
+		t->attach = lpc43x0_attach;
+		t->detach = lpc43x0_detach;
+		return;
 	}
+	/* Finally, call these once to append the linked list of ram */
+	target_add_ram(t, LPC43xx_LOCAL_SRAM1_BASE, sram1_size);
+	target_add_ram(t, LPC43xx_LOCAL_SRAM2_BASE, sram2_size);
+	target_add_ram(t, LPC43xx_AHB_SRAM_BASE, sram_ahb_size);
 	t->attach = lpc43x0_attach;
 	t->detach = lpc43x0_detach;
 }
