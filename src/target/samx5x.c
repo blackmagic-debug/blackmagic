@@ -648,7 +648,7 @@ static bool samx5x_cmd_lock_flash(target_s *t, int argc, const char **argv)
 		tc_printf(t, "Error writing NVM page\n");
 		return false;
 	}
-	tc_printf(t, "Flash locked. The target must be reset for this to take effect.\n");
+	tc_printf(t, "%s. The target must be reset for this to take effect.\n", "Flash locked");
 	return true;
 }
 
@@ -660,7 +660,7 @@ static bool samx5x_cmd_unlock_flash(target_s *t, int argc, const char **argv)
 		tc_printf(t, "Error writing NVM page\n");
 		return false;
 	}
-	tc_printf(t, "Flash unlocked. The target must be reset for this to take effect.\n");
+	tc_printf(t, "%s. The target must be reset for this to take effect.\n", "Flash unlocked");
 	return true;
 }
 
@@ -696,7 +696,7 @@ static bool samx5x_cmd_lock_bootprot(target_s *t, int argc, const char **argv)
 		tc_printf(t, "Error writing NVM page\n");
 		return false;
 	}
-	tc_printf(t, "Bootprot locked. The target must be reset for this to take effect.\n");
+	tc_printf(t, "%s. The target must be reset for this to take effect.\n", "Bootprot locked");
 	return true;
 }
 
@@ -708,7 +708,7 @@ static bool samx5x_cmd_unlock_bootprot(target_s *t, int argc, const char **argv)
 		tc_printf(t, "Error writing NVM page\n");
 		return false;
 	}
-	tc_printf(t, "Bootprot unlocked. The target must be reset for this to take effect.\n");
+	tc_printf(t, "%s. The target must be reset for this to take effect.\n", "Bootprot unlocked");
 	return true;
 }
 
