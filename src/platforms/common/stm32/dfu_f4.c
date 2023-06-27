@@ -60,6 +60,7 @@ static void get_sector_num(uint32_t addr)
 
 	if (!sector_addr[i])
 		return;
+	--i;
 	sector_num = i & 0x1fU;
 }
 
