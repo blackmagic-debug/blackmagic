@@ -752,7 +752,7 @@ static bool stm32l4_cmd_erase_bank1(target_s *const t, const int argc, const cha
 {
 	(void)argc;
 	(void)argv;
-	gdb_out("Erasing bank 1: ");
+	gdb_outf("Erasing bank %u: ", 1);
 	const bool result = stm32l4_cmd_erase(t, FLASH_CR_MER1);
 	gdb_out("done\n");
 	return result;
@@ -762,7 +762,7 @@ static bool stm32l4_cmd_erase_bank2(target_s *const t, const int argc, const cha
 {
 	(void)argc;
 	(void)argv;
-	gdb_out("Erasing bank 2: ");
+	gdb_outf("Erasing bank %u: ", 2);
 	const bool result = stm32l4_cmd_erase(t, FLASH_CR_MER2);
 	gdb_out("done\n");
 	return result;
@@ -863,15 +863,15 @@ static stm32l4_option_bytes_info_s stm32l4_get_opt_bytes_info(const uint16_t par
 static bool stm32l4_cmd_option(target_s *t, int argc, const char **argv)
 {
 	if (t->part_id == ID_STM32L55) {
-		tc_printf(t, "STM32L5 options not implemented!\n");
+		tc_printf(t, "%s options not implemented!\n", "STM32L5");
 		return false;
 	}
 	if (t->part_id == ID_STM32WBXX || t->part_id == ID_STM32WB1X) {
-		tc_printf(t, "STM32WBxx options not implemented!\n");
+		tc_printf(t, "%s options not implemented!\n", "STM32WBxx");
 		return false;
 	}
 	if (t->part_id == ID_STM32WLXX) {
-		tc_printf(t, "STM32WLxx options not implemented!\n");
+		tc_printf(t, "%s options not implemented!\n", "STM32WLxx");
 		return false;
 	}
 
