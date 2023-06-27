@@ -312,33 +312,35 @@ static void lpc43xx_detect(target_s *const t, const lpc43xx_partid_s part_id)
 {
 	lpc43xx_priv_s *const priv = (lpc43xx_priv_s *)t->target_storage;
 	const uint32_t iap_entry = target_mem_read32(t, IAP_ENTRYPOINT_LOCATION);
+	uint32_t sram_ahb_size = 0;
 
 	switch (part_id.part) {
 	case LPC43xx_PARTID_LPC4312:
 		t->driver = "LPC4312/3";
-		target_add_ram(t, LPC43xx_AHB_SRAM_BASE, LPC43x2_AHB_SRAM_SIZE);
+		sram_ahb_size = LPC43x2_AHB_SRAM_SIZE;
 		break;
 	case LPC43xx_PARTID_LPC4315:
 		t->driver = "LPC4315/7";
-		target_add_ram(t, LPC43xx_AHB_SRAM_BASE, LPC43x5_AHB_SRAM_SIZE);
+		sram_ahb_size = LPC43x5_AHB_SRAM_SIZE;
 		break;
 	case LPC43xx_PARTID_LPC4322:
 		t->driver = "LPC4322/3";
-		target_add_ram(t, LPC43xx_AHB_SRAM_BASE, LPC43x2_AHB_SRAM_SIZE);
+		sram_ahb_size = LPC43x2_AHB_SRAM_SIZE;
 		break;
 	case LPC43xx_PARTID_LPC4325:
 		t->driver = "LPC4325/7";
-		target_add_ram(t, LPC43xx_AHB_SRAM_BASE, LPC43x5_AHB_SRAM_SIZE);
+		sram_ahb_size = LPC43x5_AHB_SRAM_SIZE;
 		break;
 	case LPC43xx_PARTID_LPC433x:
 		t->driver = "LPC433x";
-		target_add_ram(t, LPC43xx_AHB_SRAM_BASE, LPC43x5_AHB_SRAM_SIZE);
+		sram_ahb_size = LPC43x5_AHB_SRAM_SIZE;
 		break;
 	case LPC43xx_PARTID_LPC435x:
 		t->driver = "LPC435x";
-		target_add_ram(t, LPC43xx_AHB_SRAM_BASE, LPC43x5_AHB_SRAM_SIZE);
+		sram_ahb_size = LPC43x5_AHB_SRAM_SIZE;
 		break;
 	}
+	target_add_ram(t, LPC43xx_AHB_SRAM_BASE, sram_ahb_size);
 	target_add_ram(t, LPC43xx_SHADOW_BASE, LPC43xx_SHADOW_SIZE);
 	target_add_ram(t, LPC43xx_LOCAL_SRAM1_BASE, LPC43xx_LOCAL_SRAM1_SIZE);
 	target_add_ram(t, LPC43xx_LOCAL_SRAM2_BASE, LPC43xx_LOCAL_SRAM2_SIZE);
