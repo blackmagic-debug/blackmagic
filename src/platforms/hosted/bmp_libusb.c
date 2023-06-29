@@ -207,8 +207,8 @@ static probe_info_s *process_ftdi_probe(void)
 		}
 		if (add_probe) {
 			const char *const manufacturer = strdup("FTDI");
-			probe_list =
-				probe_info_add_by_id(probe_list, BMP_TYPE_FTDI, vid, pid, manufacturer, product, serial, strdup("---"));
+			probe_list = probe_info_add_by_id(
+				probe_list, BMP_TYPE_FTDI, NULL, vid, pid, manufacturer, product, serial, strdup("---"));
 		} else {
 			free(serial);
 			free(product);
@@ -300,7 +300,7 @@ static bool process_cmsis_interface_probe(
 				else
 					product = get_device_descriptor_string(handle, device_descriptor->iProduct);
 
-				*probe_list = probe_info_add_by_id(*probe_list, BMP_TYPE_CMSIS_DAP, device_descriptor->idVendor,
+				*probe_list = probe_info_add_by_id(*probe_list, BMP_TYPE_CMSIS_DAP, device, device_descriptor->idVendor,
 					device_descriptor->idProduct, manufacturer, product, serial, version);
 				cmsis_dap = true;
 			}
@@ -361,7 +361,7 @@ static bool process_vid_pid_table_probe(
 		if (version == NULL)
 			version = strdup("---");
 
-		*probe_list = probe_info_add_by_id(*probe_list, probe_type, device_descriptor->idVendor,
+		*probe_list = probe_info_add_by_id(*probe_list, probe_type, device, device_descriptor->idVendor,
 			device_descriptor->idProduct, manufacturer, product, serial, version);
 		probe_added = true;
 		libusb_close(handle);
