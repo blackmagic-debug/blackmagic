@@ -111,7 +111,16 @@
 #define LED_PORT_UART GPIOA
 #define LED_UART      PINOUT_SWITCH(GPIO4, GPIO1)
 
-/* SPI2: PA4/5/6/7 to onboard w25q64 */
+/* SPI2: PB12/13/14/15 to external chips */
+#define EXT_SPI         SPI2
+#define EXT_SPI_PORT    GPIOB
+#define EXT_SPI_SCLK    GPIO13
+#define EXT_SPI_MISO    GPIO14
+#define EXT_SPI_MOSI    GPIO15
+#define EXT_SPI_CS_PORT GPIOB
+#define EXT_SPI_CS      GPIO12
+
+/* SPI1: PA4/5/6/7 to onboard w25q64 */
 #define OB_SPI         SPI1
 #define OB_SPI_PORT    GPIOA
 #define OB_SPI_SCLK    GPIO5

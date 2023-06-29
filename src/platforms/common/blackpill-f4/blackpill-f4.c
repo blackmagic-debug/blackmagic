@@ -175,23 +175,40 @@ void platform_target_clk_output_enable(bool enable)
 
 bool platform_spi_init(const spi_bus_e bus)
 {
-	if (bus != SPI_BUS_INTERNAL)
+	uint32_t gpioport = 0;
+	uint16_t gpio_hwspi = 0;
+	uint16_t gpio_cs = 0;
+	uint32_t controller = 0;
+	if (bus == SPI_BUS_INTERNAL) {
+		/* Set up onboard flash SPI GPIOs: PA5/6/7 as SPI1 in AF5, PA4 as nCS output push-pull */
+		gpioport = OB_SPI_PORT;
+		gpio_hwspi = OB_SPI_SCLK | OB_SPI_MISO | OB_SPI_MOSI;
+		gpio_cs = OB_SPI_CS;
+	} else if (bus == SPI_BUS_EXTERNAL) {
+		/* Set up external SPI GPIOs: PB13/14/15 as SPI2 in AF5, PB12 as nCS output push-pull */
+		gpioport = EXT_SPI_PORT;
+		gpio_hwspi = EXT_SPI_SCLK | EXT_SPI_MISO | EXT_SPI_MOSI;
+		gpio_cs = EXT_SPI_CS;
+	} else
 		return false;
+	gpio_mode_setup(gpioport, GPIO_MODE_AF, GPIO_PUPD_NONE, gpio_hwspi);
+	gpio_mode_setup(gpioport, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, gpio_cs);
+	gpio_set_output_options(gpioport, GPIO_OTYPE_PP, GPIO_OSPEED_50MHZ, gpio_hwspi | gpio_cs);
+	/* Both SPI1 & SPI2 seem to require AF05 on these pins */
+	gpio_set_af(gpioport, GPIO_AF5, gpio_hwspi);
+	/* Deselect the targeted peripheral chip */
+	gpio_set(gpioport, gpio_cs);
 
-	/* Set up onboard flash SPI GPIOs: PA5/6/7 as SPI1 in AF5, PA4 as nCS output push-pull */
-	const uint32_t gpioport = OB_SPI_PORT;
-	const uint16_t gpios = (OB_SPI_SCLK | OB_SPI_MISO | OB_SPI_MOSI);
-	gpio_mode_setup(gpioport, GPIO_MODE_AF, GPIO_PUPD_NONE, gpios);
-	gpio_mode_setup(gpioport, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, OB_SPI_CS);
-	gpio_set_output_options(gpioport, GPIO_OTYPE_PP, GPIO_OSPEED_50MHZ, gpios | OB_SPI_CS);
-	gpio_set_af(gpioport, GPIO_AF5, gpios);
-	/* Deselect the onboard flash chip */
-	gpio_set(gpioport, OB_SPI_CS);
+	if (bus == SPI_BUS_INTERNAL) {
+		rcc_periph_clock_enable(RCC_SPI1);
+		rcc_periph_reset_pulse(RST_SPI1);
+		controller = OB_SPI;
+	} else if (bus == SPI_BUS_EXTERNAL) {
+		rcc_periph_clock_enable(RCC_SPI2);
+		rcc_periph_reset_pulse(RST_SPI2);
+		controller = EXT_SPI;
+	}
 
-	rcc_periph_clock_enable(RCC_SPI1);
-	rcc_periph_reset_pulse(RST_SPI1);
-
-	const uint32_t controller = OB_SPI;
 	/* Set up hardware SPI: master, PCLK/8, Mode 0, 8-bit MSB first */
 	spi_init_master(controller, SPI_CR1_BAUDRATE_FPCLK_DIV_8, SPI_CR1_CPOL_CLK_TO_0_WHEN_IDLE,
 		SPI_CR1_CPHA_CLK_TRANSITION_1, SPI_CR1_DFF_8BIT, SPI_CR1_MSBFIRST);
@@ -201,17 +218,23 @@ bool platform_spi_init(const spi_bus_e bus)
 
 bool platform_spi_deinit(const spi_bus_e bus)
 {
-	if (bus != SPI_BUS_INTERNAL)
+	if (bus == SPI_BUS_INTERNAL) {
+		/* Notice: spi_clean_disable() hangs */
+		spi_disable(OB_SPI);
+		/* Gate SPI1 APB clock */
+		rcc_periph_clock_disable(RCC_SPI1);
+		/* Unmap GPIOs */
+		const uint16_t gpios = OB_SPI_SCLK | OB_SPI_MISO | OB_SPI_MOSI | OB_SPI_CS;
+		gpio_mode_setup(OB_SPI_PORT, GPIO_MODE_INPUT, GPIO_PUPD_NONE, gpios);
+		return true;
+	} else if (bus == SPI_BUS_EXTERNAL) {
+		spi_disable(EXT_SPI);
+		rcc_periph_clock_disable(RCC_SPI2);
+		const uint16_t gpios = EXT_SPI_SCLK | EXT_SPI_MISO | EXT_SPI_MOSI | EXT_SPI_CS;
+		gpio_mode_setup(EXT_SPI_PORT, GPIO_MODE_INPUT, GPIO_PUPD_NONE, gpios);
+		return true;
+	} else
 		return false;
-	const uint32_t controller = OB_SPI;
-	spi_disable(controller);
-	/* Gate SPI1 APB clock */
-	rcc_periph_clock_disable(RCC_SPI1);
-	/* Unmap GPIOs */
-	const uint32_t gpioport = OB_SPI_PORT;
-	const uint16_t gpios = (OB_SPI_SCLK | OB_SPI_MISO | OB_SPI_MOSI);
-	gpio_mode_setup(gpioport, GPIO_MODE_INPUT, GPIO_PUPD_NONE, gpios | OB_SPI_CS);
-	return true;
 }
 
 bool platform_spi_chip_select(const uint8_t device_select)
@@ -225,6 +248,10 @@ bool platform_spi_chip_select(const uint8_t device_select)
 		port = OB_SPI_CS_PORT;
 		pin = OB_SPI_CS;
 		break;
+	case SPI_DEVICE_EXT_FLASH:
+		port = EXT_SPI_CS_PORT;
+		pin = EXT_SPI_CS;
+		break;
 	default:
 		return false;
 	}
@@ -234,10 +261,16 @@ bool platform_spi_chip_select(const uint8_t device_select)
 
 uint8_t platform_spi_xfer(const spi_bus_e bus, const uint8_t value)
 {
-	if (bus != SPI_BUS_INTERNAL)
-		return false;
-	const uint32_t controller = OB_SPI;
-	return spi_xfer(controller, value);
+	switch (bus) {
+	case SPI_BUS_INTERNAL:
+		return spi_xfer(OB_SPI, value);
+		break;
+	case SPI_BUS_EXTERNAL:
+		return spi_xfer(EXT_SPI, value);
+		break;
+	default:
+		return 0U;
+	}
 }
 
 int platform_hwversion(void)
