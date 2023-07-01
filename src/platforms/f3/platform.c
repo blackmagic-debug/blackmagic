@@ -34,6 +34,11 @@
 
 extern uint32_t _ebss; // NOLINT(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp)
 
+int platform_hwversion(void)
+{
+	return 0;
+}
+
 void platform_init(void)
 {
 	volatile uint32_t *magic = &_ebss;

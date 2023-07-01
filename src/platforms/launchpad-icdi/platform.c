@@ -48,6 +48,11 @@ uint32_t platform_time_ms(void)
 	return time_ms;
 }
 
+int platform_hwversion(void)
+{
+	return 0;
+}
+
 void platform_init(void)
 {
 	for (volatile size_t i = 0; i < 1000000U; ++i)
