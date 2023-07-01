@@ -79,7 +79,7 @@ probe_host = declare_dependency(
 	sources: probe_blackpill_sources,
 	compile_args: probe_blackpill_args,
 	link_args: probe_blackpill_common_link_args + probe_blackpill_link_args,
-	dependencies: [platform_common, platform_stm32f4, fixme_platform_stm32_traceswo],
+	dependencies: [platform_common, platform_stm32f4, fixme_platform_stm32_traceswoasync],
 )
 
 probe_bootloader = declare_dependency(
