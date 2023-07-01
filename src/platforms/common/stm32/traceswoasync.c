@@ -28,11 +28,14 @@
 
 /* TDO/TRACESWO signal comes into the SWOUSART RX pin. */
 
-#include <stdatomic.h>
 #include "general.h"
 #include "platform.h"
 #include "usb.h"
 #include "traceswo.h"
+
+#include <stdatomic.h>
+#include <malloc.h>
+#include <errno.h>
 
 #include <libopencmsis/core_cm3.h>
 #include <libopencm3/cm3/nvic.h>
@@ -44,7 +47,7 @@
 static volatile uint32_t write_index; /* Packet currently received via UART */
 static volatile uint32_t read_index;  /* Packet currently waiting to transmit to USB */
 /* Packets arrived from the SWO interface */
-static uint8_t trace_rx_buf[NUM_TRACE_PACKETS * TRACE_ENDPOINT_SIZE];
+static uint8_t *trace_rx_buf = NULL;
 /* Packet pingpong buffer used for receiving packets */
 static uint8_t pingpong_buf[2 * TRACE_ENDPOINT_SIZE];
 /* SWO decoding */
@@ -123,6 +126,17 @@ void SWO_DMA_ISR(void)
 
 void traceswo_init(uint32_t baudrate, uint32_t swo_chan_bitmask)
 {
+	/* Skip initial allocation on commands for mode change */
+	if (trace_rx_buf == NULL) {
+		/* Alignment (bytes): 1 for UART DMA, 2-4 for memcpy in usb code, 8 provided by malloc. Not 64 */
+		uint8_t *const newbuf = malloc(NUM_TRACE_PACKETS * TRACE_ENDPOINT_SIZE);
+		if (!newbuf) {
+			DEBUG_ERROR("malloc: failed in %s\n", __func__);
+			return;
+		}
+		trace_rx_buf = newbuf;
+	}
+
 	if (!baudrate)
 		baudrate = SWO_DEFAULT_BAUD;
 
@@ -137,4 +151,19 @@ void traceswo_init(uint32_t baudrate, uint32_t swo_chan_bitmask)
 	traceswo_setspeed(baudrate);
 	traceswo_setmask(swo_chan_bitmask);
 	decoding = (swo_chan_bitmask != 0);
+}
+
+void traceswo_deinit(void)
+{
+	/* Stop peripherals servicing */
+	nvic_disable_irq(SWO_DMA_IRQ);
+	dma_disable_channel(SWO_DMA_BUS, SWO_DMA_CHAN);
+	usart_disable(SWO_UART);
+	/* Dump the buffered remains */
+	trace_buf_drain(usbdev, TRACE_ENDPOINT | USB_REQ_TYPE_IN);
+	/* Return this contiguous chunk of SRAM to unshrinkable heap */
+	if (trace_rx_buf != NULL) {
+		free(trace_rx_buf);
+		trace_rx_buf = NULL;
+	}
 }
