@@ -34,7 +34,7 @@
 
 #define PLATFORM_HAS_TRACESWO
 #define NUM_TRACE_PACKETS 256U /* 16K buffer */
-#define TRACESWO_PROTOCOL 1U   /* 1 = RZ/Manchester, 2 = NRZ/async/uart */
+#define TRACESWO_PROTOCOL 2U   /* 1 = RZ/Manchester, 2 = NRZ/async/uart */
 
 #if ENABLE_DEBUG == 1
 #define PLATFORM_HAS_DEBUG
