@@ -27,7 +27,9 @@
 #include "timing.h"
 #include "timing_stm32.h"
 
-#define PLATFORM_HAS_TRACESWO
+#define PLATFORM_HAS_TRACESWO 1
+#define NUM_TRACE_PACKETS     512U /* 32K buffer */
+//#define TRACESWO_PROTOCOL     2U   /* 1 = RZ/Manchester, 2 = NRZ/async/uart */
 
 /* Error handling for ALTERNATIVE_PINOUT
  * If ALTERNATIVE_PINOUT has a value >= 4 (undefined), or <= 0, an error is thrown.
@@ -202,11 +204,27 @@
 #define IRQ_PRI_USBUSART     (2U << 4U)
 #define IRQ_PRI_USBUSART_DMA (2U << 4U)
 #define IRQ_PRI_TRACE        (0U << 4U)
+#define IRQ_PRI_SWO_DMA      (0U << 4U)
 
 #define TRACE_TIM          TIM3
 #define TRACE_TIM_CLK_EN() rcc_periph_clock_enable(RCC_TIM3)
 #define TRACE_IRQ          NVIC_TIM3_IRQ
 #define TRACE_ISR(x)       tim3_isr(x)
+
+/* On F411 use USART1 remapped to PB7 for async capture */
+#define SWO_UART        USBUSART1
+#define SWO_UART_CLK    USBUSART1_CLK
+#define SWO_UART_DR     USBUSART1_DR
+#define SWO_UART_PORT   GPIOB
+#define SWO_UART_RX_PIN GPIO7
+
+/* Bind to the same DMA Rx channel */
+#define SWO_DMA_BUS    USBUSART1_DMA_BUS
+#define SWO_DMA_CLK    USBUSART1_DMA_CLK
+#define SWO_DMA_CHAN   USBUSART1_DMA_RX_CHAN
+#define SWO_DMA_IRQ    USBUSART1_DMA_RX_IRQ
+#define SWO_DMA_ISR(x) USBUSART1_DMA_RX_ISRx(x)
+#define SWO_DMA_TRG    DMA_SxCR_CHSEL_4
 
 #define SET_RUN_STATE(state)      \
 	{                             \
