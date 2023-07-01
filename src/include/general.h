@@ -121,11 +121,4 @@ void debug_serial_send_stdout(const uint8_t *data, size_t len);
 #undef MAX
 #define MAX(x, y) (((x) > (y)) ? (x) : (y))
 
-#if !defined(SYSTICKHZ)
-#define SYSTICKHZ 100U
-#endif
-
-#define SYSTICKMS (1000U / SYSTICKHZ)
-#define MORSECNT  ((SYSTICKHZ / 10U) - 1U)
-
 #endif /* INCLUDE_GENERAL_H */
