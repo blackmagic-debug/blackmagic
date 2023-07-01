@@ -21,6 +21,7 @@
 /* This file implements the platform specific functions for the 96Boards Carbon implementation. */
 
 #include "general.h"
+#include "platform.h"
 #include "usb.h"
 #include "aux_serial.h"
 #include "morse.h"

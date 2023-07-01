@@ -23,6 +23,7 @@
  */
 
 #include "general.h"
+#include "platform.h"
 #include "jtagtap.h"
 #include "swd.h"
 #include "target.h"

@@ -21,6 +21,7 @@
 /* This file implements the platform specific functions for the blackpill-f4 implementation. */
 
 #include "general.h"
+#include "platform.h"
 #include "usb.h"
 #include "aux_serial.h"
 #include "morse.h"

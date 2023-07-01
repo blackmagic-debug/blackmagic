@@ -23,6 +23,7 @@
  */
 
 #include "general.h"
+#include "platform.h"
 #include "usb.h"
 #include "aux_serial.h"
 #include "gdb_if.h"
