@@ -16,6 +16,7 @@
  */
 
 #include "general.h"
+#include "platform.h"
 #include "gdb_if.h"
 #include "usb.h"
 #include "aux_serial.h"
