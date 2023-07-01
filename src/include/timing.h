@@ -23,6 +23,13 @@
 
 #include <stdint.h>
 
+#if !defined(SYSTICKHZ)
+#define SYSTICKHZ 100U
+#endif
+
+#define SYSTICKMS (1000U / SYSTICKHZ)
+#define MORSECNT  ((SYSTICKHZ / 10U) - 1U)
+
 struct platform_timeout {
 	uint32_t time;
 };
