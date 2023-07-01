@@ -44,6 +44,20 @@
 #include <libopencm3/stm32/usart.h>
 #include <libopencm3/stm32/dma.h>
 
+#if defined(DMA_STREAM0)
+#define dma_channel_reset(dma, channel)   dma_stream_reset(dma, channel)
+#define dma_enable_channel(dma, channel)  dma_enable_stream(dma, channel)
+#define dma_disable_channel(dma, channel) dma_disable_stream(dma, channel)
+
+#define DMA_PSIZE_8BIT DMA_SxCR_PSIZE_8BIT
+#define DMA_MSIZE_8BIT DMA_SxCR_MSIZE_8BIT
+#define DMA_PL_HIGH    DMA_SxCR_PL_HIGH
+#else
+#define DMA_PSIZE_8BIT DMA_CCR_PSIZE_8BIT
+#define DMA_MSIZE_8BIT DMA_CCR_MSIZE_8BIT
+#define DMA_PL_HIGH    DMA_CCR_PL_HIGH
+#endif
+
 static volatile uint32_t write_index; /* Packet currently received via UART */
 static volatile uint32_t read_index;  /* Packet currently waiting to transmit to USB */
 /* Packets arrived from the SWO interface */
@@ -91,11 +105,18 @@ void traceswo_setspeed(uint32_t baudrate)
 	/* Set up DMA channel */
 	dma_channel_reset(SWO_DMA_BUS, SWO_DMA_CHAN);
 	dma_set_peripheral_address(SWO_DMA_BUS, SWO_DMA_CHAN, (uint32_t)&SWO_UART_DR);
+#if defined(DMA_STREAM0)
+	dma_set_transfer_mode(SWO_DMA_BUS, SWO_DMA_CHAN, DMA_SxCR_DIR_PERIPHERAL_TO_MEM);
+	dma_channel_select(SWO_DMA_BUS, SWO_DMA_CHAN, SWO_DMA_TRG);
+	dma_set_dma_flow_control(SWO_DMA_BUS, SWO_DMA_CHAN);
+	dma_enable_direct_mode(SWO_DMA_BUS, SWO_DMA_CHAN);
+#else
 	dma_set_read_from_peripheral(SWO_DMA_BUS, SWO_DMA_CHAN);
+#endif
 	dma_enable_memory_increment_mode(SWO_DMA_BUS, SWO_DMA_CHAN);
-	dma_set_peripheral_size(SWO_DMA_BUS, SWO_DMA_CHAN, DMA_CCR_PSIZE_8BIT);
-	dma_set_memory_size(SWO_DMA_BUS, SWO_DMA_CHAN, DMA_CCR_MSIZE_8BIT);
-	dma_set_priority(SWO_DMA_BUS, SWO_DMA_CHAN, DMA_CCR_PL_HIGH);
+	dma_set_peripheral_size(SWO_DMA_BUS, SWO_DMA_CHAN, DMA_PSIZE_8BIT);
+	dma_set_memory_size(SWO_DMA_BUS, SWO_DMA_CHAN, DMA_MSIZE_8BIT);
+	dma_set_priority(SWO_DMA_BUS, SWO_DMA_CHAN, DMA_PL_HIGH);
 	dma_enable_transfer_complete_interrupt(SWO_DMA_BUS, SWO_DMA_CHAN);
 	dma_enable_half_transfer_interrupt(SWO_DMA_BUS, SWO_DMA_CHAN);
 	dma_enable_circular_mode(SWO_DMA_BUS, SWO_DMA_CHAN);
@@ -111,12 +132,12 @@ void traceswo_setspeed(uint32_t baudrate)
 
 void SWO_DMA_ISR(void)
 {
-	if (DMA_ISR(SWO_DMA_BUS) & DMA_ISR_HTIF(SWO_DMA_CHAN)) {
-		DMA_IFCR(SWO_DMA_BUS) |= DMA_ISR_HTIF(SWO_DMA_CHAN);
+	if (dma_get_interrupt_flag(SWO_DMA_BUS, SWO_DMA_CHAN, DMA_HTIF)) {
+		dma_clear_interrupt_flags(SWO_DMA_BUS, SWO_DMA_CHAN, DMA_HTIF);
 		memcpy(&trace_rx_buf[write_index * TRACE_ENDPOINT_SIZE], pingpong_buf, TRACE_ENDPOINT_SIZE);
 	}
-	if (DMA_ISR(SWO_DMA_BUS) & DMA_ISR_TCIF(SWO_DMA_CHAN)) {
-		DMA_IFCR(SWO_DMA_BUS) |= DMA_ISR_TCIF(SWO_DMA_CHAN);
+	if (dma_get_interrupt_flag(SWO_DMA_BUS, SWO_DMA_CHAN, DMA_TCIF)) {
+		dma_clear_interrupt_flags(SWO_DMA_BUS, SWO_DMA_CHAN, DMA_TCIF);
 		memcpy(
 			&trace_rx_buf[write_index * TRACE_ENDPOINT_SIZE], &pingpong_buf[TRACE_ENDPOINT_SIZE], TRACE_ENDPOINT_SIZE);
 	}
@@ -143,9 +164,16 @@ void traceswo_init(uint32_t baudrate, uint32_t swo_chan_bitmask)
 	rcc_periph_clock_enable(SWO_UART_CLK);
 	rcc_periph_clock_enable(SWO_DMA_CLK);
 
+#if defined(STM32F1)
 	gpio_set_mode(SWO_UART_PORT, GPIO_MODE_INPUT, GPIO_CNF_INPUT_PULL_UPDOWN, SWO_UART_RX_PIN);
 	/* Pull SWO pin high to keep open SWO line ind uart idle state! */
 	gpio_set(SWO_UART_PORT, SWO_UART_RX_PIN);
+#else
+	gpio_mode_setup(SWO_UART_PORT, GPIO_MODE_AF, GPIO_PUPD_PULLUP, SWO_UART_RX_PIN);
+	gpio_set_output_options(SWO_UART_PORT, GPIO_OTYPE_OD, GPIO_OSPEED_100MHZ, SWO_UART_RX_PIN);
+	gpio_set_af(SWO_UART_PORT, SWO_UART_PIN_AF, SWO_UART_RX_PIN);
+#endif
+
 	nvic_set_priority(SWO_DMA_IRQ, IRQ_PRI_SWO_DMA);
 	nvic_enable_irq(SWO_DMA_IRQ);
 	traceswo_setspeed(baudrate);
