@@ -155,11 +155,6 @@ extern bool debug_bmp;
 		gpio_set_val(LED_PORT, LED_ERROR, state); \
 	}
 
-static inline int platform_hwversion(void)
-{
-	return 0;
-}
-
 /* Use newlib provided integer-only stdio functions */
 
 #ifdef sscanf

@@ -145,11 +145,6 @@
 		gpio_set_val(LED_PORT_ERROR, LED_ERROR, state); \
 	}
 
-static inline int platform_hwversion(void)
-{
-	return 0;
-}
-
 /* Use newlib provided integer-only stdio functions */
 
 #ifdef sscanf

@@ -121,6 +121,11 @@ void platform_request_boot(void)
 
 #pragma GCC diagnostic pop
 
+int platform_hwversion(void)
+{
+	return 0;
+}
+
 void platform_target_clk_output_enable(bool enable)
 {
 	(void)enable;

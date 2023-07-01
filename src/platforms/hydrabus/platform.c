@@ -36,6 +36,11 @@
 
 jmp_buf fatal_error_jmpbuf;
 
+int platform_hwversion(void)
+{
+	return 0;
+}
+
 void platform_init(void)
 {
 	/* Check the USER button */

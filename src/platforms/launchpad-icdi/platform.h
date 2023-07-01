@@ -122,11 +122,6 @@ inline static uint8_t gpio_get(uint32_t port, uint8_t pin)
 		nvic_disable_irq(USB_IRQ);  \
 	} while (0)
 
-static inline int platform_hwversion(void)
-{
-	return 0;
-}
-
 /* Use newlib provided integer-only stdio functions */
 
 #ifdef sscanf
