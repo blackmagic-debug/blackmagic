@@ -29,6 +29,8 @@
 /* TDO/TRACESWO signal comes into the SWOUSART RX pin. */
 
 #include <stdatomic.h>
+#include <malloc.h>
+#include <errno.h>
 #include "general.h"
 #include "usb.h"
 #include "traceswo.h"
@@ -40,10 +42,17 @@
 #include <libopencm3/stm32/usart.h>
 #include <libopencm3/stm32/dma.h>
 
+#define TRACESWOASYNC_ALLOCS
+//#define TRACESWOASYNC_DEALLOCS
+
 static volatile uint32_t write_index; /* Packet currently received via UART */
 static volatile uint32_t read_index;  /* Packet currently waiting to transmit to USB */
 /* Packets arrived from the SWO interface */
+#ifdef TRACESWOASYNC_ALLOCS
+static uint8_t *trace_rx_buf = NULL;
+#else
 static uint8_t trace_rx_buf[NUM_TRACE_PACKETS * TRACE_ENDPOINT_SIZE];
+#endif
 /* Packet pingpong buffer used for receiving packets */
 static uint8_t pingpong_buf[2 * TRACE_ENDPOINT_SIZE];
 /* SWO decoding */
@@ -122,6 +131,17 @@ void SWO_DMA_ISR(void)
 
 void traceswo_init(uint32_t baudrate, uint32_t swo_chan_bitmask)
 {
+#ifdef TRACESWOASYNC_ALLOCS
+	if (trace_rx_buf == NULL) {
+		uint8_t *newbuf = memalign(TRACE_ENDPOINT_SIZE, NUM_TRACE_PACKETS * TRACE_ENDPOINT_SIZE);
+		if (newbuf == NULL) {
+			DEBUG_ERROR("%s: memalign failed, errno=%d\n", __func__, errno);
+			return;
+		}
+		trace_rx_buf = newbuf;
+	}
+#endif
+
 	if (!baudrate)
 		baudrate = SWO_DEFAULT_BAUD;
 
@@ -136,4 +156,24 @@ void traceswo_init(uint32_t baudrate, uint32_t swo_chan_bitmask)
 	traceswo_setspeed(baudrate);
 	traceswo_setmask(swo_chan_bitmask);
 	decoding = (swo_chan_bitmask != 0);
+}
+
+void traceswo_deinit(void)
+{
+	/* Stop peripherals servicing */
+	nvic_disable_irq(SWO_DMA_IRQ);
+	dma_disable_channel(SWO_DMA_BUS, SWO_DMA_CHAN);
+	usart_disable(SWO_UART);
+	/* Dump the buffered remains */
+	trace_buf_drain(usbdev, TRACE_ENDPOINT | USB_REQ_TYPE_IN);
+#ifdef TRACESWOASYNC_DEALLOCS
+	/* Release this chunk of precious SRAM. FIXME: does heap shrink after free/malloc_trim? */
+	if (trace_rx_buf != NULL) {
+		mallopt(M_TRIM_THRESHOLD, 4 * 1024);
+		free(trace_rx_buf);
+		trace_rx_buf = NULL;
+		/* Trim manually in case free() didn't. This returns 1 on newlib, or fails to link on newlib-nano. */
+		malloc_trim(0);
+	}
+#endif
 }
