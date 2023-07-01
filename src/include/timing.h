@@ -23,6 +23,10 @@
 
 #include <stdint.h>
 
+#if PC_HOSTED == 1
+#define SYSTICKHZ 1000U
+#endif
+
 #if !defined(SYSTICKHZ)
 #define SYSTICKHZ 100U
 #endif

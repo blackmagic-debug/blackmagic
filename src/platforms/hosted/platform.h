@@ -49,8 +49,6 @@ void platform_buffer_flush(void);
 	} while (0)
 #define PLATFORM_HAS_POWER_SWITCH
 
-#define SYSTICKHZ 1000U
-
 #define VENDOR_ID_BMP     0x1d50U
 #define PRODUCT_ID_BMP_BL 0x6017U
 #define PRODUCT_ID_BMP    0x6018U
