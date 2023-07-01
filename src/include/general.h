@@ -40,7 +40,7 @@
 #include <sys/types.h>
 
 #include "maths_utils.h"
-#include "platform.h"
+#include "timing.h"
 #include "platform_support.h"
 
 #ifndef ARRAY_LENGTH

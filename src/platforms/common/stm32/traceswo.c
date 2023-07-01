@@ -32,6 +32,7 @@
  * The core can then process the buffer to extract the frame.
  */
 #include "general.h"
+#include "platform.h"
 #include "usb.h"
 #include "traceswo.h"
 

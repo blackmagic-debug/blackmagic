@@ -25,6 +25,7 @@
 #include <stdio.h>
 
 #include "general.h"
+#include "platform.h"
 #include "jtagtap.h"
 
 jtag_proc_s jtag_proc;

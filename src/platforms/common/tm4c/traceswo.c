@@ -28,6 +28,7 @@
  */
 
 #include "general.h"
+#include "platform.h"
 #include "usb.h"
 
 #include <libopencm3/cm3/nvic.h>

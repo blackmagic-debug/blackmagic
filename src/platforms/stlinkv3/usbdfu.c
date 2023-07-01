@@ -27,6 +27,7 @@
 
 #include "usbdfu.h"
 #include "general.h"
+#include "platform.h"
 
 uintptr_t app_address = APP_START;
 

@@ -23,6 +23,7 @@
 
 #include <stdarg.h>
 #include "general.h"
+#include "platform.h"
 #include "remote.h"
 #include "gdb_main.h"
 #include "gdb_packet.h"

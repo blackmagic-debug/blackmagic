@@ -17,6 +17,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include "general.h"
+#include "platform.h"
 #include "morse.h"
 
 #include <libopencm3/cm3/systick.h>

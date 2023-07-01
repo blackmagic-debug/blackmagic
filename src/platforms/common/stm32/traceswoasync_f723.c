@@ -31,6 +31,7 @@
 
 #include <stdatomic.h>
 #include "general.h"
+#include "platform.h"
 #include "usb.h"
 #include "traceswo.h"
 

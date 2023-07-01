@@ -21,6 +21,7 @@
 /* This file implements the SW-DP interface. */
 
 #include "general.h"
+#include "platform.h"
 #include "timing.h"
 #include "swd.h"
 

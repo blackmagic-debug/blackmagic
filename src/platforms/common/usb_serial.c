@@ -47,6 +47,7 @@
 typedef struct stat stat_s;
 #endif
 #include "general.h"
+#include "platform.h"
 #include "gdb_if.h"
 #include "usb_serial.h"
 #ifdef PLATFORM_HAS_TRACESWO
