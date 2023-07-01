@@ -33,6 +33,8 @@
 #include "timing_stm32.h"
 
 #define PLATFORM_HAS_TRACESWO
+#define NUM_TRACE_PACKETS 256U /* 16K buffer */
+#define TRACESWO_PROTOCOL 1U   /* 1 = RZ/Manchester, 2 = NRZ/async/uart */
 
 #if ENABLE_DEBUG == 1
 #define PLATFORM_HAS_DEBUG
@@ -281,11 +283,28 @@ extern bool debug_bmp;
 #define IRQ_PRI_USBUSART     (2U << 4U)
 #define IRQ_PRI_USBUSART_DMA (2U << 4U)
 #define IRQ_PRI_TRACE        (0U << 4U)
+#define IRQ_PRI_SWO_DMA      (0U << 4U)
 
 #define TRACE_TIM          TIM3
 #define TRACE_TIM_CLK_EN() rcc_periph_clock_enable(RCC_TIM3)
 #define TRACE_IRQ          NVIC_TIM3_IRQ
 #define TRACE_ISR(x)       tim3_isr(x)
+
+/* On F411 use USART1_RX mapped on PB7 for async capture */
+#define SWO_UART        USBUSART1
+#define SWO_UART_CLK    USBUSART1_CLK
+#define SWO_UART_DR     USBUSART1_DR
+#define SWO_UART_PORT   GPIOB
+#define SWO_UART_RX_PIN GPIO7
+#define SWO_UART_PIN_AF GPIO_AF7
+
+/* Bind to the same DMA Rx channel */
+#define SWO_DMA_BUS    USBUSART1_DMA_BUS
+#define SWO_DMA_CLK    USBUSART1_DMA_CLK
+#define SWO_DMA_CHAN   USBUSART1_DMA_RX_CHAN
+#define SWO_DMA_IRQ    USBUSART1_DMA_RX_IRQ
+#define SWO_DMA_ISR(x) USBUSART1_DMA_RX_ISRx(x)
+#define SWO_DMA_TRG    DMA_SxCR_CHSEL_4
 
 #define SET_RUN_STATE(state)      \
 	{                             \
