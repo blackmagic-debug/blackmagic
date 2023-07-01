@@ -21,6 +21,7 @@
 /* Provides main entry point. Initialise subsystems and enter GDB protocol loop. */
 
 #include "general.h"
+#include "platform.h"
 #include "gdb_if.h"
 #include "gdb_main.h"
 #include "target.h"

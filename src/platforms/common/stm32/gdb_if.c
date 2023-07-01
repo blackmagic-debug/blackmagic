@@ -27,6 +27,7 @@
 #include <libopencmsis/core_cm3.h>
 
 #include "general.h"
+#include "platform.h"
 #include "usb_serial.h"
 #include "gdb_if.h"
 

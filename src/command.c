@@ -25,6 +25,7 @@
  */
 
 #include "general.h"
+#include "platform.h"
 #include "exception.h"
 #include "command.h"
 #include "gdb_packet.h"

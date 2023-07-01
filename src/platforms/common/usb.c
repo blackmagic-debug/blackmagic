@@ -21,6 +21,7 @@
 #include <libopencm3/cm3/nvic.h>
 
 #include "general.h"
+#include "platform.h"
 #include "usb.h"
 #include "usb_descriptors.h"
 #include "usb_serial.h"

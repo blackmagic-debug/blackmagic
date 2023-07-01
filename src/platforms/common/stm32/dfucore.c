@@ -18,6 +18,7 @@
  */
 
 #include "general.h"
+#include "platform.h"
 #include "version.h"
 #include "serialno.h"
 #include <string.h>

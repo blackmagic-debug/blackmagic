@@ -25,6 +25,7 @@
  */
 
 #include "general.h"
+#include "platform.h"
 #include "ctype.h"
 #include "hex_utils.h"
 #include "gdb_if.h"
