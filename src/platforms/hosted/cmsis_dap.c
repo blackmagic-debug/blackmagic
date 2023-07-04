@@ -266,7 +266,7 @@ bool dap_init(void)
 
 	dap_quirks = 0;
 	/* Handle multi-TAP JTAG on older ORBTrace gateware being broken */
-	if (strcmp(info->product, "Orbtrace") == 0 &&
+	if (strcmp(info.product, "Orbtrace") == 0 &&
 		(adaptor_version.major < 1 || (adaptor_version.major == 1 && adaptor_version.minor <= 2))) {
 		dap_quirks |= DAP_QUIRK_NO_JTAG_MUTLI_TAP;
 	}
