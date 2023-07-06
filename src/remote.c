@@ -184,7 +184,6 @@ static void remote_packet_process_jtag(unsigned i, char *packet)
 {
 	uint32_t MS;
 	uint64_t DO = 0;
-	size_t ticks;
 	uint64_t DI = 0;
 	switch (packet[1]) {
 	case REMOTE_INIT: /* JS = initialise ============================= */
@@ -200,42 +199,45 @@ static void remote_packet_process_jtag(unsigned i, char *packet)
 		remote_respond(REMOTE_RESP_OK, 0);
 		break;
 
-	case REMOTE_TMS: /* JT = TMS Sequence ============================ */
-		ticks = remote_hex_string_to_num(2, &packet[2]);
+	case REMOTE_TMS: { /* JT = TMS Sequence ============================ */
+		const size_t clock_cycles = remote_hex_string_to_num(2, &packet[2]);
 		MS = remote_hex_string_to_num(2, &packet[4]);
 
 		if (i < 4U)
 			remote_respond(REMOTE_RESP_ERR, REMOTE_ERROR_WRONGLEN);
 		else {
-			jtag_proc.jtagtap_tms_seq(MS, ticks);
+			jtag_proc.jtagtap_tms_seq(MS, clock_cycles);
 			remote_respond(REMOTE_RESP_OK, 0);
 		}
 		break;
+	}
 
 	case REMOTE_CYCLE: { /* JC = clock cycle ============================ */
-		ticks = remote_hex_string_to_num(8, &packet[4]);
+		const size_t clock_cycles = remote_hex_string_to_num(8, &packet[4]);
 		const bool tms = packet[2] != '0';
 		const bool tdi = packet[3] != '0';
-		jtag_proc.jtagtap_cycle(tms, tdi, ticks);
+		jtag_proc.jtagtap_cycle(tms, tdi, clock_cycles);
 		remote_respond(REMOTE_RESP_OK, 0);
 		break;
 	}
 
 	case REMOTE_TDITDO_TMS: /* JD = TDI/TDO  ========================================= */
+	case REMOTE_TDITDO_NOTMS: {
 		if (i < 5U)
 			remote_respond(REMOTE_RESP_ERR, REMOTE_ERROR_WRONGLEN);
 		else {
-			ticks = remote_hex_string_to_num(2, &packet[2]);
+			const size_t clock_cycles = remote_hex_string_to_num(2, &packet[2]);
 			DI = remote_hex_string_to_num(-1, &packet[4]);
 			const uint8_t *const data_in = (uint8_t *)&DI;
 			uint8_t *data_out = (uint8_t *)&DO;
-			jtag_proc.jtagtap_tdi_tdo_seq(data_out, packet[1] == REMOTE_TDITDO_TMS, data_in, ticks);
+			jtag_proc.jtagtap_tdi_tdo_seq(data_out, packet[1] == REMOTE_TDITDO_TMS, data_in, clock_cycles);
 
 			remote_respond(REMOTE_RESP_OK, DO);
 		}
 		break;
+	}
 
-	case REMOTE_NEXT: /* JN = NEXT ======================================== */
+	case REMOTE_NEXT: { /* JN = NEXT ======================================== */
 		if (i != 4U)
 			remote_respond(REMOTE_RESP_ERR, REMOTE_ERROR_WRONGLEN);
 		else {
@@ -243,6 +245,7 @@ static void remote_packet_process_jtag(unsigned i, char *packet)
 			remote_respond(REMOTE_RESP_OK, tdo ? 1U : 0U);
 		}
 		break;
+	}
 
 	default:
 		remote_respond(REMOTE_RESP_ERR, REMOTE_ERROR_UNRECOGNISED);
