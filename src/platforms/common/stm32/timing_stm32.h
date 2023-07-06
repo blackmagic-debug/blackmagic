@@ -23,7 +23,6 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-extern uint32_t swd_delay_cnt;
 extern bool running_status;
 
 void platform_timing_init(void);
