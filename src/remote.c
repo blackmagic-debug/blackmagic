@@ -180,7 +180,7 @@ static void remote_packet_process_swd(unsigned i, char *packet)
 	}
 }
 
-static void remote_packet_process_jtag(unsigned i, char *packet)
+static void remote_packet_process_jtag(const char *const packet, const size_t packet_len)
 {
 	switch (packet[1]) {
 	case REMOTE_INIT: /* JS = initialise ============================= */
@@ -200,7 +200,7 @@ static void remote_packet_process_jtag(unsigned i, char *packet)
 		const size_t clock_cycles = remote_hex_string_to_num(2, &packet[2]);
 		const uint32_t tms_states = remote_hex_string_to_num(2, &packet[4]);
 
-		if (i < 4U)
+		if (packet_len < 4U)
 			remote_respond(REMOTE_RESP_ERR, REMOTE_ERROR_WRONGLEN);
 		else {
 			jtag_proc.jtagtap_tms_seq(tms_states, clock_cycles);
@@ -220,7 +220,7 @@ static void remote_packet_process_jtag(unsigned i, char *packet)
 
 	case REMOTE_TDITDO_TMS: /* JD = TDI/TDO  ========================================= */
 	case REMOTE_TDITDO_NOTMS: {
-		if (i < 5U)
+		if (packet_len < 5U)
 			remote_respond(REMOTE_RESP_ERR, REMOTE_ERROR_WRONGLEN);
 		else {
 			const size_t clock_cycles = remote_hex_string_to_num(2, &packet[2]);
@@ -235,7 +235,7 @@ static void remote_packet_process_jtag(unsigned i, char *packet)
 	}
 
 	case REMOTE_NEXT: { /* JN = NEXT ======================================== */
-		if (i != 4U)
+		if (packet_len != 4U)
 			remote_respond(REMOTE_RESP_ERR, REMOTE_ERROR_WRONGLEN);
 		else {
 			const bool tdo = jtag_proc.jtagtap_next(packet[2] == '1', packet[3] == '1');
@@ -591,7 +591,7 @@ void remote_packet_process(unsigned i, char *packet)
 		break;
 
 	case REMOTE_JTAG_PACKET:
-		remote_packet_process_jtag(i, packet);
+		remote_packet_process_jtag(packet, i);
 		break;
 
 	case REMOTE_GEN_PACKET:
