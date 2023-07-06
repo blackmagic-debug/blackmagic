@@ -182,7 +182,6 @@ static void remote_packet_process_swd(unsigned i, char *packet)
 
 static void remote_packet_process_jtag(unsigned i, char *packet)
 {
-	uint32_t MS;
 	uint64_t DO = 0;
 	uint64_t DI = 0;
 	switch (packet[1]) {
@@ -201,12 +200,12 @@ static void remote_packet_process_jtag(unsigned i, char *packet)
 
 	case REMOTE_TMS: { /* JT = TMS Sequence ============================ */
 		const size_t clock_cycles = remote_hex_string_to_num(2, &packet[2]);
-		MS = remote_hex_string_to_num(2, &packet[4]);
+		const uint32_t tms_states = remote_hex_string_to_num(2, &packet[4]);
 
 		if (i < 4U)
 			remote_respond(REMOTE_RESP_ERR, REMOTE_ERROR_WRONGLEN);
 		else {
-			jtag_proc.jtagtap_tms_seq(MS, clock_cycles);
+			jtag_proc.jtagtap_tms_seq(tms_states, clock_cycles);
 			remote_respond(REMOTE_RESP_OK, 0);
 		}
 		break;
