@@ -182,8 +182,6 @@ static void remote_packet_process_swd(unsigned i, char *packet)
 
 static void remote_packet_process_jtag(unsigned i, char *packet)
 {
-	uint64_t DO = 0;
-	uint64_t DI = 0;
 	switch (packet[1]) {
 	case REMOTE_INIT: /* JS = initialise ============================= */
 		remote_dp.dp_read = fw_adiv5_jtagdp_read;
@@ -226,12 +224,12 @@ static void remote_packet_process_jtag(unsigned i, char *packet)
 			remote_respond(REMOTE_RESP_ERR, REMOTE_ERROR_WRONGLEN);
 		else {
 			const size_t clock_cycles = remote_hex_string_to_num(2, &packet[2]);
-			DI = remote_hex_string_to_num(-1, &packet[4]);
-			const uint8_t *const data_in = (uint8_t *)&DI;
-			uint8_t *data_out = (uint8_t *)&DO;
-			jtag_proc.jtagtap_tdi_tdo_seq(data_out, packet[1] == REMOTE_TDITDO_TMS, data_in, clock_cycles);
+			const uint64_t data_in = remote_hex_string_to_num(-1, &packet[4]);
+			uint64_t data_out = 0;
+			jtag_proc.jtagtap_tdi_tdo_seq(
+				(uint8_t *)&data_out, packet[1] == REMOTE_TDITDO_TMS, (const uint8_t *)&data_in, clock_cycles);
 
-			remote_respond(REMOTE_RESP_OK, DO);
+			remote_respond(REMOTE_RESP_OK, data_out);
 		}
 		break;
 	}
