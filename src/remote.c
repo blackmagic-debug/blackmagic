@@ -204,9 +204,9 @@ static void remote_packet_process_jtag(unsigned i, char *packet)
 		ticks = remote_hex_string_to_num(2, &packet[2]);
 		MS = remote_hex_string_to_num(2, &packet[4]);
 
-		if (i < 4U) {
+		if (i < 4U)
 			remote_respond(REMOTE_RESP_ERR, REMOTE_ERROR_WRONGLEN);
-		} else {
+		else {
 			jtag_proc.jtagtap_tms_seq(MS, ticks);
 			remote_respond(REMOTE_RESP_OK, 0);
 		}
@@ -222,11 +222,9 @@ static void remote_packet_process_jtag(unsigned i, char *packet)
 	}
 
 	case REMOTE_TDITDO_TMS: /* JD = TDI/TDO  ========================================= */
-	case REMOTE_TDITDO_NOTMS:
-
-		if (i < 5U) {
+		if (i < 5U)
 			remote_respond(REMOTE_RESP_ERR, REMOTE_ERROR_WRONGLEN);
-		} else {
+		else {
 			ticks = remote_hex_string_to_num(2, &packet[2]);
 			DI = remote_hex_string_to_num(-1, &packet[4]);
 			const uint8_t *const data_in = (uint8_t *)&DI;
