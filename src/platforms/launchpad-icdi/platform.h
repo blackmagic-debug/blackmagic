@@ -26,7 +26,6 @@
 #define PLATFORM_IDENT "(Launchpad ICDI) "
 
 extern uint8_t running_status;
-extern uint32_t swd_delay_cnt;
 
 #define TMS_PORT GPIOA_BASE
 #define TMS_PIN  GPIO3
