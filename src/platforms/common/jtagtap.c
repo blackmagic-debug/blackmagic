@@ -143,6 +143,7 @@ static void jtagtap_tdi_tdo_seq_swd_delay(
 {
 	uint8_t value = 0;
 	for (size_t cycle = 0; cycle < clock_cycles; ++cycle) {
+		/* Calculate the next bit and byte to consume data from */
 		const size_t bit = cycle & 7U;
 		const size_t byte = cycle >> 3U;
 		/* On the last cycle, assert final_tms to TMS_PIN */
@@ -164,10 +165,11 @@ static void jtagtap_tdi_tdo_seq_swd_delay(
 		for (volatile int32_t cnt = swd_delay_cnt - 2U; cnt > 0; cnt--)
 			continue;
 	}
-	const size_t bit = (clock_cycles - 1U) & 7U;
-	const size_t byte = (clock_cycles - 1U) >> 3U;
-	if (bit)
+	/* If clock_cycles is not divisible by 8, we have some extra data to write back here. */
+	if (clock_cycles & 7U) {
+		const size_t byte = (clock_cycles - 1U) >> 3U;
 		data_out[byte] = value;
+	}
 }
 
 static void jtagtap_tdi_tdo_seq_no_delay(
