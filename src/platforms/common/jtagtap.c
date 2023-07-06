@@ -211,7 +211,7 @@ static void jtagtap_tdi_tdo_seq_no_delay(
 		}
 		/* Finish the clock cycle */
 	}
-	/* If clock_cycles is not divisable by 8, we have some extra data to write back here. */
+	/* If clock_cycles is not divisible by 8, we have some extra data to write back here. */
 	if (clock_cycles & 7U) {
 		const size_t byte = (clock_cycles - 1U) >> 3U;
 		data_out[byte] = value;
