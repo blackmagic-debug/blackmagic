@@ -71,11 +71,11 @@ static void jtagtap_reset(void)
 static bool jtagtap_next_swd_delay()
 {
 	gpio_set(TCK_PORT, TCK_PIN);
-	for (volatile int32_t cnt = swd_delay_cnt - 2U; cnt > 0; cnt--)
+	for (volatile uint32_t cnt = swd_delay_cnt; cnt > 0; cnt--)
 		continue;
 	const uint16_t result = gpio_get(TDO_PORT, TDO_PIN);
 	gpio_clear(TCK_PORT, TCK_PIN);
-	for (volatile int32_t cnt = swd_delay_cnt - 2U; cnt > 0; cnt--)
+	for (volatile uint32_t cnt = swd_delay_cnt; cnt > 0; cnt--)
 		continue;
 	return result != 0;
 }
@@ -104,11 +104,11 @@ static void jtagtap_tms_seq_swd_delay(uint32_t tms_states, const size_t clock_cy
 		const bool state = tms_states & 1U;
 		gpio_set_val(TMS_PORT, TMS_PIN, state);
 		gpio_set(TCK_PORT, TCK_PIN);
-		for (volatile int32_t cnt = swd_delay_cnt - 2; cnt > 0; cnt--)
+		for (volatile uint32_t cnt = swd_delay_cnt; cnt > 0; cnt--)
 			continue;
 		tms_states >>= 1U;
 		gpio_clear(TCK_PORT, TCK_PIN);
-		for (volatile int32_t cnt = swd_delay_cnt - 2; cnt > 0; cnt--)
+		for (volatile uint32_t cnt = swd_delay_cnt; cnt > 0; cnt--)
 			continue;
 	}
 }
@@ -144,14 +144,15 @@ static void jtagtap_tdi_tdo_seq_swd_delay(
 	uint8_t value = 0;
 	for (size_t cycle = 0; cycle < clock_cycles; ++cycle) {
 		/* Calculate the next bit and byte to consume data from */
-		const size_t bit = cycle & 7U;
+		const uint8_t bit = cycle & 7U;
 		const size_t byte = cycle >> 3U;
 		/* On the last cycle, assert final_tms to TMS_PIN */
 		gpio_set_val(TMS_PORT, TMS_PIN, cycle + 1U >= clock_cycles && final_tms);
 		/* Set up the TDI pin and start the clock cycle */
 		gpio_set_val(TDI_PORT, TDI_PIN, data_in[byte] & (1U << bit));
+		/* Start the clock cycle */
 		gpio_set(TCK_PORT, TCK_PIN);
-		for (volatile int32_t cnt = swd_delay_cnt - 2U; cnt > 0; cnt--)
+		for (volatile uint32_t cnt = swd_delay_cnt; cnt > 0; cnt--)
 			continue;
 		/* If TDO is high, store a 1 in the appropriate position in the value being accumulated */
 		if (gpio_get(TDO_PORT, TDO_PIN))
@@ -162,7 +163,7 @@ static void jtagtap_tdi_tdo_seq_swd_delay(
 		}
 		/* Finish the clock cycle */
 		gpio_clear(TCK_PORT, TCK_PIN);
-		for (volatile int32_t cnt = swd_delay_cnt - 2U; cnt > 0; cnt--)
+		for (volatile uint32_t cnt = swd_delay_cnt; cnt > 0; cnt--)
 			continue;
 	}
 	/* If clock_cycles is not divisible by 8, we have some extra data to write back here. */
@@ -232,18 +233,18 @@ static void jtagtap_tdi_tdo_seq(
 static void jtagtap_tdi_seq_swd_delay(const uint8_t *const data_in, const bool final_tms, size_t clock_cycles)
 {
 	for (size_t cycle = 0; cycle < clock_cycles; ++cycle) {
-		const size_t bit = cycle & 7U;
+		const uint8_t bit = cycle & 7U;
 		const size_t byte = cycle >> 3U;
 		/* On the last tick, assert final_tms to TMS_PIN */
 		gpio_set_val(TMS_PORT, TMS_PIN, cycle + 1U >= clock_cycles && final_tms);
 		/* Set up the TDI pin and start the clock cycle */
 		gpio_set_val(TDI_PORT, TDI_PIN, data_in[byte] & (1U << bit));
 		gpio_set(TCK_PORT, TCK_PIN);
-		for (volatile int32_t cnt = swd_delay_cnt - 2; cnt > 0; cnt--)
+		for (volatile uint32_t cnt = swd_delay_cnt; cnt > 0; cnt--)
 			continue;
 		/* Finish the clock cycle */
 		gpio_clear(TCK_PORT, TCK_PIN);
-		for (volatile int32_t cnt = swd_delay_cnt - 2; cnt > 0; cnt--)
+		for (volatile uint32_t cnt = swd_delay_cnt; cnt > 0; cnt--)
 			continue;
 	}
 }
@@ -251,7 +252,7 @@ static void jtagtap_tdi_seq_swd_delay(const uint8_t *const data_in, const bool f
 static void jtagtap_tdi_seq_no_delay(const uint8_t *const data_in, const bool final_tms, size_t clock_cycles)
 {
 	for (size_t cycle = 0; cycle < clock_cycles;) {
-		const size_t bit = cycle & 7U;
+		const uint8_t bit = cycle & 7U;
 		const size_t byte = cycle >> 3U;
 		const bool tms = cycle + 1U >= clock_cycles && final_tms;
 		const bool tdi = data_in[byte] & (1U << bit);
@@ -292,10 +293,10 @@ static void jtagtap_cycle_swd_delay(const size_t clock_cycles)
 {
 	for (size_t cycle = 0; cycle < clock_cycles; ++cycle) {
 		gpio_set(TCK_PORT, TCK_PIN);
-		for (volatile int32_t cnt = swd_delay_cnt - 2; cnt > 0; cnt--)
+		for (volatile uint32_t cnt = swd_delay_cnt; cnt > 0; cnt--)
 			continue;
 		gpio_clear(TCK_PORT, TCK_PIN);
-		for (volatile int32_t cnt = swd_delay_cnt - 2; cnt > 0; cnt--)
+		for (volatile uint32_t cnt = swd_delay_cnt; cnt > 0; cnt--)
 			continue;
 	}
 }
