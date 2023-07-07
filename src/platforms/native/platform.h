@@ -319,6 +319,14 @@ extern bool debug_bmp;
  * The result is an average 827.788kHz achieved
  */
 
+/*
+ * After taking samples with the delay set to 2, 3, and 4 as well, then running
+ * a linear regression on the results using the divider calculation tool, we arrive
+ * at an offset of 52 for the ratio and a division factor of 30 to produce divider numbers
+ */
+#define BITBANG_DIVIDER_OFFSET 52U
+#define BITBANG_DIVIDER_FACTOR 30U
+
 /* Use newlib provided integer-only stdio functions */
 
 #ifdef sscanf
