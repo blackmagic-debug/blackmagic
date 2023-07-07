@@ -25,7 +25,7 @@
 
 bool running_status = false;
 static volatile uint32_t time_ms = 0;
-uint32_t swd_delay_cnt = 0;
+uint32_t target_clk_divider = 0;
 
 static size_t morse_tick = 0;
 
@@ -81,22 +81,22 @@ void platform_max_frequency_set(const uint32_t frequency)
 	uint32_t divisor = rcc_ahb_frequency - USED_SWD_CYCLES * frequency;
 	/* If we now have an insanely big divisor, the above operation wrapped to a negative signed number. */
 	if (divisor >= 0x80000000U) {
-		swd_delay_cnt = 0;
+		target_clk_divider = 0;
 		return;
 	}
 	divisor /= 2U;
-	swd_delay_cnt = divisor / (CYCLES_PER_CNT * frequency);
-	if (swd_delay_cnt * (CYCLES_PER_CNT * frequency) < divisor)
-		++swd_delay_cnt;
+	target_clk_divider = divisor / (CYCLES_PER_CNT * frequency);
+	if (target_clk_divider * (CYCLES_PER_CNT * frequency) < divisor)
+		++target_clk_divider;
 }
 
 uint32_t platform_max_frequency_get(void)
 {
 #ifdef BITBANG_CALIBRATED_FREQS
-	if (!swd_delay_cnt)
+	if (!target_clk_divider)
 		return BITBANG_NO_DELAY_FREQ;
 #endif
 	uint32_t result = rcc_ahb_frequency;
-	result /= USED_SWD_CYCLES + CYCLES_PER_CNT * swd_delay_cnt;
+	result /= USED_SWD_CYCLES + CYCLES_PER_CNT * target_clk_divider;
 	return result;
 }
