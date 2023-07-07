@@ -81,9 +81,9 @@ static void swdptap_turnaround(const swdio_status_t dir)
 	}
 }
 
-static uint32_t swdptap_seq_in_swd_delay(size_t clock_cycles) __attribute__((optimize(3)));
+static uint32_t swdptap_seq_in_clk_delay(size_t clock_cycles) __attribute__((optimize(3)));
 
-static uint32_t swdptap_seq_in_swd_delay(const size_t clock_cycles)
+static uint32_t swdptap_seq_in_clk_delay(const size_t clock_cycles)
 {
 	uint32_t value = 0;
 	for (size_t cycle = 0; cycle < clock_cycles; ++cycle) {
@@ -118,7 +118,7 @@ static uint32_t swdptap_seq_in(size_t clock_cycles)
 {
 	swdptap_turnaround(SWDIO_STATUS_FLOAT);
 	if (target_clk_divider != UINT32_MAX)
-		return swdptap_seq_in_swd_delay(clock_cycles);
+		return swdptap_seq_in_clk_delay(clock_cycles);
 	else // NOLINT(readability-else-after-return)
 		return swdptap_seq_in_no_delay(clock_cycles);
 }
@@ -142,9 +142,9 @@ static bool swdptap_seq_in_parity(uint32_t *ret, size_t clock_cycles)
 	return parity & 1U;
 }
 
-static void swdptap_seq_out_swd_delay(uint32_t tms_states, size_t clock_cycles) __attribute__((optimize(3)));
+static void swdptap_seq_out_clk_delay(uint32_t tms_states, size_t clock_cycles) __attribute__((optimize(3)));
 
-static void swdptap_seq_out_swd_delay(const uint32_t tms_states, const size_t clock_cycles)
+static void swdptap_seq_out_clk_delay(const uint32_t tms_states, const size_t clock_cycles)
 {
 	for (size_t cycle = 0; cycle < clock_cycles; ++cycle) {
 		gpio_clear(SWCLK_PORT, SWCLK_PIN);
@@ -174,7 +174,7 @@ static void swdptap_seq_out(const uint32_t tms_states, const size_t clock_cycles
 {
 	swdptap_turnaround(SWDIO_STATUS_DRIVE);
 	if (target_clk_divider != UINT32_MAX)
-		swdptap_seq_out_swd_delay(tms_states, clock_cycles);
+		swdptap_seq_out_clk_delay(tms_states, clock_cycles);
 	else
 		swdptap_seq_out_no_delay(tms_states, clock_cycles);
 }
