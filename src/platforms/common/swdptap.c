@@ -117,7 +117,7 @@ static uint32_t swdptap_seq_in_no_delay(const size_t clock_cycles)
 static uint32_t swdptap_seq_in(size_t clock_cycles)
 {
 	swdptap_turnaround(SWDIO_STATUS_FLOAT);
-	if (target_clk_divider)
+	if (target_clk_divider != UINT32_MAX)
 		return swdptap_seq_in_swd_delay(clock_cycles);
 	else // NOLINT(readability-else-after-return)
 		return swdptap_seq_in_no_delay(clock_cycles);
@@ -173,7 +173,7 @@ static void swdptap_seq_out_no_delay(const uint32_t tms_states, const size_t clo
 static void swdptap_seq_out(const uint32_t tms_states, const size_t clock_cycles)
 {
 	swdptap_turnaround(SWDIO_STATUS_DRIVE);
-	if (target_clk_divider)
+	if (target_clk_divider != UINT32_MAX)
 		swdptap_seq_out_swd_delay(tms_states, clock_cycles);
 	else
 		swdptap_seq_out_no_delay(tms_states, clock_cycles);
