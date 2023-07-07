@@ -92,7 +92,7 @@ static bool jtagtap_next(const bool tms, const bool tdi)
 {
 	gpio_set_val(TMS_PORT, TMS_PIN, tms);
 	gpio_set_val(TDI_PORT, TDI_PIN, tdi);
-	if (target_clk_divider)
+	if (target_clk_divider != UINT32_MAX)
 		return jtagtap_next_swd_delay();
 	else // NOLINT(readability-else-after-return)
 		return jtagtap_next_no_delay();
@@ -132,7 +132,7 @@ static void jtagtap_tms_seq_no_delay(uint32_t tms_states, const size_t clock_cyc
 static void jtagtap_tms_seq(const uint32_t tms_states, const size_t ticks)
 {
 	gpio_set(TDI_PORT, TDI_PIN);
-	if (target_clk_divider)
+	if (target_clk_divider != UINT32_MAX)
 		jtagtap_tms_seq_swd_delay(tms_states, ticks);
 	else
 		jtagtap_tms_seq_no_delay(tms_states, ticks);
@@ -224,7 +224,7 @@ static void jtagtap_tdi_tdo_seq(
 {
 	gpio_clear(TMS_PORT, TMS_PIN);
 	gpio_clear(TDI_PORT, TDI_PIN);
-	if (target_clk_divider)
+	if (target_clk_divider != UINT32_MAX)
 		jtagtap_tdi_tdo_seq_swd_delay(data_in, data_out, final_tms, clock_cycles);
 	else
 		jtagtap_tdi_tdo_seq_no_delay(data_in, data_out, final_tms, clock_cycles);
@@ -283,7 +283,7 @@ static void jtagtap_tdi_seq_no_delay(const uint8_t *const data_in, const bool fi
 static void jtagtap_tdi_seq(const bool final_tms, const uint8_t *const data_in, const size_t clock_cycles)
 {
 	gpio_clear(TMS_PORT, TMS_PIN);
-	if (target_clk_divider)
+	if (target_clk_divider != UINT32_MAX)
 		jtagtap_tdi_seq_swd_delay(data_in, final_tms, clock_cycles);
 	else
 		jtagtap_tdi_seq_no_delay(data_in, final_tms, clock_cycles);
@@ -313,7 +313,7 @@ static void jtagtap_cycle_no_delay(const size_t clock_cycles)
 static void jtagtap_cycle(const bool tms, const bool tdi, const size_t clock_cycles)
 {
 	jtagtap_next(tms, tdi);
-	if (target_clk_divider)
+	if (target_clk_divider != UINT32_MAX)
 		jtagtap_cycle_swd_delay(clock_cycles - 1U);
 	else
 		jtagtap_cycle_no_delay(clock_cycles - 1U);
