@@ -35,7 +35,7 @@ char serial_no[DFU_SERIAL_LENGTH];
 uint8_t running_status;
 static volatile uint32_t time_ms;
 
-uint32_t swd_delay_cnt = 0;
+uint32_t target_clk_divider = 0;
 
 void sys_tick_handler(void)
 {
