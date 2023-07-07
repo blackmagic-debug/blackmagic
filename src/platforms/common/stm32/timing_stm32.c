@@ -76,23 +76,23 @@ uint32_t platform_time_ms(void)
 #define USED_SWD_CYCLES 22
 #define CYCLES_PER_CNT  10
 
-void platform_max_frequency_set(uint32_t freq)
+void platform_max_frequency_set(const uint32_t frequency)
 {
-	uint32_t divisor = rcc_ahb_frequency - USED_SWD_CYCLES * freq;
+	uint32_t divisor = rcc_ahb_frequency - USED_SWD_CYCLES * frequency;
 	/* If we now have an insanely big divisor, the above operation wrapped to a negative signed number. */
 	if (divisor >= 0x80000000U) {
 		swd_delay_cnt = 0;
 		return;
 	}
 	divisor /= 2U;
-	swd_delay_cnt = divisor / (CYCLES_PER_CNT * freq);
-	if (swd_delay_cnt * (CYCLES_PER_CNT * freq) < divisor)
+	swd_delay_cnt = divisor / (CYCLES_PER_CNT * frequency);
+	if (swd_delay_cnt * (CYCLES_PER_CNT * frequency) < divisor)
 		++swd_delay_cnt;
 }
 
 uint32_t platform_max_frequency_get(void)
 {
-	uint32_t ret = rcc_ahb_frequency;
-	ret /= USED_SWD_CYCLES + CYCLES_PER_CNT * swd_delay_cnt;
-	return ret;
+	uint32_t result = rcc_ahb_frequency;
+	result /= USED_SWD_CYCLES + CYCLES_PER_CNT * swd_delay_cnt;
+	return result;
 }
