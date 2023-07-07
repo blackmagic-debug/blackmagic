@@ -92,6 +92,10 @@ void platform_max_frequency_set(const uint32_t frequency)
 
 uint32_t platform_max_frequency_get(void)
 {
+#ifdef BITBANG_CALIBRATED_FREQS
+	if (!swd_delay_cnt)
+		return BITBANG_NO_DELAY_FREQ;
+#endif
 	uint32_t result = rcc_ahb_frequency;
 	result /= USED_SWD_CYCLES + CYCLES_PER_CNT * swd_delay_cnt;
 	return result;

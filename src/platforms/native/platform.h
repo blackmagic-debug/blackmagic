@@ -292,6 +292,18 @@ extern bool debug_bmp;
 #define SET_IDLE_STATE(state)  gpio_set_val(LED_PORT, LED_IDLE_RUN, state)
 #define SET_ERROR_STATE(state) gpio_set_val(LED_PORT, LED_ERROR, state)
 
+/* Frequency constants (in Hz) for the bitbanging routines */
+#define BITBANG_CALIBRATED_FREQS
+/*
+ * The 3 major JTAG bitbanging routines that get called result in these stats for
+ * clock frequency being generated with the _no_delay routines:
+ * jtag_proc.jtagtap_next(): 705.882kHz
+ * jtag_proc.jtagtap_tms_seq(): 4.4MHz
+ * jtag_proc.jtagtap_tdi_tdo_seq(): 750kHz
+ * The result is an average 1.95MHz achieved.
+ */
+#define BITBANG_NO_DELAY_FREQ 1951961U
+
 /* Use newlib provided integer-only stdio functions */
 
 #ifdef sscanf
