@@ -303,6 +303,14 @@ extern bool debug_bmp;
  * The result is an average 1.95MHz achieved.
  */
 #define BITBANG_NO_DELAY_FREQ 1951961U
+/*
+ * On the _swd_delay routines with the delay loops inoperative, we then get:
+ * jtag_proc.jtagtap_next(): 626.181kHz
+ * jtag_proc.jtagtap_tms_seq(): 2.8MHz
+ * jtag_proc.jtagtap_tdi_tdo_seq(): 727.27kHz
+ * The result is an average 1.38MHz achieved.
+ */
+#define BITBANG_0_DELAY_FREQ 1384484U
 
 /* Use newlib provided integer-only stdio functions */
 
