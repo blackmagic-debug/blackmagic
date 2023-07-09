@@ -172,7 +172,7 @@ bool imxrt_probe(target_s *const target)
 	target->target_options |= CORTEXM_TOPT_INHIBIT_NRST;
 	target->driver = "i.MXRT10xx";
 
-#if defined(ENABLE_DEBUG) && PC_HOSTED == 1
+#if defined(ENABLE_DEBUG) || (PC_HOSTED == 1 || defined(ESP_LOGD))
 	const uint8_t boot_mode = (target_mem_read32(target, IMXRT_SRC_BOOT_MODE2) >> 24U) & 3U;
 #endif
 	DEBUG_TARGET("i.MXRT boot mode is %x\n", boot_mode);
