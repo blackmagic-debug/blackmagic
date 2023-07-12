@@ -56,6 +56,7 @@ static bool hc32l110_flash_prepare(target_flash_s *flash);
 static bool hc32l110_flash_done(target_flash_s *flash);
 static bool hc32l110_flash_erase(target_flash_s *flash, target_addr_t addr, size_t len);
 static bool hc32l110_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t len);
+static bool hc32l110_mass_erase(target_s *target);
 
 static void hc32l110_add_flash(target_s *target, const uint32_t flash_size)
 {
@@ -95,6 +96,7 @@ bool hc32l110_probe(target_s *t)
 	}
 
 	t->enter_flash_mode = hc32l110_enter_flash_mode;
+	t->mass_erase = hc32l110_mass_erase;
 
 	hc32l110_add_flash(t, flash_size);
 	return true;
@@ -195,6 +197,25 @@ static bool hc32l110_flash_write(
 		target_mem_write32(flash->t, dest + offset, val);
 		hc32l110_check_flash_completion(flash->t, 2000);
 	}
+
+	return true;
+}
+
+static bool hc32l110_mass_erase(target_s *target)
+{
+	hc32l110_enter_flash_mode(target);
+
+	hc32l110_flash_cr_unlock(target);
+	target_mem_write32(target, HC32L110_FLASH_CR_ADDR, HC32L110_FLASH_CR_OP_ERASE_CHIP);
+	hc32l110_check_flash_completion(target, 1000);
+
+	hc32l110_slock_unlock_all(target);
+
+	// The Flash controller automatically erases the whole Flash after one write operation
+	target_mem_write32(target, 0, 0);
+	hc32l110_check_flash_completion(target, 4000);
+
+	hc32l110_slock_lock_all(target);
 
 	return true;
 }
