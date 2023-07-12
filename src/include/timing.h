@@ -23,12 +23,8 @@
 
 #include <stdint.h>
 
-#if PC_HOSTED == 1
-#define SYSTICKHZ 1000U
-#endif
-
 #if !defined(SYSTICKHZ)
-#define SYSTICKHZ 100U
+#define SYSTICKHZ 1000U
 #endif
 
 #define SYSTICKMS (1000U / SYSTICKHZ)
