@@ -327,26 +327,4 @@ extern bool debug_bmp;
 #define BITBANG_DIVIDER_OFFSET 52U
 #define BITBANG_DIVIDER_FACTOR 30U
 
-/* Use newlib provided integer-only stdio functions */
-
-#ifdef sscanf
-#undef sscanf
-#endif
-#define sscanf siscanf
-
-#ifdef sprintf
-#undef sprintf
-#endif
-#define sprintf siprintf
-
-#ifdef vasprintf
-#undef vasprintf
-#endif
-#define vasprintf vasiprintf
-
-#ifdef snprintf
-#undef snprintf
-#endif
-#define snprintf sniprintf
-
 #endif /* PLATFORMS_NATIVE_PLATFORM_H */

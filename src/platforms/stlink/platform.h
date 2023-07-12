@@ -174,26 +174,4 @@ extern uint16_t led_idle_run;
 
 extern uint32_t detect_rev(void);
 
-/* Use newlib provided integer-only stdio functions */
-
-#ifdef sscanf
-#undef sscanf
-#endif
-#define sscanf siscanf
-
-#ifdef sprintf
-#undef sprintf
-#endif
-#define sprintf siprintf
-
-#ifdef vasprintf
-#undef vasprintf
-#endif
-#define vasprintf vasiprintf
-
-#ifdef snprintf
-#undef snprintf
-#endif
-#define snprintf sniprintf
-
 #endif /* PLATFORMS_STLINK_PLATFORM_H */
