@@ -170,6 +170,11 @@
  */
 #define BUFFERED_WRITE_SIZE 0x100
 
+typedef struct msp432e4_flash {
+	target_flash_s target_flash;
+	uint16_t flash_key;
+} msp432e4_flash_s;
+
 static bool msp432e4_cmd_erase(target_s *t, int argc, const char **argv);
 
 /* Optional commands structure*/
@@ -183,20 +188,27 @@ static bool msp432e4_flash_write(target_flash_s *flash, target_addr_t dest, cons
 
 static void msp432e4_add_flash(target_s *const target, const uint32_t sector, const uint32_t base, const size_t length)
 {
-	target_flash_s *const flash = calloc(1, sizeof(*flash));
+	msp432e4_flash_s *const flash = calloc(1, sizeof(*flash));
 	if (flash == NULL) {
 		DEBUG_WARN("calloc: failed in %s\n", __func__);
 		return;
 	}
 
-	flash->start = base;
-	flash->length = length;
-	flash->blocksize = sector;
-	flash->erase = msp432e4_flash_erase_sectors;
-	flash->write = msp432e4_flash_write;
-	flash->writesize = BUFFERED_WRITE_SIZE;
-	flash->erased = 0xff;
-	target_add_flash(target, flash);
+	target_flash_s *target_flash = &flash->target_flash;
+	target_flash->start = base;
+	target_flash->length = length;
+	target_flash->blocksize = sector;
+	target_flash->erase = msp432e4_flash_erase_sectors;
+	target_flash->write = msp432e4_flash_write;
+	target_flash->writesize = BUFFERED_WRITE_SIZE;
+	target_flash->erased = 0xff;
+	target_add_flash(target, target_flash);
+
+	/* If the boot config KEY bit is set, use the fixed key value, otherwise read out the configured key */
+	if (target_mem_read32(target, MSP432E4_SYS_CTRL_BOOTCFG) & MSP432E4_SYS_CTRL_BOOTCFG_KEY)
+		flash->flash_key = 0xa442U;
+	else
+		flash->flash_key = (uint16_t)target_mem_read32(target, MSP432E4_FLASH_FLPEKEY);
 }
 
 bool msp432e4_probe(target_s *const target)
@@ -248,16 +260,13 @@ bool msp432e4_probe(target_s *const target)
 }
 
 /* Erase from addr for len bytes */
-static bool msp432e4_flash_erase_sectors(target_flash_s *const flash, const target_addr_t addr, const size_t len)
+static bool msp432e4_flash_erase_sectors(target_flash_s *const target_flash, const target_addr_t addr, const size_t len)
 {
-	target_s *target = flash->t;
-	const uint32_t fmc = (((target_mem_read32(target, MSP432E4_SYS_CTRL_BOOTCFG) & MSP432E4_SYS_CTRL_BOOTCFG_KEY) ?
-								  0xa442U :
-								  target_mem_read32(target, REG_FLASH_PEKEY))
-							 << 16U) |
-		MSP432E4_FLASH_CTRL_ERASE;
+	target_s *target = target_flash->t;
+	const msp432e4_flash_s *const flash = (msp432e4_flash_s *)target_flash;
+	const uint32_t fmc = (flash->flash_key << 16U) | MSP432E4_FLASH_CTRL_ERASE;
 
-	for (size_t offset = 0; offset < len; offset += flash->blocksize) {
+	for (size_t offset = 0; offset < len; offset += target_flash->blocksize) {
 		target_mem_write32(target, MSP432E4_FLASH_ADDR, addr + offset);
 		target_mem_write32(target, MSP432E4_FLASH_CTRL, fmc);
 		/* FixMe - verify/timeout bit? */
@@ -269,16 +278,13 @@ static bool msp432e4_flash_erase_sectors(target_flash_s *const flash, const targ
 
 /* Program flash */
 static bool msp432e4_flash_write(
-	target_flash_s *const flash, target_addr_t dest, const void *const src, const size_t len)
+	target_flash_s *const target_flash, target_addr_t dest, const void *const src, const size_t len)
 {
-	target_s *const target = flash->t;
+	target_s *const target = target_flash->t;
+	const msp432e4_flash_s *const flash = (msp432e4_flash_s *)target_flash;
 	const uint32_t *const buffer = (const uint32_t *)src;
 
-	const uint32_t fmc = ((1 || (target_mem_read32(target, MSP432E4_SYS_CTRL_BOOTCFG) & MSP432E4_SYS_CTRL_BOOTCFG_KEY) ?
-								  0xa442u :
-								  target_mem_read32(target, REG_FLASH_PEKEY))
-							 << 16U) |
-		MSP432E4_FLASH_CTRL_WRITE;
+	const uint32_t fmc = (flash->flash_key << 16U) | MSP432E4_FLASH_CTRL_WRITE;
 
 	/* Transfer the aligned part, 1 uint32_t at a time */
 	const size_t aligned_len = len & ~3U;
@@ -307,11 +313,8 @@ static bool msp432e4_flash_write(
 /* Special case command for erase all flash */
 static bool msp432e4_flash_erase_all(target_s *const target)
 {
-	uint32_t fmc = (((target_mem_read32(target, MSP432E4_SYS_CTRL_BOOTCFG) & MSP432E4_SYS_CTRL_BOOTCFG_KEY) ?
-							0xa442u :
-							target_mem_read32(target, REG_FLASH_PEKEY))
-					   << 16U) |
-		MSP432E4_FLASH_CTRL_MASS_ERASE;
+	const msp432e4_flash_s *const flash = (msp432e4_flash_s *)target->flash;
+	uint32_t fmc = (flash->flash_key << 16U) | MSP432E4_FLASH_CTRL_MASS_ERASE;
 	target_mem_write32(target, MSP432E4_FLASH_CTRL, fmc);
 	/* FixMe - timeout/verify bit? */
 	while (target_mem_read32(target, MSP432E4_FLASH_CTRL) & MSP432E4_FLASH_CTRL_MASS_ERASE)
