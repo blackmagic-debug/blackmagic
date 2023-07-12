@@ -39,6 +39,7 @@ SRC =              \
 	gdb_packet.c   \
 	gdb_reg.c      \
 	hex_utils.c    \
+	hc32l110.c     \
 	imxrt.c        \
 	jtag_devs.c    \
 	jtag_scan.c    \
