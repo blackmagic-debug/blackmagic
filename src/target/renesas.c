@@ -91,6 +91,102 @@ typedef enum {
 	PNR_SERIES_RA6T2 = PNR_SERIES('A', '6', 'T', '2'),
 } renesas_pnr_series_e;
 
+typedef enum {
+	RENESAS_FLASH_MF3,
+	RENESAS_FLASH_MF4,
+	RENESAS_FLASH_RV40,
+} renesas_flash_type_e;
+
+typedef enum {
+	RENESAS_LOCATION_FIXED1,
+	RENESAS_LOCATION_FIXED2,
+	RENESAS_LOCATION_FRT,
+} renesas_pnr_location_e;
+
+typedef struct renesas_family {
+	renesas_pnr_series_e series;
+	uint32_t option_start;
+	uint16_t option_size;
+	uint32_t option_start_2;
+	uint16_t option_size_2;
+	uint32_t data_flash_start;
+	uint16_t data_flash_size;
+	uint32_t factory_flash_start;
+	uint16_t factory_flash_size;
+	uint32_t sramhs_start;
+	uint32_t sramhs_size;
+	uint32_t sram0_start;
+	uint32_t sram0_size;
+	uint32_t sram1_start;
+	uint32_t sram1_size;
+	uint32_t stdby_sram_start;
+	uint16_t stdby_sram_size;
+	renesas_flash_type_e flash_type;
+	renesas_pnr_location_e pnr_location;
+} renesas_family_s;
+
+typedef struct renesas_restricted_setting {
+	uint32_t addr_start;
+	uint32_t addr_end;
+} renesas_restricted_setting_s;
+
+/* For details please check https://github.com/blackmagic-debug/blackmagic/pull/1450#issuecomment-1508416224 */
+renesas_restricted_setting_s renesas_restricted_setting[] = {
+	{0x0100a130, 0x0100a168},
+	{0x0100a1c0, 0x0100a1e4},
+	{0x0100a240, 0x0100a264},
+};
+
+renesas_family_s renesas_family[] = {
+	{PNR_SERIES_RA2L1, 0x01010010, 36, 0, 0, 0x40100000, 0x2000, 0, 0, 0, 0, 0x20000000, 0x8000, 0, 0, 0, 0,
+		RENESAS_FLASH_MF4, RENESAS_LOCATION_FIXED1},
+	{PNR_SERIES_RA2E1, 0x01010010, 36, 0, 0, 0x40100000, 0x1000, 0, 0, 0, 0, 0x20004000, 0x4000, 0, 0, 0, 0,
+		RENESAS_FLASH_MF4, RENESAS_LOCATION_FIXED1},
+	{PNR_SERIES_RA2E2, 0x01010010, 36, 0, 0, 0x40100000, 0x800, 0, 0, 0, 0, 0x20004000, 0x2000, 0, 0, 0, 0,
+		RENESAS_FLASH_MF4, RENESAS_LOCATION_FIXED1},
+	{PNR_SERIES_RA2A1, 0x01010008, 44, 0, 0, 0x40100000, 0x2000, 0, 0, 0, 0, 0x20000000, 0x8000, 0, 0, 0, 0,
+		RENESAS_FLASH_MF3, RENESAS_LOCATION_FRT},
+	{PNR_SERIES_RA4M1, 0x01010008, 44, 0, 0, 0x40100000, 0x2000, 0, 0, 0, 0, 0x20000000, 0x8000, 0, 0, 0, 0,
+		RENESAS_FLASH_MF3, RENESAS_LOCATION_FRT},
+	{PNR_SERIES_RA4M2, 0x0100a100, 512, 0, 0, 0x08000000, 0x2000, 0x010080f0, 196, 0, 0, 0x20000000, 0x20000, 0, 0,
+		0x28000000, 0x400, RENESAS_FLASH_RV40, RENESAS_LOCATION_FIXED2},
+	{PNR_SERIES_RA4M3, 0x0100a100, 512, 0, 0, 0x08000000, 0x2000, 0x010080f0, 196, 0, 0, 0x20000000, 0x20000, 0, 0,
+		0x28000000, 0x400, RENESAS_FLASH_RV40, RENESAS_LOCATION_FIXED2},
+	{PNR_SERIES_RA4E1, 0x0100a100, 512, 0, 0, 0x08000000, 0x2000, 0x010080f0, 196, 0, 0, 0x20000000, 0x20000, 0, 0,
+		0x28000000, 0x400, RENESAS_FLASH_RV40, RENESAS_LOCATION_FIXED2},
+	{PNR_SERIES_RA4E2, 0x0100a100, 512, 0, 0, 0x08000000, 0x1000, 0x010080f0, 196, 0, 0, 0x20000000, 0xa000, 0, 0,
+		0x28000000, 0x400, RENESAS_FLASH_RV40, RENESAS_LOCATION_FIXED2},
+	{PNR_SERIES_RA4W1, 0x01010008, 44, 0, 0, 0x40100000, 0x2000, 0, 0, 0, 0, 0x20000000, 0x18000, 0, 0, 0, 0,
+		RENESAS_FLASH_MF3, RENESAS_LOCATION_FRT},
+	{PNR_SERIES_RA6M1, 0x01007000, 4096, 0x0100a150, 24, 0x40100000, 0x2000, 0, 0, 0x1ffe0000, 0x20000, 0x20000000,
+		0x20000, 0, 0, 0x200fe000, 0x2000, RENESAS_FLASH_RV40, RENESAS_LOCATION_FRT},
+	{PNR_SERIES_RA6M2, 0x01007000, 4096, 0x0100a150, 24, 0x40100000, 0x8000, 0, 0, 0x1ffe0000, 0x20000, 0x20000000,
+		0x40000, 0, 0, 0x200fe000, 0x2000, RENESAS_FLASH_RV40, RENESAS_LOCATION_FRT},
+	{PNR_SERIES_RA6M3, 0x01007000, 4096, 0x0100a150, 24, 0x40100000, 0x1000, 0, 0, 0x1ffe0000, 0x20000, 0x20000000,
+		0x40000, 0x20040000, 0x40000, 0x200fe000, 0x2000, RENESAS_FLASH_RV40, RENESAS_LOCATION_FRT},
+	{PNR_SERIES_RA6M4, 0x0100a100, 512, 0, 0, 0x08000000, 0x2000, 0x010080f0, 196, 0, 0, 0x20000000, 0x40000, 0, 0,
+		0x28000000, 0x400, RENESAS_FLASH_RV40, RENESAS_LOCATION_FIXED2},
+	{PNR_SERIES_RA6M5, 0x0100a100, 512, 0, 0, 0x08000000, 0x2000, 0x010080f0, 196, 0, 0, 0x20000000, 0x80000, 0, 0,
+		0x28000000, 0x400, RENESAS_FLASH_RV40, RENESAS_LOCATION_FIXED2},
+	{PNR_SERIES_RA6E1, 0x0100a100, 512, 0, 0, 0x08000000, 0x2000, 0x010080f0, 196, 0, 0, 0x20000000, 0x40000, 0, 0,
+		0x28000000, 0x400, RENESAS_FLASH_RV40, RENESAS_LOCATION_FIXED2},
+	{PNR_SERIES_RA6E2, 0x0100a100, 512, 0, 0, 0x08000000, 0x1000, 0x010080f0, 196, 0, 0, 0x20000000, 0xa000, 0, 0,
+		0x28000000, 0x400, RENESAS_FLASH_RV40, RENESAS_LOCATION_FIXED2},
+	{PNR_SERIES_RA6T1, 0x01007000, 4096, 0x0100a150, 24, 0x40100000, 0x2000, 0, 0, 0x1ffe0000, 0x10000, 0, 0, 0, 0, 0,
+		0, RENESAS_FLASH_RV40, RENESAS_LOCATION_FRT},
+	{PNR_SERIES_RA6T2, 0x0100a100, 512, 0, 0, 0x08000000, 0x4000, 0x010080f0, 196, 0, 0, 0x20000000, 0x10000, 0, 0,
+		0x28000000, 0x400, RENESAS_FLASH_RV40, RENESAS_LOCATION_FIXED2},
+};
+
+renesas_family_s renesas_family_lookup(renesas_pnr_series_e series)
+{
+	renesas_family_s details = {};
+	for (size_t i = 0; i < ARRAY_LENGTH(renesas_family); ++i)
+		if (renesas_family[i].series == series)
+			return renesas_family[i];
+	return details;
+}
+
 /* Code flash memory size */
 #define PNR_MEMSIZE_INDEX 8U
 
@@ -229,6 +325,7 @@ typedef enum {
 #define RV40_DF_BLOCK_SIZE         (0x40U)
 #define RV40_CF_WRITE_SIZE         (0x80U)
 #define RV40_DF_WRITE_SIZE         (0x4U)
+#define RV40_OF_WRITE_SIZE         (0x10U)
 
 /* RV40 Flash Commands */
 #define RV40_CMD               UINT32_C(0x407e0000)
@@ -281,16 +378,18 @@ typedef enum {
 #define RV40_FCPSR_ESUSPMD 1U
 
 static bool renesas_uid(target_s *t, int argc, const char **argv);
+static bool renesas_cmd_option(target_s *target, int argc, const char **argv);
 
 const command_s renesas_cmd_list[] = {
 	{"uid", renesas_uid, "Prints unique id"},
+	{"option", renesas_cmd_option, "Manipulate option settings"},
 	{NULL, NULL, NULL},
 };
 
 typedef struct renesas_priv {
-	uint8_t pnr[17]; /* 16-byte PNR + 1-byte null termination */
-	renesas_pnr_series_e series;
+	uint8_t pnr[17];                /* 16-byte PNR + 1-byte null termination */
 	target_addr_t flash_root_table; /* if applicable */
+	renesas_family_s details;
 } renesas_priv_s;
 
 static target_addr_t renesas_fmifrt_read(target_s *t)
@@ -398,7 +497,7 @@ static bool renesas_rv40_pe_mode(target_s *const t, const pe_mode_e pe_mode)
 		return false;
 
 	bool has_fmeprot = false; /* Code Flash P/E Mode Entry Protection */
-	switch (priv_storage->series) {
+	switch (priv_storage->details.series) {
 	case PNR_SERIES_RA4E1:
 	case PNR_SERIES_RA4E2:
 	case PNR_SERIES_RA4M2:
@@ -441,6 +540,17 @@ static bool renesas_rv40_pe_mode(target_s *const t, const pe_mode_e pe_mode)
 
 	if (has_fmeprot && pe_mode == PE_MODE_READ)
 		target_mem_write16(t, RV40_FMEPROT, RV40_FMEPROT_LOCK);
+
+	return true;
+}
+
+static bool renesas_check_restricted_option(target_addr_t dest)
+{
+	for (size_t i = 0; i < ARRAY_LENGTH(renesas_restricted_setting); i++)
+		if (dest < renesas_restricted_setting[i].addr_start || dest > renesas_restricted_setting[i].addr_end)
+			return false;
+		else
+			return true;
 
 	return true;
 }
@@ -490,6 +600,10 @@ static bool renesas_rv40_prepare(target_flash_s *const f)
 {
 	target_s *const t = f->t;
 
+	renesas_priv_s *priv_storage = (renesas_priv_s *)t->target_storage;
+	if (!priv_storage)
+		return false;
+
 	if (!(target_mem_read32(t, RV40_FSTATR) & RV40_FSTATR_RDY) || target_mem_read16(t, RV40_FENTRYR) != 0) {
 		DEBUG_WARN("flash is not ready, may be hanging mid unfinished command due to something going wrong, "
 				   "please power on reset the device\n");
@@ -498,7 +612,11 @@ static bool renesas_rv40_prepare(target_flash_s *const f)
 	}
 
 	/* Code flash or data flash operation */
-	const bool code_flash = f->start < RENESAS_CF_END;
+	/* Option-Setting flash is CF type as per Table 44.1 of RA4M2 User's Manual */
+	const bool code_flash =
+		f->start < (priv_storage->details.option_start_2 > 0 ?
+						   priv_storage->details.option_start_2 + priv_storage->details.option_size_2 :
+						   priv_storage->details.option_start + priv_storage->details.option_size);
 
 	/* Transition to PE mode */
 	const pe_mode_e pe_mode = code_flash ? PE_MODE_CF : PE_MODE_DF;
@@ -514,13 +632,33 @@ static bool renesas_rv40_done(target_flash_s *const f)
 	return renesas_rv40_pe_mode(t, PE_MODE_READ);
 }
 
+static bool renesas_check_option_setting(target_s *t, target_addr_t addr)
+{
+	renesas_priv_s *priv_storage = (renesas_priv_s *)t->target_storage;
+	if (!priv_storage)
+		return false;
+
+	if ((priv_storage->details.option_start != 0 && addr >= priv_storage->details.option_start &&
+			addr < (priv_storage->details.option_start + priv_storage->details.option_size)) ||
+		(priv_storage->details.option_start_2 != 0 && addr >= priv_storage->details.option_start_2 &&
+			addr < (priv_storage->details.option_start_2 + priv_storage->details.option_size_2)))
+		return true;
+	else
+		return false;
+}
+
 /* !TODO: implement blank check */
 static bool renesas_rv40_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 {
 	target_s *const t = f->t;
 
+	uint16_t block_size;
+
 	/* Code flash or data flash operation */
-	const bool code_flash = addr < RENESAS_CF_END;
+	if (addr < RENESAS_CF_END)
+		block_size = addr < RV40_CF_REGION0_SIZE ? RV40_CF_REGION0_BLOCK_SIZE : RV40_CF_REGION1_BLOCK_SIZE;
+	else
+		block_size = f->blocksize;
 
 	/* Set Erasure Priority Mode */
 	target_mem_write16(t, RV40_FCPSR, RV40_FCPSR_ESUSPMD);
@@ -530,12 +668,6 @@ static bool renesas_rv40_flash_erase(target_flash_s *f, target_addr_t addr, size
 		target_mem_write32(t, RV40_FSADDR, addr);
 
 		/* Increment block address */
-		uint16_t block_size;
-		if (code_flash)
-			block_size = addr < RV40_CF_REGION0_SIZE ? RV40_CF_REGION0_BLOCK_SIZE : RV40_CF_REGION1_BLOCK_SIZE;
-		else
-			block_size = RV40_DF_BLOCK_SIZE;
-
 		addr += block_size;
 		len -= block_size;
 
@@ -565,13 +697,19 @@ static bool renesas_rv40_flash_write(target_flash_s *const f, target_addr_t dest
 {
 	target_s *const t = f->t;
 
-	/* code flash or data flash operation */
-	const bool code_flash = dest < RENESAS_CF_END;
-
 	/* write size for code flash / data flash */
-	const uint8_t write_size = code_flash ? RV40_CF_WRITE_SIZE : RV40_DF_WRITE_SIZE;
+	const uint8_t write_size = f->writesize;
+	bool option_flash = false;
+
+	if (renesas_check_option_setting(t, dest)) {
+		option_flash = true;
+	}
 
 	while (len) {
+		if (option_flash && renesas_check_restricted_option(dest)) {
+			return true;
+		}
+
 		/* set block start address */
 		target_mem_write32(t, RV40_FSADDR, dest);
 
@@ -580,15 +718,21 @@ static bool renesas_rv40_flash_write(target_flash_s *const f, target_addr_t dest
 		len -= write_size;
 
 		/* issue two part Write commands */
-		target_mem_write8(t, RV40_CMD, RV40_CMD_PROGRAM);
-		target_mem_write8(t, RV40_CMD, (uint8_t)(write_size / 2U));
+		if (option_flash) {
+			target_mem_write8(t, RV40_CMD, RV40_CMD_CONFIG_SET_1);
+			target_mem_write8(t, RV40_CMD, RV40_CMD_CONFIG_SET_2);
+		} else {
+			target_mem_write8(t, RV40_CMD, RV40_CMD_PROGRAM);
+			target_mem_write8(t, RV40_CMD, (uint8_t)(write_size / 2U));
+		}
 
 		/* 
 		 * According to reference manual the data buffer full time for 2 bytes is 2 usec with a FCLK of 4MHz.
 		 * A complete write should take less than 1 msec.
 		 */
 		platform_timeout_s timeout;
-		platform_timeout_set(&timeout, 10);
+		/* 100ms is almost 7x more than PDF says, but this is where I got consistent repetitive writes to option-setting memory without errors */
+		platform_timeout_set(&timeout, option_flash ? 100 : 20);
 
 		/* Write one chunk */
 		for (size_t i = 0U; i < (write_size / 2U); i++) {
@@ -624,17 +768,22 @@ static void renesas_add_rv40_flash(target_s *t, target_addr_t addr, size_t lengt
 	f->start = addr;
 	f->length = length;
 	f->erased = 0xffU;
-	f->erase = renesas_rv40_flash_erase;
 	f->write = renesas_rv40_flash_write;
 	f->prepare = renesas_rv40_prepare;
 	f->done = renesas_rv40_done;
 
-	if (code_flash) {
-		f->blocksize = RV40_CF_REGION1_BLOCK_SIZE;
-		f->writesize = RV40_CF_WRITE_SIZE;
+	if (renesas_check_option_setting(t, addr)) {
+		f->blocksize = RV40_OF_WRITE_SIZE;
+		f->writesize = RV40_OF_WRITE_SIZE;
 	} else {
-		f->blocksize = RV40_DF_BLOCK_SIZE;
-		f->writesize = RV40_DF_WRITE_SIZE;
+		f->erase = renesas_rv40_flash_erase;
+		if (code_flash) {
+			f->blocksize = RV40_CF_REGION1_BLOCK_SIZE;
+			f->writesize = RV40_CF_WRITE_SIZE;
+		} else {
+			f->blocksize = RV40_DF_BLOCK_SIZE;
+			f->writesize = RV40_DF_WRITE_SIZE;
+		}
 	}
 
 	target_add_flash(t, f);
@@ -646,51 +795,13 @@ static void renesas_add_flash(target_s *t, target_addr_t addr, size_t length)
 	if (!priv_storage)
 		return;
 
-	/* Renesas RA MCUs can have one of two kinds of flash memory, MF3/4 and RV40
-	 * Flash type by series:
-	 * ra2l1 - MF4
-	 * ra2e1 - MF4
-	 * ra2e2 - MF4
-	 * ra2a1 - MF3
-	 * ra4m1 - MF3
-	 * ra4m2 - RV40
-	 * ra4m3 - RV40
-	 * ra4e1 - RV40
-	 * ra4e2 - RV40
-	 * ra4w1 - MF3
-	 * ra6m1 - RV40
-	 * ra6m2 - RV40
-	 * ra6m3 - RV40
-	 * ra6m4 - RV40
-	 * ra6m5 - RV40
-	 * ra6e1 - RV40
-	 * ra6e2 - RV40
-	 * ra6t1 - RV40
-	 * ra6t2 - RV40
-	 */
-
-	switch (priv_storage->series) {
-	case PNR_SERIES_RA2L1:
-	case PNR_SERIES_RA2E1:
-	case PNR_SERIES_RA2E2:
-	case PNR_SERIES_RA2A1:
-	case PNR_SERIES_RA4M1:
-	case PNR_SERIES_RA4W1:
+	switch (priv_storage->details.flash_type) {
+	case RENESAS_FLASH_MF3:
+	case RENESAS_FLASH_MF4:
+		DEBUG_WARN("Found renesas chip with Flash type MF3/MF4, not implemented\n");
 		return;
 
-	case PNR_SERIES_RA4M2:
-	case PNR_SERIES_RA4M3:
-	case PNR_SERIES_RA4E1:
-	case PNR_SERIES_RA4E2:
-	case PNR_SERIES_RA6M1:
-	case PNR_SERIES_RA6M2:
-	case PNR_SERIES_RA6M3:
-	case PNR_SERIES_RA6M4:
-	case PNR_SERIES_RA6E1:
-	case PNR_SERIES_RA6E2:
-	case PNR_SERIES_RA6M5:
-	case PNR_SERIES_RA6T1:
-	case PNR_SERIES_RA6T2:
+	case RENESAS_FLASH_RV40:
 		t->enter_flash_mode = renesas_enter_flash_mode;
 		return renesas_add_rv40_flash(t, addr, length);
 
@@ -762,22 +873,22 @@ bool renesas_probe(target_s *t)
 		 */
 
 		if (renesas_pnr_read(t, RENESAS_FIXED2_PNR, pnr)) {
-			DEBUG_WARN("Found renesas chip (%.*s) with pnr location RENESAS_FIXED2_PNR and unsupported Part ID %x "
-					   "please report it\n",
+			DEBUG_WARN("Found Renesas chip (%.*s) with pnr location RENESAS_FIXED2_PNR and unsupported Part ID %" PRIx16
+					   " please report it\n",
 				(int)sizeof(pnr), pnr, t->part_id);
 			break;
 		}
 
 		if (renesas_pnr_read(t, RENESAS_FIXED1_PNR, pnr)) {
-			DEBUG_WARN("Found renesas chip (%.*s) with pnr location RENESAS_FIXED1_PNR and unsupported Part ID 0x%x "
-					   "please report it\n",
+			DEBUG_WARN("Found Renesas chip (%.*s) with pnr location RENESAS_FIXED1_PNR and unsupported Part ID "
+					   "0x%" PRIx16 " please report it\n",
 				(int)sizeof(pnr), pnr, t->part_id);
 			break;
 		}
 
 		flash_root_table = renesas_fmifrt_read(t);
 		if (renesas_pnr_read(t, RENESAS_FMIFRT_PNR(flash_root_table), pnr)) {
-			DEBUG_WARN("Found renesas chip (%.*s) with Flash Root Table and unsupported Part ID 0x%x "
+			DEBUG_WARN("Found Renesas chip (%.*s) with Flash Root Table and unsupported Part ID 0x%" PRIx16 " "
 					   "please report it\n",
 				(int)sizeof(pnr), pnr, t->part_id);
 			break;
@@ -791,101 +902,50 @@ bool renesas_probe(target_s *t)
 		return false;
 	memcpy(priv_storage->pnr, pnr, sizeof(pnr));
 
-	priv_storage->series = renesas_series(pnr);
+	const renesas_pnr_series_e series = renesas_series(pnr);
 	priv_storage->flash_root_table = flash_root_table;
 
 	t->target_storage = (void *)priv_storage;
 	t->driver = (char *)priv_storage->pnr;
 
-	switch (priv_storage->series) {
-	case PNR_SERIES_RA2L1:
-	case PNR_SERIES_RA2A1:
-	case PNR_SERIES_RA4M1:
-		renesas_add_flash(t, 0x40100000, 8U * 1024U); /* Data flash memory 8 KB 0x40100000 */
-		target_add_ram(t, 0x20000000, 32U * 1024U);   /* SRAM 32 KB 0x20000000 */
-		break;
+	priv_storage->details = renesas_family_lookup(series);
 
-	case PNR_SERIES_RA2E1:
-		renesas_add_flash(t, 0x40100000, 4U * 1024U); /* Data flash memory 4 KB 0x40100000 */
-		target_add_ram(t, 0x20004000, 16U * 1024U);   /* SRAM 16 KB 0x20004000 */
-		break;
-
-	case PNR_SERIES_RA2E2:
-		renesas_add_flash(t, 0x40100000, 2U * 1024U); /* Data flash memory 2 KB 0x40100000 */
-		target_add_ram(t, 0x20004000, 8U * 1024U);    /* SRAM 8 KB 0x20004000 */
-		break;
-
-	case PNR_SERIES_RA4M2:
-	case PNR_SERIES_RA4M3:
-	case PNR_SERIES_RA4E1:
-		renesas_add_flash(t, 0x08000000, 8U * 1024U); /* Data flash memory 8 KB 0x08000000 */
-		target_add_ram(t, 0x20000000, 128U * 1024U);  /* SRAM 128 KB 0x20000000 */
-		target_add_ram(t, 0x28000000, 1024U);         /* Standby SRAM 1 KB 0x28000000 */
-		break;
-
-	case PNR_SERIES_RA4E2:
-	case PNR_SERIES_RA6E2:
-		renesas_add_flash(t, 0x08000000, 4U * 1024U); /* Data flash memory 4 KB 0x08000000 */
-		target_add_ram(t, 0x20000000, 40U * 1024U);   /* SRAM 40 KB 0x20000000 */
-		target_add_ram(t, 0x28000000, 1024U);         /* Standby SRAM 1 KB 0x28000000 */
-		break;
-
-	case PNR_SERIES_RA4W1:
-		renesas_add_flash(t, 0x40100000, 8U * 1024U); /* Data flash memory 8 KB 0x40100000 */
-		target_add_ram(t, 0x20000000, 96U * 1024U);   /* SRAM 96 KB 0x20000000 */
-		break;
-
-	case PNR_SERIES_RA6M1:
-		/* conflicting information in the datasheet, here be dragons */
-		renesas_add_flash(t, 0x40100000, 8U * 1024U); /* Data flash memory 8 KB 0x40100000 */
-		target_add_ram(t, 0x20000000, 128U * 1024U);  /* SRAM 128 KB 0x20000000 */
-		target_add_ram(t, 0x1ffe0000, 128U * 1024U);  /* SRAMHS 128 KB 0x1ffe0000 */
-		target_add_ram(t, 0x200fe000, 8U * 1024U);    /* Standby SRAM 8 KB 0x200fe000 */
-		break;
-
-	case PNR_SERIES_RA6M2:
-		renesas_add_flash(t, 0x40100000, 32U * 1024U); /* Data flash memory 32 KB 0x40100000 */
-		target_add_ram(t, 0x20000000, 256U * 1024U);   /* SRAM 256 KB 0x20000000 */
-		target_add_ram(t, 0x1ffe0000, 128U * 1024U);   /* SRAMHS 128 KB 0x1ffe0000 */
-		target_add_ram(t, 0x200fe000, 8U * 1024U);     /* Standby SRAM 8 KB 0x200fe000 */
-		break;
-
-	case PNR_SERIES_RA6M3:
-		renesas_add_flash(t, 0x40100000, 64U * 1024U); /* Data flash memory 64 KB 0x40100000 */
-		target_add_ram(t, 0x20000000, 256U * 1024U);   /* SRAM0 256 KB 0x20000000 */
-		target_add_ram(t, 0x20040000, 256U * 1024U);   /* SRAM1 256 KB 0x20040000 */
-		target_add_ram(t, 0x1ffe0000, 128U * 1024U);   /* SRAMHS 128 KB 0x1ffe0000 */
-		target_add_ram(t, 0x200fe000, 8U * 1024U);     /* Standby SRAM 8 KB 0x200fe000 */
-		break;
-
-	case PNR_SERIES_RA6M4:
-	case PNR_SERIES_RA6E1:
-		renesas_add_flash(t, 0x08000000, 8U * 1024U); /* Data flash memory 8 KB 0x08000000 */
-		target_add_ram(t, 0x20000000, 256U * 1024U);  /* SRAM 256 KB 0x20000000 */
-		target_add_ram(t, 0x28000000, 1024U);         /* Standby SRAM 1 KB 0x28000000 */
-		break;
-
-	case PNR_SERIES_RA6M5:
-		renesas_add_flash(t, 0x08000000, 8U * 1024U); /* Data flash memory 8 KB 0x08000000 */
-		target_add_ram(t, 0x20000000, 512U * 1024U);  /* SRAM 512 KB 0x20000000 */
-		target_add_ram(t, 0x28000000, 1024U);         /* Standby SRAM 1 KB 0x28000000 */
-		break;
-
-	case PNR_SERIES_RA6T1:
-		renesas_add_flash(t, 0x40100000, 8U * 1024U); /* Data flash memory 8 KB 0x40100000 */
-		target_add_ram(t, 0x1ffe0000, 64U * 1024U);   /* SRAMHS 64 KB 0x1ffe0000 */
-		break;
-
-	case PNR_SERIES_RA6T2:
-		renesas_add_flash(t, 0x08000000, 16U * 1024U); /* Data flash memory 16 KB 0x08000000 */
-		target_add_ram(t, 0x20000000, 64U * 1024U);    /* SRAM 64 KB 0x20000000 */
-		target_add_ram(t, 0x28000000, 1024U);          /* Standby SRAM 1 KB 0x28000000 */
-		break;
-
-	default:
+	if (series != priv_storage->details.series) {
+		DEBUG_WARN("Found renesas chip (%.*s) with pnr location RENESAS_FIXED2_PNR and unsupported Part ID %x "
+				   "please report it\n",
+			(int)sizeof(pnr), pnr, t->part_id);
 		return false;
 	}
 
+	/* Data flash */
+	if (priv_storage->details.data_flash_start != 0)
+		renesas_add_flash(t, priv_storage->details.data_flash_start, priv_storage->details.data_flash_size);
+
+	/* SRAM 0 */
+	if (priv_storage->details.sram0_start != 0)
+		target_add_ram(t, priv_storage->details.sram0_start, priv_storage->details.sram0_size);
+
+	/* Standby SRAM */
+	if (priv_storage->details.stdby_sram_start != 0)
+		target_add_ram(t, priv_storage->details.stdby_sram_start, priv_storage->details.stdby_sram_size);
+
+	/* SRAM HS */
+	if (priv_storage->details.sramhs_start != 0)
+		target_add_ram(t, priv_storage->details.sramhs_start, priv_storage->details.sramhs_size);
+
+	/* SRAM 1 */
+	if (priv_storage->details.sram1_start != 0)
+		target_add_ram(t, priv_storage->details.sram1_start, priv_storage->details.sram1_size);
+
+	/* Option-Setting flash */
+	if (priv_storage->details.option_start != 0)
+		renesas_add_flash(t, priv_storage->details.option_start, priv_storage->details.option_size);
+
+	/* Option-Setting 2 flash */
+	if (priv_storage->details.option_start_2 != 0)
+		renesas_add_flash(t, priv_storage->details.option_start_2, priv_storage->details.option_size_2);
+
+	/* Code flash */
 	renesas_add_flash(t, 0x00000000, renesas_flash_size(pnr)); /* Code flash memory 0x00000000 */
 
 	target_add_commands(t, renesas_cmd_list, t->driver);
@@ -906,32 +966,16 @@ static bool renesas_uid(target_s *t, int argc, const char **argv)
 	uint8_t uid[16];
 	target_addr_t uid_addr;
 
-	switch (priv_storage->series) {
-	case PNR_SERIES_RA2L1:
-	case PNR_SERIES_RA2E1:
-	case PNR_SERIES_RA2E2:
+	switch (priv_storage->details.pnr_location) {
+	case RENESAS_LOCATION_FIXED1:
 		uid_addr = RENESAS_FIXED1_UID;
 		break;
 
-	case PNR_SERIES_RA2A1:
-	case PNR_SERIES_RA4M2:
-	case PNR_SERIES_RA4M3:
-	case PNR_SERIES_RA4E1:
-	case PNR_SERIES_RA4E2:
-	case PNR_SERIES_RA6M4:
-	case PNR_SERIES_RA6M5:
-	case PNR_SERIES_RA6E1:
-	case PNR_SERIES_RA6E2:
-	case PNR_SERIES_RA6T2:
+	case RENESAS_LOCATION_FIXED2:
 		uid_addr = RENESAS_FIXED2_UID;
 		break;
 
-	case PNR_SERIES_RA4M1:
-	case PNR_SERIES_RA4W1:
-	case PNR_SERIES_RA6M1:
-	case PNR_SERIES_RA6M2:
-	case PNR_SERIES_RA6M3:
-	case PNR_SERIES_RA6T1:
+	case RENESAS_LOCATION_FRT:
 		uid_addr = RENESAS_FMIFRT_UID(priv_storage->flash_root_table);
 		break;
 
@@ -945,6 +989,103 @@ static bool renesas_uid(target_s *t, int argc, const char **argv)
 	for (size_t i = 0U; i < 16U; i++)
 		tc_printf(t, "%02" PRIx8, uid[i]);
 	tc_printf(t, "\n");
+
+	return true;
+}
+
+static bool renesas_print_cmd_usage(target_s *t)
+{
+	tc_printf(t, "command help goes here\n");
+	return false;
+}
+
+static bool renesas_cmd_option(target_s *t, int argc, const char **argv)
+{
+	(void)argc;
+	(void)argv;
+
+	const uint8_t arglen = strlen(argv[1]);
+
+	if (arglen > 0 && strncmp(argv[1], "get", arglen) == 0) {
+		if (argc != 3)
+			return renesas_print_cmd_usage(t);
+
+		target_addr_t option_addr = strtoul(argv[2], NULL, 0);
+		if (!renesas_check_option_setting(t, option_addr))
+			return renesas_print_cmd_usage(t);
+
+		/* The address must be aligned */
+		if (option_addr % 0x10 > 0)
+			return renesas_print_cmd_usage(t);
+
+		uint32_t value = target_mem_read32(t, option_addr);
+
+		tc_printf(t, "Read from address: 0x%02x, value: %" PRIx32 "\n", option_addr, value);
+
+		return true;
+	} else if (arglen > 0 && strncmp(argv[1], "set", arglen) == 0) {
+		if (argc != 4)
+			return renesas_print_cmd_usage(t);
+
+		target_addr_t option_addr = strtoul(argv[2], NULL, 0);
+		if (!renesas_check_option_setting(t, option_addr))
+			return renesas_print_cmd_usage(t);
+
+		/* The address must be aligned */
+		if (option_addr % 0x10 > 0)
+			return renesas_print_cmd_usage(t);
+
+		/* Configuration-Set command always needs 16 bytes of data */
+		const uint8_t len = 16UL;
+		uint8_t data[len];
+
+		for (size_t i = 0; i < len;) {
+			uint32_t value = target_mem_read32(t, option_addr + i);
+			memcpy(&data[i], &value, 4UL);
+			i += 4UL;
+		}
+
+		uint32_t value = strtoul(argv[3], NULL, 0);
+		memcpy(&data, &value, sizeof(uint32_t));
+		tc_printf(t, "Write to address: 0x%02x, value: %" PRIx32 "\n", option_addr, value);
+
+		if (renesas_rv40_pe_mode(t, PE_MODE_CF)) {
+			/* Permit flash operations */
+			target_mem_write8(t, SYSC_FWEPROR, SYSC_FWEPROR_PERMIT);
+			/* set block start address */
+			target_mem_write32(t, RV40_FSADDR, option_addr);
+
+			/* issue two part Write commands */
+			target_mem_write8(t, RV40_CMD, RV40_CMD_CONFIG_SET_1);
+			target_mem_write8(t, RV40_CMD, RV40_CMD_CONFIG_SET_2);
+
+			platform_timeout_s timeout;
+			platform_timeout_set(&timeout, 200);
+
+			for (size_t i = 0U; i < len;) {
+				target_mem_write16(t, RV40_CMD, (uint16_t)((data[i + 1] << 8) + (data[i])));
+				i += 2;
+			}
+
+			/* Issue write end command */
+			target_mem_write8(t, RV40_CMD, RV40_CMD_FINAL);
+
+			/* Wait until the operation has completed or timeout */
+			/* Read FRDY bit until it has been set to 1 indicating that the current operation is complete.*/
+			while (!(target_mem_read32(t, RV40_FSTATR) & RV40_FSTATR_RDY)) {
+				if (target_check_error(t) || platform_timeout_is_expired(&timeout)) {
+					renesas_rv40_pe_mode(t, PE_MODE_READ);
+					return false;
+				}
+			}
+		} else {
+			renesas_rv40_pe_mode(t, PE_MODE_READ);
+			return false;
+		}
+	} else
+		return renesas_print_cmd_usage(t);
+
+	renesas_rv40_pe_mode(t, PE_MODE_READ);
 
 	return true;
 }
