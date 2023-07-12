@@ -52,6 +52,7 @@ bool stm32l0_probe(target_s *target);
 bool stm32l1_probe(target_s *target);
 bool stm32l4_probe(target_s *target);
 bool stm32g0_probe(target_s *target);
+bool hc32l110_probe(target_s *target);
 bool lmi_probe(target_s *target);
 bool lpc11xx_probe(target_s *target);
 bool lpc15xx_probe(target_s *target);
