@@ -148,26 +148,4 @@ extern bool debug_bmp;
 		gpio_set_val(LED_PORT, LED_ERROR, state); \
 	}
 
-/* Use newlib provided integer-only stdio functions */
-
-#ifdef sscanf
-#undef sscanf
-#endif
-#define sscanf siscanf
-
-#ifdef sprintf
-#undef sprintf
-#endif
-#define sprintf siprintf
-
-#ifdef vasprintf
-#undef vasprintf
-#endif
-#define vasprintf vasiprintf
-
-#ifdef snprintf
-#undef snprintf
-#endif
-#define snprintf sniprintf
-
 #endif /* PLATFORMS_F3_PLATFORM_H */

@@ -122,26 +122,4 @@ inline static uint8_t gpio_get(uint32_t port, uint8_t pin)
 		nvic_disable_irq(USB_IRQ);  \
 	} while (0)
 
-/* Use newlib provided integer-only stdio functions */
-
-#ifdef sscanf
-#undef sscanf
-#endif
-#define sscanf siscanf
-
-#ifdef sprintf
-#undef sprintf
-#endif
-#define sprintf siprintf
-
-#ifdef vasprintf
-#undef vasprintf
-#endif
-#define vasprintf vasiprintf
-
-#ifdef snprintf
-#undef snprintf
-#endif
-#define snprintf sniprintf
-
 #endif /* PLATFORMS_LAUNCHPAD_ICDI_PLATFORM_H */
