@@ -225,9 +225,6 @@ bool msp432e4_probe(target_s *const target)
 	DEBUG_INFO("%s: ver %x:%x part %x pin %x temp %x package %x\n", __func__, (devid0 >> 8) & 0xff,
 		(devid0 >> 0) & 0xff, (devid1 >> 16) & 0xff, (devid1 >> 13) & 0x7, (devid1 >> 5) & 0x7, (devid1 >> 3) & 0x3);
 
-	/* EEPROM size as # of 32bit words but not directly accessible */
-	const uint32_t eeprom_size = (target_mem_read32(target, MSP432E4_EEPROM_SIZE) & 0xffffU) * 4U;
-
 	/* SRAM is banked but interleaved into one logical bank */
 	const uint32_t sram_size = ((target_mem_read32(target, MSP432E4_FLASH_SRAM_SIZE) & 0xffffU) + 1U) * 256U;
 
@@ -236,15 +233,7 @@ bool msp432e4_probe(target_s *const target)
 	const uint32_t flash_size = ((flash_props & 0xffffU) + 1U) * 2048U;
 	const uint32_t flash_sector = (1U << ((flash_props >> 16U) & 0x07U)) * 1024U;
 
-#define FORMAT "MSP432E4 %" PRIu32 "k eeprom / %" PRIu32 "k sram / %" PRIu32 "k flash"
-	size_t nb = snprintf(NULL, 0, FORMAT, eeprom_size / 1024U, sram_size / 1024U, flash_size / 1024U);
-	char *p = (char *)malloc(nb + 1);
-	if (p == NULL)
-		return false;
-	snprintf(p, nb + 1, FORMAT, eeprom_size / 1024U, sram_size / 1024U, flash_size / 1024U);
-	target->driver = p;
-	target->target_storage = p;
-#undef FORMAT
+	target->driver = "MSP432E4";
 
 	target_add_ram(target, MSP432E4_SRAM_BASE, sram_size);
 
@@ -253,7 +242,7 @@ bool msp432e4_probe(target_s *const target)
 	msp432e4_add_flash(target, flash_sector, MSP432E4_FLASH_BASE + flash_size / 2U, flash_size / 2U);
 
 	/* Connect the optional commands */
-	target_add_commands(target, msp432e4_cmd_list, "MSP432E4");
+	target_add_commands(target, msp432e4_cmd_list, target->driver);
 
 	/* All done */
 	return true;
