@@ -4,6 +4,9 @@
  * Copyright (C) 2022 dpf ("neutered") <weasel@cs.stanford.edu>
  * Written by dpf ("neutered") <weasel@cs.stanford.edu>
  *
+ * Copyright (C) 2023 1BitSquared <info@1bitsquared.com>
+ * Modified by Rachel Mant <git@dragonmux.network>
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -30,7 +33,7 @@
 #include "general.h"
 #include "target.h"
 #include "target_internal.h"
-#include "cortexm.h"
+#include "buffer_utils.h"
 
 #define MSP432E4_EEPROM_BASE     0x400af000U
 #define MSP432E4_FLASH_CTRL_BASE 0x400fd000U
@@ -176,7 +179,7 @@ static const command_s msp432e4_cmd_list[] = {
 };
 
 static bool msp432e4_flash_erase_sectors(target_flash_s *flash, target_addr_t addr, size_t len);
-static bool msp432e4_flash_write(target_flash_s *flash, target_addr_t dst, const void *src, size_t len);
+static bool msp432e4_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t len);
 
 static void msp432e4_add_flash(target_s *const target, const uint32_t sector, const uint32_t base, const size_t length)
 {
@@ -266,9 +269,10 @@ static bool msp432e4_flash_erase_sectors(target_flash_s *const flash, const targ
 
 /* Program flash */
 static bool msp432e4_flash_write(
-	target_flash_s *const flash, target_addr_t dst, const void *const src, const size_t len)
+	target_flash_s *const flash, target_addr_t dest, const void *const src, const size_t len)
 {
 	target_s *const target = flash->t;
+	const uint32_t *const buffer = (const uint32_t *)src;
 
 	const uint32_t fmc = ((1 || (target_mem_read32(target, MSP432E4_SYS_CTRL_BOOTCFG) & MSP432E4_SYS_CTRL_BOOTCFG_KEY) ?
 								  0xa442u :
@@ -276,32 +280,22 @@ static bool msp432e4_flash_write(
 							 << 16U) |
 		MSP432E4_FLASH_CTRL_WRITE;
 
-	/* copy out the aligned part */
-	const uint32_t *s = src;
-	const uint32_t *const e = src + (len / 4);
-	for (/**/; s < e; dst += sizeof(uint32_t), s++) {
-		target_mem_write32(target, MSP432E4_FLASH_ADDR, dst);
-		target_mem_write32(target, MSP432E4_FLASH_DATA, *s);
+	/* Transfer the aligned part, 1 uint32_t at a time */
+	const size_t aligned_len = len & ~3U;
+	for (size_t offset = 0; offset < aligned_len; offset += 4U) {
+		target_mem_write32(target, MSP432E4_FLASH_ADDR, dest + offset);
+		target_mem_write32(target, MSP432E4_FLASH_DATA, buffer[offset >> 2U]);
 		target_mem_write32(target, MSP432E4_FLASH_CTRL, fmc);
 		while (target_mem_read32(target, MSP432E4_FLASH_CTRL) & MSP432E4_FLASH_CTRL_WRITE)
 			continue;
 	}
 
-	/* endian little hate i */
-	if (len & 3) {
-		const uint8_t *rem = (const uint8_t *)s;
-		uint32_t val = 0;
-		switch (len & 3) {
-		case 3:
-			val |= rem[2] << 16; /* fallthrough */
-		case 2:
-			val |= rem[1] << 8; /* fallthrough */
-		case 1:
-			val |= rem[0] << 0; /* fallthrough */
-		}
-
-		target_mem_write32(target, MSP432E4_FLASH_ADDR, dst);
-		target_mem_write32(target, MSP432E4_FLASH_DATA, val);
+	/* Pack and transfer the remainder */
+	if (len != aligned_len) {
+		uint8_t data[4] = {0U};
+		memcpy(data, buffer + (aligned_len >> 2U), len - aligned_len);
+		target_mem_write32(target, MSP432E4_FLASH_ADDR, dest + aligned_len);
+		target_mem_write32(target, MSP432E4_FLASH_DATA, read_le4(data, 0));
 		target_mem_write32(target, MSP432E4_FLASH_CTRL, fmc);
 		while (target_mem_read32(target, MSP432E4_FLASH_CTRL) & MSP432E4_FLASH_CTRL_WRITE)
 			continue;
