@@ -179,7 +179,8 @@ static bool msp432e4_flash_erase(target_flash_s *flash, target_addr_t addr, size
 static bool msp432e4_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t len);
 static bool msp432e4_mass_erase(target_s *target);
 
-static void msp432e4_add_flash(target_s *const target, const uint32_t sector, const uint32_t base, const size_t length)
+static void msp432e4_add_flash(
+	target_s *const target, const uint32_t sector_size, const uint32_t base, const size_t length)
 {
 	msp432e4_flash_s *const flash = calloc(1, sizeof(*flash));
 	if (flash == NULL) {
@@ -190,7 +191,7 @@ static void msp432e4_add_flash(target_s *const target, const uint32_t sector, co
 	target_flash_s *target_flash = &flash->target_flash;
 	target_flash->start = base;
 	target_flash->length = length;
-	target_flash->blocksize = sector;
+	target_flash->blocksize = sector_size;
 	target_flash->erase = msp432e4_flash_erase;
 	target_flash->write = msp432e4_flash_write;
 	target_flash->writesize = BUFFERED_WRITE_SIZE;
@@ -218,22 +219,28 @@ bool msp432e4_probe(target_s *const target)
 	DEBUG_INFO("%s: ver %x:%x part %x pin %x temp %x package %x\n", __func__, (devid0 >> 8) & 0xff,
 		(devid0 >> 0) & 0xff, (devid1 >> 16) & 0xff, (devid1 >> 13) & 0x7, (devid1 >> 5) & 0x7, (devid1 >> 3) & 0x3);
 
+	target->driver = "MSP432E4";
+	target->mass_erase = msp432e4_mass_erase;
+
 	/* SRAM is banked but interleaved into one logical bank */
 	const uint32_t sram_size = ((target_mem_read32(target, MSP432E4_FLASH_SRAM_SIZE) & 0xffffU) + 1U) * 256U;
+	target_add_ram(target, MSP432E4_SRAM_BASE, sram_size);
 
 	/* Flash is in four banks but two-way interleaved */
 	const uint32_t flash_props = target_mem_read32(target, MSP432E4_FLASH_PERIPH_PROP);
 	const uint32_t flash_size = ((flash_props & 0xffffU) + 1U) * 2048U;
-	const uint32_t flash_sector = (1U << ((flash_props >> 16U) & 0x07U)) * 1024U;
+	/*
+	 * Convert the Flash sector size from a value between 1 (2kiB) and 4 (16kiB) to a value of
+	 * 2, 4, 8 or 16. Then multiply by a kibibyte to land on the final size.
+	 */
+	const uint32_t flash_sector_size = (UINT32_C(1) << ((flash_props >> 16U) & 7U)) * 1024U;
 
-	target->driver = "MSP432E4";
-	target->mass_erase = msp432e4_mass_erase;
-
-	target_add_ram(target, MSP432E4_SRAM_BASE, sram_size);
-
-	/* the flash is physically 4x but is 2x banked and 2x interleaved. */
-	msp432e4_add_flash(target, flash_sector, MSP432E4_FLASH_BASE, flash_size / 2U);
-	msp432e4_add_flash(target, flash_sector, MSP432E4_FLASH_BASE + flash_size / 2U, flash_size / 2U);
+	/*
+	 * While the Flash is in a banked 2x2 arrangement, this doesn't matter in practical terms
+	 * because the controller hides this for us behind a cohearent interface.
+	 * Register just the one big linear region.
+	 */
+	msp432e4_add_flash(target, flash_sector_size, MSP432E4_FLASH_BASE, flash_size);
 
 	/* All done */
 	return true;
