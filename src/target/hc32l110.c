@@ -92,27 +92,27 @@ static void hc32l110_add_flash(target_s *target, const uint32_t flash_size)
 	target_add_flash(target, flash);
 }
 
-bool hc32l110_probe(target_s *t)
+bool hc32l110_probe(target_s *target)
 {
-	const uint32_t flash_size = target_mem_read32(t, HC32L110_ADDR_FLASH_SIZE);
+	const uint32_t flash_size = target_mem_read32(target, HC32L110_ADDR_FLASH_SIZE);
 
 	switch (flash_size) {
 	case 16384:
-		t->driver = "HC32L110A";
-		target_add_ram(t, 0x2000000, 2048);
+		target->driver = "HC32L110A";
+		target_add_ram(target, 0x2000000, 2048);
 		break;
 	case 32768:
-		t->driver = "HC32L110B";
-		target_add_ram(t, 0x2000000, 4096);
+		target->driver = "HC32L110B";
+		target_add_ram(target, 0x2000000, 4096);
 		break;
 	default:
 		return false;
 	}
 
-	t->enter_flash_mode = hc32l110_enter_flash_mode;
-	t->mass_erase = hc32l110_mass_erase;
+	target->enter_flash_mode = hc32l110_enter_flash_mode;
+	target->mass_erase = hc32l110_mass_erase;
 
-	hc32l110_add_flash(t, flash_size);
+	hc32l110_add_flash(target, flash_size);
 	return true;
 }
 
