@@ -175,16 +175,9 @@ typedef struct msp432e4_flash {
 	uint16_t flash_key;
 } msp432e4_flash_s;
 
-static bool msp432e4_cmd_erase(target_s *t, int argc, const char **argv);
-
-/* Optional commands structure*/
-static const command_s msp432e4_cmd_list[] = {
-	{"erase", msp432e4_cmd_erase, "Erase flash: all | <sector> <n sectors>?"},
-	{NULL, NULL, NULL},
-};
-
-static bool msp432e4_flash_erase_sectors(target_flash_s *flash, target_addr_t addr, size_t len);
+static bool msp432e4_flash_erase(target_flash_s *flash, target_addr_t addr, size_t len);
 static bool msp432e4_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t len);
+static bool msp432e4_mass_erase(target_s *target);
 
 static void msp432e4_add_flash(target_s *const target, const uint32_t sector, const uint32_t base, const size_t length)
 {
@@ -198,7 +191,7 @@ static void msp432e4_add_flash(target_s *const target, const uint32_t sector, co
 	target_flash->start = base;
 	target_flash->length = length;
 	target_flash->blocksize = sector;
-	target_flash->erase = msp432e4_flash_erase_sectors;
+	target_flash->erase = msp432e4_flash_erase;
 	target_flash->write = msp432e4_flash_write;
 	target_flash->writesize = BUFFERED_WRITE_SIZE;
 	target_flash->erased = 0xff;
@@ -234,6 +227,7 @@ bool msp432e4_probe(target_s *const target)
 	const uint32_t flash_sector = (1U << ((flash_props >> 16U) & 0x07U)) * 1024U;
 
 	target->driver = "MSP432E4";
+	target->mass_erase = msp432e4_mass_erase;
 
 	target_add_ram(target, MSP432E4_SRAM_BASE, sram_size);
 
@@ -241,15 +235,12 @@ bool msp432e4_probe(target_s *const target)
 	msp432e4_add_flash(target, flash_sector, MSP432E4_FLASH_BASE, flash_size / 2U);
 	msp432e4_add_flash(target, flash_sector, MSP432E4_FLASH_BASE + flash_size / 2U, flash_size / 2U);
 
-	/* Connect the optional commands */
-	target_add_commands(target, msp432e4_cmd_list, target->driver);
-
 	/* All done */
 	return true;
 }
 
 /* Erase from addr for len bytes */
-static bool msp432e4_flash_erase_sectors(target_flash_s *const target_flash, const target_addr_t addr, const size_t len)
+static bool msp432e4_flash_erase(target_flash_s *const target_flash, const target_addr_t addr, const size_t len)
 {
 	target_s *target = target_flash->t;
 	const msp432e4_flash_s *const flash = (msp432e4_flash_s *)target_flash;
@@ -299,8 +290,8 @@ static bool msp432e4_flash_write(
 	return true;
 }
 
-/* Special case command for erase all flash */
-static bool msp432e4_flash_erase_all(target_s *const target)
+/* Mass erases the Flash */
+static bool msp432e4_mass_erase(target_s *const target)
 {
 	const msp432e4_flash_s *const flash = (msp432e4_flash_s *)target->flash;
 	uint32_t fmc = (flash->flash_key << 16U) | MSP432E4_FLASH_CTRL_MASS_ERASE;
@@ -309,46 +300,4 @@ static bool msp432e4_flash_erase_all(target_s *const target)
 	while (target_mem_read32(target, MSP432E4_FLASH_CTRL) & MSP432E4_FLASH_CTRL_MASS_ERASE)
 		continue;
 	return true;
-}
-
-/* Optional commands handlers */
-static bool msp432e4_cmd_erase(target_s *const target, const int argc, const char **const argv)
-{
-	if (argc != 2 && argc != 3)
-		goto err_usage;
-
-	if (strcmp(argv[1], "all") == 0) {
-		if (argc != 2)
-			goto err_usage;
-		return msp432e4_flash_erase_all(target);
-	}
-
-	char *end = NULL;
-	const uint32_t addr = strtoul(argv[1], &end, 0);
-	if (end == argv[1])
-		goto err_usage;
-	target_flash_s *flash = target->flash;
-	while (flash != NULL) {
-		if ((flash->start <= addr) && (addr < flash->start + flash->length))
-			break;
-		flash = flash->next;
-	}
-	if (flash == NULL)
-		goto err_usage;
-
-	uint32_t n = 1;
-	if (argc == 3) {
-		n = strtoul(argv[2], &end, 0);
-		if (end == argv[2])
-			goto err_usage;
-	}
-	n *= flash->blocksize;
-	if (n == 0 || addr + n > flash->start + flash->length)
-		goto err_usage;
-
-	return msp432e4_flash_erase_sectors(flash, addr, n);
-
-err_usage:
-	tc_printf(target, "usage: monitor erase (all | <addr> <n>?)\n");
-	return false;
 }
