@@ -175,39 +175,35 @@ void platform_target_clk_output_enable(bool enable)
 
 bool platform_spi_init(const spi_bus_e bus)
 {
-	uint32_t gpioport = 0;
-	uint16_t gpio_hwspi = 0;
-	uint16_t gpio_cs = 0;
 	uint32_t controller = 0;
 	if (bus == SPI_BUS_INTERNAL) {
 		/* Set up onboard flash SPI GPIOs: PA5/6/7 as SPI1 in AF5, PA4 as nCS output push-pull */
-		gpioport = OB_SPI_PORT;
-		gpio_hwspi = OB_SPI_SCLK | OB_SPI_MISO | OB_SPI_MOSI;
-		gpio_cs = OB_SPI_CS;
-	} else if (bus == SPI_BUS_EXTERNAL) {
-		/* Set up external SPI GPIOs: PB13/14/15 as SPI2 in AF5, PB12 as nCS output push-pull */
-		gpioport = EXT_SPI_PORT;
-		gpio_hwspi = EXT_SPI_SCLK | EXT_SPI_MISO | EXT_SPI_MOSI;
-		gpio_cs = EXT_SPI_CS;
-	} else
-		return false;
-	gpio_mode_setup(gpioport, GPIO_MODE_AF, GPIO_PUPD_NONE, gpio_hwspi);
-	gpio_mode_setup(gpioport, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, gpio_cs);
-	gpio_set_output_options(gpioport, GPIO_OTYPE_PP, GPIO_OSPEED_50MHZ, gpio_hwspi | gpio_cs);
-	/* Both SPI1 & SPI2 seem to require AF05 on these pins */
-	gpio_set_af(gpioport, GPIO_AF5, gpio_hwspi);
-	/* Deselect the targeted peripheral chip */
-	gpio_set(gpioport, gpio_cs);
+		gpio_mode_setup(OB_SPI_PORT, GPIO_MODE_AF, GPIO_PUPD_NONE, OB_SPI_SCLK | OB_SPI_MISO | OB_SPI_MOSI);
+		gpio_mode_setup(OB_SPI_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, OB_SPI_CS);
+		gpio_set_output_options(
+			OB_SPI_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_50MHZ, OB_SPI_SCLK | OB_SPI_MISO | OB_SPI_MOSI | OB_SPI_CS);
+		gpio_set_af(OB_SPI_PORT, GPIO_AF5, OB_SPI_SCLK | OB_SPI_MISO | OB_SPI_MOSI);
+		/* Deselect the targeted peripheral chip */
+		gpio_set(OB_SPI_PORT, OB_SPI_CS);
 
-	if (bus == SPI_BUS_INTERNAL) {
 		rcc_periph_clock_enable(RCC_SPI1);
 		rcc_periph_reset_pulse(RST_SPI1);
 		controller = OB_SPI;
 	} else if (bus == SPI_BUS_EXTERNAL) {
+		/* Set up external SPI GPIOs: PB13/14/15 as SPI2 in AF5, PB12 as nCS output push-pull */
+		gpio_mode_setup(EXT_SPI_PORT, GPIO_MODE_AF, GPIO_PUPD_NONE, EXT_SPI_SCLK | EXT_SPI_MISO | EXT_SPI_MOSI);
+		gpio_mode_setup(EXT_SPI_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, EXT_SPI_CS);
+		gpio_set_output_options(
+			EXT_SPI_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_50MHZ, EXT_SPI_SCLK | EXT_SPI_MISO | EXT_SPI_MOSI | EXT_SPI_CS);
+		gpio_set_af(EXT_SPI_PORT, GPIO_AF5, EXT_SPI_SCLK | EXT_SPI_MISO | EXT_SPI_MOSI);
+		/* Deselect the targeted peripheral chip */
+		gpio_set(EXT_SPI_PORT, EXT_SPI_CS);
+
 		rcc_periph_clock_enable(RCC_SPI2);
 		rcc_periph_reset_pulse(RST_SPI2);
 		controller = EXT_SPI;
-	}
+	} else
+		return false;
 
 	/* Set up hardware SPI: master, PCLK/8, Mode 0, 8-bit MSB first */
 	spi_init_master(controller, SPI_CR1_BAUDRATE_FPCLK_DIV_8, SPI_CR1_CPOL_CLK_TO_0_WHEN_IDLE,
@@ -219,19 +215,18 @@ bool platform_spi_init(const spi_bus_e bus)
 bool platform_spi_deinit(const spi_bus_e bus)
 {
 	if (bus == SPI_BUS_INTERNAL) {
-		/* Notice: spi_clean_disable() hangs */
 		spi_disable(OB_SPI);
 		/* Gate SPI1 APB clock */
 		rcc_periph_clock_disable(RCC_SPI1);
 		/* Unmap GPIOs */
-		const uint16_t gpios = OB_SPI_SCLK | OB_SPI_MISO | OB_SPI_MOSI | OB_SPI_CS;
-		gpio_mode_setup(OB_SPI_PORT, GPIO_MODE_INPUT, GPIO_PUPD_NONE, gpios);
+		gpio_mode_setup(
+			OB_SPI_PORT, GPIO_MODE_INPUT, GPIO_PUPD_NONE, OB_SPI_SCLK | OB_SPI_MISO | OB_SPI_MOSI | OB_SPI_CS);
 		return true;
 	} else if (bus == SPI_BUS_EXTERNAL) {
 		spi_disable(EXT_SPI);
 		rcc_periph_clock_disable(RCC_SPI2);
-		const uint16_t gpios = EXT_SPI_SCLK | EXT_SPI_MISO | EXT_SPI_MOSI | EXT_SPI_CS;
-		gpio_mode_setup(EXT_SPI_PORT, GPIO_MODE_INPUT, GPIO_PUPD_NONE, gpios);
+		gpio_mode_setup(
+			EXT_SPI_PORT, GPIO_MODE_INPUT, GPIO_PUPD_NONE, EXT_SPI_SCLK | EXT_SPI_MISO | EXT_SPI_MOSI | EXT_SPI_CS);
 		return true;
 	} else
 		return false;
