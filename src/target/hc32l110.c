@@ -106,17 +106,16 @@ bool hc32l110_probe(target_s *target)
 
 	switch (flash_size) {
 	case 16384:
-		target->driver = "HC32L110A";
 		target_add_ram(target, 0x2000000, 2048);
 		break;
 	case 32768:
-		target->driver = "HC32L110B";
 		target_add_ram(target, 0x2000000, 4096);
 		break;
 	default:
 		return false;
 	}
 
+	target->driver = "HC32L110";
 	target->enter_flash_mode = hc32l110_enter_flash_mode;
 	target->mass_erase = hc32l110_mass_erase;
 
