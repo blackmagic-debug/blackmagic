@@ -58,13 +58,24 @@
  *  [2]     - b - rohs
  *  [1:0]   - bb - qualification status
  */
-#define MSP432E4_SYS_CTRL_DID0          (MSP432E4_SYS_CTRL_BASE + 0x0000U)
-#define MSP432E4_SYS_CTRL_DID0_MASK     0xffff0000U
-#define MSP432E4_SYS_CTRL_DID0_MSP432E4 0x180c0000U
+#define MSP432E4_SYS_CTRL_DID0                   (MSP432E4_SYS_CTRL_BASE + 0x0000U)
+#define MSP432E4_SYS_CTRL_DID0_CLASS_MASK        0xffff0000U
+#define MSP432E4_SYS_CTRL_DID0_MSP432E4          0x180c0000U
+#define MSP432E4_SYS_CTRL_DID0_VERSION_MAJ_SHIFT 8U
+#define MSP432E4_SYS_CTRL_DID0_VERSION_MAJ_MASK  0xffU
+#define MSP432E4_SYS_CTRL_DID0_VERSION_MIN_MASK  0xffU
 
-#define MSP432E4_SYS_CTRL_DID1          (MSP432E4_SYS_CTRL_BASE + 0x0004U)
-#define MSP432E4_SYS_CTRL_DID1_MASK     0xff000000U
-#define MSP432E4_SYS_CTRL_DID1_MSP432E4 0x10000000U
+#define MSP432E4_SYS_CTRL_DID1                    (MSP432E4_SYS_CTRL_BASE + 0x0004U)
+#define MSP432E4_SYS_CTRL_DID1_FAMILY_MASK        0xff000000U
+#define MSP432E4_SYS_CTRL_DID1_MSP432E4           0x10000000U
+#define MSP432E4_SYS_CTRL_DID1_PART_NUM_SHIFT     16U
+#define MSP432E4_SYS_CTRL_DID1_PART_NUM_MASK      0xffU
+#define MSP432E4_SYS_CTRL_DID1_PIN_COUNT_SHIFT    13U
+#define MSP432E4_SYS_CTRL_DID1_PIN_COUNT_MASK     0x7U
+#define MSP432E4_SYS_CTRL_DID1_TEMP_RANGE_SHIFT   5U
+#define MSP432E4_SYS_CTRL_DID1_TEMP_RANGE_MASK    0x7U
+#define MSP432E4_SYS_CTRL_DID1_PACKAGE_TYPE_SHIFT 3U
+#define MSP432E4_SYS_CTRL_DID1_PACKAGE_TYPE_MASK  0x3U
 
 /*
  * Boot Config
@@ -206,15 +217,20 @@ bool msp432e4_probe(target_s *const target)
 {
 	const uint32_t devid0 = target_mem_read32(target, MSP432E4_SYS_CTRL_DID0);
 	const uint32_t devid1 = target_mem_read32(target, MSP432E4_SYS_CTRL_DID1);
-	DEBUG_INFO("%s: devid %" PRIx32 ":%" PRIx32 "\n", __func__, devid0, devid1);
+	DEBUG_INFO("%s: Device ID %" PRIx32 ":%" PRIx32 "\n", __func__, devid0, devid1);
 
 	/* Does it look like an msp432e4 variant? */
-	if ((devid0 & MSP432E4_SYS_CTRL_DID0_MASK) != MSP432E4_SYS_CTRL_DID0_MSP432E4 ||
-		(devid1 & MSP432E4_SYS_CTRL_DID1_MASK) != MSP432E4_SYS_CTRL_DID1_MSP432E4)
+	if ((devid0 & MSP432E4_SYS_CTRL_DID0_CLASS_MASK) != MSP432E4_SYS_CTRL_DID0_MSP432E4 ||
+		(devid1 & MSP432E4_SYS_CTRL_DID1_FAMILY_MASK) != MSP432E4_SYS_CTRL_DID1_MSP432E4)
 		return false;
 
-	DEBUG_INFO("%s: ver %x:%x part %x pin %x temp %x package %x\n", __func__, (devid0 >> 8) & 0xff,
-		(devid0 >> 0) & 0xff, (devid1 >> 16) & 0xff, (devid1 >> 13) & 0x7, (devid1 >> 5) & 0x7, (devid1 >> 3) & 0x3);
+	DEBUG_TARGET("%s: Device version %x:%x, part ID %x, pin count %u, temperature grade %x, package type %x\n",
+		__func__, (devid0 >> MSP432E4_SYS_CTRL_DID0_VERSION_MAJ_SHIFT) & MSP432E4_SYS_CTRL_DID0_VERSION_MAJ_MASK,
+		devid0 & MSP432E4_SYS_CTRL_DID0_VERSION_MIN_MASK,
+		(devid1 >> MSP432E4_SYS_CTRL_DID1_PART_NUM_SHIFT) & MSP432E4_SYS_CTRL_DID1_PART_NUM_MASK,
+		(devid1 >> MSP432E4_SYS_CTRL_DID1_PIN_COUNT_SHIFT) & MSP432E4_SYS_CTRL_DID1_PIN_COUNT_MASK,
+		(devid1 >> MSP432E4_SYS_CTRL_DID1_TEMP_RANGE_SHIFT) & MSP432E4_SYS_CTRL_DID1_TEMP_RANGE_MASK,
+		(devid1 >> MSP432E4_SYS_CTRL_DID1_PACKAGE_TYPE_SHIFT) & MSP432E4_SYS_CTRL_DID1_PACKAGE_TYPE_MASK);
 
 	target->driver = "MSP432E4";
 	target->mass_erase = msp432e4_mass_erase;
