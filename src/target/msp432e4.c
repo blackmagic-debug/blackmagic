@@ -172,7 +172,7 @@ typedef struct msp432e4_flash {
 	uint16_t flash_key;
 } msp432e4_flash_s;
 
-static bool msp432e4_flash_erase(target_flash_s *flash, target_addr_t addr, size_t len);
+static bool msp432e4_flash_erase(target_flash_s *flash, target_addr_t addr, size_t length);
 static bool msp432e4_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t length);
 static bool msp432e4_mass_erase(target_s *target);
 
@@ -243,19 +243,20 @@ bool msp432e4_probe(target_s *const target)
 	return true;
 }
 
-/* Erase from addr for len bytes */
-static bool msp432e4_flash_erase(target_flash_s *const target_flash, const target_addr_t addr, const size_t len)
+/* Erase from addr for length bytes */
+static bool msp432e4_flash_erase(target_flash_s *const target_flash, const target_addr_t addr, const size_t length)
 {
+	(void)length;
 	target_s *const target = target_flash->t;
 	const msp432e4_flash_s *const flash = (msp432e4_flash_s *)target_flash;
-
-	for (size_t offset = 0; offset < len; offset += target_flash->blocksize) {
-		target_mem_write32(target, MSP432E4_FLASH_ADDR, addr + offset);
-		target_mem_write32(target, MSP432E4_FLASH_CTRL, (flash->flash_key << 16U) | MSP432E4_FLASH_CTRL_ERASE);
-		/* FixMe - verify/timeout bit? */
-		while (target_mem_read32(target, MSP432E4_FLASH_CTRL) & MSP432E4_FLASH_CTRL_ERASE)
-			continue;
-	}
+	/*
+	 * The target Flash layer guarantees we're called at the start of each target_flash->blocksize
+	 * so we only need to trigger the erase of the Flash sector pair and that logic will take care of the rest.
+	 */
+	target_mem_write32(target, MSP432E4_FLASH_ADDR, addr);
+	target_mem_write32(target, MSP432E4_FLASH_CTRL, (flash->flash_key << 16U) | MSP432E4_FLASH_CTRL_ERASE);
+	while (target_mem_read32(target, MSP432E4_FLASH_CTRL) & MSP432E4_FLASH_CTRL_ERASE)
+		continue;
 	return true;
 }
 
