@@ -54,11 +54,19 @@
 #define HC32L110_FLASH_SECTOR_SIZE 512U
 #define HC32L110_FLASH_WRITE_SIZE  4U
 
-#define HC32L110_ADDR_FLASH_SIZE   0x00100c70U
-#define HC32L110_FLASH_CR_ADDR     0x40020020U
-#define HC32L110_FLASH_CR_BUSY     (1U << 4U)
-#define HC32L110_FLASH_BYPASS_ADDR 0x4002002cU
-#define HC32L110_FLASH_SLOCK_ADDR  0x40020030U
+/*
+ * This is a special register defined in §26.3 of the datasheet on pg520.
+ * It contains a count of the amount of Flash present on the part.
+ */
+#define HC32L110_FLASH_SIZE 0x00100c70U
+
+/* Flash controller register defines from §7.8 pg208 */
+#define HC32L110_FLASH_CTRL_BASE 0x40020000U
+#define HC32L110_FLASH_CR        (HC32L110_FLASH_CTRL_BASE + 0x020U)
+#define HC32L110_FLASH_BYPASS    (HC32L110_FLASH_CTRL_BASE + 0x02cU)
+#define HC32L110_FLASH_SLOCK     (HC32L110_FLASH_CTRL_BASE + 0x030U)
+
+#define HC32L110_FLASH_CR_BUSY (1U << 4U)
 
 #define HC32L110_FLASH_CR_OP_READ         0U
 #define HC32L110_FLASH_CR_OP_PROGRAM      1U
@@ -94,7 +102,7 @@ static void hc32l110_add_flash(target_s *target, const uint32_t flash_size)
 
 bool hc32l110_probe(target_s *target)
 {
-	const uint32_t flash_size = target_mem_read32(target, HC32L110_ADDR_FLASH_SIZE);
+	const uint32_t flash_size = target_mem_read32(target, HC32L110_FLASH_SIZE);
 
 	switch (flash_size) {
 	case 16384:
@@ -119,8 +127,8 @@ bool hc32l110_probe(target_s *target)
 /* Executes the magic sequence to unlock the CR register */
 static void hc32l110_flash_cr_unlock(target_s *const target)
 {
-	target_mem_write32(target, HC32L110_FLASH_BYPASS_ADDR, 0x5a5aU);
-	target_mem_write32(target, HC32L110_FLASH_BYPASS_ADDR, 0xa5a5U);
+	target_mem_write32(target, HC32L110_FLASH_BYPASS, 0x5a5aU);
+	target_mem_write32(target, HC32L110_FLASH_BYPASS, 0xa5a5U);
 }
 
 static bool hc32l110_check_flash_completion(target_s *const target, const uint32_t timeout_ms)
@@ -129,7 +137,7 @@ static bool hc32l110_check_flash_completion(target_s *const target, const uint32
 	platform_timeout_set(&timeout, timeout_ms);
 	uint32_t status = HC32L110_FLASH_CR_BUSY;
 	while (status & HC32L110_FLASH_CR_BUSY) {
-		status = target_mem_read32(target, HC32L110_FLASH_CR_ADDR);
+		status = target_mem_read32(target, HC32L110_FLASH_CR);
 		if (target_check_error(target) || platform_timeout_is_expired(&timeout))
 			return false;
 	}
@@ -140,14 +148,14 @@ static bool hc32l110_check_flash_completion(target_s *const target, const uint32
 static void hc32l110_slock_lock_all(target_s *const target)
 {
 	hc32l110_flash_cr_unlock(target);
-	target_mem_write32(target, HC32L110_FLASH_SLOCK_ADDR, 0);
+	target_mem_write32(target, HC32L110_FLASH_SLOCK, 0);
 }
 
 /* Unlock the whole flash for writing */
 static void hc32l110_slock_unlock_all(target_s *const target)
 {
 	hc32l110_flash_cr_unlock(target);
-	target_mem_write32(target, HC32L110_FLASH_SLOCK_ADDR, 0xffffU);
+	target_mem_write32(target, HC32L110_FLASH_SLOCK, 0xffffU);
 }
 
 static bool hc32l110_enter_flash_mode(target_s *const target)
@@ -169,10 +177,10 @@ static bool hc32l110_flash_prepare(target_flash_s *const flash)
 
 	switch (flash->operation) {
 	case FLASH_OPERATION_WRITE:
-		target_mem_write32(flash->t, HC32L110_FLASH_CR_ADDR, HC32L110_FLASH_CR_OP_PROGRAM);
+		target_mem_write32(flash->t, HC32L110_FLASH_CR, HC32L110_FLASH_CR_OP_PROGRAM);
 		break;
 	case FLASH_OPERATION_ERASE:
-		target_mem_write32(flash->t, HC32L110_FLASH_CR_ADDR, HC32L110_FLASH_CR_OP_ERASE_SECTOR);
+		target_mem_write32(flash->t, HC32L110_FLASH_CR, HC32L110_FLASH_CR_OP_ERASE_SECTOR);
 		break;
 	default:
 		DEBUG_WARN("unsupported operation %u", flash->operation);
@@ -210,7 +218,7 @@ static bool hc32l110_mass_erase(target_s *target)
 	hc32l110_enter_flash_mode(target);
 
 	hc32l110_flash_cr_unlock(target);
-	target_mem_write32(target, HC32L110_FLASH_CR_ADDR, HC32L110_FLASH_CR_OP_ERASE_CHIP);
+	target_mem_write32(target, HC32L110_FLASH_CR, HC32L110_FLASH_CR_OP_ERASE_CHIP);
 	if (!hc32l110_check_flash_completion(target, 500))
 		return false;
 
