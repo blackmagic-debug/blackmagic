@@ -242,13 +242,12 @@ bool msp432e4_probe(target_s *const target)
 /* Erase from addr for len bytes */
 static bool msp432e4_flash_erase(target_flash_s *const target_flash, const target_addr_t addr, const size_t len)
 {
-	target_s *target = target_flash->t;
+	target_s *const target = target_flash->t;
 	const msp432e4_flash_s *const flash = (msp432e4_flash_s *)target_flash;
-	const uint32_t fmc = (flash->flash_key << 16U) | MSP432E4_FLASH_CTRL_ERASE;
 
 	for (size_t offset = 0; offset < len; offset += target_flash->blocksize) {
 		target_mem_write32(target, MSP432E4_FLASH_ADDR, addr + offset);
-		target_mem_write32(target, MSP432E4_FLASH_CTRL, fmc);
+		target_mem_write32(target, MSP432E4_FLASH_CTRL, (flash->flash_key << 16U) | MSP432E4_FLASH_CTRL_ERASE);
 		/* FixMe - verify/timeout bit? */
 		while (target_mem_read32(target, MSP432E4_FLASH_CTRL) & MSP432E4_FLASH_CTRL_ERASE)
 			continue;
@@ -263,15 +262,14 @@ static bool msp432e4_flash_write(
 	target_s *const target = target_flash->t;
 	const msp432e4_flash_s *const flash = (msp432e4_flash_s *)target_flash;
 	const uint32_t *const buffer = (const uint32_t *)src;
-
-	const uint32_t fmc = (flash->flash_key << 16U) | MSP432E4_FLASH_CTRL_WRITE;
+	const uint32_t ctrl = (flash->flash_key << 16U) | MSP432E4_FLASH_CTRL_WRITE;
 
 	/* Transfer the aligned part, 1 uint32_t at a time */
 	const size_t aligned_len = len & ~3U;
 	for (size_t offset = 0; offset < aligned_len; offset += 4U) {
 		target_mem_write32(target, MSP432E4_FLASH_ADDR, dest + offset);
 		target_mem_write32(target, MSP432E4_FLASH_DATA, buffer[offset >> 2U]);
-		target_mem_write32(target, MSP432E4_FLASH_CTRL, fmc);
+		target_mem_write32(target, MSP432E4_FLASH_CTRL, ctrl);
 		while (target_mem_read32(target, MSP432E4_FLASH_CTRL) & MSP432E4_FLASH_CTRL_WRITE)
 			continue;
 	}
@@ -282,7 +280,7 @@ static bool msp432e4_flash_write(
 		memcpy(data, buffer + (aligned_len >> 2U), len - aligned_len);
 		target_mem_write32(target, MSP432E4_FLASH_ADDR, dest + aligned_len);
 		target_mem_write32(target, MSP432E4_FLASH_DATA, read_le4(data, 0));
-		target_mem_write32(target, MSP432E4_FLASH_CTRL, fmc);
+		target_mem_write32(target, MSP432E4_FLASH_CTRL, ctrl);
 		while (target_mem_read32(target, MSP432E4_FLASH_CTRL) & MSP432E4_FLASH_CTRL_WRITE)
 			continue;
 	}
