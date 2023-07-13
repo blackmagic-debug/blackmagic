@@ -164,11 +164,8 @@
 #define MSP432E4_SRAM_BASE  0x20000000U
 #define MSP432E4_FLASH_BASE 0x00000000U
 
-/*
- * XXX: The flash block size might be nice to use, but the part used in
- * testing has a 16k sector which is too big w/ the current build setup.
- */
-#define BUFFERED_WRITE_SIZE 0x100
+/* The Flash routines can write only 4 bytes at a time, so let the target Flash layer take care of the rest */
+#define MSP432E4_FLASH_WRITE_SIZE 4U
 
 typedef struct msp432e4_flash {
 	target_flash_s target_flash;
@@ -176,7 +173,7 @@ typedef struct msp432e4_flash {
 } msp432e4_flash_s;
 
 static bool msp432e4_flash_erase(target_flash_s *flash, target_addr_t addr, size_t len);
-static bool msp432e4_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t len);
+static bool msp432e4_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t length);
 static bool msp432e4_mass_erase(target_s *target);
 
 static void msp432e4_add_flash(
@@ -192,9 +189,9 @@ static void msp432e4_add_flash(
 	target_flash->start = base;
 	target_flash->length = length;
 	target_flash->blocksize = sector_size;
+	target_flash->writesize = MSP432E4_FLASH_WRITE_SIZE;
 	target_flash->erase = msp432e4_flash_erase;
 	target_flash->write = msp432e4_flash_write;
-	target_flash->writesize = BUFFERED_WRITE_SIZE;
 	target_flash->erased = 0xff;
 	target_add_flash(target, target_flash);
 
@@ -264,34 +261,22 @@ static bool msp432e4_flash_erase(target_flash_s *const target_flash, const targe
 
 /* Program flash */
 static bool msp432e4_flash_write(
-	target_flash_s *const target_flash, target_addr_t dest, const void *const src, const size_t len)
+	target_flash_s *const target_flash, target_addr_t dest, const void *const src, const size_t length)
 {
+	(void)length;
 	target_s *const target = target_flash->t;
 	const msp432e4_flash_s *const flash = (msp432e4_flash_s *)target_flash;
-	const uint32_t *const buffer = (const uint32_t *)src;
-	const uint32_t ctrl = (flash->flash_key << 16U) | MSP432E4_FLASH_CTRL_WRITE;
-
-	/* Transfer the aligned part, 1 uint32_t at a time */
-	const size_t aligned_len = len & ~3U;
-	for (size_t offset = 0; offset < aligned_len; offset += 4U) {
-		target_mem_write32(target, MSP432E4_FLASH_ADDR, dest + offset);
-		target_mem_write32(target, MSP432E4_FLASH_DATA, buffer[offset >> 2U]);
-		target_mem_write32(target, MSP432E4_FLASH_CTRL, ctrl);
-		while (target_mem_read32(target, MSP432E4_FLASH_CTRL) & MSP432E4_FLASH_CTRL_WRITE)
-			continue;
-	}
-
-	/* Pack and transfer the remainder */
-	if (len != aligned_len) {
-		uint8_t data[4] = {0U};
-		memcpy(data, buffer + (aligned_len >> 2U), len - aligned_len);
-		target_mem_write32(target, MSP432E4_FLASH_ADDR, dest + aligned_len);
-		target_mem_write32(target, MSP432E4_FLASH_DATA, read_le4(data, 0));
-		target_mem_write32(target, MSP432E4_FLASH_CTRL, ctrl);
-		while (target_mem_read32(target, MSP432E4_FLASH_CTRL) & MSP432E4_FLASH_CTRL_WRITE)
-			continue;
-	}
-
+	/*
+	 * The target Flash layer guarantees that we're called with a length that's a complete write size
+	 * and that the source data buffer is filled with the erase byte value so we don't disturb unwritten
+	 * Flash. With the write size set to 4 to match how many bytes we can write in one go, that
+	 * allows this routine to go 32-bit block at a time efficiently, passing the complexity up a layer.
+	 */
+	target_mem_write32(target, MSP432E4_FLASH_ADDR, dest);
+	target_mem_write32(target, MSP432E4_FLASH_DATA, read_le4((const uint8_t *)src, 0));
+	target_mem_write32(target, MSP432E4_FLASH_CTRL, (flash->flash_key << 16U) | MSP432E4_FLASH_CTRL_WRITE);
+	while (target_mem_read32(target, MSP432E4_FLASH_CTRL) & MSP432E4_FLASH_CTRL_WRITE)
+		continue;
 	return true;
 }
 
