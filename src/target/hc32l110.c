@@ -32,13 +32,27 @@
  * SUCH DAMAGE.
  */
 
+/*
+ * This file implements the target-specific support for the HDSC HC32L110 series
+ *
+ * References:
+ * HC32L110系列数据手册Rev2.5 (HC32L110 Series Data Sheet Rev2.5)
+ *  https://www.hdsc.com.cn/cn/Index/downloadFile/modelid/65/id/8/key/0
+ */
+
 #include "general.h"
 #include "target.h"
 #include "target_internal.h"
 #include "cortexm.h"
 
 #define HC32L110_FLASH_BASE 0x00000000U
-#define HC32L110_BLOCKSIZE  512U
+/*
+ * Per §7.2 table 7-1 on pg199, the Flash is broken up into 16 sectors
+ * of 512 bytes each. At most 4 bytes can be written at a time before
+ * having to wait for the Flash controller to become idle again.
+ */
+#define HC32L110_FLASH_SECTOR_SIZE 512U
+#define HC32L110_FLASH_WRITE_SIZE  4U
 
 #define HC32L110_ADDR_FLASH_SIZE   0x00100c70U
 #define HC32L110_FLASH_CR_ADDR     0x40020020U
@@ -54,8 +68,8 @@
 static bool hc32l110_enter_flash_mode(target_s *target);
 static bool hc32l110_flash_prepare(target_flash_s *flash);
 static bool hc32l110_flash_done(target_flash_s *flash);
-static bool hc32l110_flash_erase(target_flash_s *flash, target_addr_t addr, size_t len);
-static bool hc32l110_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t len);
+static bool hc32l110_flash_erase(target_flash_s *flash, target_addr_t addr, size_t length);
+static bool hc32l110_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t length);
 static bool hc32l110_mass_erase(target_s *target);
 
 static void hc32l110_add_flash(target_s *target, const uint32_t flash_size)
@@ -68,8 +82,8 @@ static void hc32l110_add_flash(target_s *target, const uint32_t flash_size)
 
 	flash->start = HC32L110_FLASH_BASE;
 	flash->length = flash_size;
-	flash->blocksize = HC32L110_BLOCKSIZE;
-	flash->writesize = HC32L110_BLOCKSIZE;
+	flash->blocksize = HC32L110_FLASH_SECTOR_SIZE;
+	flash->writesize = HC32L110_FLASH_WRITE_SIZE;
 	flash->erased = 0xffU;
 	flash->erase = hc32l110_flash_erase;
 	flash->write = hc32l110_flash_write;
@@ -175,32 +189,20 @@ static bool hc32l110_flash_done(target_flash_s *const flash)
 	return true;
 }
 
-static bool hc32l110_flash_erase(target_flash_s *const flash, const target_addr_t addr, const size_t len)
+static bool hc32l110_flash_erase(target_flash_s *const flash, const target_addr_t addr, const size_t length)
 {
-	(void)len;
-	// The Flash controller automatically erases the whole sector after one write operation
+	(void)length;
+	/* The Flash controller automatically erases the whole sector after one write operation */
 	target_mem_write32(flash->t, addr, 0);
-
-	const bool result = hc32l110_check_flash_completion(flash->t, 1000);
-	if (!result)
-		DEBUG_ERROR("Failed to erase %" PRIx32 " bytes at 0x%08" PRIx32 "\n", (uint32_t)len, addr);
-	return result;
+	return hc32l110_check_flash_completion(flash->t, 1000);
 }
 
 static bool hc32l110_flash_write(
-	target_flash_s *const flash, const target_addr_t dest, const void *const src, const size_t len)
+	target_flash_s *const flash, const target_addr_t dest, const void *const src, const size_t length)
 {
-	const uint32_t *const buffer = (const uint32_t *)src;
-	for (size_t offset = 0; offset < len; offset += 4U) {
-		uint32_t val = buffer[offset >> 2U];
-		target_mem_write32(flash->t, dest + offset, val);
-		if (!hc32l110_check_flash_completion(flash->t, 1000)) {
-			DEBUG_ERROR(
-				"Failed to write %" PRIu32 " bytes at 0x%08" PRIx32 "\n", (uint32_t)len, (uint32_t)(dest + offset));
-			return false;
-		}
-	}
-	return true;
+	(void)length;
+	target_mem_write32(flash->t, dest, *(const uint32_t *)src);
+	return hc32l110_check_flash_completion(flash->t, 1000);
 }
 
 static bool hc32l110_mass_erase(target_s *target)
