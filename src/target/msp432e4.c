@@ -294,10 +294,12 @@ static bool msp432e4_flash_write(
 static bool msp432e4_mass_erase(target_s *const target)
 {
 	const msp432e4_flash_s *const flash = (msp432e4_flash_s *)target->flash;
-	uint32_t fmc = (flash->flash_key << 16U) | MSP432E4_FLASH_CTRL_MASS_ERASE;
-	target_mem_write32(target, MSP432E4_FLASH_CTRL, fmc);
-	/* FixMe - timeout/verify bit? */
+	platform_timeout_s timeout;
+	platform_timeout_set(&timeout, 500);
+	/* Kick off the mass erase */
+	target_mem_write32(target, MSP432E4_FLASH_CTRL, (flash->flash_key << 16U) | MSP432E4_FLASH_CTRL_MASS_ERASE);
+	/* Wait for the erase to complete, printing a '.' every so often to keep GDB happy */
 	while (target_mem_read32(target, MSP432E4_FLASH_CTRL) & MSP432E4_FLASH_CTRL_MASS_ERASE)
-		continue;
+		target_print_progress(&timeout);
 	return true;
 }
