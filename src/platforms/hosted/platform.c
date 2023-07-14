@@ -190,7 +190,7 @@ bool bmda_swd_dp_init(adiv5_debug_port_s *dp)
 		return dap_swd_init(dp);
 
 	case BMP_TYPE_STLINK_V2:
-		return 0;
+		return false;
 
 	case BMP_TYPE_JLINK:
 		return jlink_swd_init(dp);
@@ -241,7 +241,7 @@ bool bmda_jtag_init(void)
 
 #if HOSTED_BMP_ONLY == 0
 	case BMP_TYPE_STLINK_V2:
-		return 0;
+		return false;
 
 	case BMP_TYPE_FTDI:
 		return ftdi_jtag_init();
