@@ -676,20 +676,25 @@ static void stlink_mem_read(adiv5_access_port_s *ap, void *dest, uint32_t src, s
 {
 	if (len == 0)
 		return;
-	if (len > stlink.block_size) {
-		DEBUG_WARN("Too large!\n");
-		return;
-	}
 	if (!stlink_ensure_ap(ap->apsel))
 		raise_exception(EXCEPTION_ERROR, "ST-Link AP selection error");
 
 	uint8_t type;
-	if ((src & 1U) || (len & 1U))
+	uint16_t block_size;
+	if ((src & 1U) || (len & 1U)) {
 		type = STLINK_DEBUG_READMEM_8BIT;
-	else if ((src & 3U) || (len & 3U))
+		block_size = stlink.block_size;
+	} else if ((src & 3U) || (len & 3U)) {
 		type = STLINK_DEBUG_APIV2_READMEM_16BIT;
-	else
+		block_size = STLINK_READMEM_32BIT_MAX_SIZE;
+	} else {
 		type = STLINK_DEBUG_READMEM_32BIT;
+		block_size = STLINK_READMEM_32BIT_MAX_SIZE;
+	}
+	if (len > block_size) {
+		DEBUG_ERROR("%s(AP %u @0x%08" PRIx32 "+%zu): Too large! Must be <%u\n", __func__, ap->apsel, src, len, block_size);
+		return;
+	}
 
 	/* Build the command packet and perform the access */
 	stlink_mem_command_s command = stlink_memory_access(type, src, len, ap->apsel);
