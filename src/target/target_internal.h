@@ -30,6 +30,12 @@
 extern target_s *target_list;
 target_s *target_new(void);
 
+typedef enum flash_operation {
+	FLASH_OPERATION_NONE,
+	FLASH_OPERATION_ERASE,
+	FLASH_OPERATION_WRITE,
+} flash_operation_e;
+
 typedef struct target_ram target_ram_s;
 
 struct target_ram {
@@ -53,7 +59,7 @@ struct target_flash {
 	size_t writesize;            /* Write operation size, must be <= blocksize/writebufsize */
 	size_t writebufsize;         /* Size of write buffer, this is calculated and not set in target code */
 	uint8_t erased;              /* Byte erased state */
-	bool ready;                  /* True if flash is in flash mode/prepared */
+	uint8_t operation;           /* Current Flash operation (none means it's idle/unprepared) */
 	flash_prepare_func prepare;  /* Prepare for flash operations */
 	flash_erase_func erase;      /* Erase a range of flash */
 	flash_write_func write;      /* Write to flash */

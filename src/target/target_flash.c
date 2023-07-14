@@ -85,36 +85,51 @@ static bool target_exit_flash_mode(target_s *target)
 	return result;
 }
 
-static bool flash_prepare(target_flash_s *flash)
+static bool flash_prepare(target_flash_s *flash, flash_operation_e operation)
 {
-	if (flash->ready)
+	/* Check if we're already prepared for this operation */
+	if (flash->operation == operation)
 		return true;
 
 	bool result = true;
-	if (flash->prepare)
-		result = flash->prepare(flash);
+	/* Terminate any ongoing Flash operation */
+	if (flash->operation != FLASH_OPERATION_NONE)
+		result = flash_done(flash);
 
-	if (result == true)
-		flash->ready = true;
+	/* If that succeeded, set up the new operating state */
+	if (result) {
+		flash->operation = operation;
+		/* Prepare flash for operation, unless we failed to terminate the previous one */
+		if (flash->prepare)
+			result = flash->prepare(flash);
+
+		/* If the preparation step failed, revert back to the post-done state */
+		if (!result)
+			flash->operation = FLASH_OPERATION_NONE;
+	}
 
 	return result;
 }
 
 static bool flash_done(target_flash_s *flash)
 {
-	if (!flash->ready)
+	/* Check if we're already done */
+	if (flash->operation == FLASH_OPERATION_NONE)
 		return true;
 
 	bool result = true;
+	/* Terminate flash operation */
 	if (flash->done)
 		result = flash->done(flash);
 
+	/* Free the operation buffer */
 	if (flash->buf) {
 		free(flash->buf);
 		flash->buf = NULL;
 	}
 
-	flash->ready = false;
+	/* Mark the Flash as idle again */
+	flash->operation = FLASH_OPERATION_NONE;
 
 	return result;
 }
@@ -145,7 +160,7 @@ bool target_flash_erase(target_s *target, target_addr_t addr, size_t len)
 		const target_addr_t local_start_addr = addr & ~(flash->blocksize - 1U);
 		const target_addr_t local_end_addr = local_start_addr + flash->blocksize;
 
-		if (!flash_prepare(flash))
+		if (!flash_prepare(flash, FLASH_OPERATION_ERASE))
 			return false;
 
 		result &= flash->erase(flash, local_start_addr, flash->blocksize);
@@ -183,7 +198,7 @@ static bool flash_buffered_flush(target_flash_s *flash)
 		flash->buf_addr_low < flash->buf_addr_high) {
 		/* Write buffer to flash */
 
-		if (!flash_prepare(flash))
+		if (!flash_prepare(flash, FLASH_OPERATION_WRITE))
 			return false;
 
 		const target_addr_t aligned_addr = flash->buf_addr_low & ~(flash->writesize - 1U);
