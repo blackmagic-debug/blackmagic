@@ -290,6 +290,9 @@ dap_version_s dap_adaptor_version(const dap_info_e version_kind)
 	const char *begin = version_str;
 	char *end = NULL;
 	dap_version_s version = {};
+	/* If the string starts with a 'v' or 'V', skip over that */
+	if (begin[0] == 'v' || begin[0] == 'V')
+		++begin;
 	/* Now try to parse out the individual parts of the version string */
 	const uint16_t major = strtoul(begin, &end, 10);
 	/* If we fail on the first hurdle, return the bad version */
