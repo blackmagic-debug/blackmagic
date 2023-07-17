@@ -168,19 +168,17 @@ bool bmp_spi_mass_erase(target_s *const target)
 
 static bool bmp_spi_flash_erase(target_flash_s *const flash, const target_addr_t addr, const size_t length)
 {
+	(void)length;
 	target_s *const target = flash->t;
 	const spi_flash_s *const spi_flash = (spi_flash_s *)flash;
-	const target_addr_t begin = addr - flash->start;
-	for (size_t offset = 0; offset < length; offset += flash->blocksize) {
-		spi_flash->run_command(target, SPI_FLASH_CMD_WRITE_ENABLE, 0U);
-		if (!(bmp_spi_read_status(target, spi_flash) & SPI_FLASH_STATUS_WRITE_ENABLED))
-			return false;
+	spi_flash->run_command(target, SPI_FLASH_CMD_WRITE_ENABLE, 0U);
+	if (!(bmp_spi_read_status(target, spi_flash) & SPI_FLASH_STATUS_WRITE_ENABLED))
+		return false;
 
-		spi_flash->run_command(
-			target, SPI_FLASH_CMD_SECTOR_ERASE | SPI_FLASH_OPCODE(spi_flash->sector_erase_opcode), begin + offset);
-		while (bmp_spi_read_status(target, spi_flash) & SPI_FLASH_STATUS_BUSY)
-			continue;
-	}
+	spi_flash->run_command(
+		target, SPI_FLASH_CMD_SECTOR_ERASE | SPI_FLASH_OPCODE(spi_flash->sector_erase_opcode), addr - flash->start);
+	while (bmp_spi_read_status(target, spi_flash) & SPI_FLASH_STATUS_BUSY)
+		continue;
 	return true;
 }
 
