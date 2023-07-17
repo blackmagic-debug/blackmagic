@@ -115,7 +115,7 @@ print_probes_info:
 				(BYTE *)busReportedDeviceSesc, sizeof busReportedDeviceSesc, &dwSize, 0)) {
 			probes_found++;
 			if (is_printing_probes_info) {
-				DEBUG_WARN("%2d: %s, %ls\n", probes_found, serial_number, busReportedDeviceSesc);
+				DEBUG_WARN("%2zu: %s, %ls\n", probes_found, serial_number, busReportedDeviceSesc);
 			} else {
 				bool probe_identified = true;
 				if ((cl_opts->opt_serial && strstr(serial_number, cl_opts->opt_serial)) ||
@@ -152,7 +152,7 @@ print_probes_info:
 	 * and no probe was identified as selected by the user.
 	 * Restart the identification loop, this time printing the probe information,
 	 * and then return. */
-	DEBUG_WARN("%d debuggers found!\nSelect with -P <pos>, or "
+	DEBUG_WARN("%zu debuggers found!\nSelect with -P <pos>, or "
 			   "-s <(partial)serial no.>\n",
 		probes_found);
 	probes_found = 0;
