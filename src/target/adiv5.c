@@ -874,15 +874,8 @@ void adiv5_dp_init(adiv5_debug_port_s *const dp, const uint32_t idcode)
 		return;
 	}
 
-	volatile uint32_t ctrlstat = 0;
-	TRY_CATCH (e, EXCEPTION_TIMEOUT) {
-		ctrlstat = adiv5_dp_read(dp, ADIV5_DP_CTRLSTAT);
-	}
-	if (e.type) {
-		DEBUG_WARN("DP not responding! Trying abort sequence...\n");
-		adiv5_dp_abort(dp, ADIV5_DP_ABORT_DAPABORT);
-		ctrlstat = adiv5_dp_read(dp, ADIV5_DP_CTRLSTAT);
-	}
+	/* Read DP Control/Status */
+	uint32_t ctrlstat = adiv5_dp_read(dp, ADIV5_DP_CTRLSTAT);
 
 	platform_timeout_s timeout;
 	platform_timeout_set(&timeout, 201);
