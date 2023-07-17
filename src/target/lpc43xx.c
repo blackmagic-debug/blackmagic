@@ -838,18 +838,18 @@ static void lpc43x0_spi_setup_xfer(
 	target_s *const target, const uint16_t command, const target_addr_t address, const size_t length)
 {
 	/* Rebuild the command for the SPIFI controller */
-	uint32_t spifi_command = LPC43x0_SPIFI_CMD_SERIAL | SPI_FLASH_DATA_IN |
+	uint32_t spifi_command = LPC43x0_SPIFI_CMD_SERIAL |
 		((command & SPI_FLASH_OPCODE_MASK) << LPC43x0_SPIFI_OPCODE_SHIFT) |
 		(((command & SPI_FLASH_DUMMY_MASK) >> SPI_FLASH_DUMMY_SHIFT) << LPC43x0_SPIFI_DUMMY_SHIFT) |
 		(((command & SPI_FLASH_DATA_MASK) >> SPI_FLASH_DATA_SHIFT) << LPC43x0_SPIFI_DATA_SHIFT) |
 		LPC43x0_SPIFI_DATA_LENGTH(length);
 
 	/* Setup addressing for the instruction */
-	if ((command & SPI_FLASH_OPCODE_MASK) != SPI_FLASH_OPCODE_ONLY) {
+	if ((command & SPI_FLASH_OPCODE_MODE_MASK) != SPI_FLASH_OPCODE_ONLY) {
 		target_mem_write32(target, LPC43x0_SPIFI_ADDR, address);
-		spifi_command |= LPC43x0_SPIFI_FRAME_OPCODE_ONLY;
-	} else
 		spifi_command |= LPC43x0_SPIFI_FRAME_OPCODE_3B_ADDR;
+	} else
+		spifi_command |= LPC43x0_SPIFI_FRAME_OPCODE_ONLY;
 
 	/* Write the resulting command to the command register */
 	target_mem_write32(target, LPC43x0_SPIFI_CMD, spifi_command);
