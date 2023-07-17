@@ -33,6 +33,7 @@
 #include <winsock2.h>
 
 typedef SOCKET socket_t;
+#define PRI_SOCKET "zu"
 #ifndef __CYGWIN__
 typedef signed long long ssize_t;
 #endif
@@ -46,6 +47,7 @@ typedef signed long long ssize_t;
 #include <fcntl.h>
 
 typedef int32_t socket_t;
+#define PRI_SOCKET     "d"
 #define INVALID_SOCKET (-1)
 #endif
 
@@ -170,7 +172,7 @@ static void display_socket_error(const int error, const socket_t socket, const c
 #else
 	const char *message = strerror(error);
 #endif
-	DEBUG_ERROR("Error %s %d, got error %d: %s\n", operation, socket, error, message);
+	DEBUG_ERROR("Error %s %" PRI_SOCKET ", got error %d: %s\n", operation, socket, error, message);
 #if defined(_WIN32) || defined(__CYGWIN__)
 	LocalFree(message);
 #endif
