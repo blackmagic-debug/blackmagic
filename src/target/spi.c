@@ -188,7 +188,7 @@ static bool bmp_spi_flash_write(
 	target_s *const target = flash->t;
 	const spi_flash_s *const spi_flash = (spi_flash_s *)flash;
 	const target_addr_t begin = dest - flash->start;
-	const char *const buffer = src;
+	const char *const buffer = (const char *)src;
 	for (size_t offset = 0; offset < length; offset += spi_flash->page_size) {
 		spi_flash->run_command(target, SPI_FLASH_CMD_WRITE_ENABLE, 0U);
 		if (!(bmp_spi_read_status(target, spi_flash) & SPI_FLASH_STATUS_WRITE_ENABLED))
