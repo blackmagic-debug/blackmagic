@@ -19,8 +19,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* Handle different BMP pc-hosted platforms/
- */
+/* Implements core platform-specific functionality for BMDA */
+
+#if defined(_WIN32) || defined(__CYGWIN__)
+#define NOMINMAX
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#endif
 
 #include "general.h"
 #include "platform.h"
@@ -90,6 +95,9 @@ static void sigterm_handler(int sig)
 
 void platform_init(int argc, char **argv)
 {
+#if defined(_WIN32) || defined(__CYGWIN__)
+	SetConsoleOutputCP(CP_UTF8);
+#endif
 	cl_init(&cl_opts, argc, argv);
 	atexit(exit_function);
 	signal(SIGTERM, sigterm_handler);
