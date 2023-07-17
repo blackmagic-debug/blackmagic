@@ -57,7 +57,7 @@ static void display_error(const LSTATUS error, const char *const operation, cons
 	char *message = NULL;
 	FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL,
 		error, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (char *)&message, 0, NULL);
-	DEBUG_ERROR("Error %s %s, got error %08x: %s\n", operation, path, error, message);
+	DEBUG_ERROR("Error %s %s, got error %08lx: %s\n", operation, path, error, message);
 	LocalFree(message);
 }
 
