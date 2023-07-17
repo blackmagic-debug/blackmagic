@@ -34,12 +34,16 @@
 #ifndef PLATFORMS_HOSTED_DEBUG_H
 #define PLATFORMS_HOSTED_DEBUG_H
 
+#if !defined(__USE_MINGW_ANSI_STDIO)
+// NOLINTNEXTLINE(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp)
+#define __USE_MINGW_ANSI_STDIO 1
+#endif
 #include <stdint.h>
-#if defined(_WIN32) || defined(__CYGWIN__)
-typedef const wchar_t *debug_str_t;
-#define DEBUG_FORMAT_ATTR /*__attribute__((format(__wprintf__, 1, 2)))*/
-#else
+#include <stdio.h>
 typedef const char *debug_str_t;
+#if defined(_WIN32) || defined(__CYGWIN__)
+#define DEBUG_FORMAT_ATTR __attribute__((format(__MINGW_PRINTF_FORMAT, 1, 2)))
+#else
 #define DEBUG_FORMAT_ATTR __attribute__((format(printf, 1, 2)))
 #endif
 
@@ -59,13 +63,13 @@ typedef const char *debug_str_t;
 
 extern uint16_t bmda_debug_flags;
 
-void debug_error(debug_str_t format, ...) DEBUG_FORMAT_ATTR;
-void debug_warning(debug_str_t format, ...) DEBUG_FORMAT_ATTR;
-void debug_info(debug_str_t format, ...) DEBUG_FORMAT_ATTR;
-void debug_gdb(debug_str_t format, ...) DEBUG_FORMAT_ATTR;
-void debug_target(debug_str_t format, ...) DEBUG_FORMAT_ATTR;
-void debug_protocol(debug_str_t format, ...) DEBUG_FORMAT_ATTR;
-void debug_probe(debug_str_t format, ...) DEBUG_FORMAT_ATTR;
-void debug_wire(debug_str_t format, ...) DEBUG_FORMAT_ATTR;
+void debug_error(const char *format, ...) DEBUG_FORMAT_ATTR;
+void debug_warning(const char *format, ...) DEBUG_FORMAT_ATTR;
+void debug_info(const char *format, ...) DEBUG_FORMAT_ATTR;
+void debug_gdb(const char *format, ...) DEBUG_FORMAT_ATTR;
+void debug_target(const char *format, ...) DEBUG_FORMAT_ATTR;
+void debug_protocol(const char *format, ...) DEBUG_FORMAT_ATTR;
+void debug_probe(const char *format, ...) DEBUG_FORMAT_ATTR;
+void debug_wire(const char *format, ...) DEBUG_FORMAT_ATTR;
 
 #endif /*PLATFORMS_HOSTED_DEBUG_H*/

@@ -22,12 +22,15 @@
 #define INCLUDE_GENERAL_H
 
 #ifndef _GNU_SOURCE
+// NOLINTNEXTLINE(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp)
 #define _GNU_SOURCE
 #endif
 #ifndef _DEFAULT_SOURCE
+// NOLINTNEXTLINE(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp)
 #define _DEFAULT_SOURCE
 #endif
 #if !defined(__USE_MINGW_ANSI_STDIO)
+// NOLINTNEXTLINE(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp)
 #define __USE_MINGW_ANSI_STDIO 1
 #endif
 #include <stdint.h>
@@ -93,17 +96,6 @@ void debug_serial_send_stdout(const uint8_t *data, size_t len);
 #else
 #include "debug.h"
 
-#if defined(_WIN32) || defined(__CYGWIN__)
-#define DEBUG_WIDEN(fmt)       L##fmt
-#define DEBUG_ERROR(fmt, ...)  debug_error(DEBUG_WIDEN(fmt), ##__VA_ARGS__)
-#define DEBUG_WARN(fmt, ...)   debug_warning(DEBUG_WIDEN(fmt), ##__VA_ARGS__)
-#define DEBUG_INFO(fmt, ...)   debug_info(DEBUG_WIDEN(fmt), ##__VA_ARGS__)
-#define DEBUG_GDB(fmt, ...)    debug_gdb(DEBUG_WIDEN(fmt), ##__VA_ARGS__)
-#define DEBUG_TARGET(fmt, ...) debug_target(DEBUG_WIDEN(fmt), ##__VA_ARGS__)
-#define DEBUG_PROTO(fmt, ...)  debug_protocol(DEBUG_WIDEN(fmt), ##__VA_ARGS__)
-#define DEBUG_PROBE(fmt, ...)  debug_probe(DEBUG_WIDEN(fmt), ##__VA_ARGS__)
-#define DEBUG_WIRE(fmt, ...)   debug_wire(DEBUG_WIDEN(fmt), ##__VA_ARGS__)
-#else
 #define DEBUG_ERROR(...)  debug_error(__VA_ARGS__)
 #define DEBUG_WARN(...)   debug_warning(__VA_ARGS__)
 #define DEBUG_INFO(...)   debug_info(__VA_ARGS__)
@@ -112,7 +104,6 @@ void debug_serial_send_stdout(const uint8_t *data, size_t len);
 #define DEBUG_PROTO(...)  debug_protocol(__VA_ARGS__)
 #define DEBUG_PROBE(...)  debug_probe(__VA_ARGS__)
 #define DEBUG_WIRE(...)   debug_wire(__VA_ARGS__)
-#endif
 #endif
 
 #define ALIGN(x, n) (((x) + (n)-1) & ~((n)-1))
