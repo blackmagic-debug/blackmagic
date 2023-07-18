@@ -773,6 +773,19 @@ static void adiv5_dp_clear_sticky_errors(adiv5_debug_port_s *dp)
 		adiv5_dp_error(dp);
 }
 
+/* Keep the TRY_CATCH funkiness contained to avoid clobbering and reduce the need for volatiles */
+static uint32_t adiv5_dp_read_dpidr(adiv5_debug_port_s *const dp)
+{
+	volatile uint32_t dpidr = 0;
+	volatile exception_s e;
+	TRY_CATCH (e, EXCEPTION_ALL) {
+		dpidr = adiv5_dp_read(dp, ADIV5_DP_DPIDR);
+	}
+	if (e.type)
+		return 0;
+	return dpidr;
+}
+
 void adiv5_dp_init(adiv5_debug_port_s *const dp, const uint32_t idcode)
 {
 	/*
@@ -795,22 +808,18 @@ void adiv5_dp_init(adiv5_debug_port_s *const dp, const uint32_t idcode)
 	 *
 	 * for SWD-DP, we are guaranteed to be DP v1 or later.
 	 */
-	volatile uint32_t dpidr = 0;
-	volatile exception_s e;
-	TRY_CATCH (e, EXCEPTION_ALL) {
-		if (idcode != JTAG_IDCODE_ARM_DPv0)
-			dpidr = adiv5_dp_read(dp, ADIV5_DP_DPIDR);
-	}
-	if (e.type) {
-		DEBUG_ERROR("DP not responding!...\n");
-		free(dp);
-		return;
-	}
+	if (idcode != JTAG_IDCODE_ARM_DPv0) {
+		const uint32_t dpidr = adiv5_dp_read_dpidr(dp);
+		if (!dpidr) {
+			DEBUG_ERROR("Failed to read DPIDR\n");
+			free(dp);
+			return;
+		}
 
-	dp->version = (dpidr & ADIV5_DP_DPIDR_VERSION_MASK) >> ADIV5_DP_DPIDR_VERSION_OFFSET;
-	if (dp->version > 0 && (dpidr & 1U)) {
+		dp->version = (dpidr & ADIV5_DP_DPIDR_VERSION_MASK) >> ADIV5_DP_DPIDR_VERSION_OFFSET;
+
 		/*
-		* the code in the DPIDR is in the form
+		* The code in the DPIDR is in the form
 		* Bits 10:7 - JEP-106 Continuation code
 		* Bits 6:0 - JEP-106 Identity code
 		* here we convert it to our internal representation, See JEP-106 code list
@@ -822,16 +831,22 @@ void adiv5_dp_init(adiv5_debug_port_s *const dp, const uint32_t idcode)
 			(designer & ADIV5_DP_DESIGNER_JEP106_CONT_MASK) << 1U | (designer & ADIV5_DP_DESIGNER_JEP106_CODE_MASK);
 		dp->partno = (dpidr & ADIV5_DP_DPIDR_PARTNO_MASK) >> ADIV5_DP_DPIDR_PARTNO_OFFSET;
 
+		/* Minimal Debug Port (MINDP) functions implemented */
 		dp->mindp = !!(dpidr & ADIV5_DP_DPIDR_MINDP);
 
-		/* Check for a valid DPIDR / designer */
-		if (dp->designer_code != 0) {
+		/* 
+		 * Check DPIDR validity
+		 * Designer code 0 is not a valid JEP-106 code
+		 * Version 0 is reserved for DPv0 which does not implement DPIDR
+		 * Bit 0 of DPIDR is read as 1
+		 */
+		if (dp->designer_code != 0 && dp->version > 0 && (dpidr & 1U)) {
 			DEBUG_INFO("DP DPIDR 0x%08" PRIx32 " (v%x %srev%" PRId32 ") designer 0x%x partno 0x%x\n", dpidr,
 				dp->version, dp->mindp ? "MINDP " : "",
 				(dpidr & ADIV5_DP_DPIDR_REVISION_MASK) >> ADIV5_DP_DPIDR_REVISION_OFFSET, dp->designer_code,
 				dp->partno);
 		} else {
-			DEBUG_WARN("Invalid DPIDR %08" PRIx32 " assuming DP version 0\n", dpidr);
+			DEBUG_WARN("Invalid DPIDR %08" PRIx32 " assuming DPv0\n", dpidr);
 			dp->version = 0;
 			dp->designer_code = 0;
 			dp->partno = 0;
@@ -898,7 +913,7 @@ void adiv5_dp_init(adiv5_debug_port_s *const dp, const uint32_t idcode)
 	 * correctly on STM32.	CDBGRSTACK is never asserted, and we
 	 * just wait forever.  This scenario is described in B2.4.1
 	 * so we have a timeout mechanism in addition to the sensing one. */
-	platform_timeout_set(&timeout, 200);
+	platform_timeout_set(&timeout, 200U);
 	/* Write request for debug reset */
 	adiv5_dp_write(dp, ADIV5_DP_CTRLSTAT, ctrlstat | ADIV5_DP_CTRLSTAT_CDBGRSTREQ);
 	/* Wait for acknowledge */
@@ -934,7 +949,7 @@ void adiv5_dp_init(adiv5_debug_port_s *const dp, const uint32_t idcode)
 			/* We have probably found all APs on this DP so no need to keep looking.
 			 * Continue with rest of init function down below.
 			 */
-			if (++invalid_aps == 8)
+			if (++invalid_aps == 8U)
 				break;
 
 			continue;
