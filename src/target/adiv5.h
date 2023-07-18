@@ -42,6 +42,25 @@
 #define ADIV5_DP_RDBUFF    ADIV5_DP_REG(0xcU)
 #define ADIV5_DP_TARGETSEL ADIV5_DP_REG(0xcU)
 
+/* ADIv5 SWD/JTAG Select Sequence */
+#define ADIV5_SWD_TO_JTAG_SELECT_SEQUENCE 0xe73cU /* 16 bits, LSB (MSB: 0x3ce7) */
+#define ADIV5_JTAG_TO_SWD_SELECT_SEQUENCE 0xe79eU /* 16 bits, LSB (MSB: 0x79e7) */
+
+/* 
+ * ADIv5 Selection Alert sequence
+ * This sequence is sent MSB first and can be represented as either:
+ * - 0x49cf9046 a9b4a161 97f5bbc7 45703d98 transmitted MSB first
+ * - 0x19bc0ea2 e3ddafe9 86852d95 6209f392 transmitted LSB first
+ */
+#define ADIV5_SELECTION_ALERT_SEQUENCE_0 0x6209f392U /* 32 bits, LSB */
+#define ADIV5_SELECTION_ALERT_SEQUENCE_1 0x86852d95U /* 32 bits, LSB */
+#define ADIV5_SELECTION_ALERT_SEQUENCE_2 0xe3ddafe9U /* 32 bits, LSB */
+#define ADIV5_SELECTION_ALERT_SEQUENCE_3 0x19bc0ea2U /* 32 bits, LSB */
+
+/* ADIv5 Dormant state activation codes */
+#define ADIV5_ACTIVATION_CODE_ARM_SWD_DP  0x1aU /* 8bits, LSB (MSB: 0x58) */
+#define ADIV5_ACTIVATION_CODE_ARM_JTAG_DP 0x0aU /* 8bits, LSB (MSB: 0x50) */
+
 /* DP DPIDR */
 #define ADIV5_DP_DPIDR_REVISION_OFFSET 28U
 #define ADIV5_DP_DPIDR_REVISION_MASK   (0xfU << ADIV5_DP_DPIDR_VERSION_OFFSET)
