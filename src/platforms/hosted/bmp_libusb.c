@@ -383,16 +383,8 @@ static bool process_vid_pid_table_probe(
 			product = get_device_descriptor_string(handle, device_descriptor->iProduct);
 		if (manufacturer == NULL)
 			manufacturer = get_device_descriptor_string(handle, device_descriptor->iManufacturer);
-		if (serial == NULL) {
-			/*
-			 * If this is a ST-Link v2, it does not report its serial number correctly,
-			 * bypass trying to read it.
-			 */
-			if (device_descriptor->idVendor == VENDOR_ID_STLINK && device_descriptor->idProduct == PRODUCT_ID_STLINKV2)
-				serial = strdup("---");
-			else
-				serial = get_device_descriptor_string(handle, device_descriptor->iSerialNumber);
-		}
+		if (serial == NULL)
+			serial = get_device_descriptor_string(handle, device_descriptor->iSerialNumber);
 
 		if (version == NULL)
 			version = strdup("---");
