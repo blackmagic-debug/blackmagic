@@ -896,7 +896,7 @@ void adiv5_dp_init(adiv5_debug_port_s *const dp, const uint32_t idcode)
 		if (status == (ADIV5_DP_CTRLSTAT_CSYSPWRUPACK | ADIV5_DP_CTRLSTAT_CDBGPWRUPACK))
 			break;
 		if (platform_timeout_is_expired(&timeout)) {
-			DEBUG_INFO("DEBUG Power-Up failed\n");
+			DEBUG_WARN("DEBUG Power-Up failed\n");
 			free(dp); /* No AP that referenced this DP so long*/
 			return;
 		}
@@ -912,11 +912,11 @@ void adiv5_dp_init(adiv5_debug_port_s *const dp, const uint32_t idcode)
 	while (true) {
 		ctrlstat = adiv5_dp_read(dp, ADIV5_DP_CTRLSTAT);
 		if (ctrlstat & ADIV5_DP_CTRLSTAT_CDBGRSTACK) {
-			DEBUG_INFO("RESET_SEQ succeeded.\n");
+			DEBUG_INFO("RESET_SEQ succeeded\n");
 			break;
 		}
 		if (platform_timeout_is_expired(&timeout)) {
-			DEBUG_INFO("RESET_SEQ failed\n");
+			DEBUG_WARN("RESET_SEQ failed\n");
 			break;
 		}
 	}
