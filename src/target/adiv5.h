@@ -379,4 +379,6 @@ uint32_t firmware_swdp_error(adiv5_debug_port_s *dp, bool protocol_recovery);
 void firmware_swdp_abort(adiv5_debug_port_s *dp, uint32_t abort);
 void adiv5_jtagdp_abort(adiv5_debug_port_s *dp, uint32_t abort);
 
+uint32_t adiv5_dp_read_dpidr(adiv5_debug_port_s *dp);
+
 #endif /* TARGET_ADIV5_H */

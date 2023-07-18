@@ -774,7 +774,7 @@ static void adiv5_dp_clear_sticky_errors(adiv5_debug_port_s *dp)
 }
 
 /* Keep the TRY_CATCH funkiness contained to avoid clobbering and reduce the need for volatiles */
-static uint32_t adiv5_dp_read_dpidr(adiv5_debug_port_s *const dp)
+uint32_t adiv5_dp_read_dpidr(adiv5_debug_port_s *const dp)
 {
 	volatile uint32_t dpidr = 0;
 	volatile exception_s e;
