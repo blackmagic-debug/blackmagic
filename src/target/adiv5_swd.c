@@ -79,10 +79,6 @@ static uint32_t firmware_dp_low_read(const uint16_t addr)
 	return res == SWDP_ACK_OK ? data : 0;
 }
 
-/* Try first the dormant to SWD procedure.
- * If target id given, scan DPs 0 .. 15 on that device and return.
- * Otherwise
- */
 uint32_t adiv5_swdp_scan(const uint32_t targetid)
 {
 	/* Free the device list if any */
@@ -127,6 +123,19 @@ uint32_t adiv5_swdp_scan(const uint32_t targetid)
 
 	if (!dp_targetid) {
 		/* No targetID given on the command line Try to read ID */
+		/*
+		 * ARM Debug Interface Architecture Specification, ADIv5.0 to ADIv5.2. ARM IHI 0031C
+		 *
+		 * §4.2.6 Limitations of multi-drop
+		 * 
+		 * It is not possible to interrogate a multi-drop Serial Wire Debug system that includes multiple devices to establish
+		 * which devices are connected. Because all devices are selected on coming out of a line reset, no communication with
+		 * a device is possible without prior selection of that target using its target ID. Therefore, connection to a multi-drop
+		 * Serial Wire Debug system that includes multiple devices requires that either:
+		 * - The host has prior knowledge of the devices in the system and is configured before target connection.
+		 * - The host attempts auto-detection by issuing a target select command for each of the devices it has been
+		 * configured to support.
+	 	 */
 
 		swd_line_reset();
 
@@ -185,36 +194,88 @@ uint32_t adiv5_swdp_scan(const uint32_t targetid)
 	}
 #endif
 
-	DEBUG_WARN("scan_multidrop: %s\n", scan_multidrop ? "true" : "false");
+	if (scan_multidrop)
+		adiv5_swd_multidrop_scan(dp, dp_targetid);
+	else {
+		adiv5_dp_abort(dp, ADIV5_DP_ABORT_STKERRCLR);
+		adiv5_dp_init(dp, 0);
+	}
 
-	const volatile size_t max_dp = scan_multidrop ? 16U : 1U;
-	for (volatile size_t i = 0; i < max_dp; i++) {
-		if (scan_multidrop) {
-			dp->fault = 0;
-			swd_line_reset();
+	return target_list ? 1U : 0U;
+}
 
-			dp->dp_low_write(ADIV5_DP_TARGETSEL,
-				i << ADIV5_DP_TARGETSEL_TINSTANCE_OFFSET |
-					(dp_targetid & (ADIV5_DP_TARGETID_TDESIGNER_MASK | ADIV5_DP_TARGETID_TPARTNO_MASK)) | 1U);
+/*
+ * ARM Debug Interface Architecture Specification, ADIv5.0 to ADIv5.2. ARM IHI 0031C
+ *
+ * §4.2.6 Limitations of multi-drop
+ * 
+ * Each device must be configured with a unique target ID, that includes a 4-bit instance ID, to differentiate between
+ * otherwise identical targets. This places a limit of 16 such targets in any system, and means that identical devices
+ * must be configured before they are connected together to ensure that their instance IDs do not conflict.
+ * Auto-detection of the target
+ * 
+ * It is not possible to interrogate a multi-drop Serial Wire Debug system that includes multiple devices to establish
+ * which devices are connected. Because all devices are selected on coming out of a line reset, no communication with
+ * a device is possible without prior selection of that target using its target ID. Therefore, connection to a multi-drop
+ * Serial Wire Debug system that includes multiple devices requires that either:
+ * - The host has prior knowledge of the devices in the system and is configured before target connection.
+ * - The host attempts auto-detection by issuing a target select command for each of the devices it has been
+ * configured to support.
+ * 
+ * This means that debug tools cannot connect seamlessly to targets in a multi-drop Serial Wire Debug system that they
+ * have never seen before. However, if the debug tools can be provided with the target ID of such targets by the user
+ * then the contents of the target can be auto-detected as normal.
+ * To protect against multiple selected devices all driving the line simultaneously SWD protocol version 2 requires:
+ * - For multi-drop SWJ-DP, the JTAG connection is selected out of powerup reset. JTAG does not drive the line.
+ * - For multi-drop SW-DP, the DP is in the dormant state out of powerup reset.
+ */
+void adiv5_swd_multidrop_scan(adiv5_debug_port_s *const dp, const uint32_t targetid)
+{
+	DEBUG_INFO("Handling swd multi-drop, TARGETID 0x%08" PRIx32 "\n", targetid);
 
-			const uint32_t target_id = adiv5_dp_read_dpidr(dp);
-			if (target_id == 0)
-				continue;
-		}
+	/* Scan all 16 possible instances (4-bit instance ID) */
+	for (size_t instance = 0; instance < 16U; instance++) {
+		/*
+		 * On a write to TARGETSEL immediately following a line reset sequence, the target is selected if both the following
+		 * conditions are met:
+		 * Bits [31:28] match bits [31:28] in the DLPIDR. (i.e. the instance ID matches)
+		 * Bits [27:0] match bits [27:0] in the TARGETID register.
+		 * Writing any other value deselects the target. 
+		 * During the response phase of a write to the TARGETSEL register, the target does not drive the line
+		 */
 
-		adiv5_debug_port_s *const new_dp = calloc(1, sizeof(*new_dp));
+		/* Line reset sequence */
+		swd_line_reset();
+		dp->fault = 0;
+
+		/* Select the instance */
+		dp->dp_low_write(ADIV5_DP_TARGETSEL,
+			instance << ADIV5_DP_TARGETSEL_TINSTANCE_OFFSET |
+				(targetid & (ADIV5_DP_TARGETID_TDESIGNER_MASK | ADIV5_DP_TARGETID_TPARTNO_MASK)) | 1U);
+
+		/* Read DPIDR */
+		if (adiv5_dp_read_dpidr(dp) == 0)
+			/* No DP here, next instance */
+			continue;
+
+		/* Allocate a new target DP for this instance */
+		adiv5_debug_port_s *const target_dp = calloc(1, sizeof(*dp));
 		if (!dp) { /* calloc failed: heap exhaustion */
 			DEBUG_ERROR("calloc: failed in %s\n", __func__);
-			continue;
+			break;
 		}
 
-		memcpy(new_dp, dp, sizeof(adiv5_debug_port_s));
-		new_dp->instance = i;
+		/* Populate the target DP from the initial one */
+		memcpy(target_dp, dp, sizeof(*dp));
+		target_dp->instance = instance;
 
-		adiv5_dp_abort(new_dp, ADIV5_DP_ABORT_STKERRCLR);
-		adiv5_dp_init(new_dp, 0);
+		/* Yield the target DP to adiv5_dp_init */
+		adiv5_dp_abort(target_dp, ADIV5_DP_ABORT_STKERRCLR);
+		adiv5_dp_init(target_dp, 0);
 	}
-	return target_list ? 1U : 0U;
+
+	/* free the initial DP */
+	free(dp);
 }
 
 uint32_t firmware_swdp_read(adiv5_debug_port_s *dp, uint16_t addr)
