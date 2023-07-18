@@ -53,10 +53,72 @@ uint8_t make_packet_request(uint8_t RnW, uint16_t addr)
 
 /* Provide bare DP access functions without timeout and exception */
 
-static void swd_line_reset(void)
+static void swd_line_reset_sequence(const bool idle_cycles)
 {
-	swd_proc.seq_out(0xffffffffU, 32U);
-	swd_proc.seq_out(0x0fffffffU, 32U);
+	/* 
+	 * A line reset is achieved by holding the SWDIOTMS HIGH for at least 50 SWCLKTCK cycles, followed by at least two idle cycles
+	 * Note: in some non-conformant devices (STM32) at least 51 HIGH cycles and/or 3/4 idle cycles are required
+	 *
+	 * for robustness, we use 60 HIGH cycles and 4 idle cycles
+	 */
+	swd_proc.seq_out(0xffffffffU, 32U);                     /* 32 cycles HIGH */
+	swd_proc.seq_out(0x0fffffffU, idle_cycles ? 32U : 28U); /* 28 cycles HIGH + 4 idle cycles if idle is requested */
+}
+
+/* Switch out of dormant state into SWD */
+static void dormant_to_swd_sequence()
+{
+	/*
+	 * ARM Debug Interface Architecture Specification, ADIv5.0 to ADIv5.2. ARM IHI 0031C
+	 * §5.3.4 Switching out of Dormant state
+	 */
+
+	DEBUG_INFO("Switching out of dormant state into SWD\n");
+
+	/* Send at least 8 SWCLKTCK cycles with SWDIOTMS HIGH */
+	swd_line_reset_sequence(false);
+	/* Send the 128-bit Selection Alert sequence on SWDIOTMS */
+	swd_proc.seq_out(ADIV5_SELECTION_ALERT_SEQUENCE_0, 32U);
+	swd_proc.seq_out(ADIV5_SELECTION_ALERT_SEQUENCE_1, 32U);
+	swd_proc.seq_out(ADIV5_SELECTION_ALERT_SEQUENCE_2, 32U);
+	swd_proc.seq_out(ADIV5_SELECTION_ALERT_SEQUENCE_3, 32U);
+	/* 
+	 * We combine the last two sequences in a single seq_out as an optimization
+	 *
+	 * Send 4 SWCLKTCK cycles with SWDIOTMS LOW
+	 * Send the required 8 bit activation code sequence on SWDIOTMS
+	 * 
+	 * The bits are shifted out to the right, so we shift the second sequence left by the size of the first sequence
+	 * The first sequence is 4 bits and the second 8 bits, totaling 12 bits in the combined sequence
+	 */
+	swd_proc.seq_out(ADIV5_ACTIVATION_CODE_ARM_SWD_DP << 4U, 12U);
+
+	/*
+	 * The target is in the protocol error state after selecting SWD
+	 * Ensure the interface is in a known state by performing a line reset
+	 */
+	swd_line_reset_sequence(true);
+}
+
+/* Deprecated JTAG-to-SWD select sequence */
+static void jtag_to_swd_sequence()
+{
+	/*
+	 * ARM Debug Interface Architecture Specification, ADIv5.0 to ADIv5.2. ARM IHI 0031C
+	 * §5.2.1 Switching from JTAG to SWD operation
+	 */
+
+	/* ARM deprecates use of these sequences on devices where the dormant state of operation is implemented */
+	DEBUG_WARN("Deprecated TAG-to-SWD sequence\n");
+
+	/* SWD interface must be in reset state */
+	swd_line_reset_sequence(false);
+
+	/* Send the 16-bit JTAG-to-SWD select sequence on SWDIOTMS */
+	swd_proc.seq_out(ADIV5_JTAG_TO_SWD_SELECT_SEQUENCE, 16U);
+
+	/* This ensures that if SWJ-DP was already in SWD operation before sending the select sequence, the interface enters reset state */
+	swd_line_reset_sequence(true);
 }
 
 bool firmware_dp_low_write(const uint16_t addr, const uint32_t data)
@@ -106,18 +168,9 @@ uint32_t adiv5_swdp_scan(const uint32_t targetid)
 #endif
 
 	platform_target_clk_output_enable(true);
-	/* DORMANT-> SWD sequence*/
-	swd_proc.seq_out(0xffffffff, 32);
-	swd_proc.seq_out(0xffffffff, 32);
-	/* 128 bit selection alert sequence for SW-DP-V2 */
-	swd_proc.seq_out(0x6209f392, 32);
-	swd_proc.seq_out(0x86852d95, 32);
-	swd_proc.seq_out(0xe3ddafe9, 32);
-	swd_proc.seq_out(0x19bc0ea2, 32);
-	/* 4 cycle low,
-	 * 0x1a Arm CoreSight SW-DP activation sequence
-	 * 20 bits start of reset another reset sequence*/
-	swd_proc.seq_out(0x1a0, 12);
+
+	/* Switch out of dormant state */
+	dormant_to_swd_sequence();
 
 	uint32_t dp_targetid = targetid;
 
@@ -137,8 +190,6 @@ uint32_t adiv5_swdp_scan(const uint32_t targetid)
 		 * configured to support.
 	 	 */
 
-		swd_line_reset();
-
 		/* Read DPIDR, if the first read fails, try the JTAG to SWD sequence, if that fails, give up */
 		uint32_t dpidr = 0;
 		bool tried_jtag_to_swd = false;
@@ -149,12 +200,7 @@ uint32_t adiv5_swdp_scan(const uint32_t targetid)
 				break;
 
 			if (!tried_jtag_to_swd) {
-				DEBUG_WARN("Trying old JTAG to SWD sequence\n");
-				swd_proc.seq_out(0xffffffffU, 32U);
-				swd_proc.seq_out(0xffffffffU, 32U);
-				swd_proc.seq_out(0xe79eU, 16U); /* 0b0111100111100111 */
-
-				swd_line_reset();
+				jtag_to_swd_sequence();
 				dp->fault = 0;
 
 				tried_jtag_to_swd = true;
@@ -245,7 +291,7 @@ void adiv5_swd_multidrop_scan(adiv5_debug_port_s *const dp, const uint32_t targe
 		 */
 
 		/* Line reset sequence */
-		swd_line_reset();
+		swd_line_reset_sequence(true);
 		dp->fault = 0;
 
 		/* Select the instance */
@@ -297,7 +343,7 @@ uint32_t firmware_swdp_error(adiv5_debug_port_s *dp, const bool protocol_recover
 		 * we must then re-select the target to bring the device back
 		 * into the expected state.
 		 */
-		swd_line_reset();
+		swd_line_reset_sequence(true);
 		if (dp->version >= 2U)
 			firmware_dp_low_write(ADIV5_DP_TARGETSEL, dp->targetsel);
 		firmware_dp_low_read(ADIV5_DP_DPIDR);
