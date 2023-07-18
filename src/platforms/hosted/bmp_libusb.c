@@ -18,6 +18,7 @@
  */
 
 /* Find all known usb connected debuggers */
+
 #include "general.h"
 #if defined(_WIN32) || defined(__CYGWIN__)
 #define NOMINMAX
@@ -30,15 +31,19 @@
 #include <libusb.h>
 #include <ftdi.h>
 #endif
+#include <uchar.h>
 #include "cli.h"
 #include "ftdi_bmp.h"
 #include "version.h"
 #include "probe_info.h"
 #include "utils.h"
+#include "hex_utils.h"
 
 #define NO_SERIAL_NUMBER "<no serial number>"
 
 void bmp_read_product_version(libusb_device_descriptor_s *device_descriptor, libusb_device *device,
+	libusb_device_handle *handle, char **product, char **manufacturer, char **serial, char **version);
+void stlinkv2_read_serial(libusb_device_descriptor_s *device_descriptor, libusb_device *device,
 	libusb_device_handle *handle, char **product, char **manufacturer, char **serial, char **version);
 
 typedef struct debugger_device {
@@ -53,7 +58,7 @@ typedef struct debugger_device {
 /* Create the list of debuggers BMDA works with */
 debugger_device_s debugger_devices[] = {
 	{VENDOR_ID_BMP, PRODUCT_ID_BMP, BMP_TYPE_BMP, bmp_read_product_version, "Black Magic Probe"},
-	{VENDOR_ID_STLINK, PRODUCT_ID_STLINKV2, BMP_TYPE_STLINK_V2, NULL, "ST-Link v2"},
+	{VENDOR_ID_STLINK, PRODUCT_ID_STLINKV2, BMP_TYPE_STLINK_V2, stlinkv2_read_serial, "ST-Link v2"},
 	{VENDOR_ID_STLINK, PRODUCT_ID_STLINKV21, BMP_TYPE_STLINK_V2, NULL, "ST-Link v2.1"},
 	{VENDOR_ID_STLINK, PRODUCT_ID_STLINKV21_MSD, BMP_TYPE_STLINK_V2, NULL, "ST-Link v2.1 MSD"},
 	{VENDOR_ID_STLINK, PRODUCT_ID_STLINKV3_NO_MSD, BMP_TYPE_STLINK_V2, NULL, "ST-Link v2.1 No MSD"},
@@ -134,6 +139,37 @@ void bmp_read_product_version(libusb_device_descriptor_s *device_descriptor, lib
 			++start_of_version;
 		*version = strdup(start_of_version);
 	}
+}
+
+/*
+ * ST-Link v2's incorrectly report their serial number.
+ * Extract it, and decode it as hexadecimal
+ */
+void stlinkv2_read_serial(libusb_device_descriptor_s *device_descriptor, libusb_device *device,
+	libusb_device_handle *handle, char **product, char **manufacturer, char **serial, char **version)
+{
+	(void)device;
+	(void)product;
+	(void)manufacturer;
+	(void)version;
+	/* libusb_get_string_descriptor requires a byte buffer, but returns char16_t's */
+	char16_t raw_serial[64] = {0};
+	const int raw_length = libusb_get_string_descriptor(
+		handle, device_descriptor->iSerialNumber, 0x0409U, (uint8_t *)raw_serial, sizeof(raw_serial));
+	if (raw_length < LIBUSB_SUCCESS)
+		return;
+
+	/*
+	 * Re-encode the resulting chunk of data as hex, skipping the first char16_t which
+	 * contains the header of the string descriptor
+	 */
+	char encoded_serial[128] = {0};
+	for (size_t offset = 0; offset < (size_t)raw_length - 2U; offset += 2U) {
+		uint8_t digit = raw_serial[1 + (offset / 2U)];
+		encoded_serial[offset + 0] = hex_digit(digit >> 4U);
+		encoded_serial[offset + 1] = hex_digit(digit & 0x0fU);
+	}
+	*serial = strdup(encoded_serial);
 }
 
 #if defined(_WIN32) || defined(__CYGWIN__)
