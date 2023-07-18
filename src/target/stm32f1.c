@@ -223,12 +223,18 @@ static bool at32f40_detect(target_s *target, const uint16_t part_id)
 	case 0x0249U: // AT32F407VCT7 256KB / LQFP100
 	case 0x024aU: // AT32F407RCT7 256KB / LQFP64
 	case 0x0254U: // AT32F407AVCT7 256KB / LQFP100
+		// Flash: 256 KB / 2KB per block
+		stm32f1_add_flash(target, 0x08000000, 256U * 1024U, 2U * 1024U);
+		break;
 	case 0x02cdU: // AT32F403AVET7 512KB / LQFP100 (*)
 	case 0x02ceU: // AT32F403ARET7 512KB / LQFP64 (*)
 	case 0x02cfU: // AT32F403ACET7 512KB / LQFP48 (*)
 	case 0x02d0U: // AT32F403ACEU7 512KB / QFN48 (*)
 	case 0x02d1U: // AT32F407VET7 512KB / LQFP100 (*)
 	case 0x02d2U: // AT32F407RET7 512KB / LQFP64 (*)
+		// Flash: 512 KB / 2KB per block
+		stm32f1_add_flash(target, 0x08000000, 512U * 1024U, 2U * 1024U);
+		break;
 	case 0x0344U: // AT32F403AVGT7 1024KB / LQFP100 (*)
 	case 0x0345U: // AT32F403ARGT7 1024KB / LQFP64 (*)
 	case 0x0346U: // AT32F403ACGT7 1024KB / LQFP48 (*)
@@ -236,8 +242,9 @@ static bool at32f40_detect(target_s *target, const uint16_t part_id)
 	case 0x034bU: // AT32F407VGT7 1024KB / LQFP100 (*)
 	case 0x034cU: // AT32F407VGT7 1024KB / LQFP64 (*)
 	case 0x0353U: // AT32F407AVGT7 1024KB / LQFP100 (*)
-		// Flash: 256 KB / 2KB per block
-		stm32f1_add_flash(target, 0x08000000, 256U * 1024U, 2U * 1024U);
+		// Flash: 1024 KB / 2KB per block, dual-bank
+		stm32f1_add_flash(target, 0x08000000, 512U * 1024U, 2U * 1024U);
+		stm32f1_add_flash(target, 0x08080000, 512U * 1024U, 2U * 1024U);
 		break;
 	// Unknown/undocumented
 	default:
