@@ -62,20 +62,20 @@ static void swd_line_reset(void)
 bool firmware_dp_low_write(const uint16_t addr, const uint32_t data)
 {
 	const uint8_t request = make_packet_request(ADIV5_LOW_WRITE, addr);
-	swd_proc.seq_out(request, 8);
-	const uint8_t res = swd_proc.seq_in(3);
-	swd_proc.seq_out_parity(data, 32);
-	swd_proc.seq_out(0, 8);
+	swd_proc.seq_out(request, 8U);
+	const uint8_t res = swd_proc.seq_in(3U);
+	swd_proc.seq_out_parity(data, 32U);
+	swd_proc.seq_out(0, 8U);
 	return res != SWDP_ACK_OK;
 }
 
 static uint32_t firmware_dp_low_read(const uint16_t addr)
 {
 	const uint8_t request = make_packet_request(ADIV5_LOW_READ, addr);
-	swd_proc.seq_out(request, 8);
-	const uint8_t res = swd_proc.seq_in(3);
+	swd_proc.seq_out(request, 8U);
+	const uint8_t res = swd_proc.seq_in(3U);
 	uint32_t data = 0;
-	swd_proc.seq_in_parity(&data, 32);
+	swd_proc.seq_in_parity(&data, 32U);
 	return res == SWDP_ACK_OK ? data : 0;
 }
 
@@ -220,7 +220,7 @@ uint32_t firmware_swdp_read(adiv5_debug_port_s *dp, uint16_t addr)
 uint32_t firmware_swdp_error(adiv5_debug_port_s *dp, const bool protocol_recovery)
 {
 	/* Only do the comms reset dance on DPv2+ w/ fault or to perform protocol recovery. */
-	if ((dp->version >= 2 && dp->fault) || protocol_recovery) {
+	if ((dp->version >= 2U && dp->fault) || protocol_recovery) {
 		/*
 		 * Note that on DPv2+ devices, during a protocol error condition
 		 * the target becomes deselected during line reset. Once reset,
@@ -228,7 +228,7 @@ uint32_t firmware_swdp_error(adiv5_debug_port_s *dp, const bool protocol_recover
 		 * into the expected state.
 		 */
 		swd_line_reset();
-		if (dp->version >= 2)
+		if (dp->version >= 2U)
 			firmware_dp_low_write(ADIV5_DP_TARGETSEL, dp->targetsel);
 		firmware_dp_low_read(ADIV5_DP_DPIDR);
 		/* Exception here is unexpected, so do not catch */
@@ -262,10 +262,10 @@ uint32_t firmware_swdp_low_access(adiv5_debug_port_s *dp, const uint8_t RnW, con
 	uint32_t response = 0;
 	uint8_t ack = SWDP_ACK_WAIT;
 	platform_timeout_s timeout;
-	platform_timeout_set(&timeout, 250);
+	platform_timeout_set(&timeout, 250U);
 	do {
-		swd_proc.seq_out(request, 8);
-		ack = swd_proc.seq_in(3);
+		swd_proc.seq_out(request, 8U);
+		ack = swd_proc.seq_in(3U);
 		if (ack == SWDP_ACK_FAULT) {
 			DEBUG_ERROR("SWD access resulted in fault, retrying\n");
 			/* On fault, abort the request and repeat */
@@ -301,13 +301,13 @@ uint32_t firmware_swdp_low_access(adiv5_debug_port_s *dp, const uint8_t RnW, con
 	}
 
 	if (RnW) {
-		if (swd_proc.seq_in_parity(&response, 32)) { /* Give up on parity error */
-			dp->fault = 1;
+		if (swd_proc.seq_in_parity(&response, 32U)) { /* Give up on parity error */
+			dp->fault = 1U;
 			DEBUG_ERROR("SWD access resulted in parity error\n");
 			raise_exception(EXCEPTION_ERROR, "SWD parity error");
 		}
 	} else {
-		swd_proc.seq_out_parity(value, 32);
+		swd_proc.seq_out_parity(value, 32U);
 		/* ARM Debug Interface Architecture Specification ADIv5.0 to ADIv5.2
 		 * tells to clock the data through SW-DP to either :
 		 * - immediate start a new transaction
@@ -317,7 +317,7 @@ uint32_t firmware_swdp_low_access(adiv5_debug_port_s *dp, const uint8_t RnW, con
 		 * Implement last option to favour correctness over
 		 *   slight speed decrease
 		 */
-		swd_proc.seq_out(0, 8);
+		swd_proc.seq_out(0, 8U);
 	}
 	return response;
 }
