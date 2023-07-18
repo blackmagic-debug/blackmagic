@@ -83,26 +83,30 @@ static uint32_t firmware_dp_low_read(const uint16_t addr)
  * If target id given, scan DPs 0 .. 15 on that device and return.
  * Otherwise
  */
-uint32_t adiv5_swdp_scan(uint32_t targetid)
+uint32_t adiv5_swdp_scan(const uint32_t targetid)
 {
-	volatile exception_s e;
-
+	/* Free the device list if any */
 	target_list_free();
 
-	adiv5_debug_port_s idp = {
-		.dp_low_write = firmware_dp_low_write,
-		.error = firmware_swdp_error,
-		.dp_read = firmware_swdp_read,
-		.low_access = firmware_swdp_low_access,
-		.abort = firmware_swdp_abort,
-	};
-	adiv5_debug_port_s *initial_dp = &idp;
+	adiv5_debug_port_s *dp = calloc(1, sizeof(*dp));
+	if (!dp) { /* calloc failed: heap exhaustion */
+		DEBUG_ERROR("calloc: failed in %s\n", __func__);
+		return 0;
+	}
+
+	dp->dp_low_write = firmware_dp_low_write;
+	dp->error = firmware_swdp_error;
+	dp->dp_read = firmware_swdp_read;
+	dp->low_access = firmware_swdp_low_access;
+	dp->abort = firmware_swdp_abort;
 
 #if PC_HOSTED == 0
 	swdptap_init();
 #else
-	if (!bmda_swd_dp_init(initial_dp))
+	if (!bmda_swd_dp_init(dp)) {
+		free(dp);
 		return 0;
+	}
 #endif
 
 	platform_target_clk_output_enable(true);
@@ -119,56 +123,64 @@ uint32_t adiv5_swdp_scan(uint32_t targetid)
 	 * 20 bits start of reset another reset sequence*/
 	swd_proc.seq_out(0x1a0, 12);
 
-	bool scan_multidrop = true;
-	volatile uint32_t dp_targetid = targetid;
+	uint32_t dp_targetid = targetid;
 
 	if (!dp_targetid) {
 		/* No targetID given on the command line Try to read ID */
 
-		scan_multidrop = false;
-
 		swd_line_reset();
 
-		volatile uint32_t dp_dpidr = 0;
-		TRY_CATCH (e, EXCEPTION_ALL) {
-			dp_dpidr = initial_dp->dp_read(initial_dp, ADIV5_DP_DPIDR);
-		}
-		if (e.type || initial_dp->fault) {
-			DEBUG_WARN("Trying old JTAG to SWD sequence\n");
-			swd_proc.seq_out(0xffffffff, 32);
-			swd_proc.seq_out(0xffffffff, 32);
-			swd_proc.seq_out(0xe79e, 16); /* 0b0111100111100111 */
+		/* Read DPIDR, if the first read fails, try the JTAG to SWD sequence, if that fails, give up */
+		uint32_t dpidr = 0;
+		bool tried_jtag_to_swd = false;
+		while (true) {
+			dpidr = adiv5_dp_read_dpidr(dp);
+			if (dpidr != 0)
+				/* Successfully read the DPIDR */
+				break;
 
-			swd_line_reset();
+			if (!tried_jtag_to_swd) {
+				DEBUG_WARN("Trying old JTAG to SWD sequence\n");
+				swd_proc.seq_out(0xffffffffU, 32U);
+				swd_proc.seq_out(0xffffffffU, 32U);
+				swd_proc.seq_out(0xe79eU, 16U); /* 0b0111100111100111 */
 
-			initial_dp->fault = 0;
+				swd_line_reset();
+				dp->fault = 0;
 
-			TRY_CATCH (e, EXCEPTION_ALL) {
-				dp_dpidr = initial_dp->dp_read(initial_dp, ADIV5_DP_DPIDR);
+				tried_jtag_to_swd = true;
+
+				/* Try again */
+				continue;
 			}
-			if (e.type || initial_dp->fault) {
-				DEBUG_ERROR("No usable DP found\n");
-				return 0;
-			}
+
+			/* Give up */
+			DEBUG_ERROR("No usable DP found\n");
+			free(dp);
+			return 0;
 		}
 
-		const uint8_t dp_version = (dp_dpidr & ADIV5_DP_DPIDR_VERSION_MASK) >> ADIV5_DP_DPIDR_VERSION_OFFSET;
-		if (dp_version >= 2) {
-			scan_multidrop = true;
-			// initial_dp must have the version field set so adiv5_dp_read() does protocol recovery correctly.
-			initial_dp->version = dp_version;
-
+		/* DP must have the version field set so adiv5_dp_read() does protocol recovery correctly */
+		dp->version = (dpidr & ADIV5_DP_DPIDR_VERSION_MASK) >> ADIV5_DP_DPIDR_VERSION_OFFSET;
+		if (dp->version >= 2U) {
 			/* Read TargetID. Can be done with device in WFI, sleep or reset! */
 			/* TARGETID is on bank 2 */
-			adiv5_dp_write(initial_dp, ADIV5_DP_SELECT, ADIV5_DP_BANK2);
-			dp_targetid = adiv5_dp_read(initial_dp, ADIV5_DP_TARGETID);
-			adiv5_dp_write(initial_dp, ADIV5_DP_SELECT, ADIV5_DP_BANK0);
+			adiv5_dp_write(dp, ADIV5_DP_SELECT, ADIV5_DP_BANK2);
+			dp_targetid = adiv5_dp_read(dp, ADIV5_DP_TARGETID);
+			adiv5_dp_write(dp, ADIV5_DP_SELECT, ADIV5_DP_BANK0);
 		}
 	}
 
+	/* If we were given targetid or we have a DPv2+ device, do a multi-drop scan */
+#if PC_HOSTED == 0
+	/* On non hosted platforms, scan_multidrop can be constant */
+	const
+#endif
+		bool scan_multidrop = targetid || dp->version >= 2U;
+
 #if PC_HOSTED == 1
-	if (!initial_dp->dp_low_write) {
-		DEBUG_WARN("CMSIS_DAP < v1.2 can not handle multi-drop, disabling\n");
+	if (scan_multidrop && !dp->dp_low_write) {
+		DEBUG_WARN("Discovered multi-drop enabled target but CMSIS_DAP < v1.2 cannot handle multi-drop\n");
 		scan_multidrop = false;
 	}
 #endif
@@ -178,32 +190,29 @@ uint32_t adiv5_swdp_scan(uint32_t targetid)
 	const volatile size_t max_dp = scan_multidrop ? 16U : 1U;
 	for (volatile size_t i = 0; i < max_dp; i++) {
 		if (scan_multidrop) {
-			initial_dp->fault = 0;
+			dp->fault = 0;
 			swd_line_reset();
 
-			initial_dp->dp_low_write(ADIV5_DP_TARGETSEL,
+			dp->dp_low_write(ADIV5_DP_TARGETSEL,
 				i << ADIV5_DP_TARGETSEL_TINSTANCE_OFFSET |
 					(dp_targetid & (ADIV5_DP_TARGETID_TDESIGNER_MASK | ADIV5_DP_TARGETID_TPARTNO_MASK)) | 1U);
 
-			volatile uint32_t target_id = 0;
-			TRY_CATCH (e, EXCEPTION_ALL) {
-				target_id = adiv5_dp_low_access(initial_dp, ADIV5_LOW_READ, ADIV5_DP_DPIDR, 0U);
-			}
-			if (e.type || initial_dp->fault || !target_id)
+			const uint32_t target_id = adiv5_dp_read_dpidr(dp);
+			if (target_id == 0)
 				continue;
 		}
 
-		adiv5_debug_port_s *dp = calloc(1, sizeof(*dp));
+		adiv5_debug_port_s *const new_dp = calloc(1, sizeof(*new_dp));
 		if (!dp) { /* calloc failed: heap exhaustion */
 			DEBUG_ERROR("calloc: failed in %s\n", __func__);
 			continue;
 		}
 
-		memcpy(dp, initial_dp, sizeof(adiv5_debug_port_s));
-		dp->instance = i;
+		memcpy(new_dp, dp, sizeof(adiv5_debug_port_s));
+		new_dp->instance = i;
 
-		adiv5_dp_abort(dp, ADIV5_DP_ABORT_STKERRCLR);
-		adiv5_dp_init(dp, 0);
+		adiv5_dp_abort(new_dp, ADIV5_DP_ABORT_STKERRCLR);
+		adiv5_dp_init(new_dp, 0);
 	}
 	return target_list ? 1U : 0U;
 }
