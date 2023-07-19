@@ -296,7 +296,15 @@ typedef struct jlink_io_transact {
 	uint8_t clock_cycles[2];
 } jlink_io_transact_s;
 
-extern uint8_t jlink_interfaces;
+typedef struct jlink {
+	uint32_t capabilities;         /* Bitfield of supported capabilities */
+	uint32_t available_interfaces; /* Bitfield of available interfaces */
+	uint32_t frequency_khz;        /* Base frequency of the interface in kHz */
+	uint16_t min_divisor;          /* Minimum divisor for the interface */
+	uint16_t current_divisor;      /* Current divisor for the interface */
+} jlink_s;
+
+extern jlink_s jlink;
 
 bool jlink_simple_query(uint8_t command, void *rx_buffer, size_t rx_len);
 bool jlink_simple_request(uint8_t command, uint8_t operation, void *rx_buffer, size_t rx_len);
