@@ -318,23 +318,12 @@ typedef struct jlink_io_transact {
 	uint8_t clock_cycles[2];
 } jlink_io_transact_s;
 
-typedef struct jlink {
-	char fw_version[256U];         /* Firmware version string */
-	uint32_t hw_version;           /* Hardware version */
-	uint32_t capabilities;         /* Bitfield of supported capabilities */
-	uint32_t available_interfaces; /* Bitfield of available interfaces */
-	uint32_t frequency_khz;        /* Base frequency of the interface in kHz */
-	uint16_t min_divisor;          /* Minimum divisor for the interface */
-	uint16_t current_divisor;      /* Current divisor for the interface */
-} jlink_s;
-
-extern jlink_s jlink;
-
 bool jlink_simple_query(uint8_t command, void *rx_buffer, size_t rx_len);
 bool jlink_simple_request(uint8_t command, uint8_t operation, void *rx_buffer, size_t rx_len);
 bool jlink_transfer(uint16_t clock_cycles, const uint8_t *tms, const uint8_t *tdi, uint8_t *tdo);
 bool jlink_transfer_fixed_tms(uint16_t clock_cycles, bool final_tms, const uint8_t *tdi, uint8_t *tdo);
 bool jlink_transfer_swd(uint16_t clock_cycles, jlink_swd_dir_e direction, const uint8_t *data_in, uint8_t *data_out);
 bool jlink_set_frequency(uint16_t frequency_khz);
+bool jlink_select_interface(const uint8_t interface);
 
 #endif /*PLATFORMS_HOSTED_JLINK_PROTOCOL_H*/
