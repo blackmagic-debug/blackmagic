@@ -48,7 +48,7 @@ typedef struct jlink {
 	uint32_t hw_version;           /* Hardware version */
 	uint32_t capabilities;         /* Bitfield of supported capabilities */
 	uint32_t available_interfaces; /* Bitfield of available interfaces */
-	uint32_t frequency_khz;        /* Base frequency of the interface in kHz */
+	uint32_t base_frequency;       /* Base frequency of the interface */
 	uint16_t min_divisor;          /* Minimum divisor for the interface */
 	uint16_t current_divisor;      /* Current divisor for the interface */
 } jlink_s;
@@ -360,29 +360,55 @@ static bool jlink_get_interfaces(void)
 	return true;
 }
 
-static bool jlink_query_speed(void)
+static bool jlink_get_interface_frequency(void)
 {
-	uint8_t data[6];
-	if (!jlink_simple_query(JLINK_CMD_INTERFACE_GET_BASE_FREQUENCY, data, sizeof(data)))
-		return false;
-	jlink.frequency_khz = read_le4(data, 0) / 1000U;
-	jlink.min_divisor = read_le2(data, 4);
-	DEBUG_INFO("Emulator speed %ukHz, minimum divisor %u%s\n", jlink.frequency_khz, jlink.min_divisor,
-		(jlink.capabilities & JLINK_CAPABILITY_INTERFACE_FREQUENCY) ? "" : ", fixed");
+	/* 
+	 * Fixme: this is not strictly correct, the reported base frequency and min divisor depend on the
+	 * interface selected, but we don't know which one is selected at this point, we are assuming JTAG
+	 * and that JTAG is the only interface that supports frequency info/set.
+	 * Unfortunately, this does not look like it's documented on the docs we have access to.
+	*/
+
+	if (jlink.capabilities & JLINK_CAPABILITY_INTERFACE_FREQUENCY) {
+		uint8_t buffer[6U];
+		if (!jlink_simple_query(JLINK_CMD_INTERFACE_GET_BASE_FREQUENCY, buffer, sizeof(buffer)))
+			return false;
+
+		jlink.base_frequency = read_le4(buffer, JLINK_INTERFACE_BASE_FREQUENCY_OFFSET);
+		jlink.min_divisor = read_le2(buffer, JLINK_INTERFACE_MIN_DIV_OFFSET);
+		jlink.current_divisor = jlink.min_divisor;
+
+		DEBUG_INFO("Base frequency: %uHz\n\tMinimum divisor: %u\n", jlink.base_frequency, jlink.min_divisor);
+	} else
+		DEBUG_WARN("J-Link does not support frequency info command\n");
+
 	return true;
 }
 
-bool jlink_set_frequency(const uint16_t frequency_khz)
+bool jlink_set_jtag_frequency(const uint32_t frequency)
 {
-	jlink_set_freq_s command = {JLINK_CMD_INTERFACE_SET_FREQUENCY_KHZ};
-	write_le2(command.frequency, 0, frequency_khz);
-	DEBUG_INFO("%s: %ukHz\n", __func__, frequency_khz);
-	return bmda_usb_transfer(info.usb_link, &command, sizeof(command), NULL, 0, JLINK_USB_TIMEOUT) >= 0;
-}
+	/* Fixme: see note on jlink_get_interface_frequency */
 
-static bool jlink_info(void)
-{
-	return jlink_query_speed();
+	if (!(jlink.capabilities & JLINK_CAPABILITY_INTERFACE_FREQUENCY))
+		return false;
+
+	/* Find the divisor that gets us closest to the requested frequency */
+	uint16_t divisor = (jlink.base_frequency + frequency - 1U) / frequency;
+
+	/* Bound the divisor to the min divisor */
+	if (divisor < jlink.min_divisor)
+		divisor = jlink.min_divisor;
+
+	/* Get the approximate frequency we'll actually be running at, convert to kHz in the process */
+	const uint16_t frequency_khz = (jlink.base_frequency / jlink.current_divisor) / 1000U;
+
+	if (!jlink_simple_request_16(JLINK_CMD_INTERFACE_SET_FREQUENCY_KHZ, frequency_khz, NULL, 0))
+		return false;
+
+	/* Update the current divisor for frquency calculations */
+	jlink.current_divisor = divisor;
+
+	return true;
 }
 
 /* BMDA interface functions */
@@ -413,14 +439,14 @@ bool jlink_init(void)
 		libusb_close(info.usb_link->device_handle);
 		return false;
 	}
-	if (!jlink_get_capabilities() || !jlink_get_version() || !jlink_get_interfaces()) {
+	if (!jlink_get_capabilities() || !jlink_get_version() || !jlink_get_interfaces() ||
+		!jlink_get_interface_frequency()) {
 		DEBUG_ERROR("Failed to read J-Link information\n");
 		libusb_release_interface(info.usb_link->device_handle, info.usb_link->interface);
 		libusb_close(info.usb_link->device_handle);
 		return false;
 	}
 	memcpy(info.version, jlink.fw_version, strlen(jlink.fw_version) + 1U);
-	jlink_info();
 	return true;
 }
 
@@ -451,22 +477,22 @@ bool jlink_nrst_get_val(void)
 	return result[JLINK_SIGNAL_STATE_TRES_OFFSET] == 0;
 }
 
-void jlink_max_frequency_set(const uint32_t freq)
+void jlink_max_frequency_set(const uint32_t frequency)
 {
-	if (!(jlink.capabilities & JLINK_CAPABILITY_INTERFACE_FREQUENCY) && !info.is_jtag)
+	/* Fixme: see note on jlink_get_interface_frequency */
+
+	if (!(jlink.capabilities & JLINK_CAPABILITY_INTERFACE_FREQUENCY) || !info.is_jtag)
 		return;
-	const uint16_t freq_khz = freq / 1000U;
-	const uint16_t divisor = (jlink.frequency_khz + freq_khz - 1U) / freq_khz;
-	if (divisor > jlink.min_divisor)
-		jlink.current_divisor = divisor;
-	else
-		jlink.current_divisor = jlink.min_divisor;
-	jlink_set_frequency(jlink.frequency_khz / jlink.current_divisor);
+
+	jlink_set_jtag_frequency(frequency);
 }
 
 uint32_t jlink_max_frequency_get(void)
 {
-	if ((jlink.capabilities & JLINK_CAPABILITY_INTERFACE_FREQUENCY) && info.is_jtag)
-		return (jlink.frequency_khz * 1000U) / jlink.current_divisor;
-	return FREQ_FIXED;
+	/* Fixme: see note on jlink_get_interface_frequency */
+
+	if (!(jlink.capabilities & JLINK_CAPABILITY_INTERFACE_FREQUENCY) || !info.is_jtag)
+		return FREQ_FIXED;
+
+	return jlink.base_frequency / jlink.current_divisor;
 }
