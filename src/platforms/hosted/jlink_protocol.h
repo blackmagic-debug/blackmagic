@@ -178,6 +178,28 @@
 #define JLINK_CMD_CONFIG_READ  0xf2U /* Read the probe configuration */
 #define JLINK_CMD_CONFIG_WRITE 0xf3U /* Write the probe configuration */
 
+/* 
+ * The hardware version is returned as a 32 bit value with the following format:
+ * TTMMmmrr
+ * TT: Hardware type
+ * MM: Major version
+ * mm: Minor version
+ * rr: Revision
+ * 
+ * Note for clarification of the reference manual:
+ * This is a 32 bit decimal value! not hex! (ugh... let's not question how long it took to figure that one out)
+*/
+#define JLINK_HARDWARE_VERSION_TYPE(v)     ((v / 1000000U) % 100U) /* Get hardware type from hardware version value */
+#define JLINK_HARDWARE_VERSION_MAJOR(v)    ((v / 10000U) % 100U)   /* Get major version from hardware version value */
+#define JLINK_HARDWARE_VERSION_MINOR(v)    ((v / 100U) % 100U)     /* Get minor version from hardware version value */
+#define JLINK_HARDWARE_VERSION_REVISION(v) (v % 100U)              /* Get revision from hardware version value */
+
+/* J-Link hardware version - JLINK_CMD_INFO_GET_HARDWARE_VERSION */
+#define JLINK_HARDWARE_VERSION_TYPE_JLINK    0U
+#define JLINK_HARDWARE_VERSION_TYPE_JTRACE   1U
+#define JLINK_HARDWARE_VERSION_TYPE_FLASHER  2U
+#define JLINK_HARDWARE_VERSION_TYPE_JLINKPRO 3U
+
 /* J-Link capabilities - JLINK_CMD_INFO_GET_PROBE_CAPABILITIES 
  *
  * ┌─────┬──────────────────────────────────────────┬────────────────────────────┐
@@ -297,6 +319,8 @@ typedef struct jlink_io_transact {
 } jlink_io_transact_s;
 
 typedef struct jlink {
+	char fw_version[256U];         /* Firmware version string */
+	uint32_t hw_version;           /* Hardware version */
 	uint32_t capabilities;         /* Bitfield of supported capabilities */
 	uint32_t available_interfaces; /* Bitfield of available interfaces */
 	uint32_t frequency_khz;        /* Base frequency of the interface in kHz */

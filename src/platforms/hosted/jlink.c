@@ -207,15 +207,54 @@ static bool jlink_claim_interface(void)
 
 /* J-Link command functions and utils */
 
-static bool jlink_print_version(void)
+static char *jlink_hw_type_to_string(const uint8_t hw_type)
 {
-	uint8_t len_str[2];
-	if (!jlink_simple_query(JLINK_CMD_INFO_GET_FIRMWARE_VERSION, len_str, sizeof(len_str)))
+	switch (hw_type) {
+	case JLINK_HARDWARE_VERSION_TYPE_JLINK:
+		return "J-Link";
+	case JLINK_HARDWARE_VERSION_TYPE_JTRACE:
+		return "J-Trace";
+	case JLINK_HARDWARE_VERSION_TYPE_FLASHER:
+		return "Flasher";
+	case JLINK_HARDWARE_VERSION_TYPE_JLINKPRO:
+		return "J-Link Pro";
+	default:
+		return "Unknown";
+	}
+}
+
+static bool jlink_get_version(void)
+{
+	uint8_t buffer[4U];
+
+	/* Read the firmware version, replies with a 2 byte length packet followed by the version string packet */
+	if (!jlink_simple_query(JLINK_CMD_INFO_GET_FIRMWARE_VERSION, buffer, 2U))
 		return false;
-	uint8_t version[0x70];
-	bmda_usb_transfer(info.usb_link, NULL, 0, version, sizeof(version), JLINK_USB_TIMEOUT);
-	version[0x6f] = '\0';
-	DEBUG_INFO("%s\n", version);
+
+	/* Verify the version string fits in the buffer (expected value is 0x70) */
+	const uint16_t version_length = read_le2(buffer, 0);
+	if (version_length > sizeof(jlink.fw_version))
+		return false;
+
+	/* Read vesion string directly into jlink.version */
+	bmda_usb_transfer(info.usb_link, NULL, 0, jlink.fw_version, version_length, JLINK_USB_TIMEOUT);
+	jlink.fw_version[version_length - 1U] = '\0'; /* Ensure null termination */
+
+	DEBUG_INFO("Firmware version: %s\n", jlink.fw_version);
+
+	/* Read the hardware version if supported */
+	if (jlink.capabilities & JLINK_CAPABILITY_HARDWARE_VERSION) {
+		if (!jlink_simple_query(JLINK_CMD_INFO_GET_HARDWARE_VERSION, buffer, 4U))
+			return false;
+
+		jlink.hw_version = read_le4(buffer, 0);
+
+		DEBUG_INFO("Hardware Version: %s V%u.%u.%u\n",
+			jlink_hw_type_to_string(JLINK_HARDWARE_VERSION_TYPE(jlink.hw_version)),
+			JLINK_HARDWARE_VERSION_MAJOR(jlink.hw_version), JLINK_HARDWARE_VERSION_MINOR(jlink.hw_version),
+			JLINK_HARDWARE_VERSION_REVISION(jlink.hw_version));
+	}
+
 	return true;
 }
 
@@ -227,12 +266,6 @@ static bool jlink_query_caps(void)
 	jlink.capabilities = read_le4(caps, 0);
 	DEBUG_INFO("Caps %" PRIx32 "\n", jlink.capabilities);
 
-	if (jlink.capabilities & JLINK_CAPABILITY_HARDWARE_VERSION) {
-		uint8_t version[4];
-		if (!jlink_simple_query(JLINK_CMD_INFO_GET_HARDWARE_VERSION, version, sizeof(version)))
-			return false;
-		DEBUG_INFO("HW: Type %u, Major %u, Minor %u, Rev %u\n", version[3], version[2], version[1], version[0]);
-	}
 	return true;
 }
 
@@ -290,7 +323,7 @@ bool jlink_set_frequency(const uint16_t frequency_khz)
 
 static bool jlink_info(void)
 {
-	return jlink_print_version() && jlink_query_caps() && jlink_query_speed() && jlink_print_interfaces();
+	return jlink_query_caps() && jlink_query_speed() && jlink_print_interfaces();
 }
 
 /* BMDA interface functions */
@@ -322,6 +355,13 @@ bool jlink_init(void)
 		return false;
 	}
 	jlink_info();
+	if (!jlink_get_version()) {
+		DEBUG_ERROR("Failed to read J-Link information\n");
+		libusb_release_interface(info.usb_link->device_handle, info.usb_link->interface);
+		libusb_close(info.usb_link->device_handle);
+		return false;
+	}
+	memcpy(info.version, jlink.fw_version, strlen(jlink.fw_version) + 1U);
 	return true;
 }
 
