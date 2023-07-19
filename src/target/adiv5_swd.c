@@ -135,7 +135,7 @@ bool adiv5_swd_write_no_check(const uint16_t addr, const uint32_t data)
 	return res != SWDP_ACK_OK;
 }
 
-static uint32_t firmware_dp_low_read(const uint16_t addr)
+uint32_t adiv5_swd_read_no_check(const uint16_t addr)
 {
 	const uint8_t request = make_packet_request(ADIV5_LOW_READ, addr);
 	swd_proc.seq_out(request, 8U);
@@ -157,6 +157,7 @@ bool adiv5_swd_scan(const uint32_t targetid)
 	}
 
 	dp->write_no_check = adiv5_swd_write_no_check;
+	dp->read_no_check = adiv5_swd_read_no_check;
 	dp->error = adiv5_swd_clear_error;
 	dp->dp_read = firmware_swdp_read;
 	dp->low_access = firmware_swdp_low_access;
@@ -350,10 +351,10 @@ uint32_t adiv5_swd_clear_error(adiv5_debug_port_s *const dp, const bool protocol
 		swd_line_reset_sequence(true);
 		if (dp->version >= 2U)
 			adiv5_swd_write_no_check(ADIV5_DP_TARGETSEL, dp->targetsel);
-		firmware_dp_low_read(ADIV5_DP_DPIDR);
+		adiv5_swd_read_no_check(ADIV5_DP_DPIDR);
 		/* Exception here is unexpected, so do not catch */
 	}
-	const uint32_t err = firmware_dp_low_read(ADIV5_DP_CTRLSTAT) &
+	const uint32_t err = adiv5_swd_read_no_check(ADIV5_DP_CTRLSTAT) &
 		(ADIV5_DP_CTRLSTAT_STICKYORUN | ADIV5_DP_CTRLSTAT_STICKYCMP | ADIV5_DP_CTRLSTAT_STICKYERR |
 			ADIV5_DP_CTRLSTAT_WDATAERR);
 	uint32_t clr = 0;
