@@ -691,6 +691,7 @@ bool cortexm_probe(adiv5_access_port_s *ap)
 			PROBE(lpc546xx_probe);
 			PROBE(lpc43xx_probe);
 			PROBE(at32f40x_probe);
+			PROBE(at32f43x_probe); /* AT32F435 doesn't survive LPC40xx IAP */
 			PROBE(lpc40xx_probe);
 			PROBE(kinetis_probe); /* Older K-series */
 			PROBE(msp432e4_probe);
