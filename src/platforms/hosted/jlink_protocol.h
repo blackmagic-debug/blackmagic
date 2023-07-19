@@ -69,8 +69,8 @@ typedef struct jlink_io_transact {
 
 extern uint8_t jlink_interfaces;
 
-int jlink_simple_query(uint8_t command, void *rx_buffer, size_t rx_len);
-int jlink_simple_request(uint8_t command, uint8_t operation, void *rx_buffer, size_t rx_len);
+bool jlink_simple_query(uint8_t command, void *rx_buffer, size_t rx_len);
+bool jlink_simple_request(uint8_t command, uint8_t operation, void *rx_buffer, size_t rx_len);
 bool jlink_transfer(uint16_t clock_cycles, const uint8_t *tms, const uint8_t *tdi, uint8_t *tdo);
 bool jlink_transfer_fixed_tms(uint16_t clock_cycles, bool final_tms, const uint8_t *tdi, uint8_t *tdo);
 bool jlink_transfer_swd(uint16_t clock_cycles, jlink_swd_dir_e direction, const uint8_t *data_in, uint8_t *data_out);
