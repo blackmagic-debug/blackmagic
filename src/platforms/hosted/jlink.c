@@ -45,6 +45,8 @@
 
 jlink_s jlink;
 
+/* J-Link USB protocol functions */
+
 bool jlink_simple_query(const uint8_t command, void *const rx_buffer, const size_t rx_len)
 {
 	return bmda_usb_transfer(info.usb_link, &command, sizeof(command), rx_buffer, rx_len, JLINK_USB_TIMEOUT) >= 0;
@@ -152,6 +154,59 @@ bool jlink_transfer_swd(
 	return jlink_transfer(clock_cycles, dir, data_in, data_out);
 }
 
+/*
+ * Try to claim the debugging interface of a J-Link adaptor.
+ * On success this copies the endpoint addresses identified into the
+ * usb_link_s sub-structure of bmp_info_s (info.usb_link) for later use.
+ * Returns true for success, false for failure.
+ *
+ * Note: Newer J-Links use 2 bulk endpoints, one for "IN" (EP1) and one
+ * for "OUT" (EP2) communication whereas old J-Links (V3, V4) only use
+ * one endpoint (EP1) for "IN" and "OUT" communication.
+ * Presently we only support the newer J-Links with 2 bulk endpoints.
+ */
+static bool jlink_claim_interface(void)
+{
+	libusb_config_descriptor_s *config;
+	const int result = libusb_get_active_config_descriptor(info.libusb_dev, &config);
+	if (result != LIBUSB_SUCCESS) {
+		DEBUG_ERROR("Failed to get configuration descriptor: %s\n", libusb_error_name(result));
+		return false;
+	}
+	const libusb_interface_descriptor_s *descriptor = NULL;
+	for (size_t idx = 0; idx < config->bNumInterfaces; ++idx) {
+		const libusb_interface_s *const interface = &config->interface[idx];
+		// XXX: This fails to handle multiple alt-modes being present correctly.
+		const libusb_interface_descriptor_s *const interface_desc = &interface->altsetting[0];
+		if (interface_desc->bInterfaceClass == LIBUSB_CLASS_VENDOR_SPEC &&
+			interface_desc->bInterfaceSubClass == LIBUSB_CLASS_VENDOR_SPEC && interface_desc->bNumEndpoints > 1U) {
+			const int result = libusb_claim_interface(info.usb_link->device_handle, (int)idx);
+			if (result) {
+				DEBUG_ERROR("Can not claim handle: %s\n", libusb_error_name(result));
+				break;
+			}
+			info.usb_link->interface = idx;
+			descriptor = interface_desc;
+		}
+	}
+	if (!descriptor) {
+		DEBUG_ERROR("No suitable interface found\n");
+		libusb_free_config_descriptor(config);
+		return false;
+	}
+	for (size_t i = 0; i < descriptor->bNumEndpoints; i++) {
+		const libusb_endpoint_descriptor_s *endpoint = &descriptor->endpoint[i];
+		if (endpoint->bEndpointAddress & LIBUSB_ENDPOINT_IN)
+			info.usb_link->ep_rx = endpoint->bEndpointAddress;
+		else
+			info.usb_link->ep_tx = endpoint->bEndpointAddress;
+	}
+	libusb_free_config_descriptor(config);
+	return true;
+}
+
+/* J-Link command functions and utils */
+
 static bool jlink_print_version(void)
 {
 	uint8_t len_str[2];
@@ -225,61 +280,20 @@ static bool jlink_print_interfaces(void)
 	return true;
 }
 
+bool jlink_set_frequency(const uint16_t frequency_khz)
+{
+	jlink_set_freq_s command = {JLINK_CMD_INTERFACE_SET_FREQUENCY_KHZ};
+	write_le2(command.frequency, 0, frequency_khz);
+	DEBUG_INFO("%s: %ukHz\n", __func__, frequency_khz);
+	return bmda_usb_transfer(info.usb_link, &command, sizeof(command), NULL, 0, JLINK_USB_TIMEOUT) >= 0;
+}
+
 static bool jlink_info(void)
 {
 	return jlink_print_version() && jlink_query_caps() && jlink_query_speed() && jlink_print_interfaces();
 }
 
-/*
- * Try to claim the debugging interface of a J-Link adaptor.
- * On success this copies the endpoint addresses identified into the
- * usb_link_s sub-structure of bmp_info_s (info.usb_link) for later use.
- * Returns true for success, false for failure.
- *
- * Note: Newer J-Links use 2 bulk endpoints, one for "IN" (EP1) and one
- * for "OUT" (EP2) communication whereas old J-Links (V3, V4) only use
- * one endpoint (EP1) for "IN" and "OUT" communication.
- * Presently we only support the newer J-Links with 2 bulk endpoints.
- */
-static bool jlink_claim_interface(void)
-{
-	libusb_config_descriptor_s *config;
-	const int result = libusb_get_active_config_descriptor(info.libusb_dev, &config);
-	if (result != LIBUSB_SUCCESS) {
-		DEBUG_ERROR("Failed to get configuration descriptor: %s\n", libusb_error_name(result));
-		return false;
-	}
-	const libusb_interface_descriptor_s *descriptor = NULL;
-	for (size_t idx = 0; idx < config->bNumInterfaces; ++idx) {
-		const libusb_interface_s *const interface = &config->interface[idx];
-		// XXX: This fails to handle multiple alt-modes being present correctly.
-		const libusb_interface_descriptor_s *const interface_desc = &interface->altsetting[0];
-		if (interface_desc->bInterfaceClass == LIBUSB_CLASS_VENDOR_SPEC &&
-			interface_desc->bInterfaceSubClass == LIBUSB_CLASS_VENDOR_SPEC && interface_desc->bNumEndpoints > 1U) {
-			const int result = libusb_claim_interface(info.usb_link->device_handle, (int)idx);
-			if (result) {
-				DEBUG_ERROR("Can not claim handle: %s\n", libusb_error_name(result));
-				break;
-			}
-			info.usb_link->interface = idx;
-			descriptor = interface_desc;
-		}
-	}
-	if (!descriptor) {
-		DEBUG_ERROR("No suitable interface found\n");
-		libusb_free_config_descriptor(config);
-		return false;
-	}
-	for (size_t i = 0; i < descriptor->bNumEndpoints; i++) {
-		const libusb_endpoint_descriptor_s *endpoint = &descriptor->endpoint[i];
-		if (endpoint->bEndpointAddress & LIBUSB_ENDPOINT_IN)
-			info.usb_link->ep_rx = endpoint->bEndpointAddress;
-		else
-			info.usb_link->ep_tx = endpoint->bEndpointAddress;
-	}
-	libusb_free_config_descriptor(config);
-	return true;
-}
+/* BMDA interface functions */
 
 /*
  * Return true if single J-Link device connected or
@@ -336,14 +350,6 @@ bool jlink_nrst_get_val(void)
 	if (!jlink_simple_query(JLINK_CMD_SIGNAL_GET_STATE, result, sizeof(result)))
 		return false;
 	return result[JLINK_SIGNAL_STATE_TRES_OFFSET] == 0;
-}
-
-bool jlink_set_frequency(const uint16_t frequency_khz)
-{
-	jlink_set_freq_s command = {JLINK_CMD_INTERFACE_SET_FREQUENCY_KHZ};
-	write_le2(command.frequency, 0, frequency_khz);
-	DEBUG_INFO("%s: %ukHz\n", __func__, frequency_khz);
-	return bmda_usb_transfer(info.usb_link, &command, sizeof(command), NULL, 0, JLINK_USB_TIMEOUT) >= 0;
 }
 
 void jlink_max_frequency_set(const uint32_t freq)
