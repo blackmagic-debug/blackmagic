@@ -487,7 +487,8 @@ static bool cmd_target_power(target_s *t, int argc, const char **argv)
 				/* want to enable target power, but VREF > 0.5V sensed -> cancel */
 				gdb_outf("Target already powered (%s)\n", platform_target_voltage());
 			} else {
-				platform_target_set_power(want_enable);
+				if (!platform_target_set_power(want_enable))
+					DEBUG_ERROR("%s target power failed\n", want_enable ? "Enabling" : "Disabling");
 				gdb_outf("%s target power\n", want_enable ? "Enabling" : "Disabling");
 			}
 		}

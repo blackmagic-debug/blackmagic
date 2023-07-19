@@ -470,18 +470,15 @@ uint32_t platform_max_frequency_get(void)
 	}
 }
 
-void platform_target_set_power(const bool power)
+bool platform_target_set_power(const bool power)
 {
 	switch (info.bmp_type) {
 	case BMP_TYPE_BMP:
-		if (remote_target_set_power(power))
-			DEBUG_INFO("Powering up device!\n");
-		else
-			DEBUG_ERROR("Powering up device unimplemented or failed\n");
-		break;
+		return remote_target_set_power(power);
 
 	default:
-		break;
+		DEBUG_ERROR("Target power not available or not yet implemented\n");
+		return false;
 	}
 }
 

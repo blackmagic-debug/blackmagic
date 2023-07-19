@@ -55,7 +55,7 @@ int platform_hwversion(void);
 void platform_nrst_set_val(bool assert);
 bool platform_nrst_get_val(void);
 bool platform_target_get_power(void);
-void platform_target_set_power(bool power);
+bool platform_target_set_power(bool power);
 void platform_request_boot(void);
 void platform_max_frequency_set(uint32_t frequency);
 uint32_t platform_max_frequency_get(void);

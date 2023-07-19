@@ -272,10 +272,13 @@ bool platform_target_get_power(void)
 	return false;
 }
 
-void platform_target_set_power(const bool power)
+bool platform_target_set_power(const bool power)
 {
-	if (platform_hwversion() > 0)
-		gpio_set_val(PWR_BR_PORT, PWR_BR_PIN, !power);
+	if (platform_hwversion() <= 0)
+		return false;
+
+	gpio_set_val(PWR_BR_PORT, PWR_BR_PIN, !power);
+	return true;
 }
 
 static void adc_init(void)
