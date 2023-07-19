@@ -43,6 +43,16 @@
 
 #include "cli.h"
 
+typedef struct jlink {
+	char fw_version[256U];         /* Firmware version string */
+	uint32_t hw_version;           /* Hardware version */
+	uint32_t capabilities;         /* Bitfield of supported capabilities */
+	uint32_t available_interfaces; /* Bitfield of available interfaces */
+	uint32_t frequency_khz;        /* Base frequency of the interface in kHz */
+	uint16_t min_divisor;          /* Minimum divisor for the interface */
+	uint16_t current_divisor;      /* Current divisor for the interface */
+} jlink_s;
+
 jlink_s jlink;
 
 /* J-Link USB protocol functions */
@@ -223,6 +233,18 @@ static char *jlink_hw_type_to_string(const uint8_t hw_type)
 	}
 }
 
+static char *jlink_interface_to_string(const uint8_t interface)
+{
+	switch (interface) {
+	case JLINK_INTERFACE_JTAG:
+		return "JTAG";
+	case JLINK_INTERFACE_SWD:
+		return "SWD";
+	default:
+		return "Unknown";
+	}
+}
+
 static bool jlink_get_version(void)
 {
 	uint8_t buffer[4U];
@@ -270,6 +292,58 @@ static bool jlink_get_capabilities(void)
 	return true;
 }
 
+static inline bool jlink_interface_available(const uint8_t interface)
+{
+	return jlink.available_interfaces & (1U << interface);
+}
+
+static uint8_t jlink_selected_interface(void)
+{
+	uint8_t buffer[4U];
+	if (!jlink_simple_request(JLINK_CMD_INTERFACE_GET, JLINK_INTERFACE_GET_CURRENT, buffer, sizeof(buffer)))
+		return UINT8_MAX; /* Invalid interface, max value is 31 */
+
+	/* The max value of interface is 31, so we can use the first byte of the response directly */
+	return buffer[0];
+}
+
+bool jlink_select_interface(const uint8_t interface)
+{
+	if (!jlink_interface_available(interface))
+		return false;
+
+	uint8_t buffer[4U];
+	if (!jlink_simple_request(JLINK_CMD_INTERFACE_SET_SELECTED, interface, buffer, sizeof(buffer)))
+		return false;
+
+	return true;
+}
+
+static bool jlink_get_interfaces(void)
+{
+	uint8_t buffer[4U];
+	if (!jlink_simple_request(JLINK_CMD_INTERFACE_GET, JLINK_INTERFACE_GET_AVAILABLE, buffer, sizeof(buffer)))
+		return false;
+
+	/* available_interfaces is a 32bit bitfield/mask */
+	jlink.available_interfaces = read_le4(buffer, 0);
+
+	/* Print the available interfaces, marking the selected one, and unsuported ones */
+	const uint8_t selected_interface = jlink_selected_interface();
+	DEBUG_INFO("Available interfaces: \n");
+	for (size_t i = 0; i < JLINK_INTERFACE_MAX; i++) {
+		if (jlink_interface_available(i)) {
+			const bool is_current = i == selected_interface;
+			const bool is_bmda_supported = i == JLINK_INTERFACE_SWD || i == JLINK_INTERFACE_JTAG;
+
+			DEBUG_INFO("\t%zu: %s%c %s\n", i, jlink_interface_to_string(i), is_current ? '*' : ' ',
+				is_bmda_supported ? "" : "(Not supported)");
+		}
+	}
+
+	return true;
+}
+
 static bool jlink_query_speed(void)
 {
 	uint8_t data[6];
@@ -279,38 +353,6 @@ static bool jlink_query_speed(void)
 	jlink.min_divisor = read_le2(data, 4);
 	DEBUG_INFO("Emulator speed %ukHz, minimum divisor %u%s\n", jlink.frequency_khz, jlink.min_divisor,
 		(jlink.capabilities & JLINK_CAPABILITY_INTERFACE_FREQUENCY) ? "" : ", fixed");
-	return true;
-}
-
-static bool jlink_print_interfaces(void)
-{
-	uint8_t active_if[4];
-	uint8_t available_ifs[4];
-
-	if (!jlink_simple_request(JLINK_CMD_INTERFACE_GET, JLINK_INTERFACE_GET_CURRENT, active_if, sizeof(active_if)) ||
-		!jlink_simple_request(
-			JLINK_CMD_INTERFACE_GET, JLINK_INTERFACE_GET_AVAILABLE, available_ifs, sizeof(available_ifs)))
-		return false;
-
-	/* FIXME: this implementation is extremely broken */
-
-	++active_if[0];
-	jlink.available_interfaces = available_ifs[0];
-
-	if (active_if[0] == JLINK_INTERFACE_AVAILABLE(JLINK_INTERFACE_SWD))
-		DEBUG_INFO("SWD active");
-	else if (active_if[0] == JLINK_INTERFACE_AVAILABLE(JLINK_INTERFACE_JTAG))
-		DEBUG_INFO("JTAG active");
-	else
-		DEBUG_INFO("No interfaces active");
-
-	const uint8_t other_interface = available_ifs[0] - active_if[0];
-	if (other_interface)
-		DEBUG_INFO(
-			", %s available\n", other_interface == JLINK_INTERFACE_AVAILABLE(JLINK_INTERFACE_SWD) ? "SWD" : "JTAG");
-	else
-		DEBUG_INFO(", %s not available\n",
-			active_if[0] + 1U == JLINK_INTERFACE_AVAILABLE(JLINK_INTERFACE_JTAG) ? "JTAG" : "SWD");
 	return true;
 }
 
@@ -324,7 +366,7 @@ bool jlink_set_frequency(const uint16_t frequency_khz)
 
 static bool jlink_info(void)
 {
-	return jlink_query_speed() && jlink_print_interfaces();
+	return jlink_query_speed();
 }
 
 /* BMDA interface functions */
@@ -355,7 +397,7 @@ bool jlink_init(void)
 		libusb_close(info.usb_link->device_handle);
 		return false;
 	}
-	if (!jlink_get_capabilities() || !jlink_get_version()) {
+	if (!jlink_get_capabilities() || !jlink_get_version() || !jlink_get_interfaces()) {
 		DEBUG_ERROR("Failed to read J-Link information\n");
 		libusb_release_interface(info.usb_link->device_handle, info.usb_link->interface);
 		libusb_close(info.usb_link->device_handle);
