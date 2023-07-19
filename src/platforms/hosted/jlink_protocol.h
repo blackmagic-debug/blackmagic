@@ -291,6 +291,26 @@
 #define JLINK_INTERFACE_JTAG 0U
 #define JLINK_INTERFACE_SWD  1U
 
+/* Kickstart power - JLINK_CMD_POWER_SET_KICKSTART */
+#define JLINK_POWER_KICKSTART_ENABLE 0x01U /* Set Kickstart power on */
+
+/* Power state - JLINK_CMD_POWER_GET_STATE */
+#define JLINK_POWER_STATE_KICKSTART_ENABLED_MASK           (1U << 0U) /* Retrieves Kickstart power status */
+#define JLINK_POWER_STATE_OVERCURRENT_MASK                 (1U << 1U) /* Information about why the target power was switched off */
+#define JLINK_POWER_STATE_ITARGET_MASK                     (1U << 2U)  /* Target consumption(mA)  */
+#define JLINK_POWER_STATE_ITARGET_PEAK_MASK                (1U << 3U)  /* Peak target consumption(mA) */
+#define JLINK_POWER_STATE_ITARGET_PEAK_OPERATION_MASK      (1U << 4U)  /* Peak operation target consumption(mA) */
+#define JLINK_POWER_STATE_ITARGET_MAX_TIME_2MS_3A_MASK     (1U << 10U) /* Time(ms) target consumption exceeded 3A */
+#define JLINK_POWER_STATE_ITARGET_MAX_TIME_10MS_1A_MASK    (1U << 11U) /* Time(ms) target consumption exceeded 1A */
+#define JLINK_POWER_STATE_ITARGET_MAX_TIME_40MS_400MA_MASK (1U << 12U) /* Time(ms) target consumption exceeded 400MA */
+#define JLINK_POWER_STATE_VUSB_MASK                        (1U << 23U) /* USB voltage in mV */
+
+#define JLINK_POWER_STATE_KICKSTART_ENABLED      0x1U /* Kickstart power is on */
+#define JLINK_POWER_STATE_OVERCURRENT_NORMAL     0x0U /* Everything is normal */
+#define JLINK_POWER_STATE_OVERCURRENT_2MS_3A     0x1U /* 2ms @ 3000mA */
+#define JLINK_POWER_STATE_OVERCURRENT_10MS_1A    0x2U /* 10ms @ 1000mA */
+#define JLINK_POWER_STATE_OVERCURRENT_40MS_400MA 0x3U /* 40ms @ 400mA */
+
 /* Signal state - JLINK_CMD_SIGNAL_GET_STATE */
 #define JLINK_SIGNAL_STATE_VOLTAGE_OFFSET 0U /* 16 bit value */
 #define JLINK_SIGNAL_STATE_TCK_OFFSET     2U /* 1 bit value */

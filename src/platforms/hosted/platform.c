@@ -476,6 +476,11 @@ bool platform_target_set_power(const bool power)
 	case BMP_TYPE_BMP:
 		return remote_target_set_power(power);
 
+#if HOSTED_BMP_ONLY == 0
+	case BMP_TYPE_JLINK:
+		return jlink_target_set_power(power);
+#endif
+
 	default:
 		DEBUG_ERROR("Target power not available or not yet implemented\n");
 		return false;
@@ -487,6 +492,11 @@ bool platform_target_get_power(void)
 	switch (info.bmp_type) {
 	case BMP_TYPE_BMP:
 		return remote_target_get_power();
+
+#if HOSTED_BMP_ONLY == 0
+	case BMP_TYPE_JLINK:
+		return jlink_target_get_power();
+#endif
 
 	default:
 		return false;

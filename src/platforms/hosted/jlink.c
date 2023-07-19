@@ -319,7 +319,7 @@ static uint8_t jlink_selected_interface(void)
 	if (!jlink_simple_request_8(JLINK_CMD_INTERFACE_GET, JLINK_INTERFACE_GET_CURRENT, buffer, sizeof(buffer)))
 		return UINT8_MAX; /* Invalid interface, max value is 31 */
 
-	/* The max value of interface is 31, so we can use the first byte of the response directly */
+	/* The max value of interface is 31, so we can use the first byte of the 32 bit response directly */
 	return buffer[0];
 }
 
@@ -420,6 +420,37 @@ static uint16_t jlink_target_voltage(void)
 	return read_le2(buffer, JLINK_SIGNAL_STATE_VOLTAGE_OFFSET);
 }
 
+static bool jlink_kickstart_power(void)
+{
+	if (!(jlink.capabilities & JLINK_CAPABILITY_POWER_STATE)) {
+		if (jlink.capabilities & JLINK_CAPABILITY_KICKSTART_POWER)
+			DEBUG_ERROR("J-Link does not support JLINK_CMD_POWER_GET_STATE command, but does support kickstart power"
+						", this is unexpected\n");
+		return false;
+	}
+
+	uint8_t buffer[4U];
+	if (!jlink_simple_request_32(
+			JLINK_CMD_POWER_GET_STATE, JLINK_POWER_STATE_KICKSTART_ENABLED_MASK, buffer, sizeof(buffer)))
+		return false;
+
+	/* The result is a single bit, so we can use the first byte of the 32 bit response directly */
+	return buffer[0] == 1U;
+}
+
+static bool jlink_set_kickstart_power(const bool enable)
+{
+	/* 
+	 * Kickstart power is a 5V 300mA supply that can be used to power targets
+	 * Exposed on pin 19 of the J-Link 20 pin connector
+	 */
+
+	if (!(jlink.capabilities & JLINK_CAPABILITY_KICKSTART_POWER))
+		return false;
+
+	return jlink_simple_request_8(JLINK_CMD_POWER_SET_KICKSTART, enable ? JLINK_POWER_KICKSTART_ENABLE : 0, NULL, 0);
+}
+
 /* BMDA interface functions */
 
 /*
@@ -509,4 +540,14 @@ uint32_t jlink_max_frequency_get(void)
 		return FREQ_FIXED;
 
 	return jlink.base_frequency / jlink.current_divisor;
+}
+
+bool jlink_target_set_power(const bool power)
+{
+	return jlink_set_kickstart_power(power);
+}
+
+bool jlink_target_get_power(void)
+{
+	return jlink_kickstart_power();
 }
