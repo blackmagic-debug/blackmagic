@@ -228,6 +228,7 @@ struct adiv5_debug_port {
 
 	/* write_no_check returns true if no OK response, but ignores errors */
 	bool (*write_no_check)(uint16_t addr, const uint32_t data);
+	uint32_t (*read_no_check)(uint16_t addr);
 	uint32_t (*dp_read)(adiv5_debug_port_s *dp, uint16_t addr);
 	uint32_t (*error)(adiv5_debug_port_s *dp, bool protocol_recovery);
 	uint32_t (*low_access)(adiv5_debug_port_s *dp, uint8_t RnW, uint16_t addr, uint32_t value);
@@ -388,6 +389,7 @@ uint32_t firmware_swdp_read(adiv5_debug_port_s *dp, uint16_t addr);
 uint32_t fw_adiv5_jtagdp_read(adiv5_debug_port_s *dp, uint16_t addr);
 
 bool adiv5_swd_write_no_check(uint16_t addr, uint32_t data);
+uint32_t adiv5_swd_read_no_check(uint16_t addr);
 uint32_t adiv5_swd_clear_error(adiv5_debug_port_s *dp, bool protocol_recovery);
 uint32_t adiv5_jtagdp_error(adiv5_debug_port_s *dp, bool protocol_recovery);
 
