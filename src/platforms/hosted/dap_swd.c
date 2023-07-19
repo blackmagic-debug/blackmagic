@@ -54,6 +54,7 @@ static void dap_swd_seq_out_parity(uint32_t tms_states, size_t clock_cycles);
 
 static bool dap_swd_configure(dap_swd_turnaround_cycles_e turnaround, dap_swd_fault_cfg_e fault_cfg);
 static bool dap_write_reg_no_check(uint16_t addr, uint32_t data);
+static uint32_t dap_read_reg_no_check(uint16_t addr);
 static uint32_t dap_swd_clear_error(adiv5_debug_port_s *target_dp, bool protocol_recovery);
 
 bool dap_swd_init(adiv5_debug_port_s *target_dp)
@@ -82,6 +83,7 @@ bool dap_swd_init(adiv5_debug_port_s *target_dp)
 	else
 		target_dp->write_no_check = NULL;
 	/* Set up the accelerated SWD functions for basic target operations */
+	target_dp->read_no_check = dap_read_reg_no_check;
 	target_dp->dp_read = dap_dp_read_reg;
 	target_dp->error = dap_swd_clear_error;
 	target_dp->low_access = dap_dp_low_access;
@@ -224,6 +226,14 @@ static bool dap_write_reg_no_check(const uint16_t addr, const uint32_t data)
 	return ack != SWDP_ACK_OK;
 }
 
+/* This is a wrapper around dap_read_reg() for use by target_dp as the read_no_check function */
+uint32_t dap_read_reg_no_check(const uint16_t addr)
+{
+	/* Create a dummy DP, the only use for it is to pass the DAP Index to perform_dap_transfer which is ignored for SWD transfers, and return the fault code, which we don't care about */
+	adiv5_debug_port_s dummy_dp = {0};
+	return dap_read_reg(&dummy_dp, addr);
+}
+
 static uint32_t dap_swd_clear_error(adiv5_debug_port_s *const target_dp, const bool protocol_recovery)
 {
 	DEBUG_PROBE("dap_swd_clear_error (protocol recovery? %s)\n", protocol_recovery ? "true" : "false");
@@ -238,10 +248,10 @@ static uint32_t dap_swd_clear_error(adiv5_debug_port_s *const target_dp, const b
 		dap_line_reset();
 		if (target_dp->version >= 2)
 			dap_write_reg_no_check(ADIV5_DP_TARGETSEL, target_dp->targetsel);
-		dap_read_reg(target_dp, ADIV5_DP_DPIDR);
+		dap_read_reg_no_check(ADIV5_DP_DPIDR);
 		/* Exception here is unexpected, so do not catch */
 	}
-	const uint32_t err = dap_read_reg(target_dp, ADIV5_DP_CTRLSTAT) &
+	const uint32_t err = dap_read_reg_no_check(ADIV5_DP_CTRLSTAT) &
 		(ADIV5_DP_CTRLSTAT_STICKYORUN | ADIV5_DP_CTRLSTAT_STICKYCMP | ADIV5_DP_CTRLSTAT_STICKYERR |
 			ADIV5_DP_CTRLSTAT_WDATAERR);
 	uint32_t clr = 0;
