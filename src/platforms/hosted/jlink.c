@@ -4,6 +4,7 @@
  * Copyright (C) 2020 Uwe Bonnes (bon@elektron.ikp.physik.tu-darmstadt.de)
  * Copyright (C) 2022-2023 1BitSquared <info@1bitsquared.com>
  * Modified by Rachel Mant <git@dragonmux.network>
+ * Modified by Rafael Silva <perigoso@riseup.net>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -60,16 +61,16 @@ bool jlink_simple_request(const uint8_t command, const uint8_t operation, void *
 }
 
 /*
- * This runs JLINK_CMD_IO_TRANSACT transactions, these have the following format:
- * ╭─────────┬─────────┬───────────────┬─────────╮
- * │    0    │    1    │       2       │    3    │
- * ├╌╌╌╌╌╌╌╌╌┼╌╌╌╌╌╌╌╌╌┼╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌┼╌╌╌╌╌╌╌╌╌┤
- * │ Command │  Align  │       Cycle count       │
- * ├─────────┼─────────┼───────────────┼─────────┤
- * │    4    │    …    │ 4 + tms_bytes │    …    │
- * ├╌╌╌╌╌╌╌╌╌┼╌╌╌╌╌╌╌╌╌┼╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌┼╌╌╌╌╌╌╌╌╌┤
- * │  TMS data bytes…  │     TDI data bytes…     │
- * ╰─────────┴─────────┴───────────────┴─────────╯
+ * This runs JLINK_CMD_IO_TRANSACTION transactions, these have the following format:
+ * ┌─────────┬─────────┬───────────────┬───────┐
+ * │    0    │    1    │       2       │   3   │
+ * ├╌╌╌╌╌╌╌╌╌┼╌╌╌╌╌╌╌╌╌┼╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌┴╌╌╌╌╌╌╌┤
+ * │ Command │  Align  │      Cycle count      │
+ * ├─────────┼─────────┼───────────────┬───────┤
+ * │    4    │   ...   │ 4 + tms_bytes │  ...  │
+ * ├╌╌╌╌╌╌╌╌╌┴╌╌╌╌╌╌╌╌╌┼╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌┴╌╌╌╌╌╌╌┤
+ * │ TMS data bytes... │   TDI data bytes...   │
+ * └───────────────────┴───────────────────────┘
  * where the byte counts for each of TDI and TMS are defined by:
  * count = ⌈cycle_count / 8⌉
  *
@@ -77,6 +78,9 @@ bool jlink_simple_request(const uint8_t command, const uint8_t operation, void *
  *
  * In SWD mode, the `tms` buffer represents direction states and
  * the `tdi` buffer represents SWDIO data to send to the device
+ *
+ * RM08001 Reference manual for J-Link USB Protocol 
+ * §5.5.12 EMU_CMD_HW_JTAG3 
  */
 bool jlink_transfer(const uint16_t clock_cycles, const uint8_t *const tms, const uint8_t *const tdi, uint8_t *const tdo)
 {
@@ -94,7 +98,7 @@ bool jlink_transfer(const uint16_t clock_cycles, const uint8_t *const tms, const
 	uint8_t buffer[1028U] = {0};
 	/* The first 4 bytes define the parameters of the transaction, so map the transfer structure there */
 	jlink_io_transact_s *header = (jlink_io_transact_s *)buffer;
-	header->command = JLINK_CMD_IO_TRANSACT;
+	header->command = JLINK_CMD_IO_TRANSACTION;
 	write_le2(header->clock_cycles, 0, clock_cycles);
 	/* Copy in the TMS state values to transmit (if present) */
 	if (tms)
@@ -155,7 +159,7 @@ bool jlink_transfer_swd(
 static bool jlink_print_version(void)
 {
 	uint8_t len_str[2];
-	if (!jlink_simple_query(JLINK_CMD_GET_VERSION, len_str, sizeof(len_str)))
+	if (!jlink_simple_query(JLINK_CMD_INFO_GET_FIRMWARE_VERSION, len_str, sizeof(len_str)))
 		return false;
 	uint8_t version[0x70];
 	bmda_usb_transfer(info.usb_link, NULL, 0, version, sizeof(version), JLINK_USB_TIMEOUT);
@@ -167,14 +171,14 @@ static bool jlink_print_version(void)
 static bool jlink_query_caps(void)
 {
 	uint8_t caps[4];
-	if (!jlink_simple_query(JLINK_CMD_GET_CAPABILITIES, caps, sizeof(caps)))
+	if (!jlink_simple_query(JLINK_CMD_INFO_GET_PROBE_CAPABILITIES, caps, sizeof(caps)))
 		return false;
 	jlink_caps = read_le4(caps, 0);
 	DEBUG_INFO("Caps %" PRIx32 "\n", jlink_caps);
 
-	if (jlink_caps & JLINK_CAP_GET_HW_VERSION) {
+	if (jlink_caps & JLINK_CAPABILITY_HARDWARE_VERSION) {
 		uint8_t version[4];
-		if (!jlink_simple_query(JLINK_CMD_GET_ADAPTOR_VERSION, version, sizeof(version)))
+		if (!jlink_simple_query(JLINK_CMD_INFO_GET_HARDWARE_VERSION, version, sizeof(version)))
 			return false;
 		DEBUG_INFO("HW: Type %u, Major %u, Minor %u, Rev %u\n", version[3], version[2], version[1], version[0]);
 	}
@@ -184,12 +188,12 @@ static bool jlink_query_caps(void)
 static bool jlink_query_speed(void)
 {
 	uint8_t data[6];
-	if (!jlink_simple_query(JLINK_CMD_GET_ADAPTOR_FREQS, data, sizeof(data)))
+	if (!jlink_simple_query(JLINK_CMD_INTERFACE_GET_BASE_FREQUENCY, data, sizeof(data)))
 		return false;
 	jlink_freq_khz = read_le4(data, 0) / 1000U;
 	jlink_min_divisor = read_le2(data, 4);
 	DEBUG_INFO("Emulator speed %ukHz, minimum divisor %u%s\n", jlink_freq_khz, jlink_min_divisor,
-		(jlink_caps & JLINK_CAP_GET_SPEEDS) ? "" : ", fixed");
+		(jlink_caps & JLINK_CAPABILITY_INTERFACE_FREQUENCY) ? "" : ", fixed");
 	return true;
 }
 
@@ -198,24 +202,30 @@ static bool jlink_print_interfaces(void)
 	uint8_t active_if[4];
 	uint8_t available_ifs[4];
 
-	if (!jlink_simple_request(JLINK_CMD_TARGET_IF, JLINK_IF_GET_ACTIVE, active_if, sizeof(active_if)) ||
-		!jlink_simple_request(JLINK_CMD_TARGET_IF, JLINK_IF_GET_AVAILABLE, available_ifs, sizeof(available_ifs)))
+	if (!jlink_simple_request(JLINK_CMD_INTERFACE_GET, JLINK_INTERFACE_GET_CURRENT, active_if, sizeof(active_if)) ||
+		!jlink_simple_request(
+			JLINK_CMD_INTERFACE_GET, JLINK_INTERFACE_GET_AVAILABLE, available_ifs, sizeof(available_ifs)))
 		return false;
+
+	/* FIXME: this implementation is extremely broken */
+
 	++active_if[0];
 	jlink_interfaces = available_ifs[0];
 
-	if (active_if[0] == JLINK_IF_SWD)
+	if (active_if[0] == JLINK_INTERFACE_AVAILABLE(JLINK_INTERFACE_SWD))
 		DEBUG_INFO("SWD active");
-	else if (active_if[0] == JLINK_IF_JTAG)
+	else if (active_if[0] == JLINK_INTERFACE_AVAILABLE(JLINK_INTERFACE_JTAG))
 		DEBUG_INFO("JTAG active");
 	else
 		DEBUG_INFO("No interfaces active");
 
 	const uint8_t other_interface = available_ifs[0] - active_if[0];
 	if (other_interface)
-		DEBUG_INFO(", %s available\n", other_interface == JLINK_IF_SWD ? "SWD" : "JTAG");
+		DEBUG_INFO(
+			", %s available\n", other_interface == JLINK_INTERFACE_AVAILABLE(JLINK_INTERFACE_SWD) ? "SWD" : "JTAG");
 	else
-		DEBUG_INFO(", %s not available\n", active_if[0] + 1U == JLINK_IF_SWD ? "JTAG" : "SWD");
+		DEBUG_INFO(", %s not available\n",
+			active_if[0] + 1U == JLINK_INTERFACE_AVAILABLE(JLINK_INTERFACE_JTAG) ? "JTAG" : "SWD");
 	return true;
 }
 
@@ -229,6 +239,11 @@ static bool jlink_info(void)
  * On success this copies the endpoint addresses identified into the
  * usb_link_s sub-structure of bmp_info_s (info.usb_link) for later use.
  * Returns true for success, false for failure.
+ *
+ * Note: Newer J-Links use 2 bulk endpoints, one for "IN" (EP1) and one
+ * for "OUT" (EP2) communication whereas old J-Links (V3, V4) only use
+ * one endpoint (EP1) for "IN" and "OUT" communication.
+ * Presently we only support the newer J-Links with 2 bulk endpoints.
  */
 static bool jlink_claim_interface(void)
 {
@@ -305,7 +320,7 @@ const char *jlink_target_voltage(void)
 	static char result[7] = {'\0'};
 
 	uint8_t data[8];
-	if (!jlink_simple_query(JLINK_CMD_GET_STATE, data, sizeof(data)))
+	if (!jlink_simple_query(JLINK_CMD_SIGNAL_GET_STATE, data, sizeof(data)))
 		return NULL;
 
 	const uint16_t millivolts = read_le2(data, 0);
@@ -315,21 +330,21 @@ const char *jlink_target_voltage(void)
 
 void jlink_nrst_set_val(const bool assert)
 {
-	jlink_simple_query(assert ? JLINK_CMD_SET_RESET : JLINK_CMD_CLEAR_RESET, NULL, 0);
+	jlink_simple_query(assert ? JLINK_CMD_SIGNAL_CLEAR_RESET : JLINK_CMD_SIGNAL_SET_RESET, NULL, 0);
 	platform_delay(2);
 }
 
 bool jlink_nrst_get_val(void)
 {
 	uint8_t result[8];
-	if (!jlink_simple_query(JLINK_CMD_GET_STATE, result, sizeof(result)))
+	if (!jlink_simple_query(JLINK_CMD_SIGNAL_GET_STATE, result, sizeof(result)))
 		return false;
 	return result[6] == 0;
 }
 
 bool jlink_set_frequency(const uint16_t frequency_khz)
 {
-	jlink_set_freq_s command = {JLINK_CMD_SET_FREQ};
+	jlink_set_freq_s command = {JLINK_CMD_INTERFACE_SET_FREQUENCY_KHZ};
 	write_le2(command.frequency, 0, frequency_khz);
 	DEBUG_INFO("%s: %ukHz\n", __func__, frequency_khz);
 	return bmda_usb_transfer(info.usb_link, &command, sizeof(command), NULL, 0, JLINK_USB_TIMEOUT) >= 0;
@@ -337,7 +352,7 @@ bool jlink_set_frequency(const uint16_t frequency_khz)
 
 void jlink_max_frequency_set(const uint32_t freq)
 {
-	if (!(jlink_caps & JLINK_CAP_GET_SPEEDS) && !info.is_jtag)
+	if (!(jlink_caps & JLINK_CAPABILITY_INTERFACE_FREQUENCY) && !info.is_jtag)
 		return;
 	const uint16_t freq_khz = freq / 1000U;
 	const uint16_t divisor = (jlink_freq_khz + freq_khz - 1U) / freq_khz;
@@ -350,7 +365,7 @@ void jlink_max_frequency_set(const uint32_t freq)
 
 uint32_t jlink_max_frequency_get(void)
 {
-	if ((jlink_caps & JLINK_CAP_GET_SPEEDS) && info.is_jtag)
+	if ((jlink_caps & JLINK_CAPABILITY_INTERFACE_FREQUENCY) && info.is_jtag)
 		return (jlink_freq_khz * 1000U) / jlink_current_divisor;
 	return FREQ_FIXED;
 }

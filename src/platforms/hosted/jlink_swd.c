@@ -88,9 +88,10 @@ bool jlink_swd_init(adiv5_debug_port_s *dp)
 	DEBUG_PROBE("-> jlink_swd_init(%u)\n", dp->dev_index);
 	/* Try to switch the adaptor into SWD mode */
 	uint8_t res[4];
-	if (!(jlink_interfaces & JLINK_IF_SWD) ||
-		!jlink_simple_request(JLINK_CMD_TARGET_IF, JLINK_IF_GET_AVAILABLE, res, sizeof(res)) ||
-		!(res[0] & JLINK_IF_SWD) || !jlink_simple_request(JLINK_CMD_TARGET_IF, SELECT_IF_SWD, res, sizeof(res))) {
+	if (!(jlink_interfaces & JLINK_INTERFACE_AVAILABLE(JLINK_INTERFACE_SWD)) ||
+		!jlink_simple_request(JLINK_CMD_INTERFACE_GET, JLINK_INTERFACE_GET_AVAILABLE, res, sizeof(res)) ||
+		!(res[0] & JLINK_INTERFACE_AVAILABLE(JLINK_INTERFACE_SWD)) ||
+		!jlink_simple_request(JLINK_CMD_INTERFACE_SET_SELECTED, JLINK_INTERFACE_SWD, res, sizeof(res))) {
 		DEBUG_ERROR("SWD not available\n");
 		return false;
 	}
