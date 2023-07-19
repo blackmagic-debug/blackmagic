@@ -287,8 +287,8 @@ static void remote_packet_process_general(char *packet, const size_t packet_len)
 			 */
 			remote_respond(REMOTE_RESP_ERR, 0);
 		} else {
-			platform_target_set_power(packet[2] == '1');
-			remote_respond(REMOTE_RESP_OK, 0);
+			const bool result = platform_target_set_power(packet[2] == '1');
+			remote_respond(result ? REMOTE_RESP_OK : REMOTE_RESP_ERR, 0);
 		}
 #else
 		remote_respond(REMOTE_RESP_NOTSUP, 0);
