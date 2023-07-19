@@ -48,15 +48,15 @@ static uint16_t jlink_min_divisor;
 static uint16_t jlink_current_divisor;
 uint8_t jlink_interfaces;
 
-int jlink_simple_query(const uint8_t command, void *const rx_buffer, const size_t rx_len)
+bool jlink_simple_query(const uint8_t command, void *const rx_buffer, const size_t rx_len)
 {
-	return bmda_usb_transfer(info.usb_link, &command, sizeof(command), rx_buffer, rx_len);
+	return bmda_usb_transfer(info.usb_link, &command, sizeof(command), rx_buffer, rx_len) >= 0;
 }
 
-int jlink_simple_request(const uint8_t command, const uint8_t operation, void *const rx_buffer, const size_t rx_len)
+bool jlink_simple_request(const uint8_t command, const uint8_t operation, void *const rx_buffer, const size_t rx_len)
 {
 	const uint8_t request[2] = {command, operation};
-	return bmda_usb_transfer(info.usb_link, request, sizeof(request), rx_buffer, rx_len);
+	return bmda_usb_transfer(info.usb_link, request, sizeof(request), rx_buffer, rx_len) >= 0;
 }
 
 /*
@@ -155,7 +155,7 @@ bool jlink_transfer_swd(
 static bool jlink_print_version(void)
 {
 	uint8_t len_str[2];
-	if (jlink_simple_query(JLINK_CMD_GET_VERSION, len_str, sizeof(len_str)) < 0)
+	if (!jlink_simple_query(JLINK_CMD_GET_VERSION, len_str, sizeof(len_str)))
 		return false;
 	uint8_t version[0x70];
 	bmda_usb_transfer(info.usb_link, NULL, 0, version, sizeof(version));
@@ -167,14 +167,14 @@ static bool jlink_print_version(void)
 static bool jlink_query_caps(void)
 {
 	uint8_t caps[4];
-	if (jlink_simple_query(JLINK_CMD_GET_CAPABILITIES, caps, sizeof(caps)) < 0)
+	if (!jlink_simple_query(JLINK_CMD_GET_CAPABILITIES, caps, sizeof(caps)))
 		return false;
 	jlink_caps = read_le4(caps, 0);
 	DEBUG_INFO("Caps %" PRIx32 "\n", jlink_caps);
 
 	if (jlink_caps & JLINK_CAP_GET_HW_VERSION) {
 		uint8_t version[4];
-		if (jlink_simple_query(JLINK_CMD_GET_ADAPTOR_VERSION, version, sizeof(version)) < 0)
+		if (!jlink_simple_query(JLINK_CMD_GET_ADAPTOR_VERSION, version, sizeof(version)))
 			return false;
 		DEBUG_INFO("HW: Type %u, Major %u, Minor %u, Rev %u\n", version[3], version[2], version[1], version[0]);
 	}
@@ -184,7 +184,7 @@ static bool jlink_query_caps(void)
 static bool jlink_query_speed(void)
 {
 	uint8_t data[6];
-	if (jlink_simple_query(JLINK_CMD_GET_ADAPTOR_FREQS, data, sizeof(data)) < 0)
+	if (!jlink_simple_query(JLINK_CMD_GET_ADAPTOR_FREQS, data, sizeof(data)))
 		return false;
 	jlink_freq_khz = read_le4(data, 0) / 1000U;
 	jlink_min_divisor = read_le2(data, 4);
@@ -198,8 +198,8 @@ static bool jlink_print_interfaces(void)
 	uint8_t active_if[4];
 	uint8_t available_ifs[4];
 
-	if (jlink_simple_request(JLINK_CMD_TARGET_IF, JLINK_IF_GET_ACTIVE, active_if, sizeof(active_if)) < 0 ||
-		jlink_simple_request(JLINK_CMD_TARGET_IF, JLINK_IF_GET_AVAILABLE, available_ifs, sizeof(available_ifs)) < 0)
+	if (!jlink_simple_request(JLINK_CMD_TARGET_IF, JLINK_IF_GET_ACTIVE, active_if, sizeof(active_if)) ||
+		!jlink_simple_request(JLINK_CMD_TARGET_IF, JLINK_IF_GET_AVAILABLE, available_ifs, sizeof(available_ifs)))
 		return false;
 	++active_if[0];
 	jlink_interfaces = available_ifs[0];
@@ -305,7 +305,7 @@ const char *jlink_target_voltage(void)
 	static char result[7] = {'\0'};
 
 	uint8_t data[8];
-	if (jlink_simple_query(JLINK_CMD_GET_STATE, data, sizeof(data)) < 0)
+	if (!jlink_simple_query(JLINK_CMD_GET_STATE, data, sizeof(data)))
 		return NULL;
 
 	const uint16_t millivolts = read_le2(data, 0);
@@ -322,7 +322,7 @@ void jlink_nrst_set_val(const bool assert)
 bool jlink_nrst_get_val(void)
 {
 	uint8_t result[8];
-	if (jlink_simple_query(JLINK_CMD_GET_STATE, result, sizeof(result)) < 0)
+	if (!jlink_simple_query(JLINK_CMD_GET_STATE, result, sizeof(result)))
 		return false;
 	return result[6] == 0;
 }
