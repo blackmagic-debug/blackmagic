@@ -42,13 +42,6 @@
 
 #include "cli.h"
 
-#define USB_VID_SEGGER 0x1366U
-
-#define USB_PID_SEGGER_0101 0x0101U
-#define USB_PID_SEGGER_0105 0x0105U
-#define USB_PID_SEGGER_1015 0x1015U
-#define USB_PID_SEGGER_1020 0x1020U
-
 static uint32_t jlink_caps;
 static uint32_t jlink_freq_khz;
 static uint16_t jlink_min_divisor;
