@@ -343,8 +343,8 @@ static bool at32f43_detect(target_s *target, const uint16_t part_id)
 	return true;
 }
 
-/* Identify AT32F4x devices (Cortex-M4) */
-bool at32fxx_probe(target_s *target)
+/* Identify AT32F40x "Mainstream" line devices (Cortex-M4) */
+bool at32f40x_probe(target_s *target)
 {
 	// Artery clones use Cortex M4 cores
 	if ((target->cpuid & CORTEX_CPUID_PARTNO_MASK) != CORTEX_M4)
