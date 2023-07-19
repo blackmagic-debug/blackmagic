@@ -207,10 +207,16 @@ int find_debuggers(bmda_cli_options_s *cl_opts, bmp_info_s *info)
 	}
 
 	/* Scan for all possible probes on the system */
-	const probe_info_s *const probe_list = scan_for_devices();
+	const probe_info_s *probe_list = scan_for_devices();
 	if (!probe_list) {
 		DEBUG_WARN("No probes found\n");
 		return -1;
+	}
+	DEBUG_WARN("     %-20s %-25s %-25s %s\n", "Name", "Serial #", "Manufacturer", "Version");
+	for (size_t position = 1; probe_list != NULL; ++position) {
+		DEBUG_WARN(" %2zu. %-20s %-25s %-25s %s\n", position, probe_list->product, probe_list->serial,
+			probe_list->manufacturer, probe_list->version);
+		probe_list = probe_list->next;
 	}
 	return 1;
 }
