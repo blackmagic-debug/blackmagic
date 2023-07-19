@@ -101,6 +101,7 @@ bool jlink_swd_init(adiv5_debug_port_s *dp)
 
 	/* Set up the accelerated SWD functions for basic target operations */
 	dp->write_no_check = jlink_adiv5_raw_write_no_check;
+	dp->read_no_check = jlink_adiv5_raw_read_no_check;
 	dp->dp_read = firmware_swdp_read;
 	dp->error = jlink_adiv5_clear_error;
 	dp->low_access = jlink_adiv5_raw_access;
