@@ -30,7 +30,7 @@ bool jlink_jtag_init(void);
 const char *jlink_target_voltage(void);
 void jlink_nrst_set_val(bool assert);
 bool jlink_nrst_get_val(void);
-void jlink_max_frequency_set(uint32_t freq);
+void jlink_max_frequency_set(uint32_t frequency);
 uint32_t jlink_max_frequency_get(void);
 
 #endif /* PLATFORMS_HOSTED_JLINK_H */

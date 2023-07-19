@@ -276,6 +276,10 @@
 #define JLINK_CAPABILITY_EXTENDED_CAPABILITIES   (1U << 31U) /* Supports extended capabilities */
 #define JLINK_CAPABILITY_CMD_IO_WRITE            (1U << 32U) /* Supports JLINK_CMD_IO_WRITE */
 
+/* Interface base frequency and min divider - JLINK_CMD_INTERFACE_GET_BASE_FREQUENCY */
+#define JLINK_INTERFACE_BASE_FREQUENCY_OFFSET 0U /* 32 bit value */
+#define JLINK_INTERFACE_MIN_DIV_OFFSET        4U /* 8 bit value */
+
 /* Interface get - JLINK_CMD_INTERFACE_GET */
 #define JLINK_INTERFACE_GET_AVAILABLE 0xffU /* returns 32 bit bitfield of available interfaces */
 #define JLINK_INTERFACE_GET_CURRENT   0xfeU /* return currently selected interface number */
@@ -304,11 +308,6 @@ typedef enum jlink_swd_dir {
 	JLINK_SWD_IN,
 } jlink_swd_dir_e;
 
-typedef struct jlink_set_freq {
-	uint8_t command;
-	uint8_t frequency[2];
-} jlink_set_freq_s;
-
 typedef struct jlink_io_transact {
 	/* This must always be set to JLINK_CMD_IO_TRANSACTION */
 	uint8_t command;
@@ -325,7 +324,6 @@ bool jlink_simple_request_32(uint8_t command, uint32_t operation, void *rx_buffe
 bool jlink_transfer(uint16_t clock_cycles, const uint8_t *tms, const uint8_t *tdi, uint8_t *tdo);
 bool jlink_transfer_fixed_tms(uint16_t clock_cycles, bool final_tms, const uint8_t *tdi, uint8_t *tdo);
 bool jlink_transfer_swd(uint16_t clock_cycles, jlink_swd_dir_e direction, const uint8_t *data_in, uint8_t *data_out);
-bool jlink_set_frequency(uint16_t frequency_khz);
 bool jlink_select_interface(const uint8_t interface);
 
 #endif /*PLATFORMS_HOSTED_JLINK_PROTOCOL_H*/
