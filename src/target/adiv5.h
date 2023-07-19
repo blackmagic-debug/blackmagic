@@ -285,6 +285,16 @@ struct adiv5_access_port {
 uint8_t make_packet_request(uint8_t RnW, uint16_t addr);
 
 #if PC_HOSTED == 0
+static inline bool adiv5_write_no_check(adiv5_debug_port_s *const dp, uint16_t addr, const uint32_t value)
+{
+	return dp->write_no_check(addr, value);
+}
+
+static inline uint32_t adiv5_read_no_check(adiv5_debug_port_s *const dp, uint16_t addr)
+{
+	return dp->read_no_check(addr);
+}
+
 static inline uint32_t adiv5_dp_read(adiv5_debug_port_s *dp, uint16_t addr)
 {
 	return dp->dp_read(dp, addr);
@@ -332,6 +342,8 @@ static inline void adiv5_dp_write(adiv5_debug_port_s *dp, uint16_t addr, uint32_
 }
 
 #else
+bool adiv5_write_no_check(adiv5_debug_port_s *dp, uint16_t addr, uint32_t value);
+uint32_t adiv5_read_no_check(adiv5_debug_port_s *dp, uint16_t addr);
 uint32_t adiv5_dp_read(adiv5_debug_port_s *dp, uint16_t addr);
 uint32_t adiv5_dp_error(adiv5_debug_port_s *dp);
 uint32_t adiv5_dp_low_access(adiv5_debug_port_s *dp, uint8_t RnW, uint16_t addr, uint32_t value);
