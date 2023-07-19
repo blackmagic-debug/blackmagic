@@ -346,11 +346,11 @@ uint32_t adiv5_swd_clear_error(adiv5_debug_port_s *const dp, const bool protocol
 		 */
 		swd_line_reset_sequence(true);
 		if (dp->version >= 2U)
-			adiv5_swd_write_no_check(ADIV5_DP_TARGETSEL, dp->targetsel);
-		adiv5_swd_read_no_check(ADIV5_DP_DPIDR);
+			adiv5_write_no_check(dp, ADIV5_DP_TARGETSEL, dp->targetsel);
+		adiv5_read_no_check(dp, ADIV5_DP_DPIDR);
 		/* Exception here is unexpected, so do not catch */
 	}
-	const uint32_t err = adiv5_swd_read_no_check(ADIV5_DP_CTRLSTAT) &
+	const uint32_t err = adiv5_read_no_check(dp, ADIV5_DP_CTRLSTAT) &
 		(ADIV5_DP_CTRLSTAT_STICKYORUN | ADIV5_DP_CTRLSTAT_STICKYCMP | ADIV5_DP_CTRLSTAT_STICKYERR |
 			ADIV5_DP_CTRLSTAT_WDATAERR);
 	uint32_t clr = 0;
@@ -365,7 +365,7 @@ uint32_t adiv5_swd_clear_error(adiv5_debug_port_s *const dp, const bool protocol
 		clr |= ADIV5_DP_ABORT_WDERRCLR;
 
 	if (clr)
-		adiv5_swd_write_no_check(ADIV5_DP_ABORT, clr);
+		adiv5_write_no_check(dp, ADIV5_DP_ABORT, clr);
 	dp->fault = 0;
 	return err;
 }
