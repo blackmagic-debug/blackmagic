@@ -104,8 +104,6 @@ static bool stm32f1_mass_erase(target_s *target);
 #define AT32F4x_IDCODE_PART_MASK   0x00000fffU
 #define AT32F41_SERIES             0x70030000U
 #define AT32F40_SERIES             0x70050000U
-#define AT32F43_SERIES_4K          0x70084000U
-#define AT32F43_SERIES_2K          0x70083000U
 
 #define DBGMCU_IDCODE_MM32L0 0x40013400U
 #define DBGMCU_IDCODE_MM32F3 0x40007080U
@@ -258,91 +256,6 @@ static bool at32f41_detect(target_s *target, const uint16_t part_id)
 	return true;
 }
 
-static bool at32f43_detect(target_s *target, const uint16_t part_id)
-{
-	/* AT32F435 EOPB0 ZW/NZW split reconfiguration unsupported,
-	 * assuming default split ZW=256 SRAM=384.
-	 * AT32F437 also have a working "EMAC" (Ethernet MAC)
-	 */
-	uint32_t flash_size_kb = 0;
-	uint32_t sector_size = 0;
-	switch (part_id) {
-	// 0x70084000U parts with 4KB sectors:
-	case 0x0540U: // LQFP144
-	case 0x0543U: // LQFP100
-	case 0x0546U: // LQFP64
-	case 0x0549U: // LQFP48
-	case 0x054cU: // QFN48
-	case 0x054fU: // LQFP144 w/Eth
-	case 0x0552U: // LQFP100 w/Eth
-	case 0x0555U: // LQFP64 w/Eth
-		// Flash (G): 4032 KB in 2 banks (2048+1984), 4KB per sector.
-		flash_size_kb = 4032;
-		sector_size = 4096;
-		break;
-	case 0x0598U: // LQFP144
-	case 0x0599U: // LQFP100
-	case 0x059aU: // LQFP64
-	case 0x059bU: // LQFP48
-	case 0x059cU: // QFN48
-	case 0x059dU: // LQFP144 w/Eth
-	case 0x059eU: // LQFP100 w/Eth
-	case 0x059fU: // LQFP64 w/Eth
-		// Flash (D): 448 KB, only bank 1, 4KB per sector.
-		flash_size_kb = 448;
-		sector_size = 4096;
-		break;
-	// 0x70083000U parts with 2KB sectors:
-	case 0x0341U: // LQFP144
-	case 0x0344U: // LQFP100
-	case 0x0347U: // LQFP64
-	case 0x034aU: // LQFP48
-	case 0x034dU: // QFN48
-	case 0x0350U: // LQFP144 w/Eth
-	case 0x0353U: // LQFP100 w/Eth
-	case 0x0356U: // LQFP64 w/Eth
-		// Flash (M): 1024 KB in 2 banks (equal), 2KB per sector.
-		flash_size_kb = 1024;
-		sector_size = 2048;
-		break;
-	case 0x0242U: // LQFP144
-	case 0x0245U: // LQFP100
-	case 0x0248U: // LQFP64
-	case 0x024bU: // LQFP48
-	case 0x024eU: // QFN48
-	case 0x0251U: // LQFP144 w/Eth
-	case 0x0254U: // LQFP100 w/Eth
-	case 0x0257U: // LQFP64 w/Eth
-		// Flash (C): 256 KB, only bank 1, 2KB per sector.
-		flash_size_kb = 256;
-		sector_size = 2048;
-		break;
-	default:
-		return false;
-	}
-	/*
-	 * Arterytek F43x Flash controller has BLKERS (1<<3U).
-	 * Block erase operates on 64 KB at once for all parts.
-	 * Using here only sector erase (page erase) for compatibility.
-	 */
-	stm32f1_add_flash(target, 0x08000000, flash_size_kb * 1024U, sector_size);
-	// SRAM1 (64KB) can be remapped to 0x10000000.
-	target_add_ram(target, 0x20000000, 64U * 1024U);
-	// SRAM2 (384-64=320 KB default).
-	target_add_ram(target, 0x20010000, 320U * 1024U);
-	/*
-	 * SRAM total is adjustable between 128 KB and 512 KB (max).
-	 * Out of 640 KB SRAM present on silicon, at least 128 KB are always
-	 * dedicated to "zero-wait-state Flash". ZW region is limited by
-	 * specific part flash capacity (for 256, 448 KB) or at 512 KB.
-	 * AT32F435ZMT default EOPB0=0xffff05fa,
-	 * EOPB[0:2]=0b010 for 384 KB SRAM + 256 KB zero-wait-state flash.
-	 */
-	target->driver = "AT32F435";
-	target->mass_erase = stm32f1_mass_erase;
-	return true;
-}
-
 /* Identify AT32F40x "Mainstream" line devices (Cortex-M4) */
 bool at32f40x_probe(target_s *target)
 {
@@ -359,8 +272,6 @@ bool at32f40x_probe(target_s *target)
 		return at32f40_detect(target, part_id);
 	if (series == AT32F41_SERIES)
 		return at32f41_detect(target, part_id);
-	if (series == AT32F43_SERIES_4K || series == AT32F43_SERIES_2K)
-		return at32f43_detect(target, part_id);
 	return false;
 }
 
