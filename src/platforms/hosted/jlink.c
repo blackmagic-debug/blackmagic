@@ -159,7 +159,7 @@ bool jlink_transfer_swd(
 	return jlink_transfer(clock_cycles, dir, data_in, data_out);
 }
 
-static bool jlink_print_version(void)
+static bool jlink_get_version(char *const dest, const size_t dest_size)
 {
 	uint8_t len_str[2];
 	if (jlink_simple_query(JLINK_CMD_GET_VERSION, len_str, sizeof(len_str)) < 0)
@@ -167,7 +167,7 @@ static bool jlink_print_version(void)
 	uint8_t version[0x70];
 	bmda_usb_transfer(info.usb_link, NULL, 0, version, sizeof(version));
 	version[0x6f] = '\0';
-	DEBUG_INFO("%s\n", version);
+	strncpy(dest, (char *)version, dest_size);
 	return true;
 }
 
@@ -224,11 +224,6 @@ static bool jlink_print_interfaces(void)
 	else
 		DEBUG_INFO(", %s not available\n", active_if[0] + 1U == JLINK_IF_SWD ? "JTAG" : "SWD");
 	return true;
-}
-
-static bool jlink_info(void)
-{
-	return jlink_print_version() && jlink_query_caps() && jlink_query_speed() && jlink_print_interfaces();
 }
 
 /*
@@ -303,7 +298,15 @@ bool jlink_init(void)
 		libusb_close(info.usb_link->device_handle);
 		return false;
 	}
-	jlink_info();
+
+	jlink_get_version(info.version, sizeof(info.version));
+
+	DEBUG_INFO("%s\n", info.version);
+
+	jlink_query_caps();
+	jlink_query_speed();
+	jlink_print_interfaces();
+
 	return true;
 }
 
