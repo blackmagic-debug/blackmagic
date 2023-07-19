@@ -258,13 +258,14 @@ static bool jlink_get_version(void)
 	return true;
 }
 
-static bool jlink_query_caps(void)
+static bool jlink_get_capabilities(void)
 {
-	uint8_t caps[4];
-	if (!jlink_simple_query(JLINK_CMD_INFO_GET_PROBE_CAPABILITIES, caps, sizeof(caps)))
+	uint8_t buffer[4U];
+	if (!jlink_simple_query(JLINK_CMD_INFO_GET_PROBE_CAPABILITIES, buffer, sizeof(buffer)))
 		return false;
-	jlink.capabilities = read_le4(caps, 0);
-	DEBUG_INFO("Caps %" PRIx32 "\n", jlink.capabilities);
+
+	jlink.capabilities = read_le4(buffer, 0);
+	DEBUG_INFO("Capabilities: 0x%08" PRIx32 "\n", jlink.capabilities);
 
 	return true;
 }
@@ -323,7 +324,7 @@ bool jlink_set_frequency(const uint16_t frequency_khz)
 
 static bool jlink_info(void)
 {
-	return jlink_query_caps() && jlink_query_speed() && jlink_print_interfaces();
+	return jlink_query_speed() && jlink_print_interfaces();
 }
 
 /* BMDA interface functions */
@@ -354,14 +355,14 @@ bool jlink_init(void)
 		libusb_close(info.usb_link->device_handle);
 		return false;
 	}
-	jlink_info();
-	if (!jlink_get_version()) {
+	if (!jlink_get_capabilities() || !jlink_get_version()) {
 		DEBUG_ERROR("Failed to read J-Link information\n");
 		libusb_release_interface(info.usb_link->device_handle, info.usb_link->interface);
 		libusb_close(info.usb_link->device_handle);
 		return false;
 	}
 	memcpy(info.version, jlink.fw_version, strlen(jlink.fw_version) + 1U);
+	jlink_info();
 	return true;
 }
 
