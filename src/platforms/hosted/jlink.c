@@ -317,29 +317,29 @@ bool jlink_init(void)
 
 const char *jlink_target_voltage(void)
 {
-	static char result[7] = {'\0'};
+	static char result[8U] = {'\0'};
 
-	uint8_t data[8];
+	uint8_t data[8U];
 	if (!jlink_simple_query(JLINK_CMD_SIGNAL_GET_STATE, data, sizeof(data)))
 		return NULL;
 
-	const uint16_t millivolts = read_le2(data, 0);
-	snprintf(result, sizeof(result), "%2u.%03u", millivolts / 1000U, millivolts % 1000U);
+	const uint16_t millivolts = read_le2(data, JLINK_SIGNAL_STATE_VOLTAGE_OFFSET);
+	snprintf(result, sizeof(result), "%2u.%03uV", millivolts / 1000U, millivolts % 1000U);
 	return result;
 }
 
 void jlink_nrst_set_val(const bool assert)
 {
 	jlink_simple_query(assert ? JLINK_CMD_SIGNAL_CLEAR_RESET : JLINK_CMD_SIGNAL_SET_RESET, NULL, 0);
-	platform_delay(2);
+	platform_delay(2U);
 }
 
 bool jlink_nrst_get_val(void)
 {
-	uint8_t result[8];
+	uint8_t result[8U];
 	if (!jlink_simple_query(JLINK_CMD_SIGNAL_GET_STATE, result, sizeof(result)))
 		return false;
-	return result[6] == 0;
+	return result[JLINK_SIGNAL_STATE_TRES_OFFSET] == 0;
 }
 
 bool jlink_set_frequency(const uint16_t frequency_khz)

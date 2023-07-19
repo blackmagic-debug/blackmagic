@@ -265,6 +265,15 @@
 #define JLINK_INTERFACE_JTAG 0U
 #define JLINK_INTERFACE_SWD  1U
 
+/* Signal state - JLINK_CMD_SIGNAL_GET_STATE */
+#define JLINK_SIGNAL_STATE_VOLTAGE_OFFSET 0U /* 16 bit value */
+#define JLINK_SIGNAL_STATE_TCK_OFFSET     2U /* 1 bit value */
+#define JLINK_SIGNAL_STATE_TDI_OFFSET     3U /* 1 bit value */
+#define JLINK_SIGNAL_STATE_TDO_OFFSET     4U /* 1 bit value */
+#define JLINK_SIGNAL_STATE_TMS_OFFSET     5U /* 1 bit value */
+#define JLINK_SIGNAL_STATE_TRES_OFFSET    6U /* 1 bit value */
+#define JLINK_SIGNAL_STATE_TRST_OFFSET    7U /* 1 bit value */
+
 /* J-Link USB protocol constants */
 #define JLINK_USB_TIMEOUT 5000U /* 5 seconds */
 
