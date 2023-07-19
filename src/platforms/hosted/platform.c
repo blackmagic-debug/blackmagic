@@ -346,7 +346,7 @@ const char *platform_target_voltage(void)
 		return ftdi_target_voltage();
 
 	case BMP_TYPE_JLINK:
-		return jlink_target_voltage();
+		return jlink_target_voltage_string();
 #endif
 
 	default:
@@ -508,6 +508,12 @@ uint32_t platform_target_voltage_sense(void)
 		}
 		break;
 	}
+
+#if HOSTED_BMP_ONLY == 0
+	case BMP_TYPE_JLINK:
+		targetVoltage = jlink_target_voltage_sense();
+		break;
+#endif
 
 	default:
 		break;

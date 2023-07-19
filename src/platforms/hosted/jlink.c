@@ -411,6 +411,15 @@ bool jlink_set_jtag_frequency(const uint32_t frequency)
 	return true;
 }
 
+static uint16_t jlink_target_voltage(void)
+{
+	uint8_t buffer[8U];
+	if (!jlink_simple_query(JLINK_CMD_SIGNAL_GET_STATE, buffer, sizeof(buffer)))
+		return UINT16_MAX;
+
+	return read_le2(buffer, JLINK_SIGNAL_STATE_VOLTAGE_OFFSET);
+}
+
 /* BMDA interface functions */
 
 /*
@@ -450,15 +459,20 @@ bool jlink_init(void)
 	return true;
 }
 
-const char *jlink_target_voltage(void)
+uint32_t jlink_target_voltage_sense(void)
+{
+	/* Convert from mV to dV (deci-Volt, i.e. tenths of a Volt) */
+	return jlink_target_voltage() / 100U;
+}
+
+const char *jlink_target_voltage_string(void)
 {
 	static char result[8U] = {'\0'};
 
-	uint8_t data[8U];
-	if (!jlink_simple_query(JLINK_CMD_SIGNAL_GET_STATE, data, sizeof(data)))
-		return NULL;
+	const uint16_t millivolts = jlink_target_voltage();
+	if (millivolts == UINT16_MAX)
+		return "ERROR!";
 
-	const uint16_t millivolts = read_le2(data, JLINK_SIGNAL_STATE_VOLTAGE_OFFSET);
 	snprintf(result, sizeof(result), "%2u.%03uV", millivolts / 1000U, millivolts % 1000U);
 	return result;
 }

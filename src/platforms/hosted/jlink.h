@@ -27,7 +27,8 @@
 bool jlink_init(void);
 bool jlink_swd_init(adiv5_debug_port_s *dp);
 bool jlink_jtag_init(void);
-const char *jlink_target_voltage(void);
+uint32_t jlink_target_voltage_sense(void);
+const char *jlink_target_voltage_string(void);
 void jlink_nrst_set_val(bool assert);
 bool jlink_nrst_get_val(void);
 void jlink_max_frequency_set(uint32_t frequency);
