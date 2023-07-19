@@ -690,9 +690,9 @@ bool cortexm_probe(adiv5_access_port_s *ap)
 			 */
 			PROBE(lpc546xx_probe);
 			PROBE(lpc43xx_probe);
+			PROBE(at32f40x_probe);
 			PROBE(lpc40xx_probe);
 			PROBE(kinetis_probe); /* Older K-series */
-			PROBE(at32fxx_probe);
 			PROBE(msp432e4_probe);
 		} else if (t->part_id == 0x4cbU) { /* Cortex-M23 ROM */
 			PROBE(gd32f1_probe);           /* GD32E23x uses GD32F1 peripherals */
