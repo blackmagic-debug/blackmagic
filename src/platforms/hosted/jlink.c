@@ -62,9 +62,25 @@ bool jlink_simple_query(const uint8_t command, void *const rx_buffer, const size
 	return bmda_usb_transfer(info.usb_link, &command, sizeof(command), rx_buffer, rx_len, JLINK_USB_TIMEOUT) >= 0;
 }
 
-bool jlink_simple_request(const uint8_t command, const uint8_t operation, void *const rx_buffer, const size_t rx_len)
+bool jlink_simple_request_8(const uint8_t command, const uint8_t operation, void *const rx_buffer, const size_t rx_len)
 {
-	const uint8_t request[2] = {command, operation};
+	const uint8_t request[2U] = {command, operation};
+	return bmda_usb_transfer(info.usb_link, request, sizeof(request), rx_buffer, rx_len, JLINK_USB_TIMEOUT) >= 0;
+}
+
+bool jlink_simple_request_16(
+	const uint8_t command, const uint16_t operation, void *const rx_buffer, const size_t rx_len)
+{
+	uint8_t request[3U] = {command};
+	write_le2(request, 1U, operation);
+	return bmda_usb_transfer(info.usb_link, request, sizeof(request), rx_buffer, rx_len, JLINK_USB_TIMEOUT) >= 0;
+}
+
+bool jlink_simple_request_32(
+	const uint8_t command, const uint32_t operation, void *const rx_buffer, const size_t rx_len)
+{
+	uint8_t request[5U] = {command};
+	write_le4(request, 1U, operation);
 	return bmda_usb_transfer(info.usb_link, request, sizeof(request), rx_buffer, rx_len, JLINK_USB_TIMEOUT) >= 0;
 }
 
@@ -300,7 +316,7 @@ static inline bool jlink_interface_available(const uint8_t interface)
 static uint8_t jlink_selected_interface(void)
 {
 	uint8_t buffer[4U];
-	if (!jlink_simple_request(JLINK_CMD_INTERFACE_GET, JLINK_INTERFACE_GET_CURRENT, buffer, sizeof(buffer)))
+	if (!jlink_simple_request_8(JLINK_CMD_INTERFACE_GET, JLINK_INTERFACE_GET_CURRENT, buffer, sizeof(buffer)))
 		return UINT8_MAX; /* Invalid interface, max value is 31 */
 
 	/* The max value of interface is 31, so we can use the first byte of the response directly */
@@ -313,7 +329,7 @@ bool jlink_select_interface(const uint8_t interface)
 		return false;
 
 	uint8_t buffer[4U];
-	if (!jlink_simple_request(JLINK_CMD_INTERFACE_SET_SELECTED, interface, buffer, sizeof(buffer)))
+	if (!jlink_simple_request_8(JLINK_CMD_INTERFACE_SET_SELECTED, interface, buffer, sizeof(buffer)))
 		return false;
 
 	return true;
@@ -322,7 +338,7 @@ bool jlink_select_interface(const uint8_t interface)
 static bool jlink_get_interfaces(void)
 {
 	uint8_t buffer[4U];
-	if (!jlink_simple_request(JLINK_CMD_INTERFACE_GET, JLINK_INTERFACE_GET_AVAILABLE, buffer, sizeof(buffer)))
+	if (!jlink_simple_request_8(JLINK_CMD_INTERFACE_GET, JLINK_INTERFACE_GET_AVAILABLE, buffer, sizeof(buffer)))
 		return false;
 
 	/* available_interfaces is a 32bit bitfield/mask */
