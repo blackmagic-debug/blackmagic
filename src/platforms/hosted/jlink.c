@@ -157,7 +157,7 @@ bool jlink_transfer_fixed_tms(
 	if (byte_count > 512U)
 		return false;
 	/* Set up the buffer for TMS */
-	uint8_t tms[512] = {0};
+	uint8_t tms[512U] = {0};
 	/* Figure out the position of the final bit in the sequence */
 	const size_t cycles = clock_cycles - 1U;
 	const size_t final_byte = cycles >> 3U;
@@ -172,7 +172,7 @@ bool jlink_transfer_swd(
 	const uint16_t clock_cycles, const jlink_swd_dir_e direction, const uint8_t *const data_in, uint8_t *const data_out)
 {
 	/* Define a buffer to hold the request direction information */
-	uint8_t dir[8] = {0};
+	uint8_t dir[8U] = {0};
 	/* Fill the direction buffer appropriately for the requested transfer direction */
 	memset(dir, direction == JLINK_SWD_IN ? 0x00U : 0xffU, sizeof(dir));
 	/* Run the resulting transfer */
@@ -519,6 +519,7 @@ bool jlink_nrst_get_val(void)
 	uint8_t result[8U];
 	if (!jlink_simple_query(JLINK_CMD_SIGNAL_GET_STATE, result, sizeof(result)))
 		return false;
+
 	return result[JLINK_SIGNAL_STATE_TRES_OFFSET] == 0;
 }
 
