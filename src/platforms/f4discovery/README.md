@@ -3,7 +3,8 @@
 Allows the use of the STM32F407 Discovery board main cpu as a Black Magic Probe. Historically it was used to program the on board built in debugger before ST-Link bootloader use was possible.
 
 ## Connections
-
+* PD9: UART RX
+* PD8: UART TX
 * PC2: TDI
 * PC4: TMS/SWDIO
 * PC5: TCK/SWCLK
