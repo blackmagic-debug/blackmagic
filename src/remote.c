@@ -134,7 +134,6 @@ static void remote_packet_process_swd(unsigned i, char *packet)
 {
 	uint8_t ticks;
 	uint32_t param;
-	bool badParity;
 
 	switch (packet[1]) {
 	case REMOTE_INIT: /* SS = initialise =============================== */
@@ -148,11 +147,13 @@ static void remote_packet_process_swd(unsigned i, char *packet)
 			remote_respond(REMOTE_RESP_ERR, REMOTE_ERROR_WRONGLEN);
 		break;
 
-	case REMOTE_IN_PAR: /* SI = In parity ============================= */
-		ticks = remote_hex_string_to_num(2, &packet[2]);
-		badParity = swd_proc.seq_in_parity(&param, ticks);
-		remote_respond(badParity ? REMOTE_RESP_PARERR : REMOTE_RESP_OK, param);
+	case REMOTE_IN_PAR: { /* SI = In parity ============================= */
+		const size_t clock_cycles = remote_hex_string_to_num(2, packet + 2);
+		uint32_t result = 0;
+		const bool parity_error = swd_proc.seq_in_parity(&result, clock_cycles);
+		remote_respond(parity_error ? REMOTE_RESP_PARERR : REMOTE_RESP_OK, result);
 		break;
+	}
 
 	case REMOTE_IN: /* Si = In ======================================= */
 		ticks = remote_hex_string_to_num(2, &packet[2]);
