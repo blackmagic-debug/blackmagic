@@ -155,11 +155,12 @@ static void remote_packet_process_swd(unsigned i, char *packet)
 		break;
 	}
 
-	case REMOTE_IN: /* Si = In ======================================= */
-		ticks = remote_hex_string_to_num(2, &packet[2]);
-		param = swd_proc.seq_in(ticks);
-		remote_respond(REMOTE_RESP_OK, param);
+	case REMOTE_IN: { /* Si = In ======================================= */
+		const size_t clock_cycles = remote_hex_string_to_num(2, packet + 2);
+		const uint32_t result = swd_proc.seq_in(clock_cycles);
+		remote_respond(REMOTE_RESP_OK, result);
 		break;
+	}
 
 	case REMOTE_OUT: /* So= Out ====================================== */
 		ticks = remote_hex_string_to_num(2, &packet[2]);
