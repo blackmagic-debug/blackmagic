@@ -48,9 +48,12 @@ typedef struct jlink {
 	uint32_t hw_version;           /* Hardware version */
 	uint32_t capabilities;         /* Bitfield of supported capabilities */
 	uint32_t available_interfaces; /* Bitfield of available interfaces */
-	uint32_t base_frequency;       /* Base frequency of the interface */
-	uint16_t min_divisor;          /* Minimum divisor for the interface */
-	uint16_t current_divisor;      /* Current divisor for the interface */
+
+	struct jlink_interface_frequency {
+		uint32_t base;            /* Base frequency of the interface */
+		uint16_t min_divisor;     /* Minimum divisor for the interface */
+		uint16_t current_divisor; /* Current divisor for the interface */
+	} interface_frequency[JLINK_INTERFACE_MAX];
 } jlink_s;
 
 jlink_s jlink;
@@ -381,53 +384,124 @@ static bool jlink_get_interfaces(void)
 	return true;
 }
 
-static bool jlink_get_interface_frequency(void)
+static bool jlink_get_interface_frequency(const uint8_t interface)
 {
-	/* 
-	 * Fixme: this is not strictly correct, the reported base frequency and min divisor depend on the
-	 * interface selected, but we don't know which one is selected at this point, we are assuming JTAG
-	 * and that JTAG is the only interface that supports frequency info/set.
-	 * Unfortunately, this does not look like it's documented on the docs we have access to.
-	*/
+	if (!(jlink.capabilities & JLINK_CAPABILITY_INTERFACE_FREQUENCY)) {
+		DEBUG_WARN("J-Link does not support interface frequency commands\n");
+		return false;
+	}
 
-	if (jlink.capabilities & JLINK_CAPABILITY_INTERFACE_FREQUENCY) {
-		uint8_t buffer[6U];
-		if (!jlink_simple_query(JLINK_CMD_INTERFACE_GET_BASE_FREQUENCY, buffer, sizeof(buffer)))
+	/* If the requested interface is invalid, bail out */
+	if (!jlink_interface_available(interface))
+		return false;
+
+	/* If the base frequency is non-zero, we've already read the frequency info for the requested interface and can skip the query */
+	if (jlink.interface_frequency[interface].base != 0U)
+		return true;
+
+	/* Get the selected interface */
+	const uint8_t selected_interface = jlink_selected_interface();
+
+	if (selected_interface != interface) {
+		/* If the selected interface doesn't match the requested interface, select it, let's hope this doesn't mess something up elsewhere */
+		DEBUG_WARN("Trying to get frequency for interface %s but it is not selected, selecting it\n",
+			jlink_interface_to_string(interface));
+
+		/* select the requested interface */
+		if (!jlink_select_interface(interface))
 			return false;
+	}
 
-		jlink.base_frequency = read_le4(buffer, JLINK_INTERFACE_BASE_FREQUENCY_OFFSET);
-		jlink.min_divisor = read_le2(buffer, JLINK_INTERFACE_MIN_DIV_OFFSET);
-		jlink.current_divisor = jlink.min_divisor;
+	/* Get the frequency info for the selected interface */
+	uint8_t buffer[6U];
+	if (!jlink_simple_query(JLINK_CMD_INTERFACE_GET_BASE_FREQUENCY, buffer, sizeof(buffer)))
+		return false;
 
-		DEBUG_INFO("Base frequency: %uHz\n\tMinimum divisor: %u\n", jlink.base_frequency, jlink.min_divisor);
-	} else
-		DEBUG_WARN("J-Link does not support frequency info command\n");
+	struct jlink_interface_frequency *const interface_frequency = &jlink.interface_frequency[interface];
+
+	interface_frequency->base = read_le4(buffer, JLINK_INTERFACE_BASE_FREQUENCY_OFFSET);
+	interface_frequency->min_divisor = read_le2(buffer, JLINK_INTERFACE_MIN_DIV_OFFSET);
+
+	/* This is an assumption, if the J-Link was configured before we started, this may not be true, but we have no way to know */
+	interface_frequency->current_divisor = interface_frequency->min_divisor;
+
+	DEBUG_INFO("%s interface frequency:\n\tBase frequency: %uHz\n\tMinimum divisor: %u\n",
+		jlink_interface_to_string(interface), interface_frequency->base, interface_frequency->min_divisor);
+
+#if 0
+	/*
+	 * Restoring the selected interface seemed to cause issues sometimes (unsure if culprit)
+	 * so we don't do it for now, it didn't seem to be necessary, included in case it proves to be necessary later
+	 */
+	if (selected_interface != interface) {
+		/* If the selected interface didn't match the requested interface, restore the selected interface */
+		DEBUG_WARN("Restoring selected interface to %s\n", jlink_interface_to_string(selected_interface));
+
+		/* select the requested interface, we don't consider this a critical failure, as we got what we wanted */
+		if (!jlink_select_interface(selected_interface))
+			DEBUG_ERROR("Failed to restore selected interface to %s\n", jlink_interface_to_string(selected_interface));
+	}
+#endif
 
 	return true;
 }
 
-bool jlink_set_jtag_frequency(const uint32_t frequency)
+static bool jlink_set_interface_frequency(const uint8_t interface, const uint32_t frequency)
 {
-	/* Fixme: see note on jlink_get_interface_frequency */
+	if (!(jlink.capabilities & JLINK_CAPABILITY_INTERFACE_FREQUENCY)) {
+		DEBUG_WARN("J-Link does not support interface frequency command\n");
+		return false;
+	}
 
-	if (!(jlink.capabilities & JLINK_CAPABILITY_INTERFACE_FREQUENCY))
+	/* Get the selected interface */
+	const uint8_t selected_interface = jlink_selected_interface();
+
+	if (selected_interface != interface) {
+		/* If the selected interface doesn't match the requested interface, select it, let's hope this doesn't mess something up elsewhere */
+		DEBUG_WARN("Trying to set frequency for interface %s but it is not selected, selecting it\n",
+			jlink_interface_to_string(interface));
+
+		/* select the requested interface */
+		if (!jlink_select_interface(interface))
+			return false;
+	}
+
+	/* Ensure we have the frequency info for the selected interface */
+	if (!jlink_get_interface_frequency(interface))
 		return false;
 
+	struct jlink_interface_frequency *const interface_frequency = &jlink.interface_frequency[interface];
+
 	/* Find the divisor that gets us closest to the requested frequency */
-	uint16_t divisor = (jlink.base_frequency + frequency - 1U) / frequency;
+	uint16_t divisor = (interface_frequency->base + frequency - 1U) / frequency;
 
 	/* Bound the divisor to the min divisor */
-	if (divisor < jlink.min_divisor)
-		divisor = jlink.min_divisor;
+	if (divisor < interface_frequency->min_divisor)
+		divisor = interface_frequency->min_divisor;
 
 	/* Get the approximate frequency we'll actually be running at, convert to kHz in the process */
-	const uint16_t frequency_khz = (jlink.base_frequency / jlink.current_divisor) / 1000U;
+	const uint16_t frequency_khz = (interface_frequency->base / interface_frequency->current_divisor) / 1000U;
 
 	if (!jlink_simple_request_16(JLINK_CMD_INTERFACE_SET_FREQUENCY_KHZ, frequency_khz, NULL, 0))
 		return false;
 
-	/* Update the current divisor for frquency calculations */
-	jlink.current_divisor = divisor;
+	/* Update the current divisor for frequency calculations */
+	interface_frequency->current_divisor = divisor;
+
+#if 0
+	/*
+	 * Restoring the selected interface seemed to cause issues sometimes (unsure if culprit)
+	 * so we don't do it for now, it didn't seem to be necessary, included in case it proves to be necessary later
+	 */
+	if (selected_interface != interface) {
+		/* If the selected interface didn't match the requested interface, restore the selected interface */
+		DEBUG_WARN("Restoring selected interface to %s\n", jlink_interface_to_string(selected_interface));
+
+		/* select the requested interface, we don't consider this a critical failure, as we got what we wanted */
+		if (!jlink_select_interface(selected_interface))
+			DEBUG_ERROR("Failed to restore selected interface to %s\n", jlink_interface_to_string(selected_interface));
+	}
+#endif
 
 	return true;
 }
@@ -500,8 +574,7 @@ bool jlink_init(void)
 		libusb_close(info.usb_link->device_handle);
 		return false;
 	}
-	if (!jlink_get_capabilities() || !jlink_get_version() || !jlink_get_interfaces() ||
-		!jlink_get_interface_frequency()) {
+	if (!jlink_get_capabilities() || !jlink_get_version() || !jlink_get_interfaces()) {
 		DEBUG_ERROR("Failed to read J-Link information\n");
 		libusb_release_interface(info.usb_link->device_handle, info.usb_link->interface);
 		libusb_close(info.usb_link->device_handle);
@@ -546,22 +619,24 @@ bool jlink_nrst_get_val(void)
 
 void jlink_max_frequency_set(const uint32_t frequency)
 {
-	/* Fixme: see note on jlink_get_interface_frequency */
+	const uint8_t bmda_interface = info.is_jtag ? JLINK_INTERFACE_JTAG : JLINK_INTERFACE_SWD;
 
-	if (!(jlink.capabilities & JLINK_CAPABILITY_INTERFACE_FREQUENCY) || !info.is_jtag)
-		return;
-
-	jlink_set_jtag_frequency(frequency);
+	if (!jlink_set_interface_frequency(bmda_interface, frequency))
+		DEBUG_ERROR("Failed to set J-Link %s interface frequency\n", jlink_interface_to_string(bmda_interface));
 }
 
 uint32_t jlink_max_frequency_get(void)
 {
-	/* Fixme: see note on jlink_get_interface_frequency */
+	const uint8_t bmda_interface = info.is_jtag ? JLINK_INTERFACE_JTAG : JLINK_INTERFACE_SWD;
 
-	if (!(jlink.capabilities & JLINK_CAPABILITY_INTERFACE_FREQUENCY) || !info.is_jtag)
+	/* Ensure we have the frequency info for the requested interface */
+	if (!jlink_get_interface_frequency(bmda_interface)) {
+		DEBUG_ERROR("No frequency info available for interface %s\n", jlink_interface_to_string(bmda_interface));
 		return FREQ_FIXED;
+	}
 
-	return jlink.base_frequency / jlink.current_divisor;
+	struct jlink_interface_frequency *const interface_frequency = &jlink.interface_frequency[bmda_interface];
+	return interface_frequency->base / interface_frequency->current_divisor;
 }
 
 bool jlink_target_set_power(const bool power)
