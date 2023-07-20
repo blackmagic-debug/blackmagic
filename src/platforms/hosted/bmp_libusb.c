@@ -529,7 +529,7 @@ int find_debuggers(bmda_cli_options_s *cl_opts, bmp_info_s *info)
 			DEBUG_WARN(" %2zu. %-20s %-25s %-25s %s\n", position, probe->product, probe->serial, probe->manufacturer,
 				probe->version);
 		probe_info_list_free(probe_list);
-		return 1; // false;
+		return cl_opts->opt_list_only ? 0 : 1; // false;
 	}
 
 	/* We found a matching probe, populate bmp_info_s and signal success */
