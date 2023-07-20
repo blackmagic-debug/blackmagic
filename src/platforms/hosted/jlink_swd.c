@@ -92,7 +92,6 @@ bool jlink_swd_init(adiv5_debug_port_s *dp)
 		DEBUG_ERROR("Failed to select SWD interface\n");
 		return false;
 	}
-	platform_delay(10);
 
 	/* Set up the underlying SWD functions using the implementation below */
 	swd_proc.seq_in = jlink_swd_seq_in;

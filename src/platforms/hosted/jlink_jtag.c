@@ -52,7 +52,6 @@ bool jlink_jtag_init(void)
 		DEBUG_ERROR("Failed to select JTAG interface\n");
 		return false;
 	}
-	platform_delay(10);
 
 	/* Ensure we're in JTAG mode */
 	DEBUG_PROBE("%s: Switch to JTAG\n", __func__);

@@ -337,13 +337,22 @@ static uint8_t jlink_selected_interface(void)
 
 bool jlink_select_interface(const uint8_t interface)
 {
-	if (!jlink_interface_available(interface))
+	if (!jlink_interface_available(interface)) {
+		DEBUG_ERROR("Interface [%u] %s is not available\n", interface, jlink_interface_to_string(interface));
 		return false;
+	}
 
+	/* If the requested interface is already selected, we're done */
+	if (jlink_selected_interface() == interface)
+		return true;
+
+	/* Select the requested interface */
 	uint8_t buffer[4U];
 	if (!jlink_simple_request_8(JLINK_CMD_INTERFACE_SET_SELECTED, interface, buffer, sizeof(buffer)))
 		return false;
 
+	/* Give the J-Link some time to switch interfaces */
+	platform_delay(10U);
 	return true;
 }
 
