@@ -472,7 +472,6 @@ int find_debuggers(bmda_cli_options_s *cl_opts, bmp_info_s *info)
 	}
 
 	/* We found a matching probe, populate bmp_info_s and signal success */
-	DEBUG_WARN("Using: %-20s %-20s %-25s %s\n", probe->product, probe->serial, probe->manufacturer, probe->version);
 	probe_info_to_bmp_info(probe, info);
 	/* If the selected probe is an FTDI adapter try to resolve the adaptor type */
 	if (probe->vid == VENDOR_ID_FTDI && !ftdi_lookup_adaptor_descriptor(cl_opts, probe)) {
