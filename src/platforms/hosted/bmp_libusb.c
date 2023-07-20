@@ -358,6 +358,56 @@ static bool process_cmsis_interface_probe(
 	return cmsis_dap;
 }
 
+static void check_cmsis_interface_type(libusb_device *const device, bmp_info_s *const info)
+{
+	/* Try to get the active configuration descriptor for the device */
+	libusb_config_descriptor_s *config;
+	if (libusb_get_active_config_descriptor(device, &config) != LIBUSB_SUCCESS)
+		return;
+
+	/* Try to open the device */
+	libusb_device_handle *handle;
+	if (libusb_open(device, &handle) != LIBUSB_SUCCESS) {
+		libusb_free_config_descriptor(config);
+		return;
+	}
+
+	/* Enumerate the device's interfaces and all their alt modes */
+	for (uint8_t iface = 0; iface < config->bNumInterfaces; ++iface) {
+		const libusb_interface_s *interface = &config->interface[iface];
+		for (int altmode = 0; altmode < interface->num_altsetting; ++altmode) {
+			const libusb_interface_descriptor_s *descriptor = &interface->altsetting[altmode];
+			/* If we've found an interface without a description string, ignore it */
+			if (descriptor->iInterface == 0)
+				continue;
+			char interface_string[128];
+			/* Read out the string */
+			if (libusb_get_string_descriptor_ascii(
+					handle, descriptor->iInterface, (unsigned char *)interface_string, sizeof(interface_string)) < 0)
+				continue;
+
+			/* Check if it's a CMSIS-DAP interface */
+			if (strstr(interface_string, "CMSIS") == NULL)
+				continue;
+
+			/* Check if it's a CMSIS-DAP v2 interface */
+			if (descriptor->bInterfaceClass == 0xffU && descriptor->bNumEndpoints == 2U) {
+				info->interface_num = descriptor->bInterfaceNumber;
+				/* Extract the endpoints required */
+				for (uint8_t index = 0; index < descriptor->bNumEndpoints; ++index) {
+					const uint8_t ep = descriptor->endpoint[index].bEndpointAddress;
+					if (ep & 0x80U)
+						info->in_ep = ep;
+					else
+						info->out_ep = ep;
+				}
+			}
+		}
+	}
+	libusb_close(handle);
+	libusb_free_config_descriptor(config);
+}
+
 static bool process_vid_pid_table_probe(
 	libusb_device_descriptor_s *device_descriptor, libusb_device *device, probe_info_s **probe_list)
 {
@@ -485,12 +535,16 @@ int find_debuggers(bmda_cli_options_s *cl_opts, bmp_info_s *info)
 	/* We found a matching probe, populate bmp_info_s and signal success */
 	probe_info_to_bmp_info(probe, info);
 	/* If the selected probe is an FTDI adapter try to resolve the adaptor type */
-	if (probe->vid == VENDOR_ID_FTDI && !ftdi_lookup_adaptor_descriptor(cl_opts, probe)) {
+	if (probe->type == BMP_TYPE_FTDI && !ftdi_lookup_adaptor_descriptor(cl_opts, probe)) {
 		// Don't know the cable type, ask user to specify with "-c"
 		DEBUG_WARN("Multiple FTDI adapters match Vendor and Product ID.\n");
 		DEBUG_WARN("Please specify adapter type on command line using \"-c\" option.\n");
 		return -1; //false
 	}
+	/* If the selected probe is CMSIS-DAP, check for v2 interfaces */
+	if (probe->type == BMP_TYPE_CMSIS_DAP)
+		check_cmsis_interface_type(probe->device, info);
+
 	probe_info_list_free(probe_list);
 	return 0; // true;
 }
