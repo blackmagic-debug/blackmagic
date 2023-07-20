@@ -198,8 +198,8 @@ static void remote_packet_process_jtag(const char *const packet, const size_t pa
 		break;
 
 	case REMOTE_TMS: { /* JT = TMS Sequence ============================ */
-		const size_t clock_cycles = remote_hex_string_to_num(2, &packet[2]);
-		const uint32_t tms_states = remote_hex_string_to_num(2, &packet[4]);
+		const size_t clock_cycles = remote_hex_string_to_num(2, packet + 2);
+		const uint32_t tms_states = remote_hex_string_to_num(2, packet + 4);
 
 		if (packet_len < 4U)
 			remote_respond(REMOTE_RESP_ERR, REMOTE_ERROR_WRONGLEN);
@@ -211,7 +211,7 @@ static void remote_packet_process_jtag(const char *const packet, const size_t pa
 	}
 
 	case REMOTE_CYCLE: { /* JC = clock cycle ============================ */
-		const size_t clock_cycles = remote_hex_string_to_num(8, &packet[4]);
+		const size_t clock_cycles = remote_hex_string_to_num(8, packet + 4);
 		const bool tms = packet[2] != '0';
 		const bool tdi = packet[3] != '0';
 		jtag_proc.jtagtap_cycle(tms, tdi, clock_cycles);
@@ -224,8 +224,8 @@ static void remote_packet_process_jtag(const char *const packet, const size_t pa
 		if (packet_len < 5U)
 			remote_respond(REMOTE_RESP_ERR, REMOTE_ERROR_WRONGLEN);
 		else {
-			const size_t clock_cycles = remote_hex_string_to_num(2, &packet[2]);
-			const uint64_t data_in = remote_hex_string_to_num(-1, &packet[4]);
+			const size_t clock_cycles = remote_hex_string_to_num(2, packet + 2);
+			const uint64_t data_in = remote_hex_string_to_num(-1, packet + 4);
 			uint64_t data_out = 0;
 			jtag_proc.jtagtap_tdi_tdo_seq(
 				(uint8_t *)&data_out, packet[1] == REMOTE_TDITDO_TMS, (const uint8_t *)&data_in, clock_cycles);
