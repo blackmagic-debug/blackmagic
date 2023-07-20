@@ -256,6 +256,18 @@ static char *jlink_interface_to_string(const uint8_t interface)
 		return "JTAG";
 	case JLINK_INTERFACE_SWD:
 		return "SWD";
+	case JLINK_INTERFACE_BDM3:
+		return "BDM3";
+	case JLINK_INTERFACE_FINE:
+		return "FINE";
+	case JLINK_INTERFACE_2W_JTAG_PIC32:
+		return "PIC32 2-wire JTAG";
+	case JLINK_INTERFACE_SPI:
+		return "SPI";
+	case JLINK_INTERFACE_C2:
+		return "C2";
+	case JLINK_INTERFACE_CJTAG:
+		return "cJTAG";
 	default:
 		return "Unknown";
 	}

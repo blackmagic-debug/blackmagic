@@ -290,6 +290,13 @@
 #define JLINK_INTERFACE_MAX  32U
 #define JLINK_INTERFACE_JTAG 0U
 #define JLINK_INTERFACE_SWD  1U
+/* The following interfaces were obtained from libjaylink, with no official documentation to back them up */
+#define JLINK_INTERFACE_BDM3          2U /* Background Debug Mode 3 (BDM3) */
+#define JLINK_INTERFACE_FINE          3U /* Renesas’ single-wire debug interface (FINE) */
+#define JLINK_INTERFACE_2W_JTAG_PIC32 4U /* 2-wire JTAG for PIC32 compliant devices */
+#define JLINK_INTERFACE_SPI           5U /* Serial Peripheral Interface (SPI) */
+#define JLINK_INTERFACE_C2            6U /* Silicon Labs 2-wire interface (C2) */
+#define JLINK_INTERFACE_CJTAG         7U /* Compact JTAG (cJTAG) */
 
 /* Kickstart power - JLINK_CMD_POWER_SET_KICKSTART */
 #define JLINK_POWER_KICKSTART_ENABLE 0x01U /* Set Kickstart power on */
