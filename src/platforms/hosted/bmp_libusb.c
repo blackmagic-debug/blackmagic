@@ -283,6 +283,36 @@ void orbtrace_read_version(libusb_device *device, libusb_device_handle *handle, 
 	libusb_free_config_descriptor(config);
 }
 
+static void process_cmsis_interface(const libusb_device_descriptor_s *const device_descriptor,
+	libusb_device *const device, libusb_device_handle *const handle, probe_info_s **probe_list)
+{
+	char read_string[128];
+	char *version;
+	if (device_descriptor->idVendor == VENDOR_ID_ORBCODE && device_descriptor->idProduct == PRODUCT_ID_ORBTRACE) {
+		orbtrace_read_version(device, handle, read_string, sizeof(read_string));
+		version = strdup(read_string);
+	} else
+		version = strdup("---");
+	char *serial;
+	if (device_descriptor->iSerialNumber == 0)
+		serial = strdup("Unknown serial number");
+	else
+		serial = get_device_descriptor_string(handle, device_descriptor->iSerialNumber);
+	char *manufacturer;
+	if (device_descriptor->iManufacturer == 0)
+		manufacturer = strdup("Unknown manufacturer");
+	else
+		manufacturer = get_device_descriptor_string(handle, device_descriptor->iManufacturer);
+	char *product;
+	if (device_descriptor->iProduct == 0)
+		product = strdup("Unknown product");
+	else
+		product = get_device_descriptor_string(handle, device_descriptor->iProduct);
+
+	*probe_list = probe_info_add_by_id(*probe_list, BMP_TYPE_CMSIS_DAP, device, device_descriptor->idVendor,
+		device_descriptor->idProduct, manufacturer, product, serial, version);
+}
+
 static bool process_cmsis_interface_probe(
 	libusb_device_descriptor_s *device_descriptor, libusb_device *device, probe_info_s **probe_list, bmp_info_s *info)
 {
@@ -313,32 +343,9 @@ static bool process_cmsis_interface_probe(
 				continue; /* We failed but that's a soft error at this point. */
 
 			if (strstr(read_string, "CMSIS") != NULL) {
-				char *version;
-				if (device_descriptor->idVendor == VENDOR_ID_ORBCODE &&
-					device_descriptor->idProduct == PRODUCT_ID_ORBTRACE) {
-					orbtrace_read_version(device, handle, read_string, sizeof(read_string));
-					version = strdup(read_string);
-				} else
-					version = strdup("---");
-				char *serial;
-				if (device_descriptor->iSerialNumber == 0)
-					serial = strdup("Unknown serial number");
-				else
-					serial = get_device_descriptor_string(handle, device_descriptor->iSerialNumber);
-				char *manufacturer;
-				if (device_descriptor->iManufacturer == 0)
-					manufacturer = strdup("Unknown manufacturer");
-				else
-					manufacturer = get_device_descriptor_string(handle, device_descriptor->iManufacturer);
-				char *product;
-				if (device_descriptor->iProduct == 0)
-					product = strdup("Unknown product");
-				else
-					product = get_device_descriptor_string(handle, device_descriptor->iProduct);
-
-				*probe_list = probe_info_add_by_id(*probe_list, BMP_TYPE_CMSIS_DAP, device, device_descriptor->idVendor,
-					device_descriptor->idProduct, manufacturer, product, serial, version);
+				process_cmsis_interface(device_descriptor, device, handle, probe_list);
 				cmsis_dap = true;
+				break;
 			}
 		}
 	}
