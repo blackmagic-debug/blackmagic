@@ -319,30 +319,34 @@ static bool process_cmsis_interface_probe(
 	(void)info;
 	/* Try to get the active configuration descriptor for the device */
 	libusb_config_descriptor_s *config;
-	if (libusb_get_active_config_descriptor(device, &config) != 0)
+	if (libusb_get_active_config_descriptor(device, &config) != LIBUSB_SUCCESS)
 		return false;
 
 	/* Try to open the device */
 	libusb_device_handle *handle;
-	if (libusb_open(device, &handle) != 0) {
+	if (libusb_open(device, &handle) != LIBUSB_SUCCESS) {
 		libusb_free_config_descriptor(config);
 		return false;
 	}
-	char read_string[128];
 
 	bool cmsis_dap = false;
-	for (size_t iface = 0; iface < config->bNumInterfaces && !cmsis_dap; ++iface) {
+	/* Enumerate the device's interfaces and all their alt modes */
+	for (uint8_t iface = 0; iface < config->bNumInterfaces && !cmsis_dap; ++iface) {
 		const libusb_interface_s *interface = &config->interface[iface];
-		for (int descriptorIndex = 0; descriptorIndex < interface->num_altsetting; ++descriptorIndex) {
-			const libusb_interface_descriptor_s *descriptor = &interface->altsetting[0];
+		for (int altmode = 0; altmode < interface->num_altsetting; ++altmode) {
+			const libusb_interface_descriptor_s *descriptor = &interface->altsetting[altmode];
 			uint8_t string_index = descriptor->iInterface;
+			/* If we've found an interface without a description string, ignore it */
 			if (string_index == 0)
 				continue;
+			char interface_string[128];
+			/* Read out the string */
 			if (libusb_get_string_descriptor_ascii(
-					handle, string_index, (unsigned char *)read_string, sizeof(read_string)) < 0)
+					handle, string_index, (unsigned char *)interface_string, sizeof(interface_string)) < 0)
 				continue; /* We failed but that's a soft error at this point. */
 
-			if (strstr(read_string, "CMSIS") != NULL) {
+			/* Check if it's a CMSIS-DAP interface */
+			if (strstr(interface_string, "CMSIS") != NULL) {
 				process_cmsis_interface(device_descriptor, device, handle, probe_list);
 				cmsis_dap = true;
 				break;
