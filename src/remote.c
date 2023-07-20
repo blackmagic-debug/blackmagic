@@ -162,12 +162,13 @@ static void remote_packet_process_swd(unsigned i, char *packet)
 		break;
 	}
 
-	case REMOTE_OUT: /* So= Out ====================================== */
-		ticks = remote_hex_string_to_num(2, &packet[2]);
-		param = remote_hex_string_to_num(-1, &packet[4]);
-		swd_proc.seq_out(param, ticks);
+	case REMOTE_OUT: { /* So = Out ====================================== */
+		const size_t clock_cycles = remote_hex_string_to_num(2, packet + 2);
+		const uint32_t data = remote_hex_string_to_num(-1, packet + 4);
+		swd_proc.seq_out(data, clock_cycles);
 		remote_respond(REMOTE_RESP_OK, 0);
 		break;
+	}
 
 	case REMOTE_OUT_PAR: /* SO = Out parity ========================== */
 		ticks = remote_hex_string_to_num(2, &packet[2]);
