@@ -144,9 +144,8 @@ static void remote_packet_process_swd(unsigned i, char *packet)
 			remote_dp.abort = firmware_swdp_abort;
 			swdptap_init();
 			remote_respond(REMOTE_RESP_OK, 0);
-		} else {
+		} else
 			remote_respond(REMOTE_RESP_ERR, REMOTE_ERROR_WRONGLEN);
-		}
 		break;
 
 	case REMOTE_IN_PAR: /* SI = In parity ============================= */
