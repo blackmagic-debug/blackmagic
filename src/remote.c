@@ -130,11 +130,11 @@ static adiv5_debug_port_s remote_dp = {
 	.mem_write = adiv5_mem_write_bytes,
 };
 
-static void remote_packet_process_swd(unsigned i, char *packet)
+static void remote_packet_process_swd(const char *const packet, const size_t packet_len)
 {
 	switch (packet[1]) {
 	case REMOTE_INIT: /* SS = initialise =============================== */
-		if (i == 2) {
+		if (packet_len == 2) {
 			remote_dp.dp_read = firmware_swdp_read;
 			remote_dp.low_access = firmware_swdp_low_access;
 			remote_dp.abort = firmware_swdp_abort;
@@ -588,7 +588,7 @@ void remote_packet_process(unsigned i, char *packet)
 {
 	switch (packet[0]) {
 	case REMOTE_SWDP_PACKET:
-		remote_packet_process_swd(i, packet);
+		remote_packet_process_swd(packet, i);
 		break;
 
 	case REMOTE_JTAG_PACKET:
