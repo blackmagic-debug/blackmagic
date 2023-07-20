@@ -112,6 +112,9 @@ void platform_init(int argc, char **argv)
 	else if (find_debuggers(&cl_opts, &info))
 		exit(1);
 
+	if (cl_opts.opt_list_only)
+		exit(0);
+
 	bmp_ident(&info);
 
 	switch (info.bmp_type) {
