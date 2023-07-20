@@ -135,7 +135,7 @@ void bmp_read_product_version(libusb_device_descriptor_s *device_descriptor, lib
 			--start_of_version;
 		start_of_version[1] = '\0';
 		start_of_version += 2;
-		while (start_of_version[0] == ' ' && start_of_version[0] != '\0')
+		while (start_of_version[0] == ' ')
 			++start_of_version;
 		*version = strdup(start_of_version);
 	}
