@@ -132,9 +132,6 @@ static adiv5_debug_port_s remote_dp = {
 
 static void remote_packet_process_swd(unsigned i, char *packet)
 {
-	uint8_t ticks;
-	uint32_t param;
-
 	switch (packet[1]) {
 	case REMOTE_INIT: /* SS = initialise =============================== */
 		if (i == 2) {
@@ -170,12 +167,13 @@ static void remote_packet_process_swd(unsigned i, char *packet)
 		break;
 	}
 
-	case REMOTE_OUT_PAR: /* SO = Out parity ========================== */
-		ticks = remote_hex_string_to_num(2, &packet[2]);
-		param = remote_hex_string_to_num(-1, &packet[4]);
-		swd_proc.seq_out_parity(param, ticks);
+	case REMOTE_OUT_PAR: { /* SO = Out parity ========================== */
+		const size_t clock_cycles = remote_hex_string_to_num(2, packet + 2);
+		const uint32_t data = remote_hex_string_to_num(-1, packet + 4);
+		swd_proc.seq_out_parity(data, clock_cycles);
 		remote_respond(REMOTE_RESP_OK, 0);
 		break;
+	}
 
 	default:
 		remote_respond(REMOTE_RESP_ERR, REMOTE_ERROR_UNRECOGNISED);
