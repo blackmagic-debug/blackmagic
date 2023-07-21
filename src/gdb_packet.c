@@ -51,8 +51,8 @@ void consume_remote_packet(char *const packet, const size_t size)
 			getting_remote_packet = false;
 			break;
 
-		case '$': /* A 'real' gdb packet, best stop squatting now */
-			packet[0] = '$';
+		case GDB_PACKET_START: /* A 'real' gdb packet, best stop squatting now */
+			packet[0] = GDB_PACKET_START;
 			getting_remote_packet = false;
 			break;
 
@@ -85,7 +85,7 @@ size_t gdb_getpacket(char *const packet, const size_t size)
 	while (true) {
 		char start_char = '\0';
 		/* Wait for packet start */
-		while (start_char != '$' && start_char != REMOTE_SOM) {
+		while (start_char != GDB_PACKET_START && start_char != REMOTE_SOM) {
 			start_char = gdb_if_getchar();
 			if (start_char == '\x04')
 				return 1;
@@ -103,23 +103,23 @@ size_t gdb_getpacket(char *const packet, const size_t size)
 		csum = 0;
 		char c = '\0';
 		/* Capture packet data into buffer */
-		while (c != '#') {
+		while (c != GDB_PACKET_END) {
 			c = gdb_if_getchar();
-			if (c == '#')
+			if (c == GDB_PACKET_END)
 				break;
 			/* If we run out of buffer space, exit early */
 			if (offset == size)
 				break;
 
-			if (c == '$') { /* Restart capture */
+			if (c == GDB_PACKET_START) { /* Restart capture */
 				offset = 0;
 				csum = 0;
 				continue;
 			}
-			if (c == '}') { /* Escaped char */
+			if (c == GDB_PACKET_ESCAPE) { /* Escaped char */
 				c = gdb_if_getchar();
-				csum += c + '}';
-				packet[offset++] = (char)((uint8_t)c ^ 0x20U);
+				csum += c + GDB_PACKET_ESCAPE;
+				packet[offset++] = (char)((uint8_t)c ^ GDB_PACKET_ESCAPE_XOR);
 				continue;
 			}
 			csum += c;
@@ -134,9 +134,9 @@ size_t gdb_getpacket(char *const packet, const size_t size)
 			break;
 
 		/* Get here if checksum fails */
-		gdb_if_putchar('-', 1); /* Send nack */
+		gdb_if_putchar(GDB_PACKET_NACK, 1); /* Send nack */
 	}
-	gdb_if_putchar('+', 1); /* Send ack */
+	gdb_if_putchar(GDB_PACKET_ACK, 1); /* Send ack */
 	packet[offset] = '\0';
 
 	DEBUG_GDB("%s: ", __func__);
@@ -157,10 +157,11 @@ static void gdb_next_char(const char value, uint8_t *const csum)
 		DEBUG_GDB("%c", value);
 	else
 		DEBUG_GDB("\\x%02X", value);
-	if (value == '$' || value == '#' || value == '}' || value == '*') {
-		gdb_if_putchar('}', 0);
-		gdb_if_putchar((char)((uint8_t)value ^ 0x20U), 0);
-		*csum += '}' + (value ^ 0x20U);
+	if (value == GDB_PACKET_START || value == GDB_PACKET_END || value == GDB_PACKET_ESCAPE ||
+		value == GDB_PACKET_RUNLENGTH_START) {
+		gdb_if_putchar(GDB_PACKET_ESCAPE, 0);
+		gdb_if_putchar((char)((uint8_t)value ^ GDB_PACKET_ESCAPE_XOR), 0);
+		*csum += GDB_PACKET_ESCAPE + (value ^ GDB_PACKET_ESCAPE_XOR);
 	} else {
 		gdb_if_putchar(value, 0);
 		*csum += value;
@@ -175,19 +176,19 @@ void gdb_putpacket2(const char *const packet1, const size_t size1, const char *c
 	do {
 		DEBUG_GDB("%s: ", __func__);
 		uint8_t csum = 0;
-		gdb_if_putchar('$', 0);
+		gdb_if_putchar(GDB_PACKET_START, 0);
 
 		for (size_t i = 0; i < size1; ++i)
 			gdb_next_char(packet1[i], &csum);
 		for (size_t i = 0; i < size2; ++i)
 			gdb_next_char(packet2[i], &csum);
 
-		gdb_if_putchar('#', 0);
+		gdb_if_putchar(GDB_PACKET_END, 0);
 		snprintf(xmit_csum, sizeof(xmit_csum), "%02X", csum);
 		gdb_if_putchar(xmit_csum[0], 0);
 		gdb_if_putchar(xmit_csum[1], 1);
 		DEBUG_GDB("\n");
-	} while (gdb_if_getchar_to(2000) != '+' && tries++ < 3U);
+	} while (gdb_if_getchar_to(2000) != GDB_PACKET_ACK && tries++ < 3U);
 }
 
 void gdb_putpacket(const char *const packet, const size_t size)
@@ -198,15 +199,15 @@ void gdb_putpacket(const char *const packet, const size_t size)
 	do {
 		DEBUG_GDB("%s: ", __func__);
 		uint8_t csum = 0;
-		gdb_if_putchar('$', 0);
+		gdb_if_putchar(GDB_PACKET_START, 0);
 		for (size_t i = 0; i < size; ++i)
 			gdb_next_char(packet[i], &csum);
-		gdb_if_putchar('#', 0);
+		gdb_if_putchar(GDB_PACKET_END, 0);
 		snprintf(xmit_csum, sizeof(xmit_csum), "%02X", csum);
 		gdb_if_putchar(xmit_csum[0], 0);
 		gdb_if_putchar(xmit_csum[1], 1);
 		DEBUG_GDB("\n");
-	} while (gdb_if_getchar_to(2000) != '+' && tries++ < 3U);
+	} while (gdb_if_getchar_to(2000) != GDB_PACKET_ACK && tries++ < 3U);
 }
 
 void gdb_put_notification(const char *const packet, const size_t size)
@@ -215,10 +216,10 @@ void gdb_put_notification(const char *const packet, const size_t size)
 
 	DEBUG_GDB("%s: ", __func__);
 	uint8_t csum = 0;
-	gdb_if_putchar('%', 0);
+	gdb_if_putchar(GDB_PACKET_NOTIFICATION_START, 0);
 	for (size_t i = 0; i < size; ++i)
 		gdb_next_char(packet[i], &csum);
-	gdb_if_putchar('#', 0);
+	gdb_if_putchar(GDB_PACKET_END, 0);
 	snprintf(xmit_csum, sizeof(xmit_csum), "%02X", csum);
 	gdb_if_putchar(xmit_csum[0], 0);
 	gdb_if_putchar(xmit_csum[1], 1);
