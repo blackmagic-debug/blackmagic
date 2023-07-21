@@ -31,124 +31,196 @@
 
 #include <stdarg.h>
 
-void consume_remote_packet(char *const packet, const size_t size)
+typedef enum packet_state {
+	PACKET_IDLE,
+	PACKET_GDB_CAPTURE,
+	PACKET_GDB_ESCAPE,
+	PACKET_GDB_CHECKSUM_UPPER,
+	PACKET_GDB_CHECKSUM_LOWER,
+} packet_state_e;
+
+packet_state_e consume_remote_packet(char *const packet, const size_t size)
 {
 #if PC_HOSTED == 0
 	/* We got what looks like probably a remote control packet */
 	size_t offset = 0;
-	bool getting_remote_packet = true;
-	while (getting_remote_packet) {
+	while (true) {
 		/* Consume bytes until we either have a complete remote control packet or have to leave this mode */
-		const char c = gdb_if_getchar();
-		switch (c) {
-		case REMOTE_SOM: /* Oh dear, packet restarts */
+		const char rx_char = gdb_if_getchar();
+
+		switch (rx_char) {
+		case '\x04':
+			/* EOT (end of transmission) - connection was closed */
+			return PACKET_IDLE;
+
+		case REMOTE_SOM:
+			/* Oh dear, restart remote packet capture */
 			offset = 0;
 			break;
 
-		case REMOTE_EOM: /* Complete packet for processing */
-			packet[offset] = 0;
-			remote_packet_process(offset, packet);
-			getting_remote_packet = false;
-			break;
+		case REMOTE_EOM:
+			/* Complete packet for processing */
 
-		case GDB_PACKET_START: /* A 'real' gdb packet, best stop squatting now */
-			packet[0] = GDB_PACKET_START;
-			getting_remote_packet = false;
-			break;
+			/* Null terminate packet */
+			packet[offset] = '\0';
+			/* Handle packet */
+			remote_packet_process(offset, packet);
+
+			/* Restart packet capture */
+			return PACKET_IDLE;
+
+		case GDB_PACKET_START:
+			/* A 'real' gdb packet, best stop squatting now */
+			return PACKET_GDB_CAPTURE;
 
 		default:
 			if (offset < size)
-				packet[offset++] = c;
+				packet[offset++] = rx_char;
 			else
-				/* Who knows what is going on...return to normality */
-				getting_remote_packet = false;
-			break;
+				/* Buffer overflow, restart packet capture */
+				return PACKET_IDLE;
 		}
 	}
-#endif
+#else
+	(void)packet;
 	(void)size;
-	/*
-	 * Reset the packet buffer start character to zero, because function
-	 * 'remote_packet_process()' above overwrites this buffer, and
-	 * an arbitrary character may have been placed there. If this is a '$'
-	 * character, this will cause this loop to be terminated, which is wrong.
-	 */
-	packet[0] = '\0';
+
+	/* Hosted builds ignore remote control packets */
+	return PACKET_IDLE;
+#endif
 }
 
 size_t gdb_getpacket(char *const packet, const size_t size)
 {
-	unsigned char csum;
-	char recv_csum[3];
+	packet_state_e state = PACKET_IDLE; /* State of the packet capture */
+
 	size_t offset = 0;
+	uint8_t checksum = 0;
+	uint8_t rx_checksum = 0;
 
 	while (true) {
-		char start_char = '\0';
-		/* Wait for packet start */
-		while (start_char != GDB_PACKET_START && start_char != REMOTE_SOM) {
-			start_char = gdb_if_getchar();
-			if (start_char == '\x04')
-				return 1;
-		}
-		packet[0] = start_char;
-
-		/* If the packet appears to start a remote control message, consume it */
-		if (start_char == REMOTE_SOM) {
-			consume_remote_packet(packet, size);
-			continue;
+		const char rx_char = gdb_if_getchar();
+		if (rx_char == '\x04') {
+			/* EOT (end of transmission) - connection was closed */
+			packet[0] = '\x04';
+			packet[1U] = 0;
+			return 1U;
 		}
 
-		/* Handle a normal GDB packet */
-		offset = 0;
-		csum = 0;
-		char c = '\0';
-		/* Capture packet data into buffer */
-		while (c != GDB_PACKET_END) {
-			c = gdb_if_getchar();
-			if (c == GDB_PACKET_END)
-				break;
-			/* If we run out of buffer space, exit early */
-			if (offset == size)
-				break;
-
-			if (c == GDB_PACKET_START) { /* Restart capture */
+		switch (state) {
+		case PACKET_IDLE:
+			if (rx_char == GDB_PACKET_START) {
+				/* Start of GDB packet */
+				state = PACKET_GDB_CAPTURE;
 				offset = 0;
-				csum = 0;
-				continue;
+				checksum = 0;
 			}
-			if (c == GDB_PACKET_ESCAPE) { /* Escaped char */
-				c = gdb_if_getchar();
-				csum += c + GDB_PACKET_ESCAPE;
-				packet[offset++] = (char)((uint8_t)c ^ GDB_PACKET_ESCAPE_XOR);
-				continue;
+#if PC_HOSTED == 0
+			else if (rx_char == REMOTE_SOM) {
+				/* Start of BMP remote packet */
+				/* 
+				 * Let consume_remote_packet handle this
+				 * returns PACKET_IDLE or PACKET_GDB_CAPTURE if it detects the start of a GDB packet
+				 */
+				state = consume_remote_packet(packet, size);
+				offset = 0;
+				checksum = 0;
 			}
-			csum += c;
-			packet[offset++] = c;
-		}
-		recv_csum[0] = gdb_if_getchar();
-		recv_csum[1] = gdb_if_getchar();
-		recv_csum[2] = 0;
-
-		/* Return packet if checksum matches */
-		if (csum == strtoul(recv_csum, NULL, 16))
+#endif
 			break;
 
-		/* Get here if checksum fails */
-		gdb_if_putchar(GDB_PACKET_NACK, 1); /* Send nack */
-	}
-	gdb_if_putchar(GDB_PACKET_ACK, 1); /* Send ack */
-	packet[offset] = '\0';
+		case PACKET_GDB_CAPTURE:
+			if (rx_char == GDB_PACKET_START) {
+				/* Restart GDB packet capture */
+				offset = 0;
+				checksum = 0;
+				break;
+			}
+			if (rx_char == GDB_PACKET_END) {
+				/* End of GDB packet */
 
-	DEBUG_GDB("%s: ", __func__);
-	for (size_t j = 0; j < offset; j++) {
-		const char value = packet[j];
-		if (value >= ' ' && value < '\x7f')
-			DEBUG_GDB("%c", value);
-		else
-			DEBUG_GDB("\\x%02X", value);
+				/* Move to checksum capture */
+				state = PACKET_GDB_CHECKSUM_UPPER;
+				break;
+			}
+
+			/* Not start or end of packet, add to checksum */
+			checksum += rx_char;
+
+			/* Add to packet buffer, unless it is an escape char */
+			if (rx_char == GDB_PACKET_ESCAPE)
+				/* GDB Escaped char */
+				state = PACKET_GDB_ESCAPE;
+			else
+				/* Add to packet buffer */
+				packet[offset++] = rx_char;
+			break;
+
+		case PACKET_GDB_ESCAPE:
+			/* Add to checksum */
+			checksum += rx_char;
+
+			/* Resolve escaped char */
+			packet[offset++] = rx_char ^ GDB_PACKET_ESCAPE_XOR;
+
+			/* Return to normal packet capture */
+			state = PACKET_GDB_CAPTURE;
+			break;
+
+		case PACKET_GDB_CHECKSUM_UPPER:
+			/* Checksum upper nibble */
+			rx_checksum = unhex_digit(rx_char) << 4U; /* This also clears the lower nibble */
+			state = PACKET_GDB_CHECKSUM_LOWER;
+			break;
+
+		case PACKET_GDB_CHECKSUM_LOWER:
+			/* Checksum lower nibble */
+			rx_checksum |= unhex_digit(rx_char); /* BITWISE OR lower nibble with upper nibble */
+
+			/* Check checksum */
+			if (rx_checksum == checksum) {
+				/* Checksum matches our calculated checksum, captured valid packet */
+
+				/* Acknowledge packet */
+				gdb_if_putchar(GDB_PACKET_ACK, 1U);
+
+				/* Null terminate packet */
+				packet[offset] = '\0';
+
+				/* Log packet for debugging */
+				DEBUG_GDB("%s: ", __func__);
+				for (size_t j = 0; j < offset; j++) {
+					const char value = packet[j];
+					if (value >= ' ' && value < '\x7f')
+						DEBUG_GDB("%c", value);
+					else
+						DEBUG_GDB("\\x%02X", value);
+				}
+				DEBUG_GDB("\n");
+
+				/* Return packet captured size */
+				return offset;
+			} else {
+				/* Checksum does not match our calculated checksum */
+
+				/* N-Acknowledge packet */
+				gdb_if_putchar(GDB_PACKET_NACK, 1U);
+
+				/* Restart packet capture */
+				state = PACKET_IDLE;
+			}
+			break;
+
+		default:
+			/* Something is not right, restart packet capture */
+			state = PACKET_IDLE;
+			break;
+		}
+
+		if (offset >= size)
+			/* Buffer overflow, restart packet capture */
+			state = PACKET_IDLE;
 	}
-	DEBUG_GDB("\n");
-	return offset;
 }
 
 static void gdb_next_char(const char value, uint8_t *const csum)
