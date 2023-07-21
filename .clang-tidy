@@ -28,6 +28,22 @@ CheckOptions:
     value: '2'
   - key:   readability-identifier-length.MinimumVariableNameLength
     value: '2'
+  - key:   readability-identifier-naming.VariableCase
+    value: 'lower_case'
+  - key:   readability-identifier-naming.FunctionCase
+    value: 'lower_case'
+  - key:   readability-identifier-naming.ConstantCase
+    value: 'lower_case'
+  - key:   readability-identifier-naming.EnumCase
+  value: 'lower_case'
+   - key:   readability-identifier-naming.StructCase
+  value: 'lower_case'
+   - key:   readability-identifier-naming.UnionCase
+  value: 'lower_case'
+   - key:   readability-identifier-naming.TypedefCase
+  value: 'lower_case'
+  - key:   readability-identifier-naming.MacroDefinitionCase
+    value: 'UPPER_CASE'
   - key:   readability-identifier-length.MinimumParameterNameLength
     value: '2'
 ...
