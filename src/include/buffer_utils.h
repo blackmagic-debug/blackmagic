@@ -62,4 +62,10 @@ static inline uint32_t read_le4(const uint8_t *const buffer, const size_t offset
 		((uint32_t)buffer[offset + 3U] << 24U);
 }
 
+static inline uint32_t read_be4(const uint8_t *const buffer, const size_t offset)
+{
+	return ((uint32_t)buffer[offset + 0U] << 24U) | ((uint32_t)buffer[offset + 1U] << 16U) |
+		((uint32_t)buffer[offset + 2U] << 8U) | buffer[offset + 3U];
+}
+
 #endif /*INCLUDE_BUFFER_UTILS_H*/
