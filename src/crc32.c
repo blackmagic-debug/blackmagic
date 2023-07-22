@@ -100,7 +100,7 @@ static uint32_t crc32_calc(const uint32_t crc, const uint8_t data)
 	return (crc << 8U) ^ crc32_table[((crc >> 24U) ^ data) & 0xffU];
 }
 
-bool generic_crc32(target_s *const target, uint32_t *const crc_res, const uint32_t base, const size_t len)
+bool generic_crc32(target_s *const target, uint32_t *const result, const uint32_t base, const size_t len)
 {
 	uint32_t crc = 0xffffffffU;
 #if PC_HOSTED == 1
@@ -133,55 +133,55 @@ bool generic_crc32(target_s *const target, uint32_t *const crc_res, const uint32
 			crc = crc32_calc(crc, bytes[i]);
 	}
 	DEBUG_WARN("%" PRIu32 " ms\n", platform_time_ms() - start_time);
-	*crc_res = crc;
+	*result = crc;
 	return true;
 }
 #else
 #include <libopencm3/stm32/crc.h>
 
-bool generic_crc32(target_s *const target, uint32_t *const crc_res, uint32_t base, size_t len)
+bool generic_crc32(target_s *const target, uint32_t *const result, const uint32_t base, const size_t len)
 {
-	uint8_t bytes[128];
+	uint8_t bytes[128U];
 
 	CRC_CR |= CRC_CR_RESET;
 
 	uint32_t last_time = platform_time_ms();
-	while (len > 3U) {
+	const size_t adjusted_len = len & ~3U;
+	for (size_t offset = 0; offset < adjusted_len; offset += sizeof(bytes)) {
 		const uint32_t actual_time = platform_time_ms();
 		if (actual_time > last_time + 1000U) {
 			last_time = actual_time;
 			gdb_if_putchar(0, true);
 		}
-		const size_t read_len = MIN(sizeof(bytes), len) & ~3U;
-		if (target_mem_read(target, bytes, base, read_len)) {
-			DEBUG_ERROR("generic_crc32 error around address 0x%08" PRIx32 "\n", base);
+		const size_t read_len = MIN(sizeof(bytes), adjusted_len - offset);
+		if (target_mem_read(target, bytes, base + offset, read_len)) {
+			DEBUG_ERROR("generic_crc32 error around address 0x%08" PRIx32 "\n", (uint32_t)(base + offset));
 			return false;
 		}
 
 		for (size_t i = 0; i < read_len; i += 4U)
 			CRC_DR = __builtin_bswap32(*(uint32_t *)(bytes + i));
-
-		base += read_len;
-		len -= read_len;
 	}
 
 	uint32_t crc = CRC_DR;
 
-	if (target_mem_read(target, bytes, base, len)) {
-		DEBUG_ERROR("generic_crc32 error around address 0x%08" PRIx32 "\n", base);
-		return false;
-	}
-	uint8_t *data = bytes;
-	while (len--) {
-		crc ^= *data++ << 24U;
-		for (size_t i = 0; i < 8U; i++) {
-			if (crc & 0x80000000U)
-				crc = (crc << 1U) ^ 0x4c11db7U;
-			else
-				crc <<= 1U;
+	const size_t remainder = len - adjusted_len;
+	if (remainder) {
+		if (target_mem_read(target, bytes, base + adjusted_len, remainder)) {
+			DEBUG_ERROR("generic_crc32 error around address 0x%08" PRIx32 "\n", (uint32_t)(base + adjusted_len));
+			return false;
+		}
+		for (size_t offset = 0; offset < remainder; ++offset) {
+			crc ^= bytes[offset] << 24U;
+			for (size_t i = 0; i < 8U; i++) {
+				if (crc & 0x80000000U)
+					crc = (crc << 1U) ^ 0x4c11db7U;
+				else
+					crc <<= 1U;
+			}
 		}
 	}
-	*crc_res = crc;
+	*result = crc;
 	return true;
 }
 #endif
