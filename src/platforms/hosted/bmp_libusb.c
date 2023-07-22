@@ -31,7 +31,13 @@
 #include <libusb.h>
 #include <ftdi.h>
 #endif
+#if (defined __has_include && __has_include(<uchar.h>)) || !defined(__APPLE__)
 #include <uchar.h>
+#else
+//https://sourceware.org/bugzilla/show_bug.cgi?id=17979
+#include <stdint.h>
+typedef int_least16_t char16_t;
+#endif
 #include "cli.h"
 #include "ftdi_bmp.h"
 #include "version.h"
