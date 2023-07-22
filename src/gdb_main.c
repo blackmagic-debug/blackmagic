@@ -517,7 +517,7 @@ static void exec_q_c(const char *packet, const size_t length)
 static void exec_q_thread_info(const char *packet, const size_t length)
 {
 	(void)length;
-	if (packet[-11] == 'f')
+	if (packet[-11] == 'f' && cur_target)
 		gdb_putpacketz("m1");
 	else
 		gdb_putpacketz("l");
