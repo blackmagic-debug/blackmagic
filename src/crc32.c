@@ -100,7 +100,7 @@ static uint32_t crc32_calc(const uint32_t crc, const uint8_t data)
 	return (crc << 8U) ^ crc32_table[((crc >> 24U) ^ data) & 0xffU];
 }
 
-bool generic_crc32(target_s *const t, uint32_t *const crc_res, uint32_t base, size_t len)
+bool generic_crc32(target_s *const target, uint32_t *const crc_res, uint32_t base, size_t len)
 {
 	uint32_t crc = 0xffffffffU;
 #if PC_HOSTED == 1
@@ -124,7 +124,7 @@ bool generic_crc32(target_s *const t, uint32_t *const crc_res, uint32_t base, si
 			gdb_if_putchar(0, true);
 		}
 		const size_t read_len = MIN(sizeof(bytes), len);
-		if (target_mem_read(t, bytes, base, (read_len + 3U) & ~3U)) {
+		if (target_mem_read(target, bytes, base, (read_len + 3U) & ~3U)) {
 			DEBUG_ERROR("generic_crc32 error around address 0x%08" PRIx32 "\n", base);
 			return false;
 		}
@@ -142,7 +142,7 @@ bool generic_crc32(target_s *const t, uint32_t *const crc_res, uint32_t base, si
 #else
 #include <libopencm3/stm32/crc.h>
 
-bool generic_crc32(target_s *const t, uint32_t *const crc_res, uint32_t base, size_t len)
+bool generic_crc32(target_s *const target, uint32_t *const crc_res, uint32_t base, size_t len)
 {
 	uint8_t bytes[128];
 
@@ -156,7 +156,7 @@ bool generic_crc32(target_s *const t, uint32_t *const crc_res, uint32_t base, si
 			gdb_if_putchar(0, true);
 		}
 		const size_t read_len = MIN(sizeof(bytes), len) & ~3U;
-		if (target_mem_read(t, bytes, base, read_len)) {
+		if (target_mem_read(target, bytes, base, read_len)) {
 			DEBUG_ERROR("generic_crc32 error around address 0x%08" PRIx32 "\n", base);
 			return false;
 		}
@@ -170,7 +170,7 @@ bool generic_crc32(target_s *const t, uint32_t *const crc_res, uint32_t base, si
 
 	uint32_t crc = CRC_DR;
 
-	if (target_mem_read(t, bytes, base, len)) {
+	if (target_mem_read(target, bytes, base, len)) {
 		DEBUG_ERROR("generic_crc32 error around address 0x%08" PRIx32 "\n", base);
 		return false;
 	}
