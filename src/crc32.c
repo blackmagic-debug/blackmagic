@@ -100,7 +100,7 @@ static uint32_t crc32_calc(const uint32_t crc, const uint8_t data)
 	return (crc << 8U) ^ crc32_table[((crc >> 24U) ^ data) & 0xffU];
 }
 
-bool generic_crc32(target_s *const target, uint32_t *const crc_res, uint32_t base, size_t len)
+bool generic_crc32(target_s *const target, uint32_t *const crc_res, const uint32_t base, const size_t len)
 {
 	uint32_t crc = 0xffffffffU;
 #if PC_HOSTED == 1
@@ -108,32 +108,29 @@ bool generic_crc32(target_s *const target, uint32_t *const crc_res, uint32_t bas
 	 * Reading a 2 MByte on a H743 takes about 80 s@128, 28s @ 1k,
 	 * 22 s @ 4k and 21 s @ 64k
 	 */
-	uint8_t bytes[0x1000];
+	uint8_t bytes[4096U];
 #else
-	uint8_t bytes[128];
+	uint8_t bytes[128U];
 #endif
 
 #if defined(ENABLE_DEBUG)
 	const uint32_t start_time = platform_time_ms();
 #endif
 	uint32_t last_time = platform_time_ms();
-	while (len) {
+	for (size_t offset = 0; offset < len; offset += sizeof(bytes)) {
 		const uint32_t actual_time = platform_time_ms();
 		if (actual_time > last_time + 1000U) {
 			last_time = actual_time;
 			gdb_if_putchar(0, true);
 		}
-		const size_t read_len = MIN(sizeof(bytes), len);
-		if (target_mem_read(target, bytes, base, (read_len + 3U) & ~3U)) {
-			DEBUG_ERROR("generic_crc32 error around address 0x%08" PRIx32 "\n", base);
+		const size_t read_len = MIN(sizeof(bytes), len - offset);
+		if (target_mem_read(target, bytes, base + offset, (read_len + 3U) & ~3U)) {
+			DEBUG_ERROR("generic_crc32 error around address 0x%08" PRIx32 "\n", (uint32_t)(base + offset));
 			return false;
 		}
 
 		for (size_t i = 0; i < read_len; i++)
 			crc = crc32_calc(crc, bytes[i]);
-
-		base += read_len;
-		len -= read_len;
 	}
 	DEBUG_WARN("%" PRIu32 " ms\n", platform_time_ms() - start_time);
 	*crc_res = crc;
