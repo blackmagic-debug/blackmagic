@@ -138,6 +138,7 @@ bool generic_crc32(target_s *const target, uint32_t *const result, const uint32_
 }
 #else
 #include <libopencm3/stm32/crc.h>
+#include "buffer_utils.h"
 
 bool generic_crc32(target_s *const target, uint32_t *const result, const uint32_t base, const size_t len)
 {
@@ -160,7 +161,7 @@ bool generic_crc32(target_s *const target, uint32_t *const result, const uint32_
 		}
 
 		for (size_t i = 0; i < read_len; i += 4U)
-			CRC_DR = __builtin_bswap32(*(uint32_t *)(bytes + i));
+			CRC_DR = read_be4(bytes, i);
 	}
 
 	uint32_t crc = CRC_DR;
