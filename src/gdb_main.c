@@ -183,7 +183,8 @@ int gdb_main_loop(target_controller_s *tc, char *pbuf, size_t pbuf_size, size_t 
 			gdb_putpacketz("OK");
 		break;
 	}
-	/* '[m|M|g|G|c][thread-id]' : Set the thread ID for the given subsequent operation
+	/*
+	 * '[m|M|g|G|c][thread-id]' : Set the thread ID for the given subsequent operation
 	 * (we don't actually care which as we only care about the TID for whether to send OK or an error)
 	 */
 	case 'H': {
@@ -254,7 +255,7 @@ int gdb_main_loop(target_controller_s *tc, char *pbuf, size_t pbuf_size, size_t 
 			int n;
 			sscanf(pbuf, "P%" SCNx32 "=%n", &reg, &n);
 			// TODO: FIXME, VLAs considered harmful.
-			uint8_t val[strlen(&pbuf[n]) / 2U];
+			uint8_t val[strlen(pbuf + n) / 2U];
 			unhexify(val, pbuf + n, sizeof(val));
 			if (target_reg_write(cur_target, reg, val, sizeof(val)) > 0)
 				gdb_putpacketz("OK");
@@ -276,10 +277,11 @@ int gdb_main_loop(target_controller_s *tc, char *pbuf, size_t pbuf_size, size_t 
 		break;
 
 	case '!': /* Enable Extended GDB Protocol. */
-		/* This doesn't do anything, we support the extended
-			 * protocol anyway, but GDB will never send us a 'R'
-			 * packet unless we answer 'OK' here.
-			 */
+		/*
+		 * This doesn't do anything, we support the extended
+		 * protocol anyway, but GDB will never send us a 'R'
+		 * packet unless we answer 'OK' here.
+		 */
 		gdb_putpacketz("OK");
 		break;
 
@@ -655,8 +657,10 @@ static void handle_v_packet(char *packet, const size_t plen)
 			gdb_putpacketz("OK");
 
 	} else {
-		/* The vMustReplyEmpty is used as a feature test to check how gdbserver handles unknown packets */
-		/* print only actually unknown packets */
+		/*
+		 * The vMustReplyEmpty is used as a feature test to check how gdbserver handles
+		 * unknown packets print only actually unknown packets
+		 */
 		if (strcmp(packet, "vMustReplyEmpty") != 0)
 			DEBUG_GDB("*** Unsupported packet: %s\n", packet);
 		gdb_putpacket("", 0);
