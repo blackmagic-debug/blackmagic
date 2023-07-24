@@ -34,6 +34,7 @@
 #include <string.h>
 #include "dap.h"
 #include "dap_command.h"
+#include "exception.h"
 #include "buffer_utils.h"
 
 #define DAP_TRANSFER_APnDP       (1U << 0U)
@@ -60,6 +61,31 @@ static size_t dap_encode_transfer(
 	return 5U;
 }
 
+static void dap_dispatch_status(adiv5_debug_port_s *const dp, const dap_transfer_status_e status)
+{
+	switch (status) {
+	case DAP_TRANSFER_OK:
+		break;
+	case DAP_TRANSFER_WAIT:
+		DEBUG_ERROR("Access resulted in wait, aborting\n");
+		dp->abort(dp, ADIV5_DP_ABORT_DAPABORT);
+		dp->fault = status;
+		break;
+	case DAP_TRANSFER_FAULT:
+		DEBUG_ERROR("Access resulted in fault\n");
+		dp->fault = status;
+		break;
+	case DAP_TRANSFER_NO_RESPONSE:
+		DEBUG_ERROR("Access resulted in no response\n");
+		dp->fault = status;
+		break;
+	default:
+		DEBUG_ERROR("Access has invalid ack %x\n", status);
+		raise_exception(EXCEPTION_ERROR, "Invalid ACK");
+		break;
+	}
+}
+
 /* https://www.keil.com/pack/doc/CMSIS/DAP/html/group__DAP__Transfer.html */
 bool perform_dap_transfer(adiv5_debug_port_s *const target_dp, const dap_transfer_request_s *const transfer_requests,
 	const size_t requests, uint32_t *const response_data, const size_t responses)
@@ -80,10 +106,12 @@ bool perform_dap_transfer(adiv5_debug_port_s *const target_dp, const dap_transfe
 	for (size_t i = 0; i < requests; ++i)
 		offset += dap_encode_transfer(&transfer_requests[i], request, offset);
 
-	dap_transfer_response_s response;
+	dap_transfer_response_s response = {.processed = 0, .status = DAP_TRANSFER_OK};
 	/* Run the request */
-	if (!dap_run_cmd(request, offset, &response, 2U + (responses * 4U)))
+	if (!dap_run_cmd(request, offset, &response, 2U + (responses * 4U))) {
+		dap_dispatch_status(target_dp, response.status);
 		return false;
+	}
 
 	/* Look at the response and decipher what went on */
 	if (response.processed == requests && response.status == DAP_TRANSFER_OK) {
@@ -91,9 +119,9 @@ bool perform_dap_transfer(adiv5_debug_port_s *const target_dp, const dap_transfe
 			response_data[i] = read_le4(response.data[i], 0);
 		return true;
 	}
-	target_dp->fault = response.status;
 
 	DEBUG_PROBE("-> transfer failed with %u after processing %u requests\n", response.status, response.processed);
+	dap_dispatch_status(target_dp, response.status);
 	return false;
 }
 
