@@ -280,6 +280,10 @@ bool stm32g0_probe(target_s *t)
 
 	/* Save private storage */
 	stm32g0_priv_s *priv_storage = calloc(1, sizeof(*priv_storage));
+	if (!priv_storage) { /* calloc failed: heap exhaustion */
+		DEBUG_ERROR("calloc: failed in %s\n", __func__);
+		return false;
+	}
 	t->target_storage = priv_storage;
 	priv_storage->irreversible_enabled = false;
 
