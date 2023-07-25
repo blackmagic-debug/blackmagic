@@ -204,6 +204,7 @@
 #define LPC43x0_SPIFI_FRAME_OPCODE_3B_ADDR (4U << 21U)
 #define LPC43x0_SPIFI_FRAME_OPCODE_4B_ADDR (5U << 21U)
 #define LPC43x0_SPIFI_FRAME_MASK           0x00e00000U
+#define LPC43x0_SPIFI_FRAME_SHIFT          21U
 #define LPC43x0_SPIFI_OPCODE_SHIFT         24U
 #define LPC43x0_SPIFI_STATUS_CMD_ACTIVE    (1U << 1U)
 #define LPC43x0_SPIFI_STATUS_RESET         (1U << 4U)
@@ -836,7 +837,7 @@ static void lpc43x0_ssp0_setup_command(target_s *const t, const uint32_t command
 	/* Start by sending the command opcode byte */
 	lpc43x0_ssp0_transfer(t, (command >> 24U) & 0xffU);
 	/* Next, if the command has an address, deal with that */
-	const uint8_t address_bytes = ((command & LPC43x0_SPIFI_FRAME_MASK) >> 21U) - 1U;
+	const uint8_t address_bytes = (command & SPI_FLASH_OPCODE_MODE_MASK) == SPI_FLASH_OPCODE_3B_ADDR ? 3U : 0U;
 	for (size_t i = 0; i < address_bytes; ++i) {
 		const size_t shift = (address_bytes - (i + 1U)) * 8U;
 		lpc43x0_ssp0_transfer(t, (address >> shift) & 0xffU);
