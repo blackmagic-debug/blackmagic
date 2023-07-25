@@ -22,3 +22,5 @@ blackmagic_upgrade
 src/artifacts/
 
 src/ftd2xx.dll
+
+scripts/swolisten
