@@ -283,7 +283,7 @@ bool target_flash_write(target_s *target, target_addr_t dest, const void *src, s
 
 		/* Early exit if any of the flushing and cleanup steps above failed */
 		if (!result)
-			break;
+			return false;
 
 		const target_addr_t local_end_addr = MIN(dest + len, flash->start + flash->length);
 		const target_addr_t local_length = local_end_addr - dest;
@@ -291,7 +291,7 @@ bool target_flash_write(target_s *target, target_addr_t dest, const void *src, s
 		result &= flash_buffered_write(flash, dest, src, local_length);
 		if (!result) {
 			DEBUG_ERROR("Write failed at %" PRIx32 "\n", dest);
-			break;
+			return false;
 		}
 
 		dest = local_end_addr;
