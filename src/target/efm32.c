@@ -566,6 +566,10 @@ bool efm32_probe(target_s *t)
 	uint32_t flash_page_size = device->flash_page_size;
 
 	efm32_priv_s *priv_storage = calloc(1, sizeof(*priv_storage));
+	if (!priv_storage) { /* calloc failed: heap exhaustion */
+		DEBUG_ERROR("calloc: failed in %s\n", __func__);
+		return false;
+	}
 	t->target_storage = (void *)priv_storage;
 
 	priv_storage->di_version = di_version;
