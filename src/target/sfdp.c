@@ -72,7 +72,7 @@ static spi_parameters_s sfdp_read_basic_parameter_table(
 	const size_t table_length = MIN(sizeof(sfdp_basic_parameter_table_s), length);
 	spi_read(target, SPI_FLASH_CMD_READ_SFDP, address, &parameter_table, table_length);
 
-	spi_parameters_s result;
+	spi_parameters_s result = {0};
 	result.capacity = sfdp_memory_density_to_capacity_bits(parameter_table.memory_density) >> 3U;
 	for (size_t i = 0; i < SFDP_ERASE_TYPES; ++i) {
 		erase_parameters_s *erase_type = &parameter_table.erase_types[i];
