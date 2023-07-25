@@ -227,7 +227,7 @@ bool perform_dap_swj_sequence(size_t clock_cycles, const uint8_t *data)
 	/* Calculate the number of bytes needed to represent the requested number of clock cycles */
 	const size_t bytes = (clock_cycles + 7U) >> 3U;
 	/* And copy the data into the buffer */
-	memcpy(request + 2, data, bytes);
+	memcpy(request + 2U, data, bytes);
 
 	/* Sequence response is a single byte */
 	uint8_t response = DAP_RESPONSE_OK;
@@ -268,8 +268,8 @@ bool perform_dap_jtag_sequence(
 	};
 	/* Copy in a suitable amount of data from the source buffer */
 	const size_t sequence_length = (cycles + 7U) >> 3U;
-	memcpy(request + 3, data_in, sequence_length);
-	size_t offset = 3 + sequence_length;
+	memcpy(request + 3U, data_in, sequence_length);
+	size_t offset = 3U + sequence_length;
 	/* Figure out where the final bit is */
 	const uint8_t final_byte = cycles >> 3U;
 	const uint8_t final_bit = cycles & 7U;
