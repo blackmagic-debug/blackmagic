@@ -199,6 +199,10 @@ bool stm32h7_probe(target_s *target)
 
 	/* Save private storage */
 	stm32h7_priv_s *priv_storage = calloc(1, sizeof(*priv_storage));
+	if (!priv_storage) { /* calloc failed: heap exhaustion */
+		DEBUG_ERROR("calloc: failed in %s\n", __func__);
+		return false;
+	}
 	priv_storage->dbg_cr = target_mem_read32(target, DBGMCU_CR);
 	target->target_storage = priv_storage;
 
