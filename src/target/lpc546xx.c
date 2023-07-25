@@ -267,6 +267,10 @@ static bool lpc546xx_cmd_write_sector(target_s *t, int argc, const char **argv)
 			return false;
 
 		uint8_t *buf = calloc(1, sector_size);
+		if (!buf) { /* calloc failed: heap exhaustion */
+			DEBUG_ERROR("calloc: failed in %s\n", __func__);
+			return false;
+		}
 		for (uint32_t i = 0; i < sector_size; i++)
 			buf[i] = i & 0xffU;
 
