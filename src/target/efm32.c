@@ -475,16 +475,15 @@ static uint16_t efm32_read_radio_part_number(target_s *t, uint8_t di_version)
 /* Reads the EFM32 Misc. Chip definitions */
 static efm32_v2_di_miscchip_s efm32_v2_read_miscchip(target_s *t, uint8_t di_version)
 {
-	uint32_t meminfo;
-	efm32_v2_di_miscchip_s miscchip;
-	memset(&miscchip, 0, sizeof(efm32_v2_di_miscchip_s) / sizeof(char));
+	efm32_v2_di_miscchip_s miscchip = {0};
 
 	switch (di_version) {
-	case 2:
-		meminfo = target_mem_read32(t, EFM32_V2_DI_MEMINFO);
+	case 2: {
+		const uint32_t meminfo = target_mem_read32(t, EFM32_V2_DI_MEMINFO);
 		miscchip.pincount = (meminfo >> 16U) & 0xffU;
 		miscchip.pkgtype = (meminfo >> 8U) & 0xffU;
 		miscchip.tempgrade = (meminfo >> 0U) & 0xffU;
+	}
 	}
 
 	return miscchip;
