@@ -133,6 +133,7 @@ bool perform_dap_transfer_recoverable(adiv5_debug_port_s *const target_dp,
 	/* If all went well, or we can't recover, we get to early return */
 	if (result || target_dp->fault != DAP_TRANSFER_NO_RESPONSE)
 		return result;
+	DEBUG_WARN("Recovering and re-trying access\n");
 	/* Otherwise clear the error and try again as our best and final answer */
 	target_dp->error(target_dp, true);
 	return perform_dap_transfer(target_dp, transfer_requests, requests, response_data, responses);
