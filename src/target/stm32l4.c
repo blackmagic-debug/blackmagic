@@ -183,6 +183,7 @@ typedef enum stm32l4_family {
 	STM32L4_FAMILY_WBxx,
 	STM32L4_FAMILY_G4xx,
 	STM32L4_FAMILY_L55x,
+	STM32L4_FAMILY_U5xx,
 	STM32L4_FAMILY_WLxx,
 } stm32l4_family_e;
 
@@ -348,6 +349,38 @@ static stm32l4_device_info_s const stm32l4_device_info[] = {
 		.sram1 = 192U, /* SRAM1 and SRAM2 are mapped continuous */
 		.sram2 = 64U,
 		.flags = 2U,
+		.flash_regs_map = stm32l5_flash_regs_map,
+	},
+	{
+		.device_id = ID_STM32U535,
+		.family = STM32L4_FAMILY_U5xx,
+		.designator = "STM32U535/545",
+		.sram1 = 192U + 64U, /* SRAM1+2 continuous */
+		.flags = 2U | DUAL_BANK,
+		.flash_regs_map = stm32l5_flash_regs_map,
+	},
+	{
+		.device_id = ID_STM32U575,
+		.family = STM32L4_FAMILY_U5xx,
+		.designator = "STM32U575/585",
+		.sram1 = 192U + 64U + 512U, /* SRAM1+2+3 continuous */
+		.flags = 2U | DUAL_BANK,
+		.flash_regs_map = stm32l5_flash_regs_map,
+	},
+	{
+		.device_id = ID_STM32U59X,
+		.family = STM32L4_FAMILY_U5xx,
+		.designator = "STM32U59x/5Ax",
+		.sram1 = 786U + 64U + 832U + 832U, /* SRAM1+2+3+5 continuous */
+		.flags = 2U | DUAL_BANK,
+		.flash_regs_map = stm32l5_flash_regs_map,
+	},
+	{
+		.device_id = ID_STM32U5FX,
+		.family = STM32L4_FAMILY_U5xx,
+		.designator = "STM32U5Fx/5Gx",
+		.sram1 = 786U + 64U + 832U + 832U + 512U, /* SRAM1+2+3+5+6 continuous */
+		.flags = 2U | DUAL_BANK,
 		.flash_regs_map = stm32l5_flash_regs_map,
 	},
 	{
@@ -589,7 +622,7 @@ static bool stm32l4_attach(target_s *const t)
 	/* Free any previously built memory map */
 	target_mem_map_free(t);
 	/* And rebuild the RAM map */
-	if (device->family == STM32L4_FAMILY_L55x)
+	if (device->family == STM32L4_FAMILY_L55x || device->family == STM32L4_FAMILY_U5xx)
 		target_add_ram(t, 0x0a000000, (device->sram1 + device->sram2) * 1024U);
 	else
 		target_add_ram(t, 0x10000000, device->sram2 * 1024U);
