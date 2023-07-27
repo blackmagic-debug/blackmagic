@@ -141,7 +141,7 @@ static uint32_t firmware_dp_low_read(const uint16_t addr)
 	return res == SWDP_ACK_OK ? data : 0;
 }
 
-uint32_t adiv5_swdp_scan(const uint32_t targetid)
+bool adiv5_swdp_scan(const uint32_t targetid)
 {
 	/* Free the device list if any */
 	target_list_free();
@@ -149,7 +149,7 @@ uint32_t adiv5_swdp_scan(const uint32_t targetid)
 	adiv5_debug_port_s *dp = calloc(1, sizeof(*dp));
 	if (!dp) { /* calloc failed: heap exhaustion */
 		DEBUG_ERROR("calloc: failed in %s\n", __func__);
-		return 0;
+		return false;
 	}
 
 	dp->dp_low_write = firmware_dp_low_write;
@@ -163,7 +163,7 @@ uint32_t adiv5_swdp_scan(const uint32_t targetid)
 #else
 	if (!bmda_swd_dp_init(dp)) {
 		free(dp);
-		return 0;
+		return false;
 	}
 #endif
 
@@ -212,7 +212,7 @@ uint32_t adiv5_swdp_scan(const uint32_t targetid)
 			/* Give up */
 			DEBUG_ERROR("No usable DP found\n");
 			free(dp);
-			return 0;
+			return false;
 		}
 
 		/* DP must have the version field set so adiv5_dp_read() does protocol recovery correctly */
@@ -247,7 +247,7 @@ uint32_t adiv5_swdp_scan(const uint32_t targetid)
 		adiv5_dp_init(dp, 0);
 	}
 
-	return target_list ? 1U : 0U;
+	return target_list != NULL;
 }
 
 /*

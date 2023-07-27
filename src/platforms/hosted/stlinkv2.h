@@ -29,8 +29,8 @@
 #define STLINK_ERROR_WAIT 1
 
 bool stlink_init(void);
-uint32_t stlink_swd_scan(void);
-uint32_t stlink_jtag_scan(void);
+bool stlink_swd_scan(void);
+bool stlink_jtag_scan(void);
 int stlink_hwversion(void);
 const char *stlink_target_voltage(void);
 void stlink_nrst_set_val(bool assert);

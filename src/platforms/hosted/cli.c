@@ -418,21 +418,19 @@ static void display_target(size_t idx, target_s *target, void *context)
 			core_name ? core_name : "");
 }
 
-uint32_t scan_for_targets(const bmda_cli_options_s *const opt)
+bool scan_for_targets(const bmda_cli_options_s *const opt)
 {
 	if (opt->opt_scanmode == BMP_SCAN_JTAG)
 		return bmda_jtag_scan();
 	if (opt->opt_scanmode == BMP_SCAN_SWD)
 		return bmp_swd_scan(opt->opt_targetid);
-	uint32_t num_targets = bmda_jtag_scan();
-	if (num_targets)
-		return num_targets;
+	if (bmda_jtag_scan())
+		return true;
 	DEBUG_WARN("JTAG scan found no devices, trying SWD.\n");
-	num_targets = bmp_swd_scan(opt->opt_targetid);
-	if (num_targets)
-		return num_targets;
+	if (bmp_swd_scan(opt->opt_targetid))
+		return true;
 	DEBUG_ERROR("SW-DP scan failed!\n");
-	return 0U;
+	return false;
 }
 
 int cl_execute(bmda_cli_options_s *opt)
@@ -451,22 +449,19 @@ int cl_execute(bmda_cli_options_s *opt)
 		DEBUG_INFO("Running in Test Mode\n");
 	DEBUG_INFO("Target voltage: %s Volt\n", platform_target_voltage());
 
-	int res = 0;
-	uint32_t num_targets = scan_for_targets(opt);
-
-	if (!num_targets) {
+	if (!scan_for_targets(opt)) {
 		DEBUG_ERROR("No target found\n");
 		return -1;
 	}
-	num_targets = target_foreach(display_target, &num_targets);
 
+	const size_t num_targets = target_foreach(display_target, NULL);
 	if (opt->opt_target_dev > num_targets) {
-		DEBUG_ERROR(
-			"Given target number %" PRIu32 " not available max %" PRIu32 "\n", opt->opt_target_dev, num_targets);
+		DEBUG_ERROR("Given target number %" PRIu32 " not available max %zu\n", opt->opt_target_dev, num_targets);
 		return -1;
 	}
 	target_s *t = target_attach_n(opt->opt_target_dev, &cl_controller);
 
+	int res = 0;
 	int read_file = -1;
 	if (!t) {
 		DEBUG_ERROR("Can not attach to target %d\n", opt->opt_target_dev);
