@@ -50,13 +50,13 @@ uint8_t jlink_interfaces;
 
 bool jlink_simple_query(const uint8_t command, void *const rx_buffer, const size_t rx_len)
 {
-	return bmda_usb_transfer(info.usb_link, &command, sizeof(command), rx_buffer, rx_len) >= 0;
+	return bmda_usb_transfer(info.usb_link, &command, sizeof(command), rx_buffer, rx_len, JLINK_USB_TIMEOUT) >= 0;
 }
 
 bool jlink_simple_request(const uint8_t command, const uint8_t operation, void *const rx_buffer, const size_t rx_len)
 {
 	const uint8_t request[2] = {command, operation};
-	return bmda_usb_transfer(info.usb_link, request, sizeof(request), rx_buffer, rx_len) >= 0;
+	return bmda_usb_transfer(info.usb_link, request, sizeof(request), rx_buffer, rx_len, JLINK_USB_TIMEOUT) >= 0;
 }
 
 /*
@@ -103,10 +103,10 @@ bool jlink_transfer(const uint16_t clock_cycles, const uint8_t *const tms, const
 	if (tdi)
 		memcpy(buffer + 4U + byte_count, tdi, byte_count);
 	/* Send the resulting transaction and try to read back the response data */
-	if (bmda_usb_transfer(info.usb_link, buffer, sizeof(jlink_io_transact_s) + (byte_count * 2U), buffer, byte_count) <
-			0 ||
+	if (bmda_usb_transfer(
+			info.usb_link, buffer, sizeof(*header) + (byte_count * 2U), buffer, byte_count, JLINK_USB_TIMEOUT) < 0 ||
 		/* Try to read back the transaction return code */
-		bmda_usb_transfer(info.usb_link, NULL, 0, buffer + byte_count, 1U) < 0)
+		bmda_usb_transfer(info.usb_link, NULL, 0, buffer + byte_count, 1U, JLINK_USB_TIMEOUT) < 0)
 		return false;
 	/* Copy out the response into the TDO buffer (if present) */
 	if (tdo)
@@ -158,7 +158,7 @@ static bool jlink_print_version(void)
 	if (!jlink_simple_query(JLINK_CMD_GET_VERSION, len_str, sizeof(len_str)))
 		return false;
 	uint8_t version[0x70];
-	bmda_usb_transfer(info.usb_link, NULL, 0, version, sizeof(version));
+	bmda_usb_transfer(info.usb_link, NULL, 0, version, sizeof(version), JLINK_USB_TIMEOUT);
 	version[0x6f] = '\0';
 	DEBUG_INFO("%s\n", version);
 	return true;
@@ -332,7 +332,7 @@ bool jlink_set_frequency(const uint16_t frequency_khz)
 	jlink_set_freq_s command = {JLINK_CMD_SET_FREQ};
 	write_le2(command.frequency, 0, frequency_khz);
 	DEBUG_INFO("%s: %ukHz\n", __func__, frequency_khz);
-	return bmda_usb_transfer(info.usb_link, &command, sizeof(command), NULL, 0) >= 0;
+	return bmda_usb_transfer(info.usb_link, &command, sizeof(command), NULL, 0, JLINK_USB_TIMEOUT) >= 0;
 }
 
 void jlink_max_frequency_set(const uint32_t freq)
