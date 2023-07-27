@@ -221,7 +221,7 @@ int stlink_send_recv_retry(
 	int res;
 	int first_res = STLINK_ERROR_OK;
 	while (true) {
-		bmda_usb_transfer(info.usb_link, req_buffer, req_len, rx_buffer, rx_len);
+		bmda_usb_transfer(info.usb_link, req_buffer, req_len, rx_buffer, rx_len, BMDA_USB_NO_TIMEOUT);
 		res = stlink_usb_error_check(rx_buffer, false);
 		if (res == STLINK_ERROR_OK)
 			return res;
@@ -251,7 +251,7 @@ static int stlink_read_retry(
 	uint32_t start = platform_time_ms();
 	int res;
 	while (true) {
-		bmda_usb_transfer(info.usb_link, req_buffer, req_len, rx_buffer, rx_len);
+		bmda_usb_transfer(info.usb_link, req_buffer, req_len, rx_buffer, rx_len, BMDA_USB_NO_TIMEOUT);
 		res = stlink_usb_get_rw_status(false);
 		if (res == STLINK_ERROR_OK)
 			return res;
@@ -272,8 +272,8 @@ static int stlink_write_retry(
 	int res;
 	usb_link_s *link = info.usb_link;
 	while (true) {
-		bmda_usb_transfer(link, req_buffer, req_len, NULL, 0);
-		bmda_usb_transfer(link, tx_buffer, tx_len, NULL, 0);
+		bmda_usb_transfer(link, req_buffer, req_len, NULL, 0, BMDA_USB_NO_TIMEOUT);
+		bmda_usb_transfer(link, tx_buffer, tx_len, NULL, 0, BMDA_USB_NO_TIMEOUT);
 		res = stlink_usb_get_rw_status(false);
 		if (res == STLINK_ERROR_OK)
 			return res;
@@ -292,7 +292,7 @@ int stlink_simple_query(const uint8_t command, const uint8_t operation, void *co
 		.command = command,
 		.operation = operation,
 	};
-	return bmda_usb_transfer(info.usb_link, &request, sizeof(request), rx_buffer, rx_len);
+	return bmda_usb_transfer(info.usb_link, &request, sizeof(request), rx_buffer, rx_len, BMDA_USB_NO_TIMEOUT);
 }
 
 int stlink_simple_request(
@@ -303,7 +303,7 @@ int stlink_simple_request(
 		.operation = operation,
 		.param = param,
 	};
-	return bmda_usb_transfer(info.usb_link, &request, sizeof(request), rx_buffer, rx_len);
+	return bmda_usb_transfer(info.usb_link, &request, sizeof(request), rx_buffer, rx_len, BMDA_USB_NO_TIMEOUT);
 }
 
 /*
@@ -730,7 +730,7 @@ static uint32_t stlink_reg_read(adiv5_access_port_s *const ap, const uint8_t reg
 		.reg_num = reg_num,
 		.apsel = ap->apsel,
 	};
-	bmda_usb_transfer(info.usb_link, &request, sizeof(request), data, sizeof(data));
+	bmda_usb_transfer(info.usb_link, &request, sizeof(request), data, sizeof(data), BMDA_USB_NO_TIMEOUT);
 	stlink_usb_error_check(data, true);
 	const uint32_t result = read_le4(data, 0U);
 	DEBUG_PROBE("%s: AP %u, reg %02u val 0x%08" PRIx32 "\n", __func__, ap->apsel, reg_num, result);
@@ -747,7 +747,7 @@ static void stlink_reg_write(adiv5_access_port_s *const ap, const uint8_t reg_nu
 		.apsel = ap->apsel,
 	};
 	write_le4(request.value, 0U, value);
-	bmda_usb_transfer(info.usb_link, &request, sizeof(request), res, sizeof(res));
+	bmda_usb_transfer(info.usb_link, &request, sizeof(request), res, sizeof(res), BMDA_USB_NO_TIMEOUT);
 	DEBUG_PROBE("%s: AP %u, reg %02u val 0x%08" PRIx32 "\n", __func__, ap->apsel, reg_num, value);
 	stlink_usb_error_check(res, true);
 }
@@ -815,7 +815,7 @@ static void stlink_v2_set_frequency(const uint32_t freq)
 	DEBUG_WARN("Divisor for %u.%03uMHz is %u\n", freq_mhz, freq_khz, stlink_v2_divisor);
 	write_le2(request.divisor, 0U, stlink_v2_divisor);
 	uint8_t data[2];
-	bmda_usb_transfer(info.usb_link, &request, sizeof(request), data, sizeof(data));
+	bmda_usb_transfer(info.usb_link, &request, sizeof(request), data, sizeof(data), BMDA_USB_NO_TIMEOUT);
 	if (stlink_usb_error_check(data, false))
 		DEBUG_ERROR("Set frequency failed!\n");
 }
@@ -845,7 +845,7 @@ static void stlink_v3_set_frequency(const uint32_t freq)
 		.mode = mode,
 	};
 	write_le4(request.frequency, 0U, frequency);
-	bmda_usb_transfer(info.usb_link, &request, sizeof(request), data, 8);
+	bmda_usb_transfer(info.usb_link, &request, sizeof(request), data, 8U, BMDA_USB_NO_TIMEOUT);
 	stlink_usb_error_check(data, true);
 	stlink_v3_freq[mode] = frequency * 1000U;
 }

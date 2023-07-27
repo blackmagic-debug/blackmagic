@@ -48,6 +48,9 @@
 #define SELECT_IF_JTAG 0U
 #define SELECT_IF_SWD  1U
 
+/* J-Link USB protocol constants */
+#define JLINK_USB_TIMEOUT 5000U /* 5 seconds */
+
 typedef enum jlink_swd_dir {
 	JLINK_SWD_OUT,
 	JLINK_SWD_IN,

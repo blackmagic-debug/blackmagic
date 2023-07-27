@@ -569,7 +569,8 @@ int find_debuggers(bmda_cli_options_s *cl_opts, bmp_info_s *info)
  *   sent/received may be less (per libusb's documentation). If used, rx_buffer must be
  *   suitably intialised up front to avoid UB reads when accessed.
  */
-int bmda_usb_transfer(usb_link_s *link, const void *tx_buffer, size_t tx_len, void *rx_buffer, size_t rx_len)
+int bmda_usb_transfer(
+	usb_link_s *link, const void *tx_buffer, size_t tx_len, void *rx_buffer, size_t rx_len, uint16_t timeout)
 {
 	/* If there's data to send */
 	if (tx_len) {
@@ -583,8 +584,8 @@ int bmda_usb_transfer(usb_link_s *link, const void *tx_buffer, size_t tx_len, vo
 		DEBUG_WIRE("\n");
 
 		/* Perform the transfer */
-		const int result =
-			libusb_bulk_transfer(link->device_handle, link->ep_tx | LIBUSB_ENDPOINT_OUT, tx_data, (int)tx_len, NULL, 0);
+		const int result = libusb_bulk_transfer(
+			link->device_handle, link->ep_tx | LIBUSB_ENDPOINT_OUT, tx_data, (int)tx_len, NULL, timeout);
 		/* Then decode the result value - if its anything other than LIBUSB_SUCCESS, something went horribly wrong */
 		if (result != LIBUSB_SUCCESS) {
 			DEBUG_ERROR(
@@ -600,7 +601,7 @@ int bmda_usb_transfer(usb_link_s *link, const void *tx_buffer, size_t tx_len, vo
 		int rx_bytes = 0;
 		/* Perform the transfer */
 		const int result = libusb_bulk_transfer(
-			link->device_handle, link->ep_rx | LIBUSB_ENDPOINT_IN, rx_data, (int)rx_len, &rx_bytes, 0);
+			link->device_handle, link->ep_rx | LIBUSB_ENDPOINT_IN, rx_data, (int)rx_len, &rx_bytes, timeout);
 		/* Then decode the result value - if its anything other than LIBUSB_SUCCESS, something went horribly wrong */
 		if (result != LIBUSB_SUCCESS) {
 			DEBUG_ERROR(

@@ -45,6 +45,8 @@
 #define TRANSFER_IS_DONE   (1U << 0U)
 #define TRANSFER_HAS_ERROR (1U << 1U)
 
+#define BMDA_USB_NO_TIMEOUT 0
+
 typedef struct transfer_ctx {
 	volatile size_t flags;
 } transfer_ctx_s;
@@ -99,7 +101,8 @@ void libusb_exit_function(bmp_info_s *info);
 #if HOSTED_BMP_ONLY == 1
 bool device_is_bmp_gdb_port(const char *device);
 #else
-int bmda_usb_transfer(usb_link_s *link, const void *tx_buffer, size_t tx_len, void *rx_buffer, size_t rx_len);
+int bmda_usb_transfer(
+	usb_link_s *link, const void *tx_buffer, size_t tx_len, void *rx_buffer, size_t rx_len, uint16_t timeout);
 #endif
 
 #endif /* PLATFORMS_HOSTED_BMP_HOSTED_H */
