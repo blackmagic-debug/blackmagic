@@ -24,7 +24,7 @@
 #include "jtag_devs.h"
 #include "target_internal.h"
 
-uint32_t stlink_swd_scan(void)
+bool stlink_swd_scan(void)
 {
 	target_list_free();
 
@@ -38,12 +38,12 @@ uint32_t stlink_swd_scan(void)
 	uint8_t data[2];
 	stlink_send_recv_retry(&command, sizeof(command), data, sizeof(data));
 	if (stlink_usb_error_check(data, true))
-		return 0;
+		return false;
 
 	adiv5_debug_port_s *dp = calloc(1, sizeof(*dp));
 	if (!dp) { /* calloc failed: heap exhaustion */
 		DEBUG_ERROR("calloc: failed in %s\n", __func__);
-		return 0;
+		return false;
 	}
 
 	dp->dp_read = firmware_swdp_read;
@@ -53,5 +53,6 @@ uint32_t stlink_swd_scan(void)
 
 	adiv5_dp_error(dp);
 	adiv5_dp_init(dp, 0);
-	return target_list ? 1U : 0U;
+
+	return target_list != NULL;
 }

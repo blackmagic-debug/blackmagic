@@ -35,11 +35,11 @@ typedef uint32_t target_addr_t;
 typedef struct target_controller target_controller_s;
 
 #if PC_HOSTED == 1
-uint32_t bmp_swd_scan(uint32_t targetid);
-uint32_t bmda_jtag_scan(void);
+bool bmp_swd_scan(uint32_t targetid);
+bool bmda_jtag_scan(void);
 #endif
-uint32_t adiv5_swdp_scan(uint32_t targetid);
-uint32_t jtag_scan(void);
+bool adiv5_swdp_scan(uint32_t targetid);
+bool jtag_scan(void);
 
 size_t target_foreach(void (*callback)(size_t index, target_s *target, void *context), void *context);
 void target_list_free(void);

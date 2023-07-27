@@ -160,7 +160,7 @@ void platform_init(int argc, char **argv)
 	}
 }
 
-uint32_t bmp_swd_scan(uint32_t targetid)
+bool bmp_swd_scan(const uint32_t targetid)
 {
 	info.is_jtag = false;
 	platform_max_frequency_set(cl_opts.opt_max_swj_frequency);
@@ -171,7 +171,6 @@ uint32_t bmp_swd_scan(uint32_t targetid)
 	case BMP_TYPE_CMSIS_DAP:
 	case BMP_TYPE_JLINK:
 		return adiv5_swdp_scan(targetid);
-		break;
 
 #if HOSTED_BMP_ONLY == 0
 	case BMP_TYPE_STLINK_V2:
@@ -179,7 +178,7 @@ uint32_t bmp_swd_scan(uint32_t targetid)
 #endif
 
 	default:
-		return 0;
+		return false;
 	}
 }
 
@@ -217,7 +216,7 @@ void bmda_add_jtag_dev(const uint32_t dev_index, const jtag_dev_s *const jtag_de
 		remote_add_jtag_dev(dev_index, jtag_dev);
 }
 
-uint32_t bmda_jtag_scan(void)
+bool bmda_jtag_scan(void)
 {
 	info.is_jtag = true;
 
@@ -236,7 +235,7 @@ uint32_t bmda_jtag_scan(void)
 #endif
 
 	default:
-		return 0;
+		return false;
 	}
 }
 

@@ -28,7 +28,7 @@
 static int stlink_enter_debug_jtag(void);
 static size_t stlink_read_idcodes(uint32_t *idcodes);
 
-uint32_t stlink_jtag_scan(void)
+bool stlink_jtag_scan(void)
 {
 	uint32_t idcodes[STLINK_JTAG_MAX_DEVS];
 	target_list_free();
@@ -36,7 +36,7 @@ uint32_t stlink_jtag_scan(void)
 	jtag_dev_count = 0;
 	memset(jtag_devs, 0, sizeof(jtag_devs));
 	if (stlink_enter_debug_jtag())
-		return 0;
+		return false;
 	jtag_dev_count = stlink_read_idcodes(idcodes);
 	/* Check for known devices and handle accordingly */
 	for (uint32_t i = 0; i < jtag_dev_count; ++i)
@@ -51,7 +51,7 @@ uint32_t stlink_jtag_scan(void)
 			}
 		}
 	}
-	return jtag_dev_count;
+	return jtag_dev_count > 0;
 }
 
 static int stlink_enter_debug_jtag(void)

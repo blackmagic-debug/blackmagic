@@ -212,13 +212,13 @@ static bool cmd_jtag_scan(target_s *target, int argc, const char **argv)
 	if (connect_assert_nrst)
 		platform_nrst_set_val(true); /* will be deasserted after attach */
 
-	uint32_t devs = 0;
+	bool scan_result = false;
 	volatile exception_s e;
 	TRY_CATCH (e, EXCEPTION_ALL) {
 #if PC_HOSTED == 1
-		devs = bmda_jtag_scan();
+		scan_result = bmda_jtag_scan();
 #else
-		devs = jtag_scan();
+		scan_result = jtag_scan();
 #endif
 	}
 	switch (e.type) {
@@ -230,7 +230,7 @@ static bool cmd_jtag_scan(target_s *target, int argc, const char **argv)
 		break;
 	}
 
-	if (devs == 0) {
+	if (!scan_result) {
 		platform_target_clk_output_enable(false);
 		platform_nrst_set_val(false);
 		gdb_out("JTAG device scan failed!\n");
@@ -255,13 +255,13 @@ bool cmd_swdp_scan(target_s *t, int argc, const char **argv)
 	if (connect_assert_nrst)
 		platform_nrst_set_val(true); /* will be deasserted after attach */
 
-	uint32_t devs = 0;
+	bool scan_result = false;
 	volatile exception_s e;
 	TRY_CATCH (e, EXCEPTION_ALL) {
 #if PC_HOSTED == 1
-		devs = bmp_swd_scan(targetid);
+		scan_result = bmp_swd_scan(targetid);
 #else
-		devs = adiv5_swdp_scan(targetid);
+		scan_result = adiv5_swdp_scan(targetid);
 #endif
 	}
 	switch (e.type) {
@@ -273,7 +273,7 @@ bool cmd_swdp_scan(target_s *t, int argc, const char **argv)
 		break;
 	}
 
-	if (devs == 0) {
+	if (!scan_result) {
 		platform_target_clk_output_enable(false);
 		platform_nrst_set_val(false);
 		gdb_out("SW-DP scan failed!\n");
@@ -297,24 +297,24 @@ bool cmd_auto_scan(target_s *t, int argc, const char **argv)
 	if (connect_assert_nrst)
 		platform_nrst_set_val(true); /* will be deasserted after attach */
 
-	uint32_t devs = 0;
+	bool scan_result = false;
 	volatile exception_s e;
 	TRY_CATCH (e, EXCEPTION_ALL) {
 #if PC_HOSTED == 1
-		devs = bmda_jtag_scan();
+		scan_result = bmda_jtag_scan();
 #else
-		devs = jtag_scan();
+		scan_result = jtag_scan();
 #endif
-		if (devs > 0)
+		if (scan_result)
 			break;
 		gdb_out("JTAG scan found no devices, trying SWD!\n");
 
 #if PC_HOSTED == 1
-		devs = bmp_swd_scan(0);
+		scan_result = bmp_swd_scan(0);
 #else
-		devs = adiv5_swdp_scan(0);
+		scan_result = adiv5_swdp_scan(0);
 #endif
-		if (devs > 0)
+		if (scan_result)
 			break;
 
 		gdb_out("SW-DP scan found no devices.\n");
@@ -328,7 +328,7 @@ bool cmd_auto_scan(target_s *t, int argc, const char **argv)
 		break;
 	}
 
-	if (devs == 0) {
+	if (!scan_result) {
 		platform_target_clk_output_enable(false);
 		platform_nrst_set_val(false);
 		gdb_out("auto scan failed!\n");
