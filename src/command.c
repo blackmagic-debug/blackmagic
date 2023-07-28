@@ -86,6 +86,7 @@ const command_s cmd_list[] = {
 	{"help", cmd_help, "Display help for monitor commands"},
 	{"jtag_scan", cmd_jtag_scan, "Scan JTAG chain for devices"},
 	{"swd_scan", cmd_swd_scan, "Scan SWD interface for devices: [TARGET_ID]"},
+	{"swdp_scan", cmd_swd_scan, "Deprecated: use swd_scan instead"},
 	{"auto_scan", cmd_auto_scan, "Automatically scan all chain types for devices"},
 	{"frequency", cmd_frequency, "set minimum high and low times: [FREQ]"},
 	{"targets", cmd_targets, "Display list of available targets"},
