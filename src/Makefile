@@ -122,6 +122,10 @@ ifdef RTT_IDENT
 CFLAGS += -DRTT_IDENT=$(RTT_IDENT)
 endif
 
+ifeq ($(ADVERTISE_NOACKMODE), 1)
+CFLAGS += -DADVERTISE_NOACKMODE=1
+endif
+
 OBJ = $(patsubst %.S,%.o,$(patsubst %.c,%.o,$(SRC)))
 
 $(TARGET): include/version.h $(OBJ)

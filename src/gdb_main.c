@@ -41,6 +41,20 @@
 #include "rtt.h"
 #endif
 
+#if ADVERTISE_NOACKMODE == 1
+/*
+ * This lets GDB know that the probe supports ‘QStartNoAckMode’
+ * and prefers to operate in no-acknowledgment mode
+ *
+ * When not present, GDB will assume that the probe does not support it
+ * but can still be manually enabled by the user with:
+ * set remote noack-packet on
+ */
+#define GDB_QSUPPORTED_NOACKMODE ";QStartNoAckMode+"
+#else
+#define GDB_QSUPPORTED_NOACKMODE
+#endif
+
 #if defined(_WIN32)
 #include <malloc.h>
 #else
@@ -430,7 +444,8 @@ static void exec_q_supported(const char *packet, const size_t length)
 	 */
 	gdb_set_noackmode(false);
 
-	gdb_putpacket_f("PacketSize=%X;qXfer:memory-map:read+;qXfer:features:read+;QStartNoAckMode+", GDB_MAX_PACKET_SIZE);
+	gdb_putpacket_f(
+		"PacketSize=%X;qXfer:memory-map:read+;qXfer:features:read+" GDB_QSUPPORTED_NOACKMODE, GDB_MAX_PACKET_SIZE);
 }
 
 static void exec_q_memory_map(const char *packet, const size_t length)
@@ -512,6 +527,12 @@ static void exec_q_thread_info(const char *packet, const size_t length)
 		gdb_putpacketz("l");
 }
 
+/* 
+ * GDB will send the packet 'QStartNoAckMode' to enable NoAckMode
+ * 
+ * To tell GDB to not use NoAckMode do the following before connnecting to the probe:
+ * set remote noack-packet off
+ */
 static void exec_q_noackmode(const char *packet, const size_t length)
 {
 	(void)packet;
