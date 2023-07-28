@@ -100,8 +100,8 @@ void bmp_ident(bmp_info_s *info)
 			   "J-Link and FTDI (MPSSE)\n",
 		FIRMWARE_VERSION);
 	if (info && info->vid && info->pid) {
-		DEBUG_INFO("Using %04x:%04x %s %s\n %s\n", info->vid, info->pid,
-			(info->serial[0]) ? info->serial : NO_SERIAL_NUMBER, info->manufacturer, info->product);
+		DEBUG_INFO("Using %04x:%04x %s %s\n %s %s\n", info->vid, info->pid,
+			(info->serial[0]) ? info->serial : NO_SERIAL_NUMBER, info->manufacturer, info->product, info->version);
 	}
 }
 
