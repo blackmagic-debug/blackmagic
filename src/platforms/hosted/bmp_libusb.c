@@ -138,11 +138,11 @@ void bmp_read_product_version(libusb_device_descriptor_s *device_descriptor, lib
 	(void)device;
 	(void)serial;
 	(void)manufacturer;
-	char *start_of_version;
 	*product = get_device_descriptor_string(handle, device_descriptor->iProduct);
-	start_of_version = strrchr(*product, ' ');
+
+	char *start_of_version = strrchr(*product, ' ');
 	if (start_of_version == NULL) {
-		version = NULL;
+		*version = NULL;
 	} else {
 		while (start_of_version[0] == ' ' && start_of_version != *product)
 			--start_of_version;
