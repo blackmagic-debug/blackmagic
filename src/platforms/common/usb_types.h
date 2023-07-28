@@ -21,6 +21,8 @@
 #ifndef PLATFORMS_COMMON_USB_TYPES_H
 #define PLATFORMS_COMMON_USB_TYPES_H
 
+#include <libopencm3/usb/dfu.h>
+
 typedef struct usb_device_descriptor usb_device_descriptor_s;
 typedef struct usb_config_descriptor usb_config_descriptor_s;
 typedef struct usb_interface_descriptor usb_interface_descriptor_s;
