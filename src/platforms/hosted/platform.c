@@ -160,7 +160,7 @@ void platform_init(int argc, char **argv)
 	}
 }
 
-bool bmp_swd_scan(const uint32_t targetid)
+bool bmda_swd_scan(const uint32_t targetid)
 {
 	info.is_jtag = false;
 	platform_max_frequency_set(cl_opts.opt_max_swj_frequency);
