@@ -304,7 +304,7 @@ static bool jlink_get_version(void)
 
 		jlink.hw_version = read_le4(buffer, 0);
 
-		DEBUG_INFO("Hardware version: %s v%u.%u.%u\n",
+		DEBUG_INFO("Hardware version: %s v%" PRIu32 ".%" PRIu32 ".%" PRIu32 "\n",
 			jlink_hw_type_to_string(JLINK_HARDWARE_VERSION_TYPE(jlink.hw_version)),
 			JLINK_HARDWARE_VERSION_MAJOR(jlink.hw_version), JLINK_HARDWARE_VERSION_MINOR(jlink.hw_version),
 			JLINK_HARDWARE_VERSION_REVISION(jlink.hw_version));
@@ -436,7 +436,7 @@ static bool jlink_get_interface_frequency(const uint8_t interface)
 	 */
 	interface_frequency->current_divisor = interface_frequency->min_divisor;
 
-	DEBUG_INFO("%s interface frequency:\n\tBase frequency: %uHz\n\tMinimum divisor: %u\n",
+	DEBUG_INFO("%s interface frequency:\n\tBase frequency: %" PRIu32 "Hz\n\tMinimum divisor: %u\n",
 		jlink_interface_to_string(interface), interface_frequency->base, interface_frequency->min_divisor);
 
 #if 0
