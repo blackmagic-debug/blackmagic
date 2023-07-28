@@ -247,6 +247,8 @@ static char *jlink_hw_type_to_string(const uint8_t hw_type)
 		return "Flasher";
 	case JLINK_HARDWARE_VERSION_TYPE_JLINKPRO:
 		return "J-Link Pro";
+	case JLINK_HARDWARE_VERSION_TYPE_LPCLINK2:
+		return "LPC-Link2";
 	default:
 		return "Unknown";
 	}
