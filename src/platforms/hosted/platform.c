@@ -504,7 +504,7 @@ bool platform_target_get_power(void)
 
 uint32_t platform_target_voltage_sense(void)
 {
-	uint32_t targetVoltage = 0;
+	uint32_t target_voltage = 0;
 
 	switch (info.bmp_type) {
 	case BMP_TYPE_BMP: {
@@ -513,14 +513,14 @@ uint32_t platform_target_voltage_sense(void)
 			uint32_t units = 0;
 			uint32_t tenths = 0;
 			sscanf(result, "%" PRIu32 ".%" PRIu32, &units, &tenths);
-			targetVoltage = (units * 10U) + tenths;
+			target_voltage = (units * 10U) + tenths;
 		}
 		break;
 	}
 
 #if HOSTED_BMP_ONLY == 0
 	case BMP_TYPE_JLINK:
-		targetVoltage = jlink_target_voltage_sense();
+		target_voltage = jlink_target_voltage_sense();
 		break;
 #endif
 
@@ -528,7 +528,7 @@ uint32_t platform_target_voltage_sense(void)
 		break;
 	}
 
-	return targetVoltage;
+	return target_voltage;
 }
 
 void platform_buffer_flush(void)
