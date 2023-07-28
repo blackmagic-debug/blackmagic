@@ -117,8 +117,13 @@ void libusb_exit_function(bmp_info_s *info)
 static char *get_device_descriptor_string(libusb_device_handle *handle, uint16_t string_index)
 {
 	char read_string[128] = {0};
-	if (string_index != 0)
-		libusb_get_string_descriptor_ascii(handle, string_index, (uint8_t *)read_string, sizeof(read_string));
+	if (string_index != 0) {
+		const int result =
+			libusb_get_string_descriptor_ascii(handle, string_index, (uint8_t *)read_string, sizeof(read_string));
+		if (result < LIBUSB_SUCCESS)
+			DEBUG_ERROR(
+				"%s: Failed to read string from device (%d): %s\n", __func__, result, libusb_error_name(result));
+	}
 	return strdup(read_string);
 }
 
