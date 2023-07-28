@@ -5,7 +5,7 @@
  * Copyright (C) 2022-2023 1BitSquared <info@1bitsquared.com>
  * Written by Sid Price <sid@sidprice.com>
  * Written by Rachel Mant <git@dragonmux.network>
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -96,9 +96,8 @@ bmp_type_t get_type_from_vid_pid(const uint16_t probe_vid, const uint16_t probe_
 
 void bmp_ident(bmp_info_s *info)
 {
-	DEBUG_INFO("Black Magic Debug App %s\n for Black Magic Probe, ST-Link v2 and v3, CMSIS-DAP, "
-			   "J-Link and FTDI (MPSSE)\n",
-		FIRMWARE_VERSION);
+	DEBUG_INFO("Black Magic Debug App " FIRMWARE_VERSION "\n for Black Magic Probe, ST-Link v2 and v3, CMSIS-DAP, "
+			   "J-Link and FTDI (MPSSE)\n");
 	if (info && info->vid && info->pid) {
 		DEBUG_INFO("Using %04x:%04x %s %s\n %s %s\n", info->vid, info->pid,
 			(info->serial[0]) ? info->serial : NO_SERIAL_NUMBER, info->manufacturer, info->product, info->version);
