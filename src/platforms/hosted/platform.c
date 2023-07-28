@@ -170,7 +170,7 @@ bool bmp_swd_scan(const uint32_t targetid)
 	case BMP_TYPE_FTDI:
 	case BMP_TYPE_CMSIS_DAP:
 	case BMP_TYPE_JLINK:
-		return adiv5_swdp_scan(targetid);
+		return adiv5_swd_scan(targetid);
 
 #if HOSTED_BMP_ONLY == 0
 	case BMP_TYPE_STLINK_V2:

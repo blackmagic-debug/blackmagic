@@ -38,7 +38,7 @@ typedef struct target_controller target_controller_s;
 bool bmp_swd_scan(uint32_t targetid);
 bool bmda_jtag_scan(void);
 #endif
-bool adiv5_swdp_scan(uint32_t targetid);
+bool adiv5_swd_scan(uint32_t targetid);
 bool jtag_scan(void);
 
 size_t target_foreach(void (*callback)(size_t index, target_s *target, void *context), void *context);

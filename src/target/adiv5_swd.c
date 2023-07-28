@@ -141,7 +141,7 @@ static uint32_t firmware_dp_low_read(const uint16_t addr)
 	return res == SWDP_ACK_OK ? data : 0;
 }
 
-bool adiv5_swdp_scan(const uint32_t targetid)
+bool adiv5_swd_scan(const uint32_t targetid)
 {
 	/* Free the device list if any */
 	target_list_free();
