@@ -262,7 +262,7 @@ bool cmd_swd_scan(target_s *t, int argc, const char **argv)
 #if PC_HOSTED == 1
 		scan_result = bmp_swd_scan(targetid);
 #else
-		scan_result = adiv5_swdp_scan(targetid);
+		scan_result = adiv5_swd_scan(targetid);
 #endif
 	}
 	switch (e.type) {
@@ -313,7 +313,7 @@ bool cmd_auto_scan(target_s *t, int argc, const char **argv)
 #if PC_HOSTED == 1
 		scan_result = bmp_swd_scan(0);
 #else
-		scan_result = adiv5_swdp_scan(0);
+		scan_result = adiv5_swd_scan(0);
 #endif
 		if (scan_result)
 			break;
