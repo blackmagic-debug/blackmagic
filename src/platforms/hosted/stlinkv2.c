@@ -599,7 +599,7 @@ uint32_t stlink_raw_access(adiv5_debug_port_s *dp, uint8_t rnw, uint16_t addr, u
 	}
 
 	if (result == STLINK_ERROR_FAIL)
-		raise_exception(EXCEPTION_ERROR, "SWDP invalid ACK");
+		raise_exception(EXCEPTION_ERROR, "SWD invalid ACK");
 	return response;
 }
 
