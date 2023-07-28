@@ -123,6 +123,13 @@ const probe_info_s *probe_info_filter(const probe_info_s *const list, const char
 	return NULL;
 }
 
+static void copy_string(const char *const from, char *const to, const size_t max_len)
+{
+	const size_t length = MIN(strlen(from), max_len - 1U);
+	memcpy(to, from, length);
+	to[length] = '\0';
+}
+
 void probe_info_to_bmp_info(const probe_info_s *const probe, bmp_info_s *info)
 {
 	info->bmp_type = probe->type;
@@ -130,24 +137,11 @@ void probe_info_to_bmp_info(const probe_info_s *const probe, bmp_info_s *info)
 	info->pid = probe->pid;
 	info->vid = probe->vid;
 #endif
-	const size_t serial_len = MIN(strlen(probe->serial), sizeof(info->serial) - 1U);
-	memcpy(info->serial, probe->serial, serial_len);
-	info->serial[serial_len] = '\0';
+	copy_string(probe->serial, info->serial, sizeof(info->serial));
+	copy_string(probe->version, info->version, sizeof(info->version));
+	copy_string(probe->product, info->product, sizeof(info->product));
+	copy_string(probe->manufacturer, info->manufacturer, sizeof(info->manufacturer));
 
-	const size_t version_len = MIN(strlen(probe->version), sizeof(info->version) - 1U);
-	memcpy(info->version, probe->version, version_len);
-	info->version[version_len] = '\0';
-
-	const size_t product_len = strlen(probe->product);
-	const size_t manufacturer_len = strlen(probe->manufacturer);
-	/* + 4 as we're including two parens, a space and C's NUL character requirement */
-	const size_t descriptor_len = MIN(product_len + manufacturer_len + 4, sizeof(info->manufacturer));
-
-	if (snprintf(info->manufacturer, descriptor_len, "%s (%s)", probe->product, probe->manufacturer) !=
-		(int)descriptor_len - 1) {
-		DEBUG_ERROR("Probe descriptor string '%s (%s)' exceeds allowable manufacturer description length\n",
-			probe->product, probe->manufacturer);
-	}
 #if HOSTED_BMP_ONLY == 0
 	if (probe->device)
 		info->libusb_dev = libusb_ref_device(probe->device);
