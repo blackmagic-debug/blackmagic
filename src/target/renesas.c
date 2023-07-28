@@ -676,6 +676,7 @@ static void renesas_add_flash(target_s *t, target_addr_t addr, size_t length)
 	case PNR_SERIES_RA2A1:
 	case PNR_SERIES_RA4M1:
 	case PNR_SERIES_RA4W1:
+		/* FIXME: implement MF3/4 flash */
 		return;
 
 	case PNR_SERIES_RA4M2:
@@ -692,7 +693,8 @@ static void renesas_add_flash(target_s *t, target_addr_t addr, size_t length)
 	case PNR_SERIES_RA6T1:
 	case PNR_SERIES_RA6T2:
 		t->enter_flash_mode = renesas_enter_flash_mode;
-		return renesas_add_rv40_flash(t, addr, length);
+		renesas_add_rv40_flash(t, addr, length);
+		return;
 
 	default:
 		return;
