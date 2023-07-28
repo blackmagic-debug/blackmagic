@@ -143,15 +143,16 @@ void bmp_read_product_version(libusb_device_descriptor_s *device_descriptor, lib
 	char *start_of_version = strrchr(*product, ' ');
 	if (start_of_version == NULL) {
 		*version = NULL;
-	} else {
-		while (start_of_version[0] == ' ' && start_of_version != *product)
-			--start_of_version;
-		start_of_version[1] = '\0';
-		start_of_version += 2;
-		while (start_of_version[0] == ' ')
-			++start_of_version;
-		*version = strdup(start_of_version);
+		return;
 	}
+
+	while (start_of_version[0] == ' ' && start_of_version != *product)
+		--start_of_version;
+	start_of_version[1] = '\0';
+	start_of_version += 2;
+	while (start_of_version[0] == ' ')
+		++start_of_version;
+	*version = strdup(start_of_version);
 }
 
 /*
