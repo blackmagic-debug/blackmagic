@@ -302,7 +302,7 @@ static bool jlink_get_version(void)
 
 		jlink.hw_version = read_le4(buffer, 0);
 
-		DEBUG_INFO("Hardware Version: %s V%u.%u.%u\n",
+		DEBUG_INFO("Hardware version: %s v%u.%u.%u\n",
 			jlink_hw_type_to_string(JLINK_HARDWARE_VERSION_TYPE(jlink.hw_version)),
 			JLINK_HARDWARE_VERSION_MAJOR(jlink.hw_version), JLINK_HARDWARE_VERSION_MINOR(jlink.hw_version),
 			JLINK_HARDWARE_VERSION_REVISION(jlink.hw_version));
