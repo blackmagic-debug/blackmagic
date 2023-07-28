@@ -293,14 +293,14 @@ bool target_mem_access_needs_halt(target_s *t)
 }
 
 /* Register access functions */
-ssize_t target_reg_read(target_s *t, int reg, void *data, size_t max)
+ssize_t target_reg_read(target_s *t, uint32_t reg, void *data, size_t max)
 {
 	if (t->reg_read)
 		return t->reg_read(t, reg, data, max);
 	return 0;
 }
 
-ssize_t target_reg_write(target_s *t, int reg, const void *data, size_t size)
+ssize_t target_reg_write(target_s *t, uint32_t reg, const void *data, size_t size)
 {
 	if (t->reg_write)
 		return t->reg_write(t, reg, data, size);

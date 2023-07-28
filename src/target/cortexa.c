@@ -48,8 +48,8 @@ static void cortexa_regs_read(target_s *t, void *data);
 static void cortexa_regs_write(target_s *t, const void *data);
 static void cortexa_regs_read_internal(target_s *t);
 static void cortexa_regs_write_internal(target_s *t);
-static ssize_t cortexa_reg_read(target_s *t, int reg, void *data, size_t max);
-static ssize_t cortexa_reg_write(target_s *t, int reg, const void *data, size_t max);
+static ssize_t cortexa_reg_read(target_s *t, uint32_t reg, void *data, size_t max);
+static ssize_t cortexa_reg_write(target_s *t, uint32_t reg, const void *data, size_t max);
 
 static void cortexa_reset(target_s *t);
 static target_halt_reason_e cortexa_halt_poll(target_s *t, target_addr_t *watch);
@@ -607,28 +607,26 @@ static void cortexa_regs_write(target_s *t, const void *data)
 	memcpy(&priv->reg_cache, data, t->regs_size);
 }
 
-static ssize_t ptr_for_reg(target_s *t, int reg, void **r)
+static ssize_t ptr_for_reg(target_s *t, uint32_t reg, void **r)
 {
 	cortexa_priv_s *priv = (cortexa_priv_s *)t->priv;
-	switch (reg) {
-	case 0 ... 15:
+	if (reg <= 15U) { /* 0 .. 15 */
 		*r = &priv->reg_cache.r[reg];
-		return 4;
-	case 16:
+		return 4U;
+	} else if (reg == 16U) { /* 16 */
 		*r = &priv->reg_cache.cpsr;
-		return 4;
-	case 17:
+		return 4U;
+	} else if (reg == 17U) { /* 17 */
 		*r = &priv->reg_cache.fpscr;
-		return 4;
-	case 18 ... 33:
-		*r = &priv->reg_cache.d[reg - 18];
-		return 8;
-	default:
-		return -1;
+		return 4U;
+	} else if (reg <= 33U) { /* 18 .. 33 */
+		*r = &priv->reg_cache.d[reg - 18U];
+		return 8U;
 	}
+	return -1;
 }
 
-static ssize_t cortexa_reg_read(target_s *t, int reg, void *data, size_t max)
+static ssize_t cortexa_reg_read(target_s *t, uint32_t reg, void *data, size_t max)
 {
 	void *r = NULL;
 	size_t s = ptr_for_reg(t, reg, &r);
@@ -638,7 +636,7 @@ static ssize_t cortexa_reg_read(target_s *t, int reg, void *data, size_t max)
 	return s;
 }
 
-static ssize_t cortexa_reg_write(target_s *t, int reg, const void *data, size_t max)
+static ssize_t cortexa_reg_write(target_s *t, uint32_t reg, const void *data, size_t max)
 {
 	void *r = NULL;
 	size_t s = ptr_for_reg(t, reg, &r);
