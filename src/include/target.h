@@ -69,8 +69,8 @@ size_t target_regs_size(target_s *target);
 const char *target_regs_description(target_s *target);
 void target_regs_read(target_s *target, void *data);
 void target_regs_write(target_s *target, const void *data);
-ssize_t target_reg_read(target_s *target, int reg, void *data, size_t max);
-ssize_t target_reg_write(target_s *target, int reg, const void *data, size_t size);
+ssize_t target_reg_read(target_s *target, uint32_t reg, void *data, size_t max);
+ssize_t target_reg_write(target_s *target, uint32_t reg, const void *data, size_t size);
 
 /* Halt/resume functions */
 typedef enum target_halt_reason {

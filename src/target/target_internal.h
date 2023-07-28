@@ -117,8 +117,8 @@ struct target {
 	const char *(*regs_description)(target_s *target);
 	void (*regs_read)(target_s *target, void *data);
 	void (*regs_write)(target_s *target, const void *data);
-	ssize_t (*reg_read)(target_s *target, int reg, void *data, size_t max);
-	ssize_t (*reg_write)(target_s *target, int reg, const void *data, size_t size);
+	ssize_t (*reg_read)(target_s *target, uint32_t reg, void *data, size_t max);
+	ssize_t (*reg_write)(target_s *target, uint32_t reg, const void *data, size_t size);
 
 	/* Halt/resume functions */
 	void (*reset)(target_s *target);
