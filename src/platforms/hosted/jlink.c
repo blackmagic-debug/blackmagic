@@ -494,7 +494,7 @@ static bool jlink_set_interface_frequency(const uint8_t interface, const uint32_
 		divisor = interface_frequency->min_divisor;
 
 	/* Get the approximate frequency we'll actually be running at, convert to kHz in the process */
-	const uint16_t frequency_khz = (interface_frequency->base / interface_frequency->current_divisor) / 1000U;
+	const uint16_t frequency_khz = (interface_frequency->base / divisor) / 1000U;
 
 	if (!jlink_simple_request_16(JLINK_CMD_INTERFACE_SET_FREQUENCY_KHZ, frequency_khz, NULL, 0))
 		return false;
