@@ -106,8 +106,8 @@ bool jlink_simple_request_32(
  * In SWD mode, the `tms` buffer represents direction states and
  * the `tdi` buffer represents SWDIO data to send to the device
  *
- * RM08001 Reference manual for J-Link USB Protocol 
- * §5.5.12 EMU_CMD_HW_JTAG3 
+ * RM08001 Reference manual for J-Link USB Protocol
+ * §5.5.12 EMU_CMD_HW_JTAG3
  */
 bool jlink_transfer(const uint16_t clock_cycles, const uint8_t *const tms, const uint8_t *const tdi, uint8_t *const tdo)
 {
@@ -367,7 +367,7 @@ static bool jlink_get_interfaces(void)
 	if (!jlink_simple_request_8(JLINK_CMD_INTERFACE_GET, JLINK_INTERFACE_GET_AVAILABLE, buffer, sizeof(buffer)))
 		return false;
 
-	/* available_interfaces is a 32bit bitfield/mask */
+	/* Available_interfaces is a 32bit bitfield/mask */
 	jlink.available_interfaces = read_le4(buffer, 0);
 
 	/* Print the available interfaces, marking the selected one, and unsuported ones */
@@ -397,7 +397,10 @@ static bool jlink_get_interface_frequency(const uint8_t interface)
 	if (!jlink_interface_available(interface))
 		return false;
 
-	/* If the base frequency is non-zero, we've already read the frequency info for the requested interface and can skip the query */
+	/*
+	 * If the base frequency is non-zero, we've already read the frequency info
+	 * for the requested interface and can skip the query
+	 */
 	if (jlink.interface_frequency[interface].base != 0U)
 		return true;
 
@@ -405,7 +408,10 @@ static bool jlink_get_interface_frequency(const uint8_t interface)
 	const uint8_t selected_interface = jlink_selected_interface();
 
 	if (selected_interface != interface) {
-		/* If the selected interface doesn't match the requested interface, select it, let's hope this doesn't mess something up elsewhere */
+		/*
+		 * If the selected interface doesn't match the requested interface, select it,
+		 * let's hope this doesn't mess something up elsewhere
+		 */
 		DEBUG_WARN("Trying to get frequency for interface %s but it is not selected, selecting it\n",
 			jlink_interface_to_string(interface));
 
@@ -424,7 +430,10 @@ static bool jlink_get_interface_frequency(const uint8_t interface)
 	interface_frequency->base = read_le4(buffer, JLINK_INTERFACE_BASE_FREQUENCY_OFFSET);
 	interface_frequency->min_divisor = read_le2(buffer, JLINK_INTERFACE_MIN_DIV_OFFSET);
 
-	/* This is an assumption, if the J-Link was configured before we started, this may not be true, but we have no way to know */
+	/*
+	 * This is an assumption, if the J-Link was configured before we started,
+	 * this may not be true, but we have no way to know
+	 */
 	interface_frequency->current_divisor = interface_frequency->min_divisor;
 
 	DEBUG_INFO("%s interface frequency:\n\tBase frequency: %uHz\n\tMinimum divisor: %u\n",
@@ -459,7 +468,10 @@ static bool jlink_set_interface_frequency(const uint8_t interface, const uint32_
 	const uint8_t selected_interface = jlink_selected_interface();
 
 	if (selected_interface != interface) {
-		/* If the selected interface doesn't match the requested interface, select it, let's hope this doesn't mess something up elsewhere */
+		/*
+		 * If the selected interface doesn't match the requested interface, select it,
+		 * let's hope this doesn't mess something up elsewhere
+		 */
 		DEBUG_WARN("Trying to set frequency for interface %s but it is not selected, selecting it\n",
 			jlink_interface_to_string(interface));
 
@@ -537,7 +549,7 @@ static bool jlink_kickstart_power(void)
 
 static bool jlink_set_kickstart_power(const bool enable)
 {
-	/* 
+	/*
 	 * Kickstart power is a 5V 300mA supply that can be used to power targets
 	 * Exposed on pin 19 of the J-Link 20 pin connector
 	 */
