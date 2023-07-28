@@ -125,17 +125,17 @@ typedef struct cortexa_priv {
 #define DBGBCR_BAS_LOW_HW    (0x3U << 5U)
 #define DBGBCR_BAS_HIGH_HW   (0xcU << 5U)
 #define DBGBCR_EN            (1U << 0U)
-#define DBGBCR_PMC_ANY       (0b11U << 1U)
+#define DBGBCR_PMC_ANY       (0x3U << 1U) /* 0b11 */
 
 #define DBGWVR(i)           (96U + (i))
 #define DBGWCR(i)           (112U + (i))
-#define DBGWCR_LSC_LOAD     (0b01U << 3U)
-#define DBGWCR_LSC_STORE    (0b10U << 3U)
-#define DBGWCR_LSC_ANY      (0b11U << 3U)
-#define DBGWCR_BAS_BYTE     (0b0001U << 5U)
-#define DBGWCR_BAS_HALFWORD (0b0011U << 5U)
-#define DBGWCR_BAS_WORD     (0b1111U << 5U)
-#define DBGWCR_PAC_ANY      (0b11U << 1U)
+#define DBGWCR_LSC_LOAD     (0x1U << 3U) /* 0b01 */
+#define DBGWCR_LSC_STORE    (0x2U << 3U) /* 0b10 */
+#define DBGWCR_LSC_ANY      (0x3U << 3U) /* 0b11U */
+#define DBGWCR_BAS_BYTE     (0x1U << 5U) /* 0b0001U */
+#define DBGWCR_BAS_HALFWORD (0x3U << 5U) /* 0b0011U */
+#define DBGWCR_BAS_WORD     (0xfU << 5U) /* 0b1111U */
+#define DBGWCR_PAC_ANY      (0x3U << 1U) /* 0b11U */
 #define DBGWCR_EN           (1U << 0U)
 
 /* Instruction encodings for accessing the coprocessor interface */
