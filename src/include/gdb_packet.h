@@ -23,6 +23,7 @@
 
 #include <stddef.h>
 #include <stdarg.h>
+#include <stdbool.h>
 
 #define GDB_PACKET_START              '$'
 #define GDB_PACKET_END                '#'
