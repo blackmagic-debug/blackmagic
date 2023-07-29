@@ -714,7 +714,7 @@ adiv5_access_port_s *adiv5_new_ap(adiv5_debug_port_s *dp, uint8_t apsel)
 		return NULL;
 	tmpap.csw = adiv5_ap_read(&tmpap, ADIV5_AP_CSW);
 	// XXX: We might be able to use the type field in ap->idr to determine if the AP supports TrustZone
-	tmpap.csw &= ~(ADIV5_AP_CSW_SIZE_MASK | ADIV5_AP_CSW_ADDRINC_MASK | ADIV5_AP_CSW_HNOSEC);
+	tmpap.csw &= ~(ADIV5_AP_CSW_SIZE_MASK | ADIV5_AP_CSW_ADDRINC_MASK | ADIV5_AP_CSW_MTE | ADIV5_AP_CSW_HNOSEC);
 	tmpap.csw |= ADIV5_AP_CSW_DBGSWENABLE;
 
 	if (tmpap.csw & ADIV5_AP_CSW_TRINPROG) {

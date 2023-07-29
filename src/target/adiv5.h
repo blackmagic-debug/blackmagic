@@ -46,7 +46,7 @@
 #define ADIV5_SWD_TO_JTAG_SELECT_SEQUENCE 0xe73cU /* 16 bits, LSB (MSB: 0x3ce7) */
 #define ADIV5_JTAG_TO_SWD_SELECT_SEQUENCE 0xe79eU /* 16 bits, LSB (MSB: 0x79e7) */
 
-/* 
+/*
  * ADIv5 Selection Alert sequence
  * This sequence is sent MSB first and can be represented as either:
  * - 0x49cf9046 a9b4a161 97f5bbc7 45703d98 transmitted MSB first
@@ -156,7 +156,10 @@
 #define ADIV5_AP_CSW_MASTERTYPE_DEBUG (1U << 29U)
 #define ADIV5_AP_CSW_HPROT1           (1U << 25U)
 #define ADIV5_AP_CSW_SPIDEN           (1U << 23U)
-/* Bits 22:12 - Reserved */
+/* Bits 22:16 - Reserved */
+/* Bit 15 - MTE (Memory Tagging Enable) for AXI busses */
+#define ADIV5_AP_CSW_MTE (1U << 15U)
+/* Bits 14:12 - Reserved */
 /* Bits 11:8 - Mode, must be zero */
 #define ADIV5_AP_CSW_TRINPROG       (1U << 7U)
 #define ADIV5_AP_CSW_DEVICEEN       (1U << 6U)
