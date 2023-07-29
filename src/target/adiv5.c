@@ -49,10 +49,7 @@
  * "AP Identification types for an AP designed by Arm"
  * §C1.3 pg146. This defines a AHB3 AP when the class value is 8
  */
-#define ARM_AP_TYPE_AHB  1U
-#define ARM_AP_TYPE_APB  3U
-#define ARM_AP_TYPE_AXI  4U
-#define ARM_AP_TYPE_AHB5 5U
+#define ARM_AP_TYPE_AHB3 1U
 
 /* ROM table CIDR values */
 #define CIDR0_OFFSET 0xff0U /* DBGCID0 */
@@ -971,7 +968,7 @@ void adiv5_dp_init(adiv5_debug_port_s *const dp, const uint32_t idcode)
 		lpc55_dmap_probe(ap);
 
 		/* Try to prepare the AP if it seems to be a AHB (memory) AP */
-		if (!ap->apsel && (ap->idr & 0xfU) == ARM_AP_TYPE_AHB) {
+		if (!ap->apsel && ADIV5_AP_IDR_CLASS(ap->idr) == 8U && ADIV5_AP_IDR_TYPE(ap->idr) == ARM_AP_TYPE_AHB3) {
 			if (!cortexm_prepare(ap))
 				DEBUG_WARN("adiv5: Failed to prepare AP, results may be unpredictable\n");
 		}
