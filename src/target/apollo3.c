@@ -30,11 +30,42 @@ static bool apollo_3_flash_write(target_flash_s *flash, target_addr_t dest, cons
  */
 static size_t flash_size;
 
-static const target_addr_t flash_base_address = 0x00000000U;
-static const size_t flash_block_size = 0x2000U;
+#define FLASH_BASE_ADDRESS 0x00000000U
+#define FLASH_BLOCK_SIZE   0x2000U
 
-static const target_addr_t vendor_id_address = 0x40020010;
-static const uint32_t vendor_id = 0x414d4251;
+#define VENDOR_ID_ADDRESS 0x40020010
+
+/*
+	Define the bitfields of the CHIPPN register.
+	
+	This register contains the part number of the MCU
+ */
+#define CHIPPN_PART_NUMBER_MASK         0xff000000U
+#define CHIPPN_PART_NUMBER_BIT_POSITION 0x18U
+
+#define CHIPPN_FLASH_SIZE_MASK         0x00f00000U
+#define CHIPPN_FLASH_SIZE_BIT_POSITION 0x14U
+
+#define CHIPPN_SRAM_SIZE_MASK         0x000f0000U
+#define CHIPPN_SRAM_SIZE_BIT_POSITION 0x10U
+
+#define CHIPPN_REVISION_MASK         0x0000ff00U
+#define CHIPPN_REVISION_BIT_POSITION 0x08U
+
+#define CHIPPN_PACKAGE_MASK         0x000000c0U
+#define CHIPPN_PACKAGE_BIT_POSITION 0x06U
+
+/*
+	Define the bitfields of the CHIPREV  register.
+
+	This register contains the revision of the MCU
+*/
+#define CHIPREV_RESERVED 0xfff00000U
+#define CHIPREV_SI_PART  0x000fff00U
+#define CHIPREV_REVMAJ   0x000000f0U
+#define CHIPREV_REVMIN   0x0000000fU
+
+#define VENDOR_ID 0x414d4251
 
 static void apollo_3_add_flash(target_s *target)
 {
@@ -44,9 +75,9 @@ static void apollo_3_add_flash(target_s *target)
 		return;
 	}
 
-	flash->start = flash_base_address;
+	flash->start = FLASH_BASE_ADDRESS;
 	flash->length = flash_size;
-	flash->blocksize = flash_block_size;
+	flash->blocksize = FLASH_BLOCK_SIZE;
 	flash->erase = apollo_3_flash_erase;
 	flash->write = apollo_3_flash_write;
 	flash->erased = 0xffU;
@@ -55,8 +86,8 @@ static void apollo_3_add_flash(target_s *target)
 
 bool apollo_3_probe(target_s *target)
 {
-	uint32_t mcu_vendor_id = target_mem_read32(t, vendor_id_address);
-	if (mcu_vendor_id != vendor_id) {
+	uint32_t mcu_vendor_id = target_mem_read32(target, VENDOR_ID_ADDRESS);
+	if (mcu_vendor_id != VENDOR_ID) {
 		DEBUG_INFO("Invalid vendor ID read\n");
 		return false;
 	} else
