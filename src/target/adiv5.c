@@ -894,49 +894,32 @@ void adiv5_dp_init(adiv5_debug_port_s *const dp, const uint32_t idcode)
 		return;
 	}
 
-	/* Read DP Control/Status */
-	uint32_t ctrlstat = adiv5_dp_read(dp, ADIV5_DP_CTRLSTAT);
+	/* Start by resetting the DP contol state so the debug domain powers down */
+	adiv5_dp_write(dp, ADIV5_DP_CTRLSTAT, 0U);
+	uint32_t status = ADIV5_DP_CTRLSTAT_CSYSPWRUPACK | ADIV5_DP_CTRLSTAT_CDBGPWRUPACK;
+	/* Wait for the acknowledgements to go low */
+	while (status & (ADIV5_DP_CTRLSTAT_CSYSPWRUPACK | ADIV5_DP_CTRLSTAT_CDBGPWRUPACK))
+		status = adiv5_dp_read(dp, ADIV5_DP_CTRLSTAT);
 
 	platform_timeout_s timeout;
 	platform_timeout_set(&timeout, 201);
 	/* Write request for system and debug power up */
-	adiv5_dp_write(dp, ADIV5_DP_CTRLSTAT, ctrlstat | ADIV5_DP_CTRLSTAT_CSYSPWRUPREQ | ADIV5_DP_CTRLSTAT_CDBGPWRUPREQ);
+	adiv5_dp_write(dp, ADIV5_DP_CTRLSTAT, ADIV5_DP_CTRLSTAT_CSYSPWRUPREQ | ADIV5_DP_CTRLSTAT_CDBGPWRUPREQ);
 	/* Wait for acknowledge */
-	while (true) {
-		ctrlstat = adiv5_dp_read(dp, ADIV5_DP_CTRLSTAT);
-		const uint32_t status = ctrlstat & (ADIV5_DP_CTRLSTAT_CSYSPWRUPACK | ADIV5_DP_CTRLSTAT_CDBGPWRUPACK);
-		//DEBUG_INFO("status %08" PRIx32 " (%08" PRIx32 ")\n", ctrlstat, status);
+	status = 0U;
+	while (status != (ADIV5_DP_CTRLSTAT_CSYSPWRUPACK | ADIV5_DP_CTRLSTAT_CDBGPWRUPACK)) {
+		platform_delay(10);
+		status =
+			adiv5_dp_read(dp, ADIV5_DP_CTRLSTAT) & (ADIV5_DP_CTRLSTAT_CSYSPWRUPACK | ADIV5_DP_CTRLSTAT_CDBGPWRUPACK);
 		if (status == (ADIV5_DP_CTRLSTAT_CSYSPWRUPACK | ADIV5_DP_CTRLSTAT_CDBGPWRUPACK))
 			break;
 		if (platform_timeout_is_expired(&timeout)) {
-			DEBUG_WARN("DEBUG Power-Up failed\n");
+			DEBUG_WARN("adiv5: power-up failed\n");
 			free(dp); /* No AP that referenced this DP so long*/
 			return;
 		}
 	}
-	/*
-	 * This AP reset logic is described in ADIv5, but fails to work
-	 * correctly on STM32. CDBGRSTACK is never asserted, and we
-	 * just wait forever. This scenario is described in B2.4.1
-	 * so we have a timeout mechanism in addition to the sensing one.
-	 */
-	platform_timeout_set(&timeout, 200U);
-	/* Write request for debug reset */
-	adiv5_dp_write(dp, ADIV5_DP_CTRLSTAT, ctrlstat | ADIV5_DP_CTRLSTAT_CDBGRSTREQ);
-	/* Wait for acknowledge */
-	while (true) {
-		ctrlstat = adiv5_dp_read(dp, ADIV5_DP_CTRLSTAT);
-		if (ctrlstat & ADIV5_DP_CTRLSTAT_CDBGRSTACK) {
-			DEBUG_INFO("RESET_SEQ succeeded\n");
-			break;
-		}
-		if (platform_timeout_is_expired(&timeout)) {
-			DEBUG_WARN("RESET_SEQ failed\n");
-			break;
-		}
-	}
-	/* Write request for debug reset release */
-	adiv5_dp_write(dp, ADIV5_DP_CTRLSTAT, ctrlstat & ~ADIV5_DP_CTRLSTAT_CDBGRSTREQ);
+	/* At this point due to the guaranteed power domain restart, the APs are all up and in their reset state. */
 
 	if (dp->target_designer_code == JEP106_MANUFACTURER_NXP)
 		lpc55_dp_prepare(dp);
