@@ -264,21 +264,21 @@ static int stlink_write_retry(
 	const void *const req_buffer, const size_t req_len, const void *const tx_buffer, const size_t tx_len)
 {
 	uint32_t start = platform_time_ms();
-	int res;
 	usb_link_s *link = bmda_probe_info.usb_link;
 	while (true) {
 		bmda_usb_transfer(link, req_buffer, req_len, NULL, 0, BMDA_USB_NO_TIMEOUT);
 		bmda_usb_transfer(link, tx_buffer, tx_len, NULL, 0, BMDA_USB_NO_TIMEOUT);
-		res = stlink_usb_get_rw_status(false);
-		if (res == STLINK_ERROR_OK)
-			return res;
+		const int result = stlink_usb_get_rw_status(false);
+		if (result == STLINK_ERROR_OK)
+			return result;
 		uint32_t now = platform_time_ms();
-		if (now - start > 1000U || res != STLINK_ERROR_WAIT) {
+		if (now - start > 1000U || result != STLINK_ERROR_WAIT) {
+			DEBUG_ERROR("stlink_write_retry failed (%d): ", result);
 			stlink_usb_get_rw_status(true);
-			return res;
+			return result;
 		}
 	}
-	return res;
+	return STLINK_ERROR_GENERAL;
 }
 
 int stlink_simple_query(const uint8_t command, const uint8_t operation, void *const rx_buffer, const size_t rx_len)
