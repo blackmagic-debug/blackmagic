@@ -34,6 +34,7 @@ ifeq ($(ASAN), 1)
         CFLAGS += -Wno-format-truncation
     endif
     LDFLAGS += -fsanitize=address
+    OPT_FLAGS += -g
 endif
 
 HIDAPILIB = hidapi
