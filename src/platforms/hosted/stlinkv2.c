@@ -214,31 +214,31 @@ int stlink_send_recv_retry(
 	const void *const req_buffer, const size_t req_len, void *const rx_buffer, const size_t rx_len)
 {
 	uint32_t start = platform_time_ms();
-	int res;
 	int first_res = STLINK_ERROR_OK;
 	while (true) {
 		bmda_usb_transfer(bmda_probe_info.usb_link, req_buffer, req_len, rx_buffer, rx_len, BMDA_USB_NO_TIMEOUT);
-		res = stlink_usb_error_check(rx_buffer, false);
-		if (res == STLINK_ERROR_OK)
-			return res;
-		if (res == STLINK_ERROR_AP_FAULT && first_res == STLINK_ERROR_WAIT) {
+		int result = stlink_usb_error_check(rx_buffer, false);
+		if (result == STLINK_ERROR_OK)
+			return result;
+		if (result == STLINK_ERROR_AP_FAULT && first_res == STLINK_ERROR_WAIT) {
 			/*
 			 * ST-Link v3 while AP is busy answers once with ERROR_WAIT, then
 			 * with AP_FAULT and finally with ERROR_OK and the pending result.
 			 * Interpret AP_FAULT as AP_WAIT in this case.
 			 */
 			stlink.ap_error = false;
-			res = STLINK_ERROR_WAIT;
+			result = STLINK_ERROR_WAIT;
 		}
 		if (first_res == STLINK_ERROR_OK)
-			first_res = res;
+			first_res = result;
 		uint32_t now = platform_time_ms();
-		if (now - start > cortexm_wait_timeout || res != STLINK_ERROR_WAIT) {
-			DEBUG_ERROR("send_recv_retry failed.\n");
-			return res;
+		if (now - start > cortexm_wait_timeout || result != STLINK_ERROR_WAIT) {
+			DEBUG_ERROR("send_recv_retry failed (%d): ", result);
+			stlink_usb_error_check(rx_buffer, true);
+			return result;
 		}
 	}
-	return res;
+	return STLINK_ERROR_GENERAL;
 }
 
 static int stlink_read_retry(
