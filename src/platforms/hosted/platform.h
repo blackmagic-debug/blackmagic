@@ -49,6 +49,8 @@ void platform_buffer_flush(void);
 	} while (0)
 #define PLATFORM_HAS_POWER_SWITCH
 
+#define PRODUCT_ID_ANY 0xffffU
+
 #define VENDOR_ID_BMP     0x1d50U
 #define PRODUCT_ID_BMP_BL 0x6017U
 #define PRODUCT_ID_BMP    0x6018U
@@ -65,8 +67,7 @@ void platform_buffer_flush(void);
 #define PRODUCT_ID_STLINKV3        0x374fU
 #define PRODUCT_ID_STLINKV3E       0x374eU
 
-#define VENDOR_ID_SEGGER   0x1366U
-#define PRODUCT_ID_UNKNOWN 0xffffU
+#define VENDOR_ID_SEGGER 0x1366U
 
 #define VENDOR_ID_FTDI         0x0403U
 #define PRODUCT_ID_FTDI_FT2232 0x6010U

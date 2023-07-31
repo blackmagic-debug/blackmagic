@@ -65,7 +65,7 @@ typedef struct debugger_device {
 } debugger_device_s;
 
 /* Create the list of debuggers BMDA works with */
-debugger_device_s debugger_devices[] = {
+static const debugger_device_s debugger_devices[] = {
 	{VENDOR_ID_BMP, PRODUCT_ID_BMP, BMP_TYPE_BMP, bmp_read_product_version, "Black Magic Probe"},
 	{VENDOR_ID_STLINK, PRODUCT_ID_STLINKV2, BMP_TYPE_STLINK_V2, stlinkv2_read_serial, "ST-Link v2"},
 	{VENDOR_ID_STLINK, PRODUCT_ID_STLINKV21, BMP_TYPE_STLINK_V2, NULL, "ST-Link v2.1"},
@@ -73,25 +73,27 @@ debugger_device_s debugger_devices[] = {
 	{VENDOR_ID_STLINK, PRODUCT_ID_STLINKV3_NO_MSD, BMP_TYPE_STLINK_V2, NULL, "ST-Link v2.1 No MSD"},
 	{VENDOR_ID_STLINK, PRODUCT_ID_STLINKV3, BMP_TYPE_STLINK_V2, NULL, "ST-Link v3"},
 	{VENDOR_ID_STLINK, PRODUCT_ID_STLINKV3E, BMP_TYPE_STLINK_V2, NULL, "ST-Link v3E"},
-	{VENDOR_ID_SEGGER, PRODUCT_ID_UNKNOWN, BMP_TYPE_JLINK, NULL, "Segger JLink"},
+	{VENDOR_ID_SEGGER, PRODUCT_ID_ANY, BMP_TYPE_JLINK, NULL, "Segger JLink"},
 	{VENDOR_ID_FTDI, PRODUCT_ID_FTDI_FT2232, BMP_TYPE_FTDI, NULL, "FTDI FT2232"},
 	{VENDOR_ID_FTDI, PRODUCT_ID_FTDI_FT4232, BMP_TYPE_FTDI, NULL, "FTDI FT4232"},
 	{VENDOR_ID_FTDI, PRODUCT_ID_FTDI_FT232, BMP_TYPE_FTDI, NULL, "FTDI FT232"},
 	{0, 0, BMP_TYPE_NONE, NULL, ""},
 };
 
-bmp_type_t get_type_from_vid_pid(const uint16_t probe_vid, const uint16_t probe_pid)
+const debugger_device_s *get_debugger_device_from_vid_pid(const uint16_t probe_vid, const uint16_t probe_pid)
 {
-	bmp_type_t probe_type = BMP_TYPE_NONE;
-	/* Segger probe PIDs are unknown, if we have a Segger probe force the type to JLink */
-	if (probe_vid == VENDOR_ID_SEGGER)
-		return BMP_TYPE_JLINK;
+	/* Iterate over the list excluding the last entry (BMP_TYPE_NONE) */
+	for (size_t index = 0; index < ARRAY_LENGTH(debugger_devices) - 1U; index++) {
+		/* Check for a vendor id match */
+		if (debugger_devices[index].vendor != probe_vid)
+			continue;
 
-	for (size_t index = 0; debugger_devices[index].type != BMP_TYPE_NONE; index++) {
-		if (debugger_devices[index].vendor == probe_vid && debugger_devices[index].product == probe_pid)
-			return debugger_devices[index].type;
+		/* If the map product id is "any", then we accept all products ids, otherwise check for a match */
+		if (debugger_devices[index].product == PRODUCT_ID_ANY || probe_pid == debugger_devices[index].product)
+			return &debugger_devices[index];
 	}
-	return probe_type;
+	/* Return the last entry in the list (BMP_TYPE_NONE) */
+	return &debugger_devices[ARRAY_LENGTH(debugger_devices) - 1U];
 }
 
 void bmp_ident(bmp_info_s *info)
@@ -425,51 +427,45 @@ static void check_cmsis_interface_type(libusb_device *const device, bmp_info_s *
 static bool process_vid_pid_table_probe(
 	libusb_device_descriptor_s *device_descriptor, libusb_device *device, probe_info_s **probe_list)
 {
-	bool probe_added = false;
-	for (size_t index = 0; debugger_devices[index].type != BMP_TYPE_NONE; ++index) {
-		/* Check for a match, skip the entry if we don't get one */
-		if (device_descriptor->idVendor != debugger_devices[index].vendor ||
-			(device_descriptor->idProduct != debugger_devices[index].product &&
-				debugger_devices[index].product != PRODUCT_ID_UNKNOWN))
-			continue;
+	/* Check for a match */
+	const debugger_device_s *const debugger_device =
+		get_debugger_device_from_vid_pid(device_descriptor->idVendor, device_descriptor->idProduct);
+	if (debugger_device->type == BMP_TYPE_NONE)
+		return false;
 
-		libusb_device_handle *handle = NULL;
-		/* Try to open the device */
-		if (libusb_open(device, &handle) != LIBUSB_SUCCESS)
-			break;
+	libusb_device_handle *handle = NULL;
+	/* Try to open the device */
+	if (libusb_open(device, &handle) != LIBUSB_SUCCESS)
+		return false;
 
-		const bmp_type_t probe_type = get_type_from_vid_pid(device_descriptor->idVendor, device_descriptor->idProduct);
-		char *product = NULL;
-		char *manufacturer = NULL;
-		char *serial = NULL;
-		char *version = NULL;
-		/*
-		 * If the probe has a custom string reader available, use it first.
-		 *
-		 * This will read and process any strings that need special work, e.g., extracting
-		 * a version string from a product string (BMP native)
-		 */
-		if (debugger_devices[index].function != NULL)
-			debugger_devices[index].function(
-				device_descriptor, device, handle, &product, &manufacturer, &serial, &version);
+	char *product = NULL;
+	char *manufacturer = NULL;
+	char *serial = NULL;
+	char *version = NULL;
+	/*
+	 * If the probe has a custom string reader available, use it first.
+	 *
+	 * This will read and process any strings that need special work, e.g., extracting
+	 * a version string from a product string (BMP native)
+	 */
+	if (debugger_device->function != NULL)
+		debugger_device->function(device_descriptor, device, handle, &product, &manufacturer, &serial, &version);
 
-		/* Now read any strings that have not been set by a custom reader function */
-		if (product == NULL)
-			product = get_device_descriptor_string(handle, device_descriptor->iProduct);
-		if (manufacturer == NULL)
-			manufacturer = get_device_descriptor_string(handle, device_descriptor->iManufacturer);
-		if (serial == NULL)
-			serial = get_device_descriptor_string(handle, device_descriptor->iSerialNumber);
+	/* Now read any strings that have not been set by a custom reader function */
+	if (product == NULL)
+		product = get_device_descriptor_string(handle, device_descriptor->iProduct);
+	if (manufacturer == NULL)
+		manufacturer = get_device_descriptor_string(handle, device_descriptor->iManufacturer);
+	if (serial == NULL)
+		serial = get_device_descriptor_string(handle, device_descriptor->iSerialNumber);
 
-		if (version == NULL)
-			version = strdup("---");
+	if (version == NULL)
+		version = strdup("---");
 
-		*probe_list = probe_info_add_by_id(*probe_list, probe_type, device, device_descriptor->idVendor,
-			device_descriptor->idProduct, manufacturer, product, serial, version);
-		probe_added = true;
-		libusb_close(handle);
-	}
-	return probe_added;
+	*probe_list = probe_info_add_by_id(*probe_list, debugger_device->type, device, device_descriptor->idVendor,
+		device_descriptor->idProduct, manufacturer, product, serial, version);
+	libusb_close(handle);
+	return true;
 }
 
 static const probe_info_s *scan_for_devices(bmp_info_s *info)
