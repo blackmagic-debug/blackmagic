@@ -93,7 +93,7 @@ void riscv_jtag_dtm_handler(const uint8_t dev_index)
 	if (!dmi->ref_count)
 		free(dmi);
 
-	/* Reset the JTAG machinary back to bypass to scan the next device in the chain */
+	/* Reset the JTAG machinery back to bypass to scan the next device in the chain */
 	jtag_dev_write_ir(dev_index, IR_BYPASS);
 }
 
