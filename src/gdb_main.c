@@ -698,7 +698,7 @@ static void handle_v_packet(char *packet, const size_t plen)
 	} else {
 		/*
 		 * The vMustReplyEmpty is used as a feature test to check how gdbserver handles
-		 * unknown packets print only actually unknown packets
+		 * unknown packets, don't print an error message for it.
 		 */
 		if (strcmp(packet, "vMustReplyEmpty") != 0)
 			DEBUG_GDB("*** Unsupported packet: %s\n", packet);
