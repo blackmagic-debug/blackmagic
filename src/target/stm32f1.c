@@ -185,7 +185,7 @@ bool gd32f1_probe(target_s *target)
 /* Identify RISC-V GD32VF1 chips */
 bool gd32vf1_probe(target_s *const target)
 {
-	/* Make sure the architechture ID matches */
+	/* Make sure the architecture ID matches */
 	if (target->cpuid != 0x80000022U)
 		return false;
 	/* Then read out the device ID */
