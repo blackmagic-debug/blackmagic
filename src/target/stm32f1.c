@@ -652,6 +652,7 @@ static bool stm32f1_flash_erase(target_flash_s *flash, target_addr_t addr, size_
 {
 	target_s *target = flash->t;
 	target_addr_t end = addr + length - 1U;
+	DEBUG_TARGET("%s: at %08" PRIx32 "\n", __func__, addr);
 
 	/* Unlocked an appropriate flash bank */
 	if ((target->part_id == 0x430U && end >= FLASH_BANK_SPLIT && !stm32f1_flash_unlock(target, FLASH_BANK2_OFFSET)) ||
@@ -685,6 +686,7 @@ static bool stm32f1_flash_write(target_flash_s *flash, target_addr_t dest, const
 {
 	target_s *target = flash->t;
 	const size_t offset = stm32f1_bank1_length(dest, len);
+	DEBUG_TARGET("%s: at %08" PRIx32 " for %zu bytes\n", __func__, dest, len);
 
 	/* Start by writing any bank 1 data */
 	if (offset) {
