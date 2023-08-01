@@ -30,7 +30,6 @@
 #define JTAG_MAX_IR_LEN 16U
 
 typedef struct jtag_dev {
-	const char *jd_descr;
 	uint32_t jd_idcode;
 	uint32_t current_ir;
 

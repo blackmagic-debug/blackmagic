@@ -142,8 +142,6 @@ bool jtag_scan(void)
 	for (size_t device = 0; device < jtag_dev_count; device++) {
 		for (size_t descr = 0; dev_descr[descr].idcode; descr++) {
 			if ((jtag_devs[device].jd_idcode & dev_descr[descr].idmask) == dev_descr[descr].idcode) {
-				/* Save description in table */
-				jtag_devs[device].jd_descr = dev_descr[descr].descr;
 				/* Call handler to initialise/probe device further */
 				if (dev_descr[descr].handler)
 					dev_descr[descr].handler(device);
