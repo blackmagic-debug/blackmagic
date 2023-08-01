@@ -64,7 +64,6 @@ static bool target_enter_flash_mode(target_s *target)
 
 	if (result == true)
 		target->flash_mode = true;
-
 	return result;
 }
 
@@ -81,7 +80,6 @@ static bool target_exit_flash_mode(target_s *target)
 		target_reset(target);
 
 	target->flash_mode = false;
-
 	return result;
 }
 
@@ -130,7 +128,6 @@ static bool flash_done(target_flash_s *flash)
 
 	/* Mark the Flash as idle again */
 	flash->operation = FLASH_OPERATION_NONE;
-
 	return result;
 }
 
