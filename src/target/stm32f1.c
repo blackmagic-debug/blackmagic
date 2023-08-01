@@ -468,7 +468,7 @@ bool mm32f3xx_probe(target_s *target)
 
 	const uint32_t mm32_id = target_mem_read32(target, DBGMCU_IDCODE_MM32F3);
 	if (target_check_error(target)) {
-		DEBUG_ERROR("mm32f3xx_probe: read error at 0x%" PRIx32 "\n", (uint32_t)DBGMCU_IDCODE_MM32F3);
+		DEBUG_ERROR("%s: read error at 0x%" PRIx32 "\n", __func__, (uint32_t)DBGMCU_IDCODE_MM32F3);
 		return false;
 	}
 	switch (mm32_id) {
@@ -487,7 +487,7 @@ bool mm32f3xx_probe(target_s *target)
 	case 0xffffffffU:
 		return false;
 	default:
-		DEBUG_WARN("mm32f3xx_probe: unknown mm32 dev_id 0x%" PRIx32 "\n", mm32_id);
+		DEBUG_WARN("%s: unknown mm32 ID code 0x%" PRIx32 "\n", __func__, mm32_id);
 		return false;
 	}
 	target->part_id = mm32_id & 0xfffU;
