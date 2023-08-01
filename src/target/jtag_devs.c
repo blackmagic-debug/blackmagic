@@ -28,9 +28,12 @@ const jtag_dev_descr_s dev_descr[] = {
 	{
 		.idcode = 0x0ba00477U,
 		.idmask = 0x0fff0fffU,
+#ifdef ENABLE_DEBUG
 		.descr = "ADIv5 JTAG-DP port.",
+#endif
 		.handler = adiv5_jtag_dp_handler,
 	},
+#ifdef ENABLE_DEBUG
 	{
 		.idcode = 0x00000477U,
 		.idmask = 0x00000fffU,
@@ -101,16 +104,20 @@ const jtag_dev_descr_s dev_descr[] = {
 		.idmask = 0xffffffffU,
 		.descr = "NXP: LPC17xx family.",
 	},
+#endif
 	{
 		.idcode = 0x00000093U,
 		.idmask = 0x00000fffU,
+#ifdef ENABLE_DEBUG
 		.descr = "Xilinx.",
+#endif
 		.ir_quirks =
 			{
 				.ir_length = 6U,
 				.ir_value = 1U,
 			},
 	},
+#ifdef ENABLE_DEBUG
 	{
 		.idcode = 0x0000063dU,
 		.idmask = 0x00000fffU,
@@ -147,9 +154,12 @@ const jtag_dev_descr_s dev_descr[] = {
 		.idmask = 0xffffffffU,
 		.descr = "BCM2836.",
 	},
+#endif
 	{
 		.idcode = 0U,
 		.idmask = 0U,
+#ifdef ENABLE_DEBUG
 		.descr = "Unknown",
+#endif
 	},
 };
