@@ -120,9 +120,9 @@ static void stm32f1_add_flash(target_s *target, uint32_t addr, size_t length, si
 	flash->start = addr;
 	flash->length = length;
 	flash->blocksize = erasesize;
+	flash->writesize = 1024U;
 	flash->erase = stm32f1_flash_erase;
 	flash->write = stm32f1_flash_write;
-	flash->writesize = erasesize;
 	flash->erased = 0xff;
 	target_add_flash(target, flash);
 }
