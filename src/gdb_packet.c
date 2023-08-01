@@ -44,12 +44,12 @@ static bool noackmode = false;
 /* https://sourceware.org/gdb/onlinedocs/gdb/Packet-Acknowledgment.html */
 void gdb_set_noackmode(bool enable)
 {
-	/* 
+	/*
 	 * If we were asked to disable NoAckMode, and it was previously enabled,
 	 * it might mean we got a packet we determined to be the first of a new
 	 * GDB session, and as such it was not acknoledged (before GDB enabled NoAckMode),
 	 * better late than never.
-	 * 
+	 *
 	 * If we were asked after the connection was terminated, sending the ack will have no effect.
 	 */
 	if (!enable && noackmode)
@@ -70,6 +70,7 @@ packet_state_e consume_remote_packet(char *const packet, const size_t size)
 
 		switch (rx_char) {
 		case '\x04':
+			packet[0] = rx_char;
 			/* EOT (end of transmission) - connection was closed */
 			return PACKET_IDLE;
 
@@ -87,6 +88,7 @@ packet_state_e consume_remote_packet(char *const packet, const size_t size)
 			remote_packet_process(offset, packet);
 
 			/* Restart packet capture */
+			packet[0] = '\0';
 			return PACKET_IDLE;
 
 		case GDB_PACKET_START:
@@ -96,9 +98,11 @@ packet_state_e consume_remote_packet(char *const packet, const size_t size)
 		default:
 			if (offset < size)
 				packet[offset++] = rx_char;
-			else
+			else {
+				packet[0] = '\0';
 				/* Buffer overflow, restart packet capture */
 				return PACKET_IDLE;
+			}
 		}
 	}
 #else
@@ -120,15 +124,10 @@ size_t gdb_getpacket(char *const packet, const size_t size)
 
 	while (true) {
 		const char rx_char = gdb_if_getchar();
-		if (rx_char == '\x04') {
-			/* EOT (end of transmission) - connection was closed */
-			packet[0] = '\x04';
-			packet[1U] = 0;
-			return 1U;
-		}
 
 		switch (state) {
 		case PACKET_IDLE:
+			packet[0U] = rx_char;
 			if (rx_char == GDB_PACKET_START) {
 				/* Start of GDB packet */
 				state = PACKET_GDB_CAPTURE;
@@ -138,7 +137,7 @@ size_t gdb_getpacket(char *const packet, const size_t size)
 #if PC_HOSTED == 0
 			else if (rx_char == REMOTE_SOM) {
 				/* Start of BMP remote packet */
-				/* 
+				/*
 				 * Let consume_remote_packet handle this
 				 * returns PACKET_IDLE or PACKET_GDB_CAPTURE if it detects the start of a GDB packet
 				 */
@@ -147,6 +146,11 @@ size_t gdb_getpacket(char *const packet, const size_t size)
 				checksum = 0;
 			}
 #endif
+			/* EOT (end of transmission) - connection was closed */
+			if (packet[0U] == '\x04') {
+				packet[1U] = 0;
+				return 1U;
+			}
 			break;
 
 		case PACKET_GDB_CAPTURE:
