@@ -67,8 +67,6 @@ static void dap_dispatch_status(adiv5_debug_port_s *const dp, const dap_transfer
 	case DAP_TRANSFER_OK:
 		break;
 	case DAP_TRANSFER_WAIT:
-		DEBUG_ERROR("Access resulted in wait, aborting\n");
-		dp->abort(dp, ADIV5_DP_ABORT_DAPABORT);
 		dp->fault = status;
 		break;
 	case DAP_TRANSFER_FAULT:
