@@ -648,32 +648,28 @@ static uint32_t stm32f1_bank_offset_for(target_addr_t addr)
 	return FLASH_BANK1_OFFSET;
 }
 
-static bool stm32f1_flash_erase(target_flash_s *flash, target_addr_t addr, size_t len)
+static bool stm32f1_flash_erase(target_flash_s *flash, target_addr_t addr, size_t length)
 {
 	target_s *target = flash->t;
-	target_addr_t end = addr + len - 1U;
+	target_addr_t end = addr + length - 1U;
 
 	/* Unlocked an appropriate flash bank */
 	if ((target->part_id == 0x430U && end >= FLASH_BANK_SPLIT && !stm32f1_flash_unlock(target, FLASH_BANK2_OFFSET)) ||
 		(addr < FLASH_BANK_SPLIT && !stm32f1_flash_unlock(target, 0)))
 		return false;
 
-	for (size_t offset = 0; offset < len; offset += flash->blocksize) {
-		const uint32_t bank_offset = stm32f1_bank_offset_for(addr + offset);
-		stm32f1_flash_clear_eop(target, bank_offset);
+	const uint32_t bank_offset = stm32f1_bank_offset_for(addr);
+	stm32f1_flash_clear_eop(target, bank_offset);
 
-		/* Flash page erase instruction */
-		target_mem_write32(target, FLASH_CR + bank_offset, FLASH_CR_PER);
-		/* write address to FMA */
-		target_mem_write32(target, FLASH_AR + bank_offset, addr + offset);
-		/* Flash page erase start instruction */
-		target_mem_write32(target, FLASH_CR + bank_offset, FLASH_CR_STRT | FLASH_CR_PER);
+	/* Flash page erase instruction */
+	target_mem_write32(target, FLASH_CR + bank_offset, FLASH_CR_PER);
+	/* write address to FMA */
+	target_mem_write32(target, FLASH_AR + bank_offset, addr);
+	/* Flash page erase start instruction */
+	target_mem_write32(target, FLASH_CR + bank_offset, FLASH_CR_STRT | FLASH_CR_PER);
 
-		/* Wait for completion or an error */
-		if (!stm32f1_flash_busy_wait(target, bank_offset, NULL))
-			return false;
-	}
-	return true;
+	/* Wait for completion or an error */
+	return stm32f1_flash_busy_wait(target, bank_offset, NULL);
 }
 
 static size_t stm32f1_bank1_length(target_addr_t addr, size_t len)
