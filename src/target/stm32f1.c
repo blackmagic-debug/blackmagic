@@ -333,7 +333,7 @@ static bool at32f43_detect(target_s *target, const uint16_t part_id)
 	 * Out of 640 KB SRAM present on silicon, at least 128 KB are always
 	 * dedicated to "zero-wait-state Flash". ZW region is limited by
 	 * specific part flash capacity (for 256, 448 KB) or at 512 KB.
-	 * AT32F435ZMT default EOPB0=0xffff05fa, 
+	 * AT32F435ZMT default EOPB0=0xffff05fa,
 	 * EOPB[0:2]=0b010 for 384 KB SRAM + 256 KB zero-wait-state flash.
 	 */
 	target->driver = "AT32F435";
@@ -460,14 +460,13 @@ bool mm32l0xx_probe(target_s *target)
 /* Identify MM32 devices (Cortex-M3, Star-MC1) */
 bool mm32f3xx_probe(target_s *target)
 {
-	uint32_t mm32_id;
-	const char *name = "?";
+	const char *name;
 	size_t flash_kbyte = 0;
 	size_t ram1_kbyte = 0; /* ram at 0x20000000 */
 	size_t ram2_kbyte = 0; /* ram at 0x30000000 */
 	size_t block_size = 0x400U;
 
-	mm32_id = target_mem_read32(target, DBGMCU_IDCODE_MM32F3);
+	const uint32_t mm32_id = target_mem_read32(target, DBGMCU_IDCODE_MM32F3);
 	if (target_check_error(target)) {
 		DEBUG_ERROR("mm32f3xx_probe: read error at 0x%" PRIx32 "\n", (uint32_t)DBGMCU_IDCODE_MM32F3);
 		return false;
