@@ -25,11 +25,6 @@
 static bool apollo_3_flash_erase(target_flash_s *flash, target_addr_t addr, size_t len);
 static bool apollo_3_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t len);
 
-/*
-	Read this value from the device during probing (PARTNUM Register)
- */
-static size_t flash_size;
-
 #define FLASH_BASE_ADDRESS 0x00000000U
 #define FLASH_SIZE         0x00100000
 #define FLASH_BLOCK_SIZE   0x2000U
