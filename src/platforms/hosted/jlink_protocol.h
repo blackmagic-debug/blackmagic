@@ -331,6 +331,162 @@
 /* J-Link USB protocol constants */
 #define JLINK_USB_TIMEOUT 5000U /* 5 seconds */
 
+/* 
+ * J-Link USB Product-Id assignment
+ *
+ * Old format
+ * ┌───────────┬───────────────────┬──────────────┬──────────────────┐
+ * │    Bit    │       15:8        │     7:4      │       3:0        │
+ * ├───────────┼───────────────────┼──────────────┼──────────────────┤
+ * │ Interface │ 0x01 - Old format │ 0 - Reserved │ Class interfaces │
+ * └───────────┴───────────────────┴──────────────┴──────────────────┘
+ * 
+ * Class interfaces:
+ * 1: J-Link (default)
+ * 2: J-Link w/ USBAddr = 1 (obsolete)
+ * 3: J-Link w/ USBAddr = 2 (obsolete)
+ * 4: J-Link w/ USBAddr = 3 (obsolete)
+ * 5: J-Link | CDC
+ * 6: CDC
+ * 7: J-Link | RNDIS
+ * 8: J-Link | MSD
+ * 
+ * Known values:
+ * 0x0101: J-Link | Flasher STM8 | Flasher ARM | Flasher 5 PRO
+ * 0x0102: J-Link USBAddr = 1
+ * 0x0103: J-Link USBAddr = 2
+ * 0x0104: J-Link USBAddr = 3
+ * 0x0105: J-Link | CDC
+ * 0x0106: CDC
+ * 0x0107: J-Link | RNDIS
+ * 0x0108: J-Link | MSD
+ * 
+ * New format
+ * ┌───────────┬───────────────────┬──────────────┬──────┬────────────┬────────────┬─────┬─────┬───────┬─────┐
+ * │    Bit    │       15:8        │      7       │  6   │     5      │     4      │  3  │  2  │   1   │  0  │
+ * ├───────────┼───────────────────┼──────────────┼──────┼────────────┼────────────┼─────┼─────┼───────┼─────┤
+ * │ Interface │ 0x10 - New format │ 0 - Reserved │ CDC2 │ WINUSB_DRV │ SEGGER_DRV │ HID │ CDC │ RNDIS │ MSD │
+ * └───────────┴───────────────────┴──────────────┴──────┴────────────┴────────────┴─────┴─────┴───────┴─────┘
+ * 
+ * 1: Denotes the interface is present
+ * 0: Denotes the interface is not present
+ * 
+ * CDC/CDC2: Communication Device Class interfaces
+ * 		Note:  It seems they added more CDC interfaces later on, and to handle them they added a new bit
+ * 		but dislocated from the original bit, this makes up a 2 bit value for the number of CDC interfaces
+ * 
+ * SEGGER_DRV: BULK via SEGGER host driver interface
+ * WINUSB_DRV: BULK via WinUSB driver interface (Needs enabling in J-Link config area)
+ *		Note: SEGGER_DRV and WINUSB_DRV are mutually exclusive		
+ *
+ * Known values:
+ * 0x1001: MSD
+ * 0x1002: RNDIS
+ * 0x1003: RNDIS | MSD
+ * 0x1004: CDC
+ * 0x1005: CDC | MSD
+ * 0x1006: RNDIS | CDC
+ * 0x1007: RNDIS | CDC | MSD
+ * 0x1008: HID
+ * 0x1009: MSD | HID
+ * 0x100a: RNDIS | HID
+ * 0x100b: RNDIS | MSD | HID
+ * 0x100c: CDC | HID
+ * 0x100d: CDC | MSD | HID
+ * 0x100e: RNDIS | CDC | HID
+ * 0x100f: RNDIS | CDC | MSD | HID
+ * 0x1010: SEGGER_DRV
+ * 0x1011: SEGGER_DRV | MSD
+ * 0x1012: SEGGER_DRV | RNDIS
+ * 0x1013: SEGGER_DRV | RNDIS | MSD
+ * 0x1014: SEGGER_DRV | CDC
+ * 0x1015: SEGGER_DRV | CDC | MSD
+ * 0x1016: SEGGER_DRV | CDC | RNDIS
+ * 0x1017: SEGGER_DRV | CDC | RNDIS | MSD
+ * 0x1018: SEGGER_DRV | HID
+ * 0x1019: SEGGER_DRV | HID | MSD
+ * 0x101a: SEGGER_DRV | HID | RNDIS
+ * 0x101b: SEGGER_DRV | HID | RNDIS | MSD
+ * 0x101c: SEGGER_DRV | HID | CDC
+ * 0x101d: SEGGER_DRV | HID | CDC | MSD
+ * 0x101e: SEGGER_DRV | HID | CDC | RNDIS
+ * 0x101f: SEGGER_DRV | HID | CDC | RNDIS | MSD
+ * 0x1020: WINUSB_DRV
+ * 0x1021: WINUSB_DRV | MSD
+ * 0x1022: WINUSB_DRV | RNDIS
+ * 0x1023: WINUSB_DRV | RNDIS | MSD
+ * 0x1024: WINUSB_DRV | CDC
+ * 0x1025: WINUSB_DRV | CDC | MSD
+ * 0x1026: WINUSB_DRV | CDC | RNDIS
+ * 0x1027: WINUSB_DRV | CDC | RNDIS | MSD
+ * 0x1028: WINUSB_DRV | HID
+ * 0x1029: WINUSB_DRV | HID | MSD
+ * 0x102a: WINUSB_DRV | HID | RNDIS
+ * 0x102b: WINUSB_DRV | HID | RNDIS | MSD
+ * 0x102c: WINUSB_DRV | HID | CDC
+ * 0x102d: WINUSB_DRV | HID | CDC | MSD
+ * 0x102e: WINUSB_DRV | HID | CDC | RNDIS
+ * 0x102f: WINUSB_DRV | HID | CDC | RNDIS | MSD
+ * 0x103x: SEGGER_DRV | WINUSB_DRV is not valid
+ * 0x1050: SEGGER_DRV | 2x CDC
+ * 0x1051: SEGGER_DRV | 2x CDC | MSD
+ * 0x1052: SEGGER_DRV | 2x CDC | RNDIS
+ * 0x1053: SEGGER_DRV | 2x CDC | RNDIS | MSD
+ * 0x1054: SEGGER_DRV | 3x CDC
+ * 0x1055: SEGGER_DRV | 3x CDC | MSD
+ * 0x1056: SEGGER_DRV | 3x CDC | RNDIS
+ * 0x1057: SEGGER_DRV | 3x CDC | RNDIS | MSD
+ * 0x1058: SEGGER_DRV | HID | 2x CDC
+ * 0x1059: SEGGER_DRV | HID | 2x CDC | MSD
+ * 0x105a: SEGGER_DRV | HID | 2x CDC | RNDIS
+ * 0x105b: SEGGER_DRV | HID | 2x CDC | RNDIS  | MSD
+ * 0x105c: SEGGER_DRV | HID | 3x CDC
+ * 0x105d: SEGGER_DRV | HID | 3x CDC | MSD
+ * 0x105e: SEGGER_DRV | HID | 3x CDC | RNDIS
+ * 0x105f: SEGGER_DRV | HID | 3x CDC | RNDIS  | MSD
+ * 0x1060: WINUSB_DRV | 2x CDC
+ * 0x1061: WINUSB_DRV | 2x CDC | MSD
+ * 0x1062: WINUSB_DRV | 2x CDC | RNDIS
+ * 0x1063: WINUSB_DRV | 2x CDC | RNDIS  | MSD
+ * 0x1064: WINUSB_DRV | 3x CDC
+ * 0x1065: WINUSB_DRV | 3x CDC | MSD
+ * 0x1066: WINUSB_DRV | 3x CDC | RNDIS
+ * 0x1067: WINUSB_DRV | 3x CDC | RNDIS | MSD
+ * 0x1068: WINUSB_DRV | HID | 2x CDC
+ * 0x1069: WINUSB_DRV | HID | 2x CDC | MSD
+ * 0x106a: WINUSB_DRV | HID | 2x CDC | RNDIS
+ * 0x106b: WINUSB_DRV | HID | 2x CDC | RNDIS | MSD
+ * 0x106c: WINUSB_DRV | HID | 3x CDC
+ * 0x106d: WINUSB_DRV | HID | 3x CDC | MSD
+ * 0x106e: WINUSB_DRV | HID | 3x CDC | RNDIS
+ * 0x106f: WINUSB_DRV | HID | 3x CDC | RNDIS | MSD
+ */
+#define JLINK_USB_PID_FORMAT_OFFSET 8U
+#define JLINK_USB_PID_FORMAT_MASK   (0xffU << JLINK_USB_PID_FORMAT_OFFSET)
+#define JLINK_USB_PID_FORMAT_OLD    0x01U
+#define JLINK_USB_PID_FORMAT_NEW    0x10U
+
+#define JLINK_USB_PID_OLD_MASK        0x0fU
+#define JLINK_USB_PID_OLD_JLINK       0x01U /* J-Link  */
+#define JLINK_USB_PID_OLD_JLINK_ADDR1 0x02U /* J-Link USBAddr = 1 */
+#define JLINK_USB_PID_OLD_JLINK_ADDR2 0x03U /* J-Link USBAddr = 2 */
+#define JLINK_USB_PID_OLD_JLINK_ADDR3 0x04U /* J-Link USBAddr = 3 */
+#define JLINK_USB_PID_OLD_JLINK_CDC   0x05U /* J-Link | CDC */
+#define JLINK_USB_PID_OLD_CDC         0x06U /* CDC */
+#define JLINK_USB_PID_OLD_JLINK_RNDIS 0x07U /* J-Link | RNDIS */
+#define JLINK_USB_PID_OLD_JLINK_MSD   0x08U /* J-Link | MSD */
+
+#define JLINK_USB_PID_MASK        0x7fU
+#define JLINK_USB_PID_MSD         (1U << 0U) /* MSD */
+#define JLINK_USB_PID_RNDIS       (1U << 1U) /* RNDIS */
+#define JLINK_USB_PID_HID         (1U << 3U) /* HID */
+#define JLINK_USB_PID_DRV_SEGGER  (1U << 4U) /* J-Link (BULK via SEGGER host driver) */
+#define JLINK_USB_PID_DRV_WINUSB  (1U << 5U) /* J-Link (BULK via WinUSB driver. Needs enabling in J-Link config area) */
+#define JLINK_USB_PID_CDC_OFFSET  2U
+#define JLINK_USB_PID_CDC2_OFFSET 6U
+#define JLINK_USB_PID_CDC         (1U << JLINK_USB_PID_CDC_OFFSET)  /* CDC */
+#define JLINK_USB_PID_CDC2        (1U << JLINK_USB_PID_CDC2_OFFSET) /* CDC2 */
+
 typedef enum jlink_swd_dir {
 	JLINK_SWD_OUT,
 	JLINK_SWD_IN,

@@ -573,7 +573,7 @@ bool jlink_init(void)
 		return false;
 	info.usb_link = link;
 	link->context = info.libusb_ctx;
-	int result = libusb_open(info.libusb_dev, &link->device_handle);
+	const int result = libusb_open(info.libusb_dev, &link->device_handle);
 	if (result != LIBUSB_SUCCESS) {
 		DEBUG_ERROR("libusb_open() failed (%d): %s\n", result, libusb_error_name(result));
 		return false;
