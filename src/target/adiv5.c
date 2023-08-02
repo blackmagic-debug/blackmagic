@@ -813,7 +813,7 @@ void adiv5_dp_init(adiv5_debug_port_s *const dp, const uint32_t idcode)
 	 *
 	 * for SWD-DP, we are guaranteed to be DP v1 or later.
 	 */
-	if (idcode != JTAG_IDCODE_ARM_DPv0) {
+	if ((idcode & (JTAG_IDCODE_DESIGNER_MASK | JTAG_IDCODE_PARTNO_MASK)) != JTAG_IDCODE_ARM_DPv0) {
 		const uint32_t dpidr = adiv5_dp_read_dpidr(dp);
 		if (!dpidr) {
 			DEBUG_ERROR("Failed to read DPIDR\n");
