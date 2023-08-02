@@ -910,14 +910,21 @@ void adiv5_dp_init(adiv5_debug_port_s *const dp, const uint32_t idcode)
 		return;
 	}
 
+	platform_timeout_s timeout;
+	platform_timeout_set(&timeout, 250);
+
 	/* Start by resetting the DP contol state so the debug domain powers down */
 	adiv5_dp_write(dp, ADIV5_DP_CTRLSTAT, 0U);
 	uint32_t status = ADIV5_DP_CTRLSTAT_CSYSPWRUPACK | ADIV5_DP_CTRLSTAT_CDBGPWRUPACK;
 	/* Wait for the acknowledgements to go low */
-	while (status & (ADIV5_DP_CTRLSTAT_CSYSPWRUPACK | ADIV5_DP_CTRLSTAT_CDBGPWRUPACK))
+	while (status & (ADIV5_DP_CTRLSTAT_CSYSPWRUPACK | ADIV5_DP_CTRLSTAT_CDBGPWRUPACK)) {
 		status = adiv5_dp_read(dp, ADIV5_DP_CTRLSTAT);
+		if (platform_timeout_is_expired(&timeout)) {
+			DEBUG_WARN("adiv5: power-down failed\n");
+			break;
+		}
+	}
 
-	platform_timeout_s timeout;
 	platform_timeout_set(&timeout, 201);
 	/* Write request for system and debug power up */
 	adiv5_dp_write(dp, ADIV5_DP_CTRLSTAT, ADIV5_DP_CTRLSTAT_CSYSPWRUPREQ | ADIV5_DP_CTRLSTAT_CDBGPWRUPREQ);
