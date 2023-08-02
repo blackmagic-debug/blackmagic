@@ -118,7 +118,7 @@ void libusb_exit_function(bmp_info_s *info)
 
 static char *get_device_descriptor_string(libusb_device_handle *handle, uint16_t string_index)
 {
-	char read_string[128] = {0};
+	char read_string[128U] = {0};
 	if (string_index != 0) {
 		const int result =
 			libusb_get_string_descriptor_ascii(handle, string_index, (uint8_t *)read_string, sizeof(read_string));
@@ -150,8 +150,8 @@ void bmp_read_product_version(libusb_device_descriptor_s *device_descriptor, lib
 
 	while (start_of_version[0] == ' ' && start_of_version != *product)
 		--start_of_version;
-	start_of_version[1] = '\0';
-	start_of_version += 2;
+	start_of_version[1U] = '\0';
+	start_of_version += 2U;
 	while (start_of_version[0] == ' ')
 		++start_of_version;
 	*version = strdup(start_of_version);
@@ -169,7 +169,7 @@ void stlinkv2_read_serial(libusb_device_descriptor_s *device_descriptor, libusb_
 	(void)manufacturer;
 	(void)version;
 	/* libusb_get_string_descriptor requires a byte buffer, but returns char16_t's */
-	char16_t raw_serial[64] = {0};
+	char16_t raw_serial[64U] = {0};
 	const int raw_length = libusb_get_string_descriptor(
 		handle, device_descriptor->iSerialNumber, 0x0409U, (uint8_t *)raw_serial, sizeof(raw_serial));
 	if (raw_length < LIBUSB_SUCCESS)
@@ -179,11 +179,11 @@ void stlinkv2_read_serial(libusb_device_descriptor_s *device_descriptor, libusb_
 	 * Re-encode the resulting chunk of data as hex, skipping the first char16_t which
 	 * contains the header of the string descriptor
 	 */
-	char encoded_serial[128] = {0};
+	char encoded_serial[128U] = {0};
 	for (size_t offset = 0; offset < (size_t)raw_length - 2U; offset += 2U) {
 		uint8_t digit = raw_serial[1 + (offset / 2U)];
 		encoded_serial[offset + 0] = hex_digit(digit >> 4U);
-		encoded_serial[offset + 1] = hex_digit(digit & 0x0fU);
+		encoded_serial[offset + 1U] = hex_digit(digit & 0x0fU);
 	}
 	*serial = strdup(encoded_serial);
 }
@@ -291,7 +291,7 @@ void orbtrace_read_version(libusb_device *device, libusb_device_handle *handle, 
 			const size_t version_len = strlen(version);
 			if (begins_with(version, version_len, "Version")) {
 				/* Chop off the "Version: " prefix */
-				memmove(version, version + 9, version_len - 8);
+				memmove(version, version + 9U, version_len - 8);
 				break;
 			}
 		}
@@ -302,7 +302,7 @@ void orbtrace_read_version(libusb_device *device, libusb_device_handle *handle, 
 static void process_cmsis_interface(const libusb_device_descriptor_s *const device_descriptor,
 	libusb_device *const device, libusb_device_handle *const handle, probe_info_s **probe_list)
 {
-	char read_string[128];
+	char read_string[128U];
 	char *version;
 	if (device_descriptor->idVendor == VENDOR_ID_ORBCODE && device_descriptor->idProduct == PRODUCT_ID_ORBTRACE) {
 		orbtrace_read_version(device, handle, read_string, sizeof(read_string));
@@ -396,7 +396,7 @@ static void check_cmsis_interface_type(libusb_device *const device, bmp_info_s *
 			/* If we've found an interface without a description string, ignore it */
 			if (descriptor->iInterface == 0)
 				continue;
-			char interface_string[128];
+			char interface_string[128U];
 			/* Read out the string */
 			if (libusb_get_string_descriptor_ascii(
 					handle, descriptor->iInterface, (unsigned char *)interface_string, sizeof(interface_string)) < 0)
