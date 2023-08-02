@@ -40,7 +40,8 @@
  * The mapping between the J-Link USB Protocol reference manual commands and the new Black Magic Debug commands is listed at the start of each command group below.
  */
 
-/* System information commands
+/* 
+ * System information commands
  *
  * ┌────────────────────────────────────────────────┬──────────────────────────────────┐
  * │              BMDA J-Link command               │  RM08001 J-Link USB Protocol RM  │
@@ -58,7 +59,8 @@
 #define JLINK_CMD_INFO_GET_PROBE_EXTENDED_CAPABILITIES 0xedU /* Get probe extended capabilities */
 #define JLINK_CMD_INFO_GET_MAX_MEM_BLOCK               0xd4U /* Get the maximum memory blocksize */
 
-/* Interface commands
+/* 
+ * Interface commands
  *
  * ┌────────────────────────────────────────┬────────────────────────────────┐
  * │          BMDA J-Link command           │ RM08001 J-Link USB Protocol RM │
@@ -74,7 +76,8 @@
 #define JLINK_CMD_INTERFACE_SET_SELECTED       0xc7U /* Select the probe interface */
 #define JLINK_CMD_INTERFACE_GET                0xc7U /* Get current selected interface or available interfaces */
 
-/* Target power commands
+/* 
+ * Target power commands
  *
  * ┌───────────────────────────────┬────────────────────────────────┐
  * │      BMDA J-Link command      │ RM08001 J-Link USB Protocol RM │
@@ -86,7 +89,8 @@
 #define JLINK_CMD_POWER_SET_KICKSTART 0x08U /* Set KickStart power state on pin 19 (J-Link 20 pin connector) */
 #define JLINK_CMD_POWER_GET_STATE     0xc1U /* Get Kickstart power state and overcurrent timers */
 
-/* Low level hardware commands
+/* 
+ * Low level hardware commands
  *
  * ┌──────────────────────────────┬────────────────────────────────┐
  * │     BMDA J-Link command      │ RM08001 J-Link USB Protocol RM │
@@ -116,7 +120,8 @@
 #define JLINK_CMD_SIGNAL_CLEAR_TDI   0xcbU /* Clear TDI pin */
 #define JLINK_CMD_SIGNAL_SET_TDI     0xccU /* Set TDI pin */
 
-/* Low level IO commands
+/* 
+ * Low level IO commands
  *
  * ┌────────────────────────────────────┬────────────────────────────────────┐
  * │        BMDA J-Link command         │   RM08001 J-Link USB Protocol RM   │
@@ -138,7 +143,8 @@
 #define JLINK_CMD_IO_TRANSACTION_OBSOLETE1 0xcdU /* Obsolete: Send data on TDI and TMS and return TDO */
 #define JLINK_CMD_IO_TRANSACTION_OBSOLETE2 0xceU /* Obsolete: Send data on TDI and TMS and return TDO  */
 
-/* High level target commands
+/* 
+ * High level target commands
  *
  * ┌─────────────────────────────────────────────┬────────────────────────────────────────────┐
  * │             BMDA J-Link command             │       RM08001 J-Link USB Protocol RM       │
@@ -166,7 +172,8 @@
 #define JLINK_CMD_TARGET_MEASURE_RTCK_REACTION_TIME 0xf6U /* Measure RTCK reaction time of the target device */
 #define JLINK_CMD_TARGET_GET_CONNECTION_STATE       0xc2U /* Get target connection timer counters */
 
-/* Configuration commands
+/* 
+ * Configuration commands
  *
  * ┌────────────────────────┬────────────────────────────────┐
  * │  BMDA J-Link command   │ RM08001 J-Link USB Protocol RM │
@@ -201,7 +208,8 @@
 #define JLINK_HARDWARE_VERSION_TYPE_JLINKPRO 3U
 #define JLINK_HARDWARE_VERSION_TYPE_LPCLINK2 18U
 
-/* J-Link capabilities - JLINK_CMD_INFO_GET_PROBE_CAPABILITIES 
+/*
+ * J-Link capabilities - JLINK_CMD_INFO_GET_PROBE_CAPABILITIES 
  *
  * ┌─────┬──────────────────────────────────────────┬────────────────────────────┐
  * │ Bit │          BMDA J-Link capability          │  §5.3.4 EMU_CMD_GET_CAPS   │
