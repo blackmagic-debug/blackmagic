@@ -336,6 +336,10 @@ static inline bool jlink_interface_available(const uint8_t interface)
 
 static uint8_t jlink_selected_interface(void)
 {
+	/* V5.4 does only JTAG and hangs on 0xc7 commands */
+	if (!(jlink.capabilities & JLINK_CAPABILITY_INTERFACES))
+		return JLINK_INTERFACE_JTAG;
+
 	uint8_t buffer[4U];
 	if (!jlink_simple_request_8(JLINK_CMD_INTERFACE_GET, JLINK_INTERFACE_GET_CURRENT, buffer, sizeof(buffer)))
 		return UINT8_MAX; /* Invalid interface, max value is 31 */
@@ -368,11 +372,20 @@ bool jlink_select_interface(const uint8_t interface)
 static bool jlink_get_interfaces(void)
 {
 	uint8_t buffer[4U];
-	if (!jlink_simple_request_8(JLINK_CMD_INTERFACE_GET, JLINK_INTERFACE_GET_AVAILABLE, buffer, sizeof(buffer)))
-		return false;
+	/*
+	 * HW V5.40 IAR-KS 2006 hangs on 0xc7 commands (0xff and 0xfe),
+	 * and is known to not implement SWD or anything else besides JTAG.
+	 * Check the dedicated capability bit
+	 */
+	if (!(jlink.capabilities & JLINK_CAPABILITY_INTERFACES))
+		jlink.available_interfaces = JLINK_INTERFACE_AVAILABLE(JLINK_INTERFACE_JTAG);
+	else {
+		if (!jlink_simple_request_8(JLINK_CMD_INTERFACE_GET, JLINK_INTERFACE_GET_AVAILABLE, buffer, sizeof(buffer)))
+			return false;
 
-	/* Available_interfaces is a 32bit bitfield/mask */
-	jlink.available_interfaces = read_le4(buffer, 0);
+		/* Available_interfaces is a 32bit bitfield/mask */
+		jlink.available_interfaces = read_le4(buffer, 0);
+	}
 
 	/* Print the available interfaces, marking the selected one, and unsuported ones */
 	const uint8_t selected_interface = jlink_selected_interface();
