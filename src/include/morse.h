@@ -23,7 +23,7 @@
 
 #include <stdbool.h>
 
-extern const char *morse_msg;
+extern volatile const char *morse_msg;
 
 void morse(const char *msg, bool repeat);
 bool morse_update(void);
