@@ -64,9 +64,9 @@ void morse(const char *const msg, const bool repeat)
 		DEBUG_WARN("%s\n", msg);
 	(void)repeat;
 #else
-	morse_msg = msg;
-	msg_index = msg ? 0 : SIZE_MAX;
 	morse_repeat = repeat;
+	msg_index = msg ? 0 : SIZE_MAX;
+	morse_msg = msg;
 #endif
 }
 
