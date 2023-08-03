@@ -784,7 +784,7 @@ uint32_t adiv5_dp_read_dpidr(adiv5_debug_port_s *const dp)
 	volatile uint32_t dpidr = 0;
 	volatile exception_s e;
 	TRY_CATCH (e, EXCEPTION_ALL) {
-		dpidr = adiv5_dp_read(dp, ADIV5_DP_DPIDR);
+		dpidr = adiv5_dp_low_access(dp, ADIV5_LOW_READ, ADIV5_DP_DPIDR, 0U);
 	}
 	if (e.type)
 		return 0;
