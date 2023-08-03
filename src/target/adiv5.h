@@ -208,7 +208,8 @@
 #define JTAG_IDCODE_DESIGNER_OFFSET 1U
 #define JTAG_IDCODE_DESIGNER_MASK   (0x7ffU << JTAG_IDCODE_DESIGNER_OFFSET)
 
-#define JTAG_IDCODE_ARM_DPv0 UINT32_C(0x0ba00476)
+#define JTAG_IDCODE_ARM_DPv0    UINT32_C(0x0ba00476)
+#define JTAG_IDCODE_PARTNO_DPv0 0xba00U
 
 /* Constants to make RnW parameters more clear in code */
 #define ADIV5_LOW_WRITE 0

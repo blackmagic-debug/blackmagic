@@ -805,15 +805,37 @@ void adiv5_dp_init(adiv5_debug_port_s *const dp, const uint32_t idcode)
 	bmda_adiv5_dp_init(dp);
 #endif
 
+	/* Check if we have a JTAG ID code and that it's a valid one */
+	if (idcode & 1U) {
+		/*
+		 * We do, so this is a JTAG DP. Let's pull out the designer and part codes then.
+		 *
+		 * Start by pulling out the designer code which will be used to attempt to
+		 * detect a DPv0 DP. This will get overriden later by DPIDR if the DP turns out
+		 * to be DPv1+.
+		 */
+		const uint16_t designer = (idcode & JTAG_IDCODE_DESIGNER_MASK) >> JTAG_IDCODE_DESIGNER_OFFSET;
+		/*
+		 * Now extract the part number and sort out the designer code.
+		 * The JTAG ID code designer is in the form:
+		 * Bits 10:7 - JEP-106 Continuation Code
+		 * Bits 6:0 - JEP-106 Identity Code
+		 * So here we convert that into our internal representation.
+		 * See the JEP-106 code list (jep106.h) for more on that.
+		 */
+		dp->designer_code =
+			((designer & ADIV5_DP_DESIGNER_JEP106_CONT_MASK) << 1U) | (designer & ADIV5_DP_DESIGNER_JEP106_CODE_MASK);
+		dp->partno = (idcode & JTAG_IDCODE_PARTNO_MASK) >> JTAG_IDCODE_PARTNO_OFFSET;
+	}
+
 	/*
 	 * Start by assuming DP v1 or later.
 	 * this may not be true for JTAG-DP (we attempt to detect this with the part ID code)
-	 * in such cases (DPv0) DPIDR is not implemented
-	 * and reads are UNPREDICTABLE.
+	 * in such cases (DPv0) DPIDR is not implemented and reads are UNPREDICTABLE.
 	 *
 	 * for SWD-DP, we are guaranteed to be DP v1 or later.
 	 */
-	if ((idcode & (JTAG_IDCODE_DESIGNER_MASK | JTAG_IDCODE_PARTNO_MASK)) != JTAG_IDCODE_ARM_DPv0) {
+	if (dp->designer_code != JEP106_MANUFACTURER_ARM || dp->partno != JTAG_IDCODE_PARTNO_DPv0) {
 		const uint32_t dpidr = adiv5_dp_read_dpidr(dp);
 		if (!dpidr) {
 			DEBUG_ERROR("Failed to read DPIDR\n");
