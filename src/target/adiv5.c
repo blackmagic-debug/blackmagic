@@ -122,6 +122,7 @@ typedef enum arm_arch {
 	aa_nosupport,
 	aa_cortexm,
 	aa_cortexa,
+	aa_cortexr,
 	aa_end
 } arm_arch_e;
 
@@ -243,7 +244,7 @@ static const struct {
 	{0xc08, 0x00, 0, aa_cortexa, cidc_dc, ARM_COMPONENT_STR("Cortex-A8 Debug", "(Debug Unit)")},
 	{0xc09, 0x00, 0, aa_cortexa, cidc_dc, ARM_COMPONENT_STR("Cortex-A9 Debug", "(Debug Unit)")},
 	{0xc0f, 0x00, 0, aa_nosupport, cidc_unknown, ARM_COMPONENT_STR("Cortex-A15 Debug", "(Debug Unit)")}, /* support? */
-	{0xc14, 0x00, 0, aa_nosupport, cidc_unknown, ARM_COMPONENT_STR("Cortex-R4 Debug", "(Debug Unit)")},  /* support? */
+	{0xc14, 0x15, 0, aa_cortexr, cidc_unknown, ARM_COMPONENT_STR("Cortex-R4", "(Debug Unit)")},
 	{0xcd0, 0x00, 0, aa_nosupport, cidc_unknown, ARM_COMPONENT_STR("Atmel DSU", "(Device Service Unit)")},
 	{0xd20, 0x00, 0x2a04, aa_cortexm, cidc_gipc, ARM_COMPONENT_STR("Cortex-M23", "(System Control Space)")},
 	{0xd20, 0x11, 0, aa_nosupport, cidc_dc, ARM_COMPONENT_STR("Cortex-M23", "(Trace Port Interface Unit)")},
@@ -686,6 +687,9 @@ static void adiv5_component_probe(
 			case aa_cortexa:
 				DEBUG_INFO("%s-> cortexa_probe\n", indent + 1);
 				cortexa_probe(ap, addr);
+				break;
+			case aa_cortexr:
+				DEBUG_INFO("%s-> cortexr_probe\n", indent + 1);
 				break;
 			default:
 				break;
