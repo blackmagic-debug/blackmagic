@@ -97,7 +97,7 @@ static void dap_jtag_tdi_tdo_seq(
 	uint8_t *const data_out, const bool final_tms, const uint8_t *const data_in, const size_t clock_cycles)
 {
 	perform_dap_jtag_sequence(data_in, data_out, final_tms, clock_cycles);
-	DEBUG_PROBE("jtagtap_tdi_tdo_seq %zu, %02x -> %02x\n", clock_cycles, data_in[0], data_out ? data_out[0] : 0);
+	DEBUG_PROBE("jtagtap_tdi_tdo_seq %zu, %02x -> %02x\n", clock_cycles, data_in[0], data_out ? data_out[0] : 0U);
 }
 
 static void dap_jtag_tdi_seq(const bool final_tms, const uint8_t *const data_in, const size_t clock_cycles)

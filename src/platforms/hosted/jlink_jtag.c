@@ -93,7 +93,7 @@ static void jlink_jtag_tdi_tdo_seq(
 	uint8_t *const data_out, const bool final_tms, const uint8_t *const data_in, const size_t clock_cycles)
 {
 	const bool result = jlink_transfer_fixed_tms(clock_cycles, final_tms, data_in, data_out);
-	DEBUG_PROBE("jtagtap_tdi_tdo_seq %zu, %02x -> %02x\n", clock_cycles, data_in[0], data_out ? data_out[0] : 0);
+	DEBUG_PROBE("jtagtap_tdi_tdo_seq %zu, %02x -> %02x\n", clock_cycles, data_in[0], data_out ? data_out[0] : 0U);
 	if (!result)
 		raise_exception(EXCEPTION_ERROR, "jtagtap_tdi_tdo_seq failed");
 }
