@@ -27,14 +27,14 @@
 #define DO_PRAGMA(x)  DO_PRAGMA_(x)
 // __attribute__((alias)) is not supported in AppleClang.
 #define weak_alias(name, aliasname)     DO_PRAGMA(weak name = aliasname)
-#define CORTEXA_PROBE_WEAK_NOP(name)    weak_alias(name, cortexa_probe_nop)
+#define CORTEXAR_PROBE_WEAK_NOP(name)   weak_alias(name, cortexar_probe_nop)
 #define CORTEXM_PROBE_WEAK_NOP(name)    weak_alias(name, cortexm_probe_nop)
 #define TARGET_PROBE_WEAK_NOP(name)     weak_alias(name, target_probe_nop)
 #define LPC55_DP_PREPARE_WEAK_NOP(name) weak_alias(name, lpc55_dp_prepare_nop)
 #else
 #define APPLE_STATIC static inline
-#define CORTEXA_PROBE_WEAK_NOP(name) \
-	extern bool name(adiv5_access_port_s *, uint32_t) __attribute__((weak, alias("cortexa_probe_nop")));
+#define CORTEXAR_PROBE_WEAK_NOP(name) \
+	extern bool name(adiv5_access_port_s *, target_addr_t) __attribute__((weak, alias("cortexar_probe_nop")));
 #define CORTEXM_PROBE_WEAK_NOP(name) \
 	extern bool name(adiv5_access_port_s *) __attribute__((weak, alias("cortexm_probe_nop")));
 #define TARGET_PROBE_WEAK_NOP(name) extern bool name(target_s *) __attribute__((weak, alias("target_probe_nop")));
@@ -42,26 +42,26 @@
 	extern void name(adiv5_debug_port_s *) __attribute__((weak, alias("lpc55_dp_prepare_nop")));
 #endif
 
-APPLE_STATIC bool cortexa_probe_nop(adiv5_access_port_s *apb, uint32_t debug_base)
+APPLE_STATIC bool cortexar_probe_nop(adiv5_access_port_s *const access_port, const target_addr_t base_address)
 {
-	(void)apb;
-	(void)debug_base;
+	(void)access_port;
+	(void)base_address;
 	return false;
 }
 
-APPLE_STATIC bool cortexm_probe_nop(adiv5_access_port_s *access_port)
+APPLE_STATIC bool cortexm_probe_nop(adiv5_access_port_s *const access_port)
 {
 	(void)access_port;
 	return false;
 }
 
-APPLE_STATIC bool target_probe_nop(target_s *target)
+APPLE_STATIC bool target_probe_nop(target_s *const target)
 {
 	(void)target;
 	return false;
 }
 
-APPLE_STATIC void lpc55_dp_prepare_nop(adiv5_debug_port_s *debug_port)
+APPLE_STATIC void lpc55_dp_prepare_nop(adiv5_debug_port_s *const debug_port)
 {
 	(void)debug_port;
 }
@@ -71,8 +71,8 @@ APPLE_STATIC void lpc55_dp_prepare_nop(adiv5_debug_port_s *debug_port)
  * to be disabled by not compiling/linking them in.
  */
 
-CORTEXA_PROBE_WEAK_NOP(cortexa_probe)
-
+CORTEXAR_PROBE_WEAK_NOP(cortexa_probe)
+CORTEXAR_PROBE_WEAK_NOP(cortexr_probe)
 CORTEXM_PROBE_WEAK_NOP(cortexm_probe)
 
 CORTEXM_PROBE_WEAK_NOP(kinetis_mdm_probe)

@@ -1,7 +1,8 @@
 PROBE_HOST ?= native
 PLATFORM_DIR = platforms/$(PROBE_HOST)
 VPATH += $(PLATFORM_DIR) target
-ENABLE_DEBUG ?=
+ENABLE_DEBUG ?= 0
+ENABLE_CORTEXR ?= 0
 
 SYS = $(shell $(CC) -dumpmachine)
 
@@ -87,6 +88,11 @@ SRC =              \
 
 ifeq (,$(filter all_platforms,$(MAKECMDGOALS)))
 include $(PLATFORM_DIR)/Makefile.inc
+endif
+
+ifeq ($(ENABLE_CORTEXR), 1)
+CFLAGS += -DENABLE_CORTEXR
+SRC += cortexr.c
 endif
 
 ifneq ($(PC_HOSTED),1)

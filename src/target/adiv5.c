@@ -690,6 +690,7 @@ static void adiv5_component_probe(
 				break;
 			case aa_cortexr:
 				DEBUG_INFO("%s-> cortexr_probe\n", indent + 1);
+				cortexr_probe(ap, addr);
 				break;
 			default:
 				break;
