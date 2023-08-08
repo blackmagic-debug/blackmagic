@@ -220,7 +220,7 @@ size_t gdb_getpacket(char *const packet, const size_t size)
 					if (value >= ' ' && value < '\x7f')
 						DEBUG_GDB("%c", value);
 					else
-						DEBUG_GDB("\\x%02X", value);
+						DEBUG_GDB("\\x%02X", (uint8_t)value);
 				}
 				DEBUG_GDB("\n");
 
@@ -249,12 +249,12 @@ static void gdb_next_char(const char value, uint8_t *const csum)
 	if (value >= ' ' && value < '\x7f')
 		DEBUG_GDB("%c", value);
 	else
-		DEBUG_GDB("\\x%02X", value);
+		DEBUG_GDB("\\x%02X", (uint8_t)value);
 	if (value == GDB_PACKET_START || value == GDB_PACKET_END || value == GDB_PACKET_ESCAPE ||
 		value == GDB_PACKET_RUNLENGTH_START) {
 		gdb_if_putchar(GDB_PACKET_ESCAPE, 0);
 		gdb_if_putchar((char)((uint8_t)value ^ GDB_PACKET_ESCAPE_XOR), 0);
-		*csum += GDB_PACKET_ESCAPE + (value ^ GDB_PACKET_ESCAPE_XOR);
+		*csum += GDB_PACKET_ESCAPE + ((uint8_t)value ^ GDB_PACKET_ESCAPE_XOR);
 	} else {
 		gdb_if_putchar(value, 0);
 		*csum += value;
