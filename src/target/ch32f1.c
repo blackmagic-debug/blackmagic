@@ -30,7 +30,7 @@
 #include "general.h"
 #include "target.h"
 #include "target_internal.h"
-#include "cortexm.h"
+#include "cortex.h"
 
 extern const command_s stm32f1_cmd_list[]; // Reuse stm32f1 stuff
 
@@ -186,7 +186,7 @@ static bool ch32f1_has_fast_unlock(target_s *t)
  */
 bool ch32f1_probe(target_s *t)
 {
-	if ((t->cpuid & CPUID_PARTNO_MASK) != CORTEX_M3)
+	if ((t->cpuid & CORTEX_CPUID_PARTNO_MASK) != CORTEX_M3)
 		return false;
 
 	const uint32_t dbgmcu_idcode = target_mem_read32(t, DBGMCU_IDCODE);

@@ -129,10 +129,10 @@ static void stm32f1_add_flash(target_s *target, uint32_t addr, size_t length, si
 
 static uint16_t stm32f1_read_idcode(target_s *const target)
 {
-	if ((target->cpuid & CPUID_PARTNO_MASK) == CORTEX_M0 || (target->cpuid & CPUID_PARTNO_MASK) == CORTEX_M23)
+	if ((target->cpuid & CORTEX_CPUID_PARTNO_MASK) == CORTEX_M0 || (target->cpuid & CORTEX_CPUID_PARTNO_MASK) == CORTEX_M23)
 		return target_mem_read32(target, DBGMCU_IDCODE_F0) & 0xfffU;
 	/* Is this a Cortex-M33 core with STM32F1-style peripherals? (GD32E50x) */
-	if ((target->cpuid & CPUID_PARTNO_MASK) == CORTEX_M33)
+	if ((target->cpuid & CORTEX_CPUID_PARTNO_MASK) == CORTEX_M33)
 		return target_mem_read32(target, DBGMCU_IDCODE_GD32E5) & 0xfffU;
 
 	return target_mem_read32(target, DBGMCU_IDCODE) & 0xfffU;
@@ -153,9 +153,9 @@ bool gd32f1_probe(target_s *target)
 		target->driver = "GD32F2";
 		break;
 	case 0x410U: /* Gigadevice gd32f103, gd32e230 */
-		if ((target->cpuid & CPUID_PARTNO_MASK) == CORTEX_M23)
+		if ((target->cpuid & CORTEX_CPUID_PARTNO_MASK) == CORTEX_M23)
 			target->driver = "GD32E230";
-		else if ((target->cpuid & CPUID_PARTNO_MASK) == CORTEX_M4)
+		else if ((target->cpuid & CORTEX_CPUID_PARTNO_MASK) == CORTEX_M4)
 			target->driver = "GD32F3";
 		else
 			target->driver = "GD32F1";
@@ -345,7 +345,7 @@ static bool at32f43_detect(target_s *target, const uint16_t part_id)
 bool at32fxx_probe(target_s *target)
 {
 	// Artery clones use Cortex M4 cores
-	if ((target->cpuid & CPUID_PARTNO_MASK) != CORTEX_M4)
+	if ((target->cpuid & CORTEX_CPUID_PARTNO_MASK) != CORTEX_M4)
 		return false;
 
 	// Artery chips use the complete idcode word for identification
@@ -835,7 +835,7 @@ static bool stm32f1_option_write(target_s *const target, const uint32_t addr, co
 	 * Write changed values, taking into account if we can use 32- or have to use 16-bit writes.
 	 * GD32E230 is a special case as target_mem_write16 does not work
 	 */
-	const bool write16_broken = target->part_id == 0x410U && (target->cpuid & CPUID_PARTNO_MASK) == CORTEX_M23;
+	const bool write16_broken = target->part_id == 0x410U && (target->cpuid & CORTEX_CPUID_PARTNO_MASK) == CORTEX_M23;
 	for (size_t i = 0U; i < 8U; ++i) {
 		if (!stm32f1_option_write_erased(target, i, opt_val[i], write16_broken))
 			return false;
@@ -869,7 +869,7 @@ static bool stm32f1_cmd_option(target_s *target, int argc, const char **argv)
 		 * use 32- or have to use 16-bit writes.
 		 * GD32E230 is a special case as target_mem_write16 does not work
 		 */
-		const bool write16_broken = target->part_id == 0x410U && (target->cpuid & CPUID_PARTNO_MASK) == CORTEX_M23;
+		const bool write16_broken = target->part_id == 0x410U && (target->cpuid & CORTEX_CPUID_PARTNO_MASK) == CORTEX_M23;
 		if (!stm32f1_option_write_erased(target, 0U, stm32f1_flash_readable_key(target), write16_broken))
 			return false;
 	} else if (argc == 3) {

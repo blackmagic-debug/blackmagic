@@ -212,7 +212,7 @@ static uint16_t stm32f4_read_idcode(target_s *const t)
 	 * distinction with F205. Revision is also wrong (0x2000 instead
 	 * of 0x1000). See F40x/F41x errata.
 	 */
-	if (idcode == ID_STM32F20X && (t->cpuid & CPUID_PARTNO_MASK) == CORTEX_M4)
+	if (idcode == ID_STM32F20X && (t->cpuid & CORTEX_CPUID_PARTNO_MASK) == CORTEX_M4)
 		return ID_STM32F40X;
 	return idcode;
 }

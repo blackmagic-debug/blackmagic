@@ -22,6 +22,7 @@
 
 #include "target.h"
 #include "adiv5.h"
+#include "cortex.h"
 
 extern unsigned cortexm_wait_timeout;
 /* Private peripheral bus base address */
@@ -168,25 +169,10 @@ extern unsigned cortexm_wait_timeout;
 #define REG_PSP     18U
 #define REG_SPECIAL 19U
 
-#define ARM_THUMB_BREAKPOINT 0xbe00U
-
 #define CORTEXM_XPSR_THUMB          (1U << 24U)
 #define CORTEXM_XPSR_EXCEPTION_MASK 0x0000001fU
 
 #define CORTEXM_TOPT_INHIBIT_NRST (1U << 2U)
-
-#define CORTEX_M0  0xc200U
-#define CORTEX_M0P 0xc600U
-#define CORTEX_M3  0xc230U
-#define CORTEX_M4  0xc240U
-#define CORTEX_M7  0xc270U
-#define CORTEX_M23 0xd200U
-#define CORTEX_M33 0xd210U
-#define STAR_MC1   0x1320U
-
-#define CPUID_PARTNO_MASK   0xfff0U
-#define CPUID_REVISION_MASK 0x00f00000U
-#define CPUID_PATCH_MASK    0xfU
 
 adiv5_access_port_s *cortexm_ap(target_s *t);
 
