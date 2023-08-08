@@ -47,6 +47,16 @@ typedef struct cortexr_priv {
 
 #define CORTEXR_CPUID 0xd00U
 
+static void cortexr_mem_read(target_s *const target, void *const dest, const target_addr_t src, const size_t len)
+{
+	adiv5_mem_read(cortex_ap(target), dest, src, len);
+}
+
+static void cortexr_mem_write(target_s *const target, const target_addr_t dest, const void *const src, const size_t len)
+{
+	adiv5_mem_write(cortex_ap(target), dest, src, len);
+}
+
 bool cortexr_probe(adiv5_access_port_s *const ap, const target_addr_t base_address)
 {
 	target_s *target = target_new();
@@ -74,6 +84,10 @@ bool cortexr_probe(adiv5_access_port_s *const ap, const target_addr_t base_addre
 	target->priv_free = cortex_priv_free;
 	priv->base.ap = ap;
 	priv->base.base_addr = base_address;
+
+	target->check_error = cortex_check_error;
+	target->mem_read = cortexr_mem_read;
+	target->mem_write = cortexr_mem_write;
 
 	target->driver = "ARM Cortex-R";
 
