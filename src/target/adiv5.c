@@ -463,14 +463,14 @@ static bool cortexm_prepare(adiv5_access_port_s *ap)
 #endif
 	uint32_t dhcsr = cortexm_initial_halt(ap);
 	if (!dhcsr) {
-		DEBUG_ERROR("Halt via DHCSR(%08" PRIx32 "): failure after %" PRId32 "ms\nTry again with longer "
+		DEBUG_ERROR("Halt via DHCSR(%08" PRIx32 "): failure after %" PRIu32 "ms\nTry again with longer "
 					"timeout or connect under reset\n",
 			adiv5_mem_read32(ap, CORTEXM_DHCSR), platform_time_ms() - start_time);
 		return false;
 	}
 	/* Clear any residual WAIT fault code to keep things in good state for the next steps */
 	ap->dp->fault = 0;
-	DEBUG_INFO("Halt via DHCSR(%08" PRIx32 "): success after %" PRId32 "ms\n", dhcsr, platform_time_ms() - start_time);
+	DEBUG_INFO("Halt via DHCSR(%08" PRIx32 "): success after %" PRIu32 "ms\n", dhcsr, platform_time_ms() - start_time);
 	/* Save the old value of DEMCR and enable the DWT, and both vector table debug bits */
 	ap->ap_cortexm_demcr = adiv5_mem_read32(ap, CORTEXM_DEMCR);
 	const uint32_t demcr = CORTEXM_DEMCR_TRCENA | CORTEXM_DEMCR_VC_HARDERR | CORTEXM_DEMCR_VC_CORERESET;
@@ -846,7 +846,7 @@ void adiv5_dp_init(adiv5_debug_port_s *const dp, const uint32_t idcode)
 		 * Bit 0 of DPIDR is read as 1
 		 */
 		if (dp->designer_code != 0 && dp->version > 0 && (dpidr & 1U)) {
-			DEBUG_INFO("DP DPIDR 0x%08" PRIx32 " (v%x %srev%" PRId32 ") designer 0x%x partno 0x%x\n", dpidr,
+			DEBUG_INFO("DP DPIDR 0x%08" PRIx32 " (v%x %srev%" PRIu32 ") designer 0x%x partno 0x%x\n", dpidr,
 				dp->version, dp->mindp ? "MINDP " : "",
 				(dpidr & ADIV5_DP_DPIDR_REVISION_MASK) >> ADIV5_DP_DPIDR_REVISION_OFFSET, dp->designer_code,
 				dp->partno);
