@@ -53,7 +53,7 @@
 #include "cmsis_dap.h"
 #endif
 
-bmda_probe_s info;
+bmda_probe_s bmda_probe_info;
 
 jtag_proc_s jtag_proc;
 swd_proc_s swd_proc;
@@ -62,14 +62,14 @@ static bmda_cli_options_s cl_opts;
 
 void gdb_ident(char *p, int count)
 {
-	snprintf(p, count, "%s (%s), %s", info.manufacturer, info.product, info.version);
+	snprintf(p, count, "%s (%s), %s", bmda_probe_info.manufacturer, bmda_probe_info.product, bmda_probe_info.version);
 }
 
 static void exit_function(void)
 {
-	libusb_exit_function(&info);
+	libusb_exit_function(&bmda_probe_info);
 
-	switch (info.type) {
+	switch (bmda_probe_info.type) {
 #if HOSTED_BMP_ONLY == 0
 	case PROBE_TYPE_CMSIS_DAP:
 		dap_exit_function();
@@ -84,8 +84,8 @@ static void exit_function(void)
 	rtt_if_exit();
 #endif
 #if HOSTED_BMP_ONLY == 0
-	if (info.libusb_ctx)
-		libusb_exit(info.libusb_ctx);
+	if (bmda_probe_info.libusb_ctx)
+		libusb_exit(bmda_probe_info.libusb_ctx);
 #endif
 	fflush(stdout);
 }
@@ -108,18 +108,18 @@ void platform_init(int argc, char **argv)
 	signal(SIGINT, sigterm_handler);
 
 	if (cl_opts.opt_device)
-		info.type = PROBE_TYPE_BMP;
-	else if (find_debuggers(&cl_opts, &info))
+		bmda_probe_info.type = PROBE_TYPE_BMP;
+	else if (find_debuggers(&cl_opts, &bmda_probe_info))
 		exit(1);
 
 	if (cl_opts.opt_list_only)
 		exit(0);
 
-	bmp_ident(&info);
+	bmp_ident(&bmda_probe_info);
 
-	switch (info.type) {
+	switch (bmda_probe_info.type) {
 	case PROBE_TYPE_BMP:
-		if (!serial_open(&cl_opts, info.serial) || !remote_init(cl_opts.opt_tpwr))
+		if (!serial_open(&cl_opts, bmda_probe_info.serial) || !remote_init(cl_opts.opt_tpwr))
 			exit(1);
 		break;
 
@@ -162,10 +162,10 @@ void platform_init(int argc, char **argv)
 
 bool bmda_swd_scan(const uint32_t targetid)
 {
-	info.is_jtag = false;
+	bmda_probe_info.is_jtag = false;
 	platform_max_frequency_set(cl_opts.opt_max_swj_frequency);
 
-	switch (info.type) {
+	switch (bmda_probe_info.type) {
 	case PROBE_TYPE_BMP:
 	case PROBE_TYPE_FTDI:
 	case PROBE_TYPE_CMSIS_DAP:
@@ -187,7 +187,7 @@ bool bmda_swd_dp_init(adiv5_debug_port_s *dp)
 #if HOSTED_BMP_ONLY == 1
 	(void)dp;
 #endif
-	switch (info.type) {
+	switch (bmda_probe_info.type) {
 	case PROBE_TYPE_BMP:
 		return remote_swd_init();
 
@@ -212,17 +212,17 @@ bool bmda_swd_dp_init(adiv5_debug_port_s *dp)
 
 void bmda_add_jtag_dev(const uint32_t dev_index, const jtag_dev_s *const jtag_dev)
 {
-	if (info.type == PROBE_TYPE_BMP)
+	if (bmda_probe_info.type == PROBE_TYPE_BMP)
 		remote_add_jtag_dev(dev_index, jtag_dev);
 }
 
 bool bmda_jtag_scan(void)
 {
-	info.is_jtag = true;
+	bmda_probe_info.is_jtag = true;
 
 	platform_max_frequency_set(cl_opts.opt_max_swj_frequency);
 
-	switch (info.type) {
+	switch (bmda_probe_info.type) {
 	case PROBE_TYPE_BMP:
 	case PROBE_TYPE_FTDI:
 	case PROBE_TYPE_JLINK:
@@ -241,7 +241,7 @@ bool bmda_jtag_scan(void)
 
 bool bmda_jtag_init(void)
 {
-	switch (info.type) {
+	switch (bmda_probe_info.type) {
 	case PROBE_TYPE_BMP:
 		return remote_jtag_init();
 
@@ -266,7 +266,7 @@ bool bmda_jtag_init(void)
 
 void bmda_adiv5_dp_init(adiv5_debug_port_s *const dp)
 {
-	switch (info.type) {
+	switch (bmda_probe_info.type) {
 	case PROBE_TYPE_BMP:
 		if (cl_opts.opt_no_hl) {
 			DEBUG_WARN("Not using HL commands\n");
@@ -293,7 +293,7 @@ void bmda_adiv5_dp_init(adiv5_debug_port_s *const dp)
 void bmda_jtag_dp_init(adiv5_debug_port_s *dp)
 {
 #if HOSTED_BMP_ONLY == 0
-	switch (info.type) {
+	switch (bmda_probe_info.type) {
 	case PROBE_TYPE_STLINK_V2:
 		stlink_jtag_dp_init(dp);
 		break;
@@ -310,7 +310,7 @@ void bmda_jtag_dp_init(adiv5_debug_port_s *dp)
 
 char *bmda_adaptor_ident(void)
 {
-	switch (info.type) {
+	switch (bmda_probe_info.type) {
 	case PROBE_TYPE_NONE:
 		return "None";
 
@@ -336,7 +336,7 @@ char *bmda_adaptor_ident(void)
 
 const char *platform_target_voltage(void)
 {
-	switch (info.type) {
+	switch (bmda_probe_info.type) {
 	case PROBE_TYPE_BMP:
 		return remote_target_voltage();
 
@@ -358,7 +358,7 @@ const char *platform_target_voltage(void)
 
 void platform_nrst_set_val(bool assert)
 {
-	switch (info.type) {
+	switch (bmda_probe_info.type) {
 	case PROBE_TYPE_BMP:
 		remote_nrst_set_val(assert);
 		break;
@@ -388,7 +388,7 @@ void platform_nrst_set_val(bool assert)
 
 bool platform_nrst_get_val(void)
 {
-	switch (info.type) {
+	switch (bmda_probe_info.type) {
 	case PROBE_TYPE_BMP:
 		return remote_nrst_get_val();
 
@@ -413,7 +413,7 @@ void platform_max_frequency_set(uint32_t freq)
 	if (!freq)
 		return;
 
-	switch (info.type) {
+	switch (bmda_probe_info.type) {
 	case PROBE_TYPE_BMP:
 		remote_max_frequency_set(freq);
 		break;
@@ -443,17 +443,17 @@ void platform_max_frequency_set(uint32_t freq)
 
 	const uint32_t actual_freq = platform_max_frequency_get();
 	if (actual_freq == FREQ_FIXED)
-		DEBUG_INFO("Device has fixed frequency for %s\n", (info.is_jtag) ? "JTAG" : "SWD");
+		DEBUG_INFO("Device has fixed frequency for %s\n", bmda_probe_info.is_jtag ? "JTAG" : "SWD");
 	else {
 		const uint16_t freq_mhz = actual_freq / 1000000U;
 		const uint16_t freq_khz = (actual_freq / 1000U) - (freq_mhz * 1000U);
-		DEBUG_INFO("Speed set to %u.%03uMHz for %s\n", freq_mhz, freq_khz, info.is_jtag ? "JTAG" : "SWD");
+		DEBUG_INFO("Speed set to %u.%03uMHz for %s\n", freq_mhz, freq_khz, bmda_probe_info.is_jtag ? "JTAG" : "SWD");
 	}
 }
 
 uint32_t platform_max_frequency_get(void)
 {
-	switch (info.type) {
+	switch (bmda_probe_info.type) {
 	case PROBE_TYPE_BMP:
 		return remote_max_frequency_get();
 
@@ -479,7 +479,7 @@ uint32_t platform_max_frequency_get(void)
 
 bool platform_target_set_power(const bool power)
 {
-	switch (info.type) {
+	switch (bmda_probe_info.type) {
 	case PROBE_TYPE_BMP:
 		return remote_target_set_power(power);
 
@@ -496,7 +496,7 @@ bool platform_target_set_power(const bool power)
 
 bool platform_target_get_power(void)
 {
-	switch (info.type) {
+	switch (bmda_probe_info.type) {
 	case PROBE_TYPE_BMP:
 		return remote_target_get_power();
 
@@ -514,7 +514,7 @@ uint32_t platform_target_voltage_sense(void)
 {
 	uint32_t target_voltage = 0;
 
-	switch (info.type) {
+	switch (bmda_probe_info.type) {
 	case PROBE_TYPE_BMP: {
 		const char *const result = remote_target_voltage();
 		if (result != NULL) {
@@ -541,7 +541,7 @@ uint32_t platform_target_voltage_sense(void)
 
 void platform_buffer_flush(void)
 {
-	switch (info.type) {
+	switch (bmda_probe_info.type) {
 #if HOSTED_BMP_ONLY == 0
 	case PROBE_TYPE_FTDI:
 		ftdi_buffer_flush();
@@ -561,7 +561,7 @@ void platform_pace_poll(void)
 
 void platform_target_clk_output_enable(const bool enable)
 {
-	switch (info.type) {
+	switch (bmda_probe_info.type) {
 	case PROBE_TYPE_BMP:
 		remote_target_clk_output_enable(enable);
 		break;

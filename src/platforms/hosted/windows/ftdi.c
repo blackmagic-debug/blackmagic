@@ -72,7 +72,7 @@ int ftdi_set_interface(ftdi_context_s *ftdi, enum ftdi_interface interface)
 	 * an interface letter to the serial number by adding the number to 'A'
 	 */
 	char serial_number[16] = {0};
-	strcpy(serial_number, info.serial);
+	strcpy(serial_number, bmda_probe_info.serial);
 	serial_number[strlen(serial_number)] = 'A' + (interface - 1);
 
 	if (FT_OpenEx(serial_number, FT_OPEN_BY_SERIAL_NUMBER, &ftdi_handle) != FT_OK ||

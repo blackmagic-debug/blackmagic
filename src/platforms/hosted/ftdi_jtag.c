@@ -56,7 +56,7 @@ static bool ftdi_jtag_next(bool tms, bool tdi);
 void ftdi_jtag_drain_potential_garbage(void)
 {
 	uint8_t data[16];
-	int garbage = ftdi_read_data(info.ftdi_ctx, data, sizeof(data));
+	int garbage = ftdi_read_data(bmda_probe_info.ftdi_ctx, data, sizeof(data));
 	if (garbage > 0) {
 		DEBUG_WARN("FTDI JTAG init got garbage:");
 		for (int i = 0; i < garbage; i++)

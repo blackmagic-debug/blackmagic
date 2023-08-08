@@ -62,13 +62,15 @@ jlink_s jlink;
 
 bool jlink_simple_query(const uint8_t command, void *const rx_buffer, const size_t rx_len)
 {
-	return bmda_usb_transfer(info.usb_link, &command, sizeof(command), rx_buffer, rx_len, JLINK_USB_TIMEOUT) >= 0;
+	return bmda_usb_transfer(
+			   bmda_probe_info.usb_link, &command, sizeof(command), rx_buffer, rx_len, JLINK_USB_TIMEOUT) >= 0;
 }
 
 bool jlink_simple_request_8(const uint8_t command, const uint8_t operation, void *const rx_buffer, const size_t rx_len)
 {
 	const uint8_t request[2U] = {command, operation};
-	return bmda_usb_transfer(info.usb_link, request, sizeof(request), rx_buffer, rx_len, JLINK_USB_TIMEOUT) >= 0;
+	return bmda_usb_transfer(
+			   bmda_probe_info.usb_link, request, sizeof(request), rx_buffer, rx_len, JLINK_USB_TIMEOUT) >= 0;
 }
 
 bool jlink_simple_request_16(
@@ -76,7 +78,8 @@ bool jlink_simple_request_16(
 {
 	uint8_t request[3U] = {command};
 	write_le2(request, 1U, operation);
-	return bmda_usb_transfer(info.usb_link, request, sizeof(request), rx_buffer, rx_len, JLINK_USB_TIMEOUT) >= 0;
+	return bmda_usb_transfer(
+			   bmda_probe_info.usb_link, request, sizeof(request), rx_buffer, rx_len, JLINK_USB_TIMEOUT) >= 0;
 }
 
 bool jlink_simple_request_32(
@@ -84,7 +87,8 @@ bool jlink_simple_request_32(
 {
 	uint8_t request[5U] = {command};
 	write_le4(request, 1U, operation);
-	return bmda_usb_transfer(info.usb_link, request, sizeof(request), rx_buffer, rx_len, JLINK_USB_TIMEOUT) >= 0;
+	return bmda_usb_transfer(
+			   bmda_probe_info.usb_link, request, sizeof(request), rx_buffer, rx_len, JLINK_USB_TIMEOUT) >= 0;
 }
 
 /*
@@ -134,10 +138,10 @@ bool jlink_transfer(const uint16_t clock_cycles, const uint8_t *const tms, const
 	if (tdi)
 		memcpy(buffer + 4U + byte_count, tdi, byte_count);
 	/* Send the resulting transaction and try to read back the response data */
-	if (bmda_usb_transfer(
-			info.usb_link, buffer, sizeof(*header) + (byte_count * 2U), buffer, byte_count, JLINK_USB_TIMEOUT) < 0 ||
+	if (bmda_usb_transfer(bmda_probe_info.usb_link, buffer, sizeof(*header) + (byte_count * 2U), buffer, byte_count,
+			JLINK_USB_TIMEOUT) < 0 ||
 		/* Try to read back the transaction return code */
-		bmda_usb_transfer(info.usb_link, NULL, 0, buffer + byte_count, 1U, JLINK_USB_TIMEOUT) < 0)
+		bmda_usb_transfer(bmda_probe_info.usb_link, NULL, 0, buffer + byte_count, 1U, JLINK_USB_TIMEOUT) < 0)
 		return false;
 	/* Copy out the response into the TDO buffer (if present) */
 	if (tdo)
@@ -186,7 +190,7 @@ bool jlink_transfer_swd(
 /*
  * Try to claim the debugging interface of a J-Link adaptor.
  * On success this copies the endpoint addresses identified into the
- * usb_link_s sub-structure of bmda_probe_s (info.usb_link) for later use.
+ * usb_link_s sub-structure of bmda_probe_s (bmda_probe_info.usb_link) for later use.
  * Returns true for success, false for failure.
  *
  * Note: Newer J-Links use 2 bulk endpoints, one for "IN" (EP1) and one
@@ -197,7 +201,7 @@ bool jlink_transfer_swd(
 static bool jlink_claim_interface(void)
 {
 	libusb_config_descriptor_s *config;
-	const int get_descriptor_result = libusb_get_active_config_descriptor(info.libusb_dev, &config);
+	const int get_descriptor_result = libusb_get_active_config_descriptor(bmda_probe_info.libusb_dev, &config);
 	if (get_descriptor_result != LIBUSB_SUCCESS) {
 		DEBUG_ERROR("Failed to get configuration descriptor: %s\n", libusb_error_name(get_descriptor_result));
 		return false;
@@ -209,12 +213,12 @@ static bool jlink_claim_interface(void)
 		const libusb_interface_descriptor_s *const interface_desc = &interface->altsetting[0];
 		if (interface_desc->bInterfaceClass == LIBUSB_CLASS_VENDOR_SPEC &&
 			interface_desc->bInterfaceSubClass == LIBUSB_CLASS_VENDOR_SPEC && interface_desc->bNumEndpoints > 1U) {
-			const int claim_result = libusb_claim_interface(info.usb_link->device_handle, (int)idx);
+			const int claim_result = libusb_claim_interface(bmda_probe_info.usb_link->device_handle, (int)idx);
 			if (claim_result) {
 				DEBUG_ERROR("Can not claim handle: %s\n", libusb_error_name(claim_result));
 				break;
 			}
-			info.usb_link->interface = idx;
+			bmda_probe_info.usb_link->interface = idx;
 			descriptor = interface_desc;
 		}
 	}
@@ -226,9 +230,9 @@ static bool jlink_claim_interface(void)
 	for (size_t i = 0; i < descriptor->bNumEndpoints; i++) {
 		const libusb_endpoint_descriptor_s *endpoint = &descriptor->endpoint[i];
 		if (endpoint->bEndpointAddress & LIBUSB_ENDPOINT_IN)
-			info.usb_link->ep_rx = endpoint->bEndpointAddress;
+			bmda_probe_info.usb_link->ep_rx = endpoint->bEndpointAddress;
 		else
-			info.usb_link->ep_tx = endpoint->bEndpointAddress;
+			bmda_probe_info.usb_link->ep_tx = endpoint->bEndpointAddress;
 	}
 	libusb_free_config_descriptor(config);
 	return true;
@@ -292,7 +296,7 @@ static bool jlink_get_version(void)
 		return false;
 
 	/* Read vesion string directly into jlink.version */
-	bmda_usb_transfer(info.usb_link, NULL, 0, jlink.fw_version, version_length, JLINK_USB_TIMEOUT);
+	bmda_usb_transfer(bmda_probe_info.usb_link, NULL, 0, jlink.fw_version, version_length, JLINK_USB_TIMEOUT);
 	jlink.fw_version[version_length - 1U] = '\0'; /* Ensure null termination */
 
 	DEBUG_INFO("Firmware version: %s\n", jlink.fw_version);
@@ -571,30 +575,30 @@ bool jlink_init(void)
 	usb_link_s *link = calloc(1, sizeof(usb_link_s));
 	if (!link)
 		return false;
-	info.usb_link = link;
-	link->context = info.libusb_ctx;
-	const int result = libusb_open(info.libusb_dev, &link->device_handle);
+	bmda_probe_info.usb_link = link;
+	link->context = bmda_probe_info.libusb_ctx;
+	const int result = libusb_open(bmda_probe_info.libusb_dev, &link->device_handle);
 	if (result != LIBUSB_SUCCESS) {
 		DEBUG_ERROR("libusb_open() failed (%d): %s\n", result, libusb_error_name(result));
 		return false;
 	}
 	if (!jlink_claim_interface()) {
-		libusb_close(info.usb_link->device_handle);
+		libusb_close(bmda_probe_info.usb_link->device_handle);
 		return false;
 	}
 	if (!link->ep_tx || !link->ep_rx) {
 		DEBUG_ERROR("Device setup failed\n");
-		libusb_release_interface(info.usb_link->device_handle, info.usb_link->interface);
-		libusb_close(info.usb_link->device_handle);
+		libusb_release_interface(bmda_probe_info.usb_link->device_handle, bmda_probe_info.usb_link->interface);
+		libusb_close(bmda_probe_info.usb_link->device_handle);
 		return false;
 	}
 	if (!jlink_get_capabilities() || !jlink_get_version() || !jlink_get_interfaces()) {
 		DEBUG_ERROR("Failed to read J-Link information\n");
-		libusb_release_interface(info.usb_link->device_handle, info.usb_link->interface);
-		libusb_close(info.usb_link->device_handle);
+		libusb_release_interface(bmda_probe_info.usb_link->device_handle, bmda_probe_info.usb_link->interface);
+		libusb_close(bmda_probe_info.usb_link->device_handle);
 		return false;
 	}
-	memcpy(info.version, jlink.fw_version, strlen(jlink.fw_version) + 1U);
+	memcpy(bmda_probe_info.version, jlink.fw_version, strlen(jlink.fw_version) + 1U);
 	return true;
 }
 
@@ -633,7 +637,7 @@ bool jlink_nrst_get_val(void)
 
 void jlink_max_frequency_set(const uint32_t frequency)
 {
-	const uint8_t bmda_interface = info.is_jtag ? JLINK_INTERFACE_JTAG : JLINK_INTERFACE_SWD;
+	const uint8_t bmda_interface = bmda_probe_info.is_jtag ? JLINK_INTERFACE_JTAG : JLINK_INTERFACE_SWD;
 
 	if (!jlink_set_interface_frequency(bmda_interface, frequency))
 		DEBUG_ERROR("Failed to set J-Link %s interface frequency\n", jlink_interface_to_string(bmda_interface));
@@ -641,7 +645,7 @@ void jlink_max_frequency_set(const uint32_t frequency)
 
 uint32_t jlink_max_frequency_get(void)
 {
-	const uint8_t bmda_interface = info.is_jtag ? JLINK_INTERFACE_JTAG : JLINK_INTERFACE_SWD;
+	const uint8_t bmda_interface = bmda_probe_info.is_jtag ? JLINK_INTERFACE_JTAG : JLINK_INTERFACE_SWD;
 
 	/* Ensure we have the frequency info for the requested interface */
 	if (!jlink_get_interface_frequency(bmda_interface)) {

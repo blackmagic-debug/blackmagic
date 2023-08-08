@@ -164,14 +164,14 @@ static bool dap_init_hid(void)
 	if (hid_init())
 		return false;
 
-	const size_t size = mbslen(info.serial);
+	const size_t size = mbslen(bmda_probe_info.serial);
 	if (size > 64U) {
 		DEBUG_ERROR("Serial number invalid, aborting\n");
 		hid_exit();
 		return false;
 	}
 	wchar_t serial[65] = {0};
-	if (mbstowcs(serial, info.serial, size) != size) {
+	if (mbstowcs(serial, bmda_probe_info.serial, size) != size) {
 		DEBUG_ERROR("Serial number conversion failed, aborting\n");
 		hid_exit();
 		return false;
@@ -181,15 +181,15 @@ static bool dap_init_hid(void)
 	 * Special-case devices that do not work with 513 byte report length
 	 * FIXME: Find a solution to decipher from the device.
 	 */
-	if (info.vid == 0x1fc9U && info.pid == 0x0132U) {
+	if (bmda_probe_info.vid == 0x1fc9U && bmda_probe_info.pid == 0x0132U) {
 		DEBUG_WARN("Device does not work with the normal report length, activating quirk\n");
 		report_size = 64U + 1U;
 	}
-	handle = hid_open(info.vid, info.pid, serial[0] ? serial : NULL);
+	handle = hid_open(bmda_probe_info.vid, bmda_probe_info.pid, serial[0] ? serial : NULL);
 	if (!handle) {
 		DEBUG_ERROR("hid_open failed: %ls\n", hid_error(NULL));
 #ifdef __linux__
-		dap_hid_print_permissions(info.vid, info.pid, serial[0] ? serial : NULL);
+		dap_hid_print_permissions(bmda_probe_info.vid, bmda_probe_info.pid, serial[0] ? serial : NULL);
 #endif
 		hid_exit();
 		return false;
@@ -200,17 +200,17 @@ static bool dap_init_hid(void)
 static bool dap_init_bulk(void)
 {
 	DEBUG_INFO("Using bulk transfer\n");
-	int res = libusb_open(info.libusb_dev, &usb_handle);
+	int res = libusb_open(bmda_probe_info.libusb_dev, &usb_handle);
 	if (res != LIBUSB_SUCCESS) {
 		DEBUG_ERROR("libusb_open() failed (%d): %s\n", res, libusb_error_name(res));
 		return false;
 	}
-	if (libusb_claim_interface(usb_handle, info.interface_num) < 0) {
+	if (libusb_claim_interface(usb_handle, bmda_probe_info.interface_num) < 0) {
 		DEBUG_ERROR("libusb_claim_interface() failed\n");
 		return false;
 	}
-	in_ep = info.in_ep;
-	out_ep = info.out_ep;
+	in_ep = bmda_probe_info.in_ep;
+	out_ep = bmda_probe_info.out_ep;
 	return true;
 }
 
@@ -218,7 +218,7 @@ static bool dap_init_bulk(void)
 bool dap_init(void)
 {
 	/* Initialise the adaptor via a suitable protocol */
-	if (info.in_ep && info.out_ep) {
+	if (bmda_probe_info.in_ep && bmda_probe_info.out_ep) {
 		type = CMSIS_TYPE_BULK;
 		if (!dap_init_bulk())
 			return false;
@@ -266,7 +266,7 @@ bool dap_init(void)
 
 	dap_quirks = 0;
 	/* Handle multi-TAP JTAG on older ORBTrace gateware being broken */
-	if (strcmp(info.product, "Orbtrace") == 0 &&
+	if (strcmp(bmda_probe_info.product, "Orbtrace") == 0 &&
 		(adaptor_version.major < 1 || (adaptor_version.major == 1 && adaptor_version.minor <= 2))) {
 		dap_quirks |= DAP_QUIRK_NO_JTAG_MUTLI_TAP;
 	}

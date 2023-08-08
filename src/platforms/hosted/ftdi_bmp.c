@@ -542,7 +542,7 @@ bool ftdi_bmp_init(bmda_cli_options_s *const cl_opts)
 		goto error_2;
 	}
 
-	info.ftdi_ctx = ctx;
+	bmda_probe_info.ftdi_ctx = ctx;
 	ftdi_init[index++] = TCK_DIVISOR;
 	/* Use CLK/2 for about 50 % SWDCLK duty cycle on FT2232c.*/
 	ftdi_init[index++] = 1;
@@ -671,9 +671,9 @@ void ftdi_buffer_flush(void)
 #if defined(USE_USB_VERSION_BIT)
 	if (tc_write)
 		ftdi_transfer_data_done(tc_write);
-	tc_write = ftdi_write_data_submit(info.ftdi_ctx, outbuf, bufptr);
+	tc_write = ftdi_write_data_submit(bmda_probe_info.ftdi_ctx, outbuf, bufptr);
 #else
-	assert(ftdi_write_data(info.ftdi_ctx, outbuf, bufptr) == bufptr);
+	assert(ftdi_write_data(bmda_probe_info.ftdi_ctx, outbuf, bufptr) == bufptr);
 #endif
 	bufptr = 0;
 }
@@ -706,11 +706,11 @@ size_t ftdi_buffer_read(void *const buffer, const size_t size)
 
 	uint8_t *const data = (uint8_t *)buffer;
 #if defined(USE_USB_VERSION_BIT)
-	ftdi_transfer_control_s *transfer = ftdi_read_data_submit(info.ftdi_ctx, data, (int)size);
+	ftdi_transfer_control_s *transfer = ftdi_read_data_submit(bmda_probe_info.ftdi_ctx, data, (int)size);
 	ftdi_transfer_data_done(transfer);
 #else
 	for (size_t index = 0; index < size;)
-		index += ftdi_read_data(info.ftdi_ctx, data + index, size - index);
+		index += ftdi_read_data(bmda_probe_info.ftdi_ctx, data + index, size - index);
 #endif
 
 	DEBUG_WIRE("%s: %zu bytes:", __func__, size);
@@ -830,14 +830,14 @@ static uint16_t divisor;
 void ftdi_max_frequency_set(uint32_t freq)
 {
 	uint32_t clock;
-	if (info.ftdi_ctx->type == TYPE_2232C)
+	if (bmda_probe_info.ftdi_ctx->type == TYPE_2232C)
 		clock = 12U * 1000U * 1000U;
 	else
 		/* Undivided clock set during startup*/
 		clock = 60U * 1000U * 1000U;
 
 	uint32_t div = (clock + 2U * freq - 1U) / freq;
-	if (div < 4U && info.ftdi_ctx->type == TYPE_2232C)
+	if (div < 4U && bmda_probe_info.ftdi_ctx->type == TYPE_2232C)
 		div = 4U; /* Avoid bad asymmetric FT2232C clock at 6 MHz*/
 	divisor = div / 2U - 1U;
 	uint8_t buf[3];
@@ -850,7 +850,7 @@ void ftdi_max_frequency_set(uint32_t freq)
 uint32_t libftdi_max_frequency_get(void)
 {
 	uint32_t clock;
-	if (info.ftdi_ctx->type == TYPE_2232C)
+	if (bmda_probe_info.ftdi_ctx->type == TYPE_2232C)
 		clock = 12U * 1000U * 1000U;
 	else
 		/* Undivided clock set during startup*/

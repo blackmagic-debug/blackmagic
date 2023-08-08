@@ -221,7 +221,7 @@ int stlink_send_recv_retry(
 	int res;
 	int first_res = STLINK_ERROR_OK;
 	while (true) {
-		bmda_usb_transfer(info.usb_link, req_buffer, req_len, rx_buffer, rx_len, BMDA_USB_NO_TIMEOUT);
+		bmda_usb_transfer(bmda_probe_info.usb_link, req_buffer, req_len, rx_buffer, rx_len, BMDA_USB_NO_TIMEOUT);
 		res = stlink_usb_error_check(rx_buffer, false);
 		if (res == STLINK_ERROR_OK)
 			return res;
@@ -251,7 +251,7 @@ static int stlink_read_retry(
 	uint32_t start = platform_time_ms();
 	int res;
 	while (true) {
-		bmda_usb_transfer(info.usb_link, req_buffer, req_len, rx_buffer, rx_len, BMDA_USB_NO_TIMEOUT);
+		bmda_usb_transfer(bmda_probe_info.usb_link, req_buffer, req_len, rx_buffer, rx_len, BMDA_USB_NO_TIMEOUT);
 		res = stlink_usb_get_rw_status(false);
 		if (res == STLINK_ERROR_OK)
 			return res;
@@ -270,7 +270,7 @@ static int stlink_write_retry(
 {
 	uint32_t start = platform_time_ms();
 	int res;
-	usb_link_s *link = info.usb_link;
+	usb_link_s *link = bmda_probe_info.usb_link;
 	while (true) {
 		bmda_usb_transfer(link, req_buffer, req_len, NULL, 0, BMDA_USB_NO_TIMEOUT);
 		bmda_usb_transfer(link, tx_buffer, tx_len, NULL, 0, BMDA_USB_NO_TIMEOUT);
@@ -292,7 +292,8 @@ int stlink_simple_query(const uint8_t command, const uint8_t operation, void *co
 		.command = command,
 		.operation = operation,
 	};
-	return bmda_usb_transfer(info.usb_link, &request, sizeof(request), rx_buffer, rx_len, BMDA_USB_NO_TIMEOUT);
+	return bmda_usb_transfer(
+		bmda_probe_info.usb_link, &request, sizeof(request), rx_buffer, rx_len, BMDA_USB_NO_TIMEOUT);
 }
 
 int stlink_simple_request(
@@ -303,7 +304,8 @@ int stlink_simple_request(
 		.operation = operation,
 		.param = param,
 	};
-	return bmda_usb_transfer(info.usb_link, &request, sizeof(request), rx_buffer, rx_len, BMDA_USB_NO_TIMEOUT);
+	return bmda_usb_transfer(
+		bmda_probe_info.usb_link, &request, sizeof(request), rx_buffer, rx_len, BMDA_USB_NO_TIMEOUT);
 }
 
 /*
@@ -402,17 +404,17 @@ bool stlink_init(void)
 	usb_link_s *link = calloc(1, sizeof(usb_link_s));
 	if (!link)
 		return false;
-	info.usb_link = link;
-	link->context = info.libusb_ctx;
-	int result = libusb_open(info.libusb_dev, &link->device_handle);
+	bmda_probe_info.usb_link = link;
+	link->context = bmda_probe_info.libusb_ctx;
+	int result = libusb_open(bmda_probe_info.libusb_dev, &link->device_handle);
 	if (result != LIBUSB_SUCCESS) {
 		DEBUG_ERROR("libusb_open() failed (%d): %s\n", result, libusb_error_name(result));
 		DEBUG_WARN("Are you sure the permissions on the device are set correctly?\n");
 		return false;
 	}
-	if (info.vid != VENDOR_ID_STLINK)
+	if (bmda_probe_info.vid != VENDOR_ID_STLINK)
 		return true;
-	switch (info.pid) {
+	switch (bmda_probe_info.pid) {
 	case PRODUCT_ID_STLINKV2:
 		stlink.ver_hw = 20U;
 		link->ep_tx = 2U;
@@ -730,7 +732,7 @@ static uint32_t stlink_reg_read(adiv5_access_port_s *const ap, const uint8_t reg
 		.reg_num = reg_num,
 		.apsel = ap->apsel,
 	};
-	bmda_usb_transfer(info.usb_link, &request, sizeof(request), data, sizeof(data), BMDA_USB_NO_TIMEOUT);
+	bmda_usb_transfer(bmda_probe_info.usb_link, &request, sizeof(request), data, sizeof(data), BMDA_USB_NO_TIMEOUT);
 	stlink_usb_error_check(data, true);
 	const uint32_t result = read_le4(data, 0U);
 	DEBUG_PROBE("%s: AP %u, reg %02u val 0x%08" PRIx32 "\n", __func__, ap->apsel, reg_num, result);
@@ -747,7 +749,7 @@ static void stlink_reg_write(adiv5_access_port_s *const ap, const uint8_t reg_nu
 		.apsel = ap->apsel,
 	};
 	write_le4(request.value, 0U, value);
-	bmda_usb_transfer(info.usb_link, &request, sizeof(request), res, sizeof(res), BMDA_USB_NO_TIMEOUT);
+	bmda_usb_transfer(bmda_probe_info.usb_link, &request, sizeof(request), res, sizeof(res), BMDA_USB_NO_TIMEOUT);
 	DEBUG_PROBE("%s: AP %u, reg %02u val 0x%08" PRIx32 "\n", __func__, ap->apsel, reg_num, value);
 	stlink_usb_error_check(res, true);
 }
@@ -781,10 +783,10 @@ static void stlink_v2_set_frequency(const uint32_t freq)
 {
 	stlink_v2_set_freq_s request = {
 		.command = STLINK_DEBUG_COMMAND,
-		.operation = info.is_jtag ? STLINK_DEBUG_APIV2_JTAG_SET_FREQ : STLINK_DEBUG_APIV2_SWD_SET_FREQ,
+		.operation = bmda_probe_info.is_jtag ? STLINK_DEBUG_APIV2_JTAG_SET_FREQ : STLINK_DEBUG_APIV2_SWD_SET_FREQ,
 	};
 
-	if (info.is_jtag) {
+	if (bmda_probe_info.is_jtag) {
 		/*
 		 * The minimum divisor is /4, so cap freq before computing the divisor.
 		 * Additionally, the divisor must be a power of 2 and no more than 256.
@@ -815,14 +817,14 @@ static void stlink_v2_set_frequency(const uint32_t freq)
 	DEBUG_WARN("Divisor for %u.%03uMHz is %u\n", freq_mhz, freq_khz, stlink_v2_divisor);
 	write_le2(request.divisor, 0U, stlink_v2_divisor);
 	uint8_t data[2];
-	bmda_usb_transfer(info.usb_link, &request, sizeof(request), data, sizeof(data), BMDA_USB_NO_TIMEOUT);
+	bmda_usb_transfer(bmda_probe_info.usb_link, &request, sizeof(request), data, sizeof(data), BMDA_USB_NO_TIMEOUT);
 	if (stlink_usb_error_check(data, false))
 		DEBUG_ERROR("Set frequency failed!\n");
 }
 
 static void stlink_v3_set_frequency(const uint32_t freq)
 {
-	const uint8_t mode = info.is_jtag ? STLINK_MODE_JTAG : STLINK_MODE_SWD;
+	const uint8_t mode = bmda_probe_info.is_jtag ? STLINK_MODE_JTAG : STLINK_MODE_SWD;
 	uint8_t data[52];
 	stlink_simple_request(STLINK_DEBUG_COMMAND, STLINK_APIV3_GET_COM_FREQ, mode, data, sizeof(data));
 	stlink_usb_error_check(data, true);
@@ -838,14 +840,14 @@ static void stlink_v3_set_frequency(const uint32_t freq)
 		if (freq / 1000U >= frequency)
 			break;
 	}
-	DEBUG_INFO(" kHz for %s\n", info.is_jtag ? "JTAG" : "SWD");
+	DEBUG_INFO(" kHz for %s\n", bmda_probe_info.is_jtag ? "JTAG" : "SWD");
 	stlink_v3_set_freq_s request = {
 		.command = STLINK_DEBUG_COMMAND,
 		.operation = STLINK_APIV3_SET_COM_FREQ,
 		.mode = mode,
 	};
 	write_le4(request.frequency, 0U, frequency);
-	bmda_usb_transfer(info.usb_link, &request, sizeof(request), data, 8U, BMDA_USB_NO_TIMEOUT);
+	bmda_usb_transfer(bmda_probe_info.usb_link, &request, sizeof(request), data, 8U, BMDA_USB_NO_TIMEOUT);
 	stlink_usb_error_check(data, true);
 	stlink_v3_freq[mode] = frequency * 1000U;
 }
@@ -861,9 +863,9 @@ void stlink_max_frequency_set(const uint32_t freq)
 uint32_t stlink_max_frequency_get(void)
 {
 	if (stlink.ver_hw == 30U)
-		return stlink_v3_freq[info.is_jtag ? STLINK_MODE_JTAG : STLINK_MODE_SWD];
+		return stlink_v3_freq[bmda_probe_info.is_jtag ? STLINK_MODE_JTAG : STLINK_MODE_SWD];
 
-	if (info.is_jtag)
+	if (bmda_probe_info.is_jtag)
 		return STLINK_V2_CPU_CLOCK_FREQ / (STLINK_V2_JTAG_MUL_FACTOR * stlink_v2_divisor);
 	return STLINK_V2_CPU_CLOCK_FREQ / (STLINK_V2_SWD_MUL_FACTOR * (stlink_v2_divisor + 1U));
 }
