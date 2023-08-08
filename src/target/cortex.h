@@ -52,6 +52,7 @@
 
 /* Cortex-R CPU IDs */
 #define CORTEX_R4 0xc140U
+#define CORTEX_R5 0xc150U
 
 /* Cortex-A CPU IDs */
 #define CORTEX_A5 0xc050U
