@@ -81,19 +81,19 @@ void remote_v0_jtag_tdi_tdo_seq(uint8_t *data_out, bool final_tms, const uint8_t
 			cycle + chunk_length == clock_cycles && final_tms ? REMOTE_TDITDO_TMS : REMOTE_TDITDO_NOTMS;
 
 		/* Build a representation of the data to send safely */
-		uint32_t data = 0U;
+		uint32_t packet_data_in = 0U;
 		const size_t bytes = (chunk_length + 7U) >> 3U;
 		if (data_in) {
 			for (size_t idx = 0; idx < bytes; ++idx)
-				data |= data_in[offset + idx] << (idx * 8U);
+				packet_data_in |= data_in[offset + idx] << (idx * 8U);
 		}
 		/*
 		 * Build the remote protocol message to send, and send it.
 		 * This uses its own copy of the REMOTE_JTAG_TDIDO_STR to correct for how
 		 * formatting a uint32_t is platform-specific.
 		 */
-		int length = snprintf(
-			buffer, REMOTE_MAX_MSG_SIZE, "!J%c%02zx%" PRIx32 "%c", packet_type, chunk_length, data, REMOTE_EOM);
+		int length = snprintf(buffer, REMOTE_MAX_MSG_SIZE, "!J%c%02zx%" PRIx32 "%c", packet_type, chunk_length,
+			packet_data_in, REMOTE_EOM);
 		platform_buffer_write(buffer, length);
 
 		/* Receive the response and check if it's an error response */
@@ -103,9 +103,9 @@ void remote_v0_jtag_tdi_tdo_seq(uint8_t *data_out, bool final_tms, const uint8_t
 			exit(-1);
 		}
 		if (data_out) {
-			const uint64_t data = remote_hex_string_to_num(-1, buffer + 1);
+			const uint64_t packet_data_out = remote_hex_string_to_num(-1, buffer + 1);
 			for (size_t idx = 0; idx < bytes; ++idx)
-				data_out[offset + idx] = (uint8_t)(data >> (idx * 8U));
+				data_out[offset + idx] = (uint8_t)(packet_data_out >> (idx * 8U));
 		}
 		offset += bytes;
 	}
