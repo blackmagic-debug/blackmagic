@@ -494,7 +494,7 @@ void cortexm_priv_free(void *priv)
 	free(priv);
 }
 
-static void cortexm_read_cpuid(target_s *const t, const adiv5_access_port_s *const ap)
+static void cortexm_read_cpuid(target_s *const t)
 {
 	/*
 	 * The CPUID register is defined in the ARMv6-M, ARMv7-M and ARMv8-M
@@ -532,9 +532,11 @@ static void cortexm_read_cpuid(target_s *const t, const adiv5_access_port_s *con
 	case CORTEX_M0:
 		t->core = "M0";
 		break;
-	default:
+	default: {
+		const adiv5_access_port_s *const ap = cortexm_ap(t);
 		if (ap->designer_code != JEP106_MANUFACTURER_ATMEL) /* Protected Atmel device? */
 			DEBUG_WARN("Unexpected Cortex-M CPU partno %04x\n", cpuid_partno);
+	}
 	}
 	DEBUG_INFO("CPUID 0x%08" PRIx32 " (%s var %" PRIx32 " rev %" PRIx32 ")\n", t->cpuid, t->core,
 		(t->cpuid & CORTEX_CPUID_REVISION_MASK) >> 20U, t->cpuid & CORTEX_CPUID_PATCH_MASK);
@@ -593,7 +595,7 @@ bool cortexm_probe(adiv5_access_port_s *ap)
 
 	t->driver = "ARM Cortex-M";
 
-	cortexm_read_cpuid(t, ap);
+	cortexm_read_cpuid(t);
 
 	t->attach = cortexm_attach;
 	t->detach = cortexm_detach;
