@@ -93,7 +93,7 @@ typedef struct bmda_probe {
 
 typedef struct timeval timeval_s;
 
-extern bmda_probe_s info;
+extern bmda_probe_s bmda_probe_info;
 void bmp_ident(bmda_probe_s *info);
 int find_debuggers(bmda_cli_options_s *cl_opts, bmda_probe_s *info);
 void libusb_exit_function(bmda_probe_s *info);
