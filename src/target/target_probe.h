@@ -38,8 +38,8 @@
  * Actual functions implemented in their respective drivers.
  */
 
-bool cortexa_probe(adiv5_access_port_s *apb, uint32_t debug_base);
-
+bool cortexa_probe(adiv5_access_port_s *apb, target_addr_t debug_base);
+bool cortexr_probe(adiv5_access_port_s *apb, target_addr_t base_address);
 bool cortexm_probe(adiv5_access_port_s *ap);
 
 bool kinetis_mdm_probe(adiv5_access_port_s *ap);

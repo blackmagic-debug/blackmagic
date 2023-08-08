@@ -5,6 +5,8 @@ SYS := $(shell $(CC) -dumpmachine)
 CFLAGS += -DENABLE_DEBUG -DPLATFORM_HAS_DEBUG
 CFLAGS +=-I ./target
 
+ENABLE_CORTEXR := 1
+
 # Clang requires some special handling here: -gnu means MinGW
 # while -msvc means Clang/CL. We don't currently support the latter
 # and we need the former to fit the formula of `x86_64-w64-mingw32`
