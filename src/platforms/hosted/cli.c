@@ -464,7 +464,7 @@ int cl_execute(bmda_cli_options_s *opt)
 	int res = 0;
 	int read_file = -1;
 	if (!t) {
-		DEBUG_ERROR("Can not attach to target %d\n", opt->opt_target_dev);
+		DEBUG_ERROR("Can not attach to target %" PRIu32 "\n", opt->opt_target_dev);
 		res = -1;
 		goto target_detach;
 	}
@@ -609,7 +609,7 @@ int cl_execute(bmda_cli_options_s *opt)
 			int n_read = target_mem_read(t, data, flash_src + offset, worksize);
 			if (n_read) {
 				if (opt->opt_flash_size == 0) /* we reached end of flash */
-					DEBUG_INFO("Reached end of flash at size %" PRId32 "\n", flash_src - opt->opt_flash_start);
+					DEBUG_INFO("Reached end of flash at size %" PRIu32 "\n", flash_src - opt->opt_flash_start);
 				else
 					DEBUG_ERROR("Read failed at flash address 0x%08" PRIx32 "\n", flash_src);
 				break;
