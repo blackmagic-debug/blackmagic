@@ -128,12 +128,12 @@ bool debug_bmp;
 #endif
 unsigned cortexm_wait_timeout = 2000; /* Timeout to wait for Cortex to react on halt command. */
 
-int command_process(target_s *t, char *cmd)
+int command_process(target_s *const t, char *const cmd_buffer)
 {
 	/* Initial estimate for argc */
 	size_t argc = 1;
-	for (size_t i = 0; i < strlen(cmd); ++i) {
-		if (cmd[i] == ' ' || cmd[i] == '\t')
+	for (size_t i = 0; i < strlen(cmd_buffer); ++i) {
+		if (cmd_buffer[i] == ' ' || cmd_buffer[i] == '\t')
 			++argc;
 	}
 
@@ -142,11 +142,11 @@ int command_process(target_s *t, char *cmd)
 	 */
 	const char **const argv = alloca(sizeof(const char *) * argc);
 
-	/* Tokenize cmd to find argv */
+	/* Tokenize cmd_buffer to find argv */
 	argc = 0;
 	/* Reentrant strtok needs a state pointer to the unprocessed part */
 	char *token_state = NULL;
-	for (const char *part = strtok_r(cmd, " \t", &token_state); part; part = strtok_r(NULL, " \t", &token_state))
+	for (const char *part = strtok_r(cmd_buffer, " \t", &token_state); part; part = strtok_r(NULL, " \t", &token_state))
 		argv[argc++] = part;
 
 	/* Look for match and call handler */

@@ -25,7 +25,7 @@
 
 #include "target.h"
 
-int command_process(target_s *t, char *cmd);
+int command_process(target_s *t, char *cmd_buffer);
 
 /*
  * Attempts to parse a string as either being "enable" or "disable".
