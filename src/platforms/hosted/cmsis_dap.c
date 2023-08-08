@@ -413,20 +413,20 @@ ssize_t dbg_dap_cmd_bulk(const uint8_t *const request_data, const size_t request
 	const size_t response_length)
 {
 	int transferred = 0;
-	const int result = libusb_bulk_transfer(
+	const int request_result = libusb_bulk_transfer(
 		usb_handle, out_ep, (uint8_t *)request_data, (int)request_length, &transferred, TRANSFER_TIMEOUT_MS);
-	if (result < 0) {
-		DEBUG_ERROR("CMSIS-DAP write error: %s (%d)\n", libusb_strerror(result), result);
-		return result;
+	if (request_result < 0) {
+		DEBUG_ERROR("CMSIS-DAP write error: %s (%d)\n", libusb_strerror(request_result), request_result);
+		return request_result;
 	}
 
 	/* We repeat the read in case we're out of step with the transmitter */
 	do {
-		const int result = libusb_bulk_transfer(
+		const int response_result = libusb_bulk_transfer(
 			usb_handle, in_ep, response_data, (int)response_length, &transferred, TRANSFER_TIMEOUT_MS);
-		if (result < 0) {
-			DEBUG_ERROR("CMSIS-DAP read error: %s (%d)\n", libusb_strerror(result), result);
-			return result;
+		if (response_result < 0) {
+			DEBUG_ERROR("CMSIS-DAP read error: %s (%d)\n", libusb_strerror(response_result), response_result);
+			return response_result;
 		}
 	} while (response_data[0] != request_data[0]);
 	return transferred;
