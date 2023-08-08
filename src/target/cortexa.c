@@ -460,14 +460,20 @@ const char *cortexa_regs_description(target_s *t)
 	return description;
 }
 
-bool cortexa_probe(adiv5_access_port_s *apb, uint32_t debug_base)
+static void cortexa_priv_free(void *const priv)
+{
+	adiv5_ap_unref(((cortexa_priv_s *)priv)->apb);
+	free(priv);
+}
+
+bool cortexa_probe(adiv5_access_port_s *ap, target_addr_t base_address)
 {
 	target_s *t = target_new();
 	if (!t) {
 		return false;
 	}
 
-	adiv5_ap_ref(apb);
+	adiv5_ap_ref(ap);
 	cortexa_priv_s *priv = calloc(1, sizeof(*priv));
 	if (!priv) { /* calloc failed: heap exhaustion */
 		DEBUG_ERROR("calloc: failed in %s\n", __func__);
@@ -475,15 +481,15 @@ bool cortexa_probe(adiv5_access_port_s *apb, uint32_t debug_base)
 	}
 
 	t->priv = priv;
-	t->priv_free = free;
-	priv->apb = apb;
+	t->priv_free = cortexa_priv_free;
+	priv->apb = ap;
 	t->mem_read = cortexa_slow_mem_read;
 	t->mem_write = cortexa_slow_mem_write;
 
-	priv->base = debug_base;
+	priv->base = base_address;
 	/* Set up APB CSW, we won't touch this again */
-	uint32_t csw = apb->csw | ADIV5_AP_CSW_SIZE_WORD;
-	adiv5_ap_write(apb, ADIV5_AP_CSW, csw);
+	uint32_t csw = ap->csw | ADIV5_AP_CSW_SIZE_WORD;
+	adiv5_ap_write(ap, ADIV5_AP_CSW, csw);
 	uint32_t dbgdidr = apb_read(t, DBGDIDR);
 	priv->hw_breakpoint_max = ((dbgdidr >> 24U) & 15U) + 1U;
 	priv->hw_watchpoint_max = ((dbgdidr >> 28U) & 15U) + 1U;
