@@ -96,7 +96,7 @@ const debugger_device_s *get_debugger_device_from_vid_pid(const uint16_t probe_v
 	return &debugger_devices[ARRAY_LENGTH(debugger_devices) - 1U];
 }
 
-void bmp_ident(bmp_info_s *info)
+void bmp_ident(bmda_probe_s *info)
 {
 	DEBUG_INFO("Black Magic Debug App " FIRMWARE_VERSION "\n for Black Magic Probe, ST-Link v2 and v3, CMSIS-DAP, "
 			   "J-Link and FTDI (MPSSE)\n");
@@ -106,7 +106,7 @@ void bmp_ident(bmp_info_s *info)
 	}
 }
 
-void libusb_exit_function(bmp_info_s *info)
+void libusb_exit_function(bmda_probe_s *info)
 {
 	if (!info->usb_link)
 		return;
@@ -330,7 +330,7 @@ static void process_cmsis_interface(const libusb_device_descriptor_s *const devi
 }
 
 static bool process_cmsis_interface_probe(
-	libusb_device_descriptor_s *device_descriptor, libusb_device *device, probe_info_s **probe_list, bmp_info_s *info)
+	libusb_device_descriptor_s *device_descriptor, libusb_device *device, probe_info_s **probe_list, bmda_probe_s *info)
 {
 	(void)info;
 	/* Try to get the active configuration descriptor for the device */
@@ -374,7 +374,7 @@ static bool process_cmsis_interface_probe(
 	return cmsis_dap;
 }
 
-static void check_cmsis_interface_type(libusb_device *const device, bmp_info_s *const info)
+static void check_cmsis_interface_type(libusb_device *const device, bmda_probe_s *const info)
 {
 	/* Try to get the active configuration descriptor for the device */
 	libusb_config_descriptor_s *config;
@@ -468,7 +468,7 @@ static bool process_vid_pid_table_probe(
 	return true;
 }
 
-static const probe_info_s *scan_for_devices(bmp_info_s *info)
+static const probe_info_s *scan_for_devices(bmda_probe_s *info)
 {
 	/*
 	 * If we are running on Windows the proprietary FTD2XX library is used
@@ -504,7 +504,7 @@ static const probe_info_s *scan_for_devices(bmp_info_s *info)
 	return probe_info_correct_order(probe_list);
 }
 
-int find_debuggers(bmda_cli_options_s *cl_opts, bmp_info_s *info)
+int find_debuggers(bmda_cli_options_s *cl_opts, bmda_probe_s *info)
 {
 	if (cl_opts->opt_device)
 		return 1;
@@ -542,8 +542,8 @@ int find_debuggers(bmda_cli_options_s *cl_opts, bmp_info_s *info)
 		return cl_opts->opt_list_only ? 0 : 1; // false;
 	}
 
-	/* We found a matching probe, populate bmp_info_s and signal success */
-	probe_info_to_bmp_info(probe, info);
+	/* We found a matching probe, populate bmda_probe_s and signal success */
+	probe_info_to_bmda_probe(probe, info);
 	/* If the selected probe is an FTDI adapter try to resolve the adaptor type */
 	if (probe->type == PROBE_TYPE_FTDI && !ftdi_lookup_adaptor_descriptor(cl_opts, probe)) {
 		// Don't know the cable type, ask user to specify with "-c"

@@ -53,7 +53,7 @@
 #include "cmsis_dap.h"
 #endif
 
-bmp_info_s info;
+bmda_probe_s info;
 
 jtag_proc_s jtag_proc;
 swd_proc_s swd_proc;

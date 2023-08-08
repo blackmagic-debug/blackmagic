@@ -186,7 +186,7 @@ bool jlink_transfer_swd(
 /*
  * Try to claim the debugging interface of a J-Link adaptor.
  * On success this copies the endpoint addresses identified into the
- * usb_link_s sub-structure of bmp_info_s (info.usb_link) for later use.
+ * usb_link_s sub-structure of bmda_probe_s (info.usb_link) for later use.
  * Returns true for success, false for failure.
  *
  * Note: Newer J-Links use 2 bulk endpoints, one for "IN" (EP1) and one

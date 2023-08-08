@@ -34,7 +34,7 @@
 #include "utils.h"
 #include "version.h"
 
-void bmp_ident(bmp_info_s *info)
+void bmp_ident(bmda_probe_s *info)
 {
 	DEBUG_INFO("Black Magic Debug App (for BMP only) %s\n", FIRMWARE_VERSION);
 	if (!info)
@@ -42,13 +42,13 @@ void bmp_ident(bmp_info_s *info)
 	DEBUG_INFO("Using:\n %s %s %s\n", info->manufacturer, info->version, info->serial);
 }
 
-void libusb_exit_function(bmp_info_s *info)
+void libusb_exit_function(bmda_probe_s *info)
 {
 	(void)info;
 };
 
 #ifdef __APPLE__
-int find_debuggers(bmda_cli_options_s *cl_opts, bmp_info_s *info)
+int find_debuggers(bmda_cli_options_s *cl_opts, bmda_probe_s *info)
 {
 	DEBUG_ERROR("Please implement find_debuggers for MACOS!\n");
 	(void)cl_opts;
@@ -79,7 +79,7 @@ DEFINE_DEVPROPKEY(DEVPKEY_Device_BusReportedDeviceDesc, 0x540b947e, 0x8b40, 0x45
 
 /* List all USB devices with some additional information.
  * Unfortunately, this code is quite ugly. */
-int find_debuggers(bmda_cli_options_s *cl_opts, bmp_info_s *info)
+int find_debuggers(bmda_cli_options_s *cl_opts, bmda_probe_s *info)
 {
 	unsigned i;
 	DWORD dwSize;
@@ -322,7 +322,7 @@ static const probe_info_s *scan_for_devices(void)
 	return probe_info_correct_order(probe_list);
 }
 
-int find_debuggers(bmda_cli_options_s *cl_opts, bmp_info_s *info)
+int find_debuggers(bmda_cli_options_s *cl_opts, bmda_probe_s *info)
 {
 	if (cl_opts->opt_device)
 		return 1;
@@ -352,8 +352,8 @@ int find_debuggers(bmda_cli_options_s *cl_opts, bmp_info_s *info)
 		return 1; // false;
 	}
 
-	/* We found a matching probe, populate bmp_info_s and signal success */
-	probe_info_to_bmp_info(probe, info);
+	/* We found a matching probe, populate bmda_probe_s and signal success */
+	probe_info_to_bmda_probe(probe, info);
 	probe_info_list_free(probe_list);
 	return 0; // true;
 }
