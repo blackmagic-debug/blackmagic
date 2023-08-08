@@ -35,14 +35,15 @@
 #include "probe_info.h"
 #include "general.h"
 
-probe_info_s *probe_info_add_by_serial(probe_info_s *const list, const bmp_type_t type, const char *const mfr,
+probe_info_s *probe_info_add_by_serial(probe_info_s *const list, const probe_type_e type, const char *const mfr,
 	const char *const product, const char *const serial, const char *const version)
 {
 	return probe_info_add_by_id(list, type, NULL, 0, 0, mfr, product, serial, version);
 }
 
-probe_info_s *probe_info_add_by_id(probe_info_s *const list, const bmp_type_t type, libusb_device *device, uint16_t vid,
-	uint16_t pid, const char *const mfr, const char *const product, const char *const serial, const char *const version)
+probe_info_s *probe_info_add_by_id(probe_info_s *const list, const probe_type_e type, libusb_device *device,
+	uint16_t vid, uint16_t pid, const char *const mfr, const char *const product, const char *const serial,
+	const char *const version)
 {
 #if HOSTED_BMP_ONLY == 1
 	(void)device;
@@ -132,7 +133,7 @@ static void copy_string(const char *const from, char *const to, const size_t max
 
 void probe_info_to_bmp_info(const probe_info_s *const probe, bmp_info_s *info)
 {
-	info->bmp_type = probe->type;
+	info->type = probe->type;
 #if HOSTED_BMP_ONLY != 1
 	info->pid = probe->pid;
 	info->vid = probe->vid;

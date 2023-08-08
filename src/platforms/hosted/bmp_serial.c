@@ -92,7 +92,7 @@ int find_debuggers(bmda_cli_options_s *cl_opts, bmp_info_s *info)
 	size_t probes_found = 0;
 	bool is_printing_probes_info = cl_opts->opt_list_only != 0;
 
-	info->bmp_type = BMP_TYPE_BMP;
+	info->type = PROBE_TYPE_BMP;
 
 	hDevInfo = SetupDiGetClassDevs(0, "USB", NULL, DIGCF_ALLCLASSES | DIGCF_PRESENT);
 	if (hDevInfo == INVALID_HANDLE_VALUE)
@@ -291,7 +291,7 @@ static probe_info_s *parse_device_node(const char *name, probe_info_s *probe_lis
 		return probe_list;
 	}
 
-	return probe_info_add_by_serial(probe_list, BMP_TYPE_BMP, type, product, serial, version);
+	return probe_info_add_by_serial(probe_list, PROBE_TYPE_BMP, type, product, serial, version);
 }
 
 static const probe_info_s *scan_for_devices(void)

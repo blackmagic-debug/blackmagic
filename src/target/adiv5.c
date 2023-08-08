@@ -411,7 +411,7 @@ static uint32_t cortexm_initial_halt(adiv5_access_port_s *ap)
 		 */
 		if (ap->dp->mindp
 #if PC_HOSTED == 1
-			&& info.bmp_type != BMP_TYPE_CMSIS_DAP
+			&& info.type != PROBE_TYPE_CMSIS_DAP
 #endif
 		)
 			dhcsr = adiv5_dp_low_access(ap->dp, ADIV5_LOW_READ, ADIV5_DP_RDBUFF, 0);

@@ -71,7 +71,7 @@ typedef struct usb_link {
 #endif
 
 typedef struct bmp_info {
-	bmp_type_t bmp_type;
+	probe_type_e type;
 	char dev;
 	char serial[64];
 	char manufacturer[512];
