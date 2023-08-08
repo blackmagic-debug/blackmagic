@@ -36,12 +36,16 @@
 #include "target.h"
 #include "target_internal.h"
 #include "target_probe.h"
+#include "jep106.h"
+#include "cortex.h"
 #include "cortex_internal.h"
 
 typedef struct cortexr_priv {
 	/* Base core information */
 	cortex_priv_s base;
 } cortexr_priv_s;
+
+#define CORTEXR_CPUID 0xd00U
 
 bool cortexr_probe(adiv5_access_port_s *const ap, const target_addr_t base_address)
 {
@@ -72,6 +76,8 @@ bool cortexr_probe(adiv5_access_port_s *const ap, const target_addr_t base_addre
 	priv->base.base_addr = base_address;
 
 	target->driver = "ARM Cortex-R";
+
+	cortex_read_cpuid(target);
 
 	return true;
 }
