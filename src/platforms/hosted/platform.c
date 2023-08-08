@@ -69,9 +69,9 @@ static void exit_function(void)
 {
 	libusb_exit_function(&info);
 
-	switch (info.bmp_type) {
+	switch (info.type) {
 #if HOSTED_BMP_ONLY == 0
-	case BMP_TYPE_CMSIS_DAP:
+	case PROBE_TYPE_CMSIS_DAP:
 		dap_exit_function();
 		break;
 #endif
@@ -108,7 +108,7 @@ void platform_init(int argc, char **argv)
 	signal(SIGINT, sigterm_handler);
 
 	if (cl_opts.opt_device)
-		info.bmp_type = BMP_TYPE_BMP;
+		info.type = PROBE_TYPE_BMP;
 	else if (find_debuggers(&cl_opts, &info))
 		exit(1);
 
@@ -117,29 +117,29 @@ void platform_init(int argc, char **argv)
 
 	bmp_ident(&info);
 
-	switch (info.bmp_type) {
-	case BMP_TYPE_BMP:
+	switch (info.type) {
+	case PROBE_TYPE_BMP:
 		if (!serial_open(&cl_opts, info.serial) || !remote_init(cl_opts.opt_tpwr))
 			exit(1);
 		break;
 
 #if HOSTED_BMP_ONLY == 0
-	case BMP_TYPE_STLINK_V2:
+	case PROBE_TYPE_STLINK_V2:
 		if (!stlink_init())
 			exit(1);
 		break;
 
-	case BMP_TYPE_CMSIS_DAP:
+	case PROBE_TYPE_CMSIS_DAP:
 		if (!dap_init())
 			exit(1);
 		break;
 
-	case BMP_TYPE_FTDI:
+	case PROBE_TYPE_FTDI:
 		if (!ftdi_bmp_init(&cl_opts))
 			exit(1);
 		break;
 
-	case BMP_TYPE_JLINK:
+	case PROBE_TYPE_JLINK:
 		if (!jlink_init())
 			exit(1);
 		break;
@@ -165,15 +165,15 @@ bool bmda_swd_scan(const uint32_t targetid)
 	info.is_jtag = false;
 	platform_max_frequency_set(cl_opts.opt_max_swj_frequency);
 
-	switch (info.bmp_type) {
-	case BMP_TYPE_BMP:
-	case BMP_TYPE_FTDI:
-	case BMP_TYPE_CMSIS_DAP:
-	case BMP_TYPE_JLINK:
+	switch (info.type) {
+	case PROBE_TYPE_BMP:
+	case PROBE_TYPE_FTDI:
+	case PROBE_TYPE_CMSIS_DAP:
+	case PROBE_TYPE_JLINK:
 		return adiv5_swd_scan(targetid);
 
 #if HOSTED_BMP_ONLY == 0
-	case BMP_TYPE_STLINK_V2:
+	case PROBE_TYPE_STLINK_V2:
 		return stlink_swd_scan();
 #endif
 
@@ -187,21 +187,21 @@ bool bmda_swd_dp_init(adiv5_debug_port_s *dp)
 #if HOSTED_BMP_ONLY == 1
 	(void)dp;
 #endif
-	switch (info.bmp_type) {
-	case BMP_TYPE_BMP:
+	switch (info.type) {
+	case PROBE_TYPE_BMP:
 		return remote_swd_init();
 
 #if HOSTED_BMP_ONLY == 0
-	case BMP_TYPE_CMSIS_DAP:
+	case PROBE_TYPE_CMSIS_DAP:
 		return dap_swd_init(dp);
 
-	case BMP_TYPE_STLINK_V2:
+	case PROBE_TYPE_STLINK_V2:
 		return false;
 
-	case BMP_TYPE_JLINK:
+	case PROBE_TYPE_JLINK:
 		return jlink_swd_init(dp);
 
-	case BMP_TYPE_FTDI:
+	case PROBE_TYPE_FTDI:
 		return ftdi_swd_init();
 #endif
 
@@ -212,7 +212,7 @@ bool bmda_swd_dp_init(adiv5_debug_port_s *dp)
 
 void bmda_add_jtag_dev(const uint32_t dev_index, const jtag_dev_s *const jtag_dev)
 {
-	if (info.bmp_type == BMP_TYPE_BMP)
+	if (info.type == PROBE_TYPE_BMP)
 		remote_add_jtag_dev(dev_index, jtag_dev);
 }
 
@@ -222,15 +222,15 @@ bool bmda_jtag_scan(void)
 
 	platform_max_frequency_set(cl_opts.opt_max_swj_frequency);
 
-	switch (info.bmp_type) {
-	case BMP_TYPE_BMP:
-	case BMP_TYPE_FTDI:
-	case BMP_TYPE_JLINK:
-	case BMP_TYPE_CMSIS_DAP:
+	switch (info.type) {
+	case PROBE_TYPE_BMP:
+	case PROBE_TYPE_FTDI:
+	case PROBE_TYPE_JLINK:
+	case PROBE_TYPE_CMSIS_DAP:
 		return jtag_scan();
 
 #if HOSTED_BMP_ONLY == 0
-	case BMP_TYPE_STLINK_V2:
+	case PROBE_TYPE_STLINK_V2:
 		return stlink_jtag_scan();
 #endif
 
@@ -241,21 +241,21 @@ bool bmda_jtag_scan(void)
 
 bool bmda_jtag_init(void)
 {
-	switch (info.bmp_type) {
-	case BMP_TYPE_BMP:
+	switch (info.type) {
+	case PROBE_TYPE_BMP:
 		return remote_jtag_init();
 
 #if HOSTED_BMP_ONLY == 0
-	case BMP_TYPE_STLINK_V2:
+	case PROBE_TYPE_STLINK_V2:
 		return false;
 
-	case BMP_TYPE_FTDI:
+	case PROBE_TYPE_FTDI:
 		return ftdi_jtag_init();
 
-	case BMP_TYPE_JLINK:
+	case PROBE_TYPE_JLINK:
 		return jlink_jtag_init();
 
-	case BMP_TYPE_CMSIS_DAP:
+	case PROBE_TYPE_CMSIS_DAP:
 		return dap_jtag_init();
 #endif
 
@@ -266,8 +266,8 @@ bool bmda_jtag_init(void)
 
 void bmda_adiv5_dp_init(adiv5_debug_port_s *const dp)
 {
-	switch (info.bmp_type) {
-	case BMP_TYPE_BMP:
+	switch (info.type) {
+	case PROBE_TYPE_BMP:
 		if (cl_opts.opt_no_hl) {
 			DEBUG_WARN("Not using HL commands\n");
 			break;
@@ -276,11 +276,11 @@ void bmda_adiv5_dp_init(adiv5_debug_port_s *const dp)
 		break;
 
 #if HOSTED_BMP_ONLY == 0
-	case BMP_TYPE_STLINK_V2:
+	case PROBE_TYPE_STLINK_V2:
 		stlink_adiv5_dp_init(dp);
 		break;
 
-	case BMP_TYPE_CMSIS_DAP:
+	case PROBE_TYPE_CMSIS_DAP:
 		dap_adiv5_dp_init(dp);
 		break;
 #endif
@@ -293,11 +293,11 @@ void bmda_adiv5_dp_init(adiv5_debug_port_s *const dp)
 void bmda_jtag_dp_init(adiv5_debug_port_s *dp)
 {
 #if HOSTED_BMP_ONLY == 0
-	switch (info.bmp_type) {
-	case BMP_TYPE_STLINK_V2:
+	switch (info.type) {
+	case PROBE_TYPE_STLINK_V2:
 		stlink_jtag_dp_init(dp);
 		break;
-	case BMP_TYPE_CMSIS_DAP:
+	case PROBE_TYPE_CMSIS_DAP:
 		dap_jtag_dp_init(dp);
 		break;
 	default:
@@ -310,23 +310,23 @@ void bmda_jtag_dp_init(adiv5_debug_port_s *dp)
 
 char *bmda_adaptor_ident(void)
 {
-	switch (info.bmp_type) {
-	case BMP_TYPE_NONE:
+	switch (info.type) {
+	case PROBE_TYPE_NONE:
 		return "None";
 
-	case BMP_TYPE_BMP:
+	case PROBE_TYPE_BMP:
 		return "BMP";
 
-	case BMP_TYPE_STLINK_V2:
+	case PROBE_TYPE_STLINK_V2:
 		return "ST-Link v2";
 
-	case BMP_TYPE_FTDI:
+	case PROBE_TYPE_FTDI:
 		return "FTDI";
 
-	case BMP_TYPE_CMSIS_DAP:
+	case PROBE_TYPE_CMSIS_DAP:
 		return "CMSIS-DAP";
 
-	case BMP_TYPE_JLINK:
+	case PROBE_TYPE_JLINK:
 		return "J-Link";
 
 	default:
@@ -336,18 +336,18 @@ char *bmda_adaptor_ident(void)
 
 const char *platform_target_voltage(void)
 {
-	switch (info.bmp_type) {
-	case BMP_TYPE_BMP:
+	switch (info.type) {
+	case PROBE_TYPE_BMP:
 		return remote_target_voltage();
 
 #if HOSTED_BMP_ONLY == 0
-	case BMP_TYPE_STLINK_V2:
+	case PROBE_TYPE_STLINK_V2:
 		return stlink_target_voltage();
 
-	case BMP_TYPE_FTDI:
+	case PROBE_TYPE_FTDI:
 		return ftdi_target_voltage();
 
-	case BMP_TYPE_JLINK:
+	case PROBE_TYPE_JLINK:
 		return jlink_target_voltage_string();
 #endif
 
@@ -358,25 +358,25 @@ const char *platform_target_voltage(void)
 
 void platform_nrst_set_val(bool assert)
 {
-	switch (info.bmp_type) {
-	case BMP_TYPE_BMP:
+	switch (info.type) {
+	case PROBE_TYPE_BMP:
 		remote_nrst_set_val(assert);
 		break;
 
 #if HOSTED_BMP_ONLY == 0
-	case BMP_TYPE_STLINK_V2:
+	case PROBE_TYPE_STLINK_V2:
 		stlink_nrst_set_val(assert);
 		break;
 
-	case BMP_TYPE_JLINK:
+	case PROBE_TYPE_JLINK:
 		jlink_nrst_set_val(assert);
 		break;
 
-	case BMP_TYPE_FTDI:
+	case PROBE_TYPE_FTDI:
 		libftdi_nrst_set_val(assert);
 		break;
 
-	case BMP_TYPE_CMSIS_DAP:
+	case PROBE_TYPE_CMSIS_DAP:
 		dap_nrst_set_val(assert);
 		break;
 #endif
@@ -388,18 +388,18 @@ void platform_nrst_set_val(bool assert)
 
 bool platform_nrst_get_val(void)
 {
-	switch (info.bmp_type) {
-	case BMP_TYPE_BMP:
+	switch (info.type) {
+	case PROBE_TYPE_BMP:
 		return remote_nrst_get_val();
 
 #if HOSTED_BMP_ONLY == 0
-	case BMP_TYPE_STLINK_V2:
+	case PROBE_TYPE_STLINK_V2:
 		return stlink_nrst_get_val();
 
-	case BMP_TYPE_JLINK:
+	case PROBE_TYPE_JLINK:
 		return jlink_nrst_get_val();
 
-	case BMP_TYPE_FTDI:
+	case PROBE_TYPE_FTDI:
 		return ftdi_nrst_get_val();
 #endif
 
@@ -413,25 +413,25 @@ void platform_max_frequency_set(uint32_t freq)
 	if (!freq)
 		return;
 
-	switch (info.bmp_type) {
-	case BMP_TYPE_BMP:
+	switch (info.type) {
+	case PROBE_TYPE_BMP:
 		remote_max_frequency_set(freq);
 		break;
 
 #if HOSTED_BMP_ONLY == 0
-	case BMP_TYPE_CMSIS_DAP:
+	case PROBE_TYPE_CMSIS_DAP:
 		dap_max_frequency(freq);
 		break;
 
-	case BMP_TYPE_FTDI:
+	case PROBE_TYPE_FTDI:
 		ftdi_max_frequency_set(freq);
 		break;
 
-	case BMP_TYPE_STLINK_V2:
+	case PROBE_TYPE_STLINK_V2:
 		stlink_max_frequency_set(freq);
 		break;
 
-	case BMP_TYPE_JLINK:
+	case PROBE_TYPE_JLINK:
 		jlink_max_frequency_set(freq);
 		break;
 #endif
@@ -453,21 +453,21 @@ void platform_max_frequency_set(uint32_t freq)
 
 uint32_t platform_max_frequency_get(void)
 {
-	switch (info.bmp_type) {
-	case BMP_TYPE_BMP:
+	switch (info.type) {
+	case PROBE_TYPE_BMP:
 		return remote_max_frequency_get();
 
 #if HOSTED_BMP_ONLY == 0
-	case BMP_TYPE_CMSIS_DAP:
+	case PROBE_TYPE_CMSIS_DAP:
 		return dap_max_frequency(0);
 
-	case BMP_TYPE_FTDI:
+	case PROBE_TYPE_FTDI:
 		return libftdi_max_frequency_get();
 
-	case BMP_TYPE_STLINK_V2:
+	case PROBE_TYPE_STLINK_V2:
 		return stlink_max_frequency_get();
 
-	case BMP_TYPE_JLINK:
+	case PROBE_TYPE_JLINK:
 		return jlink_max_frequency_get();
 #endif
 
@@ -479,12 +479,12 @@ uint32_t platform_max_frequency_get(void)
 
 bool platform_target_set_power(const bool power)
 {
-	switch (info.bmp_type) {
-	case BMP_TYPE_BMP:
+	switch (info.type) {
+	case PROBE_TYPE_BMP:
 		return remote_target_set_power(power);
 
 #if HOSTED_BMP_ONLY == 0
-	case BMP_TYPE_JLINK:
+	case PROBE_TYPE_JLINK:
 		return jlink_target_set_power(power);
 #endif
 
@@ -496,12 +496,12 @@ bool platform_target_set_power(const bool power)
 
 bool platform_target_get_power(void)
 {
-	switch (info.bmp_type) {
-	case BMP_TYPE_BMP:
+	switch (info.type) {
+	case PROBE_TYPE_BMP:
 		return remote_target_get_power();
 
 #if HOSTED_BMP_ONLY == 0
-	case BMP_TYPE_JLINK:
+	case PROBE_TYPE_JLINK:
 		return jlink_target_get_power();
 #endif
 
@@ -514,8 +514,8 @@ uint32_t platform_target_voltage_sense(void)
 {
 	uint32_t target_voltage = 0;
 
-	switch (info.bmp_type) {
-	case BMP_TYPE_BMP: {
+	switch (info.type) {
+	case PROBE_TYPE_BMP: {
 		const char *const result = remote_target_voltage();
 		if (result != NULL) {
 			uint32_t units = 0;
@@ -527,7 +527,7 @@ uint32_t platform_target_voltage_sense(void)
 	}
 
 #if HOSTED_BMP_ONLY == 0
-	case BMP_TYPE_JLINK:
+	case PROBE_TYPE_JLINK:
 		target_voltage = jlink_target_voltage_sense();
 		break;
 #endif
@@ -541,9 +541,9 @@ uint32_t platform_target_voltage_sense(void)
 
 void platform_buffer_flush(void)
 {
-	switch (info.bmp_type) {
+	switch (info.type) {
 #if HOSTED_BMP_ONLY == 0
-	case BMP_TYPE_FTDI:
+	case PROBE_TYPE_FTDI:
 		ftdi_buffer_flush();
 		break;
 #endif
@@ -561,8 +561,8 @@ void platform_pace_poll(void)
 
 void platform_target_clk_output_enable(const bool enable)
 {
-	switch (info.bmp_type) {
-	case BMP_TYPE_BMP:
+	switch (info.type) {
+	case PROBE_TYPE_BMP:
 		remote_target_clk_output_enable(enable);
 		break;
 

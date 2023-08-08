@@ -43,7 +43,7 @@ typedef struct usb_device libusb_device;
 #endif
 
 typedef struct probe_info {
-	bmp_type_t type;
+	probe_type_e type;
 	uint16_t vid;
 	uint16_t pid;
 #if HOSTED_BMP_ONLY == 0
@@ -57,9 +57,9 @@ typedef struct probe_info {
 	struct probe_info *next;
 } probe_info_s;
 
-probe_info_s *probe_info_add_by_serial(
-	probe_info_s *list, bmp_type_t type, const char *mfr, const char *product, const char *serial, const char *version);
-probe_info_s *probe_info_add_by_id(probe_info_s *list, bmp_type_t type, libusb_device *device, uint16_t vid,
+probe_info_s *probe_info_add_by_serial(probe_info_s *list, probe_type_e type, const char *mfr, const char *product,
+	const char *serial, const char *version);
+probe_info_s *probe_info_add_by_id(probe_info_s *list, probe_type_e type, libusb_device *device, uint16_t vid,
 	uint16_t pid, const char *mfr, const char *product, const char *serial, const char *version);
 size_t probe_info_count(const probe_info_s *list);
 void probe_info_list_free(const probe_info_s *list);

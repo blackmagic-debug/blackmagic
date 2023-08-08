@@ -58,7 +58,7 @@ void stlinkv2_read_serial(libusb_device_descriptor_s *device_descriptor, libusb_
 typedef struct debugger_device {
 	uint16_t vendor;
 	uint16_t product;
-	bmp_type_t type;
+	probe_type_e type;
 	void (*function)(
 		libusb_device_descriptor_s *, libusb_device *, libusb_device_handle *, char **, char **, char **, char **);
 	char *type_string;
@@ -66,23 +66,23 @@ typedef struct debugger_device {
 
 /* Create the list of debuggers BMDA works with */
 static const debugger_device_s debugger_devices[] = {
-	{VENDOR_ID_BMP, PRODUCT_ID_BMP, BMP_TYPE_BMP, bmp_read_product_version, "Black Magic Probe"},
-	{VENDOR_ID_STLINK, PRODUCT_ID_STLINKV2, BMP_TYPE_STLINK_V2, stlinkv2_read_serial, "ST-Link v2"},
-	{VENDOR_ID_STLINK, PRODUCT_ID_STLINKV21, BMP_TYPE_STLINK_V2, NULL, "ST-Link v2.1"},
-	{VENDOR_ID_STLINK, PRODUCT_ID_STLINKV21_MSD, BMP_TYPE_STLINK_V2, NULL, "ST-Link v2.1 MSD"},
-	{VENDOR_ID_STLINK, PRODUCT_ID_STLINKV3_NO_MSD, BMP_TYPE_STLINK_V2, NULL, "ST-Link v2.1 No MSD"},
-	{VENDOR_ID_STLINK, PRODUCT_ID_STLINKV3, BMP_TYPE_STLINK_V2, NULL, "ST-Link v3"},
-	{VENDOR_ID_STLINK, PRODUCT_ID_STLINKV3E, BMP_TYPE_STLINK_V2, NULL, "ST-Link v3E"},
-	{VENDOR_ID_SEGGER, PRODUCT_ID_ANY, BMP_TYPE_JLINK, NULL, "Segger JLink"},
-	{VENDOR_ID_FTDI, PRODUCT_ID_FTDI_FT2232, BMP_TYPE_FTDI, NULL, "FTDI FT2232"},
-	{VENDOR_ID_FTDI, PRODUCT_ID_FTDI_FT4232, BMP_TYPE_FTDI, NULL, "FTDI FT4232"},
-	{VENDOR_ID_FTDI, PRODUCT_ID_FTDI_FT232, BMP_TYPE_FTDI, NULL, "FTDI FT232"},
-	{0, 0, BMP_TYPE_NONE, NULL, ""},
+	{VENDOR_ID_BMP, PRODUCT_ID_BMP, PROBE_TYPE_BMP, bmp_read_product_version, "Black Magic Probe"},
+	{VENDOR_ID_STLINK, PRODUCT_ID_STLINKV2, PROBE_TYPE_STLINK_V2, stlinkv2_read_serial, "ST-Link v2"},
+	{VENDOR_ID_STLINK, PRODUCT_ID_STLINKV21, PROBE_TYPE_STLINK_V2, NULL, "ST-Link v2.1"},
+	{VENDOR_ID_STLINK, PRODUCT_ID_STLINKV21_MSD, PROBE_TYPE_STLINK_V2, NULL, "ST-Link v2.1 MSD"},
+	{VENDOR_ID_STLINK, PRODUCT_ID_STLINKV3_NO_MSD, PROBE_TYPE_STLINK_V2, NULL, "ST-Link v2.1 No MSD"},
+	{VENDOR_ID_STLINK, PRODUCT_ID_STLINKV3, PROBE_TYPE_STLINK_V2, NULL, "ST-Link v3"},
+	{VENDOR_ID_STLINK, PRODUCT_ID_STLINKV3E, PROBE_TYPE_STLINK_V2, NULL, "ST-Link v3E"},
+	{VENDOR_ID_SEGGER, PRODUCT_ID_ANY, PROBE_TYPE_JLINK, NULL, "Segger JLink"},
+	{VENDOR_ID_FTDI, PRODUCT_ID_FTDI_FT2232, PROBE_TYPE_FTDI, NULL, "FTDI FT2232"},
+	{VENDOR_ID_FTDI, PRODUCT_ID_FTDI_FT4232, PROBE_TYPE_FTDI, NULL, "FTDI FT4232"},
+	{VENDOR_ID_FTDI, PRODUCT_ID_FTDI_FT232, PROBE_TYPE_FTDI, NULL, "FTDI FT232"},
+	{0, 0, PROBE_TYPE_NONE, NULL, ""},
 };
 
 const debugger_device_s *get_debugger_device_from_vid_pid(const uint16_t probe_vid, const uint16_t probe_pid)
 {
-	/* Iterate over the list excluding the last entry (BMP_TYPE_NONE) */
+	/* Iterate over the list excluding the last entry (PROBE_TYPE_NONE) */
 	for (size_t index = 0; index < ARRAY_LENGTH(debugger_devices) - 1U; index++) {
 		/* Check for a vendor id match */
 		if (debugger_devices[index].vendor != probe_vid)
@@ -92,7 +92,7 @@ const debugger_device_s *get_debugger_device_from_vid_pid(const uint16_t probe_v
 		if (debugger_devices[index].product == PRODUCT_ID_ANY || probe_pid == debugger_devices[index].product)
 			return &debugger_devices[index];
 	}
-	/* Return the last entry in the list (BMP_TYPE_NONE) */
+	/* Return the last entry in the list (PROBE_TYPE_NONE) */
 	return &debugger_devices[ARRAY_LENGTH(debugger_devices) - 1U];
 }
 
@@ -260,7 +260,7 @@ static probe_info_s *process_ftdi_probe(void)
 		if (add_probe) {
 			const char *const manufacturer = strdup("FTDI");
 			probe_list = probe_info_add_by_id(
-				probe_list, BMP_TYPE_FTDI, NULL, vid, pid, manufacturer, product, serial, strdup("---"));
+				probe_list, PROBE_TYPE_FTDI, NULL, vid, pid, manufacturer, product, serial, strdup("---"));
 		} else {
 			free(serial);
 			free(product);
@@ -325,7 +325,7 @@ static void process_cmsis_interface(const libusb_device_descriptor_s *const devi
 	else
 		product = get_device_descriptor_string(handle, device_descriptor->iProduct);
 
-	*probe_list = probe_info_add_by_id(*probe_list, BMP_TYPE_CMSIS_DAP, device, device_descriptor->idVendor,
+	*probe_list = probe_info_add_by_id(*probe_list, PROBE_TYPE_CMSIS_DAP, device, device_descriptor->idVendor,
 		device_descriptor->idProduct, manufacturer, product, serial, version);
 }
 
@@ -430,7 +430,7 @@ static bool process_vid_pid_table_probe(
 	/* Check for a match */
 	const debugger_device_s *const debugger_device =
 		get_debugger_device_from_vid_pid(device_descriptor->idVendor, device_descriptor->idProduct);
-	if (debugger_device->type == BMP_TYPE_NONE)
+	if (debugger_device->type == PROBE_TYPE_NONE)
 		return false;
 
 	libusb_device_handle *handle = NULL;
@@ -545,14 +545,14 @@ int find_debuggers(bmda_cli_options_s *cl_opts, bmp_info_s *info)
 	/* We found a matching probe, populate bmp_info_s and signal success */
 	probe_info_to_bmp_info(probe, info);
 	/* If the selected probe is an FTDI adapter try to resolve the adaptor type */
-	if (probe->type == BMP_TYPE_FTDI && !ftdi_lookup_adaptor_descriptor(cl_opts, probe)) {
+	if (probe->type == PROBE_TYPE_FTDI && !ftdi_lookup_adaptor_descriptor(cl_opts, probe)) {
 		// Don't know the cable type, ask user to specify with "-c"
 		DEBUG_WARN("Multiple FTDI adapters match Vendor and Product ID.\n");
 		DEBUG_WARN("Please specify adapter type on command line using \"-c\" option.\n");
 		return -1; //false
 	}
 	/* If the selected probe is CMSIS-DAP, check for v2 interfaces */
-	if (probe->type == BMP_TYPE_CMSIS_DAP)
+	if (probe->type == PROBE_TYPE_CMSIS_DAP)
 		check_cmsis_interface_type(probe->device, info);
 
 	probe_info_list_free(probe_list);

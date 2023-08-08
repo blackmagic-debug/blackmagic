@@ -77,14 +77,14 @@ void platform_buffer_flush(void);
 #define VENDOR_ID_ORBCODE   0x1209U
 #define PRODUCT_ID_ORBTRACE 0x3443U
 
-typedef enum bmp_type_e {
-	BMP_TYPE_NONE = 0,
-	BMP_TYPE_BMP,
-	BMP_TYPE_STLINK_V2,
-	BMP_TYPE_FTDI,
-	BMP_TYPE_CMSIS_DAP,
-	BMP_TYPE_JLINK
-} bmp_type_t;
+typedef enum probe_type {
+	PROBE_TYPE_NONE = 0,
+	PROBE_TYPE_BMP,
+	PROBE_TYPE_STLINK_V2,
+	PROBE_TYPE_FTDI,
+	PROBE_TYPE_CMSIS_DAP,
+	PROBE_TYPE_JLINK
+} probe_type_e;
 
 void gdb_ident(char *p, int count);
 
