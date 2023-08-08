@@ -66,6 +66,6 @@ void probe_info_list_free(const probe_info_s *list);
 
 const probe_info_s *probe_info_correct_order(probe_info_s *list);
 const probe_info_s *probe_info_filter(const probe_info_s *list, const char *serial, size_t position);
-void probe_info_to_bmp_info(const probe_info_s *probe, bmp_info_s *info);
+void probe_info_to_bmda_probe(const probe_info_s *probe, bmda_probe_s *info);
 
 #endif /* PLATFORMS_HOSTED_PROBE_INFO_H */

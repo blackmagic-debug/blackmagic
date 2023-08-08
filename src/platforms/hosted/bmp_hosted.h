@@ -70,7 +70,7 @@ typedef struct usb_link {
 } usb_link_s;
 #endif
 
-typedef struct bmp_info {
+typedef struct bmda_probe {
 	probe_type_e type;
 	char dev;
 	char serial[64];
@@ -89,14 +89,14 @@ typedef struct bmp_info {
 	uint8_t in_ep;
 	uint8_t out_ep;
 #endif
-} bmp_info_s;
+} bmda_probe_s;
 
 typedef struct timeval timeval_s;
 
-extern bmp_info_s info;
-void bmp_ident(bmp_info_s *info);
-int find_debuggers(bmda_cli_options_s *cl_opts, bmp_info_s *info);
-void libusb_exit_function(bmp_info_s *info);
+extern bmda_probe_s info;
+void bmp_ident(bmda_probe_s *info);
+int find_debuggers(bmda_cli_options_s *cl_opts, bmda_probe_s *info);
+void libusb_exit_function(bmda_probe_s *info);
 
 #if HOSTED_BMP_ONLY == 1
 bool device_is_bmp_gdb_port(const char *device);

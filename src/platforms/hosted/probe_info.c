@@ -131,7 +131,7 @@ static void copy_string(const char *const from, char *const to, const size_t max
 	to[length] = '\0';
 }
 
-void probe_info_to_bmp_info(const probe_info_s *const probe, bmp_info_s *info)
+void probe_info_to_bmda_probe(const probe_info_s *const probe, bmda_probe_s *info)
 {
 	info->type = probe->type;
 #if HOSTED_BMP_ONLY != 1
