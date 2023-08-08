@@ -50,6 +50,9 @@
 #define CORTEX_M33 0xd210U
 #define STAR_MC1   0x1320U
 
+/* Cortex-R CPU IDs */
+#define CORTEX_R4 0xc140U
+
 /* Cortex-A CPU IDs */
 #define CORTEX_A5 0xc050U
 #define CORTEX_A7 0xc070U

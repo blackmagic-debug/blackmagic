@@ -101,6 +101,9 @@ void cortex_read_cpuid(target_s *target)
 	case CORTEX_A9:
 		target->core = "A9";
 		break;
+	case CORTEX_R4:
+		target->core = "R4";
+		break;
 	case STAR_MC1:
 		target->core = "STAR-MC1";
 		break;
