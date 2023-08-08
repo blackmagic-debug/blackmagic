@@ -596,16 +596,16 @@ static void handle_v_packet(char *packet, const size_t plen)
 		} else
 			gdb_putpacketz("E01");
 
-	} else if (!strncmp(packet, "vKill;", 6)) {
+	} else if (!strncmp(packet, "vKill;", 6U)) {
 		/* Kill the target - we don't actually care about the PID that follows "vKill;" */
 		handle_kill_target();
 		gdb_putpacketz("OK");
 
-	} else if (!strncmp(packet, "vRun", 4)) {
+	} else if (!strncmp(packet, "vRun", 4U)) {
 		/* Parse command line for get_cmdline semihosting call */
 		char cmdline[83];
 		char *pcmdline = cmdline;
-		char *tok = packet + 4;
+		char *tok = packet + 4U;
 		if (*tok == ';')
 			++tok;
 		cmdline[0] = '\0';
@@ -618,14 +618,15 @@ static void handle_v_packet(char *packet, const size_t plen)
 				tok++;
 				continue;
 			}
-			if (isxdigit(tok[0]) && isxdigit(tok[1])) {
-				unhexify(pcmdline, tok, 2);
+			/* isxdigit expects int, to handle EOF */
+			if (isxdigit((int8_t)tok[0U]) && isxdigit((int8_t)tok[1U])) {
+				unhexify(pcmdline, tok, 2U);
 				if ((*pcmdline == ' ') || (*pcmdline == '\\')) {
-					pcmdline[1] = *pcmdline;
+					pcmdline[1U] = *pcmdline;
 					*pcmdline++ = '\\';
 				}
 				pcmdline++;
-				tok += 2;
+				tok += 2U;
 				pcmdline[0] = '\0';
 				continue;
 			}

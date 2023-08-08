@@ -21,10 +21,12 @@
 #include "morse.h"
 
 /* Morse code patterns and lengths */
-static const struct {
+typedef struct {
 	uint16_t code;
 	uint8_t bits;
-} morse_letter[] = {
+} morse_char_s;
+
+static const morse_char_s morse_char_lut[] = {
 	{0b0000000000011101, 8},  // 'A' .-
 	{0b0000000101010111, 12}, // 'B' -...
 	{0b0000010111010111, 14}, // 'C' -.-.
@@ -79,20 +81,20 @@ bool morse_update(void)
 		return false;
 
 	if (!bits) {
-		char c = morse_msg[msg_index++];
-		if (!c) {
+		char morse_char = morse_msg[msg_index++];
+		if (!morse_char) {
 			if (morse_repeat) {
-				c = morse_msg[0];
+				morse_char = morse_msg[0];
 				msg_index = 1U;
 			} else {
 				msg_index = SIZE_MAX;
 				return false;
 			}
 		}
-		if (c >= 'A' && c <= 'Z') {
-			c -= 'A';
-			code = morse_letter[c].code;
-			bits = morse_letter[c].bits;
+		if (morse_char >= 'A' && morse_char <= 'Z') {
+			const uint8_t morse_char_index = (uint8_t)morse_char - 'A';
+			code = morse_char_lut[morse_char_index].code;
+			bits = morse_char_lut[morse_char_index].bits;
 		} else {
 			code = 0U;
 			bits = 4U;
