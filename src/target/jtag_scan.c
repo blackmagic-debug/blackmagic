@@ -320,8 +320,8 @@ void jtag_dev_write_ir(const uint8_t dev_index, const uint32_t ir)
 		return;
 
 	/* Set all the other devices IR's to being in bypass */
-	for (size_t device = 0; device < jtag_dev_count; device++)
-		jtag_devs[device].current_ir = UINT32_MAX;
+	for (size_t device_index = 0; device_index < jtag_dev_count; device_index++)
+		jtag_devs[device_index].current_ir = UINT32_MAX;
 	device->current_ir = ir;
 
 	/* Do the work to make the scanchain match the jtag_devs state */
