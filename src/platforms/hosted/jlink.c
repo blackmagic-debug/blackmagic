@@ -197,9 +197,9 @@ bool jlink_transfer_swd(
 static bool jlink_claim_interface(void)
 {
 	libusb_config_descriptor_s *config;
-	const int result = libusb_get_active_config_descriptor(info.libusb_dev, &config);
-	if (result != LIBUSB_SUCCESS) {
-		DEBUG_ERROR("Failed to get configuration descriptor: %s\n", libusb_error_name(result));
+	const int get_descriptor_result = libusb_get_active_config_descriptor(info.libusb_dev, &config);
+	if (get_descriptor_result != LIBUSB_SUCCESS) {
+		DEBUG_ERROR("Failed to get configuration descriptor: %s\n", libusb_error_name(get_descriptor_result));
 		return false;
 	}
 	const libusb_interface_descriptor_s *descriptor = NULL;
@@ -209,9 +209,9 @@ static bool jlink_claim_interface(void)
 		const libusb_interface_descriptor_s *const interface_desc = &interface->altsetting[0];
 		if (interface_desc->bInterfaceClass == LIBUSB_CLASS_VENDOR_SPEC &&
 			interface_desc->bInterfaceSubClass == LIBUSB_CLASS_VENDOR_SPEC && interface_desc->bNumEndpoints > 1U) {
-			const int result = libusb_claim_interface(info.usb_link->device_handle, (int)idx);
-			if (result) {
-				DEBUG_ERROR("Can not claim handle: %s\n", libusb_error_name(result));
+			const int claim_result = libusb_claim_interface(info.usb_link->device_handle, (int)idx);
+			if (claim_result) {
+				DEBUG_ERROR("Can not claim handle: %s\n", libusb_error_name(claim_result));
 				break;
 			}
 			info.usb_link->interface = idx;
