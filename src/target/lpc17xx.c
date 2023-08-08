@@ -81,7 +81,7 @@ static void lpc17xx_add_flash(target_s *target, uint32_t addr, size_t len, size_
 
 bool lpc17xx_probe(target_s *target)
 {
-	if ((target->cpuid & CPUID_PARTNO_MASK) != CORTEX_M3)
+	if ((target->cpuid & CORTEX_CPUID_PARTNO_MASK) != CORTEX_M3)
 		return false;
 
 	/*

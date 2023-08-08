@@ -473,7 +473,7 @@ bool lpc43xx_probe(target_s *const t)
 	t->target_options |= CORTEXM_TOPT_INHIBIT_NRST;
 
 	/* If we're on the M4 core, poke the M0APP and M0SUB core resets to make them available */
-	if ((t->cpuid & CPUID_PARTNO_MASK) == CORTEX_M4) {
+	if ((t->cpuid & CORTEX_CPUID_PARTNO_MASK) == CORTEX_M4) {
 		target_mem_write32(t, LPC43xx_RGU_CTRL0, 0);
 		target_mem_write32(t, LPC43xx_RGU_CTRL1, 0);
 	}
@@ -934,7 +934,7 @@ static bool lpc43xx_iap_init(target_flash_s *const target_flash)
 	lpc43xx_priv_s *const priv = (lpc43xx_priv_s *)target->target_storage;
 	lpc_flash_s *const flash = (lpc_flash_s *)target_flash;
 	/* If on the M4 core, check and set the shadow region mapping */
-	if ((target->cpuid & CPUID_PARTNO_MASK) == CORTEX_M4) {
+	if ((target->cpuid & CORTEX_CPUID_PARTNO_MASK) == CORTEX_M4) {
 		priv->shadow_map = target_mem_read32(target, LPC43xx_M4MEMMAP);
 		target_mem_write32(target, LPC43xx_M4MEMMAP, LPC43xx_M4MEMMAP_BOOT_ROM);
 	}
