@@ -24,24 +24,24 @@
 #include "gdb_hostio.h"
 #include "gdb_packet.h"
 
-int hostio_reply(target_controller_s *tc, char *pbuf, int len)
+int hostio_reply(target_controller_s *const tc, char *const pbuf, const int len)
 {
 	(void)len;
-	int retcode, items, errno_;
-	char c, *p;
-	if (pbuf[1] == '-')
-		p = &pbuf[2];
-	else
-		p = &pbuf[1];
-	items = sscanf(p, "%x,%x,%c", &retcode, &errno_, &c);
-	if (pbuf[1] == '-')
-		retcode = -retcode;
+
+	const bool retcode_is_negative = pbuf[1U] == '-';
+
+	unsigned int retcode;
+	unsigned int errno_;
+	char ctrl_c_flag;
+	const unsigned int items =
+		sscanf(pbuf + (retcode_is_negative ? 2U : 1U), "%x,%x,%c", &retcode, &errno_, &ctrl_c_flag);
 
 	/* if break is requested */
-	tc->interrupted = items == 3 && c == 'C';
+	tc->interrupted = items == 3U && ctrl_c_flag == 'C';
+
 	tc->errno_ = errno_;
 
-	return retcode;
+	return retcode_is_negative ? -retcode : retcode;
 }
 
 static int hostio_get_response(target_controller_s *const tc)
