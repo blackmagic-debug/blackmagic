@@ -130,7 +130,7 @@ typedef struct cortexm_priv {
 } cortexm_priv_s;
 
 /* Register number tables */
-static const uint32_t regnum_cortex_m[] = {
+static const uint32_t regnum_cortex_m[CORTEXM_GENERAL_REG_COUNT] = {
 	0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, /* standard r0-r15 */
 	0x10,                                                 /* xpsr */
 	0x11,                                                 /* msp */
@@ -138,7 +138,7 @@ static const uint32_t regnum_cortex_m[] = {
 	0x14,                                                 /* special */
 };
 
-static const uint32_t regnum_cortex_mf[] = {
+static const uint32_t regnum_cortex_mf[CORTEX_FLOAT_REG_COUNT] = {
 	0x21,                                           /* fpscr */
 	0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, /* s0-s7 */
 	0x48, 0x49, 0x4a, 0x4b, 0x4c, 0x4d, 0x4e, 0x4f, /* s8-s15 */
@@ -561,7 +561,7 @@ bool cortexm_probe(adiv5_access_port_s *ap)
 	t->halt_request = cortexm_halt_request;
 	t->halt_poll = cortexm_halt_poll;
 	t->halt_resume = cortexm_halt_resume;
-	t->regs_size = sizeof(regnum_cortex_m);
+	t->regs_size = sizeof(uint32_t) * CORTEXM_GENERAL_REG_COUNT;
 
 	t->breakwatch_set = cortexm_breakwatch_set;
 	t->breakwatch_clear = cortexm_breakwatch_clear;
@@ -570,7 +570,7 @@ bool cortexm_probe(adiv5_access_port_s *ap)
 
 	if (is_cortexmf) {
 		t->target_options |= TOPT_FLAVOUR_V7MF;
-		t->regs_size += sizeof(regnum_cortex_mf);
+		t->regs_size += sizeof(uint32_t) * CORTEX_FLOAT_REG_COUNT;
 	}
 
 	/* Default vectors to catch */
@@ -845,12 +845,12 @@ static void cortexm_regs_read(target_s *const target, void *const data)
 	if (ap->dp->ap_regs_read && ap->dp->ap_reg_read) {
 		uint32_t core_regs[21U];
 		ap->dp->ap_regs_read(ap, core_regs);
-		for (size_t i = 0; i < ARRAY_LENGTH(regnum_cortex_m); ++i)
+		for (size_t i = 0; i < CORTEXM_GENERAL_REG_COUNT; ++i)
 			regs[i] = core_regs[regnum_cortex_m[i]];
 
 		if (target->target_options & TOPT_FLAVOUR_V7MF) {
-			const size_t offset = ARRAY_LENGTH(regnum_cortex_m);
-			for (size_t i = 0; i < ARRAY_LENGTH(regnum_cortex_mf); ++i)
+			const size_t offset = CORTEXM_GENERAL_REG_COUNT;
+			for (size_t i = 0; i < CORTEX_FLOAT_REG_COUNT; ++i)
 				regs[offset + i] = ap->dp->ap_reg_read(ap, regnum_cortex_mf[i]);
 		}
 	} else {
@@ -866,14 +866,14 @@ static void cortexm_regs_read(target_s *const target, void *const data)
 		adiv5_dp_write(ap->dp, ADIV5_DP_SELECT, ((uint32_t)ap->apsel << 24U) | 0x10U);
 
 		/* Walk the regnum_cortex_m array, reading the registers it specifies */
-		for (size_t i = 0; i < ARRAY_LENGTH(regnum_cortex_m); ++i) {
+		for (size_t i = 0; i < CORTEXM_GENERAL_REG_COUNT; ++i) {
 			adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_DB(DB_DCRSR), regnum_cortex_m[i]);
 			regs[i] = adiv5_dp_read(ap->dp, ADIV5_AP_DB(DB_DCRDR));
 		}
 		/* If the device has a FPU, also walk the regnum_cortex_mf array */
 		if (target->target_options & TOPT_FLAVOUR_V7MF) {
-			const size_t offset = ARRAY_LENGTH(regnum_cortex_m);
-			for (size_t i = 0; i < ARRAY_LENGTH(regnum_cortex_mf); ++i) {
+			const size_t offset = CORTEXM_GENERAL_REG_COUNT;
+			for (size_t i = 0; i < CORTEX_FLOAT_REG_COUNT; ++i) {
 				adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_DB(DB_DCRSR), regnum_cortex_mf[i]);
 				regs[offset + i] = adiv5_dp_read(ap->dp, ADIV5_AP_DB(DB_DCRDR));
 			}
@@ -889,12 +889,12 @@ static void cortexm_regs_write(target_s *const target, const void *const data)
 	adiv5_access_port_s *const ap = cortex_ap(target);
 #if PC_HOSTED == 1
 	if (ap->dp->ap_reg_write) {
-		for (size_t i = 0; i < ARRAY_LENGTH(regnum_cortex_m); ++i)
+		for (size_t i = 0; i < CORTEXM_GENERAL_REG_COUNT; ++i)
 			ap->dp->ap_reg_write(ap, regnum_cortex_m[i], regs[i]);
 
 		if (target->target_options & TOPT_FLAVOUR_V7MF) {
-			const size_t offset = ARRAY_LENGTH(regnum_cortex_m);
-			for (size_t i = 0; i < ARRAY_LENGTH(regnum_cortex_mf); ++i)
+			const size_t offset = CORTEXM_GENERAL_REG_COUNT;
+			for (size_t i = 0; i < CORTEX_FLOAT_REG_COUNT; ++i)
 				ap->dp->ap_reg_write(ap, regnum_cortex_mf[i], regs[offset + i]);
 		}
 	} else {
@@ -910,13 +910,13 @@ static void cortexm_regs_write(target_s *const target, const void *const data)
 		adiv5_dp_write(ap->dp, ADIV5_DP_SELECT, ((uint32_t)ap->apsel << 24U) | 0x10U);
 
 		/* Walk the regnum_cortex_m array, writing the registers it specifies */
-		for (size_t i = 0; i < ARRAY_LENGTH(regnum_cortex_m); ++i) {
+		for (size_t i = 0; i < CORTEXM_GENERAL_REG_COUNT; ++i) {
 			adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_DB(DB_DCRDR), regs[i]);
 			adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_DB(DB_DCRSR), 0x10000 | regnum_cortex_m[i]);
 		}
 		if (target->target_options & TOPT_FLAVOUR_V7MF) {
-			size_t offset = ARRAY_LENGTH(regnum_cortex_m);
-			for (size_t i = 0; i < ARRAY_LENGTH(regnum_cortex_mf); ++i) {
+			size_t offset = CORTEXM_GENERAL_REG_COUNT;
+			for (size_t i = 0; i < CORTEX_FLOAT_REG_COUNT; ++i) {
 				adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_DB(DB_DCRDR), regs[offset + i]);
 				adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_DB(DB_DCRSR), 0x10000 | regnum_cortex_mf[i]);
 			}
@@ -933,12 +933,12 @@ int cortexm_mem_write_sized(target_s *t, target_addr_t dest, const void *src, si
 	return target_check_error(t);
 }
 
-static int dcrsr_regnum(target_s *t, unsigned reg)
+static int dcrsr_regnum(target_s *t, uint32_t reg)
 {
-	if (reg < sizeof(regnum_cortex_m) / 4U)
+	if (reg < CORTEXM_GENERAL_REG_COUNT)
 		return regnum_cortex_m[reg];
-	if ((t->target_options & TOPT_FLAVOUR_V7MF) && reg < (sizeof(regnum_cortex_m) + sizeof(regnum_cortex_mf)) / 4U)
-		return regnum_cortex_mf[reg - sizeof(regnum_cortex_m) / 4U];
+	if ((t->target_options & TOPT_FLAVOUR_V7MF) && reg < CORTEXM_GENERAL_REG_COUNT + CORTEX_FLOAT_REG_COUNT)
+		return regnum_cortex_mf[reg - CORTEXM_GENERAL_REG_COUNT];
 	return -1;
 }
 
@@ -1132,7 +1132,7 @@ static int cortexm_fault_unwind(target_s *t)
 	 * for a configurable fault to avoid catching core resets */
 	if ((hfsr & CORTEXM_HFSR_FORCED) || cfsr) {
 		/* Unwind exception */
-		uint32_t regs[t->regs_size / 4U];
+		uint32_t regs[CORTEXM_GENERAL_REG_COUNT + CORTEX_FLOAT_REG_COUNT];
 		uint32_t stack[8];
 		/* Read registers for post-exception stack pointer */
 		target_regs_read(t, regs);
@@ -1180,9 +1180,8 @@ static int cortexm_fault_unwind(target_s *t)
 
 bool cortexm_run_stub(target_s *t, uint32_t loadaddr, uint32_t r0, uint32_t r1, uint32_t r2, uint32_t r3)
 {
-	uint32_t regs[t->regs_size / 4U];
+	uint32_t regs[CORTEXM_GENERAL_REG_COUNT + CORTEX_FLOAT_REG_COUNT] = {0};
 
-	memset(regs, 0, sizeof(regs));
 	regs[0] = r0;
 	regs[1] = r1;
 	regs[2] = r2;
@@ -1199,7 +1198,7 @@ bool cortexm_run_stub(target_s *t, uint32_t loadaddr, uint32_t r0, uint32_t r1, 
 	/* Execute the stub */
 	target_halt_reason_e reason = TARGET_HALT_RUNNING;
 #if defined(PLATFORM_HAS_DEBUG)
-	uint32_t arm_regs_start[t->regs_size];
+	uint32_t arm_regs_start[CORTEXM_GENERAL_REG_COUNT + CORTEX_FLOAT_REG_COUNT];
 	target_regs_read(t, arm_regs_start);
 #endif
 	cortexm_halt_resume(t, 0);
@@ -1210,7 +1209,7 @@ bool cortexm_run_stub(target_s *t, uint32_t loadaddr, uint32_t r0, uint32_t r1, 
 			cortexm_halt_request(t);
 #if defined(PLATFORM_HAS_DEBUG)
 			DEBUG_WARN("Stub hung\n");
-			uint32_t arm_regs[t->regs_size];
+			uint32_t arm_regs[CORTEXM_GENERAL_REG_COUNT + CORTEX_FLOAT_REG_COUNT];
 			target_regs_read(t, arm_regs);
 			for (uint32_t i = 0; i < 20U; ++i)
 				DEBUG_WARN("%2" PRIu32 ": %08" PRIx32 ", %08" PRIx32 "\n", i, arm_regs_start[i], arm_regs[i]);
@@ -1434,7 +1433,7 @@ static void probe_mem_write(
 
 static int cortexm_hostio_request(target_s *t)
 {
-	uint32_t arm_regs[t->regs_size];
+	uint32_t arm_regs[CORTEXM_GENERAL_REG_COUNT + CORTEX_FLOAT_REG_COUNT];
 	uint32_t params[4];
 
 	t->tc->interrupted = false;

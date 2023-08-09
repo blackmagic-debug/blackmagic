@@ -238,7 +238,7 @@ iap_status_e lpc40xx_iap_call(target_s *target, iap_result_s *result, iap_cmd_e 
 	const uint32_t iap_params_addr = IAP_RAM_BASE + offsetof(iap_frame_s, config);
 
 	/* Set up for the call to the IAP ROM */
-	uint32_t regs[target->regs_size / sizeof(uint32_t)];
+	uint32_t regs[CORTEXM_GENERAL_REG_COUNT];
 	target_regs_read(target, regs);
 	/* Point r0 to the start of the config block */
 	regs[0] = iap_params_addr;
