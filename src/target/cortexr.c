@@ -61,6 +61,28 @@ typedef struct cortexr_priv {
 #define CORTEXR_CPUID 0xd00U
 #define CORTEXR_CTR   0xd04U
 
+#define CORTEXR_DBG_DSCR_INSN_COMPLETE  (1U << 24U)
+#define CORTEXR_DBG_DSCR_DTR_READ_READY (1U << 29U)
+#define CORTEXR_DBG_DSCR_DTR_WRITE_DONE (1U << 30U)
+
+/*
+ * Instruction encodings for the coprocessor interface
+ * MRC -> Move to ARM core register from Coprocessor (DDI0406C §A8.8.108, pg493)
+ * MCR -> Move to Coprocessor from ARM core register (DDI0406C §A8.8.99, pg477)
+ */
+#define ARM_MRC_INSN 0xee100010U
+#define ARM_MCR_INSN 0xee000010U
+/*
+ * Encodes a core <=> coprocessor access for use with the MRC and MCR instructions.
+ * opc1 -> Coprocessor-specific opcode 1
+ *   rt -> ARM core register to use for the transfer
+ *  crn -> Primary coprocessor register
+ *  crm -> Additional coprocessor register
+ * opc2 -> Coprocessor-specific opcode 2
+ */
+#define ENCODE_CP_ACCESS(coproc, opc1, rt, crn, crm, opc2) \
+	(((opc1) << 21U) | ((crn) << 16U) | ((rt) << 12U) | ((coproc) << 8U) | ((opc2) << 5U) | (crm))
+
 static void cortexr_mem_read(target_s *const target, void *const dest, const target_addr_t src, const size_t len)
 {
 	adiv5_mem_read(cortex_ap(target), dest, src, len);
@@ -69,6 +91,50 @@ static void cortexr_mem_read(target_s *const target, void *const dest, const tar
 static void cortexr_mem_write(target_s *const target, const target_addr_t dest, const void *const src, const size_t len)
 {
 	adiv5_mem_write(cortex_ap(target), dest, src, len);
+}
+
+static void cortexr_run_insn(target_s *const target, const uint32_t insn)
+{
+	/* Issue the requested instruction to the core */
+	cortex_dbg_write32(target, CORTEXR_DBG_ITR, insn);
+	/* Poll for the instruction to complete */
+	while (!(cortex_dbg_read32(target, CORTEXR_DBG_DSCR) & CORTEXR_DBG_DSCR_INSN_COMPLETE))
+		continue;
+}
+
+static uint32_t cortexr_run_read_insn(target_s *const target, const uint32_t insn)
+{
+	/* Issue the requested instruction to the core */
+	cortex_dbg_write32(target, CORTEXR_DBG_ITR, insn);
+	/* Poll for the instruction to complete and the data to become ready in the DTR */
+	while ((cortex_dbg_read32(target, CORTEXR_DBG_DSCR) &
+			   (CORTEXR_DBG_DSCR_INSN_COMPLETE | CORTEXR_DBG_DSCR_DTR_READ_READY)) !=
+		(CORTEXR_DBG_DSCR_INSN_COMPLETE | CORTEXR_DBG_DSCR_DTR_READ_READY))
+		continue;
+	/* Read back the DTR to complete the read */
+	return cortex_dbg_read32(target, CORTEXR_DBG_DTRRX);
+}
+
+static inline uint32_t cortexr_core_reg_read(target_s *const target, const uint8_t reg)
+{
+	/* Build an issue a core to coprocessor transfer for the requested register and read back the result */
+	return cortexr_run_read_insn(target, ARM_MCR_INSN | ENCODE_CP_ACCESS(14, 0, reg, 0, 5, 0));
+}
+
+uint32_t cortexr_coproc_read(target_s *const target, const uint8_t coproc, const uint16_t op)
+{
+	/*
+	 * Perform a read of a coprocessor - which one (between 0 and 15) is given by the coproc parameter
+	 * and which register of the coprocessor to read and the operands required is given by op.
+	 * This follows the steps laid out in DDI0406C §C6.4.1 pg2109
+	 *
+	 * Encode the MCR (Move to ARM core register from Coprocessor) instruction in ARM ISA format
+	 * using core reg r0 as the read target.
+	 */
+	cortexr_run_insn(target,
+		ARM_MRC_INSN |
+			ENCODE_CP_ACCESS(coproc & 0xfU, (op >> 8U) & 0x7U, 0U, (op >> 4U) & 0xfU, op & 0xfU, (op >> 12U) & 0x7U));
+	return cortexr_core_reg_read(target, 0U);
 }
 
 bool cortexr_probe(adiv5_access_port_s *const ap, const target_addr_t base_address)
