@@ -103,7 +103,7 @@ static bool bmp_mmap(char *file, mmap_data_s *map)
 		DEBUG_ERROR("Open file %s failed: %s\n", file, strerror(errno));
 		return false;
 	}
-	struct stat stat = {};
+	struct stat stat = {0};
 	if (fstat(map->fd, &stat))
 		return false;
 	map->real_size = stat.st_size;
@@ -533,7 +533,7 @@ int cl_execute(bmda_cli_options_s *opt)
 	if (opt->opt_mode == BMP_MODE_TEST || opt->opt_mode == BMP_MODE_SWJ_TEST)
 		goto target_detach;
 
-	mmap_data_s map = {};
+	mmap_data_s map = {0};
 	if (opt->opt_mode == BMP_MODE_FLASH_WRITE || opt->opt_mode == BMP_MODE_FLASH_VERIFY ||
 		opt->opt_mode == BMP_MODE_FLASH_WRITE_VERIFY) {
 		if (!bmp_mmap(opt->opt_flash_file, &map)) {
