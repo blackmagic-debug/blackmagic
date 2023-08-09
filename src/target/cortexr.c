@@ -115,10 +115,31 @@ static uint32_t cortexr_run_read_insn(target_s *const target, const uint32_t ins
 	return cortex_dbg_read32(target, CORTEXR_DBG_DTRRX);
 }
 
+static void cortexr_run_write_insn(target_s *const target, const uint32_t insn, const uint32_t data)
+{
+	/* Set up the data in the DTR for the transaction */
+	cortex_dbg_write32(target, CORTEXR_DBG_DTRTX, data);
+	/* Poll for the data to become ready in the DTR */
+	while (!(cortex_dbg_read32(target, CORTEXR_DBG_DSCR) & CORTEXR_DBG_DSCR_DTR_WRITE_DONE))
+		continue;
+	/* Issue the requested instruction to the core */
+	cortex_dbg_write32(target, CORTEXR_DBG_ITR, insn);
+	/* Poll for the instruction to complete and the data to be consumed from the DTR */
+	while ((cortex_dbg_read32(target, CORTEXR_DBG_DSCR) &
+			   (CORTEXR_DBG_DSCR_INSN_COMPLETE | CORTEXR_DBG_DSCR_DTR_WRITE_DONE)) != CORTEXR_DBG_DSCR_INSN_COMPLETE)
+		continue;
+}
+
 static inline uint32_t cortexr_core_reg_read(target_s *const target, const uint8_t reg)
 {
 	/* Build an issue a core to coprocessor transfer for the requested register and read back the result */
 	return cortexr_run_read_insn(target, ARM_MCR_INSN | ENCODE_CP_ACCESS(14, 0, reg, 0, 5, 0));
+}
+
+static inline void cortexr_core_reg_write(target_s *const target, const uint8_t reg, const uint32_t value)
+{
+	/* Build and issue a coprocessor to core transfer for the requested register and send the new data */
+	cortexr_run_write_insn(target, ARM_MRC_INSN | ENCODE_CP_ACCESS(14, 0, reg, 0, 5, 0), value);
 }
 
 uint32_t cortexr_coproc_read(target_s *const target, const uint8_t coproc, const uint16_t op)
@@ -135,6 +156,22 @@ uint32_t cortexr_coproc_read(target_s *const target, const uint8_t coproc, const
 		ARM_MRC_INSN |
 			ENCODE_CP_ACCESS(coproc & 0xfU, (op >> 8U) & 0x7U, 0U, (op >> 4U) & 0xfU, op & 0xfU, (op >> 12U) & 0x7U));
 	return cortexr_core_reg_read(target, 0U);
+}
+
+void cortexr_coproc_write(target_s *const target, const uint8_t coproc, const uint16_t op, const uint32_t value)
+{
+	/*
+	 * Perform a write of a coprocessor - which one (between 0 and 15) is given by the coproc parameter
+	 * and which register of the coprocessor to write and the operands required is given by op.
+	 * This follows the steps laid out in DDI0406C §C6.4.1 pg2109
+	 *
+	 * Encode the MRC (Move to Coprocessor from ARM core register) instruction in ARM ISA format
+	 * using core reg r0 as the write data source.
+	 */
+	cortexr_core_reg_write(target, 0U, value);
+	cortexr_run_insn(target,
+		ARM_MCR_INSN |
+			ENCODE_CP_ACCESS(coproc & 0xfU, (op >> 8U) & 0x7U, 0U, (op >> 4U) & 0xfU, op & 0xfU, (op >> 12U) & 0x7U));
 }
 
 bool cortexr_probe(adiv5_access_port_s *const ap, const target_addr_t base_address)
