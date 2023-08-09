@@ -31,6 +31,16 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+/*
+ * This file implements support for Cortex-R family processors.
+ *
+ * References:
+ * DDI0406C - ARM Architecture Reference Manual for ARMv7-A/R
+ *   https://documentation-service.arm.com/static/5f8daeb7f86e16515cdb8c4e
+ * DDI0363G - Cortex-R4 and Cortex-R4F Technical Reference Manual
+ *   https://documentation-service.arm.com/static/5f0358e8dbdee951c1cd6f3b
+ */
+
 #include "general.h"
 #include "adiv5.h"
 #include "target.h"
