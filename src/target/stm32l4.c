@@ -553,7 +553,7 @@ static uint32_t stm32l4_main_sram_length(const target_s *const t)
 
 bool stm32l4_probe(target_s *const t)
 {
-	adiv5_access_port_s *ap = cortexm_ap(t);
+	adiv5_access_port_s *ap = cortex_ap(t);
 	uint32_t device_id = ap->dp->version >= 2U ? ap->dp->target_partno : ap->partno;
 	/* If the part is DPv0 or DPv1, we must use the L4 ID register, except if we've already identified an L5 part */
 	if (ap->dp->version < 2U && device_id != ID_STM32L55)

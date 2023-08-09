@@ -554,7 +554,7 @@ void lpc55_dp_prepare(adiv5_debug_port_s *const dp)
 
 bool lpc55xx_probe(target_s *const target)
 {
-	adiv5_access_port_s *const ap = cortexm_ap(target);
+	const adiv5_access_port_s *const ap = cortex_ap(target);
 	if (ap->apsel == 1)
 		return false;
 
@@ -666,5 +666,5 @@ static bool lpc55_dmap_mass_erase(target_s *target)
 	 * communicate with the AP to debug the core, your best chance is probably
 	 * to try and drive low the ISP pin (PIO0_5 on LPC550x) during power-on.
 	*/
-	return lpc55_dmap_cmd(cortexm_ap(target), LPC55_DMAP_BULK_ERASE);
+	return lpc55_dmap_cmd(cortex_ap(target), LPC55_DMAP_BULK_ERASE);
 }

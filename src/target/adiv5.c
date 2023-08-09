@@ -34,6 +34,7 @@
 #include "jep106.h"
 #include "adiv5.h"
 #include "cortexm.h"
+#include "cortex_internal.h"
 #include "exception.h"
 #if PC_HOSTED == 1
 #include "bmp_hosted.h"
@@ -977,8 +978,8 @@ void adiv5_dp_init(adiv5_debug_port_s *const dp)
 		 * and now that we're done with this AP's ROM tables, look for the target and resume the core.
 		 */
 		for (target_s *target = target_list; target; target = target->next) {
-			if (!connect_assert_nrst && target->priv_free == cortexm_priv_free) {
-				adiv5_access_port_s *target_ap = cortexm_ap(target);
+			if (!connect_assert_nrst && target->priv_free == cortex_priv_free) {
+				adiv5_access_port_s *target_ap = cortex_ap(target);
 				if (target_ap == ap)
 					target_halt_resume(target, false);
 			}

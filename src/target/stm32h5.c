@@ -45,7 +45,7 @@
 #include "general.h"
 #include "target.h"
 #include "target_internal.h"
-#include "cortexm.h"
+#include "cortex.h"
 
 /* Memory map constants for STM32H5xx */
 #define STM32H5_FLASH_BANK1_BASE 0x08000000U
@@ -152,7 +152,7 @@ static void stm32h5_add_flash(
 
 bool stm32h5_probe(target_s *const target)
 {
-	const adiv5_access_port_s *const ap = cortexm_ap(target);
+	const adiv5_access_port_s *const ap = cortex_ap(target);
 	/* Use the partno from the AP always to handle the difference between JTAG and SWD */
 	if (ap->partno != ID_STM32H5xx && ap->partno != ID_STM32H503)
 		return false;

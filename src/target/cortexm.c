@@ -35,6 +35,7 @@
 #include "target_probe.h"
 #include "jep106.h"
 #include "cortex.h"
+#include "cortex_internal.h"
 #include "cortexm.h"
 #include "gdb_reg.h"
 #include "command.h"
@@ -111,7 +112,7 @@ static int cortexm_hostio_request(target_s *t);
 static uint32_t time0_sec = UINT32_MAX; /* sys_clock time origin */
 
 typedef struct cortexm_priv {
-	adiv5_access_port_s *ap;
+	cortex_priv_s base;
 	bool stepping;
 	bool on_bkpt;
 	/* Watchpoint unit status */
@@ -440,11 +441,6 @@ static size_t create_tdesc_cortex_mf(char *buffer, size_t max_len)
 	return (size_t)total;
 }
 
-adiv5_access_port_s *cortexm_ap(target_s *t)
-{
-	return ((cortexm_priv_s *)t->priv)->ap;
-}
-
 static void cortexm_cache_clean(target_s *t, target_addr_t addr, size_t len, bool invalidate)
 {
 	cortexm_priv_s *priv = t->priv;
@@ -466,32 +462,26 @@ static void cortexm_cache_clean(target_s *t, target_addr_t addr, size_t len, boo
 			ram_end = mem_end;
 		/* intersection is [ram, ram_end) */
 		for (ram &= ~(minline - 1U); ram < ram_end; ram += minline)
-			adiv5_mem_write(cortexm_ap(t), cache_reg, &ram, 4);
+			adiv5_mem_write(cortex_ap(t), cache_reg, &ram, 4);
 	}
 }
 
 static void cortexm_mem_read(target_s *t, void *dest, target_addr_t src, size_t len)
 {
 	cortexm_cache_clean(t, src, len, false);
-	adiv5_mem_read(cortexm_ap(t), dest, src, len);
+	adiv5_mem_read(cortex_ap(t), dest, src, len);
 }
 
 static void cortexm_mem_write(target_s *t, target_addr_t dest, const void *src, size_t len)
 {
 	cortexm_cache_clean(t, dest, len, true);
-	adiv5_mem_write(cortexm_ap(t), dest, src, len);
+	adiv5_mem_write(cortex_ap(t), dest, src, len);
 }
 
 static bool cortexm_check_error(target_s *t)
 {
-	adiv5_access_port_s *ap = cortexm_ap(t);
+	adiv5_access_port_s *ap = cortex_ap(t);
 	return adiv5_dp_error(ap->dp) != 0;
-}
-
-void cortexm_priv_free(void *priv)
-{
-	adiv5_ap_unref(((cortexm_priv_s *)priv)->ap);
-	free(priv);
 }
 
 static void cortexm_read_cpuid(target_s *const t)
@@ -533,7 +523,7 @@ static void cortexm_read_cpuid(target_s *const t)
 		t->core = "M0";
 		break;
 	default: {
-		const adiv5_access_port_s *const ap = cortexm_ap(t);
+		const adiv5_access_port_s *const ap = cortex_ap(t);
 		if (ap->designer_code != JEP106_MANUFACTURER_ATMEL) /* Protected Atmel device? */
 			DEBUG_WARN("Unexpected Cortex-M CPU partno %04x\n", cpuid_partno);
 	}
@@ -586,8 +576,9 @@ bool cortexm_probe(adiv5_access_port_s *ap)
 	}
 
 	t->priv = priv;
-	t->priv_free = cortexm_priv_free;
-	priv->ap = ap;
+	t->priv_free = cortex_priv_free;
+	priv->base.ap = ap;
+	priv->base.base_addr = CORTEXM_SCS_BASE;
 
 	t->check_error = cortexm_check_error;
 	t->mem_read = cortexm_mem_read;
@@ -806,7 +797,7 @@ bool cortexm_probe(adiv5_access_port_s *ap)
 
 bool cortexm_attach(target_s *t)
 {
-	adiv5_access_port_s *ap = cortexm_ap(t);
+	adiv5_access_port_s *ap = cortex_ap(t);
 	ap->dp->fault = 1; /* Force switch to this multi-drop device*/
 	cortexm_priv_s *priv = t->priv;
 
@@ -879,7 +870,7 @@ void cortexm_detach(target_s *t)
 		target_mem_write32(t, CORTEXM_DWT_FUNC(i), 0);
 
 	/* Restore DEMCR */
-	adiv5_access_port_s *ap = cortexm_ap(t);
+	adiv5_access_port_s *ap = cortex_ap(t);
 	target_mem_write32(t, CORTEXM_DEMCR, ap->ap_cortexm_demcr);
 	/* Resume target and disable debug, re-enabling interrupts in the process */
 	target_mem_write32(t, CORTEXM_DHCSR, CORTEXM_DHCSR_DBGKEY | CORTEXM_DHCSR_C_DEBUGEN | CORTEXM_DHCSR_C_HALT);
@@ -897,7 +888,7 @@ enum {
 static void cortexm_regs_read(target_s *const target, void *const data)
 {
 	uint32_t *const regs = data;
-	adiv5_access_port_s *const ap = cortexm_ap(target);
+	adiv5_access_port_s *const ap = cortex_ap(target);
 #if PC_HOSTED == 1
 	if (ap->dp->ap_regs_read && ap->dp->ap_reg_read) {
 		uint32_t core_regs[21U];
@@ -943,7 +934,7 @@ static void cortexm_regs_read(target_s *const target, void *const data)
 static void cortexm_regs_write(target_s *const target, const void *const data)
 {
 	const uint32_t *const regs = data;
-	adiv5_access_port_s *const ap = cortexm_ap(target);
+	adiv5_access_port_s *const ap = cortex_ap(target);
 #if PC_HOSTED == 1
 	if (ap->dp->ap_reg_write) {
 		for (size_t i = 0; i < ARRAY_LENGTH(regnum_cortex_m); ++i)
@@ -986,7 +977,7 @@ static void cortexm_regs_write(target_s *const target, const void *const data)
 int cortexm_mem_write_sized(target_s *t, target_addr_t dest, const void *src, size_t len, align_e align)
 {
 	cortexm_cache_clean(t, dest, len, true);
-	adiv5_mem_write_sized(cortexm_ap(t), dest, src, len, align);
+	adiv5_mem_write_sized(cortex_ap(t), dest, src, len, align);
 	return target_check_error(t);
 }
 
