@@ -51,3 +51,21 @@ void cortex_priv_free(void *priv)
 	adiv5_ap_unref(((cortex_priv_s *)priv)->ap);
 	free(priv);
 }
+
+uint32_t cortex_dbg_read32(target_s *const target, const uint16_t src)
+{
+	/* Translate the offset given in the src parameter into an address in the debug address space and read */
+	const cortex_priv_s *const priv = (cortex_priv_s *)target->priv;
+	adiv5_access_port_s *const ap = cortex_ap(target);
+	uint32_t result = 0;
+	adiv5_mem_read(ap, &result, priv->base_addr + src, sizeof(result));
+	return result;
+}
+
+void cortex_dbg_write32(target_s *const target, const uint16_t dest, const uint32_t value)
+{
+	/* Translate the offset given int he dest parameter into an address int he debug address space and write */
+	const cortex_priv_s *const priv = (cortex_priv_s *)target->priv;
+	adiv5_access_port_s *const ap = cortex_ap(target);
+	adiv5_mem_write(ap, priv->base_addr + dest, &value, sizeof(value));
+}
