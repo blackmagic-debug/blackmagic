@@ -54,8 +54,13 @@
 typedef struct cortexr_priv {
 	/* Base core information */
 	cortex_priv_s base;
+	/* Watchpoint unit information */
+	uint8_t hw_watchpoint_max;
+	/* Breakpoint unit information */
+	uint8_t hw_breakpoint_max;
 } cortexr_priv_s;
 
+#define CORTEXR_DBG_IDR   0x000U
 #define CORTEXR_DBG_WFAR  0x018U
 #define CORTEXR_DBG_VCR   0x01cU
 #define CORTEXR_DBG_DSCCR 0x028U
@@ -71,6 +76,11 @@ typedef struct cortexr_priv {
 
 #define CORTEXR_CPUID 0xd00U
 #define CORTEXR_CTR   0xd04U
+
+#define CORTEXR_DBG_IDR_BREAKPOINT_MASK  0xfU
+#define CORTEXR_DBG_IDR_BREAKPOINT_SHIFT 24U
+#define CORTEXR_DBG_IDR_WATCHPOINT_MASK  0xfU
+#define CORTEXR_DBG_IDR_WATCHPOINT_SHIFT 28U
 
 #define CORTEXR_DBG_DSCR_INSN_COMPLETE  (1U << 24U)
 #define CORTEXR_DBG_DSCR_DTR_READ_READY (1U << 29U)
@@ -231,6 +241,12 @@ bool cortexr_probe(adiv5_access_port_s *const ap, const target_addr_t base_addre
 	target->driver = "ARM Cortex-R";
 
 	cortex_read_cpuid(target);
+	/* The format of the debug identification register is described in DDI0406C §C11.11.15 pg2217 */
+	const uint32_t debug_id = cortex_dbg_read32(target, CORTEXR_DBG_IDR);
+	priv->hw_breakpoint_max = ((debug_id >> CORTEXR_DBG_IDR_BREAKPOINT_SHIFT) & CORTEXR_DBG_IDR_BREAKPOINT_MASK) + 1U;
+	priv->hw_watchpoint_max = ((debug_id >> CORTEXR_DBG_IDR_WATCHPOINT_SHIFT) & CORTEXR_DBG_IDR_WATCHPOINT_MASK) + 1U;
+	DEBUG_TARGET("%s %s core has %u breakpoint and %u watchpoint units available\n", target->driver, target->core,
+		priv->hw_breakpoint_max, priv->hw_watchpoint_max);
 
 	/* Grab r0 as the next steps clobber it */
 	const uint32_t r0 = cortexr_core_reg_read(target, 0U);
