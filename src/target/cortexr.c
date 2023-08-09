@@ -39,6 +39,7 @@
 #include "jep106.h"
 #include "cortex.h"
 #include "cortex_internal.h"
+#include "gdb_packet.h"
 
 typedef struct cortexr_priv {
 	/* Base core information */
@@ -231,5 +232,11 @@ bool cortexr_probe(adiv5_access_port_s *const ap, const target_addr_t base_addre
 	/* Restore r0 after all these steps */
 	cortexr_core_reg_write(target, 0U, r0);
 
+#if PC_HOSTED == 0
+	gdb_outf("Please report unknown device with Designer 0x%x Part ID 0x%x\n", target->designer_code, target->part_id);
+#else
+	DEBUG_WARN(
+		"Please report unknown device with Designer 0x%x Part ID 0x%x\n", target->designer_code, target->part_id);
+#endif
 	return true;
 }
