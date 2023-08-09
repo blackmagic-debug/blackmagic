@@ -87,7 +87,7 @@ static void dap_jtag_reset(void)
 
 static void dap_jtag_tms_seq(const uint32_t tms_states, const size_t clock_cycles)
 {
-	uint8_t sequence[4] = {};
+	uint8_t sequence[4] = {0};
 	write_le4(sequence, 0, tms_states);
 	perform_dap_swj_sequence(clock_cycles, sequence);
 	DEBUG_PROBE("jtagtap_tms_seq data_in %08x %zu\n", tms_states, clock_cycles);

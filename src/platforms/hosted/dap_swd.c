@@ -204,7 +204,7 @@ static bool dap_write_reg_no_check(uint16_t addr, const uint32_t data)
 		/* Perform one turn-around cycle then read the 3 bit ACK */
 		{4U, DAP_SWD_IN_SEQUENCE},
 		/* Perform another turnaround cycle */
-		{1U, DAP_SWD_OUT_SEQUENCE, {}},
+		{1U, DAP_SWD_OUT_SEQUENCE, {0}},
 		/* Now write out the 32b of data to send and the 1b of parity */
 		{
 			33U,
