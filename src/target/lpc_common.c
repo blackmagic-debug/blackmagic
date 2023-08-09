@@ -156,7 +156,11 @@ iap_status_e lpc_iap_call(lpc_flash_s *const flash, iap_result_s *const result, 
 
 	/* Save IAP RAM and target regsiters to restore after IAP call */
 	iap_frame_s saved_frame;
-	uint32_t saved_regs[target->regs_size / sizeof(uint32_t)];
+	/*
+	 * Note, we allocate space for the float regs even if the CPU doesn't implement them.
+	 * The Cortex register IO routines will avoid touching the unused slots and this avoids a VLA.
+	 */
+	uint32_t saved_regs[CORTEXM_GENERAL_REG_COUNT + CORTEX_FLOAT_REG_COUNT];
 	lpc_save_state(target, flash->iap_ram, &saved_frame, saved_regs);
 
 	/* Set up our IAP frame with the break opcode and command to run */
@@ -186,7 +190,7 @@ iap_status_e lpc_iap_call(lpc_flash_s *const flash, iap_result_s *const result, 
 	const uint32_t iap_results_addr = flash->iap_ram + offsetof(iap_frame_s, result);
 
 	/* Set up for the call to the IAP ROM */
-	uint32_t regs[target->regs_size / sizeof(uint32_t)];
+	uint32_t regs[CORTEXM_GENERAL_REG_COUNT + CORTEX_FLOAT_REG_COUNT];
 	memset(regs, 0, target->regs_size);
 	/* Point r0 to the start of the config block */
 	regs[0] = flash->iap_ram + offsetof(iap_frame_s, config);

@@ -1,7 +1,9 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
- * Copyright (C) 2017  newbrain.
+ * Copyright (C) 2017 newbrain <federico.zuccardimerli@gmail.com>
+ * Copyright (C) 2022-2023 1BitSquared <info@1bitsquared.com>
+ * Modified by Rachel Mant <git@dragonmux.network>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,7 +25,7 @@
  *
  * References:
  * TI doc - SLAU356G
- *   MSP423P4xx Technical Reference Manual
+ *   MSP432P4xx Technical Reference Manual
  * TI doc - SLAS826G
  *   MSP432P401R, MSP432P401M SimpleLink Mixed-Signal Microcontrollers
  * TI doc - SLAA704
@@ -233,7 +235,7 @@ static bool msp432_sector_erase(target_flash_s *f, target_addr_t addr)
 	DEBUG_WARN("Flash protect: 0x%08" PRIX32 "\n", target_mem_read32(t, mf->flash_protect_register));
 
 	/* Prepare input data */
-	uint32_t regs[t->regs_size / sizeof(uint32_t)]; // Use of VLA
+	uint32_t regs[CORTEXM_GENERAL_REG_COUNT + CORTEX_FLOAT_REG_COUNT];
 	target_regs_read(t, regs);
 	regs[0] = addr; // Address of sector to erase in R0
 
