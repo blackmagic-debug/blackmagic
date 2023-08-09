@@ -1185,16 +1185,16 @@ static int cortexm_fault_unwind(target_s *t)
 		/* Read registers for post-exception stack pointer */
 		target_regs_read(t, regs);
 		/* save retcode currently in lr */
-		const uint32_t retcode = regs[REG_LR];
+		const uint32_t retcode = regs[CORTEX_REG_LR];
 		bool spsel = retcode & (1U << 2U);
 		bool fpca = !(retcode & (1U << 4U));
 		/* Read stack for pre-exception registers */
-		uint32_t sp = spsel ? regs[REG_PSP] : regs[REG_MSP];
+		uint32_t sp = spsel ? regs[CORTEX_REG_PSP] : regs[CORTEX_REG_MSP];
 		target_mem_read(t, stack, sp, sizeof(stack));
 		if (target_check_error(t))
 			return 0;
-		regs[REG_LR] = stack[5]; /* restore LR to pre-exception state */
-		regs[REG_PC] = stack[6]; /* restore PC to pre-exception state */
+		regs[CORTEX_REG_LR] = stack[5]; /* restore LR to pre-exception state */
+		regs[CORTEX_REG_PC] = stack[6]; /* restore PC to pre-exception state */
 
 		/* adjust stack to pop exception state */
 		uint32_t framesize = fpca ? 0x68U : 0x20U; /* check for basic vs. extended frame */
@@ -1202,13 +1202,13 @@ static int cortexm_fault_unwind(target_s *t)
 			framesize += 4U;
 
 		if (spsel) {
-			regs[REG_SPECIAL] |= 0x4000000U;
-			regs[REG_SP] = regs[REG_PSP] += framesize;
+			regs[CORTEX_REG_SPECIAL] |= 0x4000000U;
+			regs[CORTEX_REG_SP] = regs[CORTEX_REG_PSP] += framesize;
 		} else
-			regs[REG_SP] = regs[REG_MSP] += framesize;
+			regs[CORTEX_REG_SP] = regs[CORTEX_REG_MSP] += framesize;
 
 		if (fpca)
-			regs[REG_SPECIAL] |= 0x2000000U;
+			regs[CORTEX_REG_SPECIAL] |= 0x2000000U;
 
 		/* FIXME: stack[7] contains xPSR when this is supported */
 		/* although, if we caught the exception it will be unchanged */
@@ -1236,7 +1236,7 @@ bool cortexm_run_stub(target_s *t, uint32_t loadaddr, uint32_t r0, uint32_t r1, 
 	regs[2] = r2;
 	regs[3] = r3;
 	regs[15] = loadaddr;
-	regs[REG_XPSR] = CORTEXM_XPSR_THUMB;
+	regs[CORTEX_REG_XPSR] = CORTEXM_XPSR_THUMB;
 	regs[19] = 0;
 
 	cortexm_regs_write(t, regs);

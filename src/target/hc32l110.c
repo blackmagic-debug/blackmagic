@@ -43,7 +43,7 @@
 #include "general.h"
 #include "target.h"
 #include "target_internal.h"
-#include "cortexm.h"
+#include "cortex.h"
 
 #define HC32L110_FLASH_BASE 0x00000000U
 /*
@@ -167,7 +167,7 @@ static bool hc32l110_enter_flash_mode(target_s *const target)
 	 * (Whatever sector it is left in becomes stuck in a locked state)
 	 */
 	const uint32_t pc = 0xfffffffeU;
-	return target_reg_write(target, REG_PC, &pc, sizeof(pc)) == sizeof(pc);
+	return target_reg_write(target, CORTEX_REG_PC, &pc, sizeof(pc)) == sizeof(pc);
 }
 
 static bool hc32l110_flash_prepare(target_flash_s *const flash)

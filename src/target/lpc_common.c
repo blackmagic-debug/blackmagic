@@ -2,6 +2,8 @@
  * This file is part of the Black Magic Debug project.
  *
  * Copyright (C) 2015 Gareth McMullin <gareth@blacksphere.co.nz>
+ * Copyright (C) 2022-2023 1BitSquared <info@1bitsquared.com>
+ * Modified by Rachel Mant <git@dragonmux.network>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -159,7 +161,7 @@ iap_status_e lpc_iap_call(lpc_flash_s *const flash, iap_result_s *const result, 
 
 	/* Set up our IAP frame with the break opcode and command to run */
 	iap_frame_s frame = {
-		.opcode = ARM_THUMB_BREAKPOINT,
+		.opcode = CORTEX_THUMB_BREAKPOINT,
 		.config = {.command = cmd},
 	};
 
@@ -191,13 +193,13 @@ iap_status_e lpc_iap_call(lpc_flash_s *const flash, iap_result_s *const result, 
 	/* And r1 to the next block memory after for the results */
 	regs[1] = iap_results_addr;
 	/* Set the top of stack to the location of the RAM block the target uses */
-	regs[REG_MSP] = flash->iap_msp;
+	regs[CORTEX_REG_MSP] = flash->iap_msp;
 	/* Point the return address to our breakpoint opcode (thumb mode) */
-	regs[REG_LR] = flash->iap_ram | 1U;
+	regs[CORTEX_REG_LR] = flash->iap_ram | 1U;
 	/* And set the program counter to the IAP ROM entrypoint */
-	regs[REG_PC] = flash->iap_entry;
+	regs[CORTEX_REG_PC] = flash->iap_entry;
 	/* Finally set up xPSR to indicate a suitable instruction mode, no fault */
-	regs[REG_XPSR] = (flash->iap_entry & 1U) ? CORTEXM_XPSR_THUMB : 0U;
+	regs[CORTEX_REG_XPSR] = (flash->iap_entry & 1U) ? CORTEXM_XPSR_THUMB : 0U;
 	target_regs_write(target, regs);
 
 	/* Figure out if we're about to execute a mass erase or not */
@@ -222,14 +224,14 @@ iap_status_e lpc_iap_call(lpc_flash_s *const flash, iap_result_s *const result, 
 
 	/* Check if a fault occured while executing the call */
 	uint32_t status = 0;
-	target_reg_read(target, REG_XPSR, &status, sizeof(status));
+	target_reg_read(target, CORTEX_REG_XPSR, &status, sizeof(status));
 	if (status & CORTEXM_XPSR_EXCEPTION_MASK) {
 		/*
 		 * Read back the program counter to determine the fault address
 		 * (cortexm_fault_unwind puts the frame back in registers for us)
 		 */
 		uint32_t fault_address = 0;
-		target_reg_read(target, REG_PC, &fault_address, sizeof(fault_address));
+		target_reg_read(target, CORTEX_REG_PC, &fault_address, sizeof(fault_address));
 		/* Set the thumb bit in the address appropriately */
 		if (status & CORTEXM_XPSR_THUMB)
 			fault_address |= 1U;

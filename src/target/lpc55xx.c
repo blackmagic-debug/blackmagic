@@ -252,7 +252,7 @@ static lpc55xx_iap_status_e iap_call_raw(target_s *target, lpc55xx_iap_cmd_e cmd
 	uint32_t regs[target->regs_size / sizeof(uint32_t)];
 	target_regs_read(target, regs);
 
-	regs[REG_MSP] = LPC55xx_IAP_MSP_ADDRESS;
+	regs[CORTEX_REG_MSP] = LPC55xx_IAP_MSP_ADDRESS;
 	regs[0] = LPC55xx_FLASH_CONFIG_ADDRESS;
 	regs[1] = r1;
 	regs[2] = r2;
@@ -261,19 +261,19 @@ static lpc55xx_iap_status_e iap_call_raw(target_s *target, lpc55xx_iap_cmd_e cmd
 	/* Locate the correct IAP function address based on silicon revision */
 	switch (cmd) {
 	case IAP_CMD_FLASH_INIT:
-		regs[REG_PC] = lpc55xx_get_flash_init_address(target);
+		regs[CORTEX_REG_PC] = lpc55xx_get_flash_init_address(target);
 		break;
 	case IAP_CMD_FLASH_ERASE:
-		regs[REG_PC] = lpc55xx_get_flash_erase_address(target);
+		regs[CORTEX_REG_PC] = lpc55xx_get_flash_erase_address(target);
 		break;
 	case IAP_CMD_FLASH_PROGRAM:
-		regs[REG_PC] = lpc55xx_get_flash_program_address(target);
+		regs[CORTEX_REG_PC] = lpc55xx_get_flash_program_address(target);
 		break;
 	case IAP_CMD_FFR_INIT:
-		regs[REG_PC] = lpc55xx_get_ffr_init_address(target);
+		regs[CORTEX_REG_PC] = lpc55xx_get_ffr_init_address(target);
 		break;
 	case IAP_CMD_FFR_GET_UUID:
-		regs[REG_PC] = lpc55xx_get_ffr_get_uuid_address(target);
+		regs[CORTEX_REG_PC] = lpc55xx_get_ffr_get_uuid_address(target);
 		break;
 	default:
 		DEBUG_ERROR("LPC55xx: bad IAP command\n");
@@ -285,8 +285,8 @@ static lpc55xx_iap_status_e iap_call_raw(target_s *target, lpc55xx_iap_cmd_e cmd
 	 * hard-fault. Instead, set LR to a word known to contain the BKPT
 	 * instruction, so that we can safely halt on IAP function return.
 	 */
-	target_mem_write16(target, LPC55xx_CODE_PATCH_ADDRESS, ARM_THUMB_BREAKPOINT);
-	regs[REG_LR] = LPC55xx_CODE_PATCH_ADDRESS | 1; // set the ARM thumb call bit
+	target_mem_write16(target, LPC55xx_CODE_PATCH_ADDRESS, CORTEX_THUMB_BREAKPOINT);
+	regs[CORTEX_REG_LR] = LPC55xx_CODE_PATCH_ADDRESS | 1; // set the ARM thumb call bit
 
 	/* Write the registers to the target and perform the IAP call */
 	target_regs_write(target, regs);
@@ -409,7 +409,7 @@ static bool lpc55xx_enter_flash_mode(target_s *target)
 	const uint32_t CODE_PATCH = 0xbe00b672U;
 
 	target_mem_write32(target, LPC55xx_CODE_PATCH_ADDRESS, CODE_PATCH);
-	target_reg_write(target, REG_PC, &reg_pc_value, sizeof(uint32_t));
+	target_reg_write(target, CORTEX_REG_PC, &reg_pc_value, sizeof(uint32_t));
 
 	target_halt_resume(target, false);
 	// Wait for the target to halt on the BKPT instruction

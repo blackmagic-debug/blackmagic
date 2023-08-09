@@ -21,7 +21,7 @@
 #include "general.h"
 #include "target.h"
 #include "target_internal.h"
-#include "cortexm.h"
+#include "cortex.h"
 #include "lpc_common.h"
 #include "adiv5.h"
 
@@ -219,7 +219,7 @@ iap_status_e lpc40xx_iap_call(target_s *target, iap_result_s *result, iap_cmd_e 
 {
 	/* Set up our IAP frame with the break opcode and command to run */
 	iap_frame_s frame = {
-		.opcode = ARM_THUMB_BREAKPOINT,
+		.opcode = CORTEX_THUMB_BREAKPOINT,
 		{.command = cmd},
 	};
 
@@ -245,11 +245,11 @@ iap_status_e lpc40xx_iap_call(target_s *target, iap_result_s *result, iap_cmd_e 
 	/* And r1 to the same so we re-use the same memory for the results */
 	regs[1] = iap_params_addr;
 	/* Set the top of stack to the top of the RAM block we're using */
-	regs[REG_MSP] = IAP_RAM_BASE + MIN_RAM_SIZE;
+	regs[CORTEX_REG_MSP] = IAP_RAM_BASE + MIN_RAM_SIZE;
 	/* Point the return address to our breakpoint opcode (thumb mode) */
-	regs[REG_LR] = IAP_RAM_BASE | 1;
+	regs[CORTEX_REG_LR] = IAP_RAM_BASE | 1;
 	/* And set the program counter to the IAP ROM entrypoint */
-	regs[REG_PC] = IAP_ENTRYPOINT;
+	regs[CORTEX_REG_PC] = IAP_ENTRYPOINT;
 	target_regs_write(target, regs);
 
 	platform_timeout_s timeout;
