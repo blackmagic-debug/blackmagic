@@ -103,6 +103,8 @@ typedef struct cortexr_priv {
 #define CORTEXR_CPACR_CP10_FULL_ACCESS 0x00300000U
 #define CORTEXR_CPACR_CP11_FULL_ACCESS 0x00c00000U
 
+#define TOPT_FLAVOUR_FLOAT (1U << 1U) /* If set, core has a hardware FPU */
+
 static void cortexr_mem_read(target_s *const target, void *const dest, const target_addr_t src, const size_t len)
 {
 	adiv5_mem_read(cortex_ap(target), dest, src, len);
@@ -238,6 +240,11 @@ bool cortexr_probe(adiv5_access_port_s *const ap, const target_addr_t base_addre
 	cortexr_coproc_write(target, CORTEXR_CPACR, cpacr);
 	const bool core_has_fpu = cortexr_coproc_read(target, CORTEXR_CPACR) == cpacr;
 	DEBUG_TARGET("%s: FPU present? %s\n", __func__, core_has_fpu ? "yes" : "no");
+
+	if (core_has_fpu) {
+		target->target_options |= TOPT_FLAVOUR_FLOAT;
+		target->regs_size += sizeof(uint32_t) * CORTEX_FLOAT_REG_COUNT;
+	}
 
 	/* Restore r0 after all these steps */
 	cortexr_core_reg_write(target, 0U, r0);
