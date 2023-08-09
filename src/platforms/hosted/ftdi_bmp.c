@@ -376,7 +376,7 @@ const cable_desc_s cable_desc[] = {
 		.name = "arm-usb-tiny-h",
 		.description = "Olimex OpenOCD JTAG ARM-USB-TINY-H",
 	},
-	{},
+	{0},
 };
 
 /*
