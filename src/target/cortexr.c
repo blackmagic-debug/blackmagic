@@ -82,6 +82,15 @@ typedef struct cortexr_priv {
  */
 #define ENCODE_CP_ACCESS(coproc, opc1, rt, crn, crm, opc2) \
 	(((opc1) << 21U) | ((crn) << 16U) | ((rt) << 12U) | ((coproc) << 8U) | ((opc2) << 5U) | (crm))
+/* Packs a CRn and CRm value for the coprocessor IO rouines below to unpack */
+#define ENCODE_CP_REG(n, m, opc1, opc2) \
+	((((n)&0xfU) << 4U) | ((m)&0xfU) | (((opc1)&0x7U) << 8U) | (((opc2)&0x7U) << 12U))
+
+/* Coprocessor register definitions */
+#define CORTEXR_CPACR 15U, ENCODE_CP_REG(1U, 0U, 0U, 2U)
+
+#define CORTEXR_CPACR_CP10_FULL_ACCESS 0x00300000U
+#define CORTEXR_CPACR_CP11_FULL_ACCESS 0x00c00000U
 
 static void cortexr_mem_read(target_s *const target, void *const dest, const target_addr_t src, const size_t len)
 {
@@ -142,7 +151,7 @@ static inline void cortexr_core_reg_write(target_s *const target, const uint8_t 
 	cortexr_run_write_insn(target, ARM_MRC_INSN | ENCODE_CP_ACCESS(14, 0, reg, 0, 5, 0), value);
 }
 
-uint32_t cortexr_coproc_read(target_s *const target, const uint8_t coproc, const uint16_t op)
+static uint32_t cortexr_coproc_read(target_s *const target, const uint8_t coproc, const uint16_t op)
 {
 	/*
 	 * Perform a read of a coprocessor - which one (between 0 and 15) is given by the coproc parameter
@@ -158,7 +167,7 @@ uint32_t cortexr_coproc_read(target_s *const target, const uint8_t coproc, const
 	return cortexr_core_reg_read(target, 0U);
 }
 
-void cortexr_coproc_write(target_s *const target, const uint8_t coproc, const uint16_t op, const uint32_t value)
+static void cortexr_coproc_write(target_s *const target, const uint8_t coproc, const uint16_t op, const uint32_t value)
 {
 	/*
 	 * Perform a write of a coprocessor - which one (between 0 and 15) is given by the coproc parameter
@@ -209,6 +218,18 @@ bool cortexr_probe(adiv5_access_port_s *const ap, const target_addr_t base_addre
 	target->driver = "ARM Cortex-R";
 
 	cortex_read_cpuid(target);
+
+	/* Grab r0 as the next steps clobber it */
+	const uint32_t r0 = cortexr_core_reg_read(target, 0U);
+	/* Probe for FP extension. */
+	uint32_t cpacr = cortexr_coproc_read(target, CORTEXR_CPACR);
+	cpacr |= CORTEXR_CPACR_CP10_FULL_ACCESS | CORTEXR_CPACR_CP11_FULL_ACCESS;
+	cortexr_coproc_write(target, CORTEXR_CPACR, cpacr);
+	const bool core_has_fpu = cortexr_coproc_read(target, CORTEXR_CPACR) == cpacr;
+	DEBUG_TARGET("%s: FPU present? %s\n", __func__, core_has_fpu ? "yes" : "no");
+
+	/* Restore r0 after all these steps */
+	cortexr_core_reg_write(target, 0U, r0);
 
 	return true;
 }
