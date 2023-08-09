@@ -31,34 +31,20 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef TARGET_CORTEX_H
-#define TARGET_CORTEX_H
+#ifndef TARGET_CORTEX_INTERNAL_H
+#define TARGET_CORTEX_INTERNAL_H
 
 #include "general.h"
 #include "adiv5.h"
 #include "target.h"
 
-#define ARM_THUMB_BREAKPOINT 0xbe00U
+typedef struct cortex_priv {
+	/* AP from which this CPU hangs */
+	adiv5_access_port_s *ap;
+	/* Base address for the debug interface block */
+	uint32_t base_addr;
+} cortex_priv_s;
 
-/* Cortex-M CPU IDs */
-#define CORTEX_M0  0xc200U
-#define CORTEX_M0P 0xc600U
-#define CORTEX_M3  0xc230U
-#define CORTEX_M4  0xc240U
-#define CORTEX_M7  0xc270U
-#define CORTEX_M23 0xd200U
-#define CORTEX_M33 0xd210U
-#define STAR_MC1   0x1320U
+void cortex_priv_free(void *priv);
 
-#define CORTEX_CPUID_PARTNO_MASK   0xfff0U
-#define CORTEX_CPUID_REVISION_MASK 0x00f00000U
-#define CORTEX_CPUID_PATCH_MASK    0xfU
-
-#define CORTEX_FLOAT_REG_COUNT     33U
-#define CORTEX_DOUBLE_REG_COUNT    17U
-#define CORTEXM_GENERAL_REG_COUNT  20U
-#define CORTEXAR_GENERAL_REG_COUNT 17U
-
-adiv5_access_port_s *cortex_ap(target_s *target);
-
-#endif /* TARGET_CORTEX_H */
+#endif /*TARGET_CORTEX_INTERNAL_H*/

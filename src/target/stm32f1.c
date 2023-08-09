@@ -4,6 +4,7 @@
  * Copyright (C) 2011  Black Sphere Technologies Ltd.
  * Written by Gareth McMullin <gareth@blacksphere.co.nz>
  * Copyright (C) 2022-2023 1BitSquared <info@1bitsquared.com>
+ * Modified by Rachel Mant <git@dragonmux.network>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -129,7 +130,8 @@ static void stm32f1_add_flash(target_s *target, uint32_t addr, size_t length, si
 
 static uint16_t stm32f1_read_idcode(target_s *const target)
 {
-	if ((target->cpuid & CORTEX_CPUID_PARTNO_MASK) == CORTEX_M0 || (target->cpuid & CORTEX_CPUID_PARTNO_MASK) == CORTEX_M23)
+	if ((target->cpuid & CORTEX_CPUID_PARTNO_MASK) == CORTEX_M0 ||
+		(target->cpuid & CORTEX_CPUID_PARTNO_MASK) == CORTEX_M23)
 		return target_mem_read32(target, DBGMCU_IDCODE_F0) & 0xfffU;
 	/* Is this a Cortex-M33 core with STM32F1-style peripherals? (GD32E50x) */
 	if ((target->cpuid & CORTEX_CPUID_PARTNO_MASK) == CORTEX_M33)
@@ -451,7 +453,7 @@ bool mm32l0xx_probe(target_s *target)
 	target_add_ram(target, 0x20000000U, ram_kbyte * 1024U);
 	stm32f1_add_flash(target, 0x08000000U, flash_kbyte * 1024U, block_size);
 	target_add_commands(target, stm32f1_cmd_list, name);
-	cortexm_ap(target)->dp->mem_write = mm32l0_mem_write_sized;
+	cortex_ap(target)->dp->mem_write = mm32l0_mem_write_sized;
 	return true;
 }
 
@@ -518,7 +520,7 @@ bool stm32f1_probe(target_s *target)
 		stm32f1_add_flash(target, 0x8000000, 0x20000, 0x400);
 		target_add_commands(target, stm32f1_cmd_list, "STM32 LD/MD/VL-LD/VL-MD");
 		/* Test for clone parts with Core rev 2*/
-		adiv5_access_port_s *ap = cortexm_ap(target);
+		adiv5_access_port_s *ap = cortex_ap(target);
 		if ((ap->idr >> 28U) > 1U) {
 			target->driver = "STM32F1 (clone) medium density";
 			DEBUG_WARN("Detected clone STM32F1\n");
@@ -869,7 +871,8 @@ static bool stm32f1_cmd_option(target_s *target, int argc, const char **argv)
 		 * use 32- or have to use 16-bit writes.
 		 * GD32E230 is a special case as target_mem_write16 does not work
 		 */
-		const bool write16_broken = target->part_id == 0x410U && (target->cpuid & CORTEX_CPUID_PARTNO_MASK) == CORTEX_M23;
+		const bool write16_broken =
+			target->part_id == 0x410U && (target->cpuid & CORTEX_CPUID_PARTNO_MASK) == CORTEX_M23;
 		if (!stm32f1_option_write_erased(target, 0U, stm32f1_flash_readable_key(target), write16_broken))
 			return false;
 	} else if (argc == 3) {

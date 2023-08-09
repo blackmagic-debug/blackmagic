@@ -31,34 +31,23 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef TARGET_CORTEX_H
-#define TARGET_CORTEX_H
+/*
+ * This file implements generic support for ARM Cortex family of processors.
+ */
 
 #include "general.h"
-#include "adiv5.h"
 #include "target.h"
+#include "target_internal.h"
+#include "cortex.h"
+#include "cortex_internal.h"
 
-#define ARM_THUMB_BREAKPOINT 0xbe00U
+adiv5_access_port_s *cortex_ap(target_s *t)
+{
+	return ((cortex_priv_s *)t->priv)->ap;
+}
 
-/* Cortex-M CPU IDs */
-#define CORTEX_M0  0xc200U
-#define CORTEX_M0P 0xc600U
-#define CORTEX_M3  0xc230U
-#define CORTEX_M4  0xc240U
-#define CORTEX_M7  0xc270U
-#define CORTEX_M23 0xd200U
-#define CORTEX_M33 0xd210U
-#define STAR_MC1   0x1320U
-
-#define CORTEX_CPUID_PARTNO_MASK   0xfff0U
-#define CORTEX_CPUID_REVISION_MASK 0x00f00000U
-#define CORTEX_CPUID_PATCH_MASK    0xfU
-
-#define CORTEX_FLOAT_REG_COUNT     33U
-#define CORTEX_DOUBLE_REG_COUNT    17U
-#define CORTEXM_GENERAL_REG_COUNT  20U
-#define CORTEXAR_GENERAL_REG_COUNT 17U
-
-adiv5_access_port_s *cortex_ap(target_s *target);
-
-#endif /* TARGET_CORTEX_H */
+void cortex_priv_free(void *priv)
+{
+	adiv5_ap_unref(((cortex_priv_s *)priv)->ap);
+	free(priv);
+}

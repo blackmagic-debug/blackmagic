@@ -38,7 +38,7 @@
 
 #include "target.h"
 #include "target_internal.h"
-#include "cortexm.h"
+#include "cortex.h"
 
 static bool samx5x_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
 static bool samx5x_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
@@ -318,7 +318,7 @@ typedef struct samx5x_priv {
 
 bool samx5x_probe(target_s *t)
 {
-	adiv5_access_port_s *ap = cortexm_ap(t);
+	adiv5_access_port_s *ap = cortex_ap(t);
 	const uint32_t cid = adiv5_ap_read_pidr(ap, SAMX5X_DSU_CID);
 	const uint32_t pid = adiv5_ap_read_pidr(ap, SAMX5X_DSU_PID);
 
