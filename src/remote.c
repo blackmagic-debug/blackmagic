@@ -59,7 +59,7 @@ uint64_t remote_hex_string_to_num(const uint32_t max, const char *const str)
 /* hex-ify and send a buffer of data */
 static void remote_send_buf(const void *const buffer, const size_t len)
 {
-	char hex[2] = {};
+	char hex[2] = {0};
 	const uint8_t *const data = (const uint8_t *)buffer;
 	for (size_t offset = 0; offset < len; ++offset) {
 		hexify(hex, data + offset, 1U);
@@ -332,7 +332,7 @@ static void remote_packet_process_high_level(const char *packet, const size_t pa
 			break;
 		}
 
-		jtag_dev_s jtag_dev = {};
+		jtag_dev_s jtag_dev = {0};
 		const uint8_t index = remote_hex_string_to_num(2, packet + 2);
 		jtag_dev.dr_prescan = remote_hex_string_to_num(2, packet + 4);
 		jtag_dev.dr_postscan = remote_hex_string_to_num(2, packet + 6);
@@ -605,7 +605,7 @@ void remote_packet_process(unsigned i, char *packet)
 
 	case REMOTE_ADIv5_PACKET: {
 		/* Setup an exception frame to try the ADIv5 operation in */
-		volatile exception_s error = {};
+		volatile exception_s error = {0};
 		TRY_CATCH (error, EXCEPTION_ALL) {
 			remote_packet_process_adiv5(packet, i);
 		}
