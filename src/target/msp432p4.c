@@ -35,7 +35,7 @@
 #include "general.h"
 #include "target.h"
 #include "target_internal.h"
-#include "cortexm.h"
+#include "cortex.h"
 
 /* TLV: Device info tag, address and expected value */
 #define DEVINFO_TAG_ADDR  0x00201004U
@@ -349,12 +349,12 @@ static void msp432_call_rom(target_s *t, uint32_t address, uint32_t *regs)
 	target_mem_write16(t, WDT_A_WTDCTL, WDT_A_HOLD);
 
 	/* Breakpoint at the beginning of CODE SRAM alias area */
-	target_mem_write16(t, SRAM_CODE_BASE, ARM_THUMB_BREAKPOINT);
+	target_mem_write16(t, SRAM_CODE_BASE, CORTEX_THUMB_BREAKPOINT);
 
 	/* Prepare registers */
-	regs[REG_MSP] = SRAM_STACK_PTR;     /* Stack space */
-	regs[REG_LR] = SRAM_CODE_BASE | 1U; /* Return to beginning of SRAM CODE alias */
-	regs[REG_PC] = address;             /* Start at given address */
+	regs[CORTEX_REG_MSP] = SRAM_STACK_PTR;     /* Stack space */
+	regs[CORTEX_REG_LR] = SRAM_CODE_BASE | 1U; /* Return to beginning of SRAM CODE alias */
+	regs[CORTEX_REG_PC] = address;             /* Start at given address */
 	target_regs_write(t, regs);
 
 	/* Start the target and wait for it to halt again, which calls the routine setup above */

@@ -2,11 +2,12 @@
  * This file is part of the Black Magic Debug project.
  *
  * Copyright (C) 2021 Uwe Bonnes (bon@elektron.ikp.physik.tu-darmstadt.de)
- * Copyright (C) 2022 1BitSquared <info@1bitsquared.com>
+ * Copyright (C) 2022-2023 1BitSquared <info@1bitsquared.com>
  * Significantly rewritten in 2022 by Rachel Mant <git@dragonmux.network>
  * Copyright (C) 2022 James Turton
  * Includes extracts from pico-bootrom
  * Copyright (C) 2020 Raspberry Pi (Trading) Ltd
+ * Modified by Rachel Mant <git@dragonmux.network>
  *
  * All rights reserved.
  *
@@ -662,12 +663,12 @@ static bool rp_cmd_reset_usb_boot(target_s *t, int argc, const char **argv)
 	if (argc > 2)
 		regs[1] = strtoul(argv[2], NULL, 0);
 	/* The USB boot function does not return and takes its arguments in r0 and r1 */
-	regs[REG_PC] = ps->rom_reset_usb_boot;
+	regs[CORTEX_REG_PC] = ps->rom_reset_usb_boot;
 	/* So load the link register with a dummy return address like we just booted the chip */
-	regs[REG_LR] = UINT32_MAX;
+	regs[CORTEX_REG_LR] = UINT32_MAX;
 	/* Configure the stack to the end of SRAM and configure the status register for Thumb execution */
-	regs[REG_MSP] = RP_SRAM_BASE + RP_SRAM_SIZE;
-	regs[REG_XPSR] = CORTEXM_XPSR_THUMB;
+	regs[CORTEX_REG_MSP] = RP_SRAM_BASE + RP_SRAM_SIZE;
+	regs[CORTEX_REG_XPSR] = CORTEXM_XPSR_THUMB;
 	/* Now reconfigure the core with the new execution environment */
 	target_regs_write(t, regs);
 	/* And resume the core */

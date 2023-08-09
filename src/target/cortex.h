@@ -38,7 +38,7 @@
 #include "adiv5.h"
 #include "target.h"
 
-#define ARM_THUMB_BREAKPOINT 0xbe00U
+#define CORTEX_THUMB_BREAKPOINT 0xbe00U
 
 /* Cortex-M CPU IDs */
 #define CORTEX_M0  0xc200U
@@ -49,6 +49,16 @@
 #define CORTEX_M23 0xd200U
 #define CORTEX_M33 0xd210U
 #define STAR_MC1   0x1320U
+
+/* Cortex general purpose register offsets */
+#define CORTEX_REG_SP      13U
+#define CORTEX_REG_LR      14U
+#define CORTEX_REG_PC      15U
+#define CORTEX_REG_XPSR    16U
+#define CORTEX_REG_CPSR    16U
+#define CORTEX_REG_MSP     17U
+#define CORTEX_REG_PSP     18U
+#define CORTEX_REG_SPECIAL 19U
 
 #define CORTEX_CPUID_PARTNO_MASK   0xfff0U
 #define CORTEX_CPUID_REVISION_MASK 0x00f00000U

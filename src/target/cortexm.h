@@ -161,14 +161,6 @@ extern unsigned cortexm_wait_timeout;
 #define CORTEXM_DWT_FUNC_FUNC_WRITE     (6U << 0U)
 #define CORTEXM_DWT_FUNC_FUNC_ACCESS    (7U << 0U)
 
-#define REG_SP      13U
-#define REG_LR      14U
-#define REG_PC      15U
-#define REG_XPSR    16U
-#define REG_MSP     17U
-#define REG_PSP     18U
-#define REG_SPECIAL 19U
-
 #define CORTEXM_XPSR_THUMB          (1U << 24U)
 #define CORTEXM_XPSR_EXCEPTION_MASK 0x0000001fU
 
