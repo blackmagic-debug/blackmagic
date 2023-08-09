@@ -38,8 +38,11 @@
 #include "general.h"
 #include "target.h"
 #include "target_internal.h"
+#include "jep106.h"
 #include "cortex.h"
 #include "cortex_internal.h"
+
+#define CORTEX_CPUID 0xd00U
 
 adiv5_access_port_s *cortex_ap(target_s *t)
 {
@@ -68,4 +71,52 @@ void cortex_dbg_write32(target_s *const target, const uint16_t dest, const uint3
 	const cortex_priv_s *const priv = (cortex_priv_s *)target->priv;
 	adiv5_access_port_s *const ap = cortex_ap(target);
 	adiv5_mem_write(ap, priv->base_addr + dest, &value, sizeof(value));
+}
+
+void cortex_read_cpuid(target_s *target)
+{
+	/*
+	 * The CPUID register is defined in the ARMv6, ARMv7 and ARMv8 architectures
+	 * The PARTNO field is implementation defined, that is, the actual values are
+	 * found in the Technical Reference Manual for each Cortex core.
+	 */
+	target->cpuid = cortex_dbg_read32(target, CORTEX_CPUID);
+	const uint16_t cpuid_partno = target->cpuid & CORTEX_CPUID_PARTNO_MASK;
+	switch (cpuid_partno) {
+	case STAR_MC1:
+		target->core = "STAR-MC1";
+		break;
+	case CORTEX_M33:
+		target->core = "M33";
+		break;
+	case CORTEX_M23:
+		target->core = "M23";
+		break;
+	case CORTEX_M3:
+		target->core = "M3";
+		break;
+	case CORTEX_M4:
+		target->core = "M4";
+		break;
+	case CORTEX_M7:
+		target->core = "M7";
+		if ((target->cpuid & CORTEX_CPUID_REVISION_MASK) == 0 && (target->cpuid & CORTEX_CPUID_PATCH_MASK) < 2U)
+			DEBUG_WARN("Silicon bug: Single stepping will enter pending "
+					   "exception handler with this M7 core revision!\n");
+		break;
+	case CORTEX_M0P:
+		target->core = "M0+";
+		break;
+	case CORTEX_M0:
+		target->core = "M0";
+		break;
+	default: {
+		const adiv5_access_port_s *const ap = cortex_ap(target);
+		if (ap->designer_code == JEP106_MANUFACTURER_ATMEL) /* Protected Atmel device? */
+			break;
+		DEBUG_WARN("Unexpected Cortex CPU partno %04x\n", cpuid_partno);
+	}
+	}
+	DEBUG_INFO("CPUID 0x%08" PRIx32 " (%s var %" PRIx32 " rev %" PRIx32 ")\n", target->cpuid, target->core,
+		(target->cpuid & CORTEX_CPUID_REVISION_MASK) >> 20U, target->cpuid & CORTEX_CPUID_PATCH_MASK);
 }
