@@ -147,7 +147,7 @@ static void ftdi_swd_turnaround_mpsse(const swdio_status_e dir)
 		ftdi_buffer_write_arr(cmd_read);
 	}
 	/* Run one idle clock cycle */
-	const ftdi_mpsse_cmd_s cmd = {MPSSE_TDO_SHIFT, {}};
+	const ftdi_mpsse_cmd_s cmd = {MPSSE_TDO_SHIFT, {0}};
 	ftdi_buffer_write_val(cmd);
 	/* If the turnaround should set SWDIO to an output */
 	if (dir == SWDIO_STATUS_DRIVE) {
@@ -234,7 +234,7 @@ static void ftdi_swd_turnaround(const swdio_status_e dir)
 
 static bool ftdi_swd_seq_in_parity_mpsse(uint32_t *const result, const size_t clock_cycles)
 {
-	uint8_t data_out[5] = {};
+	uint8_t data_out[5U] = {0};
 	ftdi_jtag_tdi_tdo_seq(data_out, false, NULL, clock_cycles + 1U);
 	const uint32_t data = read_le4(data_out, 0);
 	uint8_t parity = __builtin_parity(data & ((UINT64_C(1) << clock_cycles) - 1U));
@@ -338,7 +338,7 @@ static void ftdi_swd_seq_out_mpsse(const uint32_t tms_states, const size_t clock
 static void ftdi_swd_seq_out_raw(uint32_t tms_states, const size_t clock_cycles)
 {
 	DEBUG_PROBE("%s %zu clock_cycles: %08" PRIx32 "\n", __func__, clock_cycles, tms_states);
-	uint8_t cmd[15] = {};
+	uint8_t cmd[15U] = {0};
 	size_t offset = 0U;
 	for (size_t cycle = 0U; cycle < clock_cycles; cycle += 7U, offset += 3U) {
 		const size_t cycles = MIN(7U, clock_cycles - cycle);
@@ -391,7 +391,7 @@ static void ftdi_swd_seq_out_parity_mpsse(const uint32_t tms_states, const uint8
 static void ftdi_swd_seq_out_parity_raw(const uint32_t tms_states, const uint8_t parity, const size_t clock_cycles)
 {
 	DEBUG_PROBE("%s %zu clock_cycles: %08" PRIx32 "\n", __func__, clock_cycles, tms_states);
-	uint8_t cmd[18] = {};
+	uint8_t cmd[18U] = {0};
 	size_t offset = 0;
 	for (size_t cycle = 0U; cycle < clock_cycles; cycle += 7U, offset += 3U) {
 		const size_t cycles = MIN(7U, clock_cycles - cycle);
