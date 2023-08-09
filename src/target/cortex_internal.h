@@ -49,5 +49,6 @@ void cortex_priv_free(void *priv);
 
 uint32_t cortex_dbg_read32(target_s *target, uint16_t src);
 void cortex_dbg_write32(target_s *target, uint16_t dest, uint32_t value);
+void cortex_read_cpuid(target_s *target);
 
 #endif /*TARGET_CORTEX_INTERNAL_H*/
