@@ -276,7 +276,7 @@ bool dap_init(void)
 
 dap_version_s dap_adaptor_version(const dap_info_e version_kind)
 {
-	char version_str[256U] = {};
+	char version_str[256U] = {0};
 	/* Try to retrieve the version string, and if we fail, report back an obvious bad one */
 	const size_t version_length = dap_info(version_kind, version_str, ARRAY_LENGTH(version_str));
 	if (!version_length)
@@ -289,7 +289,7 @@ dap_version_s dap_adaptor_version(const dap_info_e version_kind)
 		DEBUG_INFO("CMSIS-DAP v%s\n", version_str);
 	const char *begin = version_str;
 	char *end = NULL;
-	dap_version_s version = {};
+	dap_version_s version = {0};
 	/* If the string starts with a 'v' or 'V', skip over that */
 	if (begin[0] == 'v' || begin[0] == 'V')
 		++begin;
