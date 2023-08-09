@@ -148,7 +148,7 @@ bool perform_dap_transfer_block_read(
 	dap_transfer_block_request_read_s request = {
 		DAP_TRANSFER_BLOCK,
 		target_dp->dev_index,
-		{},
+		{0},
 		reg | DAP_TRANSFER_RnW,
 	};
 	write_le2(request.block_count, 0, block_count);
@@ -184,7 +184,7 @@ bool perform_dap_transfer_block_write(
 	dap_transfer_block_request_write_s request = {
 		DAP_TRANSFER_BLOCK,
 		target_dp->dev_index,
-		{},
+		{0},
 		reg & ~DAP_TRANSFER_RnW,
 	};
 	write_le2(request.block_count, 0, block_count);
