@@ -45,7 +45,21 @@ typedef struct cortexr_priv {
 	cortex_priv_s base;
 } cortexr_priv_s;
 
+#define CORTEXR_DBG_WFAR  0x018U
+#define CORTEXR_DBG_VCR   0x01cU
+#define CORTEXR_DBG_DSCCR 0x028U
+#define CORTEXR_DBG_DTRTX 0x080U
+#define CORTEXR_DBG_ITR   0x084U
+#define CORTEXR_DBG_DSCR  0x088U
+#define CORTEXR_DBG_DTRRX 0x08cU
+#define CORTEXR_DBG_DRCR  0x090U
+#define CORTEXR_DBG_BVR   0x100U
+#define CORTEXR_DBG_BCR   0x140U
+#define CORTEXR_DBG_WVR   0x180U
+#define CORTEXR_DBG_WCR   0x1c0U
+
 #define CORTEXR_CPUID 0xd00U
+#define CORTEXR_CTR   0xd04U
 
 static void cortexr_mem_read(target_s *const target, void *const dest, const target_addr_t src, const size_t len)
 {
