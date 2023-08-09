@@ -120,7 +120,7 @@ static inline uint16_t u16_to_be(const uint16_t value)
 
 static sockaddr_storage_s sockaddr_prepare(const uint16_t port)
 {
-	addrinfo_s hints = {};
+	addrinfo_s hints = {0};
 	/* Use AF_UNSPEC here to support either IPv4 or v6 */
 	hints.ai_family = AF_UNSPEC;
 	/* Ask for a normal TCP socket */
@@ -218,7 +218,7 @@ static void socket_set_flags(const socket_t socket, const int flags)
 int gdb_if_init(void)
 {
 #if defined(_WIN32) || defined(__CYGWIN__)
-	WSADATA wsa_data = {};
+	WSADATA wsa_data = {0};
 	const int result = WSAStartup(MAKEWORD(2, 2), &wsa_data);
 	if (result != NO_ERROR) {
 		DEBUG_ERROR("WSAStartup failed with error: %d\n", result);
