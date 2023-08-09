@@ -118,10 +118,10 @@ typedef struct cortexm_priv {
 	/* Watchpoint unit status */
 	bool hw_watchpoint[CORTEXM_MAX_WATCHPOINTS];
 	unsigned flash_patch_revision;
-	unsigned hw_watchpoint_max;
+	uint8_t hw_watchpoint_max;
 	/* Breakpoint unit status */
 	bool hw_breakpoint[CORTEXM_MAX_BREAKPOINTS];
-	unsigned hw_breakpoint_max;
+	uint8_t hw_breakpoint_max;
 	/* Copy of DEMCR for vector-catch */
 	uint32_t demcr;
 	/* Cache parameters */
