@@ -77,13 +77,19 @@ void platform_buffer_flush(void);
 #define VENDOR_ID_ORBCODE   0x1209U
 #define PRODUCT_ID_ORBTRACE 0x3443U
 
+#define VENDOR_ID_WCH           0x1a86U
+#define PRODUCT_ID_WCHLINK_RV   0x8010U /* WCH-Link and WCH-LinkE in mode RV */
+#define PRODUCT_ID_WCHLINK_DAP  0x8011U /* WCH-Link in mode DAP */
+#define PRODUCT_ID_WCHLINKE_DAP 0x8012U /* WCH-LinkE in mode DAP */
+
 typedef enum probe_type {
 	PROBE_TYPE_NONE = 0,
 	PROBE_TYPE_BMP,
 	PROBE_TYPE_STLINK_V2,
 	PROBE_TYPE_FTDI,
 	PROBE_TYPE_CMSIS_DAP,
-	PROBE_TYPE_JLINK
+	PROBE_TYPE_JLINK,
+	PROBE_TYPE_WCHLINK,
 } probe_type_e;
 
 void gdb_ident(char *p, int count);

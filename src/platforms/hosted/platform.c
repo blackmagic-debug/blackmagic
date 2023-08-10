@@ -50,6 +50,7 @@
 #include "stlinkv2.h"
 #include "ftdi_bmp.h"
 #include "jlink.h"
+#include "wchlink.h"
 #include "cmsis_dap.h"
 #endif
 
@@ -147,6 +148,11 @@ void platform_init(int argc, char **argv)
 	case PROBE_TYPE_JLINK:
 		if (!jlink_init())
 			exit(1);
+		break;
+
+	case PROBE_TYPE_WCHLINK:
+		if (!wchlink_init())
+			exit(-1);
 		break;
 #endif
 
@@ -333,6 +339,9 @@ char *bmda_adaptor_ident(void)
 
 	case PROBE_TYPE_JLINK:
 		return "J-Link";
+
+	case PROBE_TYPE_WCHLINK:
+		return "WCH-Link";
 
 	default:
 		return NULL;
