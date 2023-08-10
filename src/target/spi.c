@@ -121,6 +121,7 @@ spi_flash_s *bmp_spi_add_flash(target_s *const target, const target_addr_t begin
 		spi_parameters.sector_size = 4096U;
 		spi_parameters.capacity = length;
 		spi_parameters.sector_erase_opcode = SPI_FLASH_OPCODE_SECTOR_ERASE;
+		DEBUG_WARN("SFDP read failed. Using best guess.\n");
 	}
 	DEBUG_INFO("Flash size: %" PRIu32 "MiB\n", (uint32_t)spi_parameters.capacity / (1024U * 1024U));
 
