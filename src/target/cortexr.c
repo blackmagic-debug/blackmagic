@@ -262,6 +262,21 @@ bool cortexr_probe(adiv5_access_port_s *const ap, const target_addr_t base_addre
 		target->regs_size += sizeof(uint32_t) * CORTEX_FLOAT_REG_COUNT;
 	}
 
+	/* Check cache type */
+	const uint32_t cache_type = cortex_dbg_read32(target, CORTEXR_CTR);
+	if (cache_type >> CORTEX_CTR_FORMAT_SHIFT == CORTEX_CTR_FORMAT_ARMv7) {
+		/* If there is an ICache defined, decompress its length to a uint32_t count */
+		if (cache_type & CORTEX_CTR_ICACHE_LINE_MASK)
+			priv->base.icache_line_length = CORTEX_CTR_ICACHE_LINE(cache_type);
+		/* If there is a DCache defined, decompress its length to a uint32_t count */
+		if ((cache_type >> CORTEX_CTR_DCACHE_LINE_SHIFT) & CORTEX_CTR_DCACHE_LINE_MASK)
+			priv->base.dcache_line_length = CORTEX_CTR_DCACHE_LINE(cache_type);
+
+		DEBUG_TARGET("%s: ICache line length = %u, DCache line length = %u\n", __func__,
+			priv->base.icache_line_length << 2U, priv->base.dcache_line_length << 2U);
+	} else
+		target_check_error(target);
+
 	/* Restore r0 after all these steps */
 	cortexr_core_reg_write(target, 0U, r0);
 
