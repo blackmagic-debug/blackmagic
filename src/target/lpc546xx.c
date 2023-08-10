@@ -217,10 +217,10 @@ static bool lpc546xx_cmd_read_uid(target_s *target, int argc, const char **argv)
 	(void)argc;
 	(void)argv;
 	lpc_flash_s *flash = (lpc_flash_s *)target->flash;
-	iap_result_s result = {};
+	iap_result_s result = {0};
 	if (lpc_iap_call(flash, &result, IAP_CMD_READUID))
 		return false;
-	uint8_t uid[16] = {};
+	uint8_t uid[16U] = {0};
 	memcpy(&uid, result.values, sizeof(uid));
 	tc_printf(target, "UID: 0x");
 	for (uint32_t i = 0; i < sizeof(uid); ++i)

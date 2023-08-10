@@ -529,7 +529,7 @@ void lpc55_dp_prepare(adiv5_debug_port_s *const dp)
 	 */
 	adiv5_dp_abort(dp, ADIV5_DP_ABORT_DAPABORT);
 	/* Set up a dummy Access Port on the stack */
-	adiv5_access_port_s ap = {};
+	adiv5_access_port_s ap = {0};
 	ap.dp = dp;
 	ap.apsel = 2;
 	/* Read out the ID register and check it's the LPC55's Debug Mailbox ID */

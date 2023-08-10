@@ -244,7 +244,7 @@ iap_status_e lpc_iap_call(lpc_flash_s *const flash, iap_result_s *const result, 
 	}
 
 	/* Copy back just the results */
-	iap_result_s results = {};
+	iap_result_s results = {0};
 	target_mem_read(target, &results, iap_results_addr, sizeof(iap_result_s));
 
 	/* Restore the original data in RAM and registers */
