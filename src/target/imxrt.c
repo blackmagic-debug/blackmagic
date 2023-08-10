@@ -322,7 +322,7 @@ static uint8_t imxrt_spi_build_insn_sequence(target_s *const target, const uint1
 		slot = 0;
 
 	/* Build a new microcode sequence to run */
-	imxrt_flexspi_lut_insn_s sequence[8] = {};
+	imxrt_flexspi_lut_insn_s sequence[8] = {0};
 	/* Start by writing the command opcode to the Flash */
 	sequence[0].opcode_mode = IMXRT_FLEXSPI_LUT_OPCODE(IMXRT_FLEXSPI_LUT_OP_COMMAND) | IMXRT_FLEXSPI_LUT_MODE_SERIAL;
 	sequence[0].value = command & SPI_FLASH_OPCODE_MASK;
@@ -427,7 +427,7 @@ static void imxrt_spi_write(target_s *const target, const uint16_t command, cons
 			target_mem_read32(target, IMXRT_FLEXSPI1_PRG_WRITE_FIFO_STATUS) & IMXRT_FLEXSPI1_PRG_WRITE_FIFO_STATUS_FILL)
 			continue;
 		const uint16_t amount = MIN(128U, (uint16_t)(length - offset));
-		uint32_t data[32] = {};
+		uint32_t data[32] = {0};
 		memcpy(data, (const char *)buffer + offset, amount);
 		target_mem_write(target, IMXRT_FLEXSPI1_PRG_WRITE_FIFO, data, (amount + 3U) & ~3U);
 		/* Tell the controller we've filled the write FIFO */
