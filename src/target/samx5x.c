@@ -224,7 +224,7 @@ typedef struct samx5x_descr {
 
 samx5x_descr_s samx5x_parse_device_id(uint32_t did)
 {
-	samx5x_descr_s samd = {};
+	samx5x_descr_s samd = {0};
 
 	/* Series */
 	const uint8_t series = (did >> SAMX5X_DID_SERIES_POS) & SAMX5X_DID_SERIES_MASK;
