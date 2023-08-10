@@ -76,6 +76,7 @@ static const debugger_device_s debugger_devices[] = {
 	{VENDOR_ID_STLINK, PRODUCT_ID_STLINKV3, PROBE_TYPE_STLINK_V2, NULL, "ST-Link v3"},
 	{VENDOR_ID_STLINK, PRODUCT_ID_STLINKV3E, PROBE_TYPE_STLINK_V2, NULL, "ST-Link v3E"},
 	{VENDOR_ID_SEGGER, PRODUCT_ID_ANY, PROBE_TYPE_JLINK, NULL, "Segger J-Link"},
+	{VENDOR_ID_WCH, PRODUCT_ID_WCHLINK_RV, PROBE_TYPE_WCHLINK, NULL, "WCH-Link"},
 	{VENDOR_ID_FTDI, PRODUCT_ID_FTDI_FT2232, PROBE_TYPE_FTDI, NULL, "FTDI FT2232"},
 	{VENDOR_ID_FTDI, PRODUCT_ID_FTDI_FT4232, PROBE_TYPE_FTDI, NULL, "FTDI FT4232"},
 	{VENDOR_ID_FTDI, PRODUCT_ID_FTDI_FT232, PROBE_TYPE_FTDI, NULL, "FTDI FT232"},
@@ -118,7 +119,7 @@ const debugger_device_s *get_debugger_device_from_vid_pid(const uint16_t probe_v
 void bmp_ident(bmda_probe_s *info)
 {
 	DEBUG_INFO("Black Magic Debug App " FIRMWARE_VERSION "\n for Black Magic Probe, ST-Link v2 and v3, CMSIS-DAP, "
-			   "J-Link and FTDI (MPSSE)\n");
+			   "J-Link, FTDI (MPSSE) and WCH-Link\n");
 	if (info && info->vid && info->pid) {
 		DEBUG_INFO("Using %04x:%04x %s %s\n %s %s\n", info->vid, info->pid,
 			(info->serial[0]) ? info->serial : NO_SERIAL_NUMBER, info->manufacturer, info->product, info->version);
