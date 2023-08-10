@@ -479,8 +479,10 @@ static void dap_mem_read(adiv5_access_port_s *ap, void *dest, uint32_t src, size
 	align_e align = MIN(ALIGNOF(src), ALIGNOF(len));
 	DEBUG_WIRE("dap_mem_read @ %" PRIx32 " len %zu, align %d\n", src, len, align);
 	/* If the read can be done in a single transaction, use the dap_read_single() fast-path */
-	if ((1U << align) == len)
-		return dap_read_single(ap, dest, src, align);
+	if ((1U << align) == len) {
+		dap_read_single(ap, dest, src, align);
+		return;
+	}
 	/* Otherwise proceed blockwise */
 	const size_t blocks_per_transfer = (report_size - 4U) >> 2U;
 	uint8_t *const data = (uint8_t *)dest;
@@ -514,8 +516,10 @@ static void dap_mem_write(adiv5_access_port_s *ap, uint32_t dest, const void *sr
 		return;
 	DEBUG_WIRE("memwrite @ %" PRIx32 " len %zu, align %d\n", dest, len, align);
 	/* If the write can be done in a single transaction, use the dap_write_single() fast-path */
-	if ((1U << align) == len)
-		return dap_write_single(ap, dest, src, align);
+	if ((1U << align) == len) {
+		dap_write_single(ap, dest, src, align);
+		return;
+	}
 	/* Otherwise proceed blockwise */
 	const size_t blocks_per_transfer = (report_size - 4U) >> 2U;
 	const uint8_t *const data = (const uint8_t *)src;
