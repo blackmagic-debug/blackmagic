@@ -113,7 +113,7 @@ void remote_v0_jtag_tdi_tdo_seq(uint8_t *data_out, bool final_tms, const uint8_t
 
 void remote_v0_jtag_tdi_seq(bool final_tms, const uint8_t *data_in, size_t clock_cycles)
 {
-	return remote_v0_jtag_tdi_tdo_seq(NULL, final_tms, data_in, clock_cycles);
+	remote_v0_jtag_tdi_tdo_seq(NULL, final_tms, data_in, clock_cycles);
 }
 
 bool remote_v0_jtag_next(bool tms, bool tdi)
