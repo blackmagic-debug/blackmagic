@@ -135,6 +135,7 @@ typedef struct cortexr_priv {
 
 static target_halt_reason_e cortexr_halt_poll(target_s *target, target_addr_t *watch);
 static void cortexr_halt_request(target_s *target);
+static void cortexr_halt_resume(target_s *target, bool step);
 
 static void cortexr_mem_read(target_s *const target, void *const dest, const target_addr_t src, const size_t len)
 {
@@ -263,6 +264,7 @@ bool cortexr_probe(adiv5_access_port_s *const ap, const target_addr_t base_addre
 
 	target->halt_request = cortexr_halt_request;
 	target->halt_poll = cortexr_halt_poll;
+	target->halt_resume = cortexr_halt_resume;
 
 	cortex_read_cpuid(target);
 	/* The format of the debug identification register is described in DDI0406C §C11.11.15 pg2217 */
@@ -371,4 +373,18 @@ static target_halt_reason_e cortexr_halt_poll(target_s *const target, target_add
 	}
 	/* Check if we halted because we were actually single-stepping */
 	return reason;
+}
+
+static void cortexr_halt_resume(target_s *const target, const bool step)
+{
+	(void)step;
+	/* Start by asking to resume the core */
+	cortex_dbg_write32(target, CORTEXR_DBG_DRCR, CORTEXR_DBG_DRCR_CLR_STICKY_EXC | CORTEXR_DBG_DRCR_RESTART_REQ);
+
+	/* Then poll for when the core actually resumes */
+	platform_timeout_s timeout;
+	platform_timeout_set(&timeout, 250);
+	uint32_t status = CORTEXR_DBG_DSCR_HALTED;
+	while (!(status & CORTEXR_DBG_DSCR_RESTARTED) && !platform_timeout_is_expired(&timeout))
+		status = cortex_dbg_read32(target, CORTEXR_DBG_DSCR);
 }
