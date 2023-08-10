@@ -186,7 +186,7 @@ bool serial_open(const bmda_cli_options_s *const cl_opts, const char *const seri
 		return false;
 	}
 
-	DCB serial_params = {};
+	DCB serial_params = {0};
 	serial_params.DCBlength = sizeof(serial_params);
 	if (!GetCommState(port_handle, &serial_params)) {
 		handle_dev_error(port_handle, "getting communication state from device");
@@ -208,7 +208,7 @@ bool serial_open(const bmda_cli_options_s *const cl_opts, const char *const seri
 		return false;
 	}
 
-	COMMTIMEOUTS timeouts = {};
+	COMMTIMEOUTS timeouts = {0};
 	timeouts.ReadIntervalTimeout = 10;
 	timeouts.ReadTotalTimeoutConstant = 10;
 	timeouts.ReadTotalTimeoutMultiplier = 10;
