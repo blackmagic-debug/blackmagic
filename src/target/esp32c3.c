@@ -182,9 +182,9 @@ static bool esp32c3_spi_flash_erase(target_flash_s *flash, target_addr_t addr, s
 static bool esp32c3_spi_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t length);
 
 static void esp32c3_spi_read_sfdp(
-	target_s *const target, const uint32_t address, void *const buffer, const size_t length)
+	target_s *const target, const uint16_t command, const uint32_t address, void *const buffer, const size_t length)
 {
-	esp32c3_spi_read(target, SPI_FLASH_CMD_READ_SFDP, address, buffer, length);
+	esp32c3_spi_read(target, command, address, buffer, length);
 }
 
 static void esp32c3_add_flash(target_s *const target)
