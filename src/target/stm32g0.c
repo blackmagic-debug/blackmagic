@@ -691,7 +691,7 @@ static void stm32g0_display_registers(target_s *t)
  */
 static bool stm32g0_cmd_option(target_s *t, int argc, const char **argv)
 {
-	option_register_s options_req[OPT_REG_COUNT] = {};
+	option_register_s options_req[OPT_REG_COUNT] = {0};
 
 	if (argc == 2 && strcasecmp(argv[1], "erase") == 0) {
 		if (t->part_id == STM32C011 || t->part_id == STM32C031)
