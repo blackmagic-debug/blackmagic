@@ -919,7 +919,7 @@ static bool stm32l4_cmd_option(target_s *t, int argc, const char **argv)
 	const uint8_t *const opt_reg_offsets = info.offsets;
 
 	const size_t word_count = info.word_count;
-	uint32_t values[11] = {};
+	uint32_t values[11] = {0};
 	for (size_t i = 0; i < word_count; ++i)
 		values[i] = info.default_values[i];
 
