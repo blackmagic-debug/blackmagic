@@ -31,8 +31,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <string.h>
 #include "general.h"
+#include <string.h>
 #include "target.h"
 #include "target_internal.h"
 #include "cortexm.h"
@@ -73,7 +73,39 @@
 #define IMXRT10xx_CCM_CCG6_FLEXSPI_CLK_MASK           0xfffff3ffU
 #define IMXRT10xx_CCM_CCG6_FLEXSPI_CLK_ENABLE         0x00000c00U
 
+#define IMXRT11xx_CCM_BASE                              UINT32_C(0x40cc0000)
+#define IMXRT11xx_CCM_CLOCK_ROOT20_CONTROL              (IMXRT11xx_CCM_BASE + 0x0 + (20 * 0x80))
+#define IMXRT11xx_CCM_CLOCK_ROOT20_CONTROL_PLL_480M     (0x7 << 8)
+#define IMXRT11xx_CCM_CLOCK_ROOT20_CONTROL_OSC400M      (0x2 << 8)
+#define IMXRT11xx_CCM_CLOCK_ROOT20_CONTROL_DIV(divisor) ((divisor - 1) << 0)
+#define IMXRT11xx_CCM_LPCG28                            (IMXRT11xx_CCM_BASE + 0x6000 + (28 * 0x20))
+
+#define IMXRT_FP_FLAG     UINT32_C(0x0000fffc)
+#define IMXRT11xx_FP_FLAG UINT32_C(0x5aa60ff0)
+
+#define IMXRTx00_ROM_FINGERPRINT_ADDR  0x0301a000u
+#define IMXRT10xx_ROM_FINGERPRINT_ADDR 0x0020a000u
+#define IMXRT11xx_ROM_FINGERPRINT_ADDR 0x0021a000u
+
+#define IMXRT5xx_ROM_FINGERPRINT UINT32_C(0x669ff643)
+#define IMXRT6xx_ROM_FINGERPRINT UINT32_C(0xf2406510)
+
+#define IMXRT1011_ROM_FINGERPRINT UINT32_C(0xf88d10c9)
+#define IMXRT102x_ROM_FINGERPRINT UINT32_C(0xe9dd9a03)
+#define IMXRT105x_ROM_FINGERPRINT UINT32_C(0x2101eb10)
+#define IMXRT106x_ROM_FINGERPRINT UINT32_C(0x80dbf000)
+
+#define IMXRT117x_ROM_FINGERPRINT UINT32_C(0x9909a810)
+
+#define IMXRT5xx_FLEXSPI1_BASE  UINT32_C(0x4013c000)
+#define IMXRT6xx_FLEXSPI1_BASE  UINT32_C(0x40134000)
+#define IMXRT1011_FLEXSPI1_BASE UINT32_C(0x400a0000)
+#define IMXRT102x_FLEXSPI1_BASE UINT32_C(0x402a8000)
+#define IMXRT104x_FLEXSPI1_BASE UINT32_C(0x402a8000)
+#define IMXRT105x_FLEXSPI1_BASE UINT32_C(0x402a8000)
 #define IMXRT106x_FLEXSPI1_BASE UINT32_C(0x402a8000)
+#define IMXRT116x_FLEXSPI1_BASE UINT32_C(0x400cc000)
+#define IMXRT117x_FLEXSPI1_BASE UINT32_C(0x400cc000)
 
 /*
  * We only carry definitions for FlexSPI1 Flash controller A1.
@@ -129,6 +161,8 @@
 #define IMXRT_FLEXSPI_LUT_OP_READ         0x09U
 #define IMXRT_FLEXSPI_LUT_OP_WRITE        0x08U
 
+#define IMXRT_NAME_MAX_LENGTH 12
+
 typedef enum imxrt_boot_src {
 	BOOT_FLEX_SPI,
 	boot_sd_card,
@@ -144,11 +178,14 @@ typedef struct imxrt_flexspi_lut_insn {
 
 typedef struct imxrt_priv {
 	imxrt_boot_src_e boot_source;
+	uint16_t chip_id;
 	uint32_t flexspi_base;
 	uint32_t mpu_state;
 	uint32_t flexspi_lut_state;
 	uint16_t flexspi_cached_commands[4];
 	imxrt_flexspi_lut_insn_s flexspi_prg_seq_state[4][8];
+	bool flash_in_package;
+	char name[IMXRT_NAME_MAX_LENGTH];
 } imxrt_priv_s;
 
 static imxrt_boot_src_e imxrt_boot_source(uint32_t boot_cfg);
@@ -159,14 +196,13 @@ static void imxrt_spi_read(target_s *target, uint16_t command, target_addr_t add
 static void imxrt_spi_write(
 	target_s *target, uint16_t command, target_addr_t address, const void *buffer, size_t length);
 static void imxrt_spi_run_command(target_s *target, uint16_t command, target_addr_t address);
+static bool imxrt_ident_device(target_s *target);
 
 bool imxrt_probe(target_s *const target)
 {
 	/* If the part number fails to match, instantly return. */
-	if (target->part_id != 0x88cU)
+	if (target->part_id != 0x88cU && target->part_id != 0x88c6U)
 		return false;
-
-	/* XXX: Would really like to find some way to have a more positive identification on the part */
 
 	imxrt_priv_s *priv = calloc(1, sizeof(imxrt_priv_s));
 	if (!priv) { /* calloc faled: heap exhaustion */
@@ -175,9 +211,12 @@ bool imxrt_probe(target_s *const target)
 	}
 	target->target_storage = priv;
 	target->target_options |= CORTEXM_TOPT_INHIBIT_NRST;
-	target->driver = "i.MXRT10xx";
 
-	priv->flexspi_base = IMXRT106x_FLEXSPI1_BASE;
+	if (!imxrt_ident_device(target))
+		return false;
+
+	snprintf(priv->name, IMXRT_NAME_MAX_LENGTH, "i.MXRT%u", priv->chip_id);
+	target->driver = priv->name;
 
 #if defined(ENABLE_DEBUG) && (PC_HOSTED == 1 || defined(ESP_LOGD))
 	const uint8_t boot_mode = (target_mem_read32(target, IMXRT_SRC_BOOT_MODE2) >> 24U) & 3U;
@@ -234,6 +273,74 @@ bool imxrt_probe(target_s *const target)
 	return true;
 }
 
+static bool imxrt_ident_device(target_s *const target)
+{
+	imxrt_priv_s *const priv = (imxrt_priv_s *)target->target_storage;
+	/*
+	 * The iMXRT series doesn't have a device id register. Instead, the NXP universal flash loader
+	 * uses known ROM values at a particular address to differentiate the devices. That code uses
+	 * three locations but only one location is actually needed.
+	 * https://github.com/nxp-mcuxpresso/i.mxrt-ufl/blob/main/src/ufl_find_target.c
+	 */
+	uint32_t rom_location = 0;
+	const uint16_t cpuid_partno = target->cpuid & CORTEX_CPUID_PARTNO_MASK;
+	if (cpuid_partno == CORTEX_M33)
+		rom_location = IMXRTx00_ROM_FINGERPRINT_ADDR;
+	else if (cpuid_partno == CORTEX_M7) {
+		if (target->part_id == 0x88c6U)
+			rom_location = IMXRT11xx_ROM_FINGERPRINT_ADDR;
+		else
+			rom_location = IMXRT10xx_ROM_FINGERPRINT_ADDR;
+	} else {
+		DEBUG_ERROR("Unknown core %04x\n", cpuid_partno);
+		return false;
+	}
+
+	const uint32_t fingerprint = target_mem_read32(target, rom_location);
+	switch (fingerprint) {
+	case IMXRT5xx_ROM_FINGERPRINT:
+		priv->chip_id = 500;
+		priv->flexspi_base = IMXRT5xx_FLEXSPI1_BASE;
+		break;
+	case IMXRT6xx_ROM_FINGERPRINT:
+		priv->chip_id = 600;
+		priv->flexspi_base = IMXRT6xx_FLEXSPI1_BASE;
+		break;
+
+	case IMXRT1011_ROM_FINGERPRINT:
+		priv->chip_id = 1011;
+		priv->flexspi_base = IMXRT1011_FLEXSPI1_BASE;
+		break;
+	case IMXRT102x_ROM_FINGERPRINT:
+		// The 1015 is actually a 1021.
+		priv->chip_id = 1021;
+		priv->flexspi_base = IMXRT102x_FLEXSPI1_BASE;
+		break;
+	case IMXRT105x_ROM_FINGERPRINT:
+		priv->chip_id = 1052;
+		priv->flexspi_base = IMXRT105x_FLEXSPI1_BASE;
+		break;
+	case IMXRT106x_ROM_FINGERPRINT:
+		// The 1042 is actually a 1062.
+		priv->chip_id = 1062;
+		priv->flexspi_base = IMXRT106x_FLEXSPI1_BASE;
+		break;
+
+	case IMXRT117x_ROM_FINGERPRINT:
+		priv->chip_id = 1176;
+		priv->flexspi_base = IMXRT117x_FLEXSPI1_BASE;
+		break;
+	default:
+		DEBUG_TARGET("Unknown ROM fingerprint at %08x = %08x\n", rom_location, fingerprint);
+		break;
+	}
+
+	DEBUG_TARGET("%s: %u\n", __func__, priv->chip_id);
+
+	/* TODO: Check for in package flash. */
+	return true;
+}
+
 static imxrt_boot_src_e imxrt_boot_source(const uint32_t boot_cfg)
 {
 	/*
@@ -265,15 +372,32 @@ static bool imxrt_enter_flash_mode(target_s *const target)
 	/* Start by stepping the clocks to ~50MHz and putting the controller in a known state */
 	target_mem_write32(target, IMXRT_FLEXSPI1_MOD_CTRL0(priv),
 		target_mem_read32(target, IMXRT_FLEXSPI1_MOD_CTRL0(priv)) | IMXRT_FLEXSPI1_MOD_CTRL0_SUSPEND);
-	target_mem_write32(target, IMXRT10xx_CCM_CCG6,
-		target_mem_read32(target, IMXRT10xx_CCM_CCG6) & IMXRT10xx_CCM_CCG6_FLEXSPI_CLK_MASK);
-	target_mem_write32(target, IMXRT10xx_CCM_CSCM1,
-		(target_mem_read32(target, IMXRT10xx_CCM_CSCM1) & IMXRT10xx_CCM_CSCM1_FLEXSPI_CLK_SEL_MASK) |
-			IMXRT10xx_CCM_CSCM1_FLEXSPI_CLK_SEL_PLL3_PFD0);
-	target_mem_write32(target, IMXRT10xx_CCM_ANALOG_PLL3_PFD,
-		(target_mem_read32(target, IMXRT10xx_CCM_ANALOG_PLL3_PFD) & IMXRT10xx_CCM_ANALOG_PLL_PFD0_FRAC_MASK) | 0x16U);
-	target_mem_write32(target, IMXRT10xx_CCM_CCG6,
-		target_mem_read32(target, IMXRT10xx_CCM_CCG6) | IMXRT10xx_CCM_CCG6_FLEXSPI_CLK_ENABLE);
+	if (1000 <= priv->chip_id && priv->chip_id < 1100) {
+		// Gate the clock to FLEXSPI while we change it.
+		target_mem_write32(target, IMXRT10xx_CCM_CCG6,
+			target_mem_read32(target, IMXRT10xx_CCM_CCG6) & IMXRT10xx_CCM_CCG6_FLEXSPI_CLK_MASK);
+
+		target_mem_write32(target, IMXRT10xx_CCM_CSCM1,
+			(target_mem_read32(target, IMXRT10xx_CCM_CSCM1) & IMXRT10xx_CCM_CSCM1_FLEXSPI_CLK_SEL_MASK) |
+				IMXRT10xx_CCM_CSCM1_FLEXSPI_CLK_SEL_PLL3_PFD0);
+		// PLL3 is 480 mhz and PFD0 is set to 0x16 which is 480 * (18 / 0x16) = 392 which is then divided by 2.
+		target_mem_write32(target, IMXRT10xx_CCM_ANALOG_PLL3_PFD,
+			(target_mem_read32(target, IMXRT10xx_CCM_ANALOG_PLL3_PFD) & IMXRT10xx_CCM_ANALOG_PLL_PFD0_FRAC_MASK) |
+				0x16U);
+
+		// Ungate the clock.
+		target_mem_write32(target, IMXRT10xx_CCM_CCG6,
+			target_mem_read32(target, IMXRT10xx_CCM_CCG6) | IMXRT10xx_CCM_CCG6_FLEXSPI_CLK_ENABLE);
+	} else if (1100 <= priv->chip_id && priv->chip_id < 1200) {
+		// Gate the clock to FLEXSPI1 while we change it.
+		target_mem_write32(target, IMXRT11xx_CCM_LPCG28, 0);
+		// PLL3 480 Mhz / 4 -> 120 Mhz
+		target_mem_read32(target, IMXRT11xx_CCM_CLOCK_ROOT20_CONTROL);
+		target_mem_write32(target, IMXRT11xx_CCM_CLOCK_ROOT20_CONTROL,
+			IMXRT11xx_CCM_CLOCK_ROOT20_CONTROL_PLL_480M | IMXRT11xx_CCM_CLOCK_ROOT20_CONTROL_DIV(4));
+		// Ungate the clock.
+		target_mem_write32(target, IMXRT11xx_CCM_LPCG28, 1);
+	}
 	target_mem_write32(target, IMXRT_FLEXSPI1_MOD_CTRL0(priv),
 		target_mem_read32(target, IMXRT_FLEXSPI1_MOD_CTRL0(priv)) & ~IMXRT_FLEXSPI1_MOD_CTRL0_SUSPEND);
 	/* Clear all outstanding interrupts so we can consume their status cleanly */
@@ -360,7 +484,7 @@ static uint8_t imxrt_spi_build_insn_sequence(target_s *const target, const uint1
 		sequence[offset++].value = 0;
 	}
 	/* Because sequence gets 0 initalised above when it's declared, the STOP entry is already present */
-	DEBUG_TARGET("Writing new instruction seqeunce to slot %u\n", slot);
+	DEBUG_TARGET("Writing new instruction sequence to slot %u\n", slot);
 	for (size_t idx = 0; idx < 8U; ++idx)
 		DEBUG_TARGET("%zu: %02x %02x\n", idx, sequence[idx].opcode_mode, sequence[idx].value);
 
