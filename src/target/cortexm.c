@@ -601,10 +601,10 @@ bool cortexm_probe(adiv5_access_port_s *ap)
 	}
 
 	/* Check cache type */
-	uint32_t ctr = target_mem_read32(t, CORTEXM_CTR);
-	if (ctr >> 29U == 4U) {
+	const uint32_t cache_type = target_mem_read32(t, CORTEXM_CTR);
+	if (cache_type >> CORTEX_CTR_FORMAT_SHIFT == CORTEX_CTR_FORMAT_ARMv7) {
 		priv->has_cache = true;
-		priv->dcache_minline = 4U << (ctr & 0xfU);
+		priv->dcache_minline = 4U << (cache_type & 0xfU);
 	} else
 		target_check_error(t);
 
