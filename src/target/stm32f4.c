@@ -675,7 +675,7 @@ static bool stm32f4_option_write(target_s *t, uint32_t *const val, size_t count)
 
 static bool stm32f4_option_write_default(target_s *t)
 {
-	uint32_t val[3] = {};
+	uint32_t val[3] = {0};
 	switch (t->part_id) {
 	case ID_STM32F42X:
 	case ID_STM32F46X:
@@ -723,7 +723,7 @@ static bool stm32f4_cmd_option(target_s *t, int argc, const char **argv)
 	if (argc == 2 && partial_match(argv[1], option_cmd_erase, OPTION_CMD_LEN(option_cmd_erase)))
 		stm32f4_option_write_default(t);
 	else if (argc > 2 && partial_match(argv[1], option_cmd_write, OPTION_CMD_LEN(option_cmd_write))) {
-		uint32_t val[3] = {};
+		uint32_t val[3] = {0};
 		size_t count = argc > 4 ? 3 : argc - 1;
 		val[0] = strtoul(argv[2], NULL, 0);
 		if (argc > 3) {
@@ -740,7 +740,7 @@ static bool stm32f4_cmd_option(target_s *t, int argc, const char **argv)
 		tc_printf(t, "usage: monitor option erase\nusage: monitor option write <OPTCR>%s%s\n",
 			opt_bytes > 1U ? " <OPTCR1>" : "", opt_bytes == 3U ? " <OPTCR2>" : "");
 
-	uint32_t val[3] = {};
+	uint32_t val[3] = {0};
 	val[0] = target_mem_read32(t, FLASH_OPTCR);
 	if (opt_bytes > 1U) {
 		val[1] = target_mem_read32(t, FLASH_OPTCR + 4U);
