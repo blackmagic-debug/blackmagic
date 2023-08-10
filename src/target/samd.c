@@ -353,7 +353,7 @@ typedef struct samd_descr {
 
 samd_descr_s samd_parse_device_id(uint32_t did)
 {
-	samd_descr_s samd = {};
+	samd_descr_s samd = {0};
 	const samd_part_s *parts = samd_d21_parts;
 	samd.ram_size = 0x8000;
 	samd.flash_size = 0x40000;
