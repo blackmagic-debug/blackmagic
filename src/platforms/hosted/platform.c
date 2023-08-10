@@ -270,16 +270,19 @@ void bmda_adiv5_dp_init(adiv5_debug_port_s *const dp)
 	case BMP_TYPE_BMP:
 		if (cl_opts.opt_no_hl) {
 			DEBUG_WARN("Not using HL commands\n");
-			return;
+			break;
 		}
-		return remote_adiv5_dp_init(dp);
+		remote_adiv5_dp_init(dp);
+		break;
 
 #if HOSTED_BMP_ONLY == 0
 	case BMP_TYPE_STLINK_V2:
-		return stlink_adiv5_dp_init(dp);
+		stlink_adiv5_dp_init(dp);
+		break;
 
 	case BMP_TYPE_CMSIS_DAP:
-		return dap_adiv5_dp_init(dp);
+		dap_adiv5_dp_init(dp);
+		break;
 #endif
 
 	default:
@@ -357,20 +360,25 @@ void platform_nrst_set_val(bool assert)
 {
 	switch (info.bmp_type) {
 	case BMP_TYPE_BMP:
-		return remote_nrst_set_val(assert);
+		remote_nrst_set_val(assert);
+		break;
 
 #if HOSTED_BMP_ONLY == 0
 	case BMP_TYPE_STLINK_V2:
-		return stlink_nrst_set_val(assert);
+		stlink_nrst_set_val(assert);
+		break;
 
 	case BMP_TYPE_JLINK:
-		return jlink_nrst_set_val(assert);
+		jlink_nrst_set_val(assert);
+		break;
 
 	case BMP_TYPE_FTDI:
-		return libftdi_nrst_set_val(assert);
+		libftdi_nrst_set_val(assert);
+		break;
 
 	case BMP_TYPE_CMSIS_DAP:
-		return dap_nrst_set_val(assert);
+		dap_nrst_set_val(assert);
+		break;
 #endif
 
 	default:
@@ -536,7 +544,8 @@ void platform_buffer_flush(void)
 	switch (info.bmp_type) {
 #if HOSTED_BMP_ONLY == 0
 	case BMP_TYPE_FTDI:
-		return ftdi_buffer_flush();
+		ftdi_buffer_flush();
+		break;
 #endif
 
 	default:
@@ -685,7 +694,7 @@ void adiv5_ap_write(adiv5_access_port_s *ap, uint16_t addr, uint32_t value)
 {
 	decode_access(addr, ADIV5_LOW_WRITE);
 	DEBUG_PROTO("0x%08" PRIx32 "\n", value);
-	return ap->dp->ap_write(ap, addr, value);
+	ap->dp->ap_write(ap, addr, value);
 }
 
 void adiv5_mem_read(adiv5_access_port_s *ap, void *dest, uint32_t src, size_t len)
@@ -715,11 +724,11 @@ void adiv5_mem_write_sized(adiv5_access_port_s *ap, uint32_t dest, const void *s
 	if (len > 16U)
 		DEBUG_PROTO(" ...");
 	DEBUG_PROTO("\n");
-	return ap->dp->mem_write(ap, dest, src, len, align);
+	ap->dp->mem_write(ap, dest, src, len, align);
 }
 
 void adiv5_dp_abort(adiv5_debug_port_s *dp, uint32_t abort)
 {
 	DEBUG_PROTO("Abort: %08" PRIx32 "\n", abort);
-	return dp->abort(dp, abort);
+	dp->abort(dp, abort);
 }
