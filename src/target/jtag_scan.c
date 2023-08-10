@@ -211,7 +211,7 @@ static jtag_ir_quirks_s jtag_device_get_quirks(const uint32_t idcode)
 		if ((idcode & dev_descr[idx].idmask) == dev_descr[idx].idcode)
 			return dev_descr[idx].ir_quirks;
 	}
-	return (jtag_ir_quirks_s){};
+	return (jtag_ir_quirks_s){0};
 }
 
 static bool jtag_read_irs(void)
