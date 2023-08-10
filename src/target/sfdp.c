@@ -65,12 +65,14 @@ static inline size_t sfdp_memory_density_to_capacity_bits(const uint8_t *const d
 		return SFDP_DENSITY_VALUE(density) + 1U;
 }
 
-static spi_parameters_s sfdp_read_basic_parameter_table(
-	target_s *const target, const uint32_t address, const size_t length, const spi_read_func spi_read)
+static spi_parameters_s sfdp_read_basic_parameter_table(target_s *const target,
+	const sfdp_parameter_table_header_s *const header, const uint32_t address, const size_t length,
+	const spi_read_func spi_read)
 {
 	sfdp_basic_parameter_table_s parameter_table;
 	const size_t table_length = MIN(sizeof(sfdp_basic_parameter_table_s), length);
 	spi_read(target, SPI_FLASH_CMD_READ_SFDP, address, &parameter_table, table_length);
+	sfdp_debug_print(address, &parameter_table, table_length);
 
 	spi_parameters_s result = {0};
 	result.capacity = sfdp_memory_density_to_capacity_bits(parameter_table.memory_density) >> 3U;
@@ -82,7 +84,13 @@ static spi_parameters_s sfdp_read_basic_parameter_table(
 			break;
 		}
 	}
-	result.page_size = SFDP_PAGE_SIZE(parameter_table);
+	// The timing and page size DWORD was added in JESD216A. It is marked as
+	// version 1.5.
+	if (header->version_major > 1 || (header->version_major == 1 && header->version_minor >= 5))
+		result.page_size = SFDP_PAGE_SIZE(parameter_table);
+	else
+		result.page_size = 256;
+
 	return result;
 }
 
@@ -103,7 +111,7 @@ bool sfdp_read_parameters(target_s *const target, spi_parameters_s *params, cons
 		if (jedec_parameter_id == SFDP_BASIC_SPI_PARAMETER_TABLE) {
 			const uint32_t table_address = SFDP_TABLE_ADDRESS(table_header);
 			const uint16_t table_length = table_header.table_length_in_u32s * 4U;
-			*params = sfdp_read_basic_parameter_table(target, table_address, table_length, spi_read);
+			*params = sfdp_read_basic_parameter_table(target, &table_header, table_address, table_length, spi_read);
 			return true;
 		}
 	}
