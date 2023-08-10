@@ -478,12 +478,6 @@ static void cortexm_mem_write(target_s *t, target_addr_t dest, const void *src, 
 	adiv5_mem_write(cortex_ap(t), dest, src, len);
 }
 
-static bool cortexm_check_error(target_s *t)
-{
-	adiv5_access_port_s *ap = cortex_ap(t);
-	return adiv5_dp_error(ap->dp) != 0;
-}
-
 const char *cortexm_regs_description(target_s *t)
 {
 	const bool is_cortexmf = t->target_options & TOPT_FLAVOUR_V7MF;
@@ -532,7 +526,7 @@ bool cortexm_probe(adiv5_access_port_s *ap)
 	priv->base.ap = ap;
 	priv->base.base_addr = CORTEXM_SCS_BASE;
 
-	t->check_error = cortexm_check_error;
+	t->check_error = cortex_check_error;
 	t->mem_read = cortexm_mem_read;
 	t->mem_write = cortexm_mem_write;
 

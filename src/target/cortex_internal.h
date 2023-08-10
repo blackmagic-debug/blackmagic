@@ -51,6 +51,7 @@ typedef struct cortex_priv {
 
 void cortex_priv_free(void *priv);
 
+bool cortex_check_error(target_s *target);
 uint32_t cortex_dbg_read32(target_s *target, uint16_t src);
 void cortex_dbg_write32(target_s *target, uint16_t dest, uint32_t value);
 void cortex_read_cpuid(target_s *target);

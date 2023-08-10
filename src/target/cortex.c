@@ -55,6 +55,12 @@ void cortex_priv_free(void *priv)
 	free(priv);
 }
 
+bool cortex_check_error(target_s *t)
+{
+	adiv5_access_port_s *ap = cortex_ap(t);
+	return adiv5_dp_error(ap->dp) != 0;
+}
+
 uint32_t cortex_dbg_read32(target_s *const target, const uint16_t src)
 {
 	/* Translate the offset given in the src parameter into an address in the debug address space and read */
