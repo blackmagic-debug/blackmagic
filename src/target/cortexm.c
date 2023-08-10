@@ -124,9 +124,6 @@ typedef struct cortexm_priv {
 	uint8_t hw_breakpoint_max;
 	/* Copy of DEMCR for vector-catch */
 	uint32_t demcr;
-	/* Cache parameters */
-	bool has_cache;
-	uint32_t dcache_minline;
 } cortexm_priv_s;
 
 /* Register number tables */
@@ -444,10 +441,10 @@ static size_t create_tdesc_cortex_mf(char *buffer, size_t max_len)
 static void cortexm_cache_clean(target_s *t, target_addr_t addr, size_t len, bool invalidate)
 {
 	cortexm_priv_s *priv = t->priv;
-	if (!priv->has_cache || (priv->dcache_minline == 0))
+	if (!priv->base.dcache_line_length)
 		return;
 	uint32_t cache_reg = invalidate ? CORTEXM_DCCIMVAC : CORTEXM_DCCMVAC;
-	size_t minline = priv->dcache_minline;
+	size_t minline = priv->base.dcache_line_length << 2U;
 
 	/* flush data cache for RAM regions that intersect requested region */
 	target_addr_t mem_end = addr + len; /* following code is NOP if wraparound */
@@ -597,8 +594,8 @@ bool cortexm_probe(adiv5_access_port_s *ap)
 	/* Check cache type */
 	const uint32_t cache_type = target_mem_read32(t, CORTEXM_CTR);
 	if (cache_type >> CORTEX_CTR_FORMAT_SHIFT == CORTEX_CTR_FORMAT_ARMv7) {
-		priv->has_cache = true;
-		priv->dcache_minline = 4U << (cache_type & 0xfU);
+		priv->base.icache_line_length = CORTEX_CTR_ICACHE_LINE(cache_type);
+		priv->base.dcache_line_length = CORTEX_CTR_DCACHE_LINE(cache_type);
 	} else
 		target_check_error(t);
 
@@ -1109,7 +1106,7 @@ void cortexm_halt_resume(target_s *const target, const bool step)
 			cortexm_pc_write(target, pc + 2U);
 	}
 
-	if (priv->has_cache)
+	if (priv->base.icache_line_length)
 		target_mem_write32(target, CORTEXM_ICIALLU, 0);
 
 	/* Release C_HALT to resume the core in whichever mode is selected */
