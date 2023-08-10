@@ -38,15 +38,24 @@
 #include "adiv5.h"
 #include "target.h"
 
-#define CORTEX_CTR_FORMAT_SHIFT 29U
-#define CORTEX_CTR_FORMAT_ARMv6 0U
-#define CORTEX_CTR_FORMAT_ARMv7 4U
+#define CORTEX_CTR_FORMAT_SHIFT            29U
+#define CORTEX_CTR_FORMAT_ARMv6            0U
+#define CORTEX_CTR_FORMAT_ARMv7            4U
+#define CORTEX_CTR_ICACHE_LINE_MASK        0xfU
+#define CORTEX_CTR_DCACHE_LINE_SHIFT       16U
+#define CORTEX_CTR_DCACHE_LINE_MASK        0xfU
+#define CORTEX_CTR_ICACHE_LINE(cache_type) (1U << ((cache_type)&CORTEX_CTR_ICACHE_LINE_MASK))
+#define CORTEX_CTR_DCACHE_LINE(cache_type) \
+	(1U << (((cache_type) >> CORTEX_CTR_DCACHE_LINE_SHIFT) & CORTEX_CTR_DCACHE_LINE_MASK))
 
 typedef struct cortex_priv {
 	/* AP from which this CPU hangs */
 	adiv5_access_port_s *ap;
 	/* Base address for the debug interface block */
 	uint32_t base_addr;
+	/* Cache parameters */
+	uint16_t icache_line_length;
+	uint16_t dcache_line_length;
 } cortex_priv_s;
 
 void cortex_priv_free(void *priv);
