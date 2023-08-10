@@ -83,9 +83,20 @@ typedef struct cortexr_priv {
 #define CORTEXR_DBG_IDR_WATCHPOINT_MASK  0xfU
 #define CORTEXR_DBG_IDR_WATCHPOINT_SHIFT 28U
 
-#define CORTEXR_DBG_DSCR_INSN_COMPLETE  (1U << 24U)
-#define CORTEXR_DBG_DSCR_DTR_READ_READY (1U << 29U)
-#define CORTEXR_DBG_DSCR_DTR_WRITE_DONE (1U << 30U)
+#define CORTEXR_DBG_DSCR_HALTED           (1U << 0U)
+#define CORTEXR_DBG_DSCR_RESTARTED        (1U << 1U)
+#define CORTEXR_DBG_DSCR_MOE_MASK         0x0000003cU
+#define CORTEXR_DBG_DSCR_MOE_HALT_REQUEST 0x00000000U
+#define CORTEXR_DBG_DSCR_MOE_BREAKPOINT   0x00000004U
+#define CORTEXR_DBG_DSCR_MOE_ASYNC_WATCH  0x00000008U
+#define CORTEXR_DBG_DSCR_MOE_BKPT_INSN    0x0000000cU
+#define CORTEXR_DBG_DSCR_MOE_EXTERNAL_DBG 0x00000010U
+#define CORTEXR_DBG_DSCR_MOE_VEC_CATCH    0x00000014U
+#define CORTEXR_DBG_DSCR_MOE_SYNC_WATCH   0x00000028U
+#define CORTEXR_DBG_DSCR_ITR_ENABLE       (1U << 13U)
+#define CORTEXR_DBG_DSCR_INSN_COMPLETE    (1U << 24U)
+#define CORTEXR_DBG_DSCR_DTR_READ_READY   (1U << 29U)
+#define CORTEXR_DBG_DSCR_DTR_WRITE_DONE   (1U << 30U)
 
 #define CORTEXR_DBG_DRCR_HALT_REQ           (1U << 0U)
 #define CORTEXR_DBG_DRCR_RESTART_REQ        (1U << 1U)
@@ -122,6 +133,7 @@ typedef struct cortexr_priv {
 
 #define TOPT_FLAVOUR_FLOAT (1U << 1U) /* If set, core has a hardware FPU */
 
+static target_halt_reason_e cortexr_halt_poll(target_s *target, target_addr_t *watch);
 static void cortexr_halt_request(target_s *target);
 
 static void cortexr_mem_read(target_s *const target, void *const dest, const target_addr_t src, const size_t len)
@@ -250,6 +262,7 @@ bool cortexr_probe(adiv5_access_port_s *const ap, const target_addr_t base_addre
 	target->driver = "ARM Cortex-R";
 
 	target->halt_request = cortexr_halt_request;
+	target->halt_poll = cortexr_halt_poll;
 
 	cortex_read_cpuid(target);
 	/* The format of the debug identification register is described in DDI0406C §C11.11.15 pg2217 */
@@ -308,4 +321,54 @@ static void cortexr_halt_request(target_s *const target)
 	}
 	if (error.type)
 		tc_printf(target, "Timeout sending interrupt, is target in WFI?\n");
+}
+
+static target_halt_reason_e cortexr_halt_poll(target_s *const target, target_addr_t *const watch)
+{
+	volatile uint32_t dscr = 0;
+	volatile exception_s error;
+	TRY_CATCH (error, EXCEPTION_ALL) {
+		/* If this times out because the target is in WFI then the target is still running. */
+		dscr = cortex_dbg_read32(target, CORTEXR_DBG_DSCR);
+	}
+	switch (error.type) {
+	case EXCEPTION_ERROR:
+		/* Things went seriously wrong and there is no recovery from this... */
+		target_list_free();
+		return TARGET_HALT_ERROR;
+	case EXCEPTION_TIMEOUT:
+		/* Timeout isn't actually a problem and probably means target is in WFI */
+		return TARGET_HALT_RUNNING;
+	}
+
+	/* Check that the core actually halted */
+	if (!(dscr & CORTEXR_DBG_DSCR_HALTED))
+		return TARGET_HALT_RUNNING;
+
+	/* Make sure ITR is enabled */
+	cortex_dbg_write32(target, CORTEXR_DBG_DSCR, dscr | CORTEXR_DBG_DSCR_ITR_ENABLE);
+
+	/* Read the target's registers out and cache them */
+
+	target_halt_reason_e reason = TARGET_HALT_FAULT;
+	/* Determine why we halted exactly from the Method Of Entry bits */
+	switch (dscr & CORTEXR_DBG_DSCR_MOE_MASK) {
+	case CORTEXR_DBG_DSCR_MOE_HALT_REQUEST:
+		reason = TARGET_HALT_REQUEST;
+		break;
+	case CORTEXR_DBG_DSCR_MOE_EXTERNAL_DBG:
+	case CORTEXR_DBG_DSCR_MOE_BREAKPOINT:
+	case CORTEXR_DBG_DSCR_MOE_BKPT_INSN:
+	case CORTEXR_DBG_DSCR_MOE_VEC_CATCH:
+		reason = TARGET_HALT_BREAKPOINT;
+		break;
+	case CORTEXR_DBG_DSCR_MOE_ASYNC_WATCH:
+	case CORTEXR_DBG_DSCR_MOE_SYNC_WATCH:
+		/* TODO: determine the watchpoint we hit */
+		(void)watch;
+		reason = TARGET_HALT_WATCHPOINT;
+		break;
+	}
+	/* Check if we halted because we were actually single-stepping */
+	return reason;
 }
