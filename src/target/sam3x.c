@@ -298,7 +298,7 @@ static size_t sam_sram_size(uint32_t cidr)
 
 samx7x_descr_s samx7x_parse_id(uint32_t cidr, uint32_t exid)
 {
-	samx7x_descr_s descr = {};
+	samx7x_descr_s descr = {0};
 
 	switch (cidr & CHIPID_CIDR_ARCH_MASK) {
 	case CHIPID_CIDR_ARCH_SAME70:
