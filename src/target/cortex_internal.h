@@ -38,6 +38,10 @@
 #include "adiv5.h"
 #include "target.h"
 
+#define CORTEX_CTR_FORMAT_SHIFT 29U
+#define CORTEX_CTR_FORMAT_ARMv6 0U
+#define CORTEX_CTR_FORMAT_ARMv7 4U
+
 typedef struct cortex_priv {
 	/* AP from which this CPU hangs */
 	adiv5_access_port_s *ap;
