@@ -42,6 +42,7 @@
  */
 
 #include "general.h"
+#include "exception.h"
 #include "adiv5.h"
 #include "target.h"
 #include "target_internal.h"
@@ -86,6 +87,12 @@ typedef struct cortexr_priv {
 #define CORTEXR_DBG_DSCR_DTR_READ_READY (1U << 29U)
 #define CORTEXR_DBG_DSCR_DTR_WRITE_DONE (1U << 30U)
 
+#define CORTEXR_DBG_DRCR_HALT_REQ           (1U << 0U)
+#define CORTEXR_DBG_DRCR_RESTART_REQ        (1U << 1U)
+#define CORTEXR_DBG_DRCR_CLR_STICKY_EXC     (1U << 2U)
+#define CORTEXR_DBG_DRCR_CLR_STICKY_PIPEADV (1U << 3U)
+#define CORTEXR_DBG_DRCR_CANCEL_BUS_REQ     (1U << 4U)
+
 /*
  * Instruction encodings for the coprocessor interface
  * MRC -> Move to ARM core register from Coprocessor (DDI0406C §A8.8.108, pg493)
@@ -114,6 +121,8 @@ typedef struct cortexr_priv {
 #define CORTEXR_CPACR_CP11_FULL_ACCESS 0x00c00000U
 
 #define TOPT_FLAVOUR_FLOAT (1U << 1U) /* If set, core has a hardware FPU */
+
+static void cortexr_halt_request(target_s *target);
 
 static void cortexr_mem_read(target_s *const target, void *const dest, const target_addr_t src, const size_t len)
 {
@@ -240,6 +249,8 @@ bool cortexr_probe(adiv5_access_port_s *const ap, const target_addr_t base_addre
 
 	target->driver = "ARM Cortex-R";
 
+	target->halt_request = cortexr_halt_request;
+
 	cortex_read_cpuid(target);
 	/* The format of the debug identification register is described in DDI0406C §C11.11.15 pg2217 */
 	const uint32_t debug_id = cortex_dbg_read32(target, CORTEXR_DBG_IDR);
@@ -287,4 +298,14 @@ bool cortexr_probe(adiv5_access_port_s *const ap, const target_addr_t base_addre
 		"Please report unknown device with Designer 0x%x Part ID 0x%x\n", target->designer_code, target->part_id);
 #endif
 	return true;
+}
+
+static void cortexr_halt_request(target_s *const target)
+{
+	volatile exception_s error;
+	TRY_CATCH (error, EXCEPTION_TIMEOUT) {
+		cortex_dbg_write32(target, CORTEXR_DBG_DRCR, CORTEXR_DBG_DRCR_HALT_REQ);
+	}
+	if (error.type)
+		tc_printf(target, "Timeout sending interrupt, is target in WFI?\n");
 }
