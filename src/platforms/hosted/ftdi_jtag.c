@@ -128,7 +128,7 @@ static void ftdi_jtag_tms_seq(uint32_t tms_states, const size_t clock_cycles)
 
 static void ftdi_jtag_tdi_seq(const bool final_tms, const uint8_t *const data_in, const size_t clock_cycles)
 {
-	return ftdi_jtag_tdi_tdo_seq(NULL, final_tms, data_in, clock_cycles);
+	ftdi_jtag_tdi_tdo_seq(NULL, final_tms, data_in, clock_cycles);
 }
 
 static bool ftdi_jtag_next(const bool tms, const bool tdi)
