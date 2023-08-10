@@ -115,7 +115,7 @@ static void nrf51_add_flash(target_s *t, uint32_t addr, size_t length, size_t er
 	f->length = length;
 	f->blocksize = erasesize;
 	/* Limit the write buffer size to 1k to help prevent probe memory exhaustion */
-	f->writesize = MIN(erasesize, 1024);
+	f->writesize = MIN(erasesize, 1024U);
 	f->erase = nrf51_flash_erase;
 	f->write = nrf51_flash_write;
 	f->prepare = nrf51_flash_prepare;
@@ -144,7 +144,7 @@ bool nrf51_probe(target_s *t)
 		uint32_t ram_size = target_mem_read32(t, NRF52_INFO_RAM);
 		t->driver = "Nordic nRF52";
 		t->target_options |= CORTEXM_TOPT_INHIBIT_NRST;
-		target_add_ram(t, 0x20000000, ram_size * 1024U);
+		target_add_ram(t, 0x20000000U, ram_size * 1024U);
 		nrf51_add_flash(t, 0, page_size * code_size, page_size);
 		nrf51_add_flash(t, NRF51_UICR, page_size, page_size);
 		target_add_commands(t, nrf51_cmd_list, "nRF52");
@@ -154,7 +154,7 @@ bool nrf51_probe(target_s *t)
 		 * Use the biggest RAM size seen in NRF51 fammily.
 		 * IDCODE is kept as '0', as deciphering is hard and there is later no usage.
 		 */
-		target_add_ram(t, 0x20000000, 0x8000);
+		target_add_ram(t, 0x20000000U, 0x8000U);
 		t->target_options |= CORTEXM_TOPT_INHIBIT_NRST;
 		nrf51_add_flash(t, 0, page_size * code_size, page_size);
 		nrf51_add_flash(t, NRF51_UICR, page_size, page_size);
@@ -205,7 +205,7 @@ static bool nrf51_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 		/* If the address to erase is the UICR, we have to handle that separately */
 		if (addr + offset == NRF51_UICR)
 			/* Write to the ERASE_UICR register to erase */
-			target_mem_write32(t, NRF51_NVMC_ERASEUICR, 0x1);
+			target_mem_write32(t, NRF51_NVMC_ERASEUICR, 0x1U);
 		else
 			/* Write address of first word in page to erase it */
 			target_mem_write32(t, NRF51_NVMC_ERASEPAGE, addr + offset);
@@ -234,10 +234,10 @@ static bool nrf51_mass_erase(target_s *t)
 	if (!nrf51_wait_ready(t, NULL))
 		return false;
 
-	platform_timeout_s timeout = {};
-	platform_timeout_set(&timeout, 500);
+	platform_timeout_s timeout;
+	platform_timeout_set(&timeout, 500U);
 	/* Erase all */
-	target_mem_write32(t, NRF51_NVMC_ERASEALL, 1);
+	target_mem_write32(t, NRF51_NVMC_ERASEALL, 1U);
 	return nrf51_wait_ready(t, &timeout);
 }
 
@@ -253,7 +253,7 @@ static bool nrf51_cmd_erase_uicr(target_s *t, int argc, const char **argv)
 		return false;
 
 	/* Erase UICR */
-	target_mem_write32(t, NRF51_NVMC_ERASEUICR, 1);
+	target_mem_write32(t, NRF51_NVMC_ERASEUICR, 1U);
 	return nrf51_wait_ready(t, NULL);
 }
 
@@ -268,7 +268,7 @@ static bool nrf51_cmd_protect_flash(target_s *t, int argc, const char **argv)
 	if (!nrf51_wait_ready(t, NULL))
 		return false;
 
-	target_mem_write32(t, NRF51_APPROTECT, 0xffffff00);
+	target_mem_write32(t, NRF51_APPROTECT, 0xffffff00U);
 	return nrf51_wait_ready(t, NULL);
 }
 
@@ -441,12 +441,12 @@ static bool nrf51_mdm_mass_erase(target_s *t)
 	adiv5_access_port_s *ap = t->priv;
 
 	uint32_t status = adiv5_ap_read(ap, MDM_STATUS);
-	adiv5_dp_write(ap->dp, MDM_POWER_EN, 0x50000000);
-	adiv5_dp_write(ap->dp, MDM_SELECT_AP, 0x01000000);
-	adiv5_ap_write(ap, MDM_CONTROL, 0x00000001);
+	adiv5_dp_write(ap->dp, MDM_POWER_EN, 0x50000000U);
+	adiv5_dp_write(ap->dp, MDM_SELECT_AP, 0x01000000U);
+	adiv5_ap_write(ap, MDM_CONTROL, 0x00000001U);
 
 	platform_timeout_s timeout;
-	platform_timeout_set(&timeout, 500);
+	platform_timeout_set(&timeout, 500U);
 	// Read until 0, probably should have a timeout here...
 	do {
 		status = adiv5_ap_read(ap, MDM_STATUS);
