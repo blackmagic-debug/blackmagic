@@ -691,7 +691,7 @@ adiv5_access_port_s *adiv5_new_ap(adiv5_debug_port_s *dp, uint8_t apsel)
 		return NULL;
 #endif
 
-	adiv5_access_port_s tmpap = {};
+	adiv5_access_port_s tmpap = {0};
 	/* Assume valid and try to read IDR */
 	tmpap.dp = dp;
 	tmpap.apsel = apsel;
