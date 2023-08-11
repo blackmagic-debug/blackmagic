@@ -282,6 +282,13 @@ static void cortexr_float_regs_save(target_s *const target)
 	}
 }
 
+static void cortexr_regs_save(target_s *const target)
+{
+	cortexr_core_regs_save(target);
+	if (target->target_options & TOPT_FLAVOUR_FLOAT)
+		cortexr_float_regs_save(target);
+}
+
 static inline void cortexr_core_reg_write(target_s *const target, const uint8_t reg, const uint32_t value)
 {
 	/* If the register is a GPR and not the program counter, use a "simple" MCR to read */
@@ -331,6 +338,13 @@ static void cortexr_float_regs_restore(target_s *const target)
 	/* Load the value for FPCSR to r0 and then shove it back into place */
 	cortexr_core_reg_write(target, 0U, priv->core_regs.fpcsr);
 	cortexr_run_insn(target, ARM_VMSR_FPCSR_R0_INSN);
+}
+
+static void cortexr_regs_restore(target_s *const target)
+{
+	if (target->target_options & TOPT_FLAVOUR_FLOAT)
+		cortexr_float_regs_restore(target);
+	cortexr_core_regs_restore(target);
 }
 
 static uint32_t cortexr_coproc_read(target_s *const target, const uint8_t coproc, const uint16_t op)
@@ -495,9 +509,7 @@ static target_halt_reason_e cortexr_halt_poll(target_s *const target, target_add
 	cortex_dbg_write32(target, CORTEXR_DBG_DSCR, dscr | CORTEXR_DBG_DSCR_ITR_ENABLE);
 
 	/* Save the target core's registers as debugging operations clobber them */
-	cortexr_core_regs_save(target);
-	if (target->target_options & TOPT_FLAVOUR_FLOAT)
-		cortexr_float_regs_save(target);
+	cortexr_regs_save(target);
 
 	target_halt_reason_e reason = TARGET_HALT_FAULT;
 	/* Determine why we halted exactly from the Method Of Entry bits */
@@ -526,9 +538,7 @@ static void cortexr_halt_resume(target_s *const target, const bool step)
 {
 	(void)step;
 	/* Restore the core's registers so the running program doesn't know we've been in there */
-	if (target->target_options & TOPT_FLAVOUR_FLOAT)
-		cortexr_float_regs_restore(target);
-	cortexr_core_regs_restore(target);
+	cortexr_regs_restore(target);
 
 	/* Ask to resume the core */
 	cortex_dbg_write32(target, CORTEXR_DBG_DRCR, CORTEXR_DBG_DRCR_CLR_STICKY_EXC | CORTEXR_DBG_DRCR_RESTART_REQ);
