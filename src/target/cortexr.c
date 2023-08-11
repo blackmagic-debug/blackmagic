@@ -115,15 +115,32 @@ typedef struct cortexr_priv {
 
 /*
  * Instruction encodings for reading/writing the program counter to/from r0,
- * and reading/writing CPSR to/from r0
+ * reading/writing CPSR to/from r0, and reading/writing the SPSRs to/from r0.
  */
 #define ARM_MOV_R0_PC_INSN   0xe1a0000fU
 #define ARM_MOV_PC_R0_INSN   0xe1a0f000U
 #define ARM_MRS_R0_CPSR_INSN 0xe10f0000U
 #define ARM_MSR_CPSR_R0_INSN 0xe12ff000U
+#define ARM_MRS_R0_SPSR_INSN 0xe1400200U
+#define ARM_MSR_SPSR_R0_INSN 0xe160f200U
 
 /* CPSR register definitions */
 #define CORTEXR_CPSR_THUMB (1U << 5U)
+
+/*
+ * Table of encodings for the banked SPSRs - These are encoded in the following format:
+ * Bits[0]: SYSm[0]
+ * Bits[15:12]: SYSm[4:1]
+ * This allows these values to simply be shifted up a little to put them in the right spot
+ * for use in the banked MRS/MSR instructions.
+ */
+static const uint16_t cortexr_spsr_encodings[5] = {
+	0xc001U, /* FIQ */
+	0x1000U, /* IRQ */
+	0x5000U, /* SVC */
+	0x9000U, /* ABT */
+	0xd000U, /* UND */
+};
 
 /*
  * Instruction encodings for reading/writing the VFPv3 float registers
@@ -239,6 +256,12 @@ static void cortexr_core_regs_save(target_s *const target)
 	priv->core_regs.cpsr = cortexr_core_reg_read(target, 0U);
 	/* Adjust the program counter according to the mode */
 	priv->core_regs.r[CORTEX_REG_PC] -= (priv->core_regs.cpsr & CORTEXR_CPSR_THUMB) ? 4U : 8U;
+	/* Read the SPSRs into r0 and retrieve them */
+	for (size_t i = 0; i < ARRAY_LENGTH(priv->core_regs.spsr); ++i) {
+		/* Build and issue the banked MRS for the required SPSR */
+		cortexr_run_insn(target, ARM_MRS_R0_SPSR_INSN | (cortexr_spsr_encodings[i] << 4U));
+		priv->core_regs.spsr[i] = cortexr_core_reg_read(target, 0U);
+	}
 }
 
 static void cortexr_float_regs_save(target_s *const target)
@@ -275,6 +298,12 @@ static inline void cortexr_core_reg_write(target_s *const target, const uint8_t 
 static void cortexr_core_regs_restore(target_s *const target)
 {
 	cortexr_priv_s *const priv = (cortexr_priv_s *)target->priv;
+	/* Load the values for each of the SPSRs in turn into r0 and shove them back into place */
+	for (size_t i = 0; i < ARRAY_LENGTH(priv->core_regs.spsr); ++i) {
+		cortexr_core_reg_write(target, 0U, priv->core_regs.spsr[i]);
+		/* Build and issue the banked MSR for the required SPSR */
+		cortexr_run_insn(target, ARM_MSR_SPSR_R0_INSN | (cortexr_spsr_encodings[i] << 4U));
+	}
 	/* Load the value for CPSR to r0 and then shove it back into place */
 	cortexr_core_reg_write(target, 0U, priv->core_regs.cpsr);
 	cortexr_run_insn(target, ARM_MSR_CPSR_R0_INSN);
@@ -284,7 +313,6 @@ static void cortexr_core_regs_restore(target_s *const target)
 	/* Restore r1-15 in that order. Ignore r0 for the moment as it gets clobbered repeatedly */
 	for (size_t i = 1U; i < ARRAY_LENGTH(priv->core_regs.r); ++i)
 		cortexr_core_reg_write(target, i, priv->core_regs.r[i]);
-
 	/* Now we're done with the rest of the registers, restore r0 */
 	cortexr_core_reg_write(target, 0U, priv->core_regs.r[0U]);
 }
