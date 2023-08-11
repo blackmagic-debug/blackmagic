@@ -30,13 +30,24 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef PLATFORMS_HOSTED_WCHLINK_H
-#define PLATFORMS_HOSTED_WCHLINK_H
+#include "general.h"
+#include "target_internal.h"
+#include "wchlink.h"
+#include "wchlink_protocol.h"
 
-#include "bmp_hosted.h"
+bool wchlink_rvswd_scan(void)
+{
+	target_list_free();
 
-bool wchlink_init(void);
-bool wchlink_rvswd_scan(void);
-void wchlink_riscv_dtm_handler(void);
+	/* 
+	 * This is redundant as we will run a generic scan routine after this
+	 * but without it the scan will fail
+	 */
+	if (!wchlink_attach())
+		return false;
 
-#endif /* PLATFORMS_HOSTED_WCHLINK_H */
+	/* deffer to WCH-Link riscv_dtm_handler */
+	wchlink_riscv_dtm_handler();
+
+	return target_list != NULL;
+}
