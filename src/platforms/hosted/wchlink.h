@@ -36,5 +36,6 @@
 #include "bmp_hosted.h"
 
 bool wchlink_init(void);
+void wchlink_riscv_dtm_handler(void);
 
 #endif /* PLATFORMS_HOSTED_WCHLINK_H */
