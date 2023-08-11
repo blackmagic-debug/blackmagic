@@ -23,6 +23,7 @@
 #include "general.h"
 #include "target.h"
 #include "target_internal.h"
+#include "buffer_utils.h"
 
 /* IDCODE register */
 #define CH32VX_IDCODE               0x1ffff704U
@@ -35,6 +36,30 @@
 #define CH32V305_IDCODE_FAMILY 0x305U
 #define CH32V303_IDCODE_FAMILY 0x303U
 #define CH32V307_IDCODE_FAMILY 0x307U
+
+/* Electronic Signature (ESIG) registers */
+#define CH32VX_ESIG_FLASH_CAP 0x1ffff7e0U /* Flash capacity register, 16 bits, KiB units */
+#define CH32VX_ESIG_UID1      0x1ffff7e8U /* Unique ID register, bits 0:31 */
+#define CH32VX_ESIG_UID2      0x1ffff7ecU /* Unique ID register, bits 32:63 */
+#define CH32VX_ESIG_UID3      0x1ffff7f0U /* Unique ID register, bits 64:95 */
+
+static bool ch32vx_uid_cmd(target_s *t, int argc, const char **argv);
+
+const command_s ch32vx_cmd_list[] = {
+	{"uid", ch32vx_uid_cmd, "Prints 96 bit unique id"},
+	{NULL, NULL, NULL},
+};
+
+static size_t ch32vx_read_flash_size(target_s *const t)
+{
+	return target_mem32_read16(t, CH32VX_ESIG_FLASH_CAP) * 1024U;
+}
+
+static void ch32vx_read_uid(target_s *const t, uint8_t *const uid)
+{
+	for (size_t uid_reg_offset = 0; uid_reg_offset < 12U; uid_reg_offset += 4U)
+		write_be4(uid, uid_reg_offset, target_mem32_read32(t, CH32VX_ESIG_UID1 + uid_reg_offset));
+}
 
 bool ch32vx_probe(target_s *const target)
 {
@@ -74,7 +99,30 @@ bool ch32vx_probe(target_s *const target)
 		break;
 	}
 
+	const size_t flash_size = ch32vx_read_flash_size(target);
+	DEBUG_INFO("CH32Vx flash size: %zu\n", flash_size);
+	(void)flash_size;
+
 	target->part_id = idcode;
+
+	target_add_commands(target, ch32vx_cmd_list, "CH32Vx");
+
+	return true;
+}
+
+/* Reads the 96 bit unique id */
+static bool ch32vx_uid_cmd(target_s *const target, const int argc, const char **const argv)
+{
+	(void)argc;
+	(void)argv;
+
+	uint8_t uid[12U];
+	ch32vx_read_uid(target, uid);
+
+	tc_printf(target, "Unique id: 0x");
+	for (size_t i = 0U; i < sizeof(uid); i++)
+		tc_printf(target, "%02" PRIx8, uid[i]);
+	tc_printf(target, "\n");
 
 	return true;
 }
