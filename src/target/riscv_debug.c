@@ -557,16 +557,30 @@ static void riscv_hart_free(void *const priv)
 
 static bool riscv_dmi_read(riscv_dmi_s *const dmi, const uint32_t address, uint32_t *const value)
 {
-	const bool result = dmi->read(dmi, address, value);
+	bool result = false;
+	do {
+		result = dmi->read(dmi, address, value);
+	} while (dmi->fault == RV_DMI_TOO_SOON);
+
 	if (result)
 		DEBUG_PROTO("%s:  %08" PRIx32 " -> %08" PRIx32 "\n", __func__, address, *value);
+	else
+		DEBUG_WARN("%s:  %08" PRIx32 " failed: %u\n", __func__, address, dmi->fault);
 	return result;
 }
 
 static bool riscv_dmi_write(riscv_dmi_s *const dmi, const uint32_t address, const uint32_t value)
 {
 	DEBUG_PROTO("%s: %08" PRIx32 " <- %08" PRIx32 "\n", __func__, address, value);
-	return dmi->write(dmi, address, value);
+
+	bool result = false;
+	do {
+		result = dmi->write(dmi, address, value);
+	} while (dmi->fault == RV_DMI_TOO_SOON);
+
+	if (!result)
+		DEBUG_WARN("%s:  %08" PRIx32 " failed: %u\n", __func__, address, dmi->fault);
+	return result;
 }
 
 bool riscv_dm_read(riscv_dm_s *dbg_module, const uint8_t address, uint32_t *const value)
