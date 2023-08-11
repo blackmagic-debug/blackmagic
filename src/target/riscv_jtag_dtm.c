@@ -50,13 +50,6 @@
 #define RV_DTMCS_ADDRESS_MASK      0x000003f0U
 #define RV_DTMCS_ADDRESS_SHIFT     4U
 
-#define RV_DMI_NOOP     0U
-#define RV_DMI_READ     1U
-#define RV_DMI_WRITE    2U
-#define RV_DMI_SUCCESS  0U
-#define RV_DMI_FAILURE  2U
-#define RV_DMI_TOO_SOON 3U
-
 #ifdef CONFIG_RISCV
 static void riscv_jtag_dtm_init(riscv_dmi_s *dmi);
 static uint32_t riscv_shift_dtmcs(const riscv_dmi_s *dmi, uint32_t control);
