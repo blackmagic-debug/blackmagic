@@ -156,6 +156,13 @@ typedef struct riscv_hart {
 
 #define RV_STATUS_VERSION_MASK 0x0000000fU
 
+#define RV_DMI_NOOP     0U
+#define RV_DMI_READ     1U
+#define RV_DMI_WRITE    2U
+#define RV_DMI_SUCCESS  0U
+#define RV_DMI_FAILURE  2U
+#define RV_DMI_TOO_SOON 3U
+
 #define RV_DM_DATA0             0x04U
 #define RV_DM_DATA1             0x05U
 #define RV_DM_DATA2             0x06U
