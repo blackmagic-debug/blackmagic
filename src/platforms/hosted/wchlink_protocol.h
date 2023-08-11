@@ -317,5 +317,6 @@
 
 bool wchlink_command_send_recv(uint8_t command, uint8_t subcommand, const void *payload, size_t payload_length,
 	void *response, size_t response_length);
+bool wchlink_transfer_dmi(uint8_t operation, uint32_t address, uint32_t data_in, uint32_t *data_out, uint8_t *status);
 
 #endif /* PLATFORMS_HOSTED_WCHLINK_PROTOCOL_H */
