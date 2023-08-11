@@ -59,6 +59,12 @@ typedef struct cortexr_priv {
 	uint8_t hw_watchpoint_max;
 	/* Breakpoint unit information */
 	uint8_t hw_breakpoint_max;
+
+	/* Core registers cache */
+	struct {
+		uint32_t r[16];
+		uint32_t cpsr;
+	} core_regs;
 } cortexr_priv_s;
 
 #define CORTEXR_DBG_IDR   0x000U
@@ -103,6 +109,18 @@ typedef struct cortexr_priv {
 #define CORTEXR_DBG_DRCR_CLR_STICKY_EXC     (1U << 2U)
 #define CORTEXR_DBG_DRCR_CLR_STICKY_PIPEADV (1U << 3U)
 #define CORTEXR_DBG_DRCR_CANCEL_BUS_REQ     (1U << 4U)
+
+/*
+ * Instruction encodings for reading/writing the program counter to/from r0,
+ * and reading/writing CPSR to/from r0
+ */
+#define ARM_MOV_R0_PC_INSN   0xe1a0000fU
+#define ARM_MOV_PC_R0_INSN   0xe1a0f000U
+#define ARM_MRS_R0_CPSR_INSN 0xe10f0000U
+#define ARM_MSR_CPSR_R0_INSN 0xe12ff000U
+
+/* CPSR register definitions */
+#define CORTEXR_CPSR_THUMB (1U << 5U)
 
 /*
  * Instruction encodings for the coprocessor interface
@@ -186,14 +204,59 @@ static void cortexr_run_write_insn(target_s *const target, const uint32_t insn, 
 
 static inline uint32_t cortexr_core_reg_read(target_s *const target, const uint8_t reg)
 {
-	/* Build an issue a core to coprocessor transfer for the requested register and read back the result */
-	return cortexr_run_read_insn(target, ARM_MCR_INSN | ENCODE_CP_ACCESS(14, 0, reg, 0, 5, 0));
+	/* If the register is a GPR and not the program counter, use a "simple" MCR to read */
+	if (reg < 15U)
+		/* Build an issue a core to coprocessor transfer for the requested register and read back the result */
+		return cortexr_run_read_insn(target, ARM_MCR_INSN | ENCODE_CP_ACCESS(14, 0, reg, 0, 5, 0));
+	/* If the register is the program counter, we first have to extract it to r0 */
+	else if (reg == 15U) {
+		cortexr_run_insn(target, ARM_MOV_R0_PC_INSN);
+		return cortexr_core_reg_read(target, 0U);
+	}
+	return 0U;
+}
+
+static void cortexr_core_regs_save(target_s *const target)
+{
+	cortexr_priv_s *const priv = (cortexr_priv_s *)target->priv;
+	/* Save out r0-r15 in that order (r15, aka pc, clobbers r0) */
+	for (size_t i = 0U; i < ARRAY_LENGTH(priv->core_regs.r); ++i)
+		priv->core_regs.r[i] = cortexr_core_reg_read(target, i);
+	/* Read CPSR to r0 and retrieve it */
+	cortexr_run_insn(target, ARM_MRS_R0_CPSR_INSN);
+	priv->core_regs.cpsr = cortexr_core_reg_read(target, 0U);
+	/* Adjust the program counter according to the mode */
+	priv->core_regs.r[CORTEX_REG_PC] -= (priv->core_regs.cpsr & CORTEXR_CPSR_THUMB) ? 4U : 8U;
 }
 
 static inline void cortexr_core_reg_write(target_s *const target, const uint8_t reg, const uint32_t value)
 {
-	/* Build and issue a coprocessor to core transfer for the requested register and send the new data */
-	cortexr_run_write_insn(target, ARM_MRC_INSN | ENCODE_CP_ACCESS(14, 0, reg, 0, 5, 0), value);
+	/* If the register is a GPR and not the program counter, use a "simple" MCR to read */
+	if (reg < 15U)
+		/* Build and issue a coprocessor to core transfer for the requested register and send the new data */
+		cortexr_run_write_insn(target, ARM_MRC_INSN | ENCODE_CP_ACCESS(14, 0, reg, 0, 5, 0), value);
+	/* If the register is the program counter, we first have to write it to r0 */
+	else if (reg == 15U) {
+		cortexr_core_reg_write(target, 0U, value);
+		cortexr_run_insn(target, ARM_MOV_PC_R0_INSN);
+	}
+}
+
+static void cortexr_core_regs_restore(target_s *const target)
+{
+	cortexr_priv_s *const priv = (cortexr_priv_s *)target->priv;
+	/* Load the value for CPSR to r0 and then shove it back into place */
+	cortexr_core_reg_write(target, 0U, priv->core_regs.cpsr);
+	cortexr_run_insn(target, ARM_MSR_CPSR_R0_INSN);
+	/* Fix up the program counter for the mode */
+	if (priv->core_regs.cpsr & CORTEXR_CPSR_THUMB)
+		priv->core_regs.r[CORTEX_REG_PC] |= 1U;
+	/* Restore r1-15 in that order. Ignore r0 for the moment as it gets clobbered repeatedly */
+	for (size_t i = 1U; i < ARRAY_LENGTH(priv->core_regs.r); ++i)
+		cortexr_core_reg_write(target, i, priv->core_regs.r[i]);
+
+	/* Now we're done with the rest of the registers, restore r0 */
+	cortexr_core_reg_write(target, 0U, priv->core_regs.r[0U]);
 }
 
 static uint32_t cortexr_coproc_read(target_s *const target, const uint8_t coproc, const uint16_t op)
@@ -285,8 +348,6 @@ bool cortexr_probe(adiv5_access_port_s *const ap, const target_addr_t base_addre
 	DEBUG_TARGET("%s %s core has %u breakpoint and %u watchpoint units available\n", target->driver, target->core,
 		priv->hw_breakpoint_max, priv->hw_watchpoint_max);
 
-	/* Grab r0 as the next steps clobber it */
-	const uint32_t r0 = cortexr_core_reg_read(target, 0U);
 	/* Probe for FP extension. */
 	uint32_t cpacr = cortexr_coproc_read(target, CORTEXR_CPACR);
 	cpacr |= CORTEXR_CPACR_CP10_FULL_ACCESS | CORTEXR_CPACR_CP11_FULL_ACCESS;
@@ -313,9 +374,6 @@ bool cortexr_probe(adiv5_access_port_s *const ap, const target_addr_t base_addre
 			priv->base.icache_line_length << 2U, priv->base.dcache_line_length << 2U);
 	} else
 		target_check_error(target);
-
-	/* Restore r0 after all these steps */
-	cortexr_core_reg_write(target, 0U, r0);
 
 #if PC_HOSTED == 0
 	gdb_outf("Please report unknown device with Designer 0x%x Part ID 0x%x\n", target->designer_code, target->part_id);
@@ -361,7 +419,8 @@ static target_halt_reason_e cortexr_halt_poll(target_s *const target, target_add
 	/* Make sure ITR is enabled */
 	cortex_dbg_write32(target, CORTEXR_DBG_DSCR, dscr | CORTEXR_DBG_DSCR_ITR_ENABLE);
 
-	/* Read the target's registers out and cache them */
+	/* Save the target core's registers as debugging operations clobber them */
+	cortexr_core_regs_save(target);
 
 	target_halt_reason_e reason = TARGET_HALT_FAULT;
 	/* Determine why we halted exactly from the Method Of Entry bits */
@@ -389,7 +448,10 @@ static target_halt_reason_e cortexr_halt_poll(target_s *const target, target_add
 static void cortexr_halt_resume(target_s *const target, const bool step)
 {
 	(void)step;
-	/* Start by asking to resume the core */
+	/* Restore the core's registers so the running program doesn't know we've been in there */
+	cortexr_core_regs_restore(target);
+
+	/* Ask to resume the core */
 	cortex_dbg_write32(target, CORTEXR_DBG_DRCR, CORTEXR_DBG_DRCR_CLR_STICKY_EXC | CORTEXR_DBG_DRCR_RESTART_REQ);
 
 	/* Then poll for when the core actually resumes */
