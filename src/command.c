@@ -56,7 +56,7 @@ static bool cmd_version(target_s *t, int argc, const char **argv);
 static bool cmd_help(target_s *t, int argc, const char **argv);
 
 static bool cmd_jtag_scan(target_s *target, int argc, const char **argv);
-static bool cmd_swd_scan(target_s *t, int argc, const char **argv);
+static bool cmd_swd_scan(target_s *target, int argc, const char **argv);
 static bool cmd_auto_scan(target_s *t, int argc, const char **argv);
 static bool cmd_frequency(target_s *t, int argc, const char **argv);
 static bool cmd_targets(target_s *t, int argc, const char **argv);
@@ -246,9 +246,9 @@ static bool cmd_jtag_scan(target_s *target, int argc, const char **argv)
 	return true;
 }
 
-bool cmd_swd_scan(target_s *t, int argc, const char **argv)
+bool cmd_swd_scan(target_s *target, int argc, const char **argv)
 {
-	(void)t;
+	(void)target;
 	volatile uint32_t targetid = 0;
 	if (argc > 1)
 		targetid = strtoul(argv[1], NULL, 0);
@@ -279,7 +279,7 @@ bool cmd_swd_scan(target_s *t, int argc, const char **argv)
 	if (!scan_result) {
 		platform_target_clk_output_enable(false);
 		platform_nrst_set_val(false);
-		gdb_out("SW-DP scan failed!\n");
+		gdb_out("SWD scan failed!\n");
 		return false;
 	}
 
@@ -320,7 +320,7 @@ bool cmd_auto_scan(target_s *t, int argc, const char **argv)
 		if (scan_result)
 			break;
 
-		gdb_out("SW-DP scan found no devices.\n");
+		gdb_out("SWD scan found no devices.\n");
 	}
 	switch (e.type) {
 	case EXCEPTION_TIMEOUT:

@@ -429,7 +429,7 @@ bool scan_for_targets(const bmda_cli_options_s *const opt)
 	DEBUG_WARN("JTAG scan found no devices, trying SWD.\n");
 	if (bmda_swd_scan(opt->opt_targetid))
 		return true;
-	DEBUG_ERROR("SW-DP scan failed!\n");
+	DEBUG_ERROR("SWD scan failed!\n");
 	return false;
 }
 
