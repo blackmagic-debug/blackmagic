@@ -213,6 +213,9 @@ static_assert(ARRAY_LENGTH(cortexr_spr_types) == ARRAY_LENGTH(cortexr_spr_names)
 );
 /* clang-format on */
 
+static void cortexr_regs_read(target_s *target, void *data);
+static void cortexr_regs_write(target_s *target, const void *data);
+
 static target_halt_reason_e cortexr_halt_poll(target_s *target, target_addr_t *watch);
 static void cortexr_halt_request(target_s *target);
 static void cortexr_halt_resume(target_s *target, bool step);
@@ -479,6 +482,9 @@ bool cortexr_probe(adiv5_access_port_s *const ap, const target_addr_t base_addre
 	DEBUG_TARGET("%s: FPU present? %s\n", __func__, core_has_fpu ? "yes" : "no");
 
 	target->regs_description = cortexr_target_description;
+	target->regs_read = cortexr_regs_read;
+	target->regs_write = cortexr_regs_write;
+	target->regs_size = sizeof(uint32_t) * CORTEXAR_GENERAL_REG_COUNT;
 
 	if (core_has_fpu) {
 		target->target_options |= TOPT_FLAVOUR_FLOAT;
@@ -508,6 +514,32 @@ bool cortexr_probe(adiv5_access_port_s *const ap, const target_addr_t base_addre
 		"Please report unknown device with Designer 0x%x Part ID 0x%x\n", target->designer_code, target->part_id);
 #endif
 	return true;
+}
+
+static void cortexr_regs_read(target_s *const target, void *const data)
+{
+	const cortexr_priv_s *const priv = (cortexr_priv_s *)target->priv;
+	uint32_t *const regs = (uint32_t *)data;
+	/* Copy the register values out from our cache */
+	memcpy(regs, priv->core_regs.r, sizeof(priv->core_regs.r));
+	regs[CORTEX_REG_CPSR] = priv->core_regs.cpsr;
+	if (target->target_options & TOPT_FLAVOUR_FLOAT) {
+		memcpy(regs + CORTEXAR_GENERAL_REG_COUNT, priv->core_regs.d, sizeof(priv->core_regs.d));
+		regs[CORTEX_REG_FPCSR] = priv->core_regs.fpcsr;
+	}
+}
+
+static void cortexr_regs_write(target_s *const target, const void *const data)
+{
+	cortexr_priv_s *const priv = (cortexr_priv_s *)target->priv;
+	const uint32_t *const regs = (const uint32_t *)data;
+	/* Copy the new register values into our cache */
+	memcpy(priv->core_regs.r, regs, sizeof(priv->core_regs.r));
+	priv->core_regs.cpsr = regs[CORTEX_REG_CPSR];
+	if (target->target_options & TOPT_FLAVOUR_FLOAT) {
+		memcpy(priv->core_regs.d, regs + CORTEXAR_GENERAL_REG_COUNT, sizeof(priv->core_regs.d));
+		priv->core_regs.fpcsr = regs[CORTEX_REG_FPCSR];
+	}
 }
 
 static void cortexr_halt_request(target_s *const target)
