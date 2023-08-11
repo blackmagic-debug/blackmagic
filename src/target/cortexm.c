@@ -540,8 +540,6 @@ bool cortexm_probe(adiv5_access_port_s *ap)
 	target_mem_write32(t, CORTEXM_CPACR, cpacr);
 	bool is_cortexmf = target_mem_read32(t, CORTEXM_CPACR) == cpacr;
 
-	/* Should probe here to make sure it's Cortex-M3 */
-
 	t->regs_description = cortexm_regs_description;
 	t->regs_read = cortexm_regs_read;
 	t->regs_write = cortexm_regs_write;
@@ -568,12 +566,10 @@ bool cortexm_probe(adiv5_access_port_s *ap)
 	priv->demcr = CORTEXM_DEMCR_TRCENA | CORTEXM_DEMCR_VC_HARDERR | CORTEXM_DEMCR_VC_CORERESET;
 
 	/*
-	 * Some devices, such as the STM32F0, will not correctly
-	 * respond to probes under reset. Therefore, if we're
-	 * attempting to connect under reset, we should first write to
-	 * the debug register to catch the reset vector so that we
-	 * immediately halt when reset is released, then request a
-	 * halt and release reset. This will prevent any user code
+	 * Some devices, such as the STM32F0, will not correctly respond to probes under reset.
+	 * Therefore, if we're attempting to connect under reset, we should first write to
+	 * the debug register to catch the reset vector so that we immediately halt when reset
+	 * is released, then request a halt and release reset. This will prevent any user code
 	 * from running on the target.
 	 */
 	bool conn_reset = false;
@@ -701,13 +697,14 @@ bool cortexm_probe(adiv5_access_port_s *ap)
 		} else if (t->part_id == 0x4c4U) { /* Cortex-M4 ROM */
 			PROBE(sam3x_probe);
 			PROBE(lmi_probe);
-			/* The LPC546xx and LPC43xx parts present with the same AP ROM Part
-			Number, so we need to probe both. Unfortunately, when probing for
-			the LPC43xx when the target is actually an LPC546xx, the memory
-			location checked is illegal for the LPC546xx and puts the chip into
-			Lockup, requiring a RST pulse to recover. Instead, make sure to
-			probe for the LPC546xx first, which experimentally doesn't harm
-			LPC43xx detection. */
+			/*
+			 * The LPC546xx and LPC43xx parts present with the same AP ROM part number,
+			 * so we need to probe both. Unfortunately, when probing for the LPC43xx
+			 * when the target is actually an LPC546xx, the memory location checked
+			 * is illegal for the LPC546xx and puts the chip into lockup, requiring a
+			 * reset pulse to recover. Instead, make sure to probe for the LPC546xx first,
+			 * which experimentally doesn't harm LPC43xx detection.
+			 */
 			PROBE(lpc546xx_probe);
 			PROBE(lpc43xx_probe);
 			PROBE(lpc40xx_probe);
@@ -741,10 +738,11 @@ bool cortexm_probe(adiv5_access_port_s *ap)
 bool cortexm_attach(target_s *t)
 {
 	adiv5_access_port_s *ap = cortex_ap(t);
-	ap->dp->fault = 1; /* Force switch to this multi-drop device*/
+	/* Mark the DP as being in fault so error recovery will switch to this core when in multi-drop mode */
+	ap->dp->fault = 1;
 	cortexm_priv_s *priv = t->priv;
 
-	/* Clear any pending fault condition */
+	/* Clear any pending fault condition (and switch to this core) */
 	target_check_error(t);
 
 	target_halt_request(t);
@@ -849,7 +847,7 @@ static void cortexm_regs_read(target_s *const target, void *const data)
 		/* Set up CSW for 32-bit access to allow us to read the target's registers */
 		adiv5_ap_write(ap, ADIV5_AP_CSW, ap->csw | ADIV5_AP_CSW_SIZE_WORD);
 		/*
-		 * Map the banked data registers (0x10-0x1c) to the
+		 * Map the AP's banked data registers (0x10-0x1c) to the
 		 * debug registers DHCSR, DCRSR, DCRDR and DEMCR respectively
 		 */
 		adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_TAR, CORTEXM_DHCSR);
@@ -965,8 +963,10 @@ static void cortexm_pc_write(target_s *t, const uint32_t val)
 	target_mem_write32(t, CORTEXM_DCRSR, CORTEXM_DCRSR_REGWnR | 0x0fU);
 }
 
-/* The following three routines implement target halt/resume
- * using the core debug registers in the NVIC. */
+/*
+ * The following three routines implement target halt/resume
+ * using the core debug registers in the NVIC.
+ */
 static void cortexm_reset(target_s *t)
 {
 	/* Read DHCSR here to clear S_RESET_ST bit before reset */
@@ -975,8 +975,7 @@ static void cortexm_reset(target_s *t)
 	if ((t->target_options & CORTEXM_TOPT_INHIBIT_NRST) == 0) {
 		platform_nrst_set_val(true);
 		platform_nrst_set_val(false);
-		/* Some NRF52840 users saw invalid SWD transaction with
-		 * native/firmware without this delay.*/
+		/* Some NRF52840 users saw invalid SWD transaction with  native/firmware without this delay.*/
 		platform_delay(10);
 	}
 	uint32_t dhcsr = target_mem_read32(t, CORTEXM_DHCSR);
@@ -999,8 +998,7 @@ static void cortexm_reset(target_s *t)
 	if (platform_timeout_is_expired(&reset_timeout))
 		DEBUG_WARN("Reset seem to be stuck low!\n");
 #endif
-	/* 10 ms delay to ensure that things such as the STM32 HSI clock
-	 * have started up fully. */
+	/* 10 ms delay to ensure that things such as the STM32 HSI clock have started up fully. */
 	platform_delay(10);
 	/* Reset DFSR flags */
 	target_mem_write32(t, CORTEXM_DFSR, CORTEXM_DFSR_RESETALL);
@@ -1025,24 +1023,24 @@ static target_halt_reason_e cortexm_halt_poll(target_s *t, target_addr_t *watch)
 	volatile uint32_t dhcsr = 0;
 	volatile exception_s e;
 	TRY_CATCH (e, EXCEPTION_ALL) {
-		/* If this times out because the target is in WFI then
-		 * the target is still running. */
+		/* If this times out because the target is in WFI then the target is still running. */
 		dhcsr = target_mem_read32(t, CORTEXM_DHCSR);
 	}
 	switch (e.type) {
 	case EXCEPTION_ERROR:
-		/* Oh crap, there's no recovery from this... */
+		/* Things went seriously wrong and there is no recovery from this... */
 		target_list_free();
 		return TARGET_HALT_ERROR;
 	case EXCEPTION_TIMEOUT:
-		/* Timeout isn't a problem, target could be in WFI */
+		/* Timeout isn't actually a problem and probably means target is in WFI */
 		return TARGET_HALT_RUNNING;
 	}
 
+	/* Check that the core actually halted */
 	if (!(dhcsr & CORTEXM_DHCSR_S_HALT))
 		return TARGET_HALT_RUNNING;
 
-	/* We've halted.  Let's find out why. */
+	/* Read out the status register to determine why */
 	uint32_t dfsr = target_mem_read32(t, CORTEXM_DFSR);
 	target_mem_write32(t, CORTEXM_DFSR, dfsr); /* write back to reset */
 
@@ -1115,12 +1113,16 @@ void cortexm_halt_resume(target_s *const target, const bool step)
 
 static int cortexm_fault_unwind(target_s *t)
 {
+	/* Read the fault status registers */
 	uint32_t hfsr = target_mem_read32(t, CORTEXM_HFSR);
 	uint32_t cfsr = target_mem_read32(t, CORTEXM_CFSR);
-	target_mem_write32(t, CORTEXM_HFSR, hfsr); /* write back to reset */
-	target_mem_write32(t, CORTEXM_CFSR, cfsr); /* write back to reset */
-	/* We check for FORCED in the HardFault Status Register or
-	 * for a configurable fault to avoid catching core resets */
+	/* Write them back to reset them */
+	target_mem_write32(t, CORTEXM_HFSR, hfsr);
+	target_mem_write32(t, CORTEXM_CFSR, cfsr);
+	/*
+	 * We check for FORCED in the HardFault Status Register or
+	 * for a configurable fault to avoid catching core resets
+	 */
 	if ((hfsr & CORTEXM_HFSR_FORCED) || cfsr) {
 		/* Unwind exception */
 		uint32_t regs[CORTEXM_GENERAL_REG_COUNT + CORTEX_FLOAT_REG_COUNT];
@@ -1136,12 +1138,14 @@ static int cortexm_fault_unwind(target_s *t)
 		target_mem_read(t, stack, sp, sizeof(stack));
 		if (target_check_error(t))
 			return 0;
-		regs[CORTEX_REG_LR] = stack[5]; /* restore LR to pre-exception state */
-		regs[CORTEX_REG_PC] = stack[6]; /* restore PC to pre-exception state */
+		/* Restore LR and PC to their pre-exception states */
+		regs[CORTEX_REG_LR] = stack[5];
+		regs[CORTEX_REG_PC] = stack[6];
 
-		/* adjust stack to pop exception state */
-		uint32_t framesize = fpca ? 0x68U : 0x20U; /* check for basic vs. extended frame */
-		if (stack[7] & (1U << 9U))                 /* check for stack alignment fixup */
+		/* Adjust stack to pop exception statem checking for basic vs extended exception frames */
+		uint32_t framesize = fpca ? 0x68U : 0x20U;
+		/* Check for stack alignment fixup */
+		if (stack[7] & (1U << 9U))
 			framesize += 4U;
 
 		if (spsel) {
@@ -1153,12 +1157,12 @@ static int cortexm_fault_unwind(target_s *t)
 		if (fpca)
 			regs[CORTEX_REG_SPECIAL] |= 0x2000000U;
 
-		/* FIXME: stack[7] contains xPSR when this is supported */
-		/* although, if we caught the exception it will be unchanged */
-
-		/* Reset exception state to allow resuming from restored
-		 * state.
+		/*
+		 * FIXME: stack[7] contains xPSR when this is supported
+		 * although, if we caught the exception it will be unchanged
 		 */
+
+		/* Reset exception state to allow resuming from restored state. */
 		target_mem_write32(t, CORTEXM_AIRCR, CORTEXM_AIRCR_VECTKEY | CORTEXM_AIRCR_VECTCLRACTIVE);
 
 		/* Write pre-exception registers back to core */
@@ -1354,17 +1358,18 @@ static target_addr_t cortexm_check_watch(target_s *t)
 static bool cortexm_vector_catch(target_s *t, int argc, const char **argv)
 {
 	cortexm_priv_s *priv = t->priv;
-	static const char *vectors[] = {"reset", NULL, NULL, NULL, "mm", "nocp", "chk", "stat", "bus", "int", "hard"};
+	static const char *const vectors[] = {"reset", NULL, NULL, NULL, "mm", "nocp", "chk", "stat", "bus", "int", "hard"};
 	uint32_t tmp = 0;
 
 	if (argc < 3)
 		tc_printf(t, "usage: monitor vector_catch (enable|disable) (hard|int|bus|stat|chk|nocp|mm|reset)\n");
 	else {
-		for (int j = 0; j < argc; j++)
+		for (int j = 0; j < argc; j++) {
 			for (size_t i = 0; i < ARRAY_LENGTH(vectors); i++) {
 				if (vectors[i] && !strcmp(vectors[i], argv[j]))
 					tmp |= 1U << i;
 			}
+		}
 
 		bool enable;
 		if (parse_enable_or_disable(argv[1], &enable)) {
@@ -1425,7 +1430,7 @@ static void probe_mem_write(
 static int cortexm_hostio_request(target_s *t)
 {
 	uint32_t arm_regs[CORTEXM_GENERAL_REG_COUNT + CORTEX_FLOAT_REG_COUNT];
-	uint32_t params[4];
+	uint32_t params[4] = {0};
 
 	t->tc->interrupted = false;
 	target_regs_read(t, arm_regs);
