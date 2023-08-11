@@ -315,6 +315,16 @@ bool bmda_jtag_init(void)
 	}
 }
 
+bool bmda_rvswd_scan()
+{
+	bmda_probe_info.is_jtag = false;
+
+	switch (bmda_probe_info.type) {
+	default:
+		return false;
+	}
+}
+
 void bmda_adiv5_dp_init(adiv5_debug_port_s *const dp)
 {
 	switch (bmda_probe_info.type) {
