@@ -43,6 +43,8 @@ typedef struct wchlink {
 	} fw_version; /* Firmware version */
 
 	uint8_t hw_type; /* Hardware type */
+
+	uint8_t riscvchip; /* The attached RISC-V chip code */
 } wchlink_s;
 
 static wchlink_s wchlink;
@@ -261,6 +263,32 @@ static char *wchlink_hw_type_to_string(const uint8_t hardware_id)
 	}
 }
 
+static char *wchlink_riscvchip_to_string(const uint8_t hardware_id)
+{
+	switch (hardware_id) {
+	case WCH_RISCVCHIP_CH32V103:
+		return "CH32V103 RISC-V3A series";
+	case WCH_RISCVCHIP_CH57X:
+		return "CH571/CH573 RISC-V3A BLE 4.2 series";
+	case WCH_RISCVCHIP_CH56X:
+		return "CH565/CH569 RISC-V3A series";
+	case WCH_RISCVCHIP_CH32V20X:
+		return "CH32V20X RISC-V4B/V4C series";
+	case WCH_RISCVCHIP_CH32V30X:
+		return "CH32V30X RISC-V4C/V4F series";
+	case WCH_RISCVCHIP_CH58X:
+		return "CH581/CH582/CH583 RISC-V4A BLE 5.3 series";
+	case WCH_RISCVCHIP_CH32V003:
+		return "CH32V003 RISC-V2A series";
+	case WCH_RISCVCHIP_CH59X:
+		return "CH59x RISC-V4C BLE 5.4 series";
+	case WCH_RISCVCHIP_CH32X035:
+		return "CH32X035 RISC-V4C series";
+	default:
+		return "Unknown";
+	}
+}
+
 static bool wchlink_get_version(void)
 {
 	uint8_t response[4U];
@@ -278,6 +306,51 @@ static bool wchlink_get_version(void)
 	/* Build version string onto info struct for version command */
 	snprintf(bmda_probe_info.version, sizeof(bmda_probe_info.version), "%s v%" PRIu32 ".%" PRIu32,
 		wchlink_hw_type_to_string(hardware_type), wchlink.fw_version.major, wchlink.fw_version.minor);
+
+	return true;
+}
+
+/*
+ * This function is called when the WCH-Link attaches to certain types of RISC-V chip
+ * It is unknown what this function does, but the official WCH-Link software calls it
+ * 
+ * Removing this function still allows the WCH-Link to work and the scan is successful
+ * but it is unknown if it might required for some chips or states
+ */
+static bool wchlink_after_attach_unknown()
+{
+	DEBUG_INFO("Sending unknown WCH-Link command after attach\n");
+
+	/* Response seems to be WCH_CONTROL_SUBCMD_UNKNOWN, but without knowing what the command does we won't check it blindly */
+	uint8_t response = 0;
+	return wchlink_command_send_recv(WCH_CMD_CONTROL, WCH_CONTROL_SUBCMD_UNKNOWN, NULL, 0, &response, sizeof(response));
+}
+
+/* WCH-Link attach routine, attempts to detect and attach to a connected RISC-V chip */
+bool wchlink_attach()
+{
+	uint8_t response[5U];
+	if (!wchlink_command_send_recv(WCH_CMD_CONTROL, WCH_CONTROL_SUBCMD_ATTACH, NULL, 0, response, sizeof(response)))
+		return false;
+
+	wchlink.riscvchip = response[WCH_RISCVCHIP_OFFSET];
+	const uint32_t idcode = read_be4(response, WCH_IDCODDE_OFFSET);
+
+	DEBUG_INFO("WCH-Link attached to RISC-V chip: %s\n", wchlink_riscvchip_to_string(wchlink.riscvchip));
+	DEBUG_INFO("ID code: 0x%08" PRIx32 "\n", idcode);
+
+	/* Some RISC-V chips require* an additional command to be sent after attach */
+	switch (wchlink.riscvchip) {
+	case WCH_RISCVCHIP_CH32V103:
+	case WCH_RISCVCHIP_CH32V20X:
+	case WCH_RISCVCHIP_CH32V30X:
+	case WCH_RISCVCHIP_CH32V003:
+		if (!wchlink_after_attach_unknown())
+			return false;
+		break;
+	default:
+		break;
+	}
 
 	return true;
 }
