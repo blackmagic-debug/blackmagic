@@ -327,10 +327,6 @@ static bool ch32f1_flash_write(target_flash_s *flash, target_addr_t dest, const 
 {
 	target_s *target = flash->t;
 	size_t length = len;
-#ifdef CH32_VERIFY
-	target_addr_t org_dest = dest;
-	const void *org_src = src;
-#endif
 	DEBUG_INFO("CH32: flash write 0x%" PRIx32 " ,size=%" PRIu32 "\n", dest, (uint32_t)len);
 
 	while (length > 0) {
@@ -379,20 +375,6 @@ static bool ch32f1_flash_write(target_flash_s *flash, target_addr_t dest, const 
 			return false;
 		}
 	}
-
-#ifdef CH32_VERIFY
-	DEBUG_INFO("Verifying\n");
-	for (size_t i = 0; i < len; i += 4U) {
-		const uint32_t expected = *(uint32_t *)(org_src + i);
-		const uint32_t actual = target_mem_read32(t, org_dest + i);
-		if (expected != actual) {
-			DEBUG_ERROR(">>>>write mismatch at address 0x%" PRIx32 "\n", org_dest + i);
-			DEBUG_ERROR(">>>>expected: 0x%" PRIx32 "\n", expected);
-			DEBUG_ERROR(">>>>  actual: 0x%" PRIx32 "\n", actual);
-			return false;
-		}
-	}
-#endif
 
 	return true;
 }
