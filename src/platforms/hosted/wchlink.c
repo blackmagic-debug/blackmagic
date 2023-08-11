@@ -34,6 +34,7 @@
 
 #include "wchlink.h"
 #include "wchlink_protocol.h"
+#include "buffer_utils.h"
 
 typedef struct wchlink {
 	struct wchlink_fw_version {
@@ -115,6 +116,78 @@ bool wchlink_command_send_recv(const uint8_t command, const uint8_t subcommand, 
 	/* Copy the response payload if requested */
 	if (response_length && response)
 		memcpy(response, buffer + WCH_CMD_PACKET_PAYLOAD_OFFSET, response_length);
+
+	return true;
+}
+
+/*
+ * Do a DMI transfer.
+ *
+ * ┌────────────────────────────┐
+ * │          Payload           │
+ * ├─────────┬──────┬───────────┤
+ * │    0    │ 1:4  │     5     │
+ * ├─────────┼──────┼───────────┤
+ * │ Address │ Data │ Operation │
+ * └─────────┴──────┴───────────┘
+ * ┌────────────────────────────┐
+ * │      Response payload      │
+ * ├─────────┬──────┬───────────┤
+ * │    0    │ 1:4  │     5     │
+ * ├─────────┼──────┼───────────┤
+ * │ Address │ Data │  Status   │
+ * └─────────┴──────┴───────────┘
+ *	See wchlink_protocol.h for more information.
+ *  
+ * Returns true for success, false for failure.
+ */
+bool wchlink_transfer_dmi(const uint8_t operation, const uint32_t address, const uint32_t data_in,
+	uint32_t *const data_out, uint8_t *const status)
+{
+	/* The DMI register address must be a 7 or 8-bit address */
+	if (address & ~0xffU) {
+		DEBUG_ERROR("wchlink protocol error: DMI address 0x%08" PRIx32 " is out of range\n", address);
+		return false;
+	}
+
+	/* Stack buffer for the transfer */
+	uint8_t buffer[9U] = {0};
+
+	/* Prepare the command packet */
+	buffer[WCH_CMD_PACKET_HEADER_OFFSET] = WCH_CMD_PACKET_HEADER_OUT; /* Command packet header */
+	buffer[WCH_CMD_PACKET_CMD_ERROR_OFFSET] = WCH_CMD_DMI;            /* Command */
+	buffer[WCH_CMD_PACKET_SIZE_OFFSET] = 6U;                          /* Payload size */
+
+	/* Construct the payload */
+	buffer[WCH_CMD_PACKET_PAYLOAD_OFFSET + WCH_DMI_ADDR_OFFSET] = address & 0xffU;   /* Address */
+	write_be4(buffer, WCH_CMD_PACKET_PAYLOAD_OFFSET + WCH_DMI_DATA_OFFSET, data_in); /* Data */
+	buffer[WCH_CMD_PACKET_PAYLOAD_OFFSET + WCH_DMI_OP_STATUS_OFFSET] = operation;    /* Operation */
+
+	/* Send the command and receive the response */
+	if (bmda_usb_transfer(bmda_probe_info.usb_link, buffer, sizeof(buffer), buffer, sizeof(buffer), WCH_USB_TIMEOUT) <
+		0)
+		return false;
+
+	/* Check the response */
+	if (buffer[WCH_CMD_PACKET_HEADER_OFFSET] != WCH_CMD_PACKET_HEADER_IN) {
+		DEBUG_ERROR("wchlink protocol error: malformed response\n");
+		return false;
+	}
+	if (buffer[WCH_CMD_PACKET_CMD_ERROR_OFFSET] != WCH_CMD_DMI) {
+		DEBUG_ERROR("wchlink protocol error: 0x%02x - %s\n", buffer[WCH_CMD_PACKET_CMD_ERROR_OFFSET],
+			wchlink_command_error(WCH_CMD_DMI, 0, buffer[WCH_CMD_PACKET_CMD_ERROR_OFFSET]));
+		return false;
+	}
+	if (buffer[WCH_CMD_PACKET_SIZE_OFFSET] != 6U) {
+		DEBUG_ERROR("wchlink protocol error: response payload size mismatch\n");
+		return false;
+	}
+
+	/* Copy over the result */
+	if (data_out)
+		*data_out = read_be4(buffer, WCH_CMD_PACKET_PAYLOAD_OFFSET + WCH_DMI_DATA_OFFSET);
+	if (status)
+		*status = buffer[WCH_CMD_PACKET_PAYLOAD_OFFSET + WCH_DMI_OP_STATUS_OFFSET];
 
 	return true;
 }
