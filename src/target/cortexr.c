@@ -62,8 +62,11 @@ typedef struct cortexr_priv {
 
 	/* Core registers cache */
 	struct {
-		uint32_t r[16];
+		uint32_t r[16U];
 		uint32_t cpsr;
+		uint32_t spsr[5U];
+		uint64_t d[16U];
+		uint32_t fpcsr;
 	} core_regs;
 } cortexr_priv_s;
 
@@ -121,6 +124,15 @@ typedef struct cortexr_priv {
 
 /* CPSR register definitions */
 #define CORTEXR_CPSR_THUMB (1U << 5U)
+
+/*
+ * Instruction encodings for reading/writing the VFPv3 float registers
+ * to/from r0 and r1 and reading/writing FPSCR to/from r0
+ */
+#define ARM_VMRS_R0_FPCSR_INSN 0xeef10a10
+#define ARM_VMSR_FPCSR_R0_INSN 0xeee10a10
+#define ARM_VMOV_R0_R1_DN_INSN 0xec510b10
+#define ARM_VMOV_DN_R0_R1_INSN 0xec410b10
 
 /*
  * Instruction encodings for the coprocessor interface
@@ -229,6 +241,24 @@ static void cortexr_core_regs_save(target_s *const target)
 	priv->core_regs.r[CORTEX_REG_PC] -= (priv->core_regs.cpsr & CORTEXR_CPSR_THUMB) ? 4U : 8U;
 }
 
+static void cortexr_float_regs_save(target_s *const target)
+{
+	cortexr_priv_s *const priv = (cortexr_priv_s *)target->priv;
+	/* Read FPCSR to r0 and retrieve it */
+	cortexr_run_insn(target, ARM_VMRS_R0_FPCSR_INSN);
+	priv->core_regs.fpcsr = cortexr_core_reg_read(target, 0U);
+	/* Now step through each double-precision float register, reading it back to r0,r1 */
+	for (size_t i = 0; i < ARRAY_LENGTH(priv->core_regs.d); ++i) {
+		/* The float register to read slots into the bottom 4 bits of the instruction */
+		cortexr_run_insn(target, ARM_VMOV_R0_R1_DN_INSN | i);
+		/* Read back the data */
+		const uint32_t d_low = cortexr_core_reg_read(target, 0U);
+		const uint32_t d_high = cortexr_core_reg_read(target, 1U);
+		/* Reassemble it as a full 64-bit value */
+		priv->core_regs.d[i] = d_low | ((uint64_t)d_high << 32U);
+	}
+}
+
 static inline void cortexr_core_reg_write(target_s *const target, const uint8_t reg, const uint32_t value)
 {
 	/* If the register is a GPR and not the program counter, use a "simple" MCR to read */
@@ -257,6 +287,22 @@ static void cortexr_core_regs_restore(target_s *const target)
 
 	/* Now we're done with the rest of the registers, restore r0 */
 	cortexr_core_reg_write(target, 0U, priv->core_regs.r[0U]);
+}
+
+static void cortexr_float_regs_restore(target_s *const target)
+{
+	const cortexr_priv_s *const priv = (cortexr_priv_s *)target->priv;
+	/* Step through each double-precision float register, writing it back via r0,r1 */
+	for (size_t i = 0; i < ARRAY_LENGTH(priv->core_regs.d); ++i) {
+		/* Load the low 32 bits into r0, and the high into r1 */
+		cortexr_core_reg_write(target, 0U, priv->core_regs.d[i] & UINT32_MAX);
+		cortexr_core_reg_write(target, 1U, priv->core_regs.d[i] >> 32U);
+		/* The float register to write slots into the bottom 4 bits of the instruction */
+		cortexr_run_insn(target, ARM_VMOV_DN_R0_R1_INSN | i);
+	}
+	/* Load the value for FPCSR to r0 and then shove it back into place */
+	cortexr_core_reg_write(target, 0U, priv->core_regs.fpcsr);
+	cortexr_run_insn(target, ARM_VMSR_FPCSR_R0_INSN);
 }
 
 static uint32_t cortexr_coproc_read(target_s *const target, const uint8_t coproc, const uint16_t op)
@@ -358,6 +404,7 @@ bool cortexr_probe(adiv5_access_port_s *const ap, const target_addr_t base_addre
 	if (core_has_fpu) {
 		target->target_options |= TOPT_FLAVOUR_FLOAT;
 		target->regs_size += sizeof(uint32_t) * CORTEX_FLOAT_REG_COUNT;
+		cortexr_float_regs_save(target);
 	}
 
 	/* Check cache type */
@@ -421,6 +468,8 @@ static target_halt_reason_e cortexr_halt_poll(target_s *const target, target_add
 
 	/* Save the target core's registers as debugging operations clobber them */
 	cortexr_core_regs_save(target);
+	if (target->target_options & TOPT_FLAVOUR_FLOAT)
+		cortexr_float_regs_save(target);
 
 	target_halt_reason_e reason = TARGET_HALT_FAULT;
 	/* Determine why we halted exactly from the Method Of Entry bits */
@@ -449,6 +498,8 @@ static void cortexr_halt_resume(target_s *const target, const bool step)
 {
 	(void)step;
 	/* Restore the core's registers so the running program doesn't know we've been in there */
+	if (target->target_options & TOPT_FLAVOUR_FLOAT)
+		cortexr_float_regs_restore(target);
 	cortexr_core_regs_restore(target);
 
 	/* Ask to resume the core */
