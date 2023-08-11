@@ -320,6 +320,11 @@ bool bmda_rvswd_scan()
 	bmda_probe_info.is_jtag = false;
 
 	switch (bmda_probe_info.type) {
+#if HOSTED_BMP_ONLY == 0
+	case PROBE_TYPE_WCHLINK:
+		return wchlink_rvswd_scan();
+#endif
+
 	default:
 		return false;
 	}
