@@ -57,6 +57,7 @@ static bool cmd_help(target_s *t, int argc, const char **argv);
 
 static bool cmd_jtag_scan(target_s *target, int argc, const char **argv);
 static bool cmd_swd_scan(target_s *t, int argc, const char **argv);
+static bool cmd_rvswd_scan(target_s *target, int argc, const char **argv);
 static bool cmd_auto_scan(target_s *t, int argc, const char **argv);
 static bool cmd_frequency(target_s *t, int argc, const char **argv);
 static bool cmd_targets(target_s *t, int argc, const char **argv);
@@ -88,6 +89,7 @@ const command_s cmd_list[] = {
 	{"jtag_scan", cmd_jtag_scan, "Scan JTAG chain for devices"},
 	{"swd_scan", cmd_swd_scan, "Scan SWD interface for devices: [TARGET_ID]"},
 	{"swdp_scan", cmd_swd_scan, "Deprecated: use swd_scan instead"},
+	{"rvswd_scan", cmd_rvswd_scan, "Scan RVSWD for devices"},
 	{"auto_scan", cmd_auto_scan, "Automatically scan all chain types for devices"},
 	{"frequency", cmd_frequency, "set minimum high and low times: [FREQ]"},
 	{"targets", cmd_targets, "Display list of available targets"},
@@ -279,6 +281,49 @@ bool cmd_swd_scan(target_s *t, int argc, const char **argv)
 		platform_target_clk_output_enable(false);
 		platform_nrst_set_val(false);
 		gdb_out("SW-DP scan failed!\n");
+		return false;
+	}
+
+	cmd_targets(NULL, 0, NULL);
+	platform_target_clk_output_enable(false);
+	morse(NULL, false);
+	return true;
+}
+
+bool cmd_rvswd_scan(target_s *target, int argc, const char **argv)
+{
+	(void)target;
+	(void)argc;
+	(void)argv;
+
+	if (platform_target_voltage())
+		gdb_outf("Target voltage: %s\n", platform_target_voltage());
+
+	if (connect_assert_nrst)
+		platform_nrst_set_val(true); /* will be deasserted after attach */
+
+	bool scan_result = false;
+	volatile exception_s e;
+	TRY_CATCH (e, EXCEPTION_ALL) {
+#if PC_HOSTED == 1
+		scan_result = bmda_rvswd_scan();
+#else
+		scan_result = false;
+#endif
+	}
+	switch (e.type) {
+	case EXCEPTION_TIMEOUT:
+		gdb_outf("Timeout during scan. Is target stuck in WFI?\n");
+		break;
+	case EXCEPTION_ERROR:
+		gdb_outf("Exception: %s\n", e.msg);
+		break;
+	}
+
+	if (!scan_result) {
+		platform_target_clk_output_enable(false);
+		platform_nrst_set_val(false);
+		gdb_out("RVSWD scan failed!\n");
 		return false;
 	}
 
