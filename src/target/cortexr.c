@@ -58,10 +58,6 @@
 typedef struct cortexr_priv {
 	/* Base core information */
 	cortex_priv_s base;
-	/* Watchpoint unit information */
-	uint8_t hw_watchpoint_max;
-	/* Breakpoint unit information */
-	uint8_t hw_breakpoint_max;
 
 	/* Core registers cache */
 	struct {
@@ -469,10 +465,12 @@ bool cortexr_probe(adiv5_access_port_s *const ap, const target_addr_t base_addre
 	cortex_read_cpuid(target);
 	/* The format of the debug identification register is described in DDI0406C §C11.11.15 pg2217 */
 	const uint32_t debug_id = cortex_dbg_read32(target, CORTEXR_DBG_IDR);
-	priv->hw_breakpoint_max = ((debug_id >> CORTEXR_DBG_IDR_BREAKPOINT_SHIFT) & CORTEXR_DBG_IDR_BREAKPOINT_MASK) + 1U;
-	priv->hw_watchpoint_max = ((debug_id >> CORTEXR_DBG_IDR_WATCHPOINT_SHIFT) & CORTEXR_DBG_IDR_WATCHPOINT_MASK) + 1U;
+	/* Reserve the last available breakpoint for our use to implement single-stepping */
+	priv->base.breakpoints_available = (debug_id >> CORTEXR_DBG_IDR_BREAKPOINT_SHIFT) & CORTEXR_DBG_IDR_BREAKPOINT_MASK;
+	priv->base.watchpoints_available =
+		((debug_id >> CORTEXR_DBG_IDR_WATCHPOINT_SHIFT) & CORTEXR_DBG_IDR_WATCHPOINT_MASK) + 1U;
 	DEBUG_TARGET("%s %s core has %u breakpoint and %u watchpoint units available\n", target->driver, target->core,
-		priv->hw_breakpoint_max, priv->hw_watchpoint_max);
+		priv->base.breakpoints_available + 1U, priv->base.watchpoints_available);
 
 	/* Probe for FP extension. */
 	uint32_t cpacr = cortexr_coproc_read(target, CORTEXR_CPACR);
