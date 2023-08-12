@@ -104,9 +104,6 @@ static int cortexm_breakwatch_set(target_s *t, breakwatch_s *bw);
 static int cortexm_breakwatch_clear(target_s *t, breakwatch_s *bw);
 static target_addr_t cortexm_check_watch(target_s *t);
 
-#define CORTEXM_MAX_WATCHPOINTS 4U /* architecture says up to 15, no implementation has > 4 */
-#define CORTEXM_MAX_BREAKPOINTS 8U /* architecture says up to 127, no implementation has > 8 */
-
 static int cortexm_hostio_request(target_s *t);
 
 static uint32_t time0_sec = UINT32_MAX; /* sys_clock time origin */
@@ -115,13 +112,8 @@ typedef struct cortexm_priv {
 	cortex_priv_s base;
 	bool stepping;
 	bool on_bkpt;
-	/* Watchpoint unit status */
-	bool hw_watchpoint[CORTEXM_MAX_WATCHPOINTS];
-	unsigned flash_patch_revision;
-	uint8_t hw_watchpoint_max;
-	/* Breakpoint unit status */
-	bool hw_breakpoint[CORTEXM_MAX_BREAKPOINTS];
-	uint8_t hw_breakpoint_max;
+	/* Flash Patch controller configuration */
+	uint32_t flash_patch_revision;
 	/* Copy of DEMCR for vector-catch */
 	uint32_t demcr;
 } cortexm_priv_s;
@@ -734,29 +726,27 @@ bool cortexm_attach(target_s *t)
 	target_mem_write32(t, CORTEXM_DFSR, CORTEXM_DFSR_RESETALL);
 
 	/* size the break/watchpoint units */
-	priv->hw_breakpoint_max = CORTEXM_MAX_BREAKPOINTS;
+	priv->base.breakpoints_available = CORTEX_MAX_BREAKPOINTS;
 	const uint32_t flash_break_cfg = target_mem_read32(t, CORTEXM_FPB_CTRL);
 	const uint32_t breakpoints = ((flash_break_cfg >> 4U) & 0xfU);
-	if (breakpoints < priv->hw_breakpoint_max) /* only look at NUM_COMP1 */
-		priv->hw_breakpoint_max = breakpoints;
+	if (breakpoints < priv->base.breakpoints_available) /* only look at NUM_COMP1 */
+		priv->base.breakpoints_available = breakpoints;
 	priv->flash_patch_revision = flash_break_cfg >> 28U;
 
-	priv->hw_watchpoint_max = CORTEXM_MAX_WATCHPOINTS;
+	priv->base.watchpoints_available = CORTEX_MAX_WATCHPOINTS;
 	const uint32_t watchpoints = target_mem_read32(t, CORTEXM_DWT_CTRL);
-	if ((watchpoints >> 28U) < priv->hw_watchpoint_max)
-		priv->hw_watchpoint_max = watchpoints >> 28U;
+	if ((watchpoints >> 28U) < priv->base.watchpoints_available)
+		priv->base.watchpoints_available = watchpoints >> 28U;
 
 	/* Clear any stale breakpoints */
-	for (size_t i = 0; i < priv->hw_breakpoint_max; i++) {
+	priv->base.breakpoints_mask = 0;
+	for (size_t i = 0; i < priv->base.breakpoints_available; i++)
 		target_mem_write32(t, CORTEXM_FPB_COMP(i), 0);
-		priv->hw_breakpoint[i] = 0;
-	}
 
 	/* Clear any stale watchpoints */
-	for (size_t i = 0; i < priv->hw_watchpoint_max; i++) {
+	priv->base.watchpoints_mask = 0;
+	for (size_t i = 0; i < priv->base.watchpoints_available; i++)
 		target_mem_write32(t, CORTEXM_DWT_FUNC(i), 0);
-		priv->hw_watchpoint[i] = 0;
-	}
 
 	/* Flash Patch Control Register: set ENABLE */
 	target_mem_write32(t, CORTEXM_FPB_CTRL, CORTEXM_FPB_CTRL_KEY | CORTEXM_FPB_CTRL_ENABLE);
@@ -784,11 +774,11 @@ void cortexm_detach(target_s *t)
 	cortexm_priv_s *priv = t->priv;
 
 	/* Clear any stale breakpoints */
-	for (size_t i = 0; i < priv->hw_breakpoint_max; i++)
+	for (size_t i = 0; i < priv->base.breakpoints_available; i++)
 		target_mem_write32(t, CORTEXM_FPB_COMP(i), 0);
 
 	/* Clear any stale watchpoints */
-	for (size_t i = 0; i < priv->hw_watchpoint_max; i++)
+	for (size_t i = 0; i < priv->base.watchpoints_available; i++)
 		target_mem_write32(t, CORTEXM_DWT_FUNC(i), 0);
 
 	/* Restore DEMCR */
@@ -1262,15 +1252,16 @@ static int cortexm_breakwatch_set(target_s *t, breakwatch_s *bw)
 		}
 		val |= 1U;
 
-		for (i = 0; i < priv->hw_breakpoint_max; i++) {
-			if (!priv->hw_breakpoint[i])
+		/* Find the first available breakpoint slot */
+		for (i = 0; i < priv->base.breakpoints_available; i++) {
+			if (!(priv->base.breakpoints_mask & (1U << i)))
 				break;
 		}
 
-		if (i == priv->hw_breakpoint_max)
+		if (i == priv->base.breakpoints_available)
 			return -1;
 
-		priv->hw_breakpoint[i] = true;
+		priv->base.breakpoints_mask |= 1U << i;
 		target_mem_write32(t, CORTEXM_FPB_COMP(i), val);
 		bw->reserved[0] = i;
 		return 0;
@@ -1278,15 +1269,16 @@ static int cortexm_breakwatch_set(target_s *t, breakwatch_s *bw)
 	case TARGET_WATCH_WRITE:
 	case TARGET_WATCH_READ:
 	case TARGET_WATCH_ACCESS:
-		for (i = 0; i < priv->hw_watchpoint_max; i++) {
-			if (!priv->hw_watchpoint[i])
+		/* Find the first available watchpoint slot */
+		for (i = 0; i < priv->base.watchpoints_available; i++) {
+			if (!(priv->base.watchpoints_mask & (1U << i)))
 				break;
 		}
 
-		if (i == priv->hw_watchpoint_max)
+		if (i == priv->base.watchpoints_available)
 			return -1;
 
-		priv->hw_watchpoint[i] = true;
+		priv->base.watchpoints_mask |= 1U << i;
 
 		target_mem_write32(t, CORTEXM_DWT_COMP(i), val);
 		target_mem_write32(t, CORTEXM_DWT_MASK(i), dwt_mask(bw->size));
@@ -1305,13 +1297,13 @@ static int cortexm_breakwatch_clear(target_s *t, breakwatch_s *bw)
 	unsigned i = bw->reserved[0];
 	switch (bw->type) {
 	case TARGET_BREAK_HARD:
-		priv->hw_breakpoint[i] = false;
+		priv->base.breakpoints_mask &= ~(1U << i);
 		target_mem_write32(t, CORTEXM_FPB_COMP(i), 0);
 		return 0;
 	case TARGET_WATCH_WRITE:
 	case TARGET_WATCH_READ:
 	case TARGET_WATCH_ACCESS:
-		priv->hw_watchpoint[i] = false;
+		priv->base.watchpoints_mask &= ~(1U << i);
 		target_mem_write32(t, CORTEXM_DWT_FUNC(i), 0);
 		return 0;
 	default:
@@ -1324,13 +1316,14 @@ static target_addr_t cortexm_check_watch(target_s *t)
 	cortexm_priv_s *priv = t->priv;
 	unsigned i;
 
-	for (i = 0; i < priv->hw_watchpoint_max; i++) {
+	for (i = 0; i < priv->base.watchpoints_available; i++) {
 		/* if SET and MATCHED then break */
-		if (priv->hw_watchpoint[i] && (target_mem_read32(t, CORTEXM_DWT_FUNC(i)) & CORTEXM_DWT_FUNC_MATCHED))
+		if ((priv->base.watchpoints_mask & (1U << i)) &&
+			(target_mem_read32(t, CORTEXM_DWT_FUNC(i)) & CORTEXM_DWT_FUNC_MATCHED))
 			break;
 	}
 
-	if (i == priv->hw_watchpoint_max)
+	if (i == priv->base.watchpoints_available)
 		return 0;
 
 	return target_mem_read32(t, CORTEXM_DWT_COMP(i));
