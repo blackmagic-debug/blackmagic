@@ -599,24 +599,6 @@ bool cortexm_probe(adiv5_access_port_s *ap)
 	if (conn_reset)
 		target_mem_write32(t, CORTEXM_DEMCR, 0);
 
-#if PC_HOSTED
-#define STRINGIFY(x) #x
-#define PROBE(x)                                  \
-	do {                                          \
-		DEBUG_INFO("Calling " STRINGIFY(x) "\n"); \
-		if ((x)(t))                               \
-			return true;                          \
-		target_check_error(t);                    \
-	} while (0)
-#else
-#define PROBE(x)               \
-	do {                       \
-		if ((x)(t))            \
-			return true;       \
-		target_check_error(t); \
-	} while (0)
-#endif
-
 	switch (t->designer_code) {
 	case JEP106_MANUFACTURER_FREESCALE:
 		PROBE(kinetis_probe);
@@ -731,7 +713,6 @@ bool cortexm_probe(adiv5_access_port_s *ap)
 #else
 	DEBUG_WARN("Please report unknown device with Designer 0x%x Part ID 0x%x\n", t->designer_code, t->part_id);
 #endif
-#undef PROBE
 	return true;
 }
 
