@@ -216,6 +216,8 @@ static target_halt_reason_e cortexr_halt_poll(target_s *target, target_addr_t *w
 static void cortexr_halt_request(target_s *target);
 static void cortexr_halt_resume(target_s *target, bool step);
 
+bool cortexr_attach(target_s *target);
+
 static const char *cortexr_target_description(target_s *target);
 
 static void cortexr_mem_read(target_s *const target, void *const dest, const target_addr_t src, const size_t len)
@@ -472,6 +474,8 @@ bool cortexr_probe(adiv5_access_port_s *const ap, const target_addr_t base_addre
 	DEBUG_TARGET("%s %s core has %u breakpoint and %u watchpoint units available\n", target->driver, target->core,
 		priv->base.breakpoints_available + 1U, priv->base.watchpoints_available);
 
+	target->attach = cortexr_attach;
+
 	/* Probe for FP extension. */
 	uint32_t cpacr = cortexr_coproc_read(target, CORTEXR_CPACR);
 	cpacr |= CORTEXR_CPACR_CP10_FULL_ACCESS | CORTEXR_CPACR_CP11_FULL_ACCESS;
@@ -511,6 +515,45 @@ bool cortexr_probe(adiv5_access_port_s *const ap, const target_addr_t base_addre
 	DEBUG_WARN(
 		"Please report unknown device with Designer 0x%x Part ID 0x%x\n", target->designer_code, target->part_id);
 #endif
+	return true;
+}
+
+bool cortexr_attach(target_s *const target)
+{
+	adiv5_access_port_s *ap = cortex_ap(target);
+	/* Mark the DP as being in fault so error recovery will switch to this core when in multi-drop mode */
+	ap->dp->fault = 1;
+
+	/* Clear any pending fault condition (and switch to this core) */
+	target_check_error(target);
+
+	/* Try to halt the core */
+	target_halt_request(target);
+	platform_timeout_s timeout;
+	platform_timeout_set(&timeout, 250);
+	target_halt_reason_e reason = TARGET_HALT_RUNNING;
+	while (!platform_timeout_is_expired(&timeout) && reason == TARGET_HALT_RUNNING)
+		reason = target_halt_poll(target, NULL);
+	if (reason != TARGET_HALT_REQUEST) {
+		DEBUG_ERROR("Failed to halt the core\n");
+		return false;
+	}
+
+	cortexr_priv_s *const priv = (cortexr_priv_s *)target->priv;
+	/* Clear any stale breakpoints */
+	priv->base.breakpoints_mask = 0U;
+	for (size_t i = 0; i <= priv->base.breakpoints_available; ++i) {
+		cortex_dbg_write32(target, CORTEXR_DBG_BVR + (i << 2U), 0U);
+		cortex_dbg_write32(target, CORTEXR_DBG_BCR + (i << 2U), 0U);
+	}
+
+	/* Clear any stale watchpoints */
+	priv->base.watchpoints_mask = 0U;
+	for (size_t i = 0; i < priv->base.watchpoints_available; ++i) {
+		cortex_dbg_write32(target, CORTEXR_DBG_WVR + (i << 2U), 0U);
+		cortex_dbg_write32(target, CORTEXR_DBG_WCR + (i << 2U), 0U);
+	}
+
 	return true;
 }
 
