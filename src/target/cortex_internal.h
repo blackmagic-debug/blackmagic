@@ -48,6 +48,9 @@
 #define CORTEX_CTR_DCACHE_LINE(cache_type) \
 	(1U << (((cache_type) >> CORTEX_CTR_DCACHE_LINE_SHIFT) & CORTEX_CTR_DCACHE_LINE_MASK))
 
+#define CORTEX_MAX_BREAKPOINTS 8U
+#define CORTEX_MAX_WATCHPOINTS 8U
+
 typedef struct cortex_priv {
 	/* AP from which this CPU hangs */
 	adiv5_access_port_s *ap;
@@ -56,6 +59,13 @@ typedef struct cortex_priv {
 	/* Cache parameters */
 	uint16_t icache_line_length;
 	uint16_t dcache_line_length;
+	/* Breakpoint and watchpoint enablement storage */
+	uint8_t breakpoints_mask;
+	uint8_t watchpoints_mask;
+	/* Watchpoint unit information */
+	uint8_t watchpoints_available;
+	/* Breakpoint unit information */
+	uint8_t breakpoints_available;
 } cortex_priv_s;
 
 void cortex_priv_free(void *priv);
