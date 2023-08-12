@@ -23,6 +23,16 @@
 #include "target.h"
 #include "adiv5.h"
 
+#define STRINGIFY(x) #x
+/* Probe launch macro used by the CPU-generic layers to then call CPU-specific routines safely */
+#define PROBE(x)                                    \
+	do {                                            \
+		DEBUG_TARGET("Calling " STRINGIFY(x) "\n"); \
+		if ((x)(t))                                 \
+			return true;                            \
+		target_check_error(t);                      \
+	} while (0)
+
 /*
  * Probe for various targets.
  * Actual functions implemented in their respective drivers.
