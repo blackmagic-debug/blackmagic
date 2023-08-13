@@ -37,8 +37,6 @@
 #include <stdlib.h>
 #include <assert.h>
 
-static const char cortexa_driver_str[] = "ARM Cortex-A";
-
 static bool cortexa_attach(target_s *t);
 static void cortexa_detach(target_s *t);
 static void cortexa_halt_resume(target_s *t, bool step);
@@ -496,7 +494,7 @@ bool cortexa_probe(adiv5_access_port_s *ap, target_addr_t base_address)
 
 	t->check_error = cortexa_check_error;
 
-	t->driver = cortexa_driver_str;
+	t->driver = "ARM Cortex-A";
 
 	t->attach = cortexa_attach;
 	t->detach = cortexa_detach;
