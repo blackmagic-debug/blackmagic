@@ -827,17 +827,20 @@ static target_halt_reason_e riscv_halt_poll(target_s *const target, target_addr_
 static void riscv_reset(target_s *const target)
 {
 	riscv_hart_s *const hart = riscv_hart_struct(target);
+	bool has_reset = false;
 	/* If the target does not have the nRST pin inhibited, use that to initiate reset */
 	if (!(target->target_options & RV_TOPT_INHIBIT_NRST)) {
 		platform_nrst_set_val(true);
-		riscv_dm_poll_state(hart->dbg_module, RV_DM_STAT_ALL_RESET);
+		has_reset = riscv_dm_poll_state(hart->dbg_module, RV_DM_STAT_ALL_RESET);
 		platform_nrst_set_val(false);
 		/* In theory we're done at this point and no debug state was perturbed */
-	} else {
-		/*
-		 * Otherwise, if nRST is not usable, use instead reset via dmcontrol. In this case,
-		 * when reset is requested, use the ndmreset bit to perform a system reset
-		 */
+	}
+
+	/*
+	 * Otherwise, if nRST is not usable (or failed), use instead reset via dmcontrol. In this case,
+	 * when reset is requested, use the ndmreset bit to perform a system reset
+	 */
+	if (!has_reset) {
 		riscv_dm_write(hart->dbg_module, RV_DM_CONTROL, hart->hartsel | RV_DM_CTRL_SYSTEM_RESET);
 		riscv_dm_poll_state(hart->dbg_module, RV_DM_STAT_ALL_RESET);
 		/* Complete the reset by resetting ndmreset */
