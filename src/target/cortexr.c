@@ -217,6 +217,7 @@ static void cortexr_halt_request(target_s *target);
 static void cortexr_halt_resume(target_s *target, bool step);
 
 bool cortexr_attach(target_s *target);
+void cortexr_detach(target_s *target);
 
 static const char *cortexr_target_description(target_s *target);
 
@@ -475,6 +476,7 @@ bool cortexr_probe(adiv5_access_port_s *const ap, const target_addr_t base_addre
 		priv->base.breakpoints_available + 1U, priv->base.watchpoints_available);
 
 	target->attach = cortexr_attach;
+	target->detach = cortexr_detach;
 
 	/* Probe for FP extension. */
 	uint32_t cpacr = cortexr_coproc_read(target, CORTEXR_CPACR);
@@ -555,6 +557,25 @@ bool cortexr_attach(target_s *const target)
 	}
 
 	return true;
+}
+
+void cortexr_detach(target_s *const target)
+{
+	const cortexr_priv_s *const priv = (cortexr_priv_s *)target->priv;
+
+	/* Clear any set breakpoints */
+	for (size_t i = 0; i <= priv->base.breakpoints_available; ++i) {
+		cortex_dbg_write32(target, CORTEXR_DBG_BVR + (i << 2U), 0U);
+		cortex_dbg_write32(target, CORTEXR_DBG_BCR + (i << 2U), 0U);
+	}
+
+	/* Clear any set watchpoints */
+	for (size_t i = 0; i < priv->base.watchpoints_available; ++i) {
+		cortex_dbg_write32(target, CORTEXR_DBG_WVR + (i << 2U), 0U);
+		cortex_dbg_write32(target, CORTEXR_DBG_WCR + (i << 2U), 0U);
+	}
+
+	target_halt_resume(target, false);
 }
 
 static void cortexr_regs_read(target_s *const target, void *const data)
