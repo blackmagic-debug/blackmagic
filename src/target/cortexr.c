@@ -211,6 +211,8 @@ static_assert(ARRAY_LENGTH(cortexr_spr_types) == ARRAY_LENGTH(cortexr_spr_names)
 
 static void cortexr_regs_read(target_s *target, void *data);
 static void cortexr_regs_write(target_s *target, const void *data);
+static ssize_t cortexr_reg_read(target_s *target, uint32_t reg, void *data, size_t max);
+static ssize_t cortexr_reg_write(target_s *target, uint32_t reg, const void *data, size_t max);
 
 static target_halt_reason_e cortexr_halt_poll(target_s *target, target_addr_t *watch);
 static void cortexr_halt_request(target_s *target);
@@ -488,6 +490,8 @@ bool cortexr_probe(adiv5_access_port_s *const ap, const target_addr_t base_addre
 	target->regs_description = cortexr_target_description;
 	target->regs_read = cortexr_regs_read;
 	target->regs_write = cortexr_regs_write;
+	target->reg_read = cortexr_reg_read;
+	target->reg_write = cortexr_reg_write;
 	target->regs_size = sizeof(uint32_t) * CORTEXAR_GENERAL_REG_COUNT;
 
 	if (core_has_fpu) {
@@ -602,6 +606,66 @@ static void cortexr_regs_write(target_s *const target, const void *const data)
 		memcpy(priv->core_regs.d, regs + CORTEXAR_GENERAL_REG_COUNT, sizeof(priv->core_regs.d));
 		priv->core_regs.fpcsr = regs[CORTEX_REG_FPCSR];
 	}
+}
+
+static void *cortexr_reg_ptr(target_s *const target, const size_t reg)
+{
+	cortexr_priv_s *const priv = (cortexr_priv_s *)target->priv;
+	/* r0-r15 */
+	if (reg < 16U)
+		return &priv->core_regs.r[reg];
+	/* cpsr */
+	if (reg == 16U)
+		return &priv->core_regs.cpsr;
+	/* Check if the core has a FPU first */
+	if (!(target->target_options & TOPT_FLAVOUR_FLOAT))
+		return NULL;
+	/* d0-d15 */
+	if (reg < 33U)
+		return &priv->core_regs.d[reg - CORTEXAR_GENERAL_REG_COUNT];
+	/* fpcsr */
+	if (reg == 33U)
+		return &priv->core_regs.fpcsr;
+	return NULL;
+}
+
+static size_t cortexr_reg_width(const size_t reg)
+{
+	/* r0-r15, cpsr, fpcsr */
+	if (reg < CORTEXAR_GENERAL_REG_COUNT || reg == 33U)
+		return 4U;
+	/* d0-d15 */
+	return 8U;
+}
+
+static ssize_t cortexr_reg_read(target_s *const target, const uint32_t reg, void *const data, const size_t max)
+{
+	/* Try to get a pointer to the storage for the requested register, and return -1 if that fails */
+	const void *const reg_ptr = cortexr_reg_ptr(target, reg);
+	if (!reg_ptr)
+		return -1;
+	/* Now we have a valid register, get its width in bytes, and check that against max */
+	const size_t reg_width = cortexr_reg_width(reg);
+	if (max < reg_width)
+		return -1;
+	/* Finally, copy the register data out and return the width */
+	memcpy(data, reg_ptr, reg_width);
+	return reg_width;
+}
+
+static ssize_t cortexr_reg_write(target_s *const target, const uint32_t reg, const void *const data, const size_t max)
+{
+	/* Try to get a poitner to the storage for the requested register, and return -1 if that fails */
+	void *const reg_ptr = cortexr_reg_ptr(target, reg);
+	if (!reg_ptr)
+		return -1;
+	/* Now we have a valid register, get its width in bytes, and check that against max */
+	const size_t reg_width = cortexr_reg_width(reg);
+	if (max < reg_width)
+		return -1;
+	/* Finally, copy the new register data in and return the width */
+	memcpy(reg_ptr, data, reg_width);
+	return reg_width;
 }
 
 static void cortexr_halt_request(target_s *const target)
