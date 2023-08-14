@@ -589,6 +589,55 @@ static void cortexr_halt_resume(target_s *const target, const bool step)
 }
 
 /*
+ * This function creates the target description XML substring for the FPU (VFPv2) on
+ * a Cortex-R part. This has the same rationale as the function below.
+ *
+ * The string it creates is conceptually the following:
+ * <feature name="org.gnu.gdb.arm.vfp">
+ *   <reg name="d0" bitsize="64" type="ieee_double"/>
+ *   <reg name="d1" bitsize="64" type="ieee_double"/>
+ *   <reg name="d2" bitsize="64" type="ieee_double"/>
+ *   <reg name="d3" bitsize="64" type="ieee_double"/>
+ *   <reg name="d4" bitsize="64" type="ieee_double"/>
+ *   <reg name="d5" bitsize="64" type="ieee_double"/>
+ *   <reg name="d6" bitsize="64" type="ieee_double"/>
+ *   <reg name="d7" bitsize="64" type="ieee_double"/>
+ *   <reg name="d8" bitsize="64" type="ieee_double"/>
+ *   <reg name="d9" bitsize="64" type="ieee_double"/>
+ *   <reg name="d10" bitsize="64" type="ieee_double"/>
+ *   <reg name="d11" bitsize="64" type="ieee_double"/>
+ *   <reg name="d12" bitsize="64" type="ieee_double"/>
+ *   <reg name="d13" bitsize="64" type="ieee_double"/>
+ *   <reg name="d14" bitsize="64" type="ieee_double"/>
+ *   <reg name="d15" bitsize="64" type="ieee_double"/>
+ *   <reg name="fpscr" bitsize="32"/>
+ * </feature>
+ */
+static size_t cortexr_build_target_fpu_description(char *const buffer, size_t max_length)
+{
+	size_t print_size = max_length;
+	/* Terminate the previous feature block and start the new */
+	int offset = snprintf(buffer, print_size, "</feature><feature name=\"org.gnu.gdb.arm.vfp\">");
+
+	/* Build the FPU general purpose register descriptions for d0-d15 */
+	for (uint8_t i = 0; i < 16U; ++i) {
+		if (max_length != 0)
+			print_size = max_length - (size_t)offset;
+
+		offset += snprintf(buffer + offset, print_size, "<reg name=\"d%u\" bitsize=\"64\" type=\"ieee_double\"/>", i);
+	}
+
+	/* Build the FPU status/control register (fpscr) description */
+	if (max_length != 0)
+		print_size = max_length - (size_t)offset;
+
+	offset += snprintf(buffer + offset, print_size, "<reg name=\"fpscr\" bitsize=\"32\"/>");
+
+	/* offset is now the total length of the string created, discard the sign and return it. */
+	return (size_t)offset;
+}
+
+/*
  * This function creates the target description XML string for a Cortex-R part.
  * This is done this way to decrease string duplications and thus code size,
  * making it unfortunately much less readable than the string literal it is
@@ -622,7 +671,6 @@ static void cortexr_halt_resume(target_s *const target, const bool step)
  */
 static size_t cortexr_build_target_description(char *const buffer, size_t max_length, const bool has_fpu)
 {
-	(void)has_fpu;
 	size_t print_size = max_length;
 	/* Start with the "preamble" chunks which are mostly common across targets save for 2 words. */
 	int offset = snprintf(buffer, print_size, "%s target %sarm%s <feature name=\"org.gnu.gdb.arm.core\">",
@@ -648,6 +696,15 @@ static size_t cortexr_build_target_description(char *const buffer, size_t max_le
 			gdb_reg_type_strings[type], i == 3U ? " regnum=\"25\"" : "");
 	}
 
+	/* Handle when the core has a FPU (VFP) */
+	if (has_fpu) {
+		if (max_length != 0)
+			print_size = max_length - (size_t)offset;
+
+		offset += cortexr_build_target_fpu_description(buffer + offset, print_size);
+	}
+
+	/* Build the XML blob's termination */
 	if (max_length != 0)
 		print_size = max_length - (size_t)offset;
 
