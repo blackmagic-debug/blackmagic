@@ -89,6 +89,18 @@ void cortex_read_cpuid(target_s *target)
 	target->cpuid = cortex_dbg_read32(target, CORTEX_CPUID);
 	const uint16_t cpuid_partno = target->cpuid & CORTEX_CPUID_PARTNO_MASK;
 	switch (cpuid_partno) {
+	case CORTEX_A5:
+		target->core = "A5";
+		break;
+	case CORTEX_A7:
+		target->core = "A7";
+		break;
+	case CORTEX_A8:
+		target->core = "A8";
+		break;
+	case CORTEX_A9:
+		target->core = "A9";
+		break;
 	case STAR_MC1:
 		target->core = "STAR-MC1";
 		break;

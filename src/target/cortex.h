@@ -50,6 +50,12 @@
 #define CORTEX_M33 0xd210U
 #define STAR_MC1   0x1320U
 
+/* Cortex-A CPU IDs */
+#define CORTEX_A5 0xc050U
+#define CORTEX_A7 0xc070U
+#define CORTEX_A8 0xc080U
+#define CORTEX_A9 0xc090U
+
 /* Cortex general purpose register offsets */
 #define CORTEX_REG_SP      13U
 #define CORTEX_REG_LR      14U
