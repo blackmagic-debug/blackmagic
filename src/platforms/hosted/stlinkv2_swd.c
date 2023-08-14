@@ -52,7 +52,7 @@ bool stlink_swd_scan(void)
 	dp->abort = stlink_dp_abort;
 
 	adiv5_dp_error(dp);
-	adiv5_dp_init(dp, 0);
+	adiv5_dp_init(dp);
 
 	return target_list != NULL;
 }

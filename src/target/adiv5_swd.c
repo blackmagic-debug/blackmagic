@@ -55,7 +55,7 @@ uint8_t make_packet_request(uint8_t RnW, uint16_t addr)
 
 static void swd_line_reset_sequence(const bool idle_cycles)
 {
-	/* 
+	/*
 	 * A line reset is achieved by holding the SWDIOTMS HIGH for at least 50 SWCLKTCK cycles, followed by at least two idle cycles
 	 * Note: in some non-conformant devices (STM32) at least 51 HIGH cycles and/or 3/4 idle cycles are required
 	 *
@@ -82,12 +82,12 @@ static void dormant_to_swd_sequence()
 	swd_proc.seq_out(ADIV5_SELECTION_ALERT_SEQUENCE_1, 32U);
 	swd_proc.seq_out(ADIV5_SELECTION_ALERT_SEQUENCE_2, 32U);
 	swd_proc.seq_out(ADIV5_SELECTION_ALERT_SEQUENCE_3, 32U);
-	/* 
+	/*
 	 * We combine the last two sequences in a single seq_out as an optimization
 	 *
 	 * Send 4 SWCLKTCK cycles with SWDIOTMS LOW
 	 * Send the required 8 bit activation code sequence on SWDIOTMS
-	 * 
+	 *
 	 * The bits are shifted out to the right, so we shift the second sequence left by the size of the first sequence
 	 * The first sequence is 4 bits and the second 8 bits, totaling 12 bits in the combined sequence
 	 */
@@ -180,7 +180,7 @@ bool adiv5_swd_scan(const uint32_t targetid)
 		 * ARM Debug Interface Architecture Specification, ADIv5.0 to ADIv5.2. ARM IHI 0031C
 		 *
 		 * §4.2.6 Limitations of multi-drop
-		 * 
+		 *
 		 * It is not possible to interrogate a multi-drop Serial Wire Debug system that includes multiple devices to establish
 		 * which devices are connected. Because all devices are selected on coming out of a line reset, no communication with
 		 * a device is possible without prior selection of that target using its target ID. Therefore, connection to a multi-drop
@@ -244,7 +244,7 @@ bool adiv5_swd_scan(const uint32_t targetid)
 		adiv5_swd_multidrop_scan(dp, dp_targetid);
 	else {
 		adiv5_dp_abort(dp, ADIV5_DP_ABORT_STKERRCLR);
-		adiv5_dp_init(dp, 0);
+		adiv5_dp_init(dp);
 	}
 
 	return target_list != NULL;
@@ -254,12 +254,12 @@ bool adiv5_swd_scan(const uint32_t targetid)
  * ARM Debug Interface Architecture Specification, ADIv5.0 to ADIv5.2. ARM IHI 0031C
  *
  * §4.2.6 Limitations of multi-drop
- * 
+ *
  * Each device must be configured with a unique target ID, that includes a 4-bit instance ID, to differentiate between
  * otherwise identical targets. This places a limit of 16 such targets in any system, and means that identical devices
  * must be configured before they are connected together to ensure that their instance IDs do not conflict.
  * Auto-detection of the target
- * 
+ *
  * It is not possible to interrogate a multi-drop Serial Wire Debug system that includes multiple devices to establish
  * which devices are connected. Because all devices are selected on coming out of a line reset, no communication with
  * a device is possible without prior selection of that target using its target ID. Therefore, connection to a multi-drop
@@ -267,7 +267,7 @@ bool adiv5_swd_scan(const uint32_t targetid)
  * - The host has prior knowledge of the devices in the system and is configured before target connection.
  * - The host attempts auto-detection by issuing a target select command for each of the devices it has been
  * configured to support.
- * 
+ *
  * This means that debug tools cannot connect seamlessly to targets in a multi-drop Serial Wire Debug system that they
  * have never seen before. However, if the debug tools can be provided with the target ID of such targets by the user
  * then the contents of the target can be auto-detected as normal.
@@ -286,7 +286,7 @@ void adiv5_swd_multidrop_scan(adiv5_debug_port_s *const dp, const uint32_t targe
 		 * conditions are met:
 		 * Bits [31:28] match bits [31:28] in the DLPIDR. (i.e. the instance ID matches)
 		 * Bits [27:0] match bits [27:0] in the TARGETID register.
-		 * Writing any other value deselects the target. 
+		 * Writing any other value deselects the target.
 		 * During the response phase of a write to the TARGETSEL register, the target does not drive the line
 		 */
 
@@ -317,7 +317,7 @@ void adiv5_swd_multidrop_scan(adiv5_debug_port_s *const dp, const uint32_t targe
 
 		/* Yield the target DP to adiv5_dp_init */
 		adiv5_dp_abort(target_dp, ADIV5_DP_ABORT_STKERRCLR);
-		adiv5_dp_init(target_dp, 0);
+		adiv5_dp_init(target_dp);
 	}
 
 	/* free the initial DP */

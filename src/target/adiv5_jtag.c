@@ -57,12 +57,30 @@ void adiv5_jtag_dp_handler(const uint8_t dev_index)
 	bmda_jtag_dp_init(dp);
 #endif
 
-	if ((jtag_devs[dev_index].jd_idcode & (JTAG_IDCODE_PARTNO_MASK | JTAG_IDCODE_DESIGNER_MASK)) ==
-		JTAG_IDCODE_ARM_DPv0)
+	/* Grab the ID code that was scanned */
+	const uint32_t idcode = jtag_devs[dev_index].jd_idcode;
+	/*
+	 * Pulling out the designer code which will be used to attempt to detect a DPv0 DP.
+	 * This will get overriden later by DPIDR if the DP turns out to be DPv1+.
+	 */
+	const uint16_t designer = (idcode & JTAG_IDCODE_DESIGNER_MASK) >> JTAG_IDCODE_DESIGNER_OFFSET;
+	/*
+	 * Now extract the part number and sort out the designer code.
+	 * The JTAG ID code designer is in the form:
+	 * Bits 10:7 - JEP-106 Continuation Code
+	 * Bits 6:0 - JEP-106 Identity Code
+	 * So here we convert that into our internal representation.
+	 * See the JEP-106 code list (jep106.h) for more on that.
+	 */
+	dp->designer_code =
+		((designer & ADIV5_DP_DESIGNER_JEP106_CONT_MASK) << 1U) | (designer & ADIV5_DP_DESIGNER_JEP106_CODE_MASK);
+	dp->partno = (idcode & JTAG_IDCODE_PARTNO_MASK) >> JTAG_IDCODE_PARTNO_OFFSET;
+
+	if (dp->partno == JTAG_IDCODE_PARTNO_DPv0)
 		adiv5_dp_error(dp);
 	else
 		adiv5_dp_abort(dp, ADIV5_DP_ABORT_STKERRCLR);
-	adiv5_dp_init(dp, jtag_devs[dev_index].jd_idcode);
+	adiv5_dp_init(dp);
 }
 
 uint32_t fw_adiv5_jtagdp_read(adiv5_debug_port_s *dp, uint16_t addr)

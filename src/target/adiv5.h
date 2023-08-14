@@ -208,7 +208,6 @@
 #define JTAG_IDCODE_DESIGNER_OFFSET 1U
 #define JTAG_IDCODE_DESIGNER_MASK   (0x7ffU << JTAG_IDCODE_DESIGNER_OFFSET)
 
-#define JTAG_IDCODE_ARM_DPv0    UINT32_C(0x0ba00476)
 #define JTAG_IDCODE_PARTNO_DPv0 0xba00U
 
 /* Constants to make RnW parameters more clear in code */
@@ -368,7 +367,7 @@ static inline uint32_t adiv5_dp_recoverable_access(adiv5_debug_port_s *dp, uint8
 	return result;
 }
 
-void adiv5_dp_init(adiv5_debug_port_s *dp, uint32_t idcode);
+void adiv5_dp_init(adiv5_debug_port_s *dp);
 void bmda_adiv5_dp_init(adiv5_debug_port_s *dp);
 adiv5_access_port_s *adiv5_new_ap(adiv5_debug_port_s *dp, uint8_t apsel);
 void remote_jtag_dev(const jtag_dev_s *jtag_dev);
