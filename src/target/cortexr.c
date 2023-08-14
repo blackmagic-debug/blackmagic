@@ -50,7 +50,10 @@
 #include "jep106.h"
 #include "cortex.h"
 #include "cortex_internal.h"
+#include "gdb_reg.h"
 #include "gdb_packet.h"
+
+#include <assert.h>
 
 typedef struct cortexr_priv {
 	/* Base core information */
@@ -180,9 +183,41 @@ static const uint16_t cortexr_spsr_encodings[5] = {
 
 #define TOPT_FLAVOUR_FLOAT (1U << 1U) /* If set, core has a hardware FPU */
 
+/*
+ * Fields for Cortex-R special-purpose registers, used in the generation of GDB's target description XML.
+ * The general-purpose registers r0-r12 and the vector floating point (VFP) registers d0-d15 all follow a
+ * very regular format, so we only need to store fields for the special-purpose registers.
+ * The array for each SPR field have the same order as each other, making each of these pseudo
+ * 'associative array's.
+ */
+
+/* Cortex-R special-purpose register name strings */
+static const char *cortexr_spr_names[] = {
+	"sp",
+	"lr",
+	"pc",
+	"cpsr",
+};
+
+/* Cortex-R special-purpose register types */
+static const gdb_reg_type_e cortexr_spr_types[] = {
+	GDB_TYPE_DATA_PTR,    /* sp */
+	GDB_TYPE_CODE_PTR,    /* lr */
+	GDB_TYPE_CODE_PTR,    /* pc */
+	GDB_TYPE_UNSPECIFIED, /* cpsr */
+};
+
+/* clang-format off */
+static_assert(ARRAY_LENGTH(cortexr_spr_types) == ARRAY_LENGTH(cortexr_spr_names),
+	"SPR array length mistmatch! SPR type array should ahve the same length as SPR name array."
+);
+/* clang-format on */
+
 static target_halt_reason_e cortexr_halt_poll(target_s *target, target_addr_t *watch);
 static void cortexr_halt_request(target_s *target);
 static void cortexr_halt_resume(target_s *target, bool step);
+
+static const char *cortexr_target_description(target_s *target);
 
 static void cortexr_mem_read(target_s *const target, void *const dest, const target_addr_t src, const size_t len)
 {
@@ -443,6 +478,8 @@ bool cortexr_probe(adiv5_access_port_s *const ap, const target_addr_t base_addre
 	const bool core_has_fpu = cortexr_coproc_read(target, CORTEXR_CPACR) == cpacr;
 	DEBUG_TARGET("%s: FPU present? %s\n", __func__, core_has_fpu ? "yes" : "no");
 
+	target->regs_description = cortexr_target_description;
+
 	if (core_has_fpu) {
 		target->target_options |= TOPT_FLAVOUR_FLOAT;
 		target->regs_size += sizeof(uint32_t) * CORTEX_FLOAT_REG_COUNT;
@@ -549,4 +586,83 @@ static void cortexr_halt_resume(target_s *const target, const bool step)
 	uint32_t status = CORTEXR_DBG_DSCR_HALTED;
 	while (!(status & CORTEXR_DBG_DSCR_RESTARTED) && !platform_timeout_is_expired(&timeout))
 		status = cortex_dbg_read32(target, CORTEXR_DBG_DSCR);
+}
+
+/*
+ * This function creates the target description XML string for a Cortex-R part.
+ * This is done this way to decrease string duplications and thus code size,
+ * making it unfortunately much less readable than the string literal it is
+ * equivilent to.
+ *
+ * The string it creates is aproximately the following:
+ * <?xml version="1.0"?>
+ * <!DOCTYPE target SYSTEM "gdb-target.dtd">
+ * <target>
+ *   <architecture>arm</architecture>
+ *   <feature name="org.gnu.gdb.arm.core">
+ *     <reg name="r0" bitsize="32"/>
+ *     <reg name="r1" bitsize="32"/>
+ *     <reg name="r2" bitsize="32"/>
+ *     <reg name="r3" bitsize="32"/>
+ *     <reg name="r4" bitsize="32"/>
+ *     <reg name="r5" bitsize="32"/>
+ *     <reg name="r6" bitsize="32"/>
+ *     <reg name="r7" bitsize="32"/>
+ *     <reg name="r8" bitsize="32"/>
+ *     <reg name="r9" bitsize="32"/>
+ *     <reg name="r10" bitsize="32"/>
+ *     <reg name="r11" bitsize="32"/>
+ *     <reg name="r12" bitsize="32"/>
+ *     <reg name="sp" bitsize="32" type="data_ptr"/>
+ *     <reg name="lr" bitsize="32" type="code_ptr"/>
+ *     <reg name="pc" bitsize="32" type="code_ptr"/>
+ *     <reg name="cpsr" bitsize="32" regnum="25"/>
+ *   </feature>
+ * </target>
+ */
+static size_t cortexr_build_target_description(char *const buffer, size_t max_length, const bool has_fpu)
+{
+	(void)has_fpu;
+	size_t print_size = max_length;
+	/* Start with the "preamble" chunks which are mostly common across targets save for 2 words. */
+	int offset = snprintf(buffer, print_size, "%s target %sarm%s <feature name=\"org.gnu.gdb.arm.core\">",
+		gdb_xml_preamble_first, gdb_xml_preamble_second, gdb_xml_preamble_third);
+
+	/* Then build the general purpose register descriptions for r0-r12 */
+	for (uint8_t i = 0; i <= 12U; ++i) {
+		if (max_length != 0)
+			print_size = max_length - (size_t)offset;
+
+		offset += snprintf(buffer + offset, print_size, "<reg name=\"r%u\" bitsize=\"32\"/>", i);
+	}
+
+	/* Now build the special-purpose register descriptions using the arrays at the top of file */
+	for (uint8_t i = 0; i < ARRAY_LENGTH(cortexr_spr_names); ++i) {
+		if (max_length != 0)
+			print_size = max_length - (size_t)offset;
+
+		const char *const name = cortexr_spr_names[i];
+		const gdb_reg_type_e type = cortexr_spr_types[i];
+
+		offset += snprintf(buffer + offset, print_size, "<reg name=\"%s\" bitsize=\"32\"%s%s/>", name,
+			gdb_reg_type_strings[type], i == 3U ? " regnum=\"25\"" : "");
+	}
+
+	if (max_length != 0)
+		print_size = max_length - (size_t)offset;
+
+	offset += snprintf(buffer + offset, print_size, "</feature></target>");
+	/* offset is now the total length of the string created, discard the sign and return it. */
+	return (size_t)offset;
+}
+
+static const char *cortexr_target_description(target_s *const target)
+{
+	const size_t description_length =
+		cortexr_build_target_description(NULL, 0, target->target_options & TOPT_FLAVOUR_FLOAT) + 1U;
+	char *const description = malloc(description_length);
+	if (description)
+		(void)cortexr_build_target_description(
+			description, description_length, target->target_options & TOPT_FLAVOUR_FLOAT);
+	return description;
 }
