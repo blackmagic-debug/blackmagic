@@ -178,6 +178,20 @@ typedef struct riscv_hart {
 #define RV_TRIGGER_MODE_MASK          0xffff0000U
 #define RV_TRIGGER_SUPPORT_BREAKWATCH 0x00000004U
 
+// The CSR id when reported by GDB is shifted by RV_CSR_GDB_OFFSET
+// so they cannot collide with GPR registers, so you have to substract
+// RV_CSR_GDB_OFFSET from the value received from gdb
+#define RV_CSR_GDB_OFFSET 128
+#define RV_CSR_STATUS     0x300
+#define RV_CSR_MISA       0x301
+#define RV_CSR_MIE        0x304
+#define RV_CSR_MTVEC      0x305
+#define RV_CSR_MSCRATCH   0x340
+#define RV_CSR_MEPC       0x341
+#define RV_CSR_MCAUSE     0x342
+#define RV_CSR_MTVAL      0x343
+#define RV_CSR_MIP        0x344
+
 #define RV_TOPT_INHIBIT_NRST 0x00000001U
 
 void riscv_jtag_dtm_handler(uint8_t dev_index);
