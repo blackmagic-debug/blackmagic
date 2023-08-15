@@ -848,6 +848,7 @@ static void riscv_reset(target_s *const target)
 	}
 	/* Acknowledge the reset */
 	riscv_dm_write(hart->dbg_module, RV_DM_CONTROL, hart->hartsel | RV_DM_CTRL_HART_ACK_RESET);
+	riscv_halt_request(target);
 	target_check_error(target);
 }
 
