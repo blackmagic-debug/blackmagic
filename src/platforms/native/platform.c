@@ -34,12 +34,15 @@
 #include <libopencm3/usb/usbd.h>
 #include <libopencm3/stm32/adc.h>
 #include <libopencm3/stm32/flash.h>
+#include <libopencm3/stm32/timer.h>
 
 static void adc_init(void);
 static void setup_vbus_irq(void);
 
 /* This is defined by the linker script */
 extern char vector_table;
+
+#define TPWR_SOFT_START_STEPS 64U
 
 /*
  * Starting with hardware version 4 we are storing the hardware version in the
@@ -145,8 +148,10 @@ void platform_init(void)
 	rcc_periph_clock_enable(RCC_USB);
 	rcc_periph_clock_enable(RCC_GPIOA);
 	rcc_periph_clock_enable(RCC_GPIOB);
-	if (platform_hwversion() >= 6)
+	if (platform_hwversion() >= 6) {
 		rcc_periph_clock_enable(RCC_GPIOC);
+		rcc_periph_clock_enable(RCC_TIM1);
+	}
 	rcc_periph_clock_enable(RCC_AFIO);
 	rcc_periph_clock_enable(RCC_CRC);
 
@@ -205,6 +210,36 @@ void platform_init(void)
 		gpio_set_mode(PWR_BR_PORT, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_OPENDRAIN, PWR_BR_PIN);
 	}
 
+	/* Configure Timer 1 Channel 3N to allow tpwr to be soft start on hw6 */
+	if (platform_hwversion() >= 6) {
+		/* The pin mapping is a secondary mapping for the pin. We need to enable that. */
+		gpio_primary_remap(AFIO_MAPR_SWJ_CFG_FULL_SWJ, AFIO_MAPR_TIM1_REMAP_PARTIAL_REMAP);
+		/*
+		 * Configure Timer 1 to run the the power control pin PWM and switch the timer on
+		 * NB: We don't configure the pin mode here but rather we configure it to the alt-mode and back in
+		 * platform_target_set_power() below due to GD32 errata involving PB2 (AUX serial LED).
+		 * See §3.7.6 of the GD32F103 Compatability Summary for details.
+		 */
+		timer_set_mode(TIM1, TIM_CR1_CKD_CK_INT, TIM_CR1_CMS_EDGE, TIM_CR1_DIR_UP);
+		/* Use PWM mode 1 so that the signal generated is low till it exceeds the set value */
+		timer_set_oc_mode(TIM1, TIM_OC3, TIM_OCM_PWM1);
+		/* Mark the output active-low due to how this drives the target pin */
+		timer_set_oc_polarity_low(TIM1, TIM_OC3N);
+		timer_enable_oc_output(TIM1, TIM_OC3N);
+		timer_set_oc_value(TIM1, TIM_OC3, 0);
+		/* Make sure dead-time is switched off as this interferes with the correct waveform generation */
+		timer_set_deadtime(TIM1, 0);
+		/*
+		 * Configure for 64 steps which also makes this output a 562.5kHz PWM signal
+		 * given the lack of prescaling and being a peripheral on APB1 (36MHz)
+		 */
+		timer_set_period(TIM1, TPWR_SOFT_START_STEPS - 1U);
+		timer_enable_break_main_output(TIM1);
+		timer_continuous_mode(TIM1);
+		timer_update_on_overflow(TIM1);
+		timer_enable_counter(TIM1);
+	}
+
 	if (platform_hwversion() > 0)
 		adc_init();
 	else {
@@ -254,13 +289,45 @@ bool platform_target_get_power(void)
 {
 	if (platform_hwversion() > 0)
 		return !gpio_get(PWR_BR_PORT, PWR_BR_PIN);
-	return 0;
+	return false;
+}
+
+static inline void platform_wait_pwm_cycle()
+{
+	while (!timer_get_flag(TIM1, TIM_SR_UIF))
+		continue;
+	timer_clear_flag(TIM1, TIM_SR_UIF);
 }
 
 void platform_target_set_power(const bool power)
 {
-	if (platform_hwversion() > 0)
-		gpio_set_val(PWR_BR_PORT, PWR_BR_PIN, !power);
+	if (platform_hwversion() <= 0)
+		return;
+	/* If we're on hw6 or newer, and are turning the power on */
+	if (platform_hwversion() >= 6 && power) {
+		/* Configure the pin to be driven by the timer */
+		gpio_set_mode(PWR_BR_PORT, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, PWR_BR_PIN);
+		timer_clear_flag(TIM1, TIM_SR_UIF);
+		/* Wait for one PWM cycle to have taken place */
+		platform_wait_pwm_cycle();
+		/* Soft start power on the target */
+		for (size_t step = 1U; step < TPWR_SOFT_START_STEPS; ++step) {
+			/* Set the new PWM value */
+			timer_set_oc_value(TIM1, TIM_OC3, step);
+			/* Wait for one PWM cycle to have taken place */
+			platform_wait_pwm_cycle();
+		}
+	}
+	/* Set the pin state */
+	gpio_set_val(PWR_BR_PORT, PWR_BR_PIN, !power);
+	/*
+	 * If we're turning power on and running hw6+, now configure the pin back over to GPIO and
+	 * reset state timer for the next request
+	 */
+	if (platform_hwversion() >= 6 && power) {
+		gpio_set_mode(PWR_BR_PORT, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_OPENDRAIN, PWR_BR_PIN);
+		timer_set_oc_value(TIM1, TIM_OC3, 0U);
+	}
 }
 
 static void adc_init(void)
