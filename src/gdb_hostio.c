@@ -46,16 +46,26 @@ int hostio_reply(target_controller_s *const tc, char *const pbuf, const int len)
 
 	const bool retcode_is_negative = pbuf[1U] == '-';
 
-	unsigned int retcode;
-	unsigned int errno_;
-	char ctrl_c_flag;
-	const unsigned int items =
-		sscanf(pbuf + (retcode_is_negative ? 2U : 1U), "%x,%x,%c", &retcode, &errno_, &ctrl_c_flag);
+	unsigned int retcode = 0;
+	unsigned int errno_ = 0;
+	char ctrl_c_flag = '\0';
+	const int items = sscanf(pbuf + (retcode_is_negative ? 2U : 1U), "%x,%x,%c", &retcode, &errno_, &ctrl_c_flag);
 
-	/* if break is requested */
-	tc->interrupted = items == 3U && ctrl_c_flag == 'C';
+	if (items < 1) {
+		/* 
+		 * Something went wrong with the sscanf or the packet format, avoid UB
+		 * FIXME: how do we properly handle this?
+		 */
+		tc->interrupted = false;
+		tc->errno_ = TARGET_EUNKNOWN;
+		return -1;
+	}
 
-	tc->errno_ = errno_;
+	/* If the call was successful the errno may be omitted */
+	tc->errno_ = items >= 2 ? errno_ : 0;
+
+	/* If break is requested */
+	tc->interrupted = items == 3 && ctrl_c_flag == 'C';
 
 	return retcode_is_negative ? -retcode : retcode;
 }
