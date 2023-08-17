@@ -5,6 +5,7 @@ Table of Contents:
 * [Reset nomenclature](#reset-nomenclature)
 * [Multiple-inclusion guarding](#multiple-inclusion-guarding)
 * [typedef and structure, enumeration and union naming](#typedef-and-structure-enumeration-and-union-naming)
+* [Print format specifiers](#print-format-specifiers)
 
 ## Reset nomenclature
 
@@ -85,3 +86,31 @@ typedef struct lpc43xx_flash {
 	/* contents */
 } lpc43xx_flash_s;
 ```
+
+## Print format specifiers
+
+When writing format specifiers for `printf` and friends, care should be taken to ensure they match the variables'
+underlying types, taking into consideration that they may change depending on the compiler. To this end, some
+standard macros are available to help.
+
+### Non-exhaustive cheat sheet
+
+* decimal:
+  - `char`: `%c`
+  - `int`, `int8_t`, `int16_t`: `%d`
+  - `unsigned int`, `uint8_t`, `uint16_t`: `%u`
+  - `uint32_t`: `PRIu32`
+  - `int32_t`: `PRId32`
+  - `float`: `%f`
+  - `size_t`: `%zu`
+* hex:
+  - `uint8_t`: `PRIx8`
+  - `uint16_t`: `PRIx16`
+  - `uint32_t`: `PRIx32`
+
+A note on `enum`: its underlying type is not well defined in C11, `enum` **constants** have type `int` (C11 §6.4.4.3),
+but `enum` **types** are implementation defined and can have any type compatible with `char`, a _signed integer type_,
+or an _unsigned integer type_ (C11 §6.7.2.2).
+_GCC_ defaults to `unsigned int` unless there are signed entries in the `enum`,
+additionally the flag `short-enums` affects this behaviour.
+This makes it difficult to write portable format specifiers, for now `%d` should be used.
