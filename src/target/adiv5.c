@@ -289,31 +289,39 @@ static const struct {
 };
 
 #ifdef ENABLE_DEBUG
-const char *adiv5_ap_type[] = {
-	"AHB3-AP",
-	"APB2/3-AP",
-	"AXI3/4-AP",
-	"AHB5-AP",
-	"APB4/5-AP",
-	"AXI5-AP",
-	"AHB5-AP",
-};
-
-const char *adiv5_ap_map_type(const uint8_t ap_type, const uint8_t ap_class)
+static const char *adiv5_arm_ap_type_string(const uint8_t ap_type, const uint8_t ap_class)
 {
-	/* Type 0 APs are determined by the class code */
-	if (ap_type == 0U) {
+	/*
+	 * Values taken from ADIv5 spec §C1.3 pg146.
+	 * table C1-2 "AP Identification types for an AP designed by Arm"
+	 */
+
+	switch (ap_type) {
+	case 0x1U:
+		return "AHB3-AP";
+	case 0x2U:
+		return "APB2/3-AP";
+	/* 0x3 is not defined */
+	case 0x4U:
+		return "AXI3/4-AP";
+	case 0x5U:
+		return "AHB5-AP";
+	case 0x6U:
+		return "APB4/5-AP";
+	case 0x7U:
+		return "AXI5-AP";
+	case 0x8U:
+		return "AHB5-AP";
+	case 0U:
+		/* Type 0 APs are determined by the class code */
 		if (ap_class == 0U)
 			return "JTAG-AP";
 		if (ap_class == 1U)
 			return "COM-AP";
-		return "Reserved";
+	/* fall through */
+	default:
+		return "Unknown";
 	}
-	/* Anything type code less than 9U can be straight looked up in the table above */
-	if (ap_type < 9U)
-		return adiv5_ap_type[ap_type - 1U];
-	/* Type 9U+ is reserved */
-	return "Reserved";
 }
 #endif
 
@@ -741,8 +749,8 @@ adiv5_access_port_s *adiv5_new_ap(adiv5_debug_port_s *dp, uint8_t apsel)
 	designer = (designer & ADIV5_DP_DESIGNER_JEP106_CONT_MASK) << 1U | (designer & ADIV5_DP_DESIGNER_JEP106_CODE_MASK);
 	/* If this is an ARM-designed AP, map the AP type. Otherwise display "UNKNOWN" */
 	const char *const ap_type = designer == JEP106_MANUFACTURER_ARM ?
-		adiv5_ap_map_type(ADIV5_AP_IDR_TYPE(ap->idr), ADIV5_AP_IDR_CLASS(ap->idr)) :
-		"UNKNOWN";
+		adiv5_arm_ap_type_string(ADIV5_AP_IDR_TYPE(ap->idr), ADIV5_AP_IDR_CLASS(ap->idr)) :
+		"Unknown";
 	/* Display the AP's type, variant and revision information */
 	DEBUG_INFO(" (%s var%" PRIx32 " rev%" PRIx32 ")\n", ap_type, ADIV5_AP_IDR_VARIANT(ap->idr),
 		ADIV5_AP_IDR_REVISION(ap->idr));
