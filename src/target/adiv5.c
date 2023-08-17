@@ -78,35 +78,18 @@
 
 /* The following enum is based on the Component Class value table 13-3 of the ADIv5 specification. */
 typedef enum cid_class {
-	cidc_gvc = 0x0,    /* Generic verification component*/
-	cidc_romtab = 0x1, /* ROM Table, std. layout (ADIv5 Chapter 14) */
-	/* 0x2 - 0x8 */    /* Reserved */
-	cidc_dc = 0x9,     /* Debug component, std. layout (CoreSight Arch. Spec.) */
-	/* 0xa */          /* Reserved */
-	cidc_ptb = 0xb,    /* Peripheral Test Block (PTB) */
-	/* 0xc */          /* Reserved */
-	cidc_dess = 0xd,   /* OptimoDE Data Engine SubSystem (DESS) component */
-	cidc_gipc = 0xe,   /* Generic IP Component */
-	cidc_sys = 0xf,    /* CoreLink, PrimeCell, or other system component with no standard register layout */
-	cidc_unknown = 0x10
+	cidc_gvc = 0x0,     /* Generic verification component*/
+	cidc_romtab = 0x1,  /* ROM Table, std. layout (ADIv5 Chapter 14) */
+	/* 0x2 - 0x8 */     /* Reserved */
+	cidc_dc = 0x9,      /* Debug component, std. layout (CoreSight Arch. Spec.) */
+	/* 0xa */           /* Reserved */
+	cidc_ptb = 0xb,     /* Peripheral Test Block (PTB) */
+	/* 0xc */           /* Reserved */
+	cidc_dess = 0xd,    /* OptimoDE Data Engine SubSystem (DESS) component */
+	cidc_gipc = 0xe,    /* Generic IP Component */
+	cidc_sys = 0xf,     /* CoreLink, PrimeCell, or other system component with no standard register layout */
+	cidc_unknown = 0x10 /* Not a valid component class */
 } cid_class_e;
-
-#ifdef ENABLE_DEBUG
-/* The reserved ones only have an R in them, to save a bit of space. */
-static const char *const cidc_debug_strings[] = {
-	[cidc_gvc] = "Generic verification component",            /* 0x0 */
-	[cidc_romtab] = "ROM Table",                              /* 0x1 */
-	[0x2 ... 0x8] = "R",                                      /* 0x2 - 0x8 */
-	[cidc_dc] = "Debug component",                            /* 0x9 */
-	[0xa] = "R",                                              /* 0xa */
-	[cidc_ptb] = "Peripheral Test Block",                     /* 0xb */
-	[0xc] = "R",                                              /* 0xc */
-	[cidc_dess] = "OptimoDE Data Engine SubSystem component", /* 0xd */
-	[cidc_gipc] = "Generic IP component",                     /* 0xe */
-	[cidc_sys] = "Non STD System component",                  /* 0xf */
-	[cidc_unknown] = "Unknown component class"                /* 0x10 */
-};
-#endif
 
 #define PIDR0_OFFSET 0xfe0U /* DBGPID0 */
 #define PIDR1_OFFSET 0xfe4U /* DBGPID1 */
@@ -323,6 +306,28 @@ static const char *adiv5_arm_ap_type_string(const uint8_t ap_type, const uint8_t
 		return "Unknown";
 	}
 }
+
+static const char *adiv5_cid_class_string(const cid_class_e cid_class)
+{
+	switch (cid_class) {
+	case cidc_gvc:
+		return "Generic verification component";
+	case cidc_romtab:
+		return "ROM Table";
+	case cidc_dc:
+		return "Debug component";
+	case cidc_ptb:
+		return "Peripheral Test Block";
+	case cidc_dess:
+		return "OptimoDE Data Engine SubSystem component";
+	case cidc_gipc:
+		return "Generic IP component";
+	case cidc_sys:
+		return "Non STD System component";
+	default:
+		return "Unknown component"; /* Noted as reserved in the spec */
+	}
+};
 #endif
 
 /* Used to probe for a protected SAMX5X device */
@@ -602,9 +607,8 @@ static void adiv5_component_probe(
 		/* Check SYSMEM bit */
 		const uint32_t memtype = adiv5_mem_read32(ap, addr | ADIV5_ROM_MEMTYPE) & ADIV5_ROM_MEMTYPE_SYSMEM;
 
-		if (adiv5_dp_error(ap->dp)) {
+		if (adiv5_dp_error(ap->dp))
 			DEBUG_ERROR("Fault reading ROM table entry\n");
-		}
 
 		DEBUG_INFO("ROM: Table BASE=0x%" PRIx32 " SYSMEM=0x%08" PRIx32 ", Manufacturer %03x Partno %03x\n", addr,
 			memtype, designer_code, part_number);
@@ -660,14 +664,14 @@ static void adiv5_component_probe(
 
 			DEBUG_INFO("%s%" PRIu32 " 0x%" PRIx32 ": %s - %s %s (PIDR = 0x%08" PRIx32 "%08" PRIx32 " DEVTYPE = 0x%02x "
 					   "ARCHID = 0x%04x)\n",
-				indent + 1, num_entry, addr, cidc_debug_strings[cid_class], arm_component_lut[i].type,
+				indent + 1, num_entry, addr, adiv5_cid_class_string(cid_class), arm_component_lut[i].type,
 				arm_component_lut[i].full, (uint32_t)(pidr >> 32U), (uint32_t)pidr, dev_type, arch_id);
 
 			const cid_class_e adjusted_class = adiv5_class_from_cid(part_number, arch_id, cid_class);
 			/* Perform sanity check, if we know what to expect as * component ID class. */
 			if (arm_component_lut[i].cidc != cidc_unknown && adjusted_class != arm_component_lut[i].cidc)
-				DEBUG_WARN("%s\"%s\" expected, got \"%s\"\n", indent + 1, cidc_debug_strings[arm_component_lut[i].cidc],
-					cidc_debug_strings[adjusted_class]);
+				DEBUG_WARN("%s\"%s\" expected, got \"%s\"\n", indent + 1,
+					adiv5_cid_class_string(arm_component_lut[i].cidc), adiv5_cid_class_string(adjusted_class));
 
 			switch (arm_component_lut[i].arch) {
 			case aa_cortexm:
@@ -686,7 +690,7 @@ static void adiv5_component_probe(
 		if (arm_component_lut[i].arch == aa_end) {
 			DEBUG_WARN("%s%" PRIu32 " 0x%" PRIx32 ": %s - Unknown (PIDR = 0x%08" PRIx32 "%08" PRIx32 " DEVTYPE = "
 					   "0x%02x ARCHID = 0x%04x)\n",
-				indent, num_entry, addr, cidc_debug_strings[cid_class], (uint32_t)(pidr >> 32U), (uint32_t)pidr,
+				indent, num_entry, addr, adiv5_cid_class_string(cid_class), (uint32_t)(pidr >> 32U), (uint32_t)pidr,
 				dev_type, arch_id);
 		}
 	}
@@ -747,7 +751,7 @@ adiv5_access_port_s *adiv5_new_ap(adiv5_debug_port_s *dp, uint8_t apsel)
 	/* Decode the AP designer code */
 	uint16_t designer = ADIV5_AP_IDR_DESIGNER(ap->idr);
 	designer = (designer & ADIV5_DP_DESIGNER_JEP106_CONT_MASK) << 1U | (designer & ADIV5_DP_DESIGNER_JEP106_CODE_MASK);
-	/* If this is an ARM-designed AP, map the AP type. Otherwise display "UNKNOWN" */
+	/* If this is an ARM-designed AP, map the AP type. Otherwise display "Unknown" */
 	const char *const ap_type = designer == JEP106_MANUFACTURER_ARM ?
 		adiv5_arm_ap_type_string(ADIV5_AP_IDR_TYPE(ap->idr), ADIV5_AP_IDR_CLASS(ap->idr)) :
 		"Unknown";
