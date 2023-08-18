@@ -279,32 +279,36 @@ static const char *adiv5_arm_ap_type_string(const uint8_t ap_type, const uint8_t
 	 * table C1-2 "AP Identification types for an AP designed by Arm"
 	 */
 
-	switch (ap_type) {
-	case 0x1U:
-		return "AHB3-AP";
-	case 0x2U:
-		return "APB2/3-AP";
-	/* 0x3 is not defined */
-	case 0x4U:
-		return "AXI3/4-AP";
-	case 0x5U:
-		return "AHB5-AP";
-	case 0x6U:
-		return "APB4/5-AP";
-	case 0x7U:
-		return "AXI5-AP";
-	case 0x8U:
-		return "AHB5-AP";
-	case 0U:
-		/* Type 0 APs are determined by the class code */
-		if (ap_class == 0U)
-			return "JTAG-AP";
-		if (ap_class == 1U)
-			return "COM-AP";
-	/* fall through */
-	default:
-		return "Unknown";
+	/* All types except 0 are only valid for ap_class == 0x8 */
+	if (ap_class == 0x8U || ap_type == 0U) {
+		switch (ap_type) {
+		case 0U:
+			/* Type 0 APs are determined by the class code */
+			if (ap_class == 0U)
+				return "JTAG-AP";
+			if (ap_class == 1U)
+				return "COM-AP";
+			break;
+		case 0x1U:
+			return "AHB3-AP";
+		case 0x2U:
+			return "APB2/3-AP";
+		/* 0x3 is not defined */
+		case 0x4U:
+			return "AXI3/4-AP";
+		case 0x5U:
+			return "AHB5-AP";
+		case 0x6U:
+			return "APB4/5-AP";
+		case 0x7U:
+			return "AXI5-AP";
+		case 0x8U:
+			return "AHB5-AP";
+		default:
+			break;
+		}
 	}
+	return "Unknown";
 }
 
 static const char *adiv5_cid_class_string(const cid_class_e cid_class)
