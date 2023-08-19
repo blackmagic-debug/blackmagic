@@ -50,8 +50,6 @@
 #define ARRAY_LENGTH(arr) (sizeof(arr) / sizeof((arr)[0]))
 #endif
 
-extern uint32_t delay_cnt;
-
 #define FREQ_FIXED 0xffffffffU
 
 #if PC_HOSTED == 0
