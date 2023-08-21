@@ -462,10 +462,9 @@ const char *cortexa_regs_description(target_s *t)
 
 bool cortexa_probe(adiv5_access_port_s *ap, target_addr_t base_address)
 {
-	target_s *t = target_new();
-	if (!t) {
+	target_s *target = target_new();
+	if (!target)
 		return false;
-	}
 
 	adiv5_ap_ref(ap);
 	cortexa_priv_s *priv = calloc(1, sizeof(*priv));
@@ -474,42 +473,42 @@ bool cortexa_probe(adiv5_access_port_s *ap, target_addr_t base_address)
 		return false;
 	}
 
-	t->priv = priv;
-	t->priv_free = cortex_priv_free;
+	target->priv = priv;
+	target->priv_free = cortex_priv_free;
 	priv->base.ap = ap;
 	priv->base.base_addr = base_address;
 
-	t->mem_read = cortexa_slow_mem_read;
-	t->mem_write = cortexa_slow_mem_write;
+	target->mem_read = cortexa_slow_mem_read;
+	target->mem_write = cortexa_slow_mem_write;
 
 	/* Set up APB CSW, we won't touch this again */
 	uint32_t csw = ap->csw | ADIV5_AP_CSW_SIZE_WORD;
 	adiv5_ap_write(ap, ADIV5_AP_CSW, csw);
-	uint32_t dbgdidr = apb_read(t, DBGDIDR);
+	uint32_t dbgdidr = apb_read(target, DBGDIDR);
 	priv->hw_breakpoint_max = ((dbgdidr >> 24U) & 15U) + 1U;
 	priv->hw_watchpoint_max = ((dbgdidr >> 28U) & 15U) + 1U;
 
-	t->check_error = cortexa_check_error;
+	target->check_error = cortexa_check_error;
 
-	t->driver = "ARM Cortex-A";
+	target->driver = "ARM Cortex-A";
 
-	t->attach = cortexa_attach;
-	t->detach = cortexa_detach;
+	target->attach = cortexa_attach;
+	target->detach = cortexa_detach;
 
-	t->regs_description = cortexa_regs_description;
-	t->regs_read = cortexa_regs_read;
-	t->regs_write = cortexa_regs_write;
-	t->reg_read = cortexa_reg_read;
-	t->reg_write = cortexa_reg_write;
+	target->regs_description = cortexa_regs_description;
+	target->regs_read = cortexa_regs_read;
+	target->regs_write = cortexa_regs_write;
+	target->reg_read = cortexa_reg_read;
+	target->reg_write = cortexa_reg_write;
 
-	t->reset = cortexa_reset;
-	t->halt_request = cortexa_halt_request;
-	t->halt_poll = cortexa_halt_poll;
-	t->halt_resume = cortexa_halt_resume;
-	t->regs_size = sizeof(priv->reg_cache);
+	target->reset = cortexa_reset;
+	target->halt_request = cortexa_halt_request;
+	target->halt_poll = cortexa_halt_poll;
+	target->halt_resume = cortexa_halt_resume;
+	target->regs_size = sizeof(priv->reg_cache);
 
-	t->breakwatch_set = cortexa_breakwatch_set;
-	t->breakwatch_clear = cortexa_breakwatch_clear;
+	target->breakwatch_set = cortexa_breakwatch_set;
+	target->breakwatch_clear = cortexa_breakwatch_clear;
 
 	return true;
 }
