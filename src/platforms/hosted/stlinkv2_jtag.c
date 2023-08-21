@@ -27,6 +27,7 @@
 
 static bool stlink_enter_debug_jtag(void);
 static size_t stlink_read_idcodes(uint32_t *idcodes);
+static uint32_t stlink_jtag_adiv5_dp_read(adiv5_debug_port_s *dp, uint16_t addr);
 
 bool stlink_jtag_scan(void)
 {
@@ -76,7 +77,13 @@ static size_t stlink_read_idcodes(uint32_t *idcodes)
 
 void stlink_jtag_dp_init(adiv5_debug_port_s *dp)
 {
+	dp->dp_read = stlink_jtag_adiv5_dp_read;
 	dp->error = stlink_adiv5_clear_error;
 	dp->low_access = stlink_raw_access;
 	dp->abort = stlink_dp_abort;
+}
+
+static uint32_t stlink_jtag_adiv5_dp_read(adiv5_debug_port_s *const dp, const uint16_t addr)
+{
+	return stlink_raw_access(dp, ADIV5_LOW_READ, addr, 0U);
 }
