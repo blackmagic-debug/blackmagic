@@ -87,8 +87,12 @@ typedef struct cortexa_priv {
 /* This may be specific to Cortex-A9 */
 #define CACHE_LINE_LENGTH (8U * 4U)
 
-/* Debug APB registers */
-#define DBGDIDR 0U
+#define CORTEXAR_DBG_IDR 0x000U
+
+#define CORTEXAR_DBG_IDR_BREAKPOINT_MASK  0xfU
+#define CORTEXAR_DBG_IDR_BREAKPOINT_SHIFT 24U
+#define CORTEXAR_DBG_IDR_WATCHPOINT_MASK  0xfU
+#define CORTEXAR_DBG_IDR_WATCHPOINT_SHIFT 28U
 
 #define DBGDTRRX 32U /* DCC: Host to target */
 #define DBGITR   33U
@@ -462,12 +466,12 @@ const char *cortexa_regs_description(target_s *t)
 
 bool cortexa_probe(adiv5_access_port_s *ap, target_addr_t base_address)
 {
-	target_s *target = target_new();
+	target_s *const target = target_new();
 	if (!target)
 		return false;
 
 	adiv5_ap_ref(ap);
-	cortexa_priv_s *priv = calloc(1, sizeof(*priv));
+	cortexa_priv_s *const priv = calloc(1, sizeof(*priv));
 	if (!priv) { /* calloc failed: heap exhaustion */
 		DEBUG_ERROR("calloc: failed in %s\n", __func__);
 		return false;
@@ -480,17 +484,28 @@ bool cortexa_probe(adiv5_access_port_s *ap, target_addr_t base_address)
 
 	target->mem_read = cortexa_slow_mem_read;
 	target->mem_write = cortexa_slow_mem_write;
+	target->check_error = cortexa_check_error;
+
+	target->driver = "ARM Cortex-A";
+
+	target->halt_request = cortexa_halt_request;
+	target->halt_poll = cortexa_halt_poll;
+	target->halt_resume = cortexa_halt_resume;
 
 	/* Set up APB CSW, we won't touch this again */
 	uint32_t csw = ap->csw | ADIV5_AP_CSW_SIZE_WORD;
 	adiv5_ap_write(ap, ADIV5_AP_CSW, csw);
-	uint32_t dbgdidr = apb_read(target, DBGDIDR);
-	priv->hw_breakpoint_max = ((dbgdidr >> 24U) & 15U) + 1U;
-	priv->hw_watchpoint_max = ((dbgdidr >> 28U) & 15U) + 1U;
 
-	target->check_error = cortexa_check_error;
-
-	target->driver = "ARM Cortex-A";
+	cortex_read_cpuid(target);
+	/* The format of the debug identification register is described in DDI0406C §C11.11.15 pg2217 */
+	const uint32_t debug_id = cortex_dbg_read32(target, CORTEXAR_DBG_IDR);
+	/* Reserve the last available breakpoint for our use to implement single-stepping */
+	priv->base.breakpoints_available =
+		(debug_id >> CORTEXAR_DBG_IDR_BREAKPOINT_SHIFT) & CORTEXAR_DBG_IDR_BREAKPOINT_MASK;
+	priv->base.watchpoints_available =
+		((debug_id >> CORTEXAR_DBG_IDR_WATCHPOINT_SHIFT) & CORTEXAR_DBG_IDR_WATCHPOINT_MASK) + 1U;
+	DEBUG_TARGET("%s %s core has %u breakpoint and %u watchpoint units available\n", target->driver, target->core,
+		priv->base.breakpoints_available + 1U, priv->base.watchpoints_available);
 
 	target->attach = cortexa_attach;
 	target->detach = cortexa_detach;
@@ -502,9 +517,6 @@ bool cortexa_probe(adiv5_access_port_s *ap, target_addr_t base_address)
 	target->reg_write = cortexa_reg_write;
 
 	target->reset = cortexa_reset;
-	target->halt_request = cortexa_halt_request;
-	target->halt_poll = cortexa_halt_poll;
-	target->halt_resume = cortexa_halt_resume;
 	target->regs_size = sizeof(priv->reg_cache);
 
 	target->breakwatch_set = cortexa_breakwatch_set;
@@ -694,7 +706,7 @@ static void cortexa_regs_write_internal(target_s *t)
 		write_gpreg(t, i, priv->reg_cache.r[i]);
 }
 
-static void cortexa_reset(target_s *t)
+static void cortexa_reset(target_s *target)
 {
 	/* This mess is Xilinx Zynq specific
 	 * See Zynq-7000 TRM, Xilinx doc UG585
@@ -702,8 +714,8 @@ static void cortexa_reset(target_s *t)
 #define ZYNQ_SLCR_UNLOCK       0xf8000008U
 #define ZYNQ_SLCR_UNLOCK_KEY   0xdf0dU
 #define ZYNQ_SLCR_PSS_RST_CTRL 0xf8000200U
-	target_mem_write32(t, ZYNQ_SLCR_UNLOCK, ZYNQ_SLCR_UNLOCK_KEY);
-	target_mem_write32(t, ZYNQ_SLCR_PSS_RST_CTRL, 1);
+	target_mem_write32(target, ZYNQ_SLCR_UNLOCK, ZYNQ_SLCR_UNLOCK_KEY);
+	target_mem_write32(target, ZYNQ_SLCR_PSS_RST_CTRL, 1);
 
 	/* Try hard reset too */
 	platform_nrst_set_val(true);
@@ -715,7 +727,7 @@ static void cortexa_reset(target_s *t)
 	volatile exception_s e;
 	do {
 		TRY_CATCH (e, EXCEPTION_ALL) {
-			apb_read(t, DBGDIDR);
+			cortex_dbg_read32(target, CORTEXAR_DBG_IDR);
 		}
 	} while (!platform_timeout_is_expired(&timeout) && e.type == EXCEPTION_ERROR);
 	if (e.type == EXCEPTION_ERROR)
@@ -723,7 +735,7 @@ static void cortexa_reset(target_s *t)
 
 	platform_delay(100);
 
-	cortexa_attach(t);
+	cortexa_attach(target);
 }
 
 static void cortexa_halt_request(target_s *t)
