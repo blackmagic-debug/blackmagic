@@ -76,16 +76,18 @@ typedef struct cortexa_priv {
 		uint64_t d[16];
 	} reg_cache;
 
-	unsigned hw_breakpoint_max;
 	uint16_t hw_breakpoint_mask;
 	uint32_t bcr0;
 	uint32_t bvr0;
-	unsigned hw_watchpoint_max;
 	uint16_t hw_watchpoint_mask;
 	bool mmu_fault;
 } cortexa_priv_s;
 
 #define CORTEXAR_DBG_IDR 0x000U
+#define CORTEXAR_DBG_DVR 0x100U
+#define CORTEXAR_DBG_DCR 0x140U
+#define CORTEXAR_DBG_WVR 0x180U
+#define CORTEXAR_DBG_WCR 0x1c0U
 #define CORTEXAR_CTR     0xd04U
 
 #define CORTEXAR_DBG_IDR_BREAKPOINT_MASK  0xfU
@@ -538,32 +540,33 @@ bool cortexa_probe(adiv5_access_port_s *ap, target_addr_t base_address)
 	return true;
 }
 
-bool cortexa_attach(target_s *t)
+bool cortexa_attach(target_s *target)
 {
-	cortexa_priv_s *priv = t->priv;
+	cortexa_priv_s *priv = target->priv;
 
 	/* Clear any pending fault condition */
-	target_check_error(t);
+	target_check_error(target);
 
 	/* Enable halting debug mode */
-	uint32_t dbgdscr = apb_read(t, DBGDSCR);
+	uint32_t dbgdscr = apb_read(target, DBGDSCR);
 	dbgdscr |= DBGDSCR_HDBGEN | DBGDSCR_ITREN;
 	dbgdscr = (dbgdscr & ~DBGDSCR_EXTDCCMODE_MASK) | DBGDSCR_EXTDCCMODE_STALL;
-	apb_write(t, DBGDSCR, dbgdscr);
+	apb_write(target, DBGDSCR, dbgdscr);
 	DEBUG_INFO("DBGDSCR = 0x%08" PRIx32 "\n", dbgdscr);
 
-	target_halt_request(t);
+	target_halt_request(target);
 	size_t tries = 10;
-	while (!platform_nrst_get_val() && !target_halt_poll(t, NULL) && --tries)
+	while (!platform_nrst_get_val() && !target_halt_poll(target, NULL) && --tries)
 		platform_delay(200);
 	if (!tries)
 		return false;
 
 	/* Clear any stale breakpoints */
-	for (unsigned i = 0; i < priv->hw_breakpoint_max; i++) {
-		apb_write(t, DBGBCR(i), 0);
+	priv->base.breakpoints_mask = 0U;
+	for (size_t i = 0; i <= priv->base.breakpoints_available; ++i) {
+		cortex_dbg_write32(target, CORTEXAR_DBG_DVR + (i << 2U), 0U);
+		cortex_dbg_write32(target, CORTEXAR_DBG_DCR + (i << 2U), 0U);
 	}
-	priv->hw_breakpoint_mask = 0;
 	priv->bcr0 = 0;
 
 	platform_nrst_set_val(false);
@@ -571,33 +574,35 @@ bool cortexa_attach(target_s *t)
 	return true;
 }
 
-void cortexa_detach(target_s *t)
+void cortexa_detach(target_s *target)
 {
-	cortexa_priv_s *priv = t->priv;
+	cortexa_priv_s *priv = target->priv;
 
 	/* Clear any stale breakpoints */
-	for (size_t i = 0; i < priv->hw_breakpoint_max; i++)
-		apb_write(t, DBGBCR(i), 0);
+	for (size_t i = 0; i <= priv->base.breakpoints_available; ++i) {
+		cortex_dbg_write32(target, CORTEXAR_DBG_DVR + (i << 2U), 0U);
+		cortex_dbg_write32(target, CORTEXAR_DBG_DCR + (i << 2U), 0U);
+	}
 
 	/* Restore any clobbered registers */
-	cortexa_regs_write_internal(t);
+	cortexa_regs_write_internal(target);
 	/* Invalidate cache */
-	apb_write(t, DBGITR, MCR | ICIALLU);
+	apb_write(target, DBGITR, MCR | ICIALLU);
 
-	platform_timeout_s to;
-	platform_timeout_set(&to, 200);
+	platform_timeout_s timeout;
+	platform_timeout_set(&timeout, 200);
 
 	/* Wait for instruction to complete */
 	uint32_t dbgdscr;
 	do {
-		dbgdscr = apb_read(t, DBGDSCR);
-	} while (!(dbgdscr & DBGDSCR_INSTRCOMPL) && !platform_timeout_is_expired(&to));
+		dbgdscr = apb_read(target, DBGDSCR);
+	} while (!(dbgdscr & DBGDSCR_INSTRCOMPL) && !platform_timeout_is_expired(&timeout));
 
 	/* Disable halting debug mode */
 	dbgdscr &= ~(DBGDSCR_HDBGEN | DBGDSCR_ITREN);
-	apb_write(t, DBGDSCR, dbgdscr);
+	apb_write(target, DBGDSCR, dbgdscr);
 	/* Clear sticky error and resume */
-	apb_write(t, DBGDRCR, DBGDRCR_CSE | DBGDRCR_RRQ);
+	apb_write(target, DBGDRCR, DBGDRCR_CSE | DBGDRCR_RRQ);
 }
 
 static uint32_t read_gpreg(target_s *t, uint8_t regno)
