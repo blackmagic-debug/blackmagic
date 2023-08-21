@@ -85,10 +85,8 @@ typedef struct cortexa_priv {
 	bool mmu_fault;
 } cortexa_priv_s;
 
-/* This may be specific to Cortex-A9 */
-#define CACHE_LINE_LENGTH (8U * 4U)
-
 #define CORTEXAR_DBG_IDR 0x000U
+#define CORTEXAR_CTR     0xd04U
 
 #define CORTEXAR_DBG_IDR_BREAKPOINT_MASK  0xfU
 #define CORTEXAR_DBG_IDR_BREAKPOINT_SHIFT 24U
@@ -519,6 +517,20 @@ bool cortexa_probe(adiv5_access_port_s *ap, target_addr_t base_address)
 
 	target->reset = cortexa_reset;
 	target->regs_size = sizeof(uint32_t) * (CORTEXAR_GENERAL_REG_COUNT + CORTEX_FLOAT_REG_COUNT);
+	/* Check cache type */
+	const uint32_t cache_type = cortex_dbg_read32(target, CORTEXAR_CTR);
+	if (cache_type >> CORTEX_CTR_FORMAT_SHIFT == CORTEX_CTR_FORMAT_ARMv7) {
+		/* If there is an ICache defined, decompress its length to a uint32_t count */
+		if (cache_type & CORTEX_CTR_ICACHE_LINE_MASK)
+			priv->base.icache_line_length = CORTEX_CTR_ICACHE_LINE(cache_type);
+		/* If there is a DCache defined, decompress its length to a uint32_t count */
+		if ((cache_type >> CORTEX_CTR_DCACHE_LINE_SHIFT) & CORTEX_CTR_DCACHE_LINE_MASK)
+			priv->base.dcache_line_length = CORTEX_CTR_DCACHE_LINE(cache_type);
+
+		DEBUG_TARGET("%s: ICache line length = %u, DCache line length = %u\n", __func__,
+			priv->base.icache_line_length << 2U, priv->base.dcache_line_length << 2U);
+	} else
+		target_check_error(target);
 
 	target->breakwatch_set = cortexa_breakwatch_set;
 	target->breakwatch_clear = cortexa_breakwatch_clear;
