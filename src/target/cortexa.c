@@ -31,8 +31,10 @@
 #include "exception.h"
 #include "adiv5.h"
 #include "target.h"
-#include "gdb_reg.h"
 #include "target_internal.h"
+#include "target_probe.h"
+#include "cortex_internal.h"
+#include "gdb_reg.h"
 
 #include <stdlib.h>
 #include <assert.h>
@@ -63,8 +65,8 @@ static void write_gpreg(target_s *t, uint8_t regno, uint32_t val);
 static uint32_t read_gpreg(target_s *t, uint8_t regno);
 
 typedef struct cortexa_priv {
-	uint32_t base;
-	adiv5_access_port_s *apb;
+	/* Base core information */
+	cortex_priv_s base;
 
 	struct {
 		uint32_t r[16];
@@ -317,8 +319,8 @@ static size_t create_tdesc_cortex_a(char *buffer, size_t max_len)
 static void apb_write(target_s *t, uint16_t reg, uint32_t val)
 {
 	cortexa_priv_s *priv = t->priv;
-	adiv5_access_port_s *ap = priv->apb;
-	uint32_t addr = priv->base + 4U * reg;
+	adiv5_access_port_s *ap = priv->base.ap;
+	uint32_t addr = priv->base.base_addr + 4U * reg;
 	adiv5_ap_write(ap, ADIV5_AP_TAR, addr);
 	adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_DRW, val);
 }
@@ -326,8 +328,8 @@ static void apb_write(target_s *t, uint16_t reg, uint32_t val)
 static uint32_t apb_read(target_s *t, uint16_t reg)
 {
 	cortexa_priv_s *priv = t->priv;
-	adiv5_access_port_s *ap = priv->apb;
-	uint32_t addr = priv->base + 4U * reg;
+	adiv5_access_port_s *ap = priv->base.ap;
+	uint32_t addr = priv->base.base_addr + 4U * reg;
 	adiv5_ap_write(ap, ADIV5_AP_TAR, addr);
 	adiv5_dp_low_access(ap->dp, ADIV5_LOW_READ, ADIV5_AP_DRW, 0);
 	return adiv5_dp_low_access(ap->dp, ADIV5_LOW_READ, ADIV5_DP_RDBUFF, 0);
@@ -458,12 +460,6 @@ const char *cortexa_regs_description(target_s *t)
 	return description;
 }
 
-static void cortexa_priv_free(void *const priv)
-{
-	adiv5_ap_unref(((cortexa_priv_s *)priv)->apb);
-	free(priv);
-}
-
 bool cortexa_probe(adiv5_access_port_s *ap, target_addr_t base_address)
 {
 	target_s *t = target_new();
@@ -479,12 +475,13 @@ bool cortexa_probe(adiv5_access_port_s *ap, target_addr_t base_address)
 	}
 
 	t->priv = priv;
-	t->priv_free = cortexa_priv_free;
-	priv->apb = ap;
+	t->priv_free = cortex_priv_free;
+	priv->base.ap = ap;
+	priv->base.base_addr = base_address;
+
 	t->mem_read = cortexa_slow_mem_read;
 	t->mem_write = cortexa_slow_mem_write;
 
-	priv->base = base_address;
 	/* Set up APB CSW, we won't touch this again */
 	uint32_t csw = ap->csw | ADIV5_AP_CSW_SIZE_WORD;
 	adiv5_ap_write(ap, ADIV5_AP_CSW, csw);
