@@ -91,7 +91,7 @@
 #define LPC55S26_CHIPID 0xa010229aU // NXP forum
 #define LPC55S28_CHIPID 0xa010119cU // NXP forum
 #define LPC55S66_CHIPID             // (unknown)
-#define LPC55S69_CHIPID             // (unknown)
+#define LPC55S69_CHIPID 0x501000c5U // (read from MCU-Link)
 
 /* The available IAP commands that we support, mostly flash access */
 typedef enum lpc55xx_iap_cmd {
@@ -146,7 +146,7 @@ static target_addr_t lpc55xx_get_bootloader_tree_address(target_s *target)
 	case LPC55S06_CHIPID:
 		return 0x1301fe00U;
 
-	//case LPC55S69_CHIPID:
+	case LPC55S69_CHIPID:
 	case LPC5526_CHIPID:
 	case LPC55S26_CHIPID:
 	case LPC5528_CHIPID:
@@ -180,6 +180,8 @@ static const char *lpc55xx_get_device_name(uint32_t chipid)
 		return "LPC5528";
 	case LPC55S28_CHIPID:
 		return "LPC55S28";
+	case LPC55S69_CHIPID:
+		return "LPC55S69";
 
 	default:
 		return "unknown";
@@ -581,6 +583,7 @@ bool lpc55xx_probe(target_s *const target)
 	case LPC55S06_CHIPID:
 	case LPC5516_CHIPID:
 	case LPC55S16_CHIPID:
+	case LPC55S69_CHIPID:
 		target_add_ram(target, 0x04000000U, 0x4000U); // SRAM_X
 		target_add_ram(target, 0x20000000U, 0x8000U); // SRAM_0
 		target_add_ram(target, 0x20008000U, 0x4000U); // SRAM_1
