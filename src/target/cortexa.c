@@ -76,10 +76,8 @@ typedef struct cortexa_priv {
 		uint64_t d[16];
 	} reg_cache;
 
-	uint16_t hw_breakpoint_mask;
 	uint32_t bcr0;
 	uint32_t bvr0;
-	uint16_t hw_watchpoint_mask;
 	bool mmu_fault;
 } cortexa_priv_s;
 
@@ -905,15 +903,17 @@ static int cortexa_breakwatch_set(target_s *t, breakwatch_s *bw)
 		if ((bw->size != 4) && (bw->size != 2))
 			return -1;
 
-		for (i = 0; i < priv->hw_breakpoint_max; i++)
-			if ((priv->hw_breakpoint_mask & (1 << i)) == 0)
+		/* Find the first available breakpoint slot */
+		for (i = 0; i < priv->base.breakpoints_available; i++) {
+			if (!(priv->base.breakpoints_mask & (1U << i)))
 				break;
+		}
 
-		if (i == priv->hw_breakpoint_max)
+		if (i == priv->base.breakpoints_available)
 			return -1;
 
 		bw->reserved[0] = i;
-		priv->hw_breakpoint_mask |= (1 << i);
+		priv->base.breakpoints_mask |= 1U << i;
 
 		uint32_t addr = va_to_pa(t, bw->addr);
 		uint32_t bcr = bp_bas(addr, bw->size) | DBGBCR_PMC_ANY | DBGBCR_EN;
@@ -929,15 +929,17 @@ static int cortexa_breakwatch_set(target_s *t, breakwatch_s *bw)
 	case TARGET_WATCH_WRITE:
 	case TARGET_WATCH_READ:
 	case TARGET_WATCH_ACCESS:
-		for (i = 0; i < priv->hw_watchpoint_max; i++)
-			if ((priv->hw_watchpoint_mask & (1 << i)) == 0)
+		/* Find the first available watchpoint slot */
+		for (i = 0; i < priv->base.watchpoints_available; i++) {
+			if (!(priv->base.watchpoints_mask & (1U << i)))
 				break;
+		}
 
-		if (i == priv->hw_watchpoint_max)
+		if (i == priv->base.watchpoints_available)
 			return -1;
 
 		bw->reserved[0] = i;
-		priv->hw_watchpoint_mask |= (1 << i);
+		priv->base.watchpoints_mask |= 1U << i;
 
 		{
 			uint32_t wcr = DBGWCR_PAC_ANY | DBGWCR_EN;
@@ -1001,7 +1003,7 @@ static int cortexa_breakwatch_clear(target_s *t, breakwatch_s *bw)
 			return -1;
 		}
 	case TARGET_BREAK_HARD:
-		priv->hw_breakpoint_mask &= ~(1 << i);
+		priv->base.breakpoints_mask &= ~(1U << i);
 		apb_write(t, DBGBCR(i), 0);
 		if (i == 0)
 			priv->bcr0 = 0;
@@ -1009,7 +1011,7 @@ static int cortexa_breakwatch_clear(target_s *t, breakwatch_s *bw)
 	case TARGET_WATCH_WRITE:
 	case TARGET_WATCH_READ:
 	case TARGET_WATCH_ACCESS:
-		priv->hw_watchpoint_mask &= ~(1 << i);
+		priv->base.watchpoints_mask &= ~(1U << i);
 		apb_write(t, DBGWCR(i), 0);
 		return 0;
 	default:
