@@ -445,12 +445,12 @@ static void cortexa_slow_mem_write(target_s *t, target_addr_t dest, const void *
 	}
 }
 
-static bool cortexa_check_error(target_s *t)
+static bool cortexa_check_error(target_s *target)
 {
-	cortexa_priv_s *priv = t->priv;
+	cortexa_priv_s *priv = target->priv;
 	bool err = priv->mmu_fault;
 	priv->mmu_fault = false;
-	return err;
+	return err || cortex_check_error(target);
 }
 
 const char *cortexa_regs_description(target_s *t)
