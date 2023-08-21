@@ -33,6 +33,7 @@
 #include "target.h"
 #include "target_internal.h"
 #include "target_probe.h"
+#include "cortex.h"
 #include "cortex_internal.h"
 #include "gdb_reg.h"
 
@@ -517,7 +518,7 @@ bool cortexa_probe(adiv5_access_port_s *ap, target_addr_t base_address)
 	target->reg_write = cortexa_reg_write;
 
 	target->reset = cortexa_reset;
-	target->regs_size = sizeof(priv->reg_cache);
+	target->regs_size = sizeof(uint32_t) * (CORTEXAR_GENERAL_REG_COUNT + CORTEX_FLOAT_REG_COUNT);
 
 	target->breakwatch_set = cortexa_breakwatch_set;
 	target->breakwatch_clear = cortexa_breakwatch_clear;
