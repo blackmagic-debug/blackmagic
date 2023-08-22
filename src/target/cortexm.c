@@ -575,8 +575,16 @@ bool cortexm_probe(adiv5_access_port_s *ap)
 		/* Release reset */
 		platform_nrst_set_val(false);
 		/* Poll for release from reset */
-		while (target_mem_read32(t, CORTEXM_DHCSR) & CORTEXM_DHCSR_S_RESET_ST)
+		platform_timeout_s timeout;
+		platform_timeout_set(&timeout, 1000);
+		while (target_mem_read32(t, CORTEXM_DHCSR) & CORTEXM_DHCSR_S_RESET_ST) {
+			if (platform_timeout_is_expired(&timeout)) {
+				DEBUG_ERROR("Error releasing from reset\n");
+				/* Go on and try to detect the target anyways */
+				break;
+			}
 			continue;
+		}
 	}
 
 	/* Check cache type */
