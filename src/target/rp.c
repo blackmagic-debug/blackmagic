@@ -95,7 +95,10 @@
 #define RP_SSI_TXFLR                           (RP_SSI_BASE_ADDR + 0x20U)
 #define RP_SSI_RXFLR                           (RP_SSI_BASE_ADDR + 0x24U)
 #define RP_SSI_SR                              (RP_SSI_BASE_ADDR + 0x28U)
+#define RP_SSI_RISR                            (RP_SSI_BASE_ADDR + 0x34U)
 #define RP_SSI_ICR                             (RP_SSI_BASE_ADDR + 0x48U)
+#define RP_SSI_DMACR                           (RP_SSI_BASE_ADDR + 0x4CU)
+#define RP_SSI_DMATDLR                         (RP_SSI_BASE_ADDR + 0x50U)
 #define RP_SSI_DR0                             (RP_SSI_BASE_ADDR + 0x60U)
 #define RP_SSI_XIP_SPI_CTRL0                   (RP_SSI_BASE_ADDR + 0xf4U)
 #define RP_SSI_CTRL0_FRF_MASK                  0x00600000U
@@ -123,6 +126,28 @@
 #define RP_SSI_XIP_SPI_CTRL0_TRANS_1C1A        (0U << 0U)
 #define RP_SSI_XIP_SPI_CTRL0_TRANS_1C2A        (1U << 0U)
 #define RP_SSI_XIP_SPI_CTRL0_TRANS_2C2A        (2U << 0U)
+#define RP_SSI_DMACR_TDMAE                     (1U << 1U)
+#define RP_SSI_DMACR_RDMAE                     (1U << 0U)
+
+#define RP_DMA_BASE_ADDR(CH)                   (0x50000000 + ((CH)*0x40))
+#define RP_DMA_READ_ADDR(CH)                   (RP_DMA_BASE_ADDR(CH) + 0x00)
+#define RP_DMA_WRITE_ADDR(CH)                  (RP_DMA_BASE_ADDR(CH) + 0x04)
+#define RP_DMA_TRANS_COUNT(CH)                 (RP_DMA_BASE_ADDR(CH) + 0x08)
+#define RP_DMA_CTRL_TRIG(CH)                   (RP_DMA_BASE_ADDR(CH) + 0x0c)
+#define RP_DMA_CTRL(CH)                        (RP_DMA_BASE_ADDR(CH) + 0x10)
+#define RP_DMA_TRANS_COUNT_TRIG(CH)            (RP_DMA_BASE_ADDR(CH) + 0x1c)
+#define RP_DMA_CTRL_BUSY                       (1U << 24U)
+#define RP_DMA_CTRL_CHAINTO_MASK               (3U << 11U)
+#define RP_DMA_CTRL_CHAINTO_SHIFT              11U
+#define RP_DMA_CTRL_INCR_READ                  (1U << 4)
+#define RP_DMA_CTRL_INCR_WRITE                 (1U << 5)
+// Leaving DATA_SIZE field at the default value (0x00, BYTE)
+#define RP_DMA_CTRL_ENABLE                     (1U << 0)
+
+#define RP_DMA_TREQ_SEL_SHIFT                  15U
+#define RP_DMA_CTRL_DREQ_XIP_SSITX             (38U << RP_DMA_TREQ_SEL_SHIFT)
+#define RP_DMA_CTRL_DREQ_XIP_SSIRX             (39U << RP_DMA_TREQ_SEL_SHIFT)
+
 
 #define RP_PADS_QSPI_BASE_ADDR           0x40020000U
 #define RP_PADS_QSPI_GPIO_SCLK           (RP_PADS_QSPI_BASE_ADDR + 0x04U)
@@ -159,7 +184,16 @@
 #define FLASHSIZE_32K_BLOCK_MASK ~(FLASHSIZE_32K_BLOCK - 1U)
 #define FLASHSIZE_64K_BLOCK_MASK ~(FLASHSIZE_64K_BLOCK - 1U)
 #define MAX_FLASH                (16U * 1024U * 1024U)
-#define MAX_WRITE_CHUNK          0x1000U
+#define MAX_RW_CHUNK          0x1000U
+
+#define DMA_CH_WR 0x00
+#define DMA_CH_RD 0x01
+
+// Size of the buffer to allocate on the stack for writing opcode + optional 3 byte address + optional dummy clocks
+#define OP_DUMMY_ADDR_LEN ALIGN(1 + 3 + ((command & SPI_FLASH_DUMMY_MASK) >> SPI_FLASH_DUMMY_SHIFT), sizeof(uint32_t))
+
+#define FLASH_BUF_ADDR (RP_SRAM_BASE)
+#define FLASH_BUF_LEN (OP_DUMMY_ADDR_LEN + MAX_RW_CHUNK)
 
 typedef struct rp_priv {
 	uint16_t rom_reset_usb_boot;
@@ -299,6 +333,32 @@ static void rp_spi_config(target_s *const target)
 	target_mem_write32(target, RP_SSI_XIP_SPI_CTRL0,
 		RP_SSI_XIP_SPI_CTRL0_FORMAT_FRF | RP_SSI_XIP_SPI_CTRL0_ADDRESS_LENGTH(0) |
 			RP_SSI_XIP_SPI_CTRL0_INSTR_LENGTH_8b | RP_SSI_XIP_SPI_CTRL0_WAIT_CYCLES(0));
+
+	// Configure SSI for DMA
+	// TODO: backup the DMA registers in priv structure
+	target_mem_write32(target, RP_SSI_DMACR, RP_SSI_DMACR_TDMAE | RP_SSI_DMACR_RDMAE);
+	//target_mem_write32(target, RP_SSI_DMATDLR, 1); // one or less data entries in TX FIFO
+	// DMARDLR should be left at the default value of 4 (see datasheet 4.10.3)
+
+	// Configure DMA controller
+	// TODO: backup these registers as well!
+
+	// Write DMA channel
+	target_mem_write32(target, RP_DMA_CTRL(DMA_CH_WR),
+					 RP_DMA_CTRL_INCR_READ |
+					   (DMA_CH_WR << RP_DMA_CTRL_CHAINTO_SHIFT) |
+					   RP_DMA_CTRL_DREQ_XIP_SSITX |
+					   RP_DMA_CTRL_ENABLE);
+	target_mem_write32(target, RP_DMA_WRITE_ADDR(DMA_CH_WR), RP_SSI_DR0);
+
+	// Read DMA channel
+	target_mem_write32(target, RP_DMA_CTRL(DMA_CH_RD),
+					 RP_DMA_CTRL_INCR_WRITE |
+					   (DMA_CH_RD << RP_DMA_CTRL_CHAINTO_SHIFT) |
+					   RP_DMA_CTRL_DREQ_XIP_SSIRX |
+					   RP_DMA_CTRL_ENABLE);
+	target_mem_write32(target, RP_DMA_READ_ADDR(DMA_CH_RD), RP_SSI_DR0);
+
 	target_mem_write32(target, RP_SSI_ENABLE, RP_SSI_ENABLE_SSI);
 }
 
@@ -311,6 +371,8 @@ static void rp_spi_restore(target_s *const target)
 	target_mem_write32(target, RP_SSI_CTRL0, priv->ctrl0);
 	target_mem_write32(target, RP_SSI_XIP_SPI_CTRL0, priv->xpi_ctrl0);
 	target_mem_write32(target, RP_SSI_ENABLE, priv->ssi_enabled);
+
+	// TODO: restore the DMA related values
 }
 
 static bool rp_flash_prepare(target_s *const target)
@@ -342,62 +404,150 @@ static void rp_spi_chip_select(target_s *const target, const uint32_t state)
 	target_mem_write32(target, RP_GPIO_QSPI_CS_CTRL, (value & ~RP_GPIO_QSPI_CS_DRIVE_MASK) | state);
 }
 
-static uint8_t rp_spi_xfer_data(target_s *const target, const uint8_t data)
+static void rp_spi_xfer(target_s *const target, const uint16_t command, const target_addr_t address,
+						const uint8_t *wr_buf, size_t wr_len, uint8_t *rd_buf, size_t rd_len)
 {
-	target_mem_write32(target, RP_SSI_DR0, data);
-	return target_mem_read32(target, RP_SSI_DR0) & 0xffU;
-}
+	uint8_t op_dummy_addr[OP_DUMMY_ADDR_LEN];
+	size_t total_len;
 
-static void rp_spi_setup_xfer(
-	target_s *const target, const uint16_t command, const target_addr_t address, const size_t length)
-{
+	/*
+	printf("rp_spi_xfer command: 0x%04x address 0x%03x wr_len 0x%zu rd_len 0x%zu\n",
+		   command,
+		   address,
+		   wr_len,
+		   rd_len);
+	*/
+
+	// TODO: check (rd_len + wr_len) against MAX_RW_CHUNK
+
 	/* Configure the controller, and select the Flash */
-	target_mem_write32(target, RP_SSI_CTRL1, length);
 	rp_spi_chip_select(target, RP_GPIO_QSPI_CS_DRIVE_LOW);
 
-	/* Set up the instruction */
-	const uint8_t opcode = command & SPI_FLASH_OPCODE_MASK;
-	rp_spi_xfer_data(target, opcode);
+	/* Command opcode */
+	op_dummy_addr[0] = command & SPI_FLASH_OPCODE_MASK;
+	total_len = 1;
 
+	/* Optional 24-bit address */
 	if ((command & SPI_FLASH_OPCODE_MODE_MASK) == SPI_FLASH_OPCODE_3B_ADDR) {
-		/* For each byte sent here, we have to manually clean up from the controller with a read */
-		rp_spi_xfer_data(target, (address >> 16U) & 0xffU);
-		rp_spi_xfer_data(target, (address >> 8U) & 0xffU);
-		rp_spi_xfer_data(target, address & 0xffU);
+		op_dummy_addr[1] = address >> 16U;
+		op_dummy_addr[2] = address >> 8U;
+		op_dummy_addr[3] = address;
+		total_len += 3;
 	}
 
+	/* Optional dummy clock cycles */
 	const size_t inter_length = (command & SPI_FLASH_DUMMY_MASK) >> SPI_FLASH_DUMMY_SHIFT;
-	for (size_t i = 0; i < inter_length; ++i)
-		/* For each byte sent here, we have to manually clean up from the controller with a read */
-		rp_spi_xfer_data(target, 0);
+	for (size_t i = 0; i < inter_length; ++i) {
+		op_dummy_addr[total_len++] = 0;
+	}
+
+	/* Optionally copy write data bytes into the op_dummy_addr buffer:
+	 *
+	 * - For small amounts of data, this means only one AP memory write is needed.
+	 *
+	 * - Even for larger amounts of data, allows the second memory write to start
+	 *   at an aligned address.
+	 */
+	while (wr_len > 0 && total_len < OP_DUMMY_ADDR_LEN) {
+		op_dummy_addr[total_len++] = *wr_buf++;
+		wr_len--;
+	}
+
+	// Write data to target RAM for DMA
+	target_mem_write(target, FLASH_BUF_ADDR, op_dummy_addr, total_len);
+	if (wr_len > 0) {
+		target_mem_write(target, FLASH_BUF_ADDR + total_len, wr_buf, wr_len);
+		total_len += wr_len;
+	}
+
+	total_len += rd_len;
+
+	/*
+	target_mem_write32(target, RP_SSI_ENABLE, 0); // TODO: check if we really need to disable SSI for these steps
+	target_mem_write32(target, RP_SSI_CTRL1, total_len - 1); // TODO: figure out if this is needed
+	target_mem_write32(target, RP_SSI_ICR, 0xFFFFFFFF); // TODO: figure out if this is needed
+
+	target_mem_write32(target, RP_SSI_ENABLE, RP_SSI_ENABLE_SSI);
+	*/
+
+	/* Set up DMA write and read phases to run together (bidirectional mode), and trigger
+	 *
+	 * Note: The SSI controller peripheral has a useful-looking "EEPROM mode" that
+	 * looks like it will work when (rd_len > 0) to do write-then-read and avoid
+	 * unecessarily reading some bytes. It seemingly doesn't work when
+	 * triggered in 1-bit SPI frame format via DMA, unsure why. Using
+	 * bidirectional mode has advantage of being slightly less code also (as
+	 * same code works for write-only transactions.)
+	 */
+	target_mem_write32(target, RP_DMA_READ_ADDR(DMA_CH_WR), FLASH_BUF_ADDR);
+	target_mem_write32(target, RP_DMA_WRITE_ADDR(DMA_CH_RD), FLASH_BUF_ADDR);
+	// Triggering read transfer first as it won't do anything until RX FIFO contains something
+	target_mem_write32(target, RP_DMA_TRANS_COUNT_TRIG(DMA_CH_RD), total_len);
+	target_mem_write32(target, RP_DMA_TRANS_COUNT_TRIG(DMA_CH_WR), total_len);
+
+	// Wait for DMA to finish
+	while (target_mem_read32(target, RP_DMA_CTRL(DMA_CH_RD)) & RP_DMA_CTRL_BUSY) {
+		/*
+		printf("WR TRANS 0x%x RD TRANS 0x%x WR CTRL 0x%08x RD CTRL 0x%08x SSI CTRL0 0x%08x SR 0x%08x RXFLR 0x%02x TXFLR 0x%02x RISR 0x%08x \n",
+			   target_mem_read32(target, RP_DMA_TRANS_COUNT(DMA_CH_WR)),
+			   target_mem_read32(target, RP_DMA_TRANS_COUNT(DMA_CH_RD)),
+			   target_mem_read32(target, RP_DMA_CTRL(DMA_CH_WR)),
+			   target_mem_read32(target, RP_DMA_CTRL(DMA_CH_RD)),
+			   target_mem_read32(target, RP_SSI_CTRL0),
+			   target_mem_read32(target, RP_SSI_SR),
+			   target_mem_read32(target, RP_SSI_RXFLR),
+			   target_mem_read32(target, RP_SSI_TXFLR),
+			   target_mem_read32(target, RP_SSI_RISR)
+			   );
+		target_mem_read32(target, FLASH_BUF_ADDR);
+		target_mem_read32(target, RP_SSI_CTRL1);
+		*/
+		// TODO: time out if DMA never finishes
+	}
+
+	/*
+	printf("WR TRANS 0x%x RD TRANS 0x%x WR CTRL 0x%08x RD CTRL 0x%08x SSI CTRL0 0x%08x SR 0x%08x RXFLR 0x%02x TXFLR 0x%02x RISR 0x%08x \n",
+		   target_mem_read32(target, RP_DMA_TRANS_COUNT(DMA_CH_WR)),
+		   target_mem_read32(target, RP_DMA_TRANS_COUNT(DMA_CH_RD)),
+		   target_mem_read32(target, RP_DMA_CTRL(DMA_CH_WR)),
+		   target_mem_read32(target, RP_DMA_CTRL(DMA_CH_RD)),
+		   target_mem_read32(target, RP_SSI_CTRL0),
+		   target_mem_read32(target, RP_SSI_SR),
+		   target_mem_read32(target, RP_SSI_RXFLR),
+		   target_mem_read32(target, RP_SSI_TXFLR),
+		   target_mem_read32(target, RP_SSI_RISR)
+		   );
+
+	target_mem_read32(target, RP_DMA_READ_ADDR(DMA_CH_WR));
+	target_mem_read32(target, RP_DMA_WRITE_ADDR(DMA_CH_WR));
+	target_mem_read32(target, RP_DMA_READ_ADDR(DMA_CH_RD));
+	target_mem_read32(target, RP_DMA_WRITE_ADDR(DMA_CH_RD));
+
+	target_mem_read32(target, FLASH_BUF_ADDR);
+	target_mem_read32(target, FLASH_BUF_ADDR + 4);
+	target_mem_read32(target, FLASH_BUF_ADDR + 8);
+	target_mem_read32(target, FLASH_BUF_ADDR + 0xc);
+	*/
+
+	if (rd_len > 0) {
+		// Read out any result from RAM buffer
+		target_mem_read(target, rd_buf, FLASH_BUF_ADDR + total_len - rd_len, rd_len);
+	}
+
+	/* Deselect the Flash */
+	rp_spi_chip_select(target, RP_GPIO_QSPI_CS_DRIVE_HIGH);
 }
 
 static void rp_spi_read(target_s *const target, const uint16_t command, const target_addr_t address, void *const buffer,
 	const size_t length)
 {
-	/* Setup the transaction */
-	rp_spi_setup_xfer(target, command, address, length);
-	/* Now read back the data that elicited */
-	uint8_t *const data = (uint8_t *const)buffer;
-	for (size_t i = 0; i < length; ++i)
-		/* Do a write to read */
-		data[i] = rp_spi_xfer_data(target, 0);
-	/* Deselect the Flash */
-	rp_spi_chip_select(target, RP_GPIO_QSPI_CS_DRIVE_HIGH);
+	rp_spi_xfer(target, command, address, NULL, 0, buffer, length);
 }
 
 static void rp_spi_write(target_s *const target, const uint16_t command, const target_addr_t address,
 	const void *const buffer, const size_t length)
 {
-	/* Setup the transaction */
-	rp_spi_setup_xfer(target, command, address, length);
-	/* Now write out back the data requested */
-	uint8_t *const data = (uint8_t *const)buffer;
-	for (size_t i = 0; i < length; ++i)
-		/* Do a write to read */
-		rp_spi_xfer_data(target, data[i]);
-	/* Deselect the Flash */
-	rp_spi_chip_select(target, RP_GPIO_QSPI_CS_DRIVE_HIGH);
+	rp_spi_xfer(target, command, address, buffer, length, NULL, 0);
 }
 
 static void rp_spi_run_command(target_s *const target, const uint16_t command, const target_addr_t address)
