@@ -117,11 +117,15 @@ typedef struct dap_transfer_block_request_write {
 	uint8_t data[256][4];
 } dap_transfer_block_request_write_s;
 
+#define DAP_CMD_BLOCK_WRITE_HDR_LEN offsetof(dap_transfer_block_request_write_s, data)
+
 typedef struct dap_transfer_block_response_read {
 	uint8_t count[2];
 	uint8_t status;
 	uint8_t data[256][4];
 } dap_transfer_block_response_read_s;
+
+#define DAP_CMD_BLOCK_READ_HDR_LEN offsetof(dap_transfer_block_response_read_s, data)
 
 typedef struct dap_transfer_block_response_write {
 	uint8_t count[2];

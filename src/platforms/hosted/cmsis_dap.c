@@ -127,6 +127,21 @@ static size_t mbslen(const char *str)
 	return result;
 }
 
+// Return maximum length in bytes that can be sent in the 'data' payload of a
+// DAP transfer, given the interface type and (provided) DAP command header
+// size.
+static inline size_t dap_max_transfer_data(size_t command_header_len)
+{
+	const size_t result = report_size - command_header_len;
+
+	// Allow for an additional byte of payload overhead
+	// when sending data in HID Report payloads
+	if (type == CMSIS_TYPE_HID)
+		return result - 1U;
+
+	return result;
+}
+
 #ifdef __linux__
 static void dap_hid_print_permissions_for(const hid_device_info_s *const dev)
 {
@@ -379,6 +394,7 @@ void dap_exit_function(void)
 ssize_t dbg_dap_cmd_hid(const uint8_t *const request_data, const size_t request_length, uint8_t *const response_data,
 	const size_t response_length)
 {
+	// Need room to prepend HID Report ID byte
 	if (request_length + 1U > report_size) {
 		DEBUG_ERROR(
 			"Attempted to make over-long request of %zu bytes, max length is %zu\n", request_length + 1U, report_size);
@@ -386,7 +402,7 @@ ssize_t dbg_dap_cmd_hid(const uint8_t *const request_data, const size_t request_
 	}
 
 	memset(buffer + request_length + 1U, 0xff, report_size - (request_length + 1U));
-	buffer[0] = 0x00; // Report ID??
+	buffer[0] = 0x00; // Report ID
 	memcpy(buffer + 1, request_data, request_length);
 
 	const int result = hid_write(handle, buffer, report_size);
@@ -484,7 +500,7 @@ static void dap_mem_read(adiv5_access_port_s *ap, void *dest, uint32_t src, size
 		return;
 	}
 	/* Otherwise proceed blockwise */
-	const size_t blocks_per_transfer = (report_size - 4U) >> 2U;
+	const size_t blocks_per_transfer = dap_max_transfer_data(DAP_CMD_BLOCK_READ_HDR_LEN) >> 2U;
 	uint8_t *const data = (uint8_t *)dest;
 	for (size_t offset = 0; offset < len;) {
 		/* Setup AP_TAR every loop as failing to do so results in it wrapping */
@@ -521,7 +537,7 @@ static void dap_mem_write(adiv5_access_port_s *ap, uint32_t dest, const void *sr
 		return;
 	}
 	/* Otherwise proceed blockwise */
-	const size_t blocks_per_transfer = (report_size - 4U) >> 2U;
+	const size_t blocks_per_transfer = dap_max_transfer_data(DAP_CMD_BLOCK_WRITE_HDR_LEN) >> 2U;
 	const uint8_t *const data = (const uint8_t *)src;
 	for (size_t offset = 0; offset < len;) {
 		/* Setup AP_TAR every loop as failing to do so results in it wrapping */
