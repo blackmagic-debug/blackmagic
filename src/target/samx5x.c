@@ -474,11 +474,16 @@ static bool samx5x_flash_erase(target_flash_s *f, target_addr_t addr, size_t len
 		return false;
 	}
 
+	bool is_first_section = true;
+
 	for (size_t offset = 0; offset < len; offset += f->blocksize) {
 		target_mem_write32(t, SAMX5X_NVMC_ADDRESS, addr + offset);
 
-		/* Unlock */
-		samx5x_unlock_current_address(t);
+		/* If we're about to touch a new flash region, unlock it. */
+		if (is_first_section || (offset % lock_region_size) == 0) {
+			samx5x_unlock_current_address(t);
+			is_first_section = false;
+		}
 
 		/* Issue the erase command */
 		target_mem_write32(t, SAMX5X_NVMC_CTRLB, SAMX5X_CTRLB_CMD_KEY | SAMX5X_CTRLB_CMD_ERASEBLOCK);
@@ -496,8 +501,10 @@ static bool samx5x_flash_erase(target_flash_s *f, target_addr_t addr, size_t len
 			return false;
 		}
 
-		/* Lock */
-		samx5x_lock_current_address(t);
+		/* If we've just finished writing to a flash region, lock it. */
+		const size_t next_offset = offset + f->blocksize;
+		if ((next_offset % lock_region_size) == 0)
+			samx5x_lock_current_address(t);
 	}
 
 	return true;
