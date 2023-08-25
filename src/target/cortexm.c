@@ -601,8 +601,8 @@ bool cortexm_probe(adiv5_access_port_s *ap)
 
 	switch (t->designer_code) {
 	case JEP106_MANUFACTURER_FREESCALE:
-		PROBE(kinetis_probe);
 		PROBE(imxrt_probe);
+		PROBE(kinetis_probe);
 		break;
 	case JEP106_MANUFACTURER_GIGADEVICE:
 		PROBE(gd32f1_probe);
