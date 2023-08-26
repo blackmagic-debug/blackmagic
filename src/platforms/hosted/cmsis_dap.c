@@ -475,7 +475,7 @@ static ssize_t dap_run_cmd_raw(const uint8_t *const request_data, const size_t r
 	const size_t result = (size_t)response;
 
 	DEBUG_WIRE("response: ");
-	for (size_t i = 0; i < result; i++)
+	for (size_t i = 0; i < response_length + 1; i++)
 		DEBUG_WIRE("%02x ", data[i]);
 	DEBUG_WIRE("\n");
 
