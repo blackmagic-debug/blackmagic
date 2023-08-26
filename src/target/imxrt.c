@@ -322,7 +322,7 @@ static uint8_t imxrt_spi_build_insn_sequence(target_s *const target, const uint1
 		slot = 0;
 
 	/* Build a new microcode sequence to run */
-	imxrt_flexspi_lut_insn_s sequence[8] = {0};
+	imxrt_flexspi_lut_insn_s sequence[8] = {{0}};
 	/* Start by writing the command opcode to the Flash */
 	sequence[0].opcode_mode = IMXRT_FLEXSPI_LUT_OPCODE(IMXRT_FLEXSPI_LUT_OP_COMMAND) | IMXRT_FLEXSPI_LUT_MODE_SERIAL;
 	sequence[0].value = command & SPI_FLASH_OPCODE_MASK;
