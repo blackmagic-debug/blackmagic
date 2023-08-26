@@ -50,6 +50,7 @@ typedef enum dap_swd_fault_cfg {
 static uint32_t dap_swd_seq_in(size_t clock_cycles);
 static bool dap_swd_seq_in_parity(uint32_t *result, size_t clock_cycles);
 static void dap_swd_seq_out(uint32_t tms_states, size_t clock_cycles);
+static void dap_swj_seq_out(uint32_t tms_states, size_t clock_cycles);
 static void dap_swd_seq_out_parity(uint32_t tms_states, size_t clock_cycles);
 
 static bool dap_swd_configure(dap_swd_turnaround_cycles_e turnaround, dap_swd_fault_cfg_e fault_cfg);
@@ -73,14 +74,16 @@ bool dap_swd_init(adiv5_debug_port_s *target_dp)
 	/* Set up the underlying SWD functions using the implementation below */
 	swd_proc.seq_in = dap_swd_seq_in;
 	swd_proc.seq_in_parity = dap_swd_seq_in_parity;
-	swd_proc.seq_out = dap_swd_seq_out;
 	swd_proc.seq_out_parity = dap_swd_seq_out_parity;
 
 	/* If we have SWD sequences available, make use of them */
-	if (dap_has_swd_sequence)
+	if (dap_has_swd_sequence) {
+		swd_proc.seq_out = dap_swd_seq_out;
 		target_dp->dp_low_write = dap_write_reg_no_check;
-	else
+	} else {
+		swd_proc.seq_out = dap_swj_seq_out;
 		target_dp->dp_low_write = NULL;
+	}
 	/* Set up the accelerated SWD functions for basic target operations */
 	target_dp->dp_read = dap_dp_read_reg;
 	target_dp->error = dap_swd_clear_error;
@@ -117,6 +120,15 @@ static void dap_swd_seq_out(const uint32_t tms_states, const size_t clock_cycles
 	/* And perform it */
 	if (!perform_dap_swd_sequences(&sequence, 1U))
 		DEBUG_ERROR("dap_swd_seq_out failed\n");
+}
+
+/*Fallback when SWD sequence to implemented*/
+static void dap_swj_seq_out(const uint32_t tms_states, const size_t clock_cycles)
+{
+	const uint8_t data[4] = {(tms_states >> 0) & 0xff, (tms_states >> 8) & 0xff,
+		(tms_states >> 16) & 0xff, (tms_states >> 24) & 0xff};
+	if (!perform_dap_swj_sequence(clock_cycles, data))
+		DEBUG_ERROR("dap_swj_seq_out failed\n");
 }
 
 static void dap_swd_seq_out_parity(const uint32_t tms_states, const size_t clock_cycles)
