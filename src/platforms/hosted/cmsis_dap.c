@@ -325,6 +325,13 @@ dap_version_s dap_adaptor_version(const dap_info_e version_kind)
 	if (!end)
 		return version;
 	version.minor = minor;
+
+	if (minor > 9 ) {
+        /* Version 1.1.0 is encoded as 1.10 on MCU-Link firmware V2.250 */
+		version.minor = minor / 10;
+		version.revision = minor % 10;
+		return version;
+	}
 	/* Check if it's worth trying to convert anything more */
 	if ((size_t)(end - version_str) >= version_length || end[0] != '.')
 		return version;
