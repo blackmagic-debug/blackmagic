@@ -248,7 +248,7 @@ static uint32_t dap_swd_clear_error(adiv5_debug_port_s *const target_dp, const b
 		 * into the expected state.
 		 */
 		dap_line_reset();
-		if (target_dp->version >= 2)
+		if (dap_has_swd_sequence && target_dp->version >= 2)
 			dap_write_reg_no_check(ADIV5_DP_TARGETSEL, target_dp->targetsel);
 		dap_read_reg(target_dp, ADIV5_DP_DPIDR);
 		/* Exception here is unexpected, so do not catch */
