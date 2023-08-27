@@ -291,18 +291,21 @@ void adiv5_swd_multidrop_scan(adiv5_debug_port_s *const dp, const uint32_t targe
 		 */
 
 		/* Line reset sequence */
+		uint32_t target = instance << ADIV5_DP_TARGETSEL_TINSTANCE_OFFSET |
+				(targetid & (ADIV5_DP_TARGETID_TDESIGNER_MASK | ADIV5_DP_TARGETID_TPARTNO_MASK)) | 1U;
 		swd_line_reset_sequence(true);
 		dp->fault = 0;
-
-		/* Select the instance */
-		dp->dp_low_write(ADIV5_DP_TARGETSEL,
-			instance << ADIV5_DP_TARGETSEL_TINSTANCE_OFFSET |
-				(targetid & (ADIV5_DP_TARGETID_TDESIGNER_MASK | ADIV5_DP_TARGETID_TPARTNO_MASK)) | 1U);
-
-		/* Read DPIDR */
-		if (adiv5_dp_read_dpidr(dp) == 0)
-			/* No DP here, next instance */
-			continue;
+		swd_proc.seq_out(make_packet_request(ADIV5_LOW_WRITE, ADIV5_DP_TARGETSEL), 8U);
+		swd_proc.seq_in(3);
+		swd_proc.seq_out_parity(target, 32U);
+		swd_proc.seq_out(make_packet_request(ADIV5_LOW_READ, ADIV5_DP_DPIDR), 8U);
+		uint32_t ack = swd_proc.seq_in(3);
+		/* DPIDR may not issue WAIT! */
+		if ((ack & 0x7) !=SWDP_ACK_OK)
+			continue; /* No DP here, next instance */
+		uint32_t dpidr;
+		if (swd_proc.seq_in_parity(&dpidr, 32U) || (dpidr == 0))
+			continue; /* Invalid response, probably no DP here, next instance */
 
 		/* Allocate a new target DP for this instance */
 		adiv5_debug_port_s *const target_dp = calloc(1, sizeof(*dp));
@@ -344,8 +347,12 @@ uint32_t firmware_swdp_error(adiv5_debug_port_s *dp, const bool protocol_recover
 		 * into the expected state.
 		 */
 		swd_line_reset_sequence(true);
-		if (dp->version >= 2U)
-			firmware_dp_low_write(ADIV5_DP_TARGETSEL, dp->targetsel);
+		dp->fault = 0;
+		if (dp->version >= 2U) {
+			swd_proc.seq_out(make_packet_request(ADIV5_LOW_WRITE, ADIV5_DP_TARGETSEL), 8U);
+			swd_proc.seq_in(3);
+			swd_proc.seq_out_parity(dp->targetsel, 32U);
+		}
 		firmware_dp_low_read(ADIV5_DP_DPIDR);
 		/* Exception here is unexpected, so do not catch */
 	}
