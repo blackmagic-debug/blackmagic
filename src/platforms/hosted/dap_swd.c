@@ -67,7 +67,7 @@ bool dap_swd_init(adiv5_debug_port_s *target_dp)
 	/* Mark that we're going into SWD mode and configure the CMSIS-DAP adaptor accordingly */
 	dap_disconnect();
 	dap_mode = DAP_CAP_SWD;
-	dap_swd_configure(DAP_SWD_TURNAROUND_1_CYCLE, DAP_SWD_FAULT_ALWAYS_DATA_PHASE);
+	dap_swd_configure(DAP_SWD_TURNAROUND_1_CYCLE, DAP_SWD_FAULT_NO_DATA_PHASE);
 	dap_connect();
 	dap_reset_link(target_dp);
 
