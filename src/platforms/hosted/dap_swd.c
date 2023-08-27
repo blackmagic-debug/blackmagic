@@ -47,6 +47,12 @@ typedef enum dap_swd_fault_cfg {
 	DAP_SWD_FAULT_ALWAYS_DATA_PHASE = 4U,
 } dap_swd_fault_cfg_e;
 
+typedef enum swdio_status_e {
+        SWDIO_STATUS_FLOAT = 0,
+        SWDIO_STATUS_DRIVE
+} swdio_status_t;
+
+static swdio_status_t swdio_status = SWDIO_STATUS_DRIVE;
 static uint32_t dap_swd_seq_in(size_t clock_cycles);
 static bool dap_swd_seq_in_parity(uint32_t *result, size_t clock_cycles);
 static void dap_swd_seq_out(uint32_t tms_states, size_t clock_cycles);
@@ -133,57 +139,83 @@ static void dap_swj_seq_out(const uint32_t tms_states, const size_t clock_cycles
 
 static void dap_swd_seq_out_parity(const uint32_t tms_states, const size_t clock_cycles)
 {
-	/* Setup the sequence */
-	dap_swd_sequence_s sequence = {
-		clock_cycles + 1,
-		DAP_SWD_OUT_SEQUENCE,
+	dap_swd_sequence_s sequences[2] = {
+		/* Turnaround always needed after dap_swd_seq_in */
+		{
+			1,
+			DAP_SWD_OUT_SEQUENCE,
+			{0},
+		},
+		/* Data phase*/
+		{
+			clock_cycles + 1,
+			DAP_SWD_OUT_SEQUENCE,
+		},
 	};
-	write_le4(sequence.data, 0, tms_states);
-	sequence.data[4] = __builtin_parity(tms_states);
+	write_le4(sequences[1].data, 0, tms_states);
+	sequences[1].data[4] = __builtin_parity(tms_states);
 	/* And perform it */
-	if (!perform_dap_swd_sequences(&sequence, 1U))
+	swdio_status = SWDIO_STATUS_DRIVE;
+	if (!perform_dap_swd_sequences(sequences, 2U))
 		DEBUG_ERROR("dap_swd_seq_out_parity failed\n");
 }
 
 static uint32_t dap_swd_seq_in(const size_t clock_cycles)
 {
 	/* Setup the sequence */
-	dap_swd_sequence_s sequence = {
-		clock_cycles,
-		DAP_SWD_IN_SEQUENCE,
+	dap_swd_sequence_s sequences[2] = {
+		/* one cycle turn-around*/
+		{
+			1,
+			DAP_SWD_IN_SEQUENCE
+		},
+		/* Ack read phase */
+		{
+			clock_cycles,
+			DAP_SWD_IN_SEQUENCE
+		},
 	};
+	swdio_status = SWDIO_STATUS_FLOAT;
 	/* And perform it */
-	if (!perform_dap_swd_sequences(&sequence, 1U)) {
+	if (!perform_dap_swd_sequences(sequences, 2U)) {
 		DEBUG_ERROR("dap_swd_seq_in failed\n");
 		return 0U;
 	}
 
 	uint32_t result = 0;
 	for (size_t offset = 0; offset < clock_cycles; offset += 8U)
-		result |= sequence.data[offset >> 3U] << offset;
+		result |= sequences[1].data[offset >> 3U] << offset;
 	return result;
 }
 
 static bool dap_swd_seq_in_parity(uint32_t *const result, const size_t clock_cycles)
 {
 	/* Setup the sequence */
-	dap_swd_sequence_s sequence = {
-		clock_cycles + 1U,
-		DAP_SWD_IN_SEQUENCE,
+	dap_swd_sequence_s sequences[2] = {
+		{
+			clock_cycles + 1U,
+			DAP_SWD_IN_SEQUENCE,
+		},
+		{ /* 8 idle cycle to return to SWDIO_STATUS_DRIVE */
+			8,
+			DAP_SWD_OUT_SEQUENCE,
+			{0},
+		},
 	};
+	swdio_status = SWDIO_STATUS_DRIVE;
 	/* And perform it */
-	if (!perform_dap_swd_sequences(&sequence, 1U)) {
+	if (!perform_dap_swd_sequences(sequences, 2U)) {
 		DEBUG_ERROR("dap_swd_seq_in_parity failed\n");
-		return false;
+		return true;
 	}
 
 	uint32_t data = 0;
 	for (size_t offset = 0; offset < clock_cycles; offset += 8U)
-		data |= sequence.data[offset >> 3U] << offset;
+		data |= sequences[0].data[offset >> 3U] << offset;
 	*result = data;
 	uint8_t parity = __builtin_parity(data) & 1U;
-	parity ^= sequence.data[4] & 1U;
-	return !parity;
+	parity ^= sequences[0].data[4] & 1U;
+	return parity;
 }
 
 static void dap_line_reset(void)
