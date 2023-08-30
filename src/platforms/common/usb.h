@@ -58,4 +58,10 @@ void blackmagic_usb_init(void);
 /* Returns current usb configuration, or 0 if not configured. */
 uint16_t usb_get_config(void);
 
+/* Returns true if usb config has been updated. */
+bool usb_config_is_updated(void);
+
+/* Clears usb config updated flag. */
+void usb_config_clear_updated(void);
+
 #endif /* PLATFORMS_COMMON_USB_H */

@@ -21,6 +21,7 @@
 #include "general.h"
 #include "platform.h"
 #include "morse.h"
+#include "usb.h"
 
 #include <libopencm3/cm3/systick.h>
 #include <libopencm3/cm3/nvic.h>
@@ -43,6 +44,18 @@ static uint8_t monitor_ticks = 0;
  */
 #define ADC_VREFINT_MIN 1404U
 #endif
+
+static void usb_config_morse_msg_update(void)
+{
+	if (usb_config_is_updated()) {
+		if (usb_config == 0)
+			morse("NO USB HOST.", true);
+		else
+			morse(NULL, false);
+
+		usb_config_clear_updated();
+	}
+}
 
 void platform_timing_init(void)
 {
@@ -71,6 +84,7 @@ void sys_tick_handler(void)
 	if (morse_tick >= MORSECNT) {
 		if (running_status)
 			gpio_toggle(LED_PORT, LED_IDLE_RUN);
+		usb_config_morse_msg_update();
 		SET_ERROR_STATE(morse_update());
 		morse_tick = 0;
 	} else
