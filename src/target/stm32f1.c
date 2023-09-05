@@ -435,6 +435,11 @@ bool mm32l0xx_probe(target_s *target)
 		flash_kbyte = 128;
 		ram_kbyte = 8;
 		break;
+	case 0xcc4460b1:
+		name = "MM32SPIN05";
+		flash_kbyte = 32;
+		ram_kbyte = 4;
+		break;
 	case 0xcc56a097U:
 		name = "MM32SPIN27";
 		flash_kbyte = 128;
