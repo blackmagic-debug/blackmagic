@@ -154,23 +154,93 @@ bool target_flash_erase(target_s *target, target_addr_t addr, size_t len)
 			active_flash = flash;
 		}
 
+		/* Align the start address to the erase block size */
 		const target_addr_t local_start_addr = addr & ~(flash->blocksize - 1U);
-		const target_addr_t local_end_addr = local_start_addr + flash->blocksize;
 
-		if (!flash_prepare(flash, FLASH_OPERATION_ERASE))
+		/* Check if we can use mass erase */
+		const bool can_use_mass_erase = flash->mass_erase != NULL && local_start_addr == flash->start &&
+			(addr + len) >= (flash->start + flash->length);
+
+		/* Calculate the address at the end of the erase block */
+		const target_addr_t local_end_addr =
+			can_use_mass_erase ? flash->start + flash->length : local_start_addr + flash->blocksize;
+
+		if (!flash_prepare(flash, can_use_mass_erase ? FLASH_OPERATION_MASS_ERASE : FLASH_OPERATION_ERASE))
 			return false;
 
-		result &= flash->erase(flash, local_start_addr, flash->blocksize);
+		/* Erase flash, either a single aligned block size or a full mass erase */
+		result &= can_use_mass_erase ? flash->mass_erase(flash, NULL) :
+									   flash->erase(flash, local_start_addr, flash->blocksize);
 		if (!result) {
 			DEBUG_ERROR("Erase failed at %" PRIx32 "\n", local_start_addr);
 			break;
 		}
 
+		/* Update the remaining length and address, taking into account the alignment */
 		len -= MIN(local_end_addr - addr, len);
 		addr = local_end_addr;
 	}
 	/* Issue flash done on last operation */
 	result &= flash_done(active_flash);
+	return result;
+}
+
+static inline bool flash_manual_mass_erase(target_flash_s *const flash, platform_timeout_s *const print_progess)
+{
+	for (target_addr_t addr = flash->start; addr < (flash->start + flash->length); addr += flash->blocksize) {
+		if (!flash->erase(flash, addr, flash->blocksize))
+			return false;
+		target_print_progress(print_progess);
+	}
+	return true;
+}
+
+/* Run specialized target mass erase if available, otherwise erase all flash' */
+bool target_flash_mass_erase(target_s *const target)
+{
+	if (!target_enter_flash_mode(target))
+		return false;
+
+	/* Setup progress printout */
+	platform_timeout_s print_progess;
+	platform_timeout_set(&print_progess, 500U);
+
+	bool result = false;
+	if (target->mass_erase) {
+		DEBUG_INFO("Running specialized target mass erase\n");
+
+		/* Run specialized target mass erase */
+		result = target->mass_erase(target, &print_progess);
+	} else {
+		DEBUG_WARN("No specialized target mass erase available, erasing all flash\n");
+
+		/* Erase all target flash */
+		for (target_flash_s *flash = target->flash; flash; flash = flash->next) {
+			/* If the flash has a mass erase function, use it */
+			const bool can_use_mass_erase = flash->mass_erase != NULL;
+
+			if (can_use_mass_erase)
+				DEBUG_INFO("Running specialized flash mass erase for flash 0x%08" PRIx32 "\n", flash->start);
+			else
+				DEBUG_WARN("No specialized flash mass erase available for 0x%08" PRIx32 "\n", flash->start);
+
+			result = flash_prepare(flash, can_use_mass_erase ? FLASH_OPERATION_MASS_ERASE : FLASH_OPERATION_ERASE);
+			if (!result) {
+				DEBUG_ERROR("Failed to prepare flash 0x%08" PRIx32 " for mass erase\n", flash->start);
+				break;
+			}
+
+			result = can_use_mass_erase ? flash->mass_erase(flash, &print_progess) :
+										  flash_manual_mass_erase(flash, &print_progess);
+			result &= flash_done(flash); /* Don't overwrite previous result, AND with it instead */
+			if (!result) {
+				DEBUG_ERROR("Failed to mass erase flash 0x%08" PRIx32 "\n", flash->start);
+				break;
+			}
+		}
+	}
+
+	target_exit_flash_mode(target);
 	return result;
 }
 

@@ -519,7 +519,7 @@ static const command_s lpc55xx_cmd_list[] = {
 };
 
 static bool lpc55_dmap_cmd(adiv5_access_port_s *ap, uint32_t cmd);
-static bool lpc55_dmap_mass_erase(target_s *target);
+static bool lpc55_dmap_mass_erase(target_s *target, platform_timeout_s *print_progess);
 static void lpc55_dmap_ap_free(void *priv);
 
 void lpc55_dp_prepare(adiv5_debug_port_s *const dp)
@@ -656,8 +656,9 @@ static bool lpc55_dmap_cmd(adiv5_access_port_s *const ap, const uint32_t cmd)
 	}
 }
 
-static bool lpc55_dmap_mass_erase(target_s *target)
+static bool lpc55_dmap_mass_erase(target_s *const target, platform_timeout_s *const print_progess)
 {
+	(void)print_progess;
 	/*
 	 * TODO: This doesn't actually work at least on the LPC550x, there seems to be
 	 * a lot more to figure out about the debug mailbox before this code can work.

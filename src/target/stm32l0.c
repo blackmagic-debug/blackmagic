@@ -131,8 +131,7 @@ static bool stm32lx_nvm_data_erase(target_flash_s *flash, target_addr_t addr, si
 static bool stm32lx_nvm_data_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t length);
 
 static bool stm32lx_protected_attach(target_s *target);
-static bool stm32lx_protected_mass_erase(target_s *target);
-static bool stm32lx_mass_erase(target_s *target);
+static bool stm32lx_protected_mass_erase(target_s *target, platform_timeout_s *print_progess);
 
 static bool stm32lx_cmd_option(target_s *target, int argc, const char **argv);
 static bool stm32lx_cmd_eeprom(target_s *target, int argc, const char **argv);
@@ -263,8 +262,7 @@ bool stm32l0_probe(target_s *const target)
 	if (protected) {
 		target->attach = stm32lx_protected_attach;
 		target->mass_erase = stm32lx_protected_mass_erase;
-	} else
-		target->mass_erase = stm32lx_mass_erase;
+	}
 
 	return true;
 }
@@ -457,7 +455,7 @@ static bool stm32lx_protected_attach(target_s *const target)
 	return true;
 }
 
-static bool stm32lx_protected_mass_erase(target_s *const target)
+static bool stm32lx_protected_mass_erase(target_s *const target, platform_timeout_s *const print_progess)
 {
 	const uint32_t nvm = stm32lx_nvm_phys(target);
 	if (!stm32lx_nvm_opt_unlock(target, nvm))
@@ -468,24 +466,11 @@ static bool stm32lx_protected_mass_erase(target_s *const target)
 	target_mem_write32(target, STM32Lx_NVM_OPT_PHYS, 0xff5500aaU);
 	target_mem_write32(target, STM32Lx_NVM_PECR(nvm), STM32Lx_NVM_PECR_OBL_LAUNCH);
 
-	platform_timeout_s timeout;
-	platform_timeout_set(&timeout, 500);
-
 	while (target_mem_read32(target, STM32Lx_NVM_SR(nvm)) & STM32Lx_NVM_SR_BSY)
-		target_print_progress(&timeout);
+		target_print_progress(print_progess);
 
 	/* Disable further programming by locking PECR */
 	stm32lx_nvm_lock(target, nvm);
-	return true;
-}
-
-static bool stm32lx_mass_erase(target_s *const target)
-{
-	for (target_flash_s *flash = target->flash; flash; flash = flash->next) {
-		const int result = stm32lx_nvm_prog_erase(flash, flash->start, flash->length);
-		if (result != 0)
-			return false;
-	}
 	return true;
 }
 

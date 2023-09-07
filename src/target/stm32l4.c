@@ -62,7 +62,7 @@ static bool stm32l4_attach(target_s *t);
 static void stm32l4_detach(target_s *t);
 static bool stm32l4_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
 static bool stm32l4_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
-static bool stm32l4_mass_erase(target_s *t);
+static bool stm32l4_mass_erase(target_s *target, platform_timeout_s *print_progess);
 
 const command_s stm32l4_cmd_list[] = {
 	{"erase_bank1", stm32l4_cmd_erase_bank1, "Erase entire bank1 flash memory"},
@@ -768,7 +768,7 @@ static bool stm32l4_flash_write(target_flash_s *f, target_addr_t dest, const voi
 	return stm32l4_flash_busy_wait(t, NULL);
 }
 
-static bool stm32l4_cmd_erase(target_s *const t, const uint32_t action)
+static bool stm32l4_cmd_erase(target_s *const t, const uint32_t action, platform_timeout_s *const print_progess)
 {
 	stm32l4_flash_unlock(t);
 	/* Erase time is 25 ms. Timeout logic shouldn't get fired.*/
@@ -776,15 +776,13 @@ static bool stm32l4_cmd_erase(target_s *const t, const uint32_t action)
 	stm32l4_flash_write32(t, FLASH_CR, action);
 	stm32l4_flash_write32(t, FLASH_CR, action | FLASH_CR_STRT);
 
-	platform_timeout_s timeout;
-	platform_timeout_set(&timeout, 500);
 	/* Wait for completion or an error */
-	return stm32l4_flash_busy_wait(t, &timeout);
+	return stm32l4_flash_busy_wait(t, print_progess);
 }
 
-static bool stm32l4_mass_erase(target_s *const t)
+static bool stm32l4_mass_erase(target_s *const target, platform_timeout_s *const print_progess)
 {
-	return stm32l4_cmd_erase(t, FLASH_CR_MER1 | FLASH_CR_MER2);
+	return stm32l4_cmd_erase(target, FLASH_CR_MER1 | FLASH_CR_MER2, print_progess);
 }
 
 static bool stm32l4_cmd_erase_bank1(target_s *const t, const int argc, const char **const argv)
@@ -792,7 +790,7 @@ static bool stm32l4_cmd_erase_bank1(target_s *const t, const int argc, const cha
 	(void)argc;
 	(void)argv;
 	gdb_outf("Erasing bank %u: ", 1);
-	const bool result = stm32l4_cmd_erase(t, FLASH_CR_MER1);
+	const bool result = stm32l4_cmd_erase(t, FLASH_CR_MER1, NULL);
 	gdb_out("done\n");
 	return result;
 }
@@ -802,7 +800,7 @@ static bool stm32l4_cmd_erase_bank2(target_s *const t, const int argc, const cha
 	(void)argc;
 	(void)argv;
 	gdb_outf("Erasing bank %u: ", 2);
-	const bool result = stm32l4_cmd_erase(t, FLASH_CR_MER2);
+	const bool result = stm32l4_cmd_erase(t, FLASH_CR_MER2, NULL);
 	gdb_out("done\n");
 	return result;
 }

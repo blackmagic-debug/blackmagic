@@ -47,7 +47,7 @@
 
 static bool efm32_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
 static bool efm32_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
-static bool efm32_mass_erase(target_s *t);
+static bool efm32_mass_erase(target_s *target, platform_timeout_s *print_progess);
 
 static const uint16_t efm32_flash_write_stub[] = {
 #include "flashstub/efm32.stub"
@@ -666,55 +666,53 @@ static bool efm32_flash_write(target_flash_s *f, target_addr_t dest, const void 
 }
 
 /* Uses the MSC ERASEMAIN0/1 command to erase the entire flash */
-static bool efm32_mass_erase(target_s *t)
+static bool efm32_mass_erase(target_s *const target, platform_timeout_s *const print_progess)
 {
-	efm32_priv_s *priv_storage = (efm32_priv_s *)t->target_storage;
+	efm32_priv_s *priv_storage = (efm32_priv_s *)target->target_storage;
 	if (!priv_storage || !priv_storage->device)
 		return false;
 
 	if (priv_storage->device->family_id == 71 || priv_storage->device->family_id == 73) {
 		/* original Gecko and Tiny Gecko families don't support mass erase */
-		tc_printf(t, "This device does not support mass erase through MSC.\n");
+		tc_printf(target, "This device does not support mass erase through MSC.\n");
 		return false;
 	}
 
 	uint32_t msc = priv_storage->device->msc_addr;
 
-	uint16_t flash_kib = efm32_read_flash_size(t, priv_storage->di_version);
+	uint16_t flash_kib = efm32_read_flash_size(target, priv_storage->di_version);
 
 	/* Set WREN bit to enable MSC write and erase functionality */
-	target_mem_write32(t, EFM32_MSC_WRITECTRL(msc), 1);
+	target_mem_write32(target, EFM32_MSC_WRITECTRL(msc), 1);
 
 	/* Unlock mass erase */
-	target_mem_write32(t, EFM32_MSC_MASSLOCK(msc), EFM32_MSC_MASSLOCK_LOCKKEY);
+	target_mem_write32(target, EFM32_MSC_MASSLOCK(msc), EFM32_MSC_MASSLOCK_LOCKKEY);
 
 	/* Erase operation */
-	target_mem_write32(t, EFM32_MSC_WRITECMD(msc), EFM32_MSC_WRITECMD_ERASEMAIN0);
+	target_mem_write32(target, EFM32_MSC_WRITECMD(msc), EFM32_MSC_WRITECMD_ERASEMAIN0);
 
-	platform_timeout_s timeout;
-	platform_timeout_set(&timeout, 500);
 	/* Poll MSC Busy */
-	while ((target_mem_read32(t, EFM32_MSC_STATUS(msc)) & EFM32_MSC_STATUS_BUSY)) {
-		if (target_check_error(t))
+	while ((target_mem_read32(target, EFM32_MSC_STATUS(msc)) & EFM32_MSC_STATUS_BUSY)) {
+		if (target_check_error(target))
 			return false;
-		target_print_progress(&timeout);
+		target_print_progress(print_progess);
 	}
 
 	/* Parts with >= 512 kiB flash have 2 mass erase regions */
-	if (flash_kib >= 512) {
+	if (flash_kib >= 512U) {
 		/* Erase operation */
-		target_mem_write32(t, EFM32_MSC_WRITECMD(msc), EFM32_MSC_WRITECMD_ERASEMAIN1);
+		target_mem_write32(target, EFM32_MSC_WRITECMD(msc), EFM32_MSC_WRITECMD_ERASEMAIN1);
 
 		/* Poll MSC Busy */
-		while ((target_mem_read32(t, EFM32_MSC_STATUS(msc)) & EFM32_MSC_STATUS_BUSY)) {
-			if (target_check_error(t))
+		while ((target_mem_read32(target, EFM32_MSC_STATUS(msc)) & EFM32_MSC_STATUS_BUSY)) {
+			if (target_check_error(target))
 				return false;
-			target_print_progress(&timeout);
+			target_print_progress(print_progess);
 		}
 	}
 
 	/* Relock mass erase */
-	target_mem_write32(t, EFM32_MSC_MASSLOCK(msc), 0);
+	target_mem_write32(target, EFM32_MSC_MASSLOCK(msc), 0);
 
 	return true;
 }
@@ -926,7 +924,7 @@ static bool efm32_cmd_bootloader(target_s *t, int argc, const char **argv)
 
 #define CMDKEY 0xcfacc118U
 
-static bool efm32_aap_mass_erase(target_s *t);
+static bool efm32_aap_mass_erase(target_s *target, platform_timeout_s *print_progess);
 
 /* AAP Probe */
 typedef struct efm32_aap_priv {
@@ -967,9 +965,9 @@ bool efm32_aap_probe(adiv5_access_port_s *ap)
 	return true;
 }
 
-static bool efm32_aap_mass_erase(target_s *t)
+static bool efm32_aap_mass_erase(target_s *const target, platform_timeout_s *const print_progess)
 {
-	adiv5_access_port_s *ap = t->priv;
+	adiv5_access_port_s *const ap = cortex_ap(target);
 	uint32_t status;
 
 	/* Read status */
@@ -984,14 +982,12 @@ static bool efm32_aap_mass_erase(target_s *t)
 
 	DEBUG_INFO("EFM32: Issuing DEVICEERASE...\n");
 	adiv5_ap_write(ap, AAP_CMDKEY, CMDKEY);
-	adiv5_ap_write(ap, AAP_CMD, 1);
+	adiv5_ap_write(ap, AAP_CMD, 1U);
 
-	platform_timeout_s timeout;
-	platform_timeout_set(&timeout, 500);
 	/* Read until 0, probably should have a timeout here... */
 	do {
 		status = adiv5_ap_read(ap, AAP_STATUS);
-		target_print_progress(&timeout);
+		target_print_progress(print_progess);
 	} while (status & AAP_STATUS_ERASEBUSY);
 
 	/* Read status */

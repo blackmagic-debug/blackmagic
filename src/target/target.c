@@ -436,13 +436,11 @@ static bool target_cmd_mass_erase(target_s *const t, const int argc, const char 
 {
 	(void)argc;
 	(void)argv;
-	if (!t || !t->mass_erase) {
-		gdb_out("Mass erase not implemented for target_s");
-		return true;
-	}
+
 	gdb_out("Erasing device Flash: ");
-	const bool result = t->mass_erase(t);
+	const bool result = target_flash_mass_erase(t);
 	gdb_out("done\n");
+
 	return result;
 }
 

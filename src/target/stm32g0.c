@@ -177,7 +177,7 @@ static bool stm32g0_attach(target_s *t);
 static void stm32g0_detach(target_s *t);
 static bool stm32g0_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
 static bool stm32g0_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
-static bool stm32g0_mass_erase(target_s *t);
+static bool stm32g0_mass_erase(target_s *target, platform_timeout_s *print_progess);
 
 /* Custom commands */
 static bool stm32g0_cmd_erase_bank(target_s *t, int argc, const char **argv);
@@ -478,24 +478,22 @@ static bool stm32g0_flash_write(target_flash_s *f, target_addr_t dest, const voi
 	return true;
 }
 
-static bool stm32g0_mass_erase(target_s *t)
+static bool stm32g0_mass_erase(target_s *const target, platform_timeout_s *const print_progess)
 {
 	const uint32_t ctrl = FLASH_CR_MER1 | FLASH_CR_MER2 | FLASH_CR_START;
 
-	stm32g0_flash_unlock(t);
-	target_mem_write32(t, FLASH_CR, ctrl);
+	stm32g0_flash_unlock(target);
+	target_mem_write32(target, FLASH_CR, ctrl);
 
-	platform_timeout_s timeout;
-	platform_timeout_set(&timeout, 500);
 	/* Wait for completion or an error */
-	if (!stm32g0_wait_busy(t, &timeout)) {
-		stm32g0_flash_op_finish(t);
+	if (!stm32g0_wait_busy(target, print_progess)) {
+		stm32g0_flash_op_finish(target);
 		return false;
 	}
 
 	/* Check for error */
-	const uint16_t status = target_mem_read32(t, FLASH_SR);
-	stm32g0_flash_op_finish(t);
+	const uint16_t status = target_mem_read32(target, FLASH_SR);
+	stm32g0_flash_op_finish(target);
 	return !(status & FLASH_SR_ERROR_MASK);
 }
 

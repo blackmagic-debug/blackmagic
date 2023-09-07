@@ -27,11 +27,11 @@
 #include "cortexm.h"
 #include "adiv5.h"
 
-static bool nrf51_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
-static bool nrf51_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
-static bool nrf51_flash_prepare(target_flash_s *f);
-static bool nrf51_flash_done(target_flash_s *f);
-static bool nrf51_mass_erase(target_s *t);
+static bool nrf51_flash_erase(target_flash_s *flash, target_addr_t addr, size_t len);
+static bool nrf51_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t len);
+static bool nrf51_flash_prepare(target_flash_s *flash);
+static bool nrf51_flash_done(target_flash_s *flash);
+static bool nrf51_mass_erase(target_s *target, platform_timeout_s *print_progess);
 
 static bool nrf51_cmd_erase_uicr(target_s *t, int argc, const char **argv);
 static bool nrf51_cmd_protect_flash(target_s *t, int argc, const char **argv);
@@ -164,81 +164,85 @@ bool nrf51_probe(target_s *t)
 	return true;
 }
 
-static bool nrf51_wait_ready(target_s *const t, platform_timeout_s *const timeout)
+static bool nrf51_wait_ready(target_s *const t, platform_timeout_s *const print_progress)
 {
 	/* Poll for NVMC_READY */
 	while (target_mem_read32(t, NRF51_NVMC_READY) == 0) {
 		if (target_check_error(t))
 			return false;
-		if (timeout)
-			target_print_progress(timeout);
+		if (print_progress)
+			target_print_progress(print_progress);
 	}
 	return true;
 }
 
-static bool nrf51_flash_prepare(target_flash_s *f)
+static bool nrf51_flash_prepare(target_flash_s *const flash)
 {
-	target_s *t = f->t;
-	/* If there is a buffer allocated, we're in the Flash write phase, otherwise it's erase */
-	if (f->buf)
+	target_s *const target = flash->t;
+
+	switch (flash->operation) {
+	case FLASH_OPERATION_WRITE:
 		/* Enable write */
-		target_mem_write32(t, NRF51_NVMC_CONFIG, NRF51_NVMC_CONFIG_WEN);
-	else
+		target_mem_write32(target, NRF51_NVMC_CONFIG, NRF51_NVMC_CONFIG_WEN);
+		break;
+	case FLASH_OPERATION_ERASE:
 		/* Enable erase */
-		target_mem_write32(t, NRF51_NVMC_CONFIG, NRF51_NVMC_CONFIG_EEN);
-	return nrf51_wait_ready(t, NULL);
+		target_mem_write32(target, NRF51_NVMC_CONFIG, NRF51_NVMC_CONFIG_EEN);
+		break;
+	default:
+		return false; /* Unsupported operation */
+	}
+
+	return nrf51_wait_ready(target, NULL);
 }
 
-static bool nrf51_flash_done(target_flash_s *f)
+static bool nrf51_flash_done(target_flash_s *const flash)
 {
-	target_s *t = f->t;
+	target_s *const target = flash->t;
 	/* Return to read-only */
-	target_mem_write32(t, NRF51_NVMC_CONFIG, NRF51_NVMC_CONFIG_REN);
-	return nrf51_wait_ready(t, NULL);
+	target_mem_write32(target, NRF51_NVMC_CONFIG, NRF51_NVMC_CONFIG_REN);
+	return nrf51_wait_ready(target, NULL);
 }
 
-static bool nrf51_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
+static bool nrf51_flash_erase(target_flash_s *const flash, const target_addr_t addr, const size_t len)
 {
-	target_s *t = f->t;
+	target_s *const target = flash->t;
 
-	for (size_t offset = 0; offset < len; offset += f->blocksize) {
+	for (size_t offset = 0; offset < len; offset += flash->blocksize) {
 		/* If the address to erase is the UICR, we have to handle that separately */
 		if (addr + offset == NRF51_UICR)
 			/* Write to the ERASE_UICR register to erase */
-			target_mem_write32(t, NRF51_NVMC_ERASEUICR, 0x1U);
+			target_mem_write32(target, NRF51_NVMC_ERASEUICR, 0x1U);
 		else
 			/* Write address of first word in page to erase it */
-			target_mem_write32(t, NRF51_NVMC_ERASEPAGE, addr + offset);
+			target_mem_write32(target, NRF51_NVMC_ERASEPAGE, addr + offset);
 
-		if (!nrf51_wait_ready(t, NULL))
+		if (!nrf51_wait_ready(target, NULL))
 			return false;
 	}
 
 	return true;
 }
 
-static bool nrf51_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len)
+static bool nrf51_flash_write(
+	target_flash_s *const flash, const target_addr_t dest, const void *const src, const size_t len)
 {
 	/* nrf51_flash_prepare() and nrf51_flash_done() top-and-tail this, just write the data to the target. */
-	target_s *t = f->t;
-	target_mem_write(t, dest, src, len);
-	return nrf51_wait_ready(t, NULL);
+	target_s *const target = flash->t;
+	target_mem_write(target, dest, src, len);
+	return nrf51_wait_ready(target, NULL);
 }
 
-static bool nrf51_mass_erase(target_s *t)
+static bool nrf51_mass_erase(target_s *const target, platform_timeout_s *const print_progess)
 {
-	target_reset(t);
-
 	/* Enable erase */
-	target_mem_write32(t, NRF51_NVMC_CONFIG, NRF51_NVMC_CONFIG_EEN);
-	if (!nrf51_wait_ready(t, NULL))
+	target_mem_write32(target, NRF51_NVMC_CONFIG, NRF51_NVMC_CONFIG_EEN);
+	if (!nrf51_wait_ready(target, NULL))
 		return false;
 
-	platform_timeout_s timeout;
-	platform_timeout_set(&timeout, 500U);
 	/* Erase all */
-	target_mem_write32(t, NRF51_NVMC_ERASEALL, 1U);
-	return nrf51_wait_ready(t, &timeout);
+	target_mem_write32(target, NRF51_NVMC_ERASEALL, 1U);
+	return nrf51_wait_ready(target, print_progess);
 }
 
 static bool nrf51_cmd_erase_uicr(target_s *t, int argc, const char **argv)
@@ -399,7 +403,7 @@ static bool nrf51_cmd_read(target_s *t, int argc, const char **argv)
 
 #define NRF52_MDM_IDR 0x02880000U
 
-static bool nrf51_mdm_mass_erase(target_s *t);
+static bool nrf51_mdm_mass_erase(target_s *target, platform_timeout_s *print_progess);
 
 #define MDM_POWER_EN  ADIV5_DP_REG(0x01U)
 #define MDM_SELECT_AP ADIV5_DP_REG(0x02U)
@@ -436,21 +440,19 @@ bool nrf51_mdm_probe(adiv5_access_port_s *ap)
 	return true;
 }
 
-static bool nrf51_mdm_mass_erase(target_s *t)
+static bool nrf51_mdm_mass_erase(target_s *const target, platform_timeout_s *const print_progess)
 {
-	adiv5_access_port_s *ap = t->priv;
+	adiv5_access_port_s *const ap = cortex_ap(target);
 
 	uint32_t status = adiv5_ap_read(ap, MDM_STATUS);
 	adiv5_dp_write(ap->dp, MDM_POWER_EN, 0x50000000U);
 	adiv5_dp_write(ap->dp, MDM_SELECT_AP, 0x01000000U);
 	adiv5_ap_write(ap, MDM_CONTROL, 0x00000001U);
 
-	platform_timeout_s timeout;
-	platform_timeout_set(&timeout, 500U);
 	// Read until 0, probably should have a timeout here...
 	do {
 		status = adiv5_ap_read(ap, MDM_STATUS);
-		target_print_progress(&timeout);
+		target_print_progress(print_progess);
 	} while (status);
 
 	// The second read will provide true prot status

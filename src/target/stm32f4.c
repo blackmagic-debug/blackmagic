@@ -52,7 +52,7 @@ static bool stm32f4_attach(target_s *t);
 static void stm32f4_detach(target_s *t);
 static bool stm32f4_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
 static bool stm32f4_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
-static bool stm32f4_mass_erase(target_s *t);
+static bool stm32f4_mass_erase(target_s *target, platform_timeout_s *print_progess);
 
 /* Flash Program and Erase Controller Register Map */
 #define FPEC_BASE     0x40023c00U
@@ -532,21 +532,19 @@ static bool stm32f4_flash_write(target_flash_s *f, target_addr_t dest, const voi
 	return stm32f4_flash_busy_wait(t, NULL);
 }
 
-static bool stm32f4_mass_erase(target_s *t)
+static bool stm32f4_mass_erase(target_s *const target, platform_timeout_s *const print_progess)
 {
 	/* XXX: Is it correct to grab the most recently added Flash region here? What is this really trying to do? */
-	stm32f4_flash_s *sf = (stm32f4_flash_s *)t->flash;
-	stm32f4_flash_unlock(t);
+	stm32f4_flash_s *stm32f4_flash = (stm32f4_flash_s *)target->flash;
+	stm32f4_flash_unlock(target);
 
 	/* Flash mass erase start instruction */
-	const uint32_t ctrl = FLASH_CR_MER | (sf->bank_split ? FLASH_CR_MER1 : 0);
-	target_mem_write32(t, FLASH_CR, ctrl);
-	target_mem_write32(t, FLASH_CR, ctrl | FLASH_CR_STRT);
+	const uint32_t ctrl = FLASH_CR_MER | (stm32f4_flash->bank_split ? FLASH_CR_MER1 : 0);
+	target_mem_write32(target, FLASH_CR, ctrl);
+	target_mem_write32(target, FLASH_CR, ctrl | FLASH_CR_STRT);
 
-	platform_timeout_s timeout;
-	platform_timeout_set(&timeout, 500);
 	/* Wait for completion or an error */
-	return stm32f4_flash_busy_wait(t, &timeout);
+	return stm32f4_flash_busy_wait(target, print_progess);
 }
 
 /*

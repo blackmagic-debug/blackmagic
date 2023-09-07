@@ -61,7 +61,6 @@ static bool lpc546xx_cmd_write_sector(target_s *t, int argc, const char **argv);
 static void lpc546xx_reset_attach(target_s *t);
 static bool lpc546xx_flash_init(target_s *t);
 static bool lpc546xx_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
-static bool lpc546xx_mass_erase(target_s *t);
 static void lpc546xx_wdt_set_period(target_s *t);
 static void lpc546xx_wdt_kick(target_s *t);
 
@@ -152,7 +151,6 @@ bool lpc546xx_probe(target_s *t)
 	 */
 	sram123_size = device->sram123_kbytes * 1024U;
 
-	t->mass_erase = lpc546xx_mass_erase;
 	lpc546xx_add_flash(t, IAP_ENTRYPOINT_LOCATION, 0, 0x0, flash_size, 0x8000);
 
 	/*
@@ -182,20 +180,13 @@ static void lpc546xx_reset_attach(target_s *t)
 	cortexm_attach(t);
 }
 
-static bool lpc546xx_mass_erase(target_s *t)
+static bool lpc546xx_cmd_erase_sector(target_s *const target, int argc, const char **argv)
 {
-	const int result = lpc546xx_flash_erase(t->flash, t->flash->start, t->flash->length);
-	if (result != 0)
-		tc_printf(t, "Error erasing flash: %d\n", result);
-	return result == 0;
-}
-
-static bool lpc546xx_cmd_erase_sector(target_s *t, int argc, const char **argv)
-{
+	/* FIXME: is this command really needed? feels like it should at best be a generic target erase */
 	if (argc > 1) {
 		uint32_t sector_addr = strtoul(argv[1], NULL, 0);
-		sector_addr *= t->flash->blocksize;
-		return lpc546xx_flash_erase(t->flash, sector_addr, 1U);
+		sector_addr *= target->flash->blocksize;
+		return target_flash_erase(target, sector_addr, 1U);
 	}
 	return true;
 }
