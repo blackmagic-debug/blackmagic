@@ -989,8 +989,6 @@ void adiv5_dp_init(adiv5_debug_port_s *const dp)
 	adiv5_dp_unref(dp);
 }
 
-#define ALIGNOF(x) (((x)&3U) == 0 ? ALIGN_WORD : (((x)&1U) == 0 ? ALIGN_HALFWORD : ALIGN_BYTE))
-
 /* Program the CSW and TAR for sequential access at a given width */
 void ap_mem_access_setup(adiv5_access_port_s *ap, uint32_t addr, align_e align)
 {
@@ -1079,10 +1077,10 @@ const void *adiv5_pack_data(const uint32_t dest, const void *const src, uint32_t
 	return (const uint8_t *)src + (1 << align);
 }
 
-void advi5_mem_read_bytes(adiv5_access_port_s *ap, void *dest, uint32_t src, size_t len)
+void advi5_mem_read_bytes(adiv5_access_port_s *const ap, void *dest, uint32_t src, size_t len)
 {
 	uint32_t osrc = src;
-	const align_e align = MIN(ALIGNOF(src), ALIGNOF(len));
+	const align_e align = MIN_ALIGN(src, len);
 
 	if (len == 0)
 		return;
@@ -1144,8 +1142,8 @@ uint32_t firmware_ap_read(adiv5_access_port_s *ap, uint16_t addr)
 	return ret;
 }
 
-void adiv5_mem_write(adiv5_access_port_s *ap, uint32_t dest, const void *src, size_t len)
+void adiv5_mem_write(adiv5_access_port_s *const ap, const uint32_t dest, const void *const src, const size_t len)
 {
-	align_e align = MIN(ALIGNOF(dest), ALIGNOF(len));
+	const align_e align = MIN_ALIGN(dest, len);
 	adiv5_mem_write_sized(ap, dest, src, len, align);
 }

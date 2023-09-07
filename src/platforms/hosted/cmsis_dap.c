@@ -486,13 +486,11 @@ bool dap_run_cmd(const void *const request_data, const size_t request_length, vo
 	return (size_t)result >= response_length;
 }
 
-#define ALIGNOF(x) (((x)&3) == 0 ? ALIGN_WORD : (((x)&1) == 0 ? ALIGN_HALFWORD : ALIGN_BYTE))
-
 static void dap_mem_read(adiv5_access_port_s *ap, void *dest, uint32_t src, size_t len)
 {
 	if (len == 0)
 		return;
-	align_e align = MIN(ALIGNOF(src), ALIGNOF(len));
+	const align_e align = MIN_ALIGN(src, len);
 	DEBUG_WIRE("dap_mem_read @ %" PRIx32 " len %zu, align %d\n", src, len, align);
 	/* If the read can be done in a single transaction, use the dap_read_single() fast-path */
 	if ((1U << align) == len) {
