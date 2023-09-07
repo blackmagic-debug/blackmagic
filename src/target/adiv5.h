@@ -219,13 +219,6 @@
 #define SWDP_ACK_FAULT       0x04U
 #define SWDP_ACK_NO_RESPONSE 0x07U
 
-typedef enum align {
-	ALIGN_BYTE = 0,
-	ALIGN_HALFWORD = 1,
-	ALIGN_WORD = 2,
-	ALIGN_DWORD = 3
-} align_e;
-
 typedef struct adiv5_access_port adiv5_access_port_s;
 typedef struct adiv5_debug_port adiv5_debug_port_s;
 

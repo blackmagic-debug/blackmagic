@@ -43,7 +43,7 @@
 #include "adiv5.h"
 
 #define SRAM_BASE        0x20000000U
-#define STUB_BUFFER_BASE ALIGN(SRAM_BASE + sizeof(efm32_flash_write_stub), 4)
+#define STUB_BUFFER_BASE ALIGN(SRAM_BASE + sizeof(efm32_flash_write_stub), 4U)
 
 static bool efm32_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
 static bool efm32_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);

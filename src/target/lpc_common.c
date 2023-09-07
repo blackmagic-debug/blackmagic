@@ -325,7 +325,7 @@ static bool lpc_flash_write(target_flash_s *tf, target_addr_t dest, const void *
 		DEBUG_ERROR("Prepare failed\n");
 		return false;
 	}
-	const uint32_t bufaddr = ALIGN(f->iap_ram + sizeof(iap_frame_s), 4);
+	const uint32_t bufaddr = ALIGN(f->iap_ram + sizeof(iap_frame_s), 4U);
 	target_mem_write(f->f.t, bufaddr, src, len);
 	/* Only LPC80x has reserved pages!*/
 	if (!f->reserved_pages || dest + len <= tf->length - len) {

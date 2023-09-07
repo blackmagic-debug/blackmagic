@@ -45,6 +45,7 @@
 #include "maths_utils.h"
 #include "timing.h"
 #include "platform_support.h"
+#include "align.h"
 
 #ifndef ARRAY_LENGTH
 #define ARRAY_LENGTH(arr) (sizeof(arr) / sizeof((arr)[0]))
@@ -104,7 +105,6 @@ void debug_serial_send_stdout(const uint8_t *data, size_t len);
 #define DEBUG_WIRE(...)   debug_wire(__VA_ARGS__)
 #endif
 
-#define ALIGN(x, n) (((x) + (n)-1) & ~((n)-1))
 #undef MIN
 #define MIN(x, y) (((x) < (y)) ? (x) : (y))
 #undef MAX
