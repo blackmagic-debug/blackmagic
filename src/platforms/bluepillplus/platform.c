@@ -29,6 +29,7 @@
 #include <libopencm3/cm3/scb.h>
 #include <libopencm3/stm32/rcc.h>
 #include <libopencm3/stm32/dbgmcu.h>
+#include <libopencm3/stm32/spi.h>
 
 volatile uint32_t magic[2] __attribute__((section(".noinit")));
 
@@ -268,26 +269,69 @@ const char *platform_target_voltage(void)
 
 bool platform_spi_init(const spi_bus_e bus)
 {
-	(void)bus;
-	return false;
+	uint32_t controller = 0;
+	if (bus == SPI_BUS_INTERNAL) {
+		/* Set up onboard flash SPI GPIOs: PA5/6/7 as SPI1 in AF5, PA4 as nCS output push-pull */
+		gpio_set_mode(OB_SPI_PORT, GPIO_MODE_OUTPUT_10_MHZ, GPIO_CNF_OUTPUT_ALTFN_PUSHPULL,
+			OB_SPI_SCLK | OB_SPI_MISO | OB_SPI_MOSI);
+		gpio_set_mode(OB_SPI_PORT, GPIO_MODE_OUTPUT_10_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, OB_SPI_CS);
+		/* Deselect the targeted peripheral chip */
+		gpio_set(OB_SPI_PORT, OB_SPI_CS);
+
+		rcc_periph_clock_enable(RCC_SPI1);
+		rcc_periph_reset_pulse(RST_SPI1);
+		controller = OB_SPI;
+	} else
+		return false;
+
+	/* Set up hardware SPI: master, PCLK/8, Mode 0, 8-bit MSB first */
+	spi_init_master(controller, SPI_CR1_BAUDRATE_FPCLK_DIV_8, SPI_CR1_CPOL_CLK_TO_0_WHEN_IDLE,
+		SPI_CR1_CPHA_CLK_TRANSITION_1, SPI_CR1_DFF_8BIT, SPI_CR1_MSBFIRST);
+	spi_enable(controller);
+	return true;
 }
 
 bool platform_spi_deinit(const spi_bus_e bus)
 {
-	(void)bus;
-	return false;
+	if (bus == SPI_BUS_INTERNAL) {
+		spi_disable(OB_SPI);
+		/* Gate SPI1 APB clock */
+		rcc_periph_clock_disable(RCC_SPI1);
+		/* Unmap GPIOs */
+		gpio_set_mode(
+			OB_SPI_PORT, GPIO_MODE_INPUT, GPIO_CNF_INPUT_FLOAT, OB_SPI_SCLK | OB_SPI_MISO | OB_SPI_MOSI | OB_SPI_CS);
+		return true;
+	} else
+		return false;
 }
 
 bool platform_spi_chip_select(const uint8_t device_select)
 {
-	(void)device_select;
-	return false;
+	const uint8_t device = device_select & 0x7fU;
+	const bool select = !(device_select & 0x80U);
+	uint32_t port;
+	uint16_t pin;
+	switch (device) {
+	case SPI_DEVICE_INT_FLASH:
+		port = OB_SPI_CS_PORT;
+		pin = OB_SPI_CS;
+		break;
+	default:
+		return false;
+	}
+	gpio_set_val(port, pin, select);
+	return true;
 }
 
 uint8_t platform_spi_xfer(const spi_bus_e bus, const uint8_t value)
 {
-	(void)bus;
-	return value;
+	switch (bus) {
+	case SPI_BUS_INTERNAL:
+		return spi_xfer(OB_SPI, value);
+		break;
+	default:
+		return 0U;
+	}
 }
 
 int platform_hwversion(void)

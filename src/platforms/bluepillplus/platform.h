@@ -168,6 +168,15 @@ extern bool debug_bmp;
 #define SWO_PIN  GPIO7
 #endif /* PLATFORM_HAS_TRACESWO */
 
+/* SPI1: PA4/5/6/7 to onboard w25q64 */
+#define OB_SPI         SPI1
+#define OB_SPI_PORT    GPIOA
+#define OB_SPI_SCLK    GPIO5
+#define OB_SPI_MISO    GPIO6
+#define OB_SPI_MOSI    GPIO7
+#define OB_SPI_CS_PORT GPIOA
+#define OB_SPI_CS      GPIO4
+
 /* One active-low button labeled "KEY" */
 #define USER_BUTTON_PORT GPIOA
 #define USER_BUTTON_PIN  GPIO0
