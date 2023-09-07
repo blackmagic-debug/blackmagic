@@ -175,7 +175,7 @@ static void esp32c3_spi_read(target_s *target, uint32_t command, target_addr_t a
 static void esp32c3_spi_write(
 	target_s *target, uint32_t command, target_addr_t address, const void *buffer, size_t length);
 
-static bool esp32c3_mass_erase(target_s *target);
+static bool esp32c3_mass_erase(target_s *target, platform_timeout_s *print_progess);
 static bool esp32c3_enter_flash_mode(target_s *target);
 static bool esp32c3_exit_flash_mode(target_s *target);
 static bool esp32c3_spi_flash_erase(target_flash_s *flash, target_addr_t addr, size_t length);
@@ -451,17 +451,15 @@ static inline void esp32c3_spi_run_command(target_s *const target, const uint32_
 	esp32c3_spi_wait_complete(target);
 }
 
-static bool esp32c3_mass_erase(target_s *const target)
+static bool esp32c3_mass_erase(target_s *const target, platform_timeout_s *const print_progess)
 {
-	platform_timeout_s timeout;
-	platform_timeout_set(&timeout, 500U);
 	esp32c3_spi_run_command(target, SPI_FLASH_CMD_WRITE_ENABLE, 0U);
 	if (!(esp32c3_spi_read_status(target) & SPI_FLASH_STATUS_WRITE_ENABLED))
 		return false;
 
 	esp32c3_spi_run_command(target, SPI_FLASH_CMD_CHIP_ERASE, 0U);
 	while (esp32c3_spi_read_status(target) & SPI_FLASH_STATUS_BUSY)
-		target_print_progress(&timeout);
+		target_print_progress(print_progess);
 
 	return true;
 }
