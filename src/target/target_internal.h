@@ -36,6 +36,7 @@ extern target_s *target_list;
 typedef enum flash_operation {
 	FLASH_OPERATION_NONE,
 	FLASH_OPERATION_ERASE,
+	FLASH_OPERATION_MASS_ERASE,
 	FLASH_OPERATION_WRITE,
 } flash_operation_e;
 
@@ -52,28 +53,30 @@ typedef struct target_flash target_flash_s;
 
 typedef bool (*flash_prepare_func)(target_flash_s *flash);
 typedef bool (*flash_erase_func)(target_flash_s *flash, target_addr_t addr, size_t len);
+typedef bool (*flash_mass_erase_func)(target_flash_s *flash, platform_timeout_s *print_progess);
 typedef bool (*flash_write_func)(target_flash_s *flash, target_addr_t dest, const void *src, size_t len);
 typedef bool (*flash_done_func)(target_flash_s *flash);
 
 struct target_flash {
 	/* XXX: This needs adjusting for 64-bit operations */
-	target_s *t;                   /* Target this flash is attached to */
-	target_addr32_t start;         /* Start address of flash */
-	size_t length;                 /* Flash length */
-	size_t blocksize;              /* Erase block size */
-	size_t writesize;              /* Write operation size, must be <= blocksize/writebufsize */
-	size_t writebufsize;           /* Size of write buffer, this is calculated and not set in target code */
-	uint8_t erased;                /* Byte erased state */
-	uint8_t operation;             /* Current Flash operation (none means it's idle/unprepared) */
-	flash_prepare_func prepare;    /* Prepare for flash operations */
-	flash_erase_func erase;        /* Erase a range of flash */
-	flash_write_func write;        /* Write to flash */
-	flash_done_func done;          /* Finish flash operations */
-	uint8_t *buf;                  /* Buffer for flash operations */
-	target_addr32_t buf_addr_base; /* Address of block this buffer is for */
-	target_addr32_t buf_addr_low;  /* Address of lowest byte written */
-	target_addr32_t buf_addr_high; /* Address of highest byte written */
-	target_flash_s *next;          /* Next flash in list */
+	target_s *t;                      /* Target this flash is attached to */
+	target_addr32_t start;            /* Start address of flash */
+	size_t length;                    /* Flash length */
+	size_t blocksize;                 /* Erase block size */
+	size_t writesize;                 /* Write operation size, must be <= blocksize/writebufsize */
+	size_t writebufsize;              /* Size of write buffer, this is calculated and not set in target code */
+	uint8_t erased;                   /* Byte erased state */
+	uint8_t operation;                /* Current Flash operation (none means it's idle/unprepared) */
+	flash_prepare_func prepare;       /* Prepare for flash operations */
+	flash_erase_func erase;           /* Erase a range of flash */
+	flash_mass_erase_func mass_erase; /* Mass erase flash (this flash only) */
+	flash_write_func write;           /* Write to flash */
+	flash_done_func done;             /* Finish flash operations */
+	uint8_t *buf;                     /* Buffer for flash operations */
+	target_addr32_t buf_addr_base;    /* Address of block this buffer is for */
+	target_addr32_t buf_addr_low;     /* Address of lowest byte written */
+	target_addr32_t buf_addr_high;    /* Address of highest byte written */
+	target_flash_s *next;             /* Next flash in list */
 };
 
 typedef bool (*cmd_handler_fn)(target_s *target, int argc, const char **argv);
