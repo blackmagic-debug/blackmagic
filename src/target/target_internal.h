@@ -187,6 +187,9 @@ void target_add_commands(target_s *target, const command_s *cmds, const char *na
 void target_add_ram(target_s *target, target_addr_t start, uint32_t len);
 void target_add_flash(target_s *target, target_flash_s *flash);
 
+/* No-op stub for enter flash mode */
+bool target_enter_flash_mode_stub(target_s *target);
+
 target_flash_s *target_flash_for_addr(target_s *target, uint32_t addr);
 
 /* Convenience function for MMIO access */
