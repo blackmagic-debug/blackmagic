@@ -242,6 +242,7 @@ bool ke04_probe(target_s *t)
 static bool ke04_mass_erase(target_s *const t, platform_timeout_s *const print_progess)
 {
 	(void)print_progess;
+	/* FIXME: looks like this might make sense as a flash->mass erase routine */
 
 	/* Erase and verify the whole flash */
 	ke04_command(t, CMD_ERASE_ALL_BLOCKS, 0, NULL);
