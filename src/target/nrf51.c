@@ -176,17 +176,24 @@ static bool nrf51_wait_ready(target_s *const t, platform_timeout_s *const print_
 	return true;
 }
 
-static bool nrf51_flash_prepare(target_flash_s *f)
+static bool nrf51_flash_prepare(target_flash_s *const f)
 {
-	target_s *t = f->t;
-	/* If there is a buffer allocated, we're in the Flash write phase, otherwise it's erase */
-	if (f->buf)
+	target_s *const target = f->t;
+
+	switch (f->operation) {
+	case FLASH_OPERATION_WRITE:
 		/* Enable write */
-		target_mem32_write32(t, NRF51_NVMC_CONFIG, NRF51_NVMC_CONFIG_WEN);
-	else
+		target_mem32_write32(target, NRF51_NVMC_CONFIG, NRF51_NVMC_CONFIG_WEN);
+		break;
+	case FLASH_OPERATION_ERASE:
 		/* Enable erase */
-		target_mem32_write32(t, NRF51_NVMC_CONFIG, NRF51_NVMC_CONFIG_EEN);
-	return nrf51_wait_ready(t, NULL);
+		target_mem32_write32(target, NRF51_NVMC_CONFIG, NRF51_NVMC_CONFIG_EEN);
+		break;
+	default:
+		return false; /* Unsupported operation */
+	}
+
+	return nrf51_wait_ready(target, NULL);
 }
 
 static bool nrf51_flash_done(target_flash_s *f)
