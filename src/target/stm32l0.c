@@ -261,6 +261,7 @@ bool stm32l0_probe(target_s *const target)
 	target->driver = priv_storage->stm32l_variant;
 
 	if (protected) {
+		target->enter_flash_mode = target_enter_flash_mode_stub;
 		target->attach = stm32lx_protected_attach;
 		target->mass_erase = stm32lx_protected_mass_erase;
 	} else
