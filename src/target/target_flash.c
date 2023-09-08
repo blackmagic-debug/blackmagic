@@ -154,18 +154,29 @@ bool target_flash_erase(target_s *target, target_addr_t addr, size_t len)
 			active_flash = flash;
 		}
 
+		/* Align the start address to the erase block size */
 		const target_addr_t local_start_addr = addr & ~(flash->blocksize - 1U);
-		const target_addr_t local_end_addr = local_start_addr + flash->blocksize;
 
-		if (!flash_prepare(flash, FLASH_OPERATION_ERASE))
+		/* Check if we can use mass erase */
+		const bool can_use_mass_erase =
+			flash->mass_erase != NULL && local_start_addr == flash->start && addr + len >= flash->start + flash->length;
+
+		/* Calculate the address at the end of the erase block */
+		const target_addr_t local_end_addr =
+			can_use_mass_erase ? flash->start + flash->length : local_start_addr + flash->blocksize;
+
+		if (!flash_prepare(flash, can_use_mass_erase ? FLASH_OPERATION_MASS_ERASE : FLASH_OPERATION_ERASE))
 			return false;
 
-		result &= flash->erase(flash, local_start_addr, flash->blocksize);
+		/* Erase flash, either a single aligned block size or a full mass erase */
+		result &= can_use_mass_erase ? flash->mass_erase(flash, NULL) :
+									   flash->erase(flash, local_start_addr, flash->blocksize);
 		if (!result) {
 			DEBUG_ERROR("Erase failed at %" PRIx32 "\n", local_start_addr);
 			break;
 		}
 
+		/* Update the remaining length and address, taking into account the alignment */
 		len -= MIN(local_end_addr - addr, len);
 		addr = local_end_addr;
 	}
