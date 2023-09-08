@@ -177,17 +177,25 @@ static bool hc32l110_flash_prepare(target_flash_s *const flash)
 {
 	hc32l110_flash_cr_unlock(flash->t);
 
+	uint32_t cr_operation = 0;
 	switch (flash->operation) {
 	case FLASH_OPERATION_WRITE:
-		target_mem32_write32(flash->t, HC32L110_FLASH_CR, HC32L110_FLASH_CR_OP_PROGRAM);
+		cr_operation = HC32L110_FLASH_CR_OP_PROGRAM;
 		break;
 	case FLASH_OPERATION_ERASE:
-		target_mem32_write32(flash->t, HC32L110_FLASH_CR, HC32L110_FLASH_CR_OP_ERASE_SECTOR);
+		cr_operation = HC32L110_FLASH_CR_OP_ERASE_SECTOR;
+		break;
+	case FLASH_OPERATION_MASS_ERASE:
+		cr_operation = HC32L110_FLASH_CR_OP_ERASE_CHIP;
 		break;
 	default:
 		DEBUG_WARN("unsupported operation %u", flash->operation);
 		return false;
 	}
+
+	target_mem32_write32(flash->t, HC32L110_FLASH_CR, cr_operation);
+	if (!hc32l110_check_flash_completion(flash->t, 500U, NULL))
+		return false;
 
 	hc32l110_slock_unlock_all(flash->t);
 	return true;
@@ -215,19 +223,10 @@ static bool hc32l110_flash_write(
 	return hc32l110_check_flash_completion(flash->t, 1000, NULL);
 }
 
+/* FIXME: looks like this might make sense as a flash->mass erase routine */
 static bool hc32l110_mass_erase(target_s *const target, platform_timeout_s *const print_progess)
 {
-	hc32l110_flash_cr_unlock(target);
-	target_mem32_write32(target, HC32L110_FLASH_CR, HC32L110_FLASH_CR_OP_ERASE_CHIP);
-	if (!hc32l110_check_flash_completion(target, 500U, print_progess))
-		return false;
-
-	hc32l110_slock_unlock_all(target);
-
 	// The Flash controller automatically erases the whole Flash after one write operation
-	target_mem32_write32(target, 0, 0);
-	const bool result = hc32l110_check_flash_completion(target, 4000U, print_progess);
-
-	hc32l110_slock_lock_all(target);
-	return result;
+	target_mem32_write32(target, 0x0U, 0U);
+	return hc32l110_check_flash_completion(target, 4000U, print_progess);
 }
