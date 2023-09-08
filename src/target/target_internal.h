@@ -192,6 +192,9 @@ void target_add_ram32(target_s *target, target_addr32_t start, uint32_t len);
 void target_add_ram64(target_s *target, target_addr64_t start, uint64_t len);
 void target_add_flash(target_s *target, target_flash_s *flash);
 
+/* No-op stub for enter flash mode */
+bool target_enter_flash_mode_stub(target_s *target);
+
 target_flash_s *target_flash_for_addr(target_s *target, uint32_t addr);
 
 /* Convenience function for MMIO access */

@@ -233,6 +233,12 @@ void target_add_flash(target_s *target, target_flash_s *flash)
 	target->flash = flash;
 }
 
+bool target_enter_flash_mode_stub(target_s *target)
+{
+	(void)target;
+	return true;
+}
+
 static ssize_t map_ram(char *buf, size_t len, target_ram_s *ram)
 {
 	return snprintf(buf, len, "<memory type=\"ram\" start=\"0x%08" PRIx32 "\" length=\"0x%" PRIx32 "\"/>", ram->start,
