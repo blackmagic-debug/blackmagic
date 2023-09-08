@@ -177,7 +177,6 @@ static bool stm32lx_flash_erase(target_flash_s *flash, target_addr_t addr, size_
 static bool stm32lx_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t length);
 static bool stm32lx_eeprom_erase(target_flash_s *flash, target_addr_t addr, size_t length);
 static bool stm32lx_eeprom_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t length);
-static bool stm32lx_mass_erase(target_s *target, platform_timeout_s *print_progess);
 
 typedef struct stm32l_priv {
 	target_addr32_t uid_taddr;
@@ -277,7 +276,6 @@ bool stm32l0_probe(target_s *const target)
 	target->driver = "STM32L0";
 	target->attach = stm32l0_attach;
 	target->detach = stm32l0_detach;
-	target->mass_erase = stm32lx_mass_erase;
 	target_add_commands(target, stm32lx_cmd_list, target->driver);
 
 	/* Having identified that it's a STM32L0 of some sort, read out how much Flash it has */
@@ -351,7 +349,6 @@ bool stm32l1_probe(target_s *const target)
 	stm32l1_configure_dbgmcu(target);
 
 	target->driver = "STM32L1";
-	target->mass_erase = stm32lx_mass_erase;
 	target_add_commands(target, stm32lx_cmd_list, target->driver);
 	/* There's no good way to tell how much RAM a part has, so use a one-size map */
 	target_add_ram32(target, STM32Lx_SRAM_BASE, STM32L1_SRAM_SIZE);
@@ -657,18 +654,6 @@ static bool stm32lx_eeprom_write(
 	stm32lx_nvm_lock(target, flash_base);
 	/* Wait for completion or an error */
 	return stm32lx_nvm_busy_wait(target, flash_base, NULL);
-}
-
-static bool stm32lx_mass_erase(target_s *const target, platform_timeout_s *const print_progess)
-{
-	(void)print_progess;
-
-	for (target_flash_s *flash = target->flash; flash; flash = flash->next) {
-		const bool result = stm32lx_flash_erase(flash, flash->start, flash->length);
-		if (!result)
-			return false;
-	}
-	return true;
 }
 
 /*
