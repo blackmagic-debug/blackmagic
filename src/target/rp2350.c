@@ -169,7 +169,6 @@ bool rp2350_probe(target_s *const target)
 	}
 	DEBUG_TARGET("Boot ROM version: %x\n", (uint8_t)(boot_magic >> RP2350_BOOTROM_VERSION_SHIFT));
 
-	target->mass_erase = bmp_spi_mass_erase;
 	target->driver = "RP2350";
 	target->attach = rp2350_attach;
 	target->enter_flash_mode = rp2350_flash_prepare;

@@ -132,6 +132,7 @@ spi_flash_s *bmp_spi_add_flash(target_s *const target, const target_addr_t begin
 	flash->blocksize = spi_parameters.sector_size;
 	flash->write = bmp_spi_flash_write;
 	flash->erase = bmp_spi_flash_erase;
+	flash->mass_erase = bmp_spi_mass_erase;
 	flash->erased = 0xffU;
 	target_add_flash(target, flash);
 
@@ -143,29 +144,27 @@ spi_flash_s *bmp_spi_add_flash(target_s *const target, const target_addr_t begin
 	return spi_flash;
 }
 
-/* Note: These routines assume that the first Flash registered on the target is a SPI Flash device */
-bool bmp_spi_mass_erase(target_s *const target, platform_timeout_s *const print_progess)
+bool bmp_spi_mass_erase(target_flash_s *const flash, platform_timeout_s *const print_progess)
 {
 	DEBUG_TARGET("Running %s\n", __func__);
 
-	/* Extract the Flash structure */
-	const spi_flash_s *const flash = (spi_flash_s *)target->flash;
+	/* Extract the Target and Flash structure */
+	target_s *const target = flash->t;
+	const spi_flash_s *const spi_flash = (spi_flash_s *)flash;
 
-	/* Go into Flash mode and tell the Flash to enable writing */
-	target->enter_flash_mode(target);
-	flash->run_command(target, SPI_FLASH_CMD_WRITE_ENABLE, 0U);
-	if (!(bmp_spi_read_status(target, flash) & SPI_FLASH_STATUS_WRITE_ENABLED)) {
-		target->exit_flash_mode(target);
+	/* Tell the Flash to enable writing */
+	spi_flash->run_command(target, SPI_FLASH_CMD_WRITE_ENABLE, 0U);
+	if (!(bmp_spi_read_status(target, spi_flash) & SPI_FLASH_STATUS_WRITE_ENABLED))
 		return false;
+
+	/* Execute a full chip erase and wait for the operation to complete */
+	spi_flash->run_command(target, SPI_FLASH_CMD_CHIP_ERASE, 0U);
+	while (bmp_spi_read_status(target, spi_flash) & SPI_FLASH_STATUS_BUSY) {
+		if (print_progess)
+			target_print_progress(print_progess);
 	}
 
-	/* Execute a full chip erase and wait for the operatoin to complete */
-	flash->run_command(target, SPI_FLASH_CMD_CHIP_ERASE, 0U);
-	while (bmp_spi_read_status(target, flash) & SPI_FLASH_STATUS_BUSY)
-		target_print_progress(print_progess);
-
-	/* Finally, leave Flash mode to conclude business */
-	return target->exit_flash_mode(target);
+	return true;
 }
 
 static bool bmp_spi_flash_erase(target_flash_s *const flash, const target_addr_t addr, const size_t length)

@@ -504,7 +504,6 @@ bool lpc43xx_probe(target_s *const t)
 		if (part_id.part == LPC43xx_PARTID_INVALID)
 			return false;
 
-		t->mass_erase = bmp_spi_mass_erase;
 		t->enter_flash_mode = lpc43x0_enter_flash_mode;
 		t->exit_flash_mode = lpc43x0_exit_flash_mode;
 		lpc43x0_detect(t, part_id);

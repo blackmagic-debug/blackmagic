@@ -247,7 +247,6 @@ bool rp2040_probe(target_s *const target)
 	}
 	target->target_storage = (void *)priv_storage;
 
-	target->mass_erase = bmp_spi_mass_erase;
 	target->driver = "RP2040";
 	target->target_options |= TOPT_INHIBIT_NRST;
 	target->attach = rp_attach;
