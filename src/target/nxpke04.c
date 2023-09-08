@@ -118,7 +118,7 @@ static bool ke04_command(target_s *t, uint8_t cmd, uint32_t addr, const void *da
 static bool ke04_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
 static bool ke04_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
 static bool ke04_flash_done(target_flash_s *f);
-static bool ke04_mass_erase(target_s *t);
+static bool ke04_mass_erase(target_s *t, platform_timeout_s *print_progess);
 
 /* Target specific commands */
 static bool kinetis_cmd_unsafe(target_s *t, int argc, const char **argv);
@@ -239,8 +239,10 @@ bool ke04_probe(target_s *t)
 	return true;
 }
 
-static bool ke04_mass_erase(target_s *t)
+static bool ke04_mass_erase(target_s *const t, platform_timeout_s *const print_progess)
 {
+	(void)print_progess;
+
 	/* Erase and verify the whole flash */
 	ke04_command(t, CMD_ERASE_ALL_BLOCKS, 0, NULL);
 	/* Adjust security byte if needed */
