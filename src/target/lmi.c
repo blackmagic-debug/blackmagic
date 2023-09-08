@@ -102,7 +102,6 @@
 
 static bool lmi_flash_erase(target_flash_s *flash, target_addr_t addr, size_t len);
 static bool lmi_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t len);
-static bool lmi_mass_erase(target_s *target, platform_timeout_s *print_progess);
 
 static const uint16_t lmi_flash_write_stub[] = {
 #include "flashstub/lmi.stub"
@@ -141,7 +140,6 @@ bool lm3s_probe(target_s *const target, const uint16_t did1)
 		return false;
 	}
 	target->driver = "Stellaris";
-	target->mass_erase = lmi_mass_erase;
 	return true;
 }
 
@@ -177,7 +175,6 @@ bool tm4c_probe(target_s *const target, const uint16_t did1)
 		return false;
 	}
 	target->driver = "Tiva-C";
-	target->mass_erase = lmi_mass_erase;
 	cortex_ap(target)->dp->quirks |= ADIV5_DP_QUIRK_DUPED_AP;
 	return true;
 }
@@ -235,10 +232,4 @@ static bool lmi_flash_write(target_flash_s *flash, target_addr_t dest, const voi
 		return false;
 
 	return cortexm_run_stub(target, SRAM_BASE, dest, STUB_BUFFER_BASE, len, 0) == 0;
-}
-
-static bool lmi_mass_erase(target_s *target, platform_timeout_s *print_progess)
-{
-	(void)print_progess;
-	return lmi_flash_erase(target->flash, target->flash->start, target->flash->length);
 }
