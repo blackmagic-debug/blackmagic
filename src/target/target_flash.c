@@ -205,13 +205,22 @@ bool target_flash_mass_erase(target_s *const target)
 
 		/* Erase all target flash */
 		for (target_flash_s *flash = target->flash; flash; flash = flash->next) {
-			result = flash_prepare(flash, FLASH_OPERATION_ERASE);
+			/* If the flash has a mass erase function, use it */
+			const bool can_use_mass_erase = flash->mass_erase != NULL;
+
+			if (can_use_mass_erase)
+				DEBUG_TARGET("Running specialized flash mass erase for flash 0x%08" PRIx32 "\n", flash->start);
+			else
+				DEBUG_WARN("No specialized flash mass erase available for 0x%08" PRIx32 "\n", flash->start);
+
+			result = flash_prepare(flash, can_use_mass_erase ? FLASH_OPERATION_MASS_ERASE : FLASH_OPERATION_ERASE);
 			if (!result) {
 				DEBUG_ERROR("Failed to prepare flash 0x%08" PRIx32 " for mass erase\n", flash->start);
 				break;
 			}
 
-			result = flash_manual_mass_erase(flash, &print_progess);
+			result = can_use_mass_erase ? flash->mass_erase(flash, &print_progess) :
+										  flash_manual_mass_erase(flash, &print_progess);
 			result &= flash_done(flash); /* Don't overwrite previous result, AND with it instead */
 			if (!result) {
 				DEBUG_ERROR("Failed to mass erase flash 0x%08" PRIx32 "\n", flash->start);
