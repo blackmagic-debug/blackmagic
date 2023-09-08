@@ -235,7 +235,6 @@ bool rp_probe(target_s *target)
 	}
 	target->target_storage = (void *)priv_storage;
 
-	target->mass_erase = bmp_spi_mass_erase;
 	target->driver = "Raspberry RP2040";
 	target->target_options |= CORTEXM_TOPT_INHIBIT_NRST;
 	target->attach = rp_attach;

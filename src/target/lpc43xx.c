@@ -189,7 +189,7 @@
 #define LPC43x0_SPIFI_MCMD (LPC43x0_SPIFI_BASE + 0x018U)
 #define LPC43x0_SPIFI_STAT (LPC43x0_SPIFI_BASE + 0x01cU)
 
-#define LPC43x0_SPIFI_DATA_LENGTH(x)       ((x) & 0x00003fffU)
+#define LPC43x0_SPIFI_DATA_LENGTH(x)       ((x)&0x00003fffU)
 #define LPC43x0_SPIFI_DATA_SHIFT           15U
 #define LPC43x0_SPIFI_DATA_IN              (0U << 15U)
 #define LPC43x0_SPIFI_DATA_OUT             (1U << 15U)
@@ -504,7 +504,6 @@ bool lpc43xx_probe(target_s *const t)
 		if (part_id.part == LPC43xx_PARTID_INVALID)
 			return false;
 
-		t->mass_erase = bmp_spi_mass_erase;
 		t->enter_flash_mode = lpc43x0_enter_flash_mode;
 		t->exit_flash_mode = lpc43x0_exit_flash_mode;
 		lpc43x0_detect(t, part_id);
