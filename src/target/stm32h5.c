@@ -359,18 +359,11 @@ static bool stm32h5_flash_write(
 
 static bool stm32h5_mass_erase(target_s *const target, platform_timeout_s *const print_progess)
 {
-	/* To start mass erase, enter into Flash mode */
-	if (!stm32h5_enter_flash_mode(target))
-		return false;
-
 	/* Trigger the mass erase */
 	target_mem32_write32(target, STM32H5_FLASH_CTRL, STM32H5_FLASH_CTRL_MASS_ERASE);
 	target_mem32_write32(target, STM32H5_FLASH_CTRL, STM32H5_FLASH_CTRL_MASS_ERASE | STM32H5_FLASH_CTRL_START);
 	/* And wait for it to complete, reporting errors along the way */
-	const bool result = stm32h5_flash_wait_complete(target, print_progess);
-
-	/* When done, leave Flash mode */
-	return stm32h5_exit_flash_mode(target) && result;
+	return stm32h5_flash_wait_complete(target, print_progess);
 }
 
 static bool stm32h5_cmd_uid(target_s *target, int argc, const char **argv)

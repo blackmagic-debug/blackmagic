@@ -217,8 +217,6 @@ static bool hc32l110_flash_write(
 
 static bool hc32l110_mass_erase(target_s *const target, platform_timeout_s *const print_progess)
 {
-	hc32l110_enter_flash_mode(target);
-
 	hc32l110_flash_cr_unlock(target);
 	target_mem32_write32(target, HC32L110_FLASH_CR, HC32L110_FLASH_CR_OP_ERASE_CHIP);
 	if (!hc32l110_check_flash_completion(target, 500U, print_progess))

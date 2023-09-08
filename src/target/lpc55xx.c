@@ -620,6 +620,7 @@ bool lpc55_dmap_probe(adiv5_access_port_s *ap)
 
 	target->driver = "LPC55 Debug Mailbox";
 	target->regs_size = 0;
+	target->enter_flash_mode = target_enter_flash_mode_stub;
 	target->mass_erase = lpc55_dmap_mass_erase;
 
 	return true;

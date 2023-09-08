@@ -171,27 +171,22 @@ static bool lpc17xx_exit_flash_mode(target_s *const target)
 static bool lpc17xx_mass_erase(target_s *const target, platform_timeout_s *const print_progess)
 {
 	iap_result_s result;
-	lpc17xx_enter_flash_mode(target);
 
 	if (lpc17xx_iap_call(target, &result, print_progess, IAP_CMD_PREPARE, 0, FLASH_NUM_SECTOR - 1U)) {
-		lpc17xx_exit_flash_mode(target);
 		DEBUG_ERROR("lpc17xx_cmd_erase: prepare failed %" PRIu32 "\n", result.return_code);
 		return false;
 	}
 
 	if (lpc17xx_iap_call(target, &result, print_progess, IAP_CMD_ERASE, 0, FLASH_NUM_SECTOR - 1U, CPU_CLK_KHZ)) {
-		lpc17xx_exit_flash_mode(target);
 		DEBUG_ERROR("lpc17xx_cmd_erase: erase failed %" PRIu32 "\n", result.return_code);
 		return false;
 	}
 
 	if (lpc17xx_iap_call(target, &result, print_progess, IAP_CMD_BLANKCHECK, 0, FLASH_NUM_SECTOR - 1U)) {
-		lpc17xx_exit_flash_mode(target);
 		DEBUG_ERROR("lpc17xx_cmd_erase: blankcheck failed %" PRIu32 "\n", result.return_code);
 		return false;
 	}
 
-	lpc17xx_exit_flash_mode(target);
 	return true;
 }
 

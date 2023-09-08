@@ -569,6 +569,7 @@ bool kinetis_mdm_probe(adiv5_access_port_s *ap)
 		return false;
 	}
 
+	t->enter_flash_mode = target_enter_flash_mode_stub;
 	t->mass_erase = kinetis_mdm_mass_erase;
 	adiv5_ap_ref(ap);
 	t->priv = ap;
