@@ -174,6 +174,20 @@ bool target_flash_erase(target_s *target, target_addr_t addr, size_t len)
 	return result;
 }
 
+/* Run specialized target mass erase if available, otherwise erase all flash' */
+bool target_flash_mass_erase(target_s *const target)
+{
+	if (target->mass_erase) {
+		DEBUG_TARGET("Running specialized target mass erase\n");
+
+		/* Run specialized target mass erase */
+		return target->mass_erase(target);
+	} else {
+		DEBUG_WARN("No specialized target mass erase available\n");
+		return false;
+	}
+}
+
 bool flash_buffer_alloc(target_flash_s *flash)
 {
 	/* Allocate buffer */

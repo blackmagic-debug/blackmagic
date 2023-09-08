@@ -191,7 +191,6 @@ static bool lpc17xx_mass_erase(target_s *target)
 	}
 
 	lpc17xx_exit_flash_mode(target);
-	tc_printf(target, "Erase OK.\n");
 	return true;
 }
 
