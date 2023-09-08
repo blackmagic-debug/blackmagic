@@ -285,7 +285,7 @@ static bool lpc43xx_iap_init(target_flash_s *flash);
 static lpc43xx_partid_s lpc43xx_iap_read_partid(target_s *t);
 static bool lpc43xx_enter_flash_mode(target_s *t);
 static bool lpc43xx_iap_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
-static bool lpc43xx_iap_mass_erase(target_s *t);
+static bool lpc43xx_iap_mass_erase(target_s *t, platform_timeout_s *print_progess);
 static void lpc43xx_wdt_set_period(target_s *t);
 static void lpc43xx_wdt_kick(target_s *t);
 
@@ -1000,19 +1000,19 @@ static bool lpc43xx_iap_flash_erase(target_flash_s *f, const target_addr_t addr,
 	return lpc_flash_erase(f, addr, len);
 }
 
-static bool lpc43xx_iap_mass_erase(target_s *t)
+static bool lpc43xx_iap_mass_erase(target_s *const t, platform_timeout_s *const print_progess)
 {
 	lpc43xx_priv_s *const priv = (lpc43xx_priv_s *)t->target_storage;
-	platform_timeout_s timeout;
-	platform_timeout_set(&timeout, 500);
+
 	lpc43xx_iap_init(t->flash);
 
+	/* FIXME: since this is looking like bank mass erases, maybe this should be in flash->mass_erase */
 	for (size_t bank = 0; bank < priv->flash_banks; ++bank) {
 		lpc_flash_s *const f = (lpc_flash_s *)t->flash;
 		if (lpc_iap_call(f, NULL, IAP_CMD_PREPARE, 0, FLASH_NUM_SECTOR - 1U, bank) ||
 			lpc_iap_call(f, NULL, IAP_CMD_ERASE, 0, FLASH_NUM_SECTOR - 1U, CPU_CLK_KHZ, bank))
 			return false;
-		target_print_progress(&timeout);
+		target_print_progress(print_progess);
 	}
 
 	return true;

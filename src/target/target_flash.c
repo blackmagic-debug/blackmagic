@@ -177,11 +177,15 @@ bool target_flash_erase(target_s *target, target_addr_t addr, size_t len)
 /* Run specialized target mass erase if available, otherwise erase all flash' */
 bool target_flash_mass_erase(target_s *const target)
 {
+	/* Setup progress printout */
+	platform_timeout_s print_progess;
+	platform_timeout_set(&print_progess, 500U);
+
 	if (target->mass_erase) {
 		DEBUG_TARGET("Running specialized target mass erase\n");
 
 		/* Run specialized target mass erase */
-		return target->mass_erase(target);
+		return target->mass_erase(target, &print_progess);
 	} else {
 		DEBUG_WARN("No specialized target mass erase available\n");
 		return false;

@@ -144,13 +144,13 @@ spi_flash_s *bmp_spi_add_flash(target_s *const target, const target_addr_t begin
 }
 
 /* Note: These routines assume that the first Flash registered on the target is a SPI Flash device */
-bool bmp_spi_mass_erase(target_s *const target)
+bool bmp_spi_mass_erase(target_s *const target, platform_timeout_s *const print_progess)
 {
-	/* Extract the Flash structure and set up timeouts */
-	const spi_flash_s *const flash = (spi_flash_s *)target->flash;
-	platform_timeout_s timeout;
-	platform_timeout_set(&timeout, 500);
 	DEBUG_TARGET("Running %s\n", __func__);
+
+	/* Extract the Flash structure */
+	const spi_flash_s *const flash = (spi_flash_s *)target->flash;
+
 	/* Go into Flash mode and tell the Flash to enable writing */
 	target->enter_flash_mode(target);
 	flash->run_command(target, SPI_FLASH_CMD_WRITE_ENABLE, 0U);
@@ -162,7 +162,7 @@ bool bmp_spi_mass_erase(target_s *const target)
 	/* Execute a full chip erase and wait for the operatoin to complete */
 	flash->run_command(target, SPI_FLASH_CMD_CHIP_ERASE, 0U);
 	while (bmp_spi_read_status(target, flash) & SPI_FLASH_STATUS_BUSY)
-		target_print_progress(&timeout);
+		target_print_progress(print_progess);
 
 	/* Finally, leave Flash mode to conclude business */
 	return target->exit_flash_mode(target);

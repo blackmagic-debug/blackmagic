@@ -82,7 +82,7 @@
 static bool stm32wb0_enter_flash_mode(target_s *target);
 static bool stm32wb0_flash_erase(target_flash_s *flash, target_addr_t addr, size_t len);
 static bool stm32wb0_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t len);
-static bool stm32wb0_mass_erase(target_s *target);
+static bool stm32wb0_mass_erase(target_s *target, platform_timeout_s *print_progess);
 
 static void stm32wb0_add_flash(target_s *const target, const size_t length)
 {
@@ -208,16 +208,14 @@ static bool stm32wb0_flash_write(
 	return true;
 }
 
-static bool stm32wb0_mass_erase(target_s *const target)
+static bool stm32wb0_mass_erase(target_s *const target, platform_timeout_s *const print_progess)
 {
 	/* To start the mass erase, prep the controller */
 	if (!stm32wb0_enter_flash_mode(target))
 		return false;
 
-	platform_timeout_s timeout;
-	platform_timeout_set(&timeout, 500U);
 	/* Set up and run the mass erase */
 	target_mem32_write32(target, STM32WB0_FLASH_COMMAND, STM32WB0_FLASH_COMMAND_MASS_ERASE);
 	/* Then wait for the erase to complete and report any errors */
-	return stm32wb0_flash_wait_complete(target, &timeout);
+	return stm32wb0_flash_wait_complete(target, print_progess);
 }

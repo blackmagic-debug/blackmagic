@@ -93,6 +93,6 @@ void bmp_spi_run_command(spi_bus_e bus, uint8_t device, uint16_t command, target
 
 spi_flash_s *bmp_spi_add_flash(target_s *target, target_addr_t begin, size_t length, spi_read_func spi_read,
 	spi_write_func spi_write, spi_run_command_func spi_run_command);
-bool bmp_spi_mass_erase(target_s *target);
+bool bmp_spi_mass_erase(target_s *target, platform_timeout_s *print_progess);
 
 #endif /* TARGET_SPI_H */

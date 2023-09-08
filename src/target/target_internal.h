@@ -138,7 +138,7 @@ struct target {
 	breakwatch_s *bw_list;
 
 	/* Recovery functions */
-	bool (*mass_erase)(target_s *target);
+	bool (*mass_erase)(target_s *target, platform_timeout_s *print_progess); /* Mass erase all target flash */
 
 	/* Flash functions */
 	bool (*enter_flash_mode)(target_s *target);

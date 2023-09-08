@@ -78,7 +78,7 @@ static bool hc32l110_flash_prepare(target_flash_s *flash);
 static bool hc32l110_flash_done(target_flash_s *flash);
 static bool hc32l110_flash_erase(target_flash_s *flash, target_addr_t addr, size_t length);
 static bool hc32l110_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t length);
-static bool hc32l110_mass_erase(target_s *target);
+static bool hc32l110_mass_erase(target_s *target, platform_timeout_s *print_progess);
 
 static void hc32l110_add_flash(target_s *target, const uint32_t flash_size)
 {
@@ -130,7 +130,8 @@ static void hc32l110_flash_cr_unlock(target_s *const target)
 	target_mem32_write32(target, HC32L110_FLASH_BYPASS, 0xa5a5U);
 }
 
-static bool hc32l110_check_flash_completion(target_s *const target, const uint32_t timeout_ms)
+static bool hc32l110_check_flash_completion(
+	target_s *const target, const uint32_t timeout_ms, platform_timeout_s *const print_progess)
 {
 	platform_timeout_s timeout;
 	platform_timeout_set(&timeout, timeout_ms);
@@ -139,6 +140,8 @@ static bool hc32l110_check_flash_completion(target_s *const target, const uint32
 		status = target_mem32_read32(target, HC32L110_FLASH_CR);
 		if (target_check_error(target) || platform_timeout_is_expired(&timeout))
 			return false;
+		if (print_progess)
+			target_print_progress(print_progess);
 	}
 	return true;
 }
@@ -201,7 +204,7 @@ static bool hc32l110_flash_erase(target_flash_s *const flash, const target_addr_
 	(void)length;
 	/* The Flash controller automatically erases the whole sector after one write operation */
 	target_mem32_write32(flash->t, addr, 0);
-	return hc32l110_check_flash_completion(flash->t, 1000);
+	return hc32l110_check_flash_completion(flash->t, 1000, NULL);
 }
 
 static bool hc32l110_flash_write(
@@ -209,23 +212,23 @@ static bool hc32l110_flash_write(
 {
 	(void)length;
 	target_mem32_write32(flash->t, dest, *(const uint32_t *)src);
-	return hc32l110_check_flash_completion(flash->t, 1000);
+	return hc32l110_check_flash_completion(flash->t, 1000, NULL);
 }
 
-static bool hc32l110_mass_erase(target_s *target)
+static bool hc32l110_mass_erase(target_s *const target, platform_timeout_s *const print_progess)
 {
 	hc32l110_enter_flash_mode(target);
 
 	hc32l110_flash_cr_unlock(target);
 	target_mem32_write32(target, HC32L110_FLASH_CR, HC32L110_FLASH_CR_OP_ERASE_CHIP);
-	if (!hc32l110_check_flash_completion(target, 500))
+	if (!hc32l110_check_flash_completion(target, 500U, print_progess))
 		return false;
 
 	hc32l110_slock_unlock_all(target);
 
 	// The Flash controller automatically erases the whole Flash after one write operation
 	target_mem32_write32(target, 0, 0);
-	const bool result = hc32l110_check_flash_completion(target, 4000);
+	const bool result = hc32l110_check_flash_completion(target, 4000U, print_progess);
 
 	hc32l110_slock_lock_all(target);
 	return result;

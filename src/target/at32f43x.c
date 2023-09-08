@@ -50,7 +50,7 @@ static bool at32f43_flash_prepare(target_flash_s *flash);
 static bool at32f43_flash_erase(target_flash_s *flash, target_addr_t addr, size_t len);
 static bool at32f43_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t len);
 static bool at32f43_flash_done(target_flash_s *flash);
-static bool at32f43_mass_erase(target_s *target);
+static bool at32f43_mass_erase(target_s *target, platform_timeout_s *print_progess);
 
 /* Flash memory controller register map */
 #define AT32F43x_FLASH_REG_BASE   0x40023c00U
@@ -538,17 +538,15 @@ static bool at32f43_mass_erase_bank(
 	return at32f43_flash_busy_wait(target, bank_reg_offset, timeout);
 }
 
-static bool at32f43_mass_erase(target_s *target)
+static bool at32f43_mass_erase(target_s *const target, platform_timeout_s *const print_progess)
 {
 	/* Datasheet: bank erase takes seconds to complete */
-	platform_timeout_s timeout;
-	platform_timeout_set(&timeout, 500);
-	if (!at32f43_mass_erase_bank(target, AT32F43x_FLASH_BANK1_REG_OFFSET, &timeout))
+	if (!at32f43_mass_erase_bank(target, AT32F43x_FLASH_BANK1_REG_OFFSET, print_progess))
 		return false;
 
 	/* For dual-bank targets, mass erase bank 2 as well */
 	if (target->flash->next)
-		return at32f43_mass_erase_bank(target, AT32F43x_FLASH_BANK2_REG_OFFSET, &timeout);
+		return at32f43_mass_erase_bank(target, AT32F43x_FLASH_BANK2_REG_OFFSET, print_progess);
 	return true;
 }
 

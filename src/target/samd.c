@@ -45,7 +45,7 @@
 static bool samd_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
 static bool samd_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
 /* NB: This is not marked static on purpose as it's used by samx5x.c. */
-bool samd_mass_erase(target_s *t);
+bool samd_mass_erase(target_s *t, platform_timeout_s *print_progess);
 
 static bool samd_cmd_lock_flash(target_s *t, int argc, const char **argv);
 static bool samd_cmd_unlock_flash(target_s *t, int argc, const char **argv);
@@ -601,15 +601,15 @@ static bool samd_wait_nvm_ready(target_s *t)
 	return true;
 }
 
-static bool samd_wait_dsu_ready(target_s *const t, uint32_t *const result, platform_timeout_s *const timeout)
+static bool samd_wait_dsu_ready(target_s *const t, uint32_t *const result, platform_timeout_s *const print_progress)
 {
 	uint32_t status = 0;
 	while ((status & (SAMD_STATUSA_DONE | SAMD_STATUSA_PERR | SAMD_STATUSA_FAIL)) == 0) {
 		status = target_mem32_read32(t, SAMD_DSU_CTRLSTAT);
 		if (target_check_error(t))
 			return false;
-		if (timeout)
-			target_print_progress(timeout);
+		if (print_progress)
+			target_print_progress(print_progress);
 	}
 	*result = status;
 	return true;
@@ -666,7 +666,7 @@ static bool samd_flash_write(target_flash_s *f, target_addr_t dest, const void *
 }
 
 /* Uses the Device Service Unit to erase the entire flash */
-bool samd_mass_erase(target_s *t)
+bool samd_mass_erase(target_s *const t, platform_timeout_s *const print_progess)
 {
 	/* Clear the DSU status bits */
 	target_mem32_write32(t, SAMD_DSU_CTRLSTAT, SAMD_STATUSA_DONE | SAMD_STATUSA_PERR | SAMD_STATUSA_FAIL);
@@ -675,9 +675,7 @@ bool samd_mass_erase(target_s *t)
 	target_mem32_write32(t, SAMD_DSU_CTRLSTAT, SAMD_CTRL_CHIP_ERASE);
 
 	uint32_t status = 0;
-	platform_timeout_s timeout;
-	platform_timeout_set(&timeout, 500);
-	if (!samd_wait_dsu_ready(t, &status, &timeout))
+	if (!samd_wait_dsu_ready(t, &status, print_progess))
 		return false;
 
 	/* Test the protection error bit in Status A */

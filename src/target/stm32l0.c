@@ -177,7 +177,7 @@ static bool stm32lx_flash_erase(target_flash_s *flash, target_addr_t addr, size_
 static bool stm32lx_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t length);
 static bool stm32lx_eeprom_erase(target_flash_s *flash, target_addr_t addr, size_t length);
 static bool stm32lx_eeprom_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t length);
-static bool stm32lx_mass_erase(target_s *target);
+static bool stm32lx_mass_erase(target_s *target, platform_timeout_s *print_progess);
 
 typedef struct stm32l_priv {
 	target_addr32_t uid_taddr;
@@ -659,8 +659,10 @@ static bool stm32lx_eeprom_write(
 	return stm32lx_nvm_busy_wait(target, flash_base, NULL);
 }
 
-static bool stm32lx_mass_erase(target_s *const target)
+static bool stm32lx_mass_erase(target_s *const target, platform_timeout_s *const print_progess)
 {
+	(void)print_progess;
+
 	for (target_flash_s *flash = target->flash; flash; flash = flash->next) {
 		const bool result = stm32lx_flash_erase(flash, flash->start, flash->length);
 		if (!result)

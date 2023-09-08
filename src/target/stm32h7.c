@@ -212,7 +212,7 @@ static bool stm32h7_flash_erase(target_flash_s *target_flash, target_addr_t addr
 static bool stm32h7_flash_write(target_flash_s *target_flash, target_addr_t dest, const void *src, size_t len);
 static bool stm32h7_flash_prepare(target_flash_s *target_flash);
 static bool stm32h7_flash_done(target_flash_s *target_flash);
-static bool stm32h7_mass_erase(target_s *target);
+static bool stm32h7_mass_erase(target_s *target, platform_timeout_s *print_progess);
 
 static uint32_t stm32h7_flash_bank_base(const uint32_t addr)
 {
@@ -600,7 +600,7 @@ static bool stm32h7_check_bank(target_s *const target, const uint32_t reg_base)
 }
 
 /* Both banks are erased in parallel.*/
-static bool stm32h7_mass_erase(target_s *target)
+static bool stm32h7_mass_erase(target_s *const target, platform_timeout_s *const print_progess)
 {
 	align_e psize = ALIGN_64BIT;
 	/*
@@ -617,11 +617,9 @@ static bool stm32h7_mass_erase(target_s *target)
 		!stm32h7_erase_bank(target, psize, STM32H7_FPEC2_BASE))
 		return false;
 
-	platform_timeout_s timeout;
-	platform_timeout_set(&timeout, 500);
 	/* Wait for the banks to finish erasing */
-	if (!stm32h7_wait_erase_bank(target, &timeout, STM32H7_FPEC1_BASE) ||
-		!stm32h7_wait_erase_bank(target, &timeout, STM32H7_FPEC2_BASE))
+	if (!stm32h7_wait_erase_bank(target, print_progess, STM32H7_FPEC1_BASE) ||
+		!stm32h7_wait_erase_bank(target, print_progess, STM32H7_FPEC2_BASE))
 		return false;
 
 	/* Check the banks for final errors */

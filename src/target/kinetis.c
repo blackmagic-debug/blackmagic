@@ -539,7 +539,7 @@ static bool kinetis_flash_done(target_flash_s *const f)
  * device.  This provides a fake target to allow a monitor command interface
  */
 
-static bool kinetis_mdm_mass_erase(target_s *t);
+static bool kinetis_mdm_mass_erase(target_s *t, platform_timeout_s *const print_progess);
 static bool kinetis_mdm_cmd_ke04_mode(target_s *t, int argc, const char **argv);
 
 const command_s kinetis_mdm_cmd_list[] = {
@@ -593,13 +593,13 @@ static bool kinetis_mdm_cmd_ke04_mode(target_s *t, int argc, const char **argv)
 	return true;
 }
 
-static bool kinetis_mdm_mass_erase(target_s *t)
+static bool kinetis_mdm_mass_erase(target_s *const t, platform_timeout_s *const print_progess)
 {
 	adiv5_access_port_s *ap = t->priv;
 
 	/* Keep the MCU in reset as stated in KL25PxxM48SF0RM */
 	if (t->ke04_mode)
-		adiv5_ap_write(ap, MDM_CONTROL, MDM_CONTROL_SYS_RESET);
+		adiv5_ap_write(ap, MDM_CONTROL, MDM_CONTROL_SYS_RESET); /* FIXME: move this to enter_flash_mode? */
 
 	uint32_t status = adiv5_ap_read(ap, MDM_STATUS);
 	uint32_t control = adiv5_ap_read(ap, MDM_CONTROL);
@@ -625,18 +625,16 @@ static bool kinetis_mdm_mass_erase(target_s *t)
 	}
 
 	adiv5_ap_write(ap, MDM_CONTROL, MDM_CONTROL_MASS_ERASE);
-	platform_timeout_s timeout;
-	platform_timeout_set(&timeout, 500);
 
 	do {
 		status = adiv5_ap_read(ap, MDM_STATUS);
-		target_print_progress(&timeout);
+		target_print_progress(print_progess);
 	} while (!(status & MDM_STATUS_MASS_ERASE_ACK));
 	tc_printf(t, "Mass erase acknowledged\n");
 
 	do {
 		control = adiv5_ap_read(ap, MDM_CONTROL);
-		target_print_progress(&timeout);
+		target_print_progress(print_progess);
 	} while (!(control & MDM_CONTROL_MASS_ERASE));
 	tc_printf(t, "Mass erase complete\n");
 

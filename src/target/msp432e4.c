@@ -185,7 +185,7 @@ typedef struct msp432e4_flash {
 
 static bool msp432e4_flash_erase(target_flash_s *flash, target_addr_t addr, size_t length);
 static bool msp432e4_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t length);
-static bool msp432e4_mass_erase(target_s *target);
+static bool msp432e4_mass_erase(target_s *target, platform_timeout_s *print_progess);
 
 static void msp432e4_add_flash(
 	target_s *const target, const uint32_t sector_size, const uint32_t base, const size_t length)
@@ -299,15 +299,13 @@ static bool msp432e4_flash_write(
 }
 
 /* Mass erases the Flash */
-static bool msp432e4_mass_erase(target_s *const target)
+static bool msp432e4_mass_erase(target_s *const target, platform_timeout_s *const print_progess)
 {
 	const msp432e4_flash_s *const flash = (msp432e4_flash_s *)target->flash;
-	platform_timeout_s timeout;
-	platform_timeout_set(&timeout, 500);
 	/* Kick off the mass erase */
 	target_mem32_write32(target, MSP432E4_FLASH_CTRL, (flash->flash_key << 16U) | MSP432E4_FLASH_CTRL_MASS_ERASE);
 	/* Wait for the erase to complete, printing a '.' every so often to keep GDB happy */
 	while (target_mem32_read32(target, MSP432E4_FLASH_CTRL) & MSP432E4_FLASH_CTRL_MASS_ERASE)
-		target_print_progress(&timeout);
+		target_print_progress(print_progess);
 	return true;
 }

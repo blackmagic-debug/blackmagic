@@ -65,7 +65,7 @@ static bool stm32l4_attach(target_s *target);
 static void stm32l4_detach(target_s *target);
 static bool stm32l4_flash_erase(target_flash_s *flash, target_addr_t addr, size_t len);
 static bool stm32l4_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t len);
-static bool stm32l4_mass_erase(target_s *target);
+static bool stm32l4_mass_erase(target_s *target, platform_timeout_s *print_progess);
 
 const command_s stm32l4_cmd_list[] = {
 	{"erase_bank1", stm32l4_cmd_erase_bank1, "Erase entire bank1 flash memory"},
@@ -855,7 +855,7 @@ static void stm32l4_flash_unlock(target_s *const target)
 	}
 }
 
-static bool stm32l4_flash_busy_wait(target_s *const target, platform_timeout_s *timeout)
+static bool stm32l4_flash_busy_wait(target_s *const target, platform_timeout_s *const print_progess)
 {
 	/* Read FLASH_SR to poll for BSY bit */
 	uint32_t status = FLASH_SR_BSY;
@@ -865,8 +865,8 @@ static bool stm32l4_flash_busy_wait(target_s *const target, platform_timeout_s *
 			DEBUG_ERROR("stm32l4 Flash error: status 0x%" PRIx32 "\n", status);
 			return false;
 		}
-		if (timeout)
-			target_print_progress(timeout);
+		if (print_progess)
+			target_print_progress(print_progess);
 	}
 	return true;
 }
@@ -911,7 +911,7 @@ static bool stm32l4_flash_write(target_flash_s *flash, target_addr_t dest, const
 	return stm32l4_flash_busy_wait(target, NULL);
 }
 
-static bool stm32l4_cmd_erase(target_s *const target, const uint32_t action)
+static bool stm32l4_cmd_erase(target_s *const target, const uint32_t action, platform_timeout_s *const print_progess)
 {
 	stm32l4_flash_unlock(target);
 	/* Erase time is 25 ms. Timeout logic shouldn't get fired.*/
@@ -919,15 +919,13 @@ static bool stm32l4_cmd_erase(target_s *const target, const uint32_t action)
 	stm32l4_flash_write32(target, FLASH_CR, action);
 	stm32l4_flash_write32(target, FLASH_CR, action | FLASH_CR_STRT);
 
-	platform_timeout_s timeout;
-	platform_timeout_set(&timeout, 500);
 	/* Wait for completion or an error */
-	return stm32l4_flash_busy_wait(target, &timeout);
+	return stm32l4_flash_busy_wait(target, print_progess);
 }
 
-static bool stm32l4_mass_erase(target_s *const target)
+static bool stm32l4_mass_erase(target_s *const target, platform_timeout_s *const print_progess)
 {
-	return stm32l4_cmd_erase(target, FLASH_CR_MER1 | FLASH_CR_MER2);
+	return stm32l4_cmd_erase(target, FLASH_CR_MER1 | FLASH_CR_MER2, print_progess);
 }
 
 static bool stm32l4_cmd_erase_bank1(target_s *const target, const int argc, const char **const argv)
@@ -935,7 +933,7 @@ static bool stm32l4_cmd_erase_bank1(target_s *const target, const int argc, cons
 	(void)argc;
 	(void)argv;
 	tc_printf(target, "Erasing bank %u: ", 1U);
-	const bool result = stm32l4_cmd_erase(target, FLASH_CR_MER1);
+	const bool result = stm32l4_cmd_erase(target, FLASH_CR_MER1, NULL);
 	tc_printf(target, "done\n");
 	return result;
 }
@@ -945,7 +943,7 @@ static bool stm32l4_cmd_erase_bank2(target_s *const target, const int argc, cons
 	(void)argc;
 	(void)argv;
 	tc_printf(target, "Erasing bank %u: ", 2U);
-	const bool result = stm32l4_cmd_erase(target, FLASH_CR_MER2);
+	const bool result = stm32l4_cmd_erase(target, FLASH_CR_MER2, NULL);
 	tc_printf(target, "done\n");
 	return result;
 }

@@ -66,8 +66,9 @@ typedef struct lpc40xx_priv {
 static void lpc40xx_extended_reset(target_s *target);
 static bool lpc40xx_enter_flash_mode(target_s *target);
 static bool lpc40xx_exit_flash_mode(target_s *target);
-static bool lpc40xx_mass_erase(target_s *target);
-iap_status_e lpc40xx_iap_call(target_s *target, iap_result_s *result, iap_cmd_e cmd, ...);
+static bool lpc40xx_mass_erase(target_s *target, platform_timeout_s *print_progess);
+iap_status_e lpc40xx_iap_call(
+	target_s *target, iap_result_s *result, platform_timeout_s *print_progess, iap_cmd_e cmd, ...);
 
 static void lpc40xx_add_flash(target_s *target, uint32_t addr, size_t len, size_t erasesize, uint8_t base_sector)
 {
@@ -105,7 +106,7 @@ bool lpc40xx_probe(target_s *target)
 	lpc40xx_enter_flash_mode(target);
 	/* Read the Part ID */
 	iap_result_s result;
-	lpc40xx_iap_call(target, &result, IAP_CMD_PARTID);
+	lpc40xx_iap_call(target, &result, NULL, IAP_CMD_PARTID);
 	/* Transition back to normal mode and resume the target */
 	lpc40xx_exit_flash_mode(target);
 	target_halt_resume(target, false);
@@ -161,24 +162,24 @@ static bool lpc40xx_exit_flash_mode(target_s *const target)
 	return true;
 }
 
-static bool lpc40xx_mass_erase(target_s *target)
+static bool lpc40xx_mass_erase(target_s *const target, platform_timeout_s *const print_progess)
 {
 	iap_result_s result;
 	lpc40xx_enter_flash_mode(target);
 
-	if (lpc40xx_iap_call(target, &result, IAP_CMD_PREPARE, 0, FLASH_NUM_SECTOR - 1U)) {
+	if (lpc40xx_iap_call(target, &result, print_progess, IAP_CMD_PREPARE, 0, FLASH_NUM_SECTOR - 1U)) {
 		lpc40xx_exit_flash_mode(target);
 		DEBUG_ERROR("lpc40xx_cmd_erase: prepare failed %" PRIu32 "\n", result.return_code);
 		return false;
 	}
 
-	if (lpc40xx_iap_call(target, &result, IAP_CMD_ERASE, 0, FLASH_NUM_SECTOR - 1U, CPU_CLK_KHZ)) {
+	if (lpc40xx_iap_call(target, &result, print_progess, IAP_CMD_ERASE, 0, FLASH_NUM_SECTOR - 1U, CPU_CLK_KHZ)) {
 		lpc40xx_exit_flash_mode(target);
 		DEBUG_ERROR("lpc40xx_cmd_erase: erase failed %" PRIu32 "\n", result.return_code);
 		return false;
 	}
 
-	if (lpc40xx_iap_call(target, &result, IAP_CMD_BLANKCHECK, 0, FLASH_NUM_SECTOR - 1U)) {
+	if (lpc40xx_iap_call(target, &result, print_progess, IAP_CMD_BLANKCHECK, 0, FLASH_NUM_SECTOR - 1U)) {
 		lpc40xx_exit_flash_mode(target);
 		DEBUG_ERROR("lpc40xx_cmd_erase: blankcheck failed %" PRIu32 "\n", result.return_code);
 		return false;
@@ -215,7 +216,8 @@ static size_t lpc40xx_iap_params(const iap_cmd_e cmd)
 	}
 }
 
-iap_status_e lpc40xx_iap_call(target_s *target, iap_result_s *result, iap_cmd_e cmd, ...)
+iap_status_e lpc40xx_iap_call(
+	target_s *const target, iap_result_s *const result, platform_timeout_s *const print_progess, iap_cmd_e cmd, ...)
 {
 	/* Set up our IAP frame with the break opcode and command to run */
 	iap_frame_s frame = {
@@ -230,7 +232,7 @@ iap_status_e lpc40xx_iap_call(target_s *target, iap_result_s *result, iap_cmd_e 
 	for (size_t i = 0; i < params_count; ++i)
 		frame.config.params[i] = va_arg(params, uint32_t);
 	va_end(params);
-	for (size_t i = params_count; i < 4; ++i)
+	for (size_t i = params_count; i < 4U; ++i)
 		frame.config.params[i] = 0U;
 
 	/* Copy the structure to RAM */
@@ -243,22 +245,22 @@ iap_status_e lpc40xx_iap_call(target_s *target, iap_result_s *result, iap_cmd_e 
 	/* Point r0 to the start of the config block */
 	regs[0] = iap_params_addr;
 	/* And r1 to the same so we re-use the same memory for the results */
-	regs[1] = iap_params_addr;
+	regs[1U] = iap_params_addr;
 	/* Set the top of stack to the top of the RAM block we're using */
 	regs[CORTEX_REG_MSP] = IAP_RAM_BASE + MIN_RAM_SIZE;
 	/* Point the return address to our breakpoint opcode (thumb mode) */
-	regs[CORTEX_REG_LR] = IAP_RAM_BASE | 1;
+	regs[CORTEX_REG_LR] = IAP_RAM_BASE | 1U;
 	/* And set the program counter to the IAP ROM entrypoint */
 	regs[CORTEX_REG_PC] = IAP_ENTRYPOINT;
 	target_regs_write(target, regs);
 
 	platform_timeout_s timeout;
-	platform_timeout_set(&timeout, 500);
+	platform_timeout_set(&timeout, 500U);
 	/* Start the target and wait for it to halt again */
 	target_halt_resume(target, false);
 	while (!target_halt_poll(target, NULL)) {
-		if (cmd == IAP_CMD_ERASE)
-			target_print_progress(&timeout);
+		if (print_progess)
+			target_print_progress(print_progess);
 		else if (cmd == IAP_CMD_PARTID && platform_timeout_is_expired(&timeout)) {
 			target_halt_request(target);
 			return IAP_STATUS_INVALID_COMMAND;

@@ -31,7 +31,7 @@ static bool nrf51_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 static bool nrf51_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
 static bool nrf51_flash_prepare(target_flash_s *f);
 static bool nrf51_flash_done(target_flash_s *f);
-static bool nrf51_mass_erase(target_s *t);
+static bool nrf51_mass_erase(target_s *t, platform_timeout_s *print_progess);
 
 static bool nrf51_cmd_erase_uicr(target_s *t, int argc, const char **argv);
 static bool nrf51_cmd_protect_flash(target_s *t, int argc, const char **argv);
@@ -164,14 +164,14 @@ bool nrf51_probe(target_s *t)
 	return true;
 }
 
-static bool nrf51_wait_ready(target_s *const t, platform_timeout_s *const timeout)
+static bool nrf51_wait_ready(target_s *const t, platform_timeout_s *const print_progress)
 {
 	/* Poll for NVMC_READY */
 	while (target_mem32_read32(t, NRF51_NVMC_READY) == 0) {
 		if (target_check_error(t))
 			return false;
-		if (timeout)
-			target_print_progress(timeout);
+		if (print_progress)
+			target_print_progress(print_progress);
 	}
 	return true;
 }
@@ -225,20 +225,16 @@ static bool nrf51_flash_write(target_flash_s *f, target_addr_t dest, const void 
 	return nrf51_wait_ready(t, NULL);
 }
 
-static bool nrf51_mass_erase(target_s *t)
+static bool nrf51_mass_erase(target_s *const t, platform_timeout_s *const print_progess)
 {
-	target_reset(t);
-
 	/* Enable erase */
 	target_mem32_write32(t, NRF51_NVMC_CONFIG, NRF51_NVMC_CONFIG_EEN);
 	if (!nrf51_wait_ready(t, NULL))
 		return false;
 
-	platform_timeout_s timeout;
-	platform_timeout_set(&timeout, 500U);
 	/* Erase all */
 	target_mem32_write32(t, NRF51_NVMC_ERASEALL, 1U);
-	return nrf51_wait_ready(t, &timeout);
+	return nrf51_wait_ready(t, print_progess);
 }
 
 static bool nrf51_cmd_erase_uicr(target_s *t, int argc, const char **argv)
@@ -399,7 +395,7 @@ static bool nrf51_cmd_read(target_s *t, int argc, const char **argv)
 
 #define NRF52_MDM_IDR 0x02880000U
 
-static bool nrf51_mdm_mass_erase(target_s *t);
+static bool nrf51_mdm_mass_erase(target_s *t, platform_timeout_s *print_progess);
 
 #define MDM_POWER_EN  ADIV5_DP_REG(0x01U)
 #define MDM_SELECT_AP ADIV5_DP_REG(0x02U)
@@ -436,21 +432,19 @@ bool nrf51_mdm_probe(adiv5_access_port_s *ap)
 	return true;
 }
 
-static bool nrf51_mdm_mass_erase(target_s *t)
+static bool nrf51_mdm_mass_erase(target_s *const t, platform_timeout_s *const print_progess)
 {
-	adiv5_access_port_s *ap = t->priv;
+	adiv5_access_port_s *const ap = t->priv;
 
 	uint32_t status = adiv5_ap_read(ap, MDM_STATUS);
 	adiv5_dp_write(ap->dp, MDM_POWER_EN, 0x50000000U);
 	adiv5_dp_write(ap->dp, MDM_SELECT_AP, 0x01000000U);
 	adiv5_ap_write(ap, MDM_CONTROL, 0x00000001U);
 
-	platform_timeout_s timeout;
-	platform_timeout_set(&timeout, 500U);
 	// Read until 0, probably should have a timeout here...
 	do {
 		status = adiv5_ap_read(ap, MDM_STATUS);
-		target_print_progress(&timeout);
+		target_print_progress(print_progess);
 	} while (status);
 
 	// The second read will provide true prot status

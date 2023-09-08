@@ -61,7 +61,7 @@ static bool lpc546xx_cmd_write_sector(target_s *t, int argc, const char **argv);
 static void lpc546xx_reset_attach(target_s *t);
 static bool lpc546xx_flash_init(target_s *t);
 static bool lpc546xx_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
-static bool lpc546xx_mass_erase(target_s *t);
+static bool lpc546xx_mass_erase(target_s *t, platform_timeout_s *print_progess);
 static void lpc546xx_wdt_set_period(target_s *t);
 static void lpc546xx_wdt_kick(target_s *t);
 
@@ -182,8 +182,10 @@ static void lpc546xx_reset_attach(target_s *t)
 	cortexm_attach(t);
 }
 
-static bool lpc546xx_mass_erase(target_s *t)
+static bool lpc546xx_mass_erase(target_s *t, platform_timeout_s *const print_progess)
 {
+	(void)print_progess;
+
 	const int result = lpc546xx_flash_erase(t->flash, t->flash->start, t->flash->length);
 	if (result != 0)
 		tc_printf(t, "Error erasing flash: %d\n", result);
