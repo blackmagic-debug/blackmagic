@@ -270,7 +270,7 @@ bool dap_read_block(
 		return false;
 	}
 
-	if (align > ALIGN_HALFWORD)
+	if (align > ALIGN_16BIT)
 		memcpy(dest, data, len);
 	else {
 		for (size_t i = 0; i < blocks; ++i) {
@@ -287,7 +287,7 @@ bool dap_write_block(
 	const size_t blocks = len >> MAX(align, 2U);
 	uint32_t data[256];
 
-	if (align > ALIGN_HALFWORD)
+	if (align > ALIGN_16BIT)
 		memcpy(data, src, len);
 	else {
 		for (size_t i = 0; i < blocks; ++i) {
@@ -336,14 +336,14 @@ static void mem_access_setup(const adiv5_access_port_s *const target_ap,
 {
 	uint32_t csw = target_ap->csw | ADIV5_AP_CSW_ADDRINC_SINGLE;
 	switch (align) {
-	case ALIGN_BYTE:
+	case ALIGN_8BIT:
 		csw |= ADIV5_AP_CSW_SIZE_BYTE;
 		break;
-	case ALIGN_HALFWORD:
+	case ALIGN_16BIT:
 		csw |= ADIV5_AP_CSW_SIZE_HALFWORD;
 		break;
-	case ALIGN_DWORD:
-	case ALIGN_WORD:
+	case ALIGN_64BIT:
+	case ALIGN_32BIT:
 		csw |= ADIV5_AP_CSW_SIZE_WORD;
 		break;
 	}

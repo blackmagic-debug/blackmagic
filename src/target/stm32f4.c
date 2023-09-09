@@ -162,7 +162,7 @@ static void stm32f4_add_flash(target_s *const t, const uint32_t addr, const size
 	f->erased = 0xffU;
 	sf->base_sector = base_sector;
 	sf->bank_split = split;
-	sf->psize = ALIGN_WORD;
+	sf->psize = ALIGN_32BIT;
 	target_add_flash(t, f);
 }
 
@@ -484,7 +484,7 @@ static bool stm32f4_flash_erase(target_flash_s *f, target_addr_t addr, size_t le
 	stm32f4_flash_s *sf = (stm32f4_flash_s *)f;
 	stm32f4_flash_unlock(t);
 
-	align_e psize = ALIGN_WORD;
+	align_e psize = ALIGN_32BIT;
 	/*
 	 * XXX: What is this and why does it exist?
 	 * A dry-run walk-through says it'll pull out the psize for the Flash region added first by stm32f4_attach()
@@ -761,7 +761,7 @@ static bool stm32f4_cmd_option(target_s *t, int argc, const char **argv)
 static bool stm32f4_cmd_psize(target_s *t, int argc, const char **argv)
 {
 	if (argc == 1) {
-		align_e psize = ALIGN_WORD;
+		align_e psize = ALIGN_32BIT;
 		/*
 		 * XXX: What is this and why does it exist?
 		 * A dry-run walk-through says it'll pull out the psize for the Flash region added first by stm32f4_attach()

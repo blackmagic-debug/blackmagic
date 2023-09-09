@@ -182,7 +182,7 @@ static void stm32h7_add_flash(target_s *target, uint32_t addr, size_t length, si
 		flash->regbase = FPEC1_BASE;
 	else
 		flash->regbase = FPEC2_BASE;
-	flash->psize = ALIGN_DWORD;
+	flash->psize = ALIGN_64BIT;
 	target_add_flash(target, target_flash);
 }
 
@@ -400,7 +400,7 @@ static bool stm32h7_check_bank(target_s *const target, const uint32_t reg_base)
 /* Both banks are erased in parallel.*/
 static bool stm32h7_mass_erase(target_s *target)
 {
-	align_e psize = ALIGN_DWORD;
+	align_e psize = ALIGN_64BIT;
 	/*
 	 * XXX: What is this and why does it exist?
 	 * A dry-run walk-through says it'll pull out the psize for the first Flash region added by stm32h7_probe()
@@ -499,7 +499,7 @@ static bool stm32h7_crc(target_s *target, int argc, const char **argv)
 static bool stm32h7_cmd_psize(target_s *target, int argc, const char **argv)
 {
 	if (argc == 1) {
-		align_e psize = ALIGN_DWORD;
+		align_e psize = ALIGN_64BIT;
 		/*
 		 * XXX: What is this and why does it exist?
 		 * A dry-run walk-through says it'll pull out the psize for the first Flash region added by stm32h7_probe()

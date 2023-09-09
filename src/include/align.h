@@ -34,13 +34,13 @@
 #define INCLUDE_ALIGN_H
 
 typedef enum align {
-	ALIGN_BYTE = 0,     /* 8 bit alignment */
-	ALIGN_HALFWORD = 1, /* 16 bit alignment */
-	ALIGN_WORD = 2,     /* 32 bit alignment */
-	ALIGN_DWORD = 3     /* 64 bit alignment */
+	ALIGN_8BIT = 0U,
+	ALIGN_16BIT = 1U,
+	ALIGN_32BIT = 2U,
+	ALIGN_64BIT = 3U,
 } align_e;
 
-#define ALIGN_OF(x)     (((x)&3U) == 0 ? ALIGN_WORD : (((x)&1U) == 0 ? ALIGN_HALFWORD : ALIGN_BYTE))
+#define ALIGN_OF(x)     (((x)&3U) == 0 ? ALIGN_32BIT : (((x)&1U) == 0 ? ALIGN_16BIT : ALIGN_8BIT))
 #define MIN_ALIGN(x, y) MIN(ALIGN_OF(x), ALIGN_OF(y))
 
 #define ALIGN(x, n) (((x) + (n)-1) & ~((n)-1))

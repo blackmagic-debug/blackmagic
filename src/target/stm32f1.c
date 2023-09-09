@@ -379,7 +379,7 @@ void mm32l0_mem_write_sized(adiv5_access_port_s *ap, uint32_t dest, const void *
 		uint32_t tmp = 0;
 		/* Pack data into correct data lane */
 		switch (align) {
-		case ALIGN_BYTE: {
+		case ALIGN_8BIT: {
 			uint8_t value;
 			memcpy(&value, src, sizeof(value));
 			/* copy byte to be written to all four bytes of the uint32_t */
@@ -388,7 +388,7 @@ void mm32l0_mem_write_sized(adiv5_access_port_s *ap, uint32_t dest, const void *
 			tmp = tmp | tmp << 16U;
 			break;
 		}
-		case ALIGN_HALFWORD: {
+		case ALIGN_16BIT: {
 			uint16_t value;
 			memcpy(&value, src, sizeof(value));
 			/* copy halfword to be written to both halfwords of the uint32_t */
@@ -396,8 +396,8 @@ void mm32l0_mem_write_sized(adiv5_access_port_s *ap, uint32_t dest, const void *
 			tmp = tmp | tmp << 16U;
 			break;
 		}
-		case ALIGN_DWORD:
-		case ALIGN_WORD:
+		case ALIGN_64BIT:
+		case ALIGN_32BIT:
 			memcpy(&tmp, src, sizeof(tmp));
 			break;
 		}
@@ -700,7 +700,7 @@ static bool stm32f1_flash_write(target_flash_s *flash, target_addr_t dest, const
 		stm32f1_flash_clear_eop(target, FLASH_BANK1_OFFSET);
 
 		target_mem_write32(target, FLASH_CR, FLASH_CR_PG);
-		cortexm_mem_write_sized(target, dest, src, offset, ALIGN_HALFWORD);
+		cortexm_mem_write_sized(target, dest, src, offset, ALIGN_16BIT);
 
 		/* Wait for completion or an error */
 		if (!stm32f1_flash_busy_wait(target, FLASH_BANK1_OFFSET, NULL))
@@ -714,7 +714,7 @@ static bool stm32f1_flash_write(target_flash_s *flash, target_addr_t dest, const
 		stm32f1_flash_clear_eop(target, FLASH_BANK2_OFFSET);
 
 		target_mem_write32(target, FLASH_CR + FLASH_BANK2_OFFSET, FLASH_CR_PG);
-		cortexm_mem_write_sized(target, dest + offset, data + offset, remainder, ALIGN_HALFWORD);
+		cortexm_mem_write_sized(target, dest + offset, data + offset, remainder, ALIGN_16BIT);
 
 		/* Wait for completion or an error */
 		if (!stm32f1_flash_busy_wait(target, FLASH_BANK2_OFFSET, NULL))
