@@ -113,7 +113,7 @@ const jtag_dev_descr_s dev_descr[] = {
 		.ir_quirks =
 			{
 				.ir_length = 18U,
-				.ir_value = 0b010001010001010001U,
+				.ir_value = 0x11451U,
 			},
 	},
 	{
