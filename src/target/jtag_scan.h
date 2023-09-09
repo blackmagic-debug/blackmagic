@@ -27,7 +27,7 @@
 #include "jtagtap.h"
 
 #define JTAG_MAX_DEVS   32U
-#define JTAG_MAX_IR_LEN 16U
+#define JTAG_MAX_IR_LEN 38U
 
 typedef struct jtag_dev {
 	uint32_t jd_idcode;

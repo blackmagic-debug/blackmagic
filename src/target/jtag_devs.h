@@ -24,7 +24,7 @@
 #include <stdint.h>
 
 typedef struct jtag_ir_quirks {
-	uint16_t ir_value;
+	uint32_t ir_value;
 	uint8_t ir_length;
 } jtag_ir_quirks_s;
 
