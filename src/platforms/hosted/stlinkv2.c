@@ -741,14 +741,14 @@ static void stlink_mem_write(
 		/* Now generate an appropriate access packet */
 		stlink_mem_command_s command;
 		switch (align) {
-		case ALIGN_BYTE:
+		case ALIGN_8BIT:
 			command = stlink_memory_access(STLINK_DEBUG_WRITEMEM_8BIT, addr, amount, ap->apsel);
 			break;
-		case ALIGN_HALFWORD:
+		case ALIGN_16BIT:
 			command = stlink_memory_access(STLINK_DEBUG_APIV2_WRITEMEM_16BIT, addr, amount, ap->apsel);
 			break;
-		case ALIGN_WORD:
-		case ALIGN_DWORD:
+		case ALIGN_32BIT:
+		case ALIGN_64BIT:
 			command = stlink_memory_access(STLINK_DEBUG_WRITEMEM_32BIT, addr, amount, ap->apsel);
 			break;
 		}
