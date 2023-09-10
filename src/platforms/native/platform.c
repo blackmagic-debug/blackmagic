@@ -154,10 +154,10 @@ void platform_init(void)
 	rcc_periph_clock_enable(RCC_USB);
 	rcc_periph_clock_enable(RCC_GPIOA);
 	rcc_periph_clock_enable(RCC_GPIOB);
-	if (platform_hwversion() >= 6) {
+	if (platform_hwversion() >= 6)
 		rcc_periph_clock_enable(RCC_GPIOC);
+	if (platform_hwversion() >= 1)
 		rcc_periph_clock_enable(RCC_TIM1);
-	}
 	rcc_periph_clock_enable(RCC_AFIO);
 	rcc_periph_clock_enable(RCC_CRC);
 
