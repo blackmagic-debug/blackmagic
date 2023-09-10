@@ -220,8 +220,8 @@ void platform_init(void)
 		              GPIO_CNF_OUTPUT_OPENDRAIN, PWR_BR_PIN);
 	}
 
-	/* Configure Timer 1 Channel 3N to allow tpwr to be soft start on hw6 */
-	if (platform_hwversion() >= 6) {
+	/* Configure Timer 1 Channel 3N to allow tpwr to be soft start on hw1+ */
+	if (platform_hwversion() >= 1) {
 		/* The pin mapping is a secondary mapping for the pin. We need to enable that. */
 		gpio_primary_remap(AFIO_MAPR_SWJ_CFG_FULL_SWJ, AFIO_MAPR_TIM1_REMAP_PARTIAL_REMAP);
 		/*
@@ -316,8 +316,8 @@ void platform_target_set_power(bool power)
 {
 	if (platform_hwversion() <= 0)
 		return;
-	/* If we're on hw6 or newer, and are turning the power on */
-	if (platform_hwversion() >= 6 && power) {
+	/* If we're on hw1 or newer, and are turning the power on */
+	if (power) {
 		/* Configure the pin to be driven by the timer */
 		gpio_set_mode(PWR_BR_PORT, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, PWR_BR_PIN);
 		timer_clear_flag(TIM1, TIM_SR_UIF);
@@ -334,11 +334,14 @@ void platform_target_set_power(bool power)
 	/* Set the pin state */
 	gpio_set_val(PWR_BR_PORT, PWR_BR_PIN, !power);
 	/*
-	 * If we're turning power on and running hw6+, now configure the pin back over to GPIO and
+	 * If we're turning power on and running hw1+, now configure the pin back over to GPIO and
 	 * reset state timer for the next request
 	 */
-	if (platform_hwversion() >= 6 && power) {
-		gpio_set_mode(PWR_BR_PORT, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_OPENDRAIN, PWR_BR_PIN);
+	if (power) {
+		if (platform_hwversion() == 1)
+			gpio_set_mode(PWR_BR_PORT, GPIO_MODE_INPUT, GPIO_CNF_INPUT_PULL_UPDOWN, PWR_BR_PIN);
+		else
+			gpio_set_mode(PWR_BR_PORT, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_OPENDRAIN, PWR_BR_PIN);
 		timer_set_oc_value(TIM1, TIM_OC3, 0U);
 	}
 }
