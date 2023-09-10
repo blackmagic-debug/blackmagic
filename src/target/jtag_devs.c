@@ -332,7 +332,7 @@ const jtag_dev_descr_s dev_descr[] = {
 		.descr = "Xilinx 12-bit IR.",
 		.ir_quirks =
 			{
-				.ir_length = 6U,
+				.ir_length = 12U,
 				.ir_value = 1U,
 			},
 	},
