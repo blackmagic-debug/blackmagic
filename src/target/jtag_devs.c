@@ -104,8 +104,6 @@ const jtag_dev_descr_s dev_descr[] = {
 		.idmask = 0xffffffffU,
 		.descr = "NXP: LPC17xx family.",
 	},
-#endif
-#ifdef ENABLE_DEBUG
 	{
 		.idcode = 0x1396d093U,
 		.idmask = 0xffffffffU,
