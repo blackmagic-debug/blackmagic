@@ -412,7 +412,7 @@ bool ftdi_lookup_adapter_from_vid_pid(bmda_cli_options_s *const cl_opts, const p
 bool ftdi_lookup_cable_by_product(bmda_cli_options_s *cl_opts, const char *product)
 {
 	if (cl_opts->opt_cable)
-		return false;
+		return true;
 
 	for (const cable_desc_s *cable = &cable_desc[0]; cable->vendor; ++cable) {
 		if (cable->description && strstr(product, cable->description) != 0) {
