@@ -549,6 +549,7 @@ int find_debuggers(bmda_cli_options_s *cl_opts, bmda_probe_s *info)
 		// Don't know the cable type, ask user to specify with "-c"
 		DEBUG_WARN("Multiple FTDI adapters match Vendor and Product ID.\n");
 		DEBUG_WARN("Please specify adapter type on command line using \"-c\" option.\n");
+		probe_info_list_free(probe_list);
 		return -1; //false
 	}
 	/* If the selected probe is CMSIS-DAP, check for v2 interfaces */
