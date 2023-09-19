@@ -82,10 +82,10 @@ typedef struct cortexa_priv {
 } cortexa_priv_s;
 
 #define CORTEXAR_DBG_IDR   0x000U
-#define CORTEXAR_DBG_DTRTX 0x080U
+#define CORTEXAR_DBG_DTRTX 0x080U /* DBGDTRRXext */
 #define CORTEXAR_DBG_ITR   0x084U
 #define CORTEXAR_DBG_DSCR  0x088U
-#define CORTEXAR_DBG_DTRRX 0x08cU
+#define CORTEXAR_DBG_DTRRX 0x08cU /* DBGDTRTXext */
 #define CORTEXAR_DBG_DRCR  0x090U
 #define CORTEXAR_DBG_DVR   0x100U
 #define CORTEXAR_DBG_DCR   0x140U
@@ -97,9 +97,6 @@ typedef struct cortexa_priv {
 #define CORTEXAR_DBG_IDR_BREAKPOINT_SHIFT 24U
 #define CORTEXAR_DBG_IDR_WATCHPOINT_MASK  0xfU
 #define CORTEXAR_DBG_IDR_WATCHPOINT_SHIFT 28U
-
-#define DBGDTRRX 32U /* DCC: Host to target */
-#define DBGITR   33U
 
 #define CORTEXAR_DBG_DSCR_HALTED           (1U << 0U)
 #define CORTEXAR_DBG_DSCR_RESTARTED        (1U << 1U)
@@ -123,8 +120,6 @@ typedef struct cortexa_priv {
 #define DBGDSCR_INTDIS           (1U << 11U)
 #define DBGDSCR_UND_I            (1U << 8U)
 #define DBGDSCR_SDABORT_L        (1U << 6U)
-
-#define DBGDTRTX 35U /* DCC: Target to host */
 
 #define DBGDRCR     36U
 #define DBGDRCR_CSE (1U << 2U)
@@ -413,20 +408,21 @@ static void cortexa_slow_mem_read(target_s *t, void *dest, target_addr_t src, si
 	dbgdscr = (dbgdscr & ~DBGDSCR_EXTDCCMODE_MASK) | DBGDSCR_EXTDCCMODE_FAST;
 	cortex_dbg_write32(t, CORTEXAR_DBG_DSCR, dbgdscr);
 
-	apb_write(t, DBGITR, 0xecb05e01); /* ldc 14, cr5, [r0], #4 */
-	/* According to the ARMv7-A ARM, in fast mode, the first read from
-	 * DBGDTRTX is  supposed to block until the instruction is complete,
-	 * but we see the first read returns junk, so it's read here and
-	 * ignored. */
-	apb_read(t, DBGDTRTX);
+	cortex_dbg_write32(t, CORTEXAR_DBG_ITR, 0xecb05e01); /* ldc 14, cr5, [r0], #4 */
+	/*
+	 * According to the ARMv7-AR ARM, in fast mode, the first read from
+	 * DBGDTRTXext (CORTEXAR_DBG_DTRRX) is supposed to block until the instruction
+	 * is complete, but we see the first read returns junk, so it's read here and ignored.
+	 */
+	cortex_dbg_read32(t, CORTEXAR_DBG_DTRRX);
 
 	for (unsigned i = 0; i < words; i++)
-		dest32[i] = apb_read(t, DBGDTRTX);
+		dest32[i] = cortex_dbg_read32(t, CORTEXAR_DBG_DTRRX);
 
 	memcpy(dest, (uint8_t *)dest32 + (src & 3U), len);
 
-	/* Switch back to stalling DCC mode */
-	dbgdscr = (dbgdscr & ~DBGDSCR_EXTDCCMODE_MASK) | DBGDSCR_EXTDCCMODE_STALL;
+	/* Switch back to non-blocking DCC mode */
+	dbgdscr = (dbgdscr & ~DBGDSCR_EXTDCCMODE_MASK);
 	cortex_dbg_write32(t, CORTEXAR_DBG_DSCR, dbgdscr);
 
 	if (cortex_dbg_read32(t, CORTEXAR_DBG_DSCR) & DBGDSCR_SDABORT_L) {
@@ -434,7 +430,7 @@ static void cortexa_slow_mem_read(target_s *t, void *dest, target_addr_t src, si
 		apb_write(t, DBGDRCR, DBGDRCR_CSE);
 		priv->mmu_fault = true;
 	} else {
-		apb_read(t, DBGDTRTX);
+		cortex_dbg_read32(t, CORTEXAR_DBG_DTRRX);
 	}
 }
 
@@ -447,7 +443,7 @@ static void cortexa_slow_mem_write_bytes(target_s *t, target_addr_t dest, const 
 
 	while (len--) {
 		write_gpreg(t, 0, *src++);
-		apb_write(t, DBGITR, 0xe4cd0001); /* strb r0, [sp], #1 */
+		cortex_dbg_write32(t, CORTEXAR_DBG_ITR, 0xe4cd0001); /* strb r0, [sp], #1 */
 		if (cortex_dbg_read32(t, CORTEXAR_DBG_DSCR) & DBGDSCR_SDABORT_L) {
 			/* Memory access aborted, flag a fault */
 			apb_write(t, DBGDRCR, DBGDRCR_CSE);
@@ -476,13 +472,13 @@ static void cortexa_slow_mem_write(target_s *t, target_addr_t dest, const void *
 	dbgdscr = (dbgdscr & ~DBGDSCR_EXTDCCMODE_MASK) | DBGDSCR_EXTDCCMODE_FAST;
 	cortex_dbg_write32(t, CORTEXAR_DBG_DSCR, dbgdscr);
 
-	apb_write(t, DBGITR, 0xeca05e01); /* stc 14, cr5, [r0], #4 */
+	cortex_dbg_write32(t, CORTEXAR_DBG_ITR, 0xeca05e01); /* stc 14, cr5, [r0], #4 */
 
 	for (; len; len -= 4U)
-		apb_write(t, DBGDTRRX, *src32++);
+		cortex_dbg_write32(t, CORTEXAR_DBG_DTRTX, *src32++);
 
-	/* Switch back to stalling DCC mode */
-	dbgdscr = (dbgdscr & ~DBGDSCR_EXTDCCMODE_MASK) | DBGDSCR_EXTDCCMODE_STALL;
+	/* Switch back to non-blocking DCC mode */
+	dbgdscr &= ~DBGDSCR_EXTDCCMODE_MASK;
 	cortex_dbg_write32(t, CORTEXAR_DBG_DSCR, dbgdscr);
 
 	if (cortex_dbg_read32(t, CORTEXAR_DBG_DSCR) & DBGDSCR_SDABORT_L) {
