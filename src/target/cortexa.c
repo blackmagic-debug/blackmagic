@@ -508,6 +508,17 @@ bool cortexa_probe(adiv5_access_port_s *ap, target_addr_t base_address)
 	target->halt_poll = cortexa_halt_poll;
 	target->halt_resume = cortexa_halt_resume;
 
+	/* Try to halt the target core */
+	target_halt_request(target);
+	platform_timeout_s timeout;
+	platform_timeout_set(&timeout, 250);
+	target_halt_reason_e reason = TARGET_HALT_RUNNING;
+	while (!platform_timeout_is_expired(&timeout) && reason == TARGET_HALT_RUNNING)
+		reason = target_halt_poll(target, NULL);
+	/* If we did not succeed, we must abort at this point. */
+	if (reason == TARGET_HALT_FAULT || reason == TARGET_HALT_ERROR)
+		return false;
+
 	cortex_read_cpuid(target);
 	/* The format of the debug identification register is described in DDI0406C §C11.11.15 pg2217 */
 	const uint32_t debug_id = cortex_dbg_read32(target, CORTEXAR_DBG_IDR);
