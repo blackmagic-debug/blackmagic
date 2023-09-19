@@ -60,8 +60,6 @@ static int cortexa_breakwatch_set(target_s *t, breakwatch_s *);
 static int cortexa_breakwatch_clear(target_s *t, breakwatch_s *);
 static uint32_t bp_bas(uint32_t addr, uint8_t len);
 
-static void apb_write(target_s *t, uint16_t reg, uint32_t val);
-static uint32_t apb_read(target_s *t, uint16_t reg);
 static void write_gpreg(target_s *t, uint8_t regno, uint32_t val);
 static uint32_t read_gpreg(target_s *t, uint8_t regno);
 
@@ -87,8 +85,8 @@ typedef struct cortexa_priv {
 #define CORTEXAR_DBG_DSCR  0x088U
 #define CORTEXAR_DBG_DTRRX 0x08cU /* DBGDTRTXext */
 #define CORTEXAR_DBG_DRCR  0x090U
-#define CORTEXAR_DBG_DVR   0x100U
-#define CORTEXAR_DBG_DCR   0x140U
+#define CORTEXAR_DBG_BVR   0x100U
+#define CORTEXAR_DBG_BCR   0x140U
 #define CORTEXAR_DBG_WVR   0x180U
 #define CORTEXAR_DBG_WCR   0x1c0U
 #define CORTEXAR_CTR       0xd04U
@@ -125,8 +123,6 @@ typedef struct cortexa_priv {
 #define DBGDRCR_RRQ (1U << 1U)
 #define DBGDRCR_HRQ (1U << 0U)
 
-#define DBGBVR(i)            (64U + (i))
-#define DBGBCR(i)            (80U + (i))
 #define DBGBCR_INST_MISMATCH (4U << 20U)
 #define DBGBCR_BAS_ANY       (0xfU << 5U)
 #define DBGBCR_BAS_LOW_HW    (0x3U << 5U)
@@ -134,8 +130,6 @@ typedef struct cortexa_priv {
 #define DBGBCR_EN            (1U << 0U)
 #define DBGBCR_PMC_ANY       (0x3U << 1U) /* 0b11 */
 
-#define DBGWVR(i)           (96U + (i))
-#define DBGWCR(i)           (112U + (i))
 #define DBGWCR_LSC_LOAD     (0x1U << 3U) /* 0b01 */
 #define DBGWCR_LSC_STORE    (0x2U << 3U) /* 0b10 */
 #define DBGWCR_LSC_ANY      (0x3U << 3U) /* 0b11U */
@@ -321,25 +315,6 @@ static size_t create_tdesc_cortex_a(char *buffer, size_t max_len)
 	// does, then there's nothing we can do about it, so we'll just discard the signedness
 	// of total when we return it.
 	return (size_t)total;
-}
-
-static void apb_write(target_s *t, uint16_t reg, uint32_t val)
-{
-	cortexa_priv_s *priv = t->priv;
-	adiv5_access_port_s *ap = priv->base.ap;
-	uint32_t addr = priv->base.base_addr + 4U * reg;
-	adiv5_ap_write(ap, ADIV5_AP_TAR, addr);
-	adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_DRW, val);
-}
-
-static uint32_t apb_read(target_s *t, uint16_t reg)
-{
-	cortexa_priv_s *priv = t->priv;
-	adiv5_access_port_s *ap = priv->base.ap;
-	uint32_t addr = priv->base.base_addr + 4U * reg;
-	adiv5_ap_write(ap, ADIV5_AP_TAR, addr);
-	adiv5_dp_low_access(ap->dp, ADIV5_LOW_READ, ADIV5_AP_DRW, 0);
-	return adiv5_dp_low_access(ap->dp, ADIV5_LOW_READ, ADIV5_DP_RDBUFF, 0);
 }
 
 static void cortexar_run_insn(target_s *const target, const uint32_t insn)
@@ -604,8 +579,8 @@ bool cortexa_attach(target_s *target)
 	/* Clear any stale breakpoints */
 	priv->base.breakpoints_mask = 0U;
 	for (size_t i = 0; i <= priv->base.breakpoints_available; ++i) {
-		cortex_dbg_write32(target, CORTEXAR_DBG_DVR + (i << 2U), 0U);
-		cortex_dbg_write32(target, CORTEXAR_DBG_DCR + (i << 2U), 0U);
+		cortex_dbg_write32(target, CORTEXAR_DBG_BVR + (i << 2U), 0U);
+		cortex_dbg_write32(target, CORTEXAR_DBG_BCR + (i << 2U), 0U);
 	}
 	priv->bcr0 = 0;
 
@@ -620,8 +595,8 @@ void cortexa_detach(target_s *target)
 
 	/* Clear any stale breakpoints */
 	for (size_t i = 0; i <= priv->base.breakpoints_available; ++i) {
-		cortex_dbg_write32(target, CORTEXAR_DBG_DVR + (i << 2U), 0U);
-		cortex_dbg_write32(target, CORTEXAR_DBG_DCR + (i << 2U), 0U);
+		cortex_dbg_write32(target, CORTEXAR_DBG_BVR + (i << 2U), 0U);
+		cortex_dbg_write32(target, CORTEXAR_DBG_BCR + (i << 2U), 0U);
 	}
 
 	/* Restore any clobbered registers */
@@ -852,17 +827,17 @@ static target_halt_reason_e cortexa_halt_poll(target_s *t, target_addr_t *watch)
 void cortexa_halt_resume(target_s *t, bool step)
 {
 	cortexa_priv_s *priv = t->priv;
-	/* Set breakpoint comarator for single stepping if needed */
+	/* Set breakpoint comparator for single stepping if needed */
 	if (step) {
 		uint32_t addr = priv->reg_cache.r[15];
 		uint32_t bas = bp_bas(addr, (priv->reg_cache.cpsr & CPSR_THUMB) ? 2 : 4);
 		DEBUG_INFO("step 0x%08" PRIx32 "  %" PRIx32 "\n", addr, bas);
 		/* Set match any breakpoint */
-		apb_write(t, DBGBVR(0), priv->reg_cache.r[15] & ~3);
-		apb_write(t, DBGBCR(0), DBGBCR_INST_MISMATCH | bas | DBGBCR_PMC_ANY | DBGBCR_EN);
+		cortex_dbg_write32(t, CORTEXAR_DBG_BVR + 0, priv->reg_cache.r[15] & ~3);
+		cortex_dbg_write32(t, CORTEXAR_DBG_BCR + 0, DBGBCR_INST_MISMATCH | bas | DBGBCR_PMC_ANY | DBGBCR_EN);
 	} else {
-		apb_write(t, DBGBVR(0), priv->bvr0);
-		apb_write(t, DBGBCR(0), priv->bcr0);
+		cortex_dbg_write32(t, CORTEXAR_DBG_BVR + 0, priv->bvr0);
+		cortex_dbg_write32(t, CORTEXAR_DBG_BCR + 0, priv->bcr0);
 	}
 
 	/* Write back register cache */
@@ -901,7 +876,7 @@ static uint32_t bp_bas(uint32_t addr, uint8_t len)
 static int cortexa_breakwatch_set(target_s *t, breakwatch_s *bw)
 {
 	cortexa_priv_s *priv = t->priv;
-	unsigned i;
+	uint32_t i;
 
 	switch (bw->type) {
 	case TARGET_BREAK_SOFT:
@@ -935,8 +910,8 @@ static int cortexa_breakwatch_set(target_s *t, breakwatch_s *bw)
 
 		uint32_t addr = va_to_pa(t, bw->addr);
 		uint32_t bcr = bp_bas(addr, bw->size) | DBGBCR_PMC_ANY | DBGBCR_EN;
-		apb_write(t, DBGBVR(i), addr & ~3);
-		apb_write(t, DBGBCR(i), bcr);
+		cortex_dbg_write32(t, CORTEXAR_DBG_BVR + (i << 2U), addr & ~3);
+		cortex_dbg_write32(t, CORTEXAR_DBG_BCR + (i << 2U), bcr);
 		if (i == 0) {
 			priv->bcr0 = bcr;
 			priv->bvr0 = addr & ~3;
@@ -992,10 +967,10 @@ static int cortexa_breakwatch_set(target_s *t, breakwatch_s *bw)
 				return -1;
 			}
 
-			apb_write(t, DBGWCR(i), wcr);
-			apb_write(t, DBGWVR(i), bw->addr & ~3U);
-			DEBUG_INFO("Watchpoint set WCR = 0x%08" PRIx32 ", WVR = %08" PRIx32 "\n", apb_read(t, DBGWCR(i)),
-				apb_read(t, DBGWVR(i)));
+			cortex_dbg_write32(t, CORTEXAR_DBG_WVR + (i << 2U), wcr);
+			cortex_dbg_write32(t, CORTEXAR_DBG_WCR + (i << 2U), bw->addr & ~3U);
+			DEBUG_INFO("Watchpoint set WCR = 0x%08" PRIx32 ", WVR = %08" PRIx32 "\n",
+				cortex_dbg_read32(t, CORTEXAR_DBG_WVR + (i << 2U)), cortex_dbg_read32(t, CORTEXAR_DBG_WCR + (i << 2U)));
 		}
 		return 0;
 
@@ -1007,7 +982,7 @@ static int cortexa_breakwatch_set(target_s *t, breakwatch_s *bw)
 static int cortexa_breakwatch_clear(target_s *t, breakwatch_s *bw)
 {
 	cortexa_priv_s *priv = t->priv;
-	unsigned i = bw->reserved[0];
+	uint32_t i = bw->reserved[0];
 	switch (bw->type) {
 	case TARGET_BREAK_SOFT:
 		switch (bw->size) {
@@ -1022,7 +997,7 @@ static int cortexa_breakwatch_clear(target_s *t, breakwatch_s *bw)
 		}
 	case TARGET_BREAK_HARD:
 		priv->base.breakpoints_mask &= ~(1U << i);
-		apb_write(t, DBGBCR(i), 0);
+		cortex_dbg_write32(t, CORTEXAR_DBG_BCR + (i << 2U), 0);
 		if (i == 0)
 			priv->bcr0 = 0;
 		return 0;
@@ -1030,7 +1005,7 @@ static int cortexa_breakwatch_clear(target_s *t, breakwatch_s *bw)
 	case TARGET_WATCH_READ:
 	case TARGET_WATCH_ACCESS:
 		priv->base.watchpoints_mask &= ~(1U << i);
-		apb_write(t, DBGWCR(i), 0);
+		cortex_dbg_write32(t, CORTEXAR_DBG_WCR + (i << 2U), 0);
 		return 0;
 	default:
 		return 1;
