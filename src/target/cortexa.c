@@ -357,6 +357,34 @@ static void cortexar_run_insn(target_s *const target, const uint32_t insn)
 		continue;
 }
 
+static uint32_t cortexar_run_read_insn(target_s *const target, const uint32_t insn)
+{
+	/* Issue the requested instruction to the core */
+	cortex_dbg_write32(target, CORTEXAR_DBG_ITR, insn);
+	/* Poll for the instruction to complete and the data to become ready in the DTR */
+	while ((cortex_dbg_read32(target, CORTEXAR_DBG_DSCR) &
+			   (CORTEXAR_DBG_DSCR_INSN_COMPLETE | CORTEXAR_DBG_DSCR_DTR_READ_READY)) !=
+		(CORTEXAR_DBG_DSCR_INSN_COMPLETE | CORTEXAR_DBG_DSCR_DTR_READ_READY))
+		continue;
+	/* Read back the DTR to complete the read */
+	return cortex_dbg_read32(target, CORTEXAR_DBG_DTRRX);
+}
+
+static void cortexar_run_write_insn(target_s *const target, const uint32_t insn, const uint32_t data)
+{
+	/* Set up the data in the DTR for the transaction */
+	cortex_dbg_write32(target, CORTEXAR_DBG_DTRTX, data);
+	/* Poll for the data to become ready in the DTR */
+	while (!(cortex_dbg_read32(target, CORTEXAR_DBG_DSCR) & CORTEXAR_DBG_DSCR_DTR_WRITE_DONE))
+		continue;
+	/* Issue the requested instruction to the core */
+	cortex_dbg_write32(target, CORTEXAR_DBG_ITR, insn);
+	/* Poll for the instruction to complete and the data to be consumed from the DTR */
+	while ((cortex_dbg_read32(target, CORTEXAR_DBG_DSCR) &
+			   (CORTEXAR_DBG_DSCR_INSN_COMPLETE | CORTEXAR_DBG_DSCR_DTR_WRITE_DONE)) != CORTEXAR_DBG_DSCR_INSN_COMPLETE)
+		continue;
+}
+
 static uint32_t va_to_pa(target_s *t, uint32_t va)
 {
 	cortexa_priv_s *priv = t->priv;
@@ -614,24 +642,14 @@ void cortexa_detach(target_s *target)
 	apb_write(target, DBGDRCR, DBGDRCR_CSE | DBGDRCR_RRQ);
 }
 
-static uint32_t read_gpreg(target_s *t, uint8_t regno)
+static inline uint32_t read_gpreg(target_s *t, uint8_t regno)
 {
-	/* To read a register we use DBGITR to load an MCR instruction
-	 * that sends the value via DCC DBGDTRTX using the CP14 interface.
-	 */
-	uint32_t instr = MCR | DBGDTRTXint | ((regno & 0xfU) << 12U);
-	apb_write(t, DBGITR, instr);
-	/* Return value read from DCC channel */
-	return apb_read(t, DBGDTRTX);
+	return cortexar_run_read_insn(t, MCR | DBGDTRTXint | ((regno & 0xfU) << 12U));
 }
 
-static void write_gpreg(target_s *t, uint8_t regno, uint32_t val)
+static inline void write_gpreg(target_s *t, uint8_t regno, uint32_t val)
 {
-	/* Write value to DCC channel */
-	apb_write(t, DBGDTRRX, val);
-	/* Run instruction to load register */
-	uint32_t instr = MRC | DBGDTRRXint | ((regno & 0xfU) << 12U);
-	apb_write(t, DBGITR, instr);
+	cortexar_run_write_insn(t, MRC | DBGDTRRXint | ((regno & 0xfU) << 12U), val);
 }
 
 static void cortexa_regs_read(target_s *t, void *data)
@@ -693,18 +711,18 @@ static void cortexa_regs_read_internal(target_s *t)
 		priv->reg_cache.r[i] = read_gpreg(t, i);
 
 	/* Read PC, via r0.  MCR is UNPREDICTABLE for Rt = r15. */
-	apb_write(t, DBGITR, 0xe1a0000f); /* mov r0, pc */
+	cortexar_run_insn(t, 0xe1a0000f); /* mov r0, pc */
 	priv->reg_cache.r[15] = read_gpreg(t, 0);
 	/* Read CPSR */
-	apb_write(t, DBGITR, 0xe10f0000); /* mrs r0, CPSR */
+	cortexar_run_insn(t, 0xe10f0000); /* mrs r0, CPSR */
 	priv->reg_cache.cpsr = read_gpreg(t, 0);
 	/* Read FPSCR */
-	apb_write(t, DBGITR, 0xeef10a10); /* vmrs r0, fpscr */
+	cortexar_run_insn(t, 0xeef10a10); /* vmrs r0, fpscr */
 	priv->reg_cache.fpscr = read_gpreg(t, 0);
 	/* Read out VFP registers */
 	for (size_t i = 0; i < 16U; i++) {
 		/* Read D[i] to R0/R1 */
-		apb_write(t, DBGITR, 0xec510b10 | i); /* vmov r0, r1, d0 */
+		cortexar_run_insn(t, 0xec510b10 | i); /* vmov r0, r1, d0 */
 		priv->reg_cache.d[i] = ((uint64_t)read_gpreg(t, 1) << 32U) | read_gpreg(t, 0);
 	}
 	priv->reg_cache.r[15] -= (priv->reg_cache.cpsr & CPSR_THUMB) ? 4 : 8;
@@ -717,17 +735,17 @@ static void cortexa_regs_write_internal(target_s *t)
 	for (size_t i = 0; i < 16U; i++) {
 		write_gpreg(t, 1, priv->reg_cache.d[i] >> 32U);
 		write_gpreg(t, 0, priv->reg_cache.d[i]);
-		apb_write(t, DBGITR, 0xec410b10U | i); /* vmov d[i], r0, r1 */
+		cortexar_run_insn(t, 0xec410b10U | i); /* vmov d[i], r0, r1 */
 	}
 	/* Write back FPSCR */
 	write_gpreg(t, 0, priv->reg_cache.fpscr);
-	apb_write(t, DBGITR, 0xeee10a10); /* vmsr fpscr, r0 */
+	cortexar_run_insn(t, 0xeee10a10); /* vmsr fpscr, r0 */
 	/* Write back the CPSR */
 	write_gpreg(t, 0, priv->reg_cache.cpsr);
-	apb_write(t, DBGITR, 0xe12ff000); /* msr CPSR_fsxc, r0 */
+	cortexar_run_insn(t, 0xe12ff000); /* msr CPSR_fsxc, r0 */
 	/* Write back PC, via r0.  MRC clobbers CPSR instead */
 	write_gpreg(t, 0, priv->reg_cache.r[15] | ((priv->reg_cache.cpsr & CPSR_THUMB) ? 1 : 0));
-	apb_write(t, DBGITR, 0xe1a0f000); /* mov pc, r0 */
+	cortexar_run_insn(t, 0xe1a0f000); /* mov pc, r0 */
 	/* Finally the GP registers now that we're done using them */
 	for (size_t i = 0; i < 15U; i++)
 		write_gpreg(t, i, priv->reg_cache.r[i]);
