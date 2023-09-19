@@ -42,13 +42,22 @@
  * Access via the debug APB is at 0xe0081000 over AP1. */
 #define STM32MP15_DBGMCU_BASE 0x50081000U
 #define STM32MP15_UID_BASE    0x5c005234U
-#define DBGMCU_IDCODE         (STM32MP15_DBGMCU_BASE + 0U)
+
+#define DBGMCU_IDCODE        (STM32MP15_DBGMCU_BASE + 0U)
+#define DBGMCU_CTRL          (STM32MP15_DBGMCU_BASE + 4U)
+#define DBGMCU_CTRL_DBGSLEEP (1U << 0U)
+#define DBGMCU_CTRL_DBGSTOP  (1U << 1U)
+#define DBGMCU_CTRL_DBGSTBY  (1U << 2U)
 
 /* Taken from DP_TARGETID.TPARTNO = 0x5000 in §66.8.3 of RM0436 rev 6, pg3669 */
 /* Taken from DBGMCU_IDC.DEV_ID = 0x500 in §66.10.9 of RM0436 rev 6, pg3825 */
 #define ID_STM32MP15x 0x5000U
 /* Taken from CM4ROM_PIDRx in 2.3.21 of ES0438 rev 7, pg18 */
 #define ID_STM32MP15x_ERRATA 0x450U
+
+typedef struct stm32mp15_priv {
+	uint32_t dbgmcu_ctrl;
+} stm32mp15_priv_s;
 
 static bool stm32mp15_uid(target_s *target, int argc, const char **argv);
 static bool stm32mp15_cmd_rev(target_s *target, int argc, const char **argv);
@@ -59,15 +68,41 @@ const command_s stm32mp15_cmd_list[] = {
 	{NULL, NULL, NULL},
 };
 
+static bool stm32mp15_attach(target_s *target)
+{
+	if (!cortexm_attach(target))
+		return false;
+
+	/* Save DBGMCU_CR to restore it when detaching */
+	stm32mp15_priv_s *const priv = (stm32mp15_priv_s *)target->target_storage;
+	priv->dbgmcu_ctrl = target_mem_read32(target, DBGMCU_CTRL);
+
+	/* Disable C-Sleep, C-Stop, C-Standby for debugging */
+	target_mem_write32(target, DBGMCU_CTRL, DBGMCU_CTRL_DBGSLEEP | DBGMCU_CTRL_DBGSTOP | DBGMCU_CTRL_DBGSTBY);
+
+	return true;
+}
+
+static void stm32mp15_detach(target_s *target)
+{
+	stm32mp15_priv_s *priv = (stm32mp15_priv_s *)target->target_storage;
+	target_mem_write32(target, DBGMCU_CTRL, priv->dbgmcu_ctrl);
+	cortexm_detach(target);
+}
+
 bool stm32mp15_cm4_probe(target_s *target)
 {
 	if (target->part_id != ID_STM32MP15x && target->part_id != ID_STM32MP15x_ERRATA)
 		return false;
 
 	target->driver = "STM32MP15";
-	target->attach = cortexm_attach;
-	target->detach = cortexm_detach;
+	target->attach = stm32mp15_attach;
+	target->detach = stm32mp15_detach;
 	target_add_commands(target, stm32mp15_cmd_list, target->driver);
+
+	/* Allocate private storage */
+	stm32mp15_priv_s *priv = calloc(1, sizeof(*priv));
+	target->target_storage = priv;
 
 	/* Figure 4. Memory map from §2.5.2 in RM0436 rev 6, pg158 */
 	target_add_ram(target, STM32MP15_RETRAM_BASE, STM32MP15_RETRAM_SIZE);
