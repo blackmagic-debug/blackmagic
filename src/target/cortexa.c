@@ -508,10 +508,6 @@ bool cortexa_probe(adiv5_access_port_s *ap, target_addr_t base_address)
 	target->halt_poll = cortexa_halt_poll;
 	target->halt_resume = cortexa_halt_resume;
 
-	/* Set up APB CSW, we won't touch this again */
-	uint32_t csw = ap->csw | ADIV5_AP_CSW_SIZE_WORD;
-	adiv5_ap_write(ap, ADIV5_AP_CSW, csw);
-
 	cortex_read_cpuid(target);
 	/* The format of the debug identification register is described in DDI0406C §C11.11.15 pg2217 */
 	const uint32_t debug_id = cortex_dbg_read32(target, CORTEXAR_DBG_IDR);
