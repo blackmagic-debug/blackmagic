@@ -121,7 +121,6 @@ typedef struct cortexa_priv {
 #define DBGDSCR_UND_I            (1U << 8U)
 #define DBGDSCR_SDABORT_L        (1U << 6U)
 
-#define DBGDRCR     36U
 #define DBGDRCR_CSE (1U << 2U)
 #define DBGDRCR_RRQ (1U << 1U)
 #define DBGDRCR_HRQ (1U << 0U)
@@ -427,7 +426,7 @@ static void cortexa_slow_mem_read(target_s *t, void *dest, target_addr_t src, si
 
 	if (cortex_dbg_read32(t, CORTEXAR_DBG_DSCR) & DBGDSCR_SDABORT_L) {
 		/* Memory access aborted, flag a fault */
-		apb_write(t, DBGDRCR, DBGDRCR_CSE);
+		cortex_dbg_write32(t, CORTEXAR_DBG_DRCR, DBGDRCR_CSE);
 		priv->mmu_fault = true;
 	} else {
 		cortex_dbg_read32(t, CORTEXAR_DBG_DTRRX);
@@ -446,7 +445,7 @@ static void cortexa_slow_mem_write_bytes(target_s *t, target_addr_t dest, const 
 		cortex_dbg_write32(t, CORTEXAR_DBG_ITR, 0xe4cd0001); /* strb r0, [sp], #1 */
 		if (cortex_dbg_read32(t, CORTEXAR_DBG_DSCR) & DBGDSCR_SDABORT_L) {
 			/* Memory access aborted, flag a fault */
-			apb_write(t, DBGDRCR, DBGDRCR_CSE);
+			cortex_dbg_write32(t, CORTEXAR_DBG_DRCR, DBGDRCR_CSE);
 			priv->mmu_fault = true;
 			return;
 		}
@@ -483,7 +482,7 @@ static void cortexa_slow_mem_write(target_s *t, target_addr_t dest, const void *
 
 	if (cortex_dbg_read32(t, CORTEXAR_DBG_DSCR) & DBGDSCR_SDABORT_L) {
 		/* Memory access aborted, flag a fault */
-		apb_write(t, DBGDRCR, DBGDRCR_CSE);
+		cortex_dbg_write32(t, CORTEXAR_DBG_DRCR, DBGDRCR_CSE);
 		priv->mmu_fault = true;
 	}
 }
@@ -635,7 +634,7 @@ void cortexa_detach(target_s *target)
 	dbgdscr &= ~(CORTEXAR_DBG_DSCR_HALT_DBG_ENABLE | CORTEXAR_DBG_DSCR_ITR_ENABLE);
 	cortex_dbg_write32(target, CORTEXAR_DBG_DSCR, dbgdscr);
 	/* Clear sticky error and resume */
-	apb_write(target, DBGDRCR, DBGDRCR_CSE | DBGDRCR_RRQ);
+	cortex_dbg_write32(target, CORTEXAR_DBG_DRCR, DBGDRCR_CSE | DBGDRCR_RRQ);
 }
 
 static inline uint32_t read_gpreg(target_s *t, uint8_t regno)
@@ -783,7 +782,7 @@ static void cortexa_halt_request(target_s *t)
 {
 	volatile exception_s e;
 	TRY_CATCH (e, EXCEPTION_TIMEOUT) {
-		apb_write(t, DBGDRCR, DBGDRCR_HRQ);
+		cortex_dbg_write32(t, CORTEXAR_DBG_DRCR, DBGDRCR_HRQ);
 	}
 	if (e.type) {
 		tc_printf(t, "Timeout sending interrupt, is target in WFI?\n");
@@ -883,7 +882,7 @@ void cortexa_halt_resume(target_s *t, bool step)
 	platform_timeout_s to;
 	platform_timeout_set(&to, 200);
 	do {
-		apb_write(t, DBGDRCR, DBGDRCR_CSE | DBGDRCR_RRQ);
+		cortex_dbg_write32(t, CORTEXAR_DBG_DRCR, DBGDRCR_CSE | DBGDRCR_RRQ);
 		dbgdscr = cortex_dbg_read32(t, CORTEXAR_DBG_DSCR);
 		DEBUG_INFO("%s: DBGDSCR = 0x%08" PRIx32 "\n", __func__, dbgdscr);
 	} while (!(dbgdscr & CORTEXAR_DBG_DSCR_RESTARTED) && !platform_timeout_is_expired(&to));
