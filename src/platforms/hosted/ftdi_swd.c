@@ -81,39 +81,39 @@ bool ftdi_swd_init(void)
 		return false;
 	}
 	DEBUG_PROBE("%s\n", __func__);
-	active_state.data_low &= ~MPSSE_SK;
-	active_state.data_low |= MPSSE_CS | MPSSE_DI | MPSSE_DO;
-	active_state.ddr_low &= ~(MPSSE_CS | MPSSE_DI | MPSSE_DO);
-	active_state.ddr_low |= MPSSE_SK;
+	active_state.data[0] &= ~MPSSE_SK;
+	active_state.data[0] |= MPSSE_CS | MPSSE_DI | MPSSE_DO;
+	active_state.dirs[0] &= ~(MPSSE_CS | MPSSE_DI | MPSSE_DO);
+	active_state.dirs[0] |= MPSSE_SK;
 	if (do_mpsse) {
 		DEBUG_INFO("Using genuine MPSSE for SWD.\n");
-		active_state.data_low |= active_cable.mpsse_swd_read.set_data_low;
-		active_state.data_low &= ~active_cable.mpsse_swd_read.clr_data_low;
-		active_state.data_high |= active_cable.mpsse_swd_read.set_data_high;
-		active_state.data_high &= ~active_cable.mpsse_swd_read.clr_data_high;
+		active_state.data[0] |= active_cable.mpsse_swd_read.set_data_low;
+		active_state.data[0] &= ~active_cable.mpsse_swd_read.clr_data_low;
+		active_state.data[1] |= active_cable.mpsse_swd_read.set_data_high;
+		active_state.data[1] &= ~active_cable.mpsse_swd_read.clr_data_high;
 	} else if (direct_bb_swd) {
 		DEBUG_INFO("Using direct bitbang with SWDIO %cBUS%d.\n",
 			(active_cable.bb_swdio_in_port_cmd == GET_BITS_LOW) ? 'C' : 'D',
 			__builtin_ctz(active_cable.bb_swdio_in_pin));
 	} else {
 		DEBUG_INFO("Using switched bitbang for SWD.\n");
-		active_state.data_low |= active_cable.bb_swd_read.set_data_low;
-		active_state.data_low &= (~active_cable.bb_swd_read.clr_data_low);
-		active_state.data_high |= active_cable.bb_swd_read.set_data_high;
-		active_state.data_high &= (~active_cable.bb_swd_read.clr_data_high);
-		active_state.ddr_low |= MPSSE_CS;
+		active_state.data[0] |= active_cable.bb_swd_read.set_data_low;
+		active_state.data[0] &= (~active_cable.bb_swd_read.clr_data_low);
+		active_state.data[1] |= active_cable.bb_swd_read.set_data_high;
+		active_state.data[1] &= (~active_cable.bb_swd_read.clr_data_high);
+		active_state.dirs[0] |= MPSSE_CS;
 		if (active_cable.bb_swdio_in_port_cmd == GET_BITS_LOW)
-			active_state.ddr_low &= ~active_cable.bb_swdio_in_pin;
+			active_state.dirs[0] &= ~active_cable.bb_swdio_in_pin;
 		else if (active_cable.bb_swdio_in_port_cmd == GET_BITS_HIGH)
-			active_state.ddr_high &= ~active_cable.bb_swdio_in_pin;
+			active_state.dirs[1] &= ~active_cable.bb_swdio_in_pin;
 	}
 	const uint8_t cmd_write[6] = {
 		SET_BITS_LOW,
-		active_state.data_low,
-		active_state.ddr_low,
+		active_state.data[0],
+		active_state.dirs[0],
 		SET_BITS_HIGH,
-		active_state.data_high,
-		active_state.ddr_high,
+		active_state.data[1],
+		active_state.dirs[1],
 	};
 	ftdi_buffer_write_arr(cmd_write);
 	ftdi_buffer_flush();
@@ -130,19 +130,19 @@ static void ftdi_swd_turnaround_mpsse(const swdio_status_e dir)
 {
 	/* If the turnaround should set SWDIO to an input */
 	if (dir == SWDIO_STATUS_FLOAT) {
-		active_state.data_low |= active_cable.mpsse_swd_read.set_data_low | MPSSE_DO;
-		active_state.data_low &= ~active_cable.mpsse_swd_read.clr_data_low;
-		active_state.ddr_low &= ~MPSSE_DO;
-		active_state.data_high |= active_cable.mpsse_swd_read.set_data_high;
-		active_state.data_high &= ~active_cable.mpsse_swd_read.clr_data_high;
+		active_state.data[0] |= active_cable.mpsse_swd_read.set_data_low | MPSSE_DO;
+		active_state.data[0] &= ~active_cable.mpsse_swd_read.clr_data_low;
+		active_state.dirs[0] &= ~MPSSE_DO;
+		active_state.data[1] |= active_cable.mpsse_swd_read.set_data_high;
+		active_state.data[1] &= ~active_cable.mpsse_swd_read.clr_data_high;
 		/* Set up the pin states accordingly */
 		const uint8_t cmd_read[6] = {
 			SET_BITS_LOW,
-			active_state.data_low,
-			active_state.ddr_low,
+			active_state.data[0],
+			active_state.dirs[0],
 			SET_BITS_HIGH,
-			active_state.data_high,
-			active_state.ddr_high,
+			active_state.data[1],
+			active_state.dirs[1],
 		};
 		ftdi_buffer_write_arr(cmd_read);
 	}
@@ -151,19 +151,19 @@ static void ftdi_swd_turnaround_mpsse(const swdio_status_e dir)
 	ftdi_buffer_write_val(cmd);
 	/* If the turnaround should set SWDIO to an output */
 	if (dir == SWDIO_STATUS_DRIVE) {
-		active_state.data_low |= active_cable.mpsse_swd_write.set_data_low | MPSSE_DO;
-		active_state.data_low &= ~active_cable.mpsse_swd_write.clr_data_low;
-		active_state.ddr_low |= MPSSE_DO;
-		active_state.data_high |= active_cable.mpsse_swd_write.set_data_high;
-		active_state.data_high &= ~active_cable.mpsse_swd_write.clr_data_high;
+		active_state.data[0] |= active_cable.mpsse_swd_write.set_data_low | MPSSE_DO;
+		active_state.data[0] &= ~active_cable.mpsse_swd_write.clr_data_low;
+		active_state.dirs[0] |= MPSSE_DO;
+		active_state.data[1] |= active_cable.mpsse_swd_write.set_data_high;
+		active_state.data[1] &= ~active_cable.mpsse_swd_write.clr_data_high;
 		/* Set up the pin states accordingly */
 		const uint8_t cmd_write[6] = {
 			SET_BITS_LOW,
-			active_state.data_low,
-			active_state.ddr_low,
+			active_state.data[0],
+			active_state.dirs[0],
 			SET_BITS_HIGH,
-			active_state.data_high,
-			active_state.ddr_high,
+			active_state.data[1],
+			active_state.dirs[1],
 		};
 		ftdi_buffer_write_arr(cmd_write);
 	}
@@ -175,21 +175,21 @@ static void ftdi_swd_turnaround_raw(const swdio_status_e dir)
 	/* If the turnaround should set SWDIO to an input */
 	if (dir == SWDIO_STATUS_FLOAT) {
 		if (direct_bb_swd) {
-			active_state.data_low |= MPSSE_CS;
-			active_state.ddr_low &= ~MPSSE_CS;
+			active_state.data[0] |= MPSSE_CS;
+			active_state.dirs[0] &= ~MPSSE_CS;
 		} else {
-			active_state.data_low |= active_cable.bb_swd_read.set_data_low;
-			active_state.data_low &= ~active_cable.bb_swd_read.clr_data_low;
-			active_state.data_high |= active_cable.bb_swd_read.set_data_high;
-			active_state.data_high &= ~active_cable.bb_swd_read.clr_data_high;
+			active_state.data[0] |= active_cable.bb_swd_read.set_data_low;
+			active_state.data[0] &= ~active_cable.bb_swd_read.clr_data_low;
+			active_state.data[1] |= active_cable.bb_swd_read.set_data_high;
+			active_state.data[1] &= ~active_cable.bb_swd_read.clr_data_high;
 		}
 		/* Set up the pin states accordingly */
 		cmd[0] = SET_BITS_LOW;
-		cmd[1] = active_state.data_low;
-		cmd[2] = active_state.ddr_low;
+		cmd[1] = active_state.data[0];
+		cmd[2] = active_state.dirs[0];
 		cmd[3] = SET_BITS_HIGH;
-		cmd[4] = active_state.data_high;
-		cmd[5] = active_state.ddr_high;
+		cmd[4] = active_state.data[1];
+		cmd[5] = active_state.dirs[1];
 		/* Run one idle clock cycle */
 		cmd[6] = MPSSE_TMS_SHIFT;
 		cmd[7] = 0;
@@ -201,21 +201,21 @@ static void ftdi_swd_turnaround_raw(const swdio_status_e dir)
 		cmd[1] = 0;
 		cmd[2] = 0;
 		if (direct_bb_swd) {
-			active_state.data_low |= MPSSE_CS;
-			active_state.ddr_low |= MPSSE_CS;
+			active_state.data[0] |= MPSSE_CS;
+			active_state.dirs[0] |= MPSSE_CS;
 		} else {
-			active_state.data_low |= active_cable.bb_swd_write.set_data_low;
-			active_state.data_low &= ~active_cable.bb_swd_write.clr_data_low;
-			active_state.data_high |= active_cable.bb_swd_write.set_data_high;
-			active_state.data_high &= ~active_cable.bb_swd_write.clr_data_high;
+			active_state.data[0] |= active_cable.bb_swd_write.set_data_low;
+			active_state.data[0] &= ~active_cable.bb_swd_write.clr_data_low;
+			active_state.data[1] |= active_cable.bb_swd_write.set_data_high;
+			active_state.data[1] &= ~active_cable.bb_swd_write.clr_data_high;
 		}
 		/* Set up the pin states accordingly */
 		cmd[3] = SET_BITS_LOW;
-		cmd[4] = active_state.data_low;
-		cmd[5] = active_state.ddr_low;
+		cmd[4] = active_state.data[0];
+		cmd[5] = active_state.dirs[0];
 		cmd[6] = SET_BITS_HIGH;
-		cmd[7] = active_state.data_high;
-		cmd[8] = active_state.ddr_high;
+		cmd[7] = active_state.data[1];
+		cmd[8] = active_state.dirs[1];
 	}
 	ftdi_buffer_write_arr(cmd);
 }

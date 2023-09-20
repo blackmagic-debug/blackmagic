@@ -42,10 +42,10 @@
  * ready-to-or/and state.
  */
 typedef struct ftdi_port_state {
-	uint16_t data_low;
-	uint16_t ddr_low;
-	uint16_t data_high;
-	uint16_t ddr_high;
+	/* Data for the low and then high bytes of the port */
+	uint16_t data[2];
+	/* Which directions to set the pins in each byte of the port */
+	uint16_t dirs[2];
 } ftdi_port_state_s;
 
 typedef struct pin_settings {
