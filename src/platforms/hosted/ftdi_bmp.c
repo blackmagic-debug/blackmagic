@@ -51,7 +51,7 @@ static uint8_t outbuf[BUF_SIZE];
 static uint16_t bufptr = 0;
 
 cable_desc_s active_cable;
-data_desc_s active_state;
+ftdi_port_state_s active_state;
 
 const cable_desc_s cable_desc[] = {
 	{
@@ -452,7 +452,7 @@ bool ftdi_bmp_init(bmda_cli_options_s *const cl_opts)
 	}
 
 	active_cable = *cable;
-	memcpy(&active_state, &active_cable.init, sizeof(data_desc_s));
+	memcpy(&active_state, &active_cable.init, sizeof(ftdi_port_state_s));
 	/* If the adaptor being used is Tigard, NULL the description out as libftdi can't deal with the partial match. */
 	if (active_cable.description && memcmp(active_cable.description, "Tigard", 7) == 0)
 		active_cable.description = NULL;
@@ -580,7 +580,7 @@ error_1:
 	return false;
 }
 
-static void libftdi_set_data(data_desc_s *data)
+static void libftdi_set_data(ftdi_port_state_s *data)
 {
 	uint8_t cmd[6];
 	size_t index = 0;
