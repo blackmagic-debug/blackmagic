@@ -76,13 +76,13 @@ const cable_desc_s cable_desc[] = {
 		.vendor = 0x0403U,
 		.product = 0x6010U,
 		.interface = INTERFACE_A,
-		.init.data_low = PIN6, /* PULL nRST high*/
+		.init.data[0] = PIN6, /* PULL nRST high*/
 		.bb_swdio_in_port_cmd = GET_BITS_LOW,
 		.bb_swdio_in_pin = MPSSE_CS,
-		.assert_nrst.data_low = ~PIN6,
-		.assert_nrst.ddr_low = PIN6,
-		.deassert_nrst.data_low = PIN6,
-		.deassert_nrst.ddr_low = ~PIN6,
+		.assert_nrst.data[0] = ~PIN6,
+		.assert_nrst.dirs[0] = PIN6,
+		.deassert_nrst.data[0] = PIN6,
+		.deassert_nrst.dirs[0] = ~PIN6,
 		.description = "FLOSS-JTAG",
 		.name = "flossjtag",
 	},
@@ -100,14 +100,14 @@ const cable_desc_s cable_desc[] = {
 		.vendor = 0x0403U,
 		.product = 0x6010U, /*FT2232H*/
 		.interface = INTERFACE_B,
-		.init.data_low = PIN4, /* Pull up pin 4 */
-		.init.ddr_low = PIN4,  /* Pull up pin 4 */
+		.init.data[0] = PIN4, /* Pull up pin 4 */
+		.init.dirs[0] = PIN4, /* Pull up pin 4 */
 		.mpsse_swd_read.set_data_low = MPSSE_DO,
 		.mpsse_swd_write.set_data_low = MPSSE_DO,
-		.assert_nrst.data_low = ~PIN6,
-		.assert_nrst.ddr_low = PIN6,
-		.deassert_nrst.data_low = PIN6,
-		.deassert_nrst.ddr_low = ~PIN6,
+		.assert_nrst.data[0] = ~PIN6,
+		.assert_nrst.dirs[0] = PIN6,
+		.deassert_nrst.data[0] = PIN6,
+		.deassert_nrst.dirs[0] = ~PIN6,
 		.target_voltage_cmd = GET_BITS_LOW,
 		.target_voltage_pin = PIN4, /* Always read as target voltage present.*/
 		.description = "USBMATE",
@@ -144,11 +144,10 @@ const cable_desc_s cable_desc[] = {
 		.vendor = 0x0403U,
 		.product = 0x6010U,
 		.interface = INTERFACE_A,
-		.init.ddr_low = PIN4,
-		.init.data_high = PIN4 | PIN3 | PIN2,
-		.init.ddr_high = PIN4 | PIN3 | PIN2 | PIN1 | PIN0,
-		.assert_nrst.data_high = ~PIN3,
-		.deassert_nrst.data_high = PIN3,
+		.init.dirs = {PIN4, PIN4 | PIN3 | PIN2 | PIN1 | PIN0},
+		.init.data = {0, PIN4 | PIN3 | PIN2},
+		.assert_nrst.data[1] = ~PIN3,
+		.deassert_nrst.data[1] = PIN3,
 		.nrst_get_port_cmd = GET_BITS_LOW,
 		.nrst_get_pin = PIN6,
 		.description = "FTDIJTAG",
@@ -173,13 +172,12 @@ const cable_desc_s cable_desc[] = {
 		.vendor = 0x0403U,
 		.product = 0x6010U,
 		.interface = INTERFACE_B,
-		.init.data_low = PIN6 | PIN5,
-		.init.ddr_low = PIN6 | PIN5,
-		.init.data_high = PIN1 | PIN2,
-		.assert_nrst.data_high = ~PIN1,
-		.assert_nrst.ddr_high = PIN1,
-		.deassert_nrst.data_high = PIN1,
-		.deassert_nrst.ddr_high = ~PIN1,
+		.init.data = {PIN6 | PIN5, PIN1 | PIN2},
+		.init.dirs = {PIN6 | PIN5, 0},
+		.assert_nrst.data[1] = ~PIN1,
+		.assert_nrst.dirs[1] = PIN1,
+		.deassert_nrst.data[1] = PIN1,
+		.deassert_nrst.dirs[1] = ~PIN1,
 		.mpsse_swd_read.clr_data_low = PIN5 | PIN6,
 		.mpsse_swd_write.set_data_low = PIN5,
 		.mpsse_swd_write.clr_data_low = PIN6,
@@ -193,7 +191,7 @@ const cable_desc_s cable_desc[] = {
 		.vendor = 0x15b1U,
 		.product = 0x0003U,
 		.interface = INTERFACE_A,
-		.init.ddr_low = PIN5,
+		.init.dirs[0] = PIN5,
 		.name = "olimex",
 	},
 	{
@@ -210,11 +208,10 @@ const cable_desc_s cable_desc[] = {
 		.product = 0xbdc8U,
 		.interface = INTERFACE_A,
 		/* Drive low to activate JTAGOE and deassert TRST/RST.*/
-		.init.data_low = 0,
-		.init.ddr_low = PIN6 | PIN5 | PIN4,
-		.init.ddr_high = PIN2, /* ONE LED */
-		.assert_nrst.data_low = PIN6,
-		.deassert_nrst.data_low = ~PIN6,
+		.init.data = {0, 0},
+		.init.dirs = {PIN6 | PIN5 | PIN4, PIN2 /* One LED */},
+		.assert_nrst.data[0] = PIN6,
+		.deassert_nrst.data[0] = ~PIN6,
 		.nrst_get_port_cmd = GET_BITS_HIGH,
 		.nrst_get_pin = PIN0,
 		.name = "turtelizer",
@@ -237,8 +234,8 @@ const cable_desc_s cable_desc[] = {
 		.vendor = 0x0403U,
 		.product = 0xbdc8U,
 		.interface = INTERFACE_A,
-		.init.data_low = MPSSE_CS | MPSSE_DO | MPSSE_DI,
-		.init.ddr_low = MPSSE_CS | MPSSE_DO | MPSSE_SK,
+		.init.data[0] = MPSSE_CS | MPSSE_DO | MPSSE_DI,
+		.init.dirs[0] = MPSSE_CS | MPSSE_DO | MPSSE_SK,
 		.bb_swdio_in_port_cmd = GET_BITS_LOW,
 		.bb_swdio_in_pin = MPSSE_CS,
 		.name = "ftdi",
@@ -248,10 +245,8 @@ const cable_desc_s cable_desc[] = {
 		.vendor = 0x0403U,
 		.product = 0x6014U,
 		.interface = INTERFACE_A,
-		.init.data_low = PIN7,
-		.init.ddr_low = PIN7,
-		.init.data_high = PIN5,
-		.init.ddr_high = PIN5 | PIN4 | PIN3 | PIN2 | PIN1 | PIN0,
+		.init.data = {PIN7, PIN5},
+		.init.dirs = {PIN7, PIN5 | PIN4 | PIN3 | PIN2 | PIN1 | PIN0},
 		.name = "digilent",
 	},
 	{
@@ -259,8 +254,8 @@ const cable_desc_s cable_desc[] = {
 		.vendor = 0x0403U,
 		.product = 0x6014U,
 		.interface = INTERFACE_A,
-		.init.data_low = MPSSE_CS | MPSSE_DO | MPSSE_DI,
-		.init.ddr_low = MPSSE_CS | MPSSE_DO | MPSSE_SK,
+		.init.data[0] = MPSSE_CS | MPSSE_DO | MPSSE_DI,
+		.init.dirs[0] = MPSSE_CS | MPSSE_DO | MPSSE_SK,
 		.bb_swdio_in_port_cmd = GET_BITS_LOW,
 		.bb_swdio_in_pin = MPSSE_CS,
 		.name = "ft232h",
@@ -290,9 +285,8 @@ const cable_desc_s cable_desc[] = {
 		.vendor = 0x15baU,
 		.product = 0x002bU,
 		.interface = INTERFACE_A,
-		.init.ddr_low = PIN4,
-		.init.data_high = PIN3 | PIN1 | PIN0,
-		.init.ddr_high = PIN4 | PIN3 | PIN1 | PIN0,
+		.init.data = {0, PIN3 | PIN1 | PIN0},
+		.init.dirs = {PIN4, PIN4 | PIN3 | PIN1 | PIN0},
 		.name = "arm-usb-ocd-h",
 	},
 	{
@@ -332,12 +326,12 @@ const cable_desc_s cable_desc[] = {
 		.vendor = 0x0403U,
 		.product = 0x6010U, /* FT2232H */
 		.interface = INTERFACE_B,
-		.init.data_high = PIN4 | PIN5, /* High   on PIN4/5 */
-		.init.ddr_high = PIN4 | PIN5,  /* Output on PIN4/5 */
-		.assert_nrst.data_low = ~PIN5,
-		.assert_nrst.ddr_low = PIN5,
-		.deassert_nrst.data_low = PIN5,
-		.deassert_nrst.ddr_low = PIN5,
+		.init.data[1] = PIN4 | PIN5, /* High   on PIN4/5 */
+		.init.dirs[1] = PIN4 | PIN5, /* Output on PIN4/5 */
+		.assert_nrst.data[0] = ~PIN5,
+		.assert_nrst.dirs[0] = PIN5,
+		.deassert_nrst.data[0] = PIN5,
+		.deassert_nrst.dirs[0] = PIN5,
 		.nrst_get_pin = ~PIN5,
 		.target_voltage_cmd = GET_BITS_LOW,
 		.bb_swdio_in_port_cmd = GET_BITS_LOW,
@@ -357,10 +351,10 @@ const cable_desc_s cable_desc[] = {
 		.vendor = 0x0403U,
 		.product = 0x6010U,
 		.interface = INTERFACE_A,
-		.assert_nrst.data_low = ~PIN5,
-		.assert_nrst.ddr_low = PIN5,
-		.deassert_nrst.data_low = PIN5,
-		.deassert_nrst.ddr_low = ~PIN5,
+		.assert_nrst.data[0] = ~PIN5,
+		.assert_nrst.dirs[0] = PIN5,
+		.deassert_nrst.data[0] = PIN5,
+		.deassert_nrst.dirs[0] = ~PIN5,
 		.bb_swdio_in_port_cmd = GET_BITS_LOW,
 		.bb_swdio_in_pin = MPSSE_CS,
 		.name = "hifive1",
@@ -374,14 +368,12 @@ const cable_desc_s cable_desc[] = {
 		.vendor = 0x15b1U,
 		.product = 0x002aU,
 		.interface = INTERFACE_A,
-		.init.data_low = PIN4,
-		.init.ddr_low = PIN4 | PIN5,
-		.init.data_high = PIN2 | PIN4,
-		.init.ddr_high = PIN4,
-		.assert_nrst.data_high = ~PIN2,
-		.assert_nrst.ddr_high = PIN2,
-		.deassert_nrst.data_high = PIN2,
-		.deassert_nrst.ddr_high = ~PIN2,
+		.init.data = {PIN4, PIN2 | PIN4},
+		.init.dirs = {PIN4 | PIN5, PIN4},
+		.assert_nrst.data[1] = ~PIN2,
+		.assert_nrst.dirs[1] = PIN2,
+		.deassert_nrst.data[1] = PIN2,
+		.deassert_nrst.dirs[1] = ~PIN2,
 		.name = "arm-usb-tiny-h",
 		.description = "Olimex OpenOCD JTAG ARM-USB-TINY-H",
 	},
@@ -557,11 +549,11 @@ bool ftdi_bmp_init(bmda_cli_options_s *const cl_opts)
 	ftdi_init[index++] = 1;
 	ftdi_init[index++] = 0;
 	ftdi_init[index++] = SET_BITS_LOW;
-	ftdi_init[index++] = active_state.data_low;
-	ftdi_init[index++] = active_state.ddr_low;
+	ftdi_init[index++] = active_state.data[0];
+	ftdi_init[index++] = active_state.dirs[0];
 	ftdi_init[index++] = SET_BITS_HIGH;
-	ftdi_init[index++] = active_state.data_high;
-	ftdi_init[index++] = active_state.ddr_high;
+	ftdi_init[index++] = active_state.data[1];
+	ftdi_init[index++] = active_state.dirs[1];
 	ftdi_buffer_write(ftdi_init, index);
 	ftdi_buffer_flush();
 	garbage = ftdi_read_data(ctx, ftdi_init, sizeof(ftdi_init));
@@ -584,46 +576,46 @@ static void libftdi_set_data(ftdi_port_state_s *data)
 {
 	uint8_t cmd[6];
 	size_t index = 0;
-	if (data->data_low || data->ddr_low) {
+	if (data->data[0] || data->dirs[0]) {
 		/* If non-zero and positive if signed */
-		if (data->data_low && !(data->data_low & 0x8000U))
-			active_state.data_low |= data->data_low & 0xffU;
+		if (data->data[0] && !(data->data[0] & 0x8000U))
+			active_state.data[0] |= data->data[0] & 0xffU;
 		/* If negative if signed */
-		else if (data->data_low & 0x8000U)
-			active_state.data_low &= data->data_low & 0xffU;
+		else if (data->data[0] & 0x8000U)
+			active_state.data[0] &= data->data[0] & 0xffU;
 
 		/* If non-zero and positive if signed */
-		if (data->ddr_low && !(data->ddr_low & 0x8000U))
-			active_state.ddr_low |= data->ddr_low & 0xffU;
+		if (data->dirs[0] && !(data->dirs[0] & 0x8000U))
+			active_state.dirs[0] |= data->dirs[0] & 0xffU;
 		/* If negative if signed */
-		else if (data->ddr_low & 0x8000U)
-			active_state.ddr_low &= data->ddr_low & 0xffU;
+		else if (data->dirs[0] & 0x8000U)
+			active_state.dirs[0] &= data->dirs[0] & 0xffU;
 
 		/* Having adjusted the active state, configure the pins */
 		cmd[index + 0U] = SET_BITS_LOW;
-		cmd[index + 1U] = active_state.data_low;
-		cmd[index + 2U] = active_state.ddr_low;
+		cmd[index + 1U] = active_state.data[0];
+		cmd[index + 2U] = active_state.dirs[0];
 		index += 3U;
 	}
-	if (data->data_high || data->ddr_high) {
+	if (data->data[1] || data->dirs[1]) {
 		/* If non-zero and positive if signed */
-		if (data->data_high && !(data->data_high & 0x8000U))
-			active_state.data_high |= data->data_high & 0xffU;
+		if (data->data[1] && !(data->data[1] & 0x8000U))
+			active_state.data[1] |= data->data[1] & 0xffU;
 		/* If negative if signed */
-		else if (data->data_high & 0x8000U)
-			active_state.data_high &= data->data_high & 0xffU;
+		else if (data->data[1] & 0x8000U)
+			active_state.data[1] &= data->data[1] & 0xffU;
 
 		/* If non-zero and positive if signed */
-		if (data->ddr_high && !(data->ddr_high & 0x8000U))
-			active_state.ddr_high |= data->ddr_high & 0xffU;
+		if (data->dirs[1] && !(data->dirs[1] & 0x8000U))
+			active_state.dirs[1] |= data->dirs[1] & 0xffU;
 		/* If negative if signed */
-		else if (data->ddr_high & 0x8000U)
-			active_state.ddr_high &= data->ddr_high & 0xffU;
+		else if (data->dirs[1] & 0x8000U)
+			active_state.dirs[1] &= data->dirs[1] & 0xffU;
 
 		/* Having adjusted the active state, configure the pins */
 		cmd[index + 0U] = SET_BITS_HIGH;
-		cmd[index + 1U] = active_state.data_high;
-		cmd[index + 2U] = active_state.ddr_high;
+		cmd[index + 1U] = active_state.data[1];
+		cmd[index + 2U] = active_state.dirs[1];
 		index += 3U;
 	}
 	/* If any adjustments needed to be made, send the commands and flush */
@@ -648,12 +640,12 @@ bool ftdi_nrst_get_val(void)
 	if (active_cable.nrst_get_port_cmd && active_cable.nrst_get_pin) {
 		cmd = active_cable.nrst_get_port_cmd;
 		pin = active_cable.nrst_get_pin;
-	} else if (active_cable.assert_nrst.data_low && active_cable.assert_nrst.ddr_low) {
+	} else if (active_cable.assert_nrst.data[0] && active_cable.assert_nrst.dirs[0]) {
 		cmd = GET_BITS_LOW;
-		pin = active_cable.assert_nrst.data_low;
-	} else if (active_cable.assert_nrst.data_high && active_cable.assert_nrst.ddr_high) {
+		pin = active_cable.assert_nrst.data[0];
+	} else if (active_cable.assert_nrst.data[1] && active_cable.assert_nrst.dirs[1]) {
 		cmd = GET_BITS_HIGH;
-		pin = active_cable.assert_nrst.data_high;
+		pin = active_cable.assert_nrst.data[1];
 	} else
 		return false;
 

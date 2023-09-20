@@ -79,21 +79,21 @@ bool ftdi_jtag_init(void)
 	jtag_proc.jtagtap_tdi_seq = ftdi_jtag_tdi_seq;
 	jtag_proc.tap_idle_cycles = 1;
 
-	active_state.data_low |= active_cable.jtag.set_data_low | MPSSE_CS | MPSSE_DI | MPSSE_DO;
-	active_state.data_low &= ~(active_cable.jtag.clr_data_low | MPSSE_SK);
-	active_state.ddr_low |= MPSSE_CS | MPSSE_DO | MPSSE_SK;
-	active_state.ddr_low &= ~MPSSE_DI;
-	active_state.data_high |= active_cable.jtag.set_data_high;
-	active_state.data_high &= ~active_cable.jtag.clr_data_high;
+	active_state.data[0] |= active_cable.jtag.set_data_low | MPSSE_CS | MPSSE_DI | MPSSE_DO;
+	active_state.data[0] &= ~(active_cable.jtag.clr_data_low | MPSSE_SK);
+	active_state.dirs[0] |= MPSSE_CS | MPSSE_DO | MPSSE_SK;
+	active_state.dirs[0] &= ~MPSSE_DI;
+	active_state.data[1] |= active_cable.jtag.set_data_high;
+	active_state.data[1] &= ~active_cable.jtag.clr_data_high;
 	ftdi_jtag_drain_potential_garbage();
 
 	const uint8_t cmd[6] = {
 		SET_BITS_LOW,
-		active_state.data_low,
-		active_state.ddr_low,
+		active_state.data[0],
+		active_state.dirs[0],
 		SET_BITS_HIGH,
-		active_state.data_high,
-		active_state.ddr_high,
+		active_state.data[1],
+		active_state.dirs[1],
 	};
 	ftdi_buffer_write_arr(cmd);
 	ftdi_buffer_flush();
