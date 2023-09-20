@@ -33,6 +33,15 @@
 #include "ftdi_bmp.h"
 #include <ftdi.h>
 
+/*
+ * This file implements the generic and overarching logic and routines needed to talk
+ * with FTDI devices to interface with JTAG and SWD via them.
+ *
+ * References:
+ * AN_108 - Command Processor for MPSSE and MCU Host Bus Emulation Modes
+ *   https://www.ftdichip.com/Support/Documents/AppNotes/AN_108_Command_Processor_for_MPSSE_and_MCU_Host_Bus_Emulation_Modes.pdf
+ */
+
 #if defined(USE_USB_VERSION_BIT)
 typedef struct ftdi_transfer_control ftdi_transfer_control_s;
 #endif
