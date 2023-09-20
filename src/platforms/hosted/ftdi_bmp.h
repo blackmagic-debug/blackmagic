@@ -33,12 +33,20 @@
 
 #include "probe_info.h"
 
-typedef struct data_desc {
+/*
+ * This structure defines a current or desired port state. Ports are 16-bit, though
+ * on the 4-port FTDI models the upper 8 bits are not bonded out.
+ *
+ * The high half of each uint16_t entry in the data and dirs arrays define whether
+ * the desired state sets or clears bits. The low half defines the new state in a
+ * ready-to-or/and state.
+ */
+typedef struct ftdi_port_state {
 	uint16_t data_low;
 	uint16_t ddr_low;
 	uint16_t data_high;
 	uint16_t ddr_high;
-} data_desc_s;
+} ftdi_port_state_s;
 
 typedef struct pin_settings {
 	uint8_t set_data_low;
@@ -53,7 +61,7 @@ typedef struct cable_desc {
 	int interface;
 	/* Initial (C|D)(Bus|Ddr) values for additional pins.
 	 * MPSSE_CS|DI|DO|SK are initialized accordig to mode.*/
-	data_desc_s init;
+	ftdi_port_state_s init;
 	/* MPSSE command to read TMS/SWDIO in bitbanging SWD.
 	 * In many cases this is the TMS port, so then use "GET_PIN_LOW".*/
 	uint8_t bb_swdio_in_port_cmd;
@@ -69,11 +77,11 @@ typedef struct cable_desc {
 	/* dbus_data, dbus_ddr, cbus_data, cbus_ddr value to assert nRST.
 	 *	E.g. with CBUS Pin 1 low,
 	 *	give data_high = ~PIN1, ddr_high = PIN1 */
-	data_desc_s assert_nrst;
+	ftdi_port_state_s assert_nrst;
 	/*  Bus_data, dbus_ddr, cbus_data, cbus_ddr value to release nRST.
 	 *	E.g. with CBUS Pin 1 floating with internal pull up,
 	 *	give data_high = PIN1, ddr_high = ~PIN1 */
-	data_desc_s deassert_nrst;
+	ftdi_port_state_s deassert_nrst;
 	/* Command to read back NRST. If 0, port from assert_nrst is used*/
 	uint8_t nrst_get_port_cmd;
 	/* PIN to read back as NRST. if 0 port from assert_nrst is ised.
@@ -117,7 +125,7 @@ typedef struct ftdi_mpsse_cmd_bits {
 
 extern const cable_desc_s cable_desc[];
 extern cable_desc_s active_cable;
-extern data_desc_s active_state;
+extern ftdi_port_state_s active_state;
 
 #define ftdi_buffer_write_arr(array) ftdi_buffer_write(array, sizeof(array))
 #define ftdi_buffer_write_val(value) ftdi_buffer_write(&(value), sizeof(value))
