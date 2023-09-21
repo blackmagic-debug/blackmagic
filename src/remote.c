@@ -146,7 +146,7 @@ static void remote_packet_process_swd(const char *const packet, const size_t pac
 		if (packet_len == 2) {
 			remote_dp.dp_low_write = firmware_dp_low_write;
 			remote_dp.dp_read = firmware_swdp_read;
-			remote_dp.error = firmware_swdp_error;
+			remote_dp.error = adiv5_swd_clear_error;
 			remote_dp.low_access = firmware_swdp_low_access;
 			remote_dp.abort = firmware_swdp_abort;
 			swdptap_init();
