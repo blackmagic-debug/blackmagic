@@ -125,7 +125,7 @@ static void jtag_to_swd_sequence()
 	swd_line_reset_sequence(true);
 }
 
-bool firmware_dp_low_write(const uint16_t addr, const uint32_t data)
+bool adiv5_swd_write_no_check(const uint16_t addr, const uint32_t data)
 {
 	const uint8_t request = make_packet_request(ADIV5_LOW_WRITE, addr);
 	swd_proc.seq_out(request, 8U);
@@ -156,7 +156,7 @@ bool adiv5_swd_scan(const uint32_t targetid)
 		return false;
 	}
 
-	dp->dp_low_write = firmware_dp_low_write;
+	dp->write_no_check = adiv5_swd_write_no_check;
 	dp->error = adiv5_swd_clear_error;
 	dp->dp_read = firmware_swdp_read;
 	dp->low_access = firmware_swdp_low_access;
@@ -238,7 +238,7 @@ bool adiv5_swd_scan(const uint32_t targetid)
 		bool scan_multidrop = targetid || dp->version >= 2U;
 
 #if PC_HOSTED == 1
-	if (scan_multidrop && !dp->dp_low_write) {
+	if (scan_multidrop && !dp->write_no_check) {
 		DEBUG_WARN("Discovered multi-drop enabled target but CMSIS_DAP < v1.2 cannot handle multi-drop\n");
 		scan_multidrop = false;
 	}
@@ -299,7 +299,7 @@ void adiv5_swd_multidrop_scan(adiv5_debug_port_s *const dp, const uint32_t targe
 		dp->fault = 0;
 
 		/* Select the instance */
-		dp->dp_low_write(ADIV5_DP_TARGETSEL,
+		dp->write_no_check(ADIV5_DP_TARGETSEL,
 			instance << ADIV5_DP_TARGETSEL_TINSTANCE_OFFSET |
 				(targetid & (ADIV5_DP_TARGETID_TDESIGNER_MASK | ADIV5_DP_TARGETID_TPARTNO_MASK)) | 1U);
 
@@ -349,7 +349,7 @@ uint32_t adiv5_swd_clear_error(adiv5_debug_port_s *const dp, const bool protocol
 		 */
 		swd_line_reset_sequence(true);
 		if (dp->version >= 2U)
-			firmware_dp_low_write(ADIV5_DP_TARGETSEL, dp->targetsel);
+			adiv5_swd_write_no_check(ADIV5_DP_TARGETSEL, dp->targetsel);
 		firmware_dp_low_read(ADIV5_DP_DPIDR);
 		/* Exception here is unexpected, so do not catch */
 	}
@@ -368,7 +368,7 @@ uint32_t adiv5_swd_clear_error(adiv5_debug_port_s *const dp, const bool protocol
 		clr |= ADIV5_DP_ABORT_WDERRCLR;
 
 	if (clr)
-		firmware_dp_low_write(ADIV5_DP_ABORT, clr);
+		adiv5_swd_write_no_check(ADIV5_DP_ABORT, clr);
 	dp->fault = 0;
 	return err;
 }

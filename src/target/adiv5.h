@@ -225,8 +225,8 @@ typedef struct adiv5_debug_port adiv5_debug_port_s;
 struct adiv5_debug_port {
 	int refcnt;
 
-	/* dp_low_write returns true if no OK response, but ignores errors */
-	bool (*dp_low_write)(uint16_t addr, const uint32_t data);
+	/* write_no_check returns true if no OK response, but ignores errors */
+	bool (*write_no_check)(uint16_t addr, const uint32_t data);
 	uint32_t (*dp_read)(adiv5_debug_port_s *dp, uint16_t addr);
 	uint32_t (*error)(adiv5_debug_port_s *dp, bool protocol_recovery);
 	uint32_t (*low_access)(adiv5_debug_port_s *dp, uint8_t RnW, uint16_t addr, uint32_t value);
@@ -386,7 +386,7 @@ uint32_t fw_adiv5_jtagdp_low_access(adiv5_debug_port_s *dp, uint8_t RnW, uint16_
 uint32_t firmware_swdp_read(adiv5_debug_port_s *dp, uint16_t addr);
 uint32_t fw_adiv5_jtagdp_read(adiv5_debug_port_s *dp, uint16_t addr);
 
-bool firmware_dp_low_write(uint16_t addr, uint32_t data);
+bool adiv5_swd_write_no_check(uint16_t addr, uint32_t data);
 uint32_t adiv5_swd_clear_error(adiv5_debug_port_s *dp, bool protocol_recovery);
 uint32_t adiv5_jtagdp_error(adiv5_debug_port_s *dp, bool protocol_recovery);
 
