@@ -153,7 +153,7 @@ bool adiv5_swd_scan(const uint32_t targetid)
 	}
 
 	dp->dp_low_write = firmware_dp_low_write;
-	dp->error = firmware_swdp_error;
+	dp->error = adiv5_swd_clear_error;
 	dp->dp_read = firmware_swdp_read;
 	dp->low_access = firmware_swdp_low_access;
 	dp->abort = firmware_swdp_abort;
@@ -333,7 +333,7 @@ uint32_t firmware_swdp_read(adiv5_debug_port_s *dp, uint16_t addr)
 	return adiv5_dp_recoverable_access(dp, ADIV5_LOW_READ, addr, 0);
 }
 
-uint32_t firmware_swdp_error(adiv5_debug_port_s *dp, const bool protocol_recovery)
+uint32_t adiv5_swd_clear_error(adiv5_debug_port_s *const dp, const bool protocol_recovery)
 {
 	/* Only do the comms reset dance on DPv2+ w/ fault or to perform protocol recovery. */
 	if ((dp->version >= 2U && dp->fault) || protocol_recovery) {
