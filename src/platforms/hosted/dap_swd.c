@@ -78,9 +78,9 @@ bool dap_swd_init(adiv5_debug_port_s *target_dp)
 
 	/* If we have SWD sequences available, make use of them */
 	if (dap_has_swd_sequence)
-		target_dp->dp_low_write = dap_write_reg_no_check;
+		target_dp->write_no_check = dap_write_reg_no_check;
 	else
-		target_dp->dp_low_write = NULL;
+		target_dp->write_no_check = NULL;
 	/* Set up the accelerated SWD functions for basic target operations */
 	target_dp->dp_read = dap_dp_read_reg;
 	target_dp->error = dap_swd_clear_error;
@@ -190,7 +190,7 @@ static void dap_line_reset(void)
 		DEBUG_ERROR("line reset failed\n");
 }
 
-static bool dap_write_reg_no_check(uint16_t addr, const uint32_t data)
+static bool dap_write_reg_no_check(const uint16_t addr, const uint32_t data)
 {
 	DEBUG_PROBE("dap_write_reg_no_check %04x <- %08" PRIx32 "\n", addr, data);
 	/* Setup the sequences */

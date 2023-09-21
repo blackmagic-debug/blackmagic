@@ -129,7 +129,7 @@ static void remote_respond_string(const char response_code, const char *const st
  * and remote_packet_process_jtag() for use by remote_packet_process_adiv5() so its faked AP can do the right
  * thing.
  *
- * REMOTE_INIT for SWD and JTAG rewrite the dp_low_write, dp_read, error, low_access and abort function
+ * REMOTE_INIT for SWD and JTAG rewrite the write_no_check, dp_read, error, low_access and abort function
  * pointers to reconfigure this structure appropriately.
  */
 static adiv5_debug_port_s remote_dp = {
@@ -144,7 +144,7 @@ static void remote_packet_process_swd(const char *const packet, const size_t pac
 	switch (packet[1]) {
 	case REMOTE_INIT: /* SS = initialise =============================== */
 		if (packet_len == 2) {
-			remote_dp.dp_low_write = firmware_dp_low_write;
+			remote_dp.write_no_check = adiv5_swd_write_no_check;
 			remote_dp.dp_read = firmware_swdp_read;
 			remote_dp.error = adiv5_swd_clear_error;
 			remote_dp.low_access = firmware_swdp_low_access;
@@ -196,7 +196,7 @@ static void remote_packet_process_jtag(const char *const packet, const size_t pa
 {
 	switch (packet[1]) {
 	case REMOTE_INIT: /* JS = initialise ============================= */
-		remote_dp.dp_low_write = NULL;
+		remote_dp.write_no_check = NULL;
 		remote_dp.dp_read = fw_adiv5_jtagdp_read;
 		remote_dp.error = adiv5_jtagdp_error;
 		remote_dp.low_access = fw_adiv5_jtagdp_low_access;

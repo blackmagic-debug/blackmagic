@@ -100,7 +100,7 @@ bool jlink_swd_init(adiv5_debug_port_s *dp)
 	swd_proc.seq_out_parity = jlink_swd_seq_out_parity;
 
 	/* Set up the accelerated SWD functions for basic target operations */
-	dp->dp_low_write = jlink_adiv5_raw_write_no_check;
+	dp->write_no_check = jlink_adiv5_raw_write_no_check;
 	dp->dp_read = firmware_swdp_read;
 	dp->error = jlink_adiv5_clear_error;
 	dp->low_access = jlink_adiv5_raw_access;
