@@ -91,8 +91,12 @@ typedef struct cortexa_priv {
 #define CORTEXAR_DBG_WCR   0x1c0U
 #define CORTEXAR_CTR       0xd04U
 
+#define CORTEXAR_DBG_DSCCR 0x028U
+#define CORTEXAR_DBG_DSMCR 0x02cU
 #define CORTEXAR_DBG_OSLAR 0x300U
 #define CORTEXAR_DBG_OSLSR 0x304U
+#define CORTEXAR_DBG_LAR   0xfb0U /* Lock Access */
+#define CORTEXAR_DBG_LSR   0xfb4U /* Lock Status */
 
 #define DBGOSLSR_OSLM0 (1U << 0U)
 #define DBGOSLSR_OSLK  (1U << 1U)
@@ -628,6 +632,15 @@ bool cortexa_attach(target_s *target)
 
 	/* Clear any pending fault condition */
 	target_check_error(target);
+
+#if 0
+	/* Reset 0xc5acce55 lock access to deter software */
+	cortex_dbg_write32(target, CORTEXAR_DBG_LAR, 0U);
+	/* Cache write-through */
+	cortex_dbg_write32(target, CORTEXAR_DBG_DSCCR, 0U);
+	/* Disable TLB lookup and refill/eviction */
+	cortex_dbg_write32(target, CORTEXAR_DBG_DSMCR, 0U);
+#endif
 
 	uint32_t dbg_osreg = cortex_dbg_read32(target, CORTEXAR_DBG_OSLSR);
 	DEBUG_INFO("%s: DBGOSLSR = 0x%08X\n", __func__, dbg_osreg);
