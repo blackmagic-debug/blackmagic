@@ -317,6 +317,54 @@ static size_t create_tdesc_cortex_a(char *buffer, size_t max_len)
 	return (size_t)total;
 }
 
+typedef struct bitfield_entry {
+	char *desc;
+	uint8_t bitnum;
+} bitfields_lut_s;
+
+static const bitfields_lut_s cortexa_dbg_dscr_lut[] = {
+	{"HALTED", 0U},
+	{"RESTARTED", 1U},
+	{"SDABORT_l", 6U},
+	{"ADABORT_l", 7U},
+	{"UND_l", 8U},
+	{"FS", 9U},
+	{"ITRen", 13U},
+	{"HDBGen", 14U},
+	{"MDBGen", 15U},
+	{"InstrCompl_l", 24U},
+	{"PipeAdv", 25U},
+	{"TXfull_l", 26U},
+	{"RXfull_l", 27U},
+	{"TXfull", 29U},
+	{"RXfull", 30U},
+};
+
+static void helper_print_bitfields(const uint32_t val, const bitfields_lut_s lut[], const size_t array_length)
+{
+	for (size_t i = 0; i < array_length; i++) {
+		if (val & (1U << lut[i].bitnum)) {
+			DEBUG_TARGET("%s ", lut[i].desc);
+		}
+	}
+};
+
+static void cortexa_decode_bitfields(const uint32_t reg, const uint32_t val)
+{
+	DEBUG_TARGET("Bits set in reg ");
+	switch (reg) {
+	case CORTEXAR_DBG_DSCR:
+		DEBUG_TARGET("DBGDSCR: ");
+		helper_print_bitfields(val, cortexa_dbg_dscr_lut, ARRAY_LENGTH(cortexa_dbg_dscr_lut));
+		break;
+	default:
+		DEBUG_TARGET("unknown reg");
+		break;
+	}
+
+	DEBUG_TARGET("\n");
+}
+
 static void cortexar_run_insn(target_s *const target, const uint32_t insn)
 {
 	/* Issue the requested instruction to the core */
@@ -572,12 +620,19 @@ bool cortexa_attach(target_s *target)
 	/* Clear any pending fault condition */
 	target_check_error(target);
 
-	/* Enable halting debug mode */
 	uint32_t dbgdscr = cortex_dbg_read32(target, CORTEXAR_DBG_DSCR);
-	dbgdscr |= CORTEXAR_DBG_DSCR_ITR_ENABLE | CORTEXAR_DBG_DSCR_ITR_ENABLE;
+	DEBUG_INFO("%s: DBGDSCR = 0x%08" PRIx32 " (1)\n", __func__, dbgdscr);
+	cortexa_decode_bitfields(CORTEXAR_DBG_DSCR, dbgdscr);
+
+	/* Enable halting debug mode */
+	dbgdscr |= CORTEXAR_DBG_DSCR_HALT_DBG_ENABLE | CORTEXAR_DBG_DSCR_ITR_ENABLE;
+	cortex_dbg_write32(target, CORTEXAR_DBG_DSCR, dbgdscr);
 	dbgdscr &= ~DBGDSCR_EXTDCCMODE_MASK;
 	cortex_dbg_write32(target, CORTEXAR_DBG_DSCR, dbgdscr);
-	DEBUG_INFO("DBGDSCR = 0x%08" PRIx32 "\n", dbgdscr);
+
+	dbgdscr = cortex_dbg_read32(target, CORTEXAR_DBG_DSCR);
+	DEBUG_INFO("%s: DBGDSCR = 0x%08" PRIx32 " (2)\n", __func__, dbgdscr);
+	cortexa_decode_bitfields(CORTEXAR_DBG_DSCR, dbgdscr);
 
 	target_halt_request(target);
 	size_t tries = 10;
