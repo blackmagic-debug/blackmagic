@@ -508,6 +508,8 @@ bool cortexa_probe(adiv5_access_port_s *ap, target_addr_t base_address)
 	target->halt_poll = cortexa_halt_poll;
 	target->halt_resume = cortexa_halt_resume;
 
+#if 0 /* Trying to halt STM32MP15x Cortex-A cores during probe locks up BMDA/BMF! */
+
 	/* Try to halt the target core */
 	target_halt_request(target);
 	platform_timeout_s timeout;
@@ -518,6 +520,7 @@ bool cortexa_probe(adiv5_access_port_s *ap, target_addr_t base_address)
 	/* If we did not succeed, we must abort at this point. */
 	if (reason == TARGET_HALT_FAULT || reason == TARGET_HALT_ERROR)
 		return false;
+#endif
 
 	cortex_read_cpuid(target);
 	/* The format of the debug identification register is described in DDI0406C §C11.11.15 pg2217 */
