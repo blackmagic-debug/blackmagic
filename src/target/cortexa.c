@@ -91,6 +91,15 @@ typedef struct cortexa_priv {
 #define CORTEXAR_DBG_WCR   0x1c0U
 #define CORTEXAR_CTR       0xd04U
 
+#define CORTEXAR_DBG_OSLAR 0x300U
+#define CORTEXAR_DBG_OSLSR 0x304U
+
+#define DBGOSLSR_OSLM0 (1U << 0U)
+#define DBGOSLSR_OSLK  (1U << 1U)
+#define DBGOSLSR_NTT   (1U << 2U)
+#define DBGOSLSR_OSLM1 (1U << 3U)
+#define DBGOSLSR_OSLM  (DBGOSLSR_OSLM0 | DBGOSLSR_OSLM1)
+
 #define CORTEXAR_DBG_IDR_BREAKPOINT_MASK  0xfU
 #define CORTEXAR_DBG_IDR_BREAKPOINT_SHIFT 24U
 #define CORTEXAR_DBG_IDR_WATCHPOINT_MASK  0xfU
@@ -619,6 +628,22 @@ bool cortexa_attach(target_s *target)
 
 	/* Clear any pending fault condition */
 	target_check_error(target);
+
+	uint32_t dbg_osreg = cortex_dbg_read32(target, CORTEXAR_DBG_OSLSR);
+	DEBUG_INFO("%s: DBGOSLSR = 0x%08X\n", __func__, dbg_osreg);
+	/* Is OS Lock implemented? */
+	if (((dbg_osreg & DBGOSLSR_OSLM) == DBGOSLSR_OSLM0) || ((dbg_osreg & DBGOSLSR_OSLM) == DBGOSLSR_OSLM1)) {
+		/* Is OS Lock set? */
+		if (dbg_osreg & DBGOSLSR_OSLK) {
+			DEBUG_WARN("%s: OSLock set! Trying to unlock\n", __func__);
+			cortex_dbg_write32(target, CORTEXAR_DBG_OSLAR, 0U);
+			dbg_osreg = cortex_dbg_read32(target, CORTEXAR_DBG_OSLSR);
+
+			if ((dbg_osreg & DBGOSLSR_OSLK) != 0) {
+				DEBUG_ERROR("%s: OSLock sticky, core not powered?\n", __func__);
+			}
+		}
+	}
 
 	uint32_t dbgdscr = cortex_dbg_read32(target, CORTEXAR_DBG_DSCR);
 	DEBUG_INFO("%s: DBGDSCR = 0x%08" PRIx32 " (1)\n", __func__, dbgdscr);
