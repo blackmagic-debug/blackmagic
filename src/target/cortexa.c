@@ -569,7 +569,44 @@ bool cortexa_probe(adiv5_access_port_s *ap, target_addr_t base_address)
 	target->halt_poll = cortexa_halt_poll;
 	target->halt_resume = cortexa_halt_resume;
 
-#if 0 /* Trying to halt STM32MP15x Cortex-A cores during probe locks up BMDA/BMF! */
+#if 0
+	/* Reset 0xc5acce55 lock access to deter software */
+	cortex_dbg_write32(target, CORTEXAR_DBG_LAR, 0U);
+	/* Cache write-through */
+	cortex_dbg_write32(target, CORTEXAR_DBG_DSCCR, 0U);
+	/* Disable TLB lookup and refill/eviction */
+	cortex_dbg_write32(target, CORTEXAR_DBG_DSMCR, 0U);
+#endif
+
+	uint32_t dbg_osreg = cortex_dbg_read32(target, CORTEXAR_DBG_OSLSR);
+	DEBUG_INFO("%s: DBGOSLSR = 0x%08X\n", __func__, dbg_osreg);
+	/* Is OS Lock implemented? */
+	if (((dbg_osreg & DBGOSLSR_OSLM) == DBGOSLSR_OSLM0) || ((dbg_osreg & DBGOSLSR_OSLM) == DBGOSLSR_OSLM1)) {
+		/* Is OS Lock set? */
+		if (dbg_osreg & DBGOSLSR_OSLK) {
+			DEBUG_WARN("%s: OSLock set! Trying to unlock\n", __func__);
+			cortex_dbg_write32(target, CORTEXAR_DBG_OSLAR, 0U);
+			dbg_osreg = cortex_dbg_read32(target, CORTEXAR_DBG_OSLSR);
+
+			if ((dbg_osreg & DBGOSLSR_OSLK) != 0) {
+				DEBUG_ERROR("%s: OSLock sticky, core not powered?\n", __func__);
+			}
+		}
+	}
+
+	uint32_t dbgdscr = cortex_dbg_read32(target, CORTEXAR_DBG_DSCR);
+	DEBUG_INFO("%s: DBGDSCR = 0x%08" PRIx32 " (1)\n", __func__, dbgdscr);
+	cortexa_decode_bitfields(CORTEXAR_DBG_DSCR, dbgdscr);
+
+	/* Enable halting debug mode */
+	dbgdscr |= CORTEXAR_DBG_DSCR_HALT_DBG_ENABLE | CORTEXAR_DBG_DSCR_ITR_ENABLE;
+	cortex_dbg_write32(target, CORTEXAR_DBG_DSCR, dbgdscr);
+	dbgdscr &= ~DBGDSCR_EXTDCCMODE_MASK;
+	cortex_dbg_write32(target, CORTEXAR_DBG_DSCR, dbgdscr);
+
+	dbgdscr = cortex_dbg_read32(target, CORTEXAR_DBG_DSCR);
+	DEBUG_INFO("%s: DBGDSCR = 0x%08" PRIx32 " (2)\n", __func__, dbgdscr);
+	cortexa_decode_bitfields(CORTEXAR_DBG_DSCR, dbgdscr);
 
 	/* Try to halt the target core */
 	target_halt_request(target);
@@ -581,7 +618,6 @@ bool cortexa_probe(adiv5_access_port_s *ap, target_addr_t base_address)
 	/* If we did not succeed, we must abort at this point. */
 	if (reason == TARGET_HALT_FAULT || reason == TARGET_HALT_ERROR)
 		return false;
-#endif
 
 	cortex_read_cpuid(target);
 	/* The format of the debug identification register is described in DDI0406C §C11.11.15 pg2217 */
@@ -632,45 +668,6 @@ bool cortexa_attach(target_s *target)
 
 	/* Clear any pending fault condition */
 	target_check_error(target);
-
-#if 0
-	/* Reset 0xc5acce55 lock access to deter software */
-	cortex_dbg_write32(target, CORTEXAR_DBG_LAR, 0U);
-	/* Cache write-through */
-	cortex_dbg_write32(target, CORTEXAR_DBG_DSCCR, 0U);
-	/* Disable TLB lookup and refill/eviction */
-	cortex_dbg_write32(target, CORTEXAR_DBG_DSMCR, 0U);
-#endif
-
-	uint32_t dbg_osreg = cortex_dbg_read32(target, CORTEXAR_DBG_OSLSR);
-	DEBUG_INFO("%s: DBGOSLSR = 0x%08X\n", __func__, dbg_osreg);
-	/* Is OS Lock implemented? */
-	if (((dbg_osreg & DBGOSLSR_OSLM) == DBGOSLSR_OSLM0) || ((dbg_osreg & DBGOSLSR_OSLM) == DBGOSLSR_OSLM1)) {
-		/* Is OS Lock set? */
-		if (dbg_osreg & DBGOSLSR_OSLK) {
-			DEBUG_WARN("%s: OSLock set! Trying to unlock\n", __func__);
-			cortex_dbg_write32(target, CORTEXAR_DBG_OSLAR, 0U);
-			dbg_osreg = cortex_dbg_read32(target, CORTEXAR_DBG_OSLSR);
-
-			if ((dbg_osreg & DBGOSLSR_OSLK) != 0) {
-				DEBUG_ERROR("%s: OSLock sticky, core not powered?\n", __func__);
-			}
-		}
-	}
-
-	uint32_t dbgdscr = cortex_dbg_read32(target, CORTEXAR_DBG_DSCR);
-	DEBUG_INFO("%s: DBGDSCR = 0x%08" PRIx32 " (1)\n", __func__, dbgdscr);
-	cortexa_decode_bitfields(CORTEXAR_DBG_DSCR, dbgdscr);
-
-	/* Enable halting debug mode */
-	dbgdscr |= CORTEXAR_DBG_DSCR_HALT_DBG_ENABLE | CORTEXAR_DBG_DSCR_ITR_ENABLE;
-	cortex_dbg_write32(target, CORTEXAR_DBG_DSCR, dbgdscr);
-	dbgdscr &= ~DBGDSCR_EXTDCCMODE_MASK;
-	cortex_dbg_write32(target, CORTEXAR_DBG_DSCR, dbgdscr);
-
-	dbgdscr = cortex_dbg_read32(target, CORTEXAR_DBG_DSCR);
-	DEBUG_INFO("%s: DBGDSCR = 0x%08" PRIx32 " (2)\n", __func__, dbgdscr);
-	cortexa_decode_bitfields(CORTEXAR_DBG_DSCR, dbgdscr);
 
 	target_halt_request(target);
 	size_t tries = 10;
