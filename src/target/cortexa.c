@@ -837,6 +837,11 @@ static target_halt_reason_e cortexa_halt_poll(target_s *t, target_addr_t *watch)
 void cortexa_halt_resume(target_s *t, bool step)
 {
 	cortexa_priv_s *priv = t->priv;
+
+	uint32_t dbgdscr = cortex_dbg_read32(t, CORTEXAR_DBG_DSCR);
+	if (!(dbgdscr & CORTEXAR_DBG_DSCR_HALTED)) /* Not halted */
+		return;
+
 	/* Set breakpoint comparator for single stepping if needed */
 	if (step) {
 		uint32_t addr = priv->reg_cache.r[15];
@@ -856,7 +861,7 @@ void cortexa_halt_resume(target_s *t, bool step)
 	cortexar_run_insn(t, MCR | ICIALLU); /* invalidate cache */
 
 	/* Disable DBGITR.  Not sure why, but RRQ is ignored otherwise. */
-	uint32_t dbgdscr = cortex_dbg_read32(t, CORTEXAR_DBG_DSCR);
+	dbgdscr = cortex_dbg_read32(t, CORTEXAR_DBG_DSCR);
 	if (step)
 		dbgdscr |= DBGDSCR_INTDIS;
 	else
