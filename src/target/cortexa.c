@@ -330,6 +330,7 @@ static size_t create_tdesc_cortex_a(char *buffer, size_t max_len)
 	return (size_t)total;
 }
 
+#ifdef ENABLE_DEBUG
 typedef struct bitfield_entry {
 	char *desc;
 	uint8_t bitnum;
@@ -353,14 +354,13 @@ static const bitfields_lut_s cortexa_dbg_dscr_lut[] = {
 	{"RXfull", 30U},
 };
 
-static void helper_print_bitfields(const uint32_t val, const bitfields_lut_s lut[], const size_t array_length)
+static void helper_print_bitfields(const uint32_t val, const bitfields_lut_s *lut, const size_t array_length)
 {
 	for (size_t i = 0; i < array_length; i++) {
-		if (val & (1U << lut[i].bitnum)) {
+		if (val & (1U << lut[i].bitnum))
 			DEBUG_TARGET("%s ", lut[i].desc);
-		}
 	}
-};
+}
 
 static void cortexa_decode_bitfields(const uint32_t reg, const uint32_t val)
 {
@@ -377,6 +377,13 @@ static void cortexa_decode_bitfields(const uint32_t reg, const uint32_t val)
 
 	DEBUG_TARGET("\n");
 }
+#else
+static void cortexa_decode_bitfields(const uint32_t reg, const uint32_t val)
+{
+	(void)reg;
+	(void)val;
+}
+#endif
 
 static void cortexar_run_insn(target_s *const target, const uint32_t insn)
 {
@@ -579,9 +586,9 @@ bool cortexa_probe(adiv5_access_port_s *ap, target_addr_t base_address)
 #endif
 
 	uint32_t dbg_osreg = cortex_dbg_read32(target, CORTEXAR_DBG_OSLSR);
-	DEBUG_INFO("%s: DBGOSLSR = 0x%08X\n", __func__, dbg_osreg);
+	DEBUG_INFO("%s: DBGOSLSR = 0x%08" PRIx32 "\n", __func__, dbg_osreg);
 	/* Is OS Lock implemented? */
-	if (((dbg_osreg & DBGOSLSR_OSLM) == DBGOSLSR_OSLM0) || ((dbg_osreg & DBGOSLSR_OSLM) == DBGOSLSR_OSLM1)) {
+	if ((dbg_osreg & DBGOSLSR_OSLM) == DBGOSLSR_OSLM0 || (dbg_osreg & DBGOSLSR_OSLM) == DBGOSLSR_OSLM1) {
 		/* Is OS Lock set? */
 		if (dbg_osreg & DBGOSLSR_OSLK) {
 			DEBUG_WARN("%s: OSLock set! Trying to unlock\n", __func__);
