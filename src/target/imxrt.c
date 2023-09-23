@@ -73,25 +73,29 @@
 #define IMXRT10xx_CCM_CCG6_FLEXSPI_CLK_MASK           0xfffff3ffU
 #define IMXRT10xx_CCM_CCG6_FLEXSPI_CLK_ENABLE         0x00000c00U
 
-#define IMXRT_FLEXSPI1_BASE UINT32_C(0x402a8000)
-/* We only carry definitions for FlexSPI1 Flash controller A1. */
-#define IMXRT_FLEXSPI1_MOD_CTRL0             (IMXRT_FLEXSPI1_BASE + 0x000U)
-#define IMXRT_FLEXSPI1_INT                   (IMXRT_FLEXSPI1_BASE + 0x014U)
-#define IMXRT_FLEXSPI1_LUT_KEY               (IMXRT_FLEXSPI1_BASE + 0x018U)
-#define IMXRT_FLEXSPI1_LUT_CTRL              (IMXRT_FLEXSPI1_BASE + 0x01cU)
-#define IMXRT_FLEXSPI1_CTRL0                 (IMXRT_FLEXSPI1_BASE + 0x060U)
-#define IMXRT_FLEXSPI1_CTRL1                 (IMXRT_FLEXSPI1_BASE + 0x070U)
-#define IMXRT_FLEXSPI1_CTRL2                 (IMXRT_FLEXSPI1_BASE + 0x080U)
-#define IMXRT_FLEXSPI1_PRG_CTRL0             (IMXRT_FLEXSPI1_BASE + 0x0a0U)
-#define IMXRT_FLEXSPI1_PRG_CTRL1             (IMXRT_FLEXSPI1_BASE + 0x0a4U)
-#define IMXRT_FLEXSPI1_PRG_CMD               (IMXRT_FLEXSPI1_BASE + 0x0b0U)
-#define IMXRT_FLEXSPI1_PRG_READ_FIFO_CTRL    (IMXRT_FLEXSPI1_BASE + 0x0b8U)
-#define IMXRT_FLEXSPI1_PRG_WRITE_FIFO_CTRL   (IMXRT_FLEXSPI1_BASE + 0x0bcU)
-#define IMXRT_FLEXSPI1_STAT1                 (IMXRT_FLEXSPI1_BASE + 0x0e4U)
-#define IMXRT_FLEXSPI1_PRG_WRITE_FIFO_STATUS (IMXRT_FLEXSPI1_BASE + 0x0f4U)
-#define IMXRT_FLEXSPI1_PRG_READ_FIFO         (IMXRT_FLEXSPI1_BASE + 0x100U)
-#define IMXRT_FLEXSPI1_PRG_WRITE_FIFO        (IMXRT_FLEXSPI1_BASE + 0x180U)
-#define IMXRT_FLEXSPI1_LUT_BASE              (IMXRT_FLEXSPI1_BASE + 0x200U)
+#define IMXRT106x_FLEXSPI1_BASE UINT32_C(0x402a8000)
+
+/*
+ * We only carry definitions for FlexSPI1 Flash controller A1.
+ * The base address varies across the 10xx line. We store it in the private structure.
+ */
+#define IMXRT_FLEXSPI1_MOD_CTRL0(priv)             ((priv)->flexspi_base + 0x000U)
+#define IMXRT_FLEXSPI1_INT(priv)                   ((priv)->flexspi_base + 0x014U)
+#define IMXRT_FLEXSPI1_LUT_KEY(priv)               ((priv)->flexspi_base + 0x018U)
+#define IMXRT_FLEXSPI1_LUT_CTRL(priv)              ((priv)->flexspi_base + 0x01cU)
+#define IMXRT_FLEXSPI1_CTRL0(priv)                 ((priv)->flexspi_base + 0x060U)
+#define IMXRT_FLEXSPI1_CTRL1(priv)                 ((priv)->flexspi_base + 0x070U)
+#define IMXRT_FLEXSPI1_CTRL2(priv)                 ((priv)->flexspi_base + 0x080U)
+#define IMXRT_FLEXSPI1_PRG_CTRL0(priv)             ((priv)->flexspi_base + 0x0a0U)
+#define IMXRT_FLEXSPI1_PRG_CTRL1(priv)             ((priv)->flexspi_base + 0x0a4U)
+#define IMXRT_FLEXSPI1_PRG_CMD(priv)               ((priv)->flexspi_base + 0x0b0U)
+#define IMXRT_FLEXSPI1_PRG_READ_FIFO_CTRL(priv)    ((priv)->flexspi_base + 0x0b8U)
+#define IMXRT_FLEXSPI1_PRG_WRITE_FIFO_CTRL(priv)   ((priv)->flexspi_base + 0x0bcU)
+#define IMXRT_FLEXSPI1_STAT1(priv)                 ((priv)->flexspi_base + 0x0e4U)
+#define IMXRT_FLEXSPI1_PRG_WRITE_FIFO_STATUS(priv) ((priv)->flexspi_base + 0x0f4U)
+#define IMXRT_FLEXSPI1_PRG_READ_FIFO(priv)         ((priv)->flexspi_base + 0x100U)
+#define IMXRT_FLEXSPI1_PRG_WRITE_FIFO(priv)        ((priv)->flexspi_base + 0x180U)
+#define IMXRT_FLEXSPI1_LUT_BASE(priv)              ((priv)->flexspi_base + 0x200U)
 
 #define IMXRT_FLEXSPI1_MOD_CTRL0_SUSPEND          0x00000002U
 #define IMXRT_FLEXSPI1_INT_PRG_CMD_DONE           0x00000001U
@@ -140,6 +144,7 @@ typedef struct imxrt_flexspi_lut_insn {
 
 typedef struct imxrt_priv {
 	imxrt_boot_src_e boot_source;
+	uint32_t flexspi_base;
 	uint32_t mpu_state;
 	uint32_t flexspi_lut_state;
 	uint16_t flexspi_cached_commands[4];
@@ -171,6 +176,8 @@ bool imxrt_probe(target_s *const target)
 	target->target_storage = priv;
 	target->target_options |= CORTEXM_TOPT_INHIBIT_NRST;
 	target->driver = "i.MXRT10xx";
+
+	priv->flexspi_base = IMXRT106x_FLEXSPI1_BASE;
 
 #if defined(ENABLE_DEBUG) && (PC_HOSTED == 1 || defined(ESP_LOGD))
 	const uint8_t boot_mode = (target_mem_read32(target, IMXRT_SRC_BOOT_MODE2) >> 24U) & 3U;
@@ -256,8 +263,8 @@ static bool imxrt_enter_flash_mode(target_s *const target)
 	priv->mpu_state = target_mem_read32(target, IMXRT_MPU_CTRL);
 	target_mem_write32(target, IMXRT_MPU_CTRL, 0);
 	/* Start by stepping the clocks to ~50MHz and putting the controller in a known state */
-	target_mem_write32(target, IMXRT_FLEXSPI1_MOD_CTRL0,
-		target_mem_read32(target, IMXRT_FLEXSPI1_MOD_CTRL0) | IMXRT_FLEXSPI1_MOD_CTRL0_SUSPEND);
+	target_mem_write32(target, IMXRT_FLEXSPI1_MOD_CTRL0(priv),
+		target_mem_read32(target, IMXRT_FLEXSPI1_MOD_CTRL0(priv)) | IMXRT_FLEXSPI1_MOD_CTRL0_SUSPEND);
 	target_mem_write32(target, IMXRT10xx_CCM_CCG6,
 		target_mem_read32(target, IMXRT10xx_CCM_CCG6) & IMXRT10xx_CCM_CCG6_FLEXSPI_CLK_MASK);
 	target_mem_write32(target, IMXRT10xx_CCM_CSCM1,
@@ -267,24 +274,25 @@ static bool imxrt_enter_flash_mode(target_s *const target)
 		(target_mem_read32(target, IMXRT10xx_CCM_ANALOG_PLL3_PFD) & IMXRT10xx_CCM_ANALOG_PLL_PFD0_FRAC_MASK) | 0x16U);
 	target_mem_write32(target, IMXRT10xx_CCM_CCG6,
 		target_mem_read32(target, IMXRT10xx_CCM_CCG6) | IMXRT10xx_CCM_CCG6_FLEXSPI_CLK_ENABLE);
-	target_mem_write32(target, IMXRT_FLEXSPI1_MOD_CTRL0,
-		target_mem_read32(target, IMXRT_FLEXSPI1_MOD_CTRL0) & ~IMXRT_FLEXSPI1_MOD_CTRL0_SUSPEND);
+	target_mem_write32(target, IMXRT_FLEXSPI1_MOD_CTRL0(priv),
+		target_mem_read32(target, IMXRT_FLEXSPI1_MOD_CTRL0(priv)) & ~IMXRT_FLEXSPI1_MOD_CTRL0_SUSPEND);
 	/* Clear all outstanding interrupts so we can consume their status cleanly */
-	target_mem_write32(target, IMXRT_FLEXSPI1_INT, target_mem_read32(target, IMXRT_FLEXSPI1_INT));
+	target_mem_write32(target, IMXRT_FLEXSPI1_INT(priv), target_mem_read32(target, IMXRT_FLEXSPI1_INT(priv)));
 	/* Tell the controller we want to use the entire read FIFO */
-	target_mem_write32(target, IMXRT_FLEXSPI1_PRG_READ_FIFO_CTRL,
+	target_mem_write32(target, IMXRT_FLEXSPI1_PRG_READ_FIFO_CTRL(priv),
 		IMXRT_FLEXSPI1_PRG_FIFO_CTRL_WATERMARK(128) | IMXRT_FLEXSPI1_PRG_FIFO_CTRL_CLR);
 	/* Tell the controller we want to use the entire write FIFO */
-	target_mem_write32(target, IMXRT_FLEXSPI1_PRG_WRITE_FIFO_CTRL,
+	target_mem_write32(target, IMXRT_FLEXSPI1_PRG_WRITE_FIFO_CTRL(priv),
 		IMXRT_FLEXSPI1_PRG_FIFO_CTRL_WATERMARK(128) | IMXRT_FLEXSPI1_PRG_FIFO_CTRL_CLR);
 	/* Then unlock the sequence LUT so we can use it to to run Flash commands */
-	priv->flexspi_lut_state = target_mem_read32(target, IMXRT_FLEXSPI1_LUT_CTRL);
+	priv->flexspi_lut_state = target_mem_read32(target, IMXRT_FLEXSPI1_LUT_CTRL(priv));
 	if (priv->flexspi_lut_state != IMXRT_FLEXSPI1_LUT_CTRL_UNLOCK) {
-		target_mem_write32(target, IMXRT_FLEXSPI1_LUT_KEY, IMXRT_FLEXSPI1_LUT_KEY_VALUE);
-		target_mem_write32(target, IMXRT_FLEXSPI1_LUT_CTRL, IMXRT_FLEXSPI1_LUT_CTRL_UNLOCK);
+		target_mem_write32(target, IMXRT_FLEXSPI1_LUT_KEY(priv), IMXRT_FLEXSPI1_LUT_KEY_VALUE);
+		target_mem_write32(target, IMXRT_FLEXSPI1_LUT_CTRL(priv), IMXRT_FLEXSPI1_LUT_CTRL_UNLOCK);
 	}
 	/* Save the current state of the LUT the SPI Flash routines will use */
-	target_mem_read(target, priv->flexspi_prg_seq_state, IMXRT_FLEXSPI1_LUT_BASE, sizeof(priv->flexspi_prg_seq_state));
+	target_mem_read(
+		target, priv->flexspi_prg_seq_state, IMXRT_FLEXSPI1_LUT_BASE(priv), sizeof(priv->flexspi_prg_seq_state));
 	/* Clear the sequence microcode cache state */
 	memset(priv->flexspi_cached_commands, 0, sizeof(priv->flexspi_cached_commands));
 	return true;
@@ -294,10 +302,11 @@ static bool imxrt_exit_flash_mode(target_s *const target)
 {
 	const imxrt_priv_s *const priv = (imxrt_priv_s *)target->target_storage;
 	/* To leave Flash mode, we do things in the opposite order to entering. */
-	target_mem_write(target, IMXRT_FLEXSPI1_LUT_BASE, priv->flexspi_prg_seq_state, sizeof(priv->flexspi_prg_seq_state));
+	target_mem_write(
+		target, IMXRT_FLEXSPI1_LUT_BASE(priv), priv->flexspi_prg_seq_state, sizeof(priv->flexspi_prg_seq_state));
 	if (priv->flexspi_lut_state != IMXRT_FLEXSPI1_LUT_CTRL_UNLOCK) {
-		target_mem_write32(target, IMXRT_FLEXSPI1_LUT_KEY, IMXRT_FLEXSPI1_LUT_KEY_VALUE);
-		target_mem_write32(target, IMXRT_FLEXSPI1_LUT_CTRL, priv->flexspi_lut_state);
+		target_mem_write32(target, IMXRT_FLEXSPI1_LUT_KEY(priv), IMXRT_FLEXSPI1_LUT_KEY_VALUE);
+		target_mem_write32(target, IMXRT_FLEXSPI1_LUT_CTRL(priv), priv->flexspi_lut_state);
 	}
 	/* But we don't bother restoring the clocks as the boot ROM'll do that if needed */
 	target_mem_write32(target, IMXRT_MPU_CTRL, priv->mpu_state);
@@ -356,7 +365,8 @@ static uint8_t imxrt_spi_build_insn_sequence(target_s *const target, const uint1
 		DEBUG_TARGET("%zu: %02x %02x\n", idx, sequence[idx].opcode_mode, sequence[idx].value);
 
 	/* Write the new sequence to the programmable sequence LUT */
-	target_mem_write(target, IMXRT_FLEXSPI1_LUT_BASE + IMXRT_FLEXSI_SLOT_OFFSET(slot), sequence, sizeof(sequence));
+	target_mem_write(
+		target, IMXRT_FLEXSPI1_LUT_BASE(priv) + IMXRT_FLEXSI_SLOT_OFFSET(slot), sequence, sizeof(sequence));
 	/* Update the cache information */
 	priv->flexspi_cached_commands[slot] = command;
 	return slot;
@@ -369,31 +379,32 @@ static void imxrt_spi_exec_sequence(
 	const uint32_t command = priv->flexspi_cached_commands[slot];
 	/* Write the address, if any, to the sequence address register */
 	if ((command & SPI_FLASH_OPCODE_MODE_MASK) == SPI_FLASH_OPCODE_3B_ADDR)
-		target_mem_write32(target, IMXRT_FLEXSPI1_PRG_CTRL0, address);
+		target_mem_write32(target, IMXRT_FLEXSPI1_PRG_CTRL0(priv), address);
 	/* Write the command data length and instruction sequence index */
 	target_mem_write32(
-		target, IMXRT_FLEXSPI1_PRG_CTRL1, IMXRT_FLEXSPI1_PRG_SEQ_INDEX(slot) | IMXRT_FLEXSPI1_PRG_LENGTH(length));
+		target, IMXRT_FLEXSPI1_PRG_CTRL1(priv), IMXRT_FLEXSPI1_PRG_SEQ_INDEX(slot) | IMXRT_FLEXSPI1_PRG_LENGTH(length));
 	/* Execute the sequence */
-	target_mem_write32(target, IMXRT_FLEXSPI1_PRG_CMD, IMXRT_FLEXSPI1_PRG_RUN);
+	target_mem_write32(target, IMXRT_FLEXSPI1_PRG_CMD(priv), IMXRT_FLEXSPI1_PRG_RUN);
 }
 
 static void imxrt_spi_wait_complete(target_s *const target)
 {
+	const imxrt_priv_s *const priv = (imxrt_priv_s *)target->target_storage;
 	/* Wait till it finishes */
-	while (!(target_mem_read32(target, IMXRT_FLEXSPI1_INT) & IMXRT_FLEXSPI1_INT_PRG_CMD_DONE))
+	while (!(target_mem_read32(target, IMXRT_FLEXSPI1_INT(priv)) & IMXRT_FLEXSPI1_INT_PRG_CMD_DONE))
 		continue;
 	/* Then clear the interrupt bit it sets. */
-	target_mem_write32(target, IMXRT_FLEXSPI1_INT, IMXRT_FLEXSPI1_INT_PRG_CMD_DONE);
+	target_mem_write32(target, IMXRT_FLEXSPI1_INT(priv), IMXRT_FLEXSPI1_INT_PRG_CMD_DONE);
 	/* Check if any errors occured */
-	if (target_mem_read32(target, IMXRT_FLEXSPI1_INT) & IMXRT_FLEXSPI1_INT_CMD_ERR) {
+	if (target_mem_read32(target, IMXRT_FLEXSPI1_INT(priv)) & IMXRT_FLEXSPI1_INT_CMD_ERR) {
 #if defined(ENABLE_DEBUG) && PC_HOSTED == 1
 		/* Read out the status code and display it */
-		const uint32_t status = target_mem_read32(target, IMXRT_FLEXSPI1_STAT1);
+		const uint32_t status = target_mem_read32(target, IMXRT_FLEXSPI1_STAT1(priv));
 		DEBUG_TARGET("Error executing sequence, offset %u, error code %u\n", (uint8_t)(status >> 16U) & 0xfU,
 			(uint8_t)(status >> 24U) & 0xfU);
 #endif
 		/* Now clear the error (this clears the status field bits too) */
-		target_mem_write32(target, IMXRT_FLEXSPI1_INT, IMXRT_FLEXSPI1_INT_CMD_ERR);
+		target_mem_write32(target, IMXRT_FLEXSPI1_INT(priv), IMXRT_FLEXSPI1_INT_CMD_ERR);
 	}
 }
 
@@ -404,34 +415,36 @@ static void imxrt_spi_wait_complete(target_s *const target)
 static void imxrt_spi_read(target_s *const target, const uint16_t command, const target_addr_t address,
 	void *const buffer, const size_t length)
 {
+	const imxrt_priv_s *const priv = (imxrt_priv_s *)target->target_storage;
 	/* Configure the programmable sequence LUT and execute the read */
 	const uint8_t slot = imxrt_spi_build_insn_sequence(target, command, length);
 	imxrt_spi_exec_sequence(target, slot, address, length);
 	imxrt_spi_wait_complete(target);
 	/* Transfer the resulting data into the target buffer */
 	uint32_t data[32];
-	target_mem_read(target, data, IMXRT_FLEXSPI1_PRG_READ_FIFO, 128);
+	target_mem_read(target, data, IMXRT_FLEXSPI1_PRG_READ_FIFO(priv), 128);
 	memcpy(buffer, data, length);
-	target_mem_write32(target, IMXRT_FLEXSPI1_INT, IMXRT_FLEXSPI1_INT_READ_FIFO_FULL);
+	target_mem_write32(target, IMXRT_FLEXSPI1_INT(priv), IMXRT_FLEXSPI1_INT_READ_FIFO_FULL);
 }
 
 static void imxrt_spi_write(target_s *const target, const uint16_t command, const target_addr_t address,
 	const void *const buffer, const size_t length)
 {
+	const imxrt_priv_s *const priv = (imxrt_priv_s *)target->target_storage;
 	/* Configure the programmable sequence LUT */
 	const uint8_t slot = imxrt_spi_build_insn_sequence(target, command, length);
 	imxrt_spi_exec_sequence(target, slot, address, length);
 	/* Transfer the data into the transmit FIFO in blocks */
 	for (uint16_t offset = 0; offset < length; offset += 128U) {
-		while (
-			target_mem_read32(target, IMXRT_FLEXSPI1_PRG_WRITE_FIFO_STATUS) & IMXRT_FLEXSPI1_PRG_WRITE_FIFO_STATUS_FILL)
+		while (target_mem_read32(target, IMXRT_FLEXSPI1_PRG_WRITE_FIFO_STATUS(priv)) &
+			IMXRT_FLEXSPI1_PRG_WRITE_FIFO_STATUS_FILL)
 			continue;
 		const uint16_t amount = MIN(128U, (uint16_t)(length - offset));
 		uint32_t data[32] = {0};
 		memcpy(data, (const char *)buffer + offset, amount);
-		target_mem_write(target, IMXRT_FLEXSPI1_PRG_WRITE_FIFO, data, (amount + 3U) & ~3U);
+		target_mem_write(target, IMXRT_FLEXSPI1_PRG_WRITE_FIFO(priv), data, (amount + 3U) & ~3U);
 		/* Tell the controller we've filled the write FIFO */
-		target_mem_write32(target, IMXRT_FLEXSPI1_INT, IMXRT_FLEXSPI1_INT_WRITE_FIFO_EMPTY);
+		target_mem_write32(target, IMXRT_FLEXSPI1_INT(priv), IMXRT_FLEXSPI1_INT_WRITE_FIFO_EMPTY);
 	}
 	/* Now wait for the FlexSPI controller to indicate the command completed we're done */
 	imxrt_spi_wait_complete(target);
