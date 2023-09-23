@@ -33,10 +33,10 @@
 #include "cortexm.h"
 
 /* Memory map constants for STM32MP15x */
-#define STM32MP15_RETRAM_BASE  0x00000000U
-#define STM32MP15_RETRAM_SIZE  0x00001000U /* RETRAM, 64 KiB */
-#define STM32MP15_AHBSRAM_BASE 0x10000000U
-#define STM32MP15_AHBSRAM_SIZE 0x00060000U /* AHB SRAM 1+2+3+4, 128+128+64+64 KiB */
+#define STM32MP15_CM4_RETRAM_BASE  0x00000000U
+#define STM32MP15_RETRAM_SIZE      0x00001000U /* RETRAM, 64 KiB */
+#define STM32MP15_CM4_AHBSRAM_BASE 0x10000000U
+#define STM32MP15_AHBSRAM_SIZE     0x00060000U /* AHB SRAM 1+2+3+4, 128+128+64+64 KiB */
 
 /* Access from processor address space.
  * Access via the debug APB is at 0xe0081000 over AP1. */
@@ -105,8 +105,8 @@ bool stm32mp15_cm4_probe(target_s *target)
 	target->target_storage = priv;
 
 	/* Figure 4. Memory map from §2.5.2 in RM0436 rev 6, pg158 */
-	target_add_ram(target, STM32MP15_RETRAM_BASE, STM32MP15_RETRAM_SIZE);
-	target_add_ram(target, STM32MP15_AHBSRAM_BASE, STM32MP15_AHBSRAM_SIZE);
+	target_add_ram(target, STM32MP15_CM4_RETRAM_BASE, STM32MP15_RETRAM_SIZE);
+	target_add_ram(target, STM32MP15_CM4_AHBSRAM_BASE, STM32MP15_AHBSRAM_SIZE);
 
 	return true;
 }
