@@ -306,6 +306,7 @@ uint32_t fw_adiv5_jtagdp_low_access(ADIv5_DP_t *dp, uint8_t RnW,
 uint32_t firmware_swdp_read(ADIv5_DP_t *dp, uint16_t addr);
 uint32_t fw_adiv5_jtagdp_read(ADIv5_DP_t *dp, uint16_t addr);
 
+bool firmware_dp_low_write(ADIv5_DP_t *dp, uint16_t addr, uint32_t data);
 uint32_t firmware_swdp_error(ADIv5_DP_t *dp);
 
 void firmware_swdp_abort(ADIv5_DP_t *dp, uint32_t abort);

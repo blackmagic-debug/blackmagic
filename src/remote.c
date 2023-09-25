@@ -142,7 +142,9 @@ static void remotePacketProcessSWD(unsigned i, char *packet)
 	switch (packet[1]) {
     case REMOTE_INIT: /* SS = initialise =============================== */
 		if (i==2) {
+			remote_dp.dp_low_write = firmware_dp_low_write;
 			remote_dp.dp_read = firmware_swdp_read;
+			remote_dp.error = firmware_swdp_error;
 			remote_dp.low_access = firmware_swdp_low_access;
 			remote_dp.abort = firmware_swdp_abort;
 			swdptap_init(&remote_dp);
