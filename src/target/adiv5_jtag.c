@@ -37,8 +37,6 @@
 #define IR_DPACC 0xaU
 #define IR_APACC 0xbU
 
-static uint32_t adiv5_jtagdp_error(adiv5_debug_port_s *dp, bool protocol_recovery);
-
 void adiv5_jtag_dp_handler(const uint8_t dev_index)
 {
 	adiv5_debug_port_s *dp = calloc(1, sizeof(*dp));
@@ -89,7 +87,7 @@ uint32_t fw_adiv5_jtagdp_read(adiv5_debug_port_s *dp, uint16_t addr)
 	return fw_adiv5_jtagdp_low_access(dp, ADIV5_LOW_READ, ADIV5_DP_RDBUFF, 0);
 }
 
-static uint32_t adiv5_jtagdp_error(adiv5_debug_port_s *dp, const bool protocol_recovery)
+uint32_t adiv5_jtagdp_error(adiv5_debug_port_s *dp, const bool protocol_recovery)
 {
 	(void)protocol_recovery;
 	const uint32_t status = adiv5_dp_read(dp, ADIV5_DP_CTRLSTAT) & ADIV5_DP_CTRLSTAT_ERRMASK;
