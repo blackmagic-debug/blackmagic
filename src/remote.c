@@ -195,7 +195,9 @@ static void remotePacketProcessJTAG(unsigned i, char *packet)
 	jtag_dev_t jtag_dev;
 	switch (packet[1]) {
     case REMOTE_INIT: /* JS = initialise ============================= */
+		remote_dp.dp_low_write = NULL;
 		remote_dp.dp_read = fw_adiv5_jtagdp_read;
+		remote_dp.error = adiv5_jtagdp_error;
 		remote_dp.low_access = fw_adiv5_jtagdp_low_access;
 		remote_dp.abort = adiv5_jtagdp_abort;
 		jtagtap_init();

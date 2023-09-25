@@ -37,8 +37,6 @@
 #define IR_DPACC	0xA
 #define IR_APACC	0xB
 
-static uint32_t adiv5_jtagdp_error(ADIv5_DP_t *dp);
-
 void adiv5_jtag_dp_handler(uint8_t jd_index)
 {
 	ADIv5_DP_t *dp = (void*)calloc(1, sizeof(*dp));
@@ -65,7 +63,7 @@ uint32_t fw_adiv5_jtagdp_read(ADIv5_DP_t *dp, uint16_t addr)
 					ADIV5_DP_RDBUFF, 0);
 }
 
-static uint32_t adiv5_jtagdp_error(ADIv5_DP_t *dp)
+uint32_t adiv5_jtagdp_error(ADIv5_DP_t *dp)
 {
 	fw_adiv5_jtagdp_low_access(dp, ADIV5_LOW_READ, ADIV5_DP_CTRLSTAT, 0);
 	return fw_adiv5_jtagdp_low_access(dp, ADIV5_LOW_WRITE,
