@@ -110,6 +110,15 @@ static void remote_respond_string(char respCode, const char *s)
 	gdb_if_putchar(REMOTE_EOM, 1);
 }
 
+/*
+ * This faked ADIv5 DP structure holds the currently used low-level implementation functions (SWD vs JTAG)
+ * and basic DP state for remote protocol requests made. This is shared between remote_packet_process_swd()
+ * and remote_packet_process_jtag() for use by remote_packet_process_adiv5() so its faked AP can do the right
+ * thing.
+ *
+ * REMOTE_INIT for SWD and JTAG rewrite the dp_low_write, dp_read, error, low_access and abort function
+ * pointers to reconfigure this structure appropriately.
+ */
 static adiv5_debug_port_s remote_dp = {
 	.ap_read = firmware_ap_read,
 	.ap_write = firmware_ap_write,
