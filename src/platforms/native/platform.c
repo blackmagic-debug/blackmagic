@@ -225,7 +225,7 @@ void platform_init(void)
 		 */
 		timer_set_mode(TIM1, TIM_CR1_CKD_CK_INT, TIM_CR1_CMS_EDGE, TIM_CR1_DIR_UP);
 		/* Use PWM mode 1 so that the signal generated is low till it exceeds the set value */
-		timer_set_oc_mode(TIM1, TIM_OC3, TIM_OCM_PWM1);
+		timer_set_oc3_mode(TIM1, TIM_OCM_PWM1);
 		/* Mark the output active-low due to how this drives the target pin */
 		timer_set_oc_polarity_low(TIM1, TIM_OC3N);
 		timer_enable_oc_output(TIM1, TIM_OC3N);
