@@ -907,9 +907,16 @@ static target_halt_reason_e cortexa_halt_poll(target_s *t, target_addr_t *watch)
 	cortexa_oslock_unlock(t);
 
 	DEBUG_INFO("%s: DBGDSCR = 0x%08" PRIx32 "\n", __func__, dbgdscr);
-	/* Reenable DBGITR */
-	dbgdscr |= CORTEXAR_DBG_DSCR_ITR_ENABLE;
+	cortexa_decode_bitfields(CORTEXAR_DBG_DSCR, dbgdscr);
+
+	/* Enable halting debug mode */
+	dbgdscr |= CORTEXAR_DBG_DSCR_HALT_DBG_ENABLE | CORTEXAR_DBG_DSCR_ITR_ENABLE;
+	dbgdscr &= ~DBGDSCR_EXTDCCMODE_MASK;
 	cortex_dbg_write32(t, CORTEXAR_DBG_DSCR, dbgdscr);
+
+	dbgdscr = cortex_dbg_read32(t, CORTEXAR_DBG_DSCR);
+	DEBUG_INFO("%s: DBGDSCR = 0x%08" PRIx32 "\n", __func__, dbgdscr);
+	cortexa_decode_bitfields(CORTEXAR_DBG_DSCR, dbgdscr);
 
 	/* Find out why we halted */
 	target_halt_reason_e reason = TARGET_HALT_BREAKPOINT;
