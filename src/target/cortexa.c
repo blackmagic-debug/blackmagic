@@ -963,7 +963,7 @@ void cortexa_halt_resume(target_s *t, bool step)
 	if (step)
 		dbgdscr |= DBGDSCR_INTDIS;
 	else
-		dbgdscr &= ~DBGDSCR_INTDIS;
+		dbgdscr &= ~(DBGDSCR_INTDIS | CORTEXAR_DBG_DSCR_HALT_DBG_ENABLE);
 	dbgdscr &= ~CORTEXAR_DBG_DSCR_ITR_ENABLE;
 	cortex_dbg_write32(t, CORTEXAR_DBG_DSCR, dbgdscr);
 
