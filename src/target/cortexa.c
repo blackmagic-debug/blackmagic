@@ -610,20 +610,6 @@ bool cortexa_probe(adiv5_access_port_s *ap, target_addr_t base_address)
 	 */
 	cortexa_oslock_unlock(target);
 
-	uint32_t dbgdscr = cortex_dbg_read32(target, CORTEXAR_DBG_DSCR);
-	DEBUG_INFO("%s: DBGDSCR = 0x%08" PRIx32 " (1)\n", __func__, dbgdscr);
-	cortexa_decode_bitfields(CORTEXAR_DBG_DSCR, dbgdscr);
-
-	/* Enable halting debug mode */
-	dbgdscr |= CORTEXAR_DBG_DSCR_HALT_DBG_ENABLE | CORTEXAR_DBG_DSCR_ITR_ENABLE;
-	cortex_dbg_write32(target, CORTEXAR_DBG_DSCR, dbgdscr);
-	dbgdscr &= ~DBGDSCR_EXTDCCMODE_MASK;
-	cortex_dbg_write32(target, CORTEXAR_DBG_DSCR, dbgdscr);
-
-	dbgdscr = cortex_dbg_read32(target, CORTEXAR_DBG_DSCR);
-	DEBUG_INFO("%s: DBGDSCR = 0x%08" PRIx32 " (2)\n", __func__, dbgdscr);
-	cortexa_decode_bitfields(CORTEXAR_DBG_DSCR, dbgdscr);
-
 	/* Try to halt the target core */
 	target_halt_request(target);
 	platform_timeout_s timeout;
