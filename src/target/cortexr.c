@@ -226,6 +226,7 @@ static void cortexr_halt_resume(target_s *target, bool step);
 
 static int cortexr_breakwatch_set(target_s *target, breakwatch_s *breakwatch);
 static int cortexr_breakwatch_clear(target_s *target, breakwatch_s *breakwatch);
+static void cortexr_config_breakpoint(target_s *target, size_t slot, uint32_t mode, target_addr_t addr);
 
 bool cortexr_attach(target_s *target);
 void cortexr_detach(target_s *target);
@@ -753,12 +754,10 @@ static void cortexr_halt_resume(target_s *const target, const bool step)
 	 * We always keep the final supported breakpoint reserved for this purpose so
 	 * `priv->base.breakpoints_available` represents this slot index.
 	 */
-	if (step) {
-		const size_t breakpoint = priv->base.breakpoints_available << 2U;
-		cortex_dbg_write32(target, CORTEXR_DBG_BVR + breakpoint, priv->core_regs.r[CORTEX_REG_PC] & ~3U);
-		cortex_dbg_write32(target, CORTEXR_DBG_BCR + breakpoint,
-			CORTEXR_DBG_BCR_ENABLE | CORTEXR_DBG_BCR_TYPE_UNLINKED_INSN_MISMATCH | CORTEXR_DBG_BCR_ALL_MODES);
-	} else
+	if (step)
+		cortexr_config_breakpoint(target, priv->base.breakpoints_available, CORTEXR_DBG_BCR_TYPE_UNLINKED_INSN_MISMATCH,
+			priv->core_regs.r[CORTEX_REG_PC]);
+	else
 		cortex_dbg_write32(target, CORTEXR_DBG_BCR + (priv->base.breakpoints_available << 2U), 0U);
 
 	/* Ask to resume the core */
@@ -770,6 +769,14 @@ static void cortexr_halt_resume(target_s *const target, const bool step)
 	uint32_t status = CORTEXR_DBG_DSCR_HALTED;
 	while (!(status & CORTEXR_DBG_DSCR_RESTARTED) && !platform_timeout_is_expired(&timeout))
 		status = cortex_dbg_read32(target, CORTEXR_DBG_DSCR);
+}
+
+static void cortexr_config_breakpoint(
+	target_s *const target, const size_t slot, const uint32_t mode, const target_addr_t addr)
+{
+	cortex_dbg_write32(target, CORTEXR_DBG_BVR + (slot << 2U), addr & ~3U);
+	cortex_dbg_write32(
+		target, CORTEXR_DBG_BCR + (slot << 2U), CORTEXR_DBG_BCR_ENABLE | CORTEXR_DBG_BCR_ALL_MODES | mode);
 }
 
 static int cortexr_breakwatch_set(target_s *const target, breakwatch_s *const breakwatch)
@@ -790,9 +797,7 @@ static int cortexr_breakwatch_set(target_s *const target, breakwatch_s *const br
 			return -1;
 
 		/* Set the breakpoint slot up and mark it used */
-		cortex_dbg_write32(target, CORTEXR_DBG_BVR + (breakpoint << 2U), breakwatch->addr);
-		cortex_dbg_write32(target, CORTEXR_DBG_BCR + (breakpoint << 2U),
-			CORTEXR_DBG_BCR_ENABLE | CORTEXR_DBG_BCR_TYPE_UNLINKED_INSN_MATCH | CORTEXR_DBG_BCR_ALL_MODES);
+		cortexr_config_breakpoint(target, breakpoint, CORTEXR_DBG_BCR_TYPE_UNLINKED_INSN_MATCH, breakwatch->addr);
 		priv->base.breakpoints_mask |= 1U << breakpoint;
 		breakwatch->reserved[0] = breakpoint;
 		/* Tell the debugger that it was successfully able to set the breakpoint */
