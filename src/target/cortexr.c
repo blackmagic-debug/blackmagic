@@ -112,6 +112,11 @@ typedef struct cortexr_priv {
 #define CORTEXR_DBG_DRCR_CLR_STICKY_PIPEADV (1U << 3U)
 #define CORTEXR_DBG_DRCR_CANCEL_BUS_REQ     (1U << 4U)
 
+#define CORTEXR_DBG_BCR_ENABLE                      0x00000001U
+#define CORTEXR_DBG_BCR_TYPE_UNLINKED_INSN_MATCH    0x00000000U
+#define CORTEXR_DBG_BCR_TYPE_UNLINKED_INSN_MISMATCH 0x00400000U
+#define CORTEXR_DBG_BCR_ALL_MODES                   0x00002006U
+
 /*
  * Instruction encodings for reading/writing the program counter to/from r0,
  * reading/writing CPSR to/from r0, and reading/writing the SPSRs to/from r0.
@@ -217,6 +222,9 @@ static ssize_t cortexr_reg_write(target_s *target, uint32_t reg, const void *dat
 static target_halt_reason_e cortexr_halt_poll(target_s *target, target_addr_t *watch);
 static void cortexr_halt_request(target_s *target);
 static void cortexr_halt_resume(target_s *target, bool step);
+
+static int cortexr_breakwatch_set(target_s *target, breakwatch_s *breakwatch);
+static int cortexr_breakwatch_clear(target_s *target, breakwatch_s *breakwatch);
 
 bool cortexr_attach(target_s *target);
 void cortexr_detach(target_s *target);
@@ -500,6 +508,9 @@ bool cortexr_probe(adiv5_access_port_s *const ap, const target_addr_t base_addre
 		cortexr_float_regs_save(target);
 	}
 
+	target->breakwatch_set = cortexr_breakwatch_set;
+	target->breakwatch_clear = cortexr_breakwatch_clear;
+
 	/* Check cache type */
 	const uint32_t cache_type = cortex_dbg_read32(target, CORTEXR_CTR);
 	if (cache_type >> CORTEX_CTR_FORMAT_SHIFT == CORTEX_CTR_FORMAT_ARMv7) {
@@ -744,6 +755,57 @@ static void cortexr_halt_resume(target_s *const target, const bool step)
 	uint32_t status = CORTEXR_DBG_DSCR_HALTED;
 	while (!(status & CORTEXR_DBG_DSCR_RESTARTED) && !platform_timeout_is_expired(&timeout))
 		status = cortex_dbg_read32(target, CORTEXR_DBG_DSCR);
+}
+
+static int cortexr_breakwatch_set(target_s *const target, breakwatch_s *const breakwatch)
+{
+	cortexr_priv_s *const priv = (cortexr_priv_s *)target->priv;
+
+	switch (breakwatch->type) {
+	case TARGET_BREAK_HARD: {
+		/* First try and find a unused breakpoint slot */
+		size_t breakpoint = 0;
+		for (; breakpoint < priv->base.breakpoints_available; ++breakpoint) {
+			/* Check if the slot is presently in use, breaking if it is not */
+			if (!(priv->base.breakpoints_mask & (1U << breakpoint)))
+				break;
+		}
+		/* If none was available, return an error */
+		if (breakpoint == priv->base.breakpoints_available)
+			return -1;
+
+		/* Set the breakpoint slot up and mark it used */
+		cortex_dbg_write32(target, CORTEXR_DBG_BVR + (breakpoint << 2U), breakwatch->addr);
+		cortex_dbg_write32(target, CORTEXR_DBG_BCR + (breakpoint << 2U),
+			CORTEXR_DBG_BCR_ENABLE | CORTEXR_DBG_BCR_TYPE_UNLINKED_INSN_MATCH | CORTEXR_DBG_BCR_ALL_MODES);
+		priv->base.breakpoints_mask |= 1U << breakpoint;
+		breakwatch->reserved[0] = breakpoint;
+		/* Tell the debugger that it was successfully able to set the breakpoint */
+		return 0;
+	}
+	default:
+		/* If the breakwatch type is not one of the above, tell the debugger we don't support it */
+		return 1;
+	}
+}
+
+static int cortexr_breakwatch_clear(target_s *const target, breakwatch_s *const breakwatch)
+{
+	cortexr_priv_s *const priv = (cortexr_priv_s *)target->priv;
+
+	switch (breakwatch->type) {
+	case TARGET_BREAK_HARD: {
+		/* Clear the breakpoint slot this used */
+		const size_t breakpoint = breakwatch->reserved[0];
+		cortex_dbg_write32(target, CORTEXR_DBG_BCR + (breakpoint << 2U), 0);
+		priv->base.breakpoints_mask &= ~(1U << breakpoint);
+		/* Tell the debugger that it was successfully able to clear the breakpoint */
+		return 0;
+	}
+	default:
+		/* If the breakwatch type is not one of the above, tell the debugger wed on't support it */
+		return 1;
+	}
 }
 
 /*
