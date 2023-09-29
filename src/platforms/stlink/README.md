@@ -18,6 +18,22 @@ then they often don't provide a UART interface. In this case, build the firmware
 
 Note: on some clones, SWIM is strongly pulled up by a 680 Ohm resistor.
 
+## External connections
+
+| Function  | Normal Pin | Alt Pin |
+| --------- | ---------- | ------- |
+| SWCLK/TCK |  PA5       |    -    |
+| TDO       |  PA6       |    -    |
+| TDI       |  PA7       |    -    |
+| SWDIO/TMS |  PB14      |    -    |
+| SWO       |  PA10      |    -    |
+| nRST      |  PB0       | PB6     |
+
+The alternative pinout uses the same pins as the normal unless noted otherwise for a function.
+This second pinout is used on some clone boards - if you are using a clone, check the schematic.
+
+NB: SWDIO/TMS is on P**B**14, not P**A**14.
+
 ## Upload BMP Firmware
 
 * Keep the original ST Bootloader.
