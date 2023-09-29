@@ -91,20 +91,21 @@ typedef struct cortexr_priv {
 #define CORTEXR_DBG_IDR_WATCHPOINT_MASK  0xfU
 #define CORTEXR_DBG_IDR_WATCHPOINT_SHIFT 28U
 
-#define CORTEXR_DBG_DSCR_HALTED           (1U << 0U)
-#define CORTEXR_DBG_DSCR_RESTARTED        (1U << 1U)
-#define CORTEXR_DBG_DSCR_MOE_MASK         0x0000003cU
-#define CORTEXR_DBG_DSCR_MOE_HALT_REQUEST 0x00000000U
-#define CORTEXR_DBG_DSCR_MOE_BREAKPOINT   0x00000004U
-#define CORTEXR_DBG_DSCR_MOE_ASYNC_WATCH  0x00000008U
-#define CORTEXR_DBG_DSCR_MOE_BKPT_INSN    0x0000000cU
-#define CORTEXR_DBG_DSCR_MOE_EXTERNAL_DBG 0x00000010U
-#define CORTEXR_DBG_DSCR_MOE_VEC_CATCH    0x00000014U
-#define CORTEXR_DBG_DSCR_MOE_SYNC_WATCH   0x00000028U
-#define CORTEXR_DBG_DSCR_ITR_ENABLE       (1U << 13U)
-#define CORTEXR_DBG_DSCR_INSN_COMPLETE    (1U << 24U)
-#define CORTEXR_DBG_DSCR_DTR_READ_READY   (1U << 29U)
-#define CORTEXR_DBG_DSCR_DTR_WRITE_DONE   (1U << 30U)
+#define CORTEXR_DBG_DSCR_HALTED             (1U << 0U)
+#define CORTEXR_DBG_DSCR_RESTARTED          (1U << 1U)
+#define CORTEXR_DBG_DSCR_MOE_MASK           0x0000003cU
+#define CORTEXR_DBG_DSCR_MOE_HALT_REQUEST   0x00000000U
+#define CORTEXR_DBG_DSCR_MOE_BREAKPOINT     0x00000004U
+#define CORTEXR_DBG_DSCR_MOE_ASYNC_WATCH    0x00000008U
+#define CORTEXR_DBG_DSCR_MOE_BKPT_INSN      0x0000000cU
+#define CORTEXR_DBG_DSCR_MOE_EXTERNAL_DBG   0x00000010U
+#define CORTEXR_DBG_DSCR_MOE_VEC_CATCH      0x00000014U
+#define CORTEXR_DBG_DSCR_MOE_SYNC_WATCH     0x00000028U
+#define CORTEXR_DBG_DSCR_ITR_ENABLE         (1U << 13U)
+#define CORTEXR_DBG_DSCR_HALTING_DBG_ENABLE (1U << 14U)
+#define CORTEXR_DBG_DSCR_INSN_COMPLETE      (1U << 24U)
+#define CORTEXR_DBG_DSCR_DTR_READ_READY     (1U << 29U)
+#define CORTEXR_DBG_DSCR_DTR_WRITE_DONE     (1U << 30U)
 
 #define CORTEXR_DBG_DRCR_HALT_REQ           (1U << 0U)
 #define CORTEXR_DBG_DRCR_RESTART_REQ        (1U << 1U)
@@ -711,8 +712,9 @@ static target_halt_reason_e cortexr_halt_poll(target_s *const target, target_add
 	if (!(dscr & CORTEXR_DBG_DSCR_HALTED))
 		return TARGET_HALT_RUNNING;
 
-	/* Make sure ITR is enabled */
-	cortex_dbg_write32(target, CORTEXR_DBG_DSCR, dscr | CORTEXR_DBG_DSCR_ITR_ENABLE);
+	/* Make sure ITR is enabled and likewise halting debug (so breakpoints work) */
+	cortex_dbg_write32(
+		target, CORTEXR_DBG_DSCR, dscr | CORTEXR_DBG_DSCR_ITR_ENABLE | CORTEXR_DBG_DSCR_HALTING_DBG_ENABLE);
 
 	/* Save the target core's registers as debugging operations clobber them */
 	cortexr_regs_save(target);
