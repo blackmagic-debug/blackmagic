@@ -742,9 +742,22 @@ static target_halt_reason_e cortexr_halt_poll(target_s *const target, target_add
 
 static void cortexr_halt_resume(target_s *const target, const bool step)
 {
-	(void)step;
+	cortexr_priv_s *const priv = (cortexr_priv_s *)target->priv;
 	/* Restore the core's registers so the running program doesn't know we've been in there */
 	cortexr_regs_restore(target);
+
+	/*
+	 * If we're setting up to single-step the core, configure the final breakpoint slot approrpriately.
+	 * We always keep the final supported breakpoint reserved for this purpose so
+	 * `priv->base.breakpoints_available` represents this slot index.
+	 */
+	if (step) {
+		const size_t breakpoint = priv->base.breakpoints_available << 2U;
+		cortex_dbg_write32(target, CORTEXR_DBG_BVR + breakpoint, priv->core_regs.r[CORTEX_REG_PC] & ~3U);
+		cortex_dbg_write32(target, CORTEXR_DBG_BCR + breakpoint,
+			CORTEXR_DBG_BCR_ENABLE | CORTEXR_DBG_BCR_TYPE_UNLINKED_INSN_MISMATCH | CORTEXR_DBG_BCR_ALL_MODES);
+	} else
+		cortex_dbg_write32(target, CORTEXR_DBG_BCR + (priv->base.breakpoints_available << 2U), 0U);
 
 	/* Ask to resume the core */
 	cortex_dbg_write32(target, CORTEXR_DBG_DRCR, CORTEXR_DBG_DRCR_CLR_STICKY_EXC | CORTEXR_DBG_DRCR_RESTART_REQ);
