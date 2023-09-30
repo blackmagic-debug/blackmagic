@@ -121,6 +121,15 @@ typedef struct cortexr_priv {
 #define CORTEXR_DBG_BCR_BYTE_SELECT_LOW_HALF        0x00000060U
 #define CORTEXR_DBG_BCR_BYTE_SELECT_HIGH_HALF       0x00000180U
 
+#define CORTEXR_DBG_WCR_ENABLE             0x00000001U
+#define CORTEXR_DBG_WCR_MATCH_ON_LOAD      0x00000008U
+#define CORTEXR_DBG_WCR_MATCH_ON_STORE     0x00000010U
+#define CORTEXR_DBG_WCR_MATCH_ANY_ACCESS   0x00000018U
+#define CORTEXR_DBG_WCR_ALL_MODES          0x00002006U
+#define CORTEXR_DBG_WCR_BYTE_SELECT_OFFSET 5U
+#define CORTEXR_DBG_WCR_BYTE_SELECT_MASK   0x00001fe0U
+#define CORTEXR_DBG_WCR_BYTE_SELECT(x)     (((x) << CORTEXR_DBG_WCR_BYTE_SELECT_OFFSET) & CORTEXR_DBG_WCR_BYTE_SELECT_MASK)
+
 /*
  * Instruction encodings for reading/writing the program counter to/from r0,
  * reading/writing CPSR to/from r0, and reading/writing the SPSRs to/from r0.
@@ -794,6 +803,38 @@ static void cortexr_config_breakpoint(
 		target, CORTEXR_DBG_BCR + (slot << 2U), CORTEXR_DBG_BCR_ENABLE | CORTEXR_DBG_BCR_ALL_MODES | (mode & ~7U));
 }
 
+static uint32_t cortexr_watchpoint_mode(const target_breakwatch_e type)
+{
+	switch (type) {
+	case TARGET_WATCH_READ:
+		return CORTEXR_DBG_WCR_MATCH_ON_LOAD;
+	case TARGET_WATCH_WRITE:
+		return CORTEXR_DBG_WCR_MATCH_ON_STORE;
+	case TARGET_WATCH_ACCESS:
+		return CORTEXR_DBG_WCR_MATCH_ANY_ACCESS;
+	default:
+		return 0U;
+	}
+}
+
+static void cortexr_config_watchpoint(target_s *const target, const size_t slot, const breakwatch_s *const breakwatch)
+{
+	/*
+	 * Construct the access and bytes masks - starting with the bytes mask which uses the fact
+	 * that any `(1 << N) - 1` will result in all the bits less than the Nth being set.
+	 * The DBG_WCR BAS field is a bit-per-byte bitfield, so to match on two bytes, one has to program
+	 * it with 0b11 somewhere in its length, and for four bytes that's 0b1111.
+	 * Which set of bits need to be 1's depends on the address low bits.
+	 */
+	const uint32_t byte_mask = ((1U << breakwatch->size) - 1U) << (breakwatch->addr & 3U);
+	const uint32_t mode = cortexr_watchpoint_mode(breakwatch->type) | CORTEXR_DBG_WCR_BYTE_SELECT(byte_mask);
+
+	/* Configure the watchpoint slot */
+	cortex_dbg_write32(target, CORTEXR_DBG_WVR + (slot << 2U), breakwatch->addr & ~3U);
+	cortex_dbg_write32(
+		target, CORTEXR_DBG_WCR + (slot << 2U), CORTEXR_DBG_WCR_ENABLE | CORTEXR_DBG_WCR_ALL_MODES | mode);
+}
+
 static int cortexr_breakwatch_set(target_s *const target, breakwatch_s *const breakwatch)
 {
 	cortexr_priv_s *const priv = (cortexr_priv_s *)target->priv;
@@ -819,6 +860,27 @@ static int cortexr_breakwatch_set(target_s *const target, breakwatch_s *const br
 		/* Tell the debugger that it was successfully able to set the breakpoint */
 		return 0;
 	}
+	case TARGET_WATCH_READ:
+	case TARGET_WATCH_WRITE:
+	case TARGET_WATCH_ACCESS: {
+		/* First try and find an unused watchpoint slot */
+		size_t watchpoint = 0;
+		for (; watchpoint < priv->base.watchpoints_available; ++watchpoint) {
+			/* Check if the slot is presently in use, breaking if it is not */
+			if (!(priv->base.watchpoints_mask & (1U << watchpoint)))
+				break;
+		}
+		/* If none was available, return an error */
+		if (watchpoint == priv->base.watchpoints_available)
+			return -1;
+
+		/* Set the watchpoint slot up and mark it used */
+		cortexr_config_watchpoint(target, watchpoint, breakwatch);
+		priv->base.watchpoints_mask |= 1U << watchpoint;
+		breakwatch->reserved[0] = watchpoint;
+		/* Tell the debugger that it was successfully able to set the watchpoint */
+		return 0;
+	}
 	default:
 		/* If the breakwatch type is not one of the above, tell the debugger we don't support it */
 		return 1;
@@ -836,6 +898,16 @@ static int cortexr_breakwatch_clear(target_s *const target, breakwatch_s *const 
 		cortex_dbg_write32(target, CORTEXR_DBG_BCR + (breakpoint << 2U), 0);
 		priv->base.breakpoints_mask &= ~(1U << breakpoint);
 		/* Tell the debugger that it was successfully able to clear the breakpoint */
+		return 0;
+	}
+	case TARGET_WATCH_READ:
+	case TARGET_WATCH_WRITE:
+	case TARGET_WATCH_ACCESS: {
+		/* Clear the watchpoint slot this used */
+		const size_t watchpoint = breakwatch->reserved[0];
+		cortex_dbg_write32(target, CORTEXR_DBG_WCR + (watchpoint << 2U), 0);
+		priv->base.watchpoints_mask &= ~(1U << watchpoint);
+		/* Tell the debugger that it was successfully able to clear the watchpoint */
 		return 0;
 	}
 	default:
