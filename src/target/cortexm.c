@@ -85,8 +85,7 @@ const command_s cortexm_cmd_list[] = {
 };
 
 /* target options recognised by the Cortex-M target */
-#define TOPT_FLAVOUR_V6M  (1U << 0U) /* if not set, target is assumed to be v7m */
-#define TOPT_FLAVOUR_V7MF (1U << 1U) /* if set, floating-point enabled. */
+#define TOPT_FLAVOUR_V6M (1U << 0U) /* if not set, target is assumed to be v7m */
 
 static const char *cortexm_regs_description(target_s *t);
 static void cortexm_regs_read(target_s *t, void *data);
@@ -469,7 +468,7 @@ static void cortexm_mem_write(target_s *t, target_addr_t dest, const void *src, 
 
 const char *cortexm_regs_description(target_s *t)
 {
-	const bool is_cortexmf = t->target_options & TOPT_FLAVOUR_V7MF;
+	const bool is_cortexmf = t->target_options & CORTEXM_TOPT_FLAVOUR_V7MF;
 	const size_t description_length =
 		(is_cortexmf ? create_tdesc_cortex_mf(NULL, 0) : create_tdesc_cortex_m(NULL, 0)) + 1U;
 	char *const description = malloc(description_length);
@@ -550,7 +549,7 @@ bool cortexm_probe(adiv5_access_port_s *ap)
 	target_add_commands(t, cortexm_cmd_list, t->driver);
 
 	if (is_cortexmf) {
-		t->target_options |= TOPT_FLAVOUR_V7MF;
+		t->target_options |= CORTEXM_TOPT_FLAVOUR_V7MF;
 		t->regs_size += sizeof(uint32_t) * CORTEX_FLOAT_REG_COUNT;
 	}
 
@@ -818,7 +817,7 @@ static void cortexm_regs_read(target_s *const target, void *const data)
 		for (size_t i = 0; i < CORTEXM_GENERAL_REG_COUNT; ++i)
 			regs[i] = core_regs[regnum_cortex_m[i]];
 
-		if (target->target_options & TOPT_FLAVOUR_V7MF) {
+		if (target->target_options & CORTEXM_TOPT_FLAVOUR_V7MF) {
 			const size_t offset = CORTEXM_GENERAL_REG_COUNT;
 			for (size_t i = 0; i < CORTEX_FLOAT_REG_COUNT; ++i)
 				regs[offset + i] = ap->dp->ap_reg_read(ap, regnum_cortex_mf[i]);
@@ -841,7 +840,7 @@ static void cortexm_regs_read(target_s *const target, void *const data)
 			regs[i] = adiv5_dp_read(ap->dp, ADIV5_AP_DB(DB_DCRDR));
 		}
 		/* If the device has a FPU, also walk the regnum_cortex_mf array */
-		if (target->target_options & TOPT_FLAVOUR_V7MF) {
+		if (target->target_options & CORTEXM_TOPT_FLAVOUR_V7MF) {
 			const size_t offset = CORTEXM_GENERAL_REG_COUNT;
 			for (size_t i = 0; i < CORTEX_FLOAT_REG_COUNT; ++i) {
 				adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_DB(DB_DCRSR), regnum_cortex_mf[i]);
@@ -862,7 +861,7 @@ static void cortexm_regs_write(target_s *const target, const void *const data)
 		for (size_t i = 0; i < CORTEXM_GENERAL_REG_COUNT; ++i)
 			ap->dp->ap_reg_write(ap, regnum_cortex_m[i], regs[i]);
 
-		if (target->target_options & TOPT_FLAVOUR_V7MF) {
+		if (target->target_options & CORTEXM_TOPT_FLAVOUR_V7MF) {
 			const size_t offset = CORTEXM_GENERAL_REG_COUNT;
 			for (size_t i = 0; i < CORTEX_FLOAT_REG_COUNT; ++i)
 				ap->dp->ap_reg_write(ap, regnum_cortex_mf[i], regs[offset + i]);
@@ -884,7 +883,7 @@ static void cortexm_regs_write(target_s *const target, const void *const data)
 			adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_DB(DB_DCRDR), regs[i]);
 			adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_DB(DB_DCRSR), 0x10000 | regnum_cortex_m[i]);
 		}
-		if (target->target_options & TOPT_FLAVOUR_V7MF) {
+		if (target->target_options & CORTEXM_TOPT_FLAVOUR_V7MF) {
 			size_t offset = CORTEXM_GENERAL_REG_COUNT;
 			for (size_t i = 0; i < CORTEX_FLOAT_REG_COUNT; ++i) {
 				adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_DB(DB_DCRDR), regs[offset + i]);
@@ -907,7 +906,7 @@ static int dcrsr_regnum(target_s *t, uint32_t reg)
 {
 	if (reg < CORTEXM_GENERAL_REG_COUNT)
 		return regnum_cortex_m[reg];
-	if ((t->target_options & TOPT_FLAVOUR_V7MF) && reg < CORTEXM_GENERAL_REG_COUNT + CORTEX_FLOAT_REG_COUNT)
+	if ((t->target_options & CORTEXM_TOPT_FLAVOUR_V7MF) && reg < CORTEXM_GENERAL_REG_COUNT + CORTEX_FLOAT_REG_COUNT)
 		return regnum_cortex_mf[reg - CORTEXM_GENERAL_REG_COUNT];
 	return -1;
 }
