@@ -22,6 +22,7 @@
 #include "target.h"
 #include "target_internal.h"
 #include "cortex.h"
+#include "cortexm.h"
 #include "lpc_common.h"
 #include "adiv5.h"
 
@@ -82,7 +83,8 @@ static void lpc40xx_add_flash(target_s *target, uint32_t addr, size_t len, size_
 
 bool lpc40xx_probe(target_s *target)
 {
-	if ((target->cpuid & CORTEX_CPUID_PARTNO_MASK) != CORTEX_M4)
+	if ((target->cpuid & CORTEX_CPUID_PARTNO_MASK) != CORTEX_M4 ||
+		(target->target_options & CORTEXM_TOPT_FLAVOUR_V7MF) != 0)
 		return false;
 
 	/*
