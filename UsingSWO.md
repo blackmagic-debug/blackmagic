@@ -135,7 +135,7 @@ Attach to BMP to your PC:
 gdb> target extended_remote /dev/ttyBmpGdb # Choose BMP as the remote target
 gdb> mon traceswo        # Start SWO output
 gdb> mon traceswo 115200 # If async SWO is used, set the decoding baud rate that matches the target
-gdb> mon swdp_scan       # Scan for the SWD device
+gdb> mon swd_scan        # Scan for the SWD device
 gdb> attach 1            # Attach to the device
 gdb> run                 # Start the program execution
 ```

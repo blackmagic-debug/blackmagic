@@ -24,7 +24,7 @@ In another window open a debugger:
 ```
 $ gdb
 (gdb) target extended-remote /dev/ttyBmpGdb
-(gdb) monitor swdp_scan
+(gdb) monitor swd_scan
 (gdb) attach 1
 (gdb) monitor rtt
 (gdb) run
@@ -154,7 +154,7 @@ As an example, if the RTT identifier is "IDENT STR":
 ```
 $ gdb
 (gdb) target extended-remote /dev/ttyBmpGdb
-(gdb) monitor swdp_scan
+(gdb) monitor swd_scan
 (gdb) attach 1
 (gdb) monitor rtt ident IDENT_STR
 (gdb) monitor rtt
@@ -183,7 +183,7 @@ two COM ports. Connect an ansi terminal emulator to the higher numbered of the t
 Sample gdb session:
 ```
 (gdb) target extended-remote COM3
-(gdb) monitor swdp_scan
+(gdb) monitor swd_scan
 (gdb) attach 1
 (gdb) monitor rtt
 (gdb) run
@@ -217,7 +217,7 @@ In another window :
 ```
 gdb
 (gdb) target extended-remote /dev/ttyBmpGdb
-(gdb) monitor swdp_scan
+(gdb) monitor swd_scan
 (gdb) attach 1
 (gdb) monitor rtt
 (gdb) run
@@ -239,7 +239,7 @@ In another Terminal window, connect gdb to /dev/cu.usbmodemDDCEC9EC1 :
 ```
 gdb
 (gdb) target extended-remote /dev/cu.usbmodemDDCEC9EC1
-(gdb) monitor swdp_scan
+(gdb) monitor swd_scan
 (gdb) attach 1
 (gdb) monitor rtt
 (gdb) run
