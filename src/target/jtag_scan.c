@@ -83,7 +83,8 @@ bool jtag_scan(void)
 
 	/*
 	 * Initialise the JTAG backend if it's not already
-	 * This will automatically do the SWD-to-JTAG sequence just in case we've got any SWJ-DP's in chain
+	 * This will automatically do the SWD-to-JTAG sequence just in case we've got
+	 * any SWD/JTAG DPs in the chain
 	 */
 	DEBUG_INFO("Resetting TAP\n");
 #if PC_HOSTED == 1
