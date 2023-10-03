@@ -21,8 +21,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* This file implements a basic command interpreter for GDB 'monitor'
- * commands.
+/* 
+ * This file implements a basic command interpreter for GDB 'monitor' commands.
  */
 
 #include "general.h"
@@ -174,12 +174,13 @@ bool cmd_version(target_s *t, int argc, const char **argv)
 	char ident[256];
 	gdb_ident(ident, sizeof(ident));
 	DEBUG_WARN("%s\n", ident);
+	DEBUG_WARN("Copyright (C) 2010-2023 Black Magic Debug Project\n");
+	DEBUG_WARN("License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>\n\n");
 #else
 	gdb_out(BOARD_IDENT);
 	gdb_outf(", Hardware Version %d\n", platform_hwversion());
-	gdb_out("Copyright (C) 2022 Black Magic Debug Project\n");
-	gdb_out("License GPLv3+: GNU GPL version 3 or later "
-			"<http://gnu.org/licenses/gpl.html>\n\n");
+	gdb_out("Copyright (C) 2010-2023 Black Magic Debug Project\n");
+	gdb_out("License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>\n\n");
 #endif
 
 	return true;
