@@ -19,7 +19,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* This file implements the SW-DP specific functions of the
+/* 
+ * This file implements the SWD specific functions of the
  * ARM Debug Interface v5 Architecture Specification, ARM doc IHI0031A.
  */
 
@@ -109,15 +110,18 @@ static void jtag_to_swd_sequence()
 	 */
 
 	/* ARM deprecates use of these sequences on devices where the dormant state of operation is implemented */
-	DEBUG_WARN("Deprecated TAG-to-SWD sequence\n");
+	DEBUG_WARN("Deprecated JTAG to SWD sequence\n");
 
 	/* SWD interface must be in reset state */
 	swd_line_reset_sequence(false);
 
-	/* Send the 16-bit JTAG-to-SWD select sequence on SWDIOTMS */
+	/* Send the 16-bit JTAG-to-SWD select sequence on SWDIO/TMS */
 	swd_proc.seq_out(ADIV5_JTAG_TO_SWD_SELECT_SEQUENCE, 16U);
 
-	/* This ensures that if SWJ-DP was already in SWD operation before sending the select sequence, the interface enters reset state */
+	/*
+	 * This ensures that if a SWD/JTAG DP was already in SWD operation before sending the select sequence,
+	 * the interface enters reset state
+	 */
 	swd_line_reset_sequence(true);
 }
 
@@ -272,12 +276,12 @@ bool adiv5_swd_scan(const uint32_t targetid)
  * have never seen before. However, if the debug tools can be provided with the target ID of such targets by the user
  * then the contents of the target can be auto-detected as normal.
  * To protect against multiple selected devices all driving the line simultaneously SWD protocol version 2 requires:
- * - For multi-drop SWJ-DP, the JTAG connection is selected out of powerup reset. JTAG does not drive the line.
- * - For multi-drop SW-DP, the DP is in the dormant state out of powerup reset.
+ * - For multi-drop SWD/JTAG DPs, the JTAG connection is selected out of powerup reset. JTAG does not drive the line.
+ * - For multi-drop SWD DPs, the DP is in the dormant state out of powerup reset.
  */
 void adiv5_swd_multidrop_scan(adiv5_debug_port_s *const dp, const uint32_t targetid)
 {
-	DEBUG_INFO("Handling swd multi-drop, TARGETID 0x%08" PRIx32 "\n", targetid);
+	DEBUG_INFO("Handling SWD multi-drop, TARGETID 0x%08" PRIx32 "\n", targetid);
 
 	/* Scan all 16 possible instances (4-bit instance ID) */
 	for (size_t instance = 0; instance < 16U; instance++) {
