@@ -84,10 +84,10 @@ to connect.
 Black Magic Debug App can talk to
 
 * Black Magic Probe firmware probes via the USB-serial port
-* ST-LinkV2 and V3 with recent firmware
+* ST-Link v2, v2.1 and v3 with recent firmware
 * CMSIS-DAP compatible probes
-* JLINK probes
-* FTDI MPSSE based probe.
+* J-Link probes
+* FTDI MPSSE based probes
 
 When connected to a single BMP supported probe, starting "blackmagic" w/o any
 arguments starts the server. When several BMP supported probes are connected,
@@ -99,10 +99,10 @@ In another terminal:
 
 ```console
 > blackmagic
-Black Magic Debug App v1.8.0
- for Black Magic Probe, ST-Link v2 and v3, CMSIS-DAP, JLink and libftdi/MPSSE
+Black Magic Debug App v1.9.2
+ for Black Magic Probe, ST-Link v2 and v3, CMSIS-DAP, J-Link and FTDI (MPSSE)
 Using 1d50:6018 8BB20A03 Black Magic Debug
- Black Magic Probe  v1.8.0
+ Black Magic Probe  v1.9.2
 Listening on TCP: 2000
 ```
 

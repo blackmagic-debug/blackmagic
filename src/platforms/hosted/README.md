@@ -1,7 +1,7 @@
 # PC-Hosted BMP
 Compile in src with "make PROBE_HOST=hosted". This needs minimal external
 support.  "make PROBE_HOST=hosted HOSTED_BMP_ONLY=0" will compile support for FTDI,
-STLink, CMSIS-DAP and JLINK probes, but requires external libraries.
+STLink, CMSIS-DAP and J-Link probes, but requires external libraries.
 
 ## Description
 PC-hosted BMP run on the PC and compiles as "blackmagic". When started,
@@ -100,7 +100,7 @@ Probes below only when compiled with HOSTED_BMP_ONLY=0
 | ST-Link V2/1 |  +++  | Requires recent firmware, Cortex only!
 | CMSIS-DAP    |  +++  | Speed varies with MCU implementing CMSIS-DAP
 | FTDI MPSSE   |   ++  | Requires a device description
-| JLINK        |    -  | Useful to add BMP support for MCUs with built-in JLINK
+| J-Link       |    -  | Limited support for hardware prior to v8
 
 ## Device matching
 As other USB dongles already connected to the host PC may use FTDI chips,
