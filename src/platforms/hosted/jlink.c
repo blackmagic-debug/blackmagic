@@ -406,7 +406,7 @@ static bool jlink_get_interfaces(void)
 static bool jlink_get_interface_frequency(const uint8_t interface)
 {
 	if (!(jlink.capabilities & JLINK_CAPABILITY_INTERFACE_FREQUENCY)) {
-		DEBUG_WARN("J-Link does not support interface frequency commands\n");
+		DEBUG_WARN("J-Link interface frequency commands are not available\n");
 		return false;
 	}
 
@@ -477,7 +477,7 @@ static bool jlink_get_interface_frequency(const uint8_t interface)
 static bool jlink_set_interface_frequency(const uint8_t interface, const uint32_t frequency)
 {
 	if (!(jlink.capabilities & JLINK_CAPABILITY_INTERFACE_FREQUENCY)) {
-		DEBUG_WARN("J-Link does not support interface frequency command\n");
+		DEBUG_WARN("J-Link interface frequency commands are not available\n");
 		return false;
 	}
 
@@ -550,8 +550,7 @@ static bool jlink_kickstart_power(void)
 {
 	if (!(jlink.capabilities & JLINK_CAPABILITY_POWER_STATE)) {
 		if (jlink.capabilities & JLINK_CAPABILITY_KICKSTART_POWER)
-			DEBUG_ERROR("J-Link does not support JLINK_CMD_POWER_GET_STATE command, but does support kickstart power"
-						", this is unexpected\n");
+			DEBUG_ERROR("J-Link power state command is not available, but kickstart power is, this is unexpected\n");
 		return false;
 	}
 
