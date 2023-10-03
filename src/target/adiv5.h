@@ -222,7 +222,6 @@
 typedef struct adiv5_access_port adiv5_access_port_s;
 typedef struct adiv5_debug_port adiv5_debug_port_s;
 
-/* Try to keep this somewhat absract for later adding SW-DP */
 struct adiv5_debug_port {
 	int refcnt;
 
