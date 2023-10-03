@@ -89,10 +89,10 @@ Black Magic Debug App can talk to
 * J-Link probes
 * FTDI MPSSE based probes
 
-When connected to a single BMP supported probe, starting "blackmagic" w/o any
+When connected to a single BMP supported probe, starting `blackmagic` w/o any
 arguments starts the server. When several BMP supported probes are connected,
 their types, position and serial number is displayed and the program exits.
-Add "-P (position)" to the next invocation to select one.
+Add `-P (position)` to the next invocation to select one.
 For the setup from the sample session above:
 
 In another terminal:
