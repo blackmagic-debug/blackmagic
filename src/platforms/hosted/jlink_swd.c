@@ -22,8 +22,7 @@
  */
 
 /*
- * This file implements the SW-DP specific functions of the
- * ARM Debug Interface v5 Architecture Specification, ARM doc IHI0031A.
+ * This file implements SWD specific functions for the J-Link probe.
  */
 
 #include <assert.h>
