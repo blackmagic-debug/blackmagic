@@ -710,7 +710,7 @@ bool cortexm_probe(adiv5_access_port_s *ap)
 		break;
 	}
 #if PC_HOSTED == 0
-	gdb_outf("Please report unknown device with Designer 0x%x Part ID 0x%x\n", t->designer_code, t->part_id);
+	gdb_outf("Please report unknown device with Designer 0x%x Part ID 0x%x\n", target->designer_code, target->part_id);
 #else
 	DEBUG_WARN(
 		"Please report unknown device with Designer 0x%x Part ID 0x%x\n", target->designer_code, target->part_id);
