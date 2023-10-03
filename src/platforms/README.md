@@ -22,7 +22,7 @@ used by (multiple) platforms.
   * ST-Link v2, v2.1, and v3
   * FTDI MPSSE probes
   * CMSIS-DAP probes and
-  * JLink probes
+  * J-Link probes
 
 ## Support directories
 
