@@ -53,7 +53,6 @@ static bool samx5x_cmd_update_user_word(target_s *t, int argc, const char **argv
 
 /* (The SAM D1x/2x implementation of erase_all is reused as it's identical)*/
 extern bool samd_mass_erase(target_s *target, platform_timeout_s *print_progess);
-#define samx5x_mass_erase samd_mass_erase
 
 #ifdef SAMX5X_EXTRA_CMDS
 static bool samx5x_cmd_mbist(target_s *t, int argc, const char **argv);
@@ -194,7 +193,6 @@ const command_s samx5x_cmd_list[] = {
  * (Reuses the SAM D1x/2x implementation as it is identical)
  */
 extern void samd_reset(target_s *t);
-#define samx5x_reset samd_reset
 
 /*
  * Overload the default cortexm attach for when the samd is protected.
@@ -207,7 +205,6 @@ extern void samd_reset(target_s *t);
  * (Reuses the SAM D1x/2x implementation as it is identical)
  */
 extern bool samd_protected_attach(target_s *t);
-#define samx5x_protected_attach samd_protected_attach
 
 /*
  * Use the DSU Device Identification Register to populate a struct
@@ -348,8 +345,8 @@ bool samx5x_probe(target_s *t)
 
 	/* Setup Target */
 	t->driver = priv_storage->samx5x_variant_string;
-	t->reset = samx5x_reset;
-	t->mass_erase = samx5x_mass_erase;
+	t->reset = samd_reset;
+	t->mass_erase = samd_mass_erase;
 
 	/*
 	 * Overload the default cortexm attach when the samx5x is protected.
@@ -357,7 +354,7 @@ bool samx5x_probe(target_s *t)
 	 * can rescue the device.
 	 */
 	if (protected)
-		t->attach = samx5x_protected_attach;
+		t->attach = samd_protected_attach;
 
 	switch (samx5x.mem) {
 	default:
