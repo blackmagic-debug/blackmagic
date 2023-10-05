@@ -97,6 +97,7 @@ bool riscv32_probe(target_s *const target)
 		PROBE(gd32vf1_probe);
 		break;
 	case NOT_JEP106_MANUFACTURER_WCH:
+		PROBE(ch32v003x_probe);
 		PROBE(ch32vx_probe);
 		break;
 	}
