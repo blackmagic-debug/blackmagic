@@ -25,6 +25,13 @@
 #include "target_internal.h"
 #include "buffer_utils.h"
 
+/* 
+ * IDCODE register 
+ * [31:16] - REVID
+ * [15:0]  - DEVID
+ */
+#define CH32V003X_IDCODE 0x1ffff7c4U
+
 /* IDCODE register */
 #define CH32VX_IDCODE               0x1ffff704U
 #define CH32VX_IDCODE_MASK          0x0ffffff0f
@@ -61,6 +68,35 @@ static void ch32vx_read_uid(target_s *const t, uint8_t *const uid)
 		write_be4(uid, uid_reg_offset, target_mem32_read32(t, CH32VX_ESIG_UID1 + uid_reg_offset));
 }
 
+bool ch32v003x_probe(target_s *const target)
+{
+	const uint32_t idcode = target_mem32_read32(target, CH32V003X_IDCODE);
+
+	switch (idcode & CH32VX_IDCODE_MASK) {
+	case 0x00300500U: /* CH32V003F4P6 */
+	case 0x00310500U: /* CH32V003F4U6 */
+	case 0x00320500U: /* CH32V003A4M6 */
+	case 0x00330500U: /* CH32V003J4M6 */
+		break;
+	default:
+		DEBUG_INFO("Unrecognized CH32V003x IDCODE: 0x%08x\n", idcode);
+		return false;
+		break;
+	}
+
+	target->driver = "CH32V003";
+
+	const size_t flash_size = ch32vx_read_flash_size(target);
+	DEBUG_INFO("CH32V003x flash size: %zu\n", flash_size);
+	(void)flash_size;
+
+	target->part_id = idcode;
+
+	target_add_commands(target, ch32vx_cmd_list, "CH32Vx");
+
+	return true;
+}
+
 bool ch32vx_probe(target_s *const target)
 {
 	const uint32_t idcode = target_mem32_read32(target, CH32VX_IDCODE);
@@ -78,6 +114,7 @@ bool ch32vx_probe(target_s *const target)
 	case 0x30700508U: /* CH32V307VCT6 */
 		break;
 	default:
+		DEBUG_INFO("Unrecognized CH32Vx IDCODE: 0x%08x\n", idcode);
 		return false;
 		break;
 	}
