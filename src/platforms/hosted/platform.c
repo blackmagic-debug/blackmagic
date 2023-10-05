@@ -666,22 +666,22 @@ static void decode_ap_access(const uint8_t ap, const uint8_t addr)
 		DEBUG_PROTO("Reserved(%02x): ", addr);
 }
 
-static void decode_access(const uint16_t addr, const uint8_t rnw, const uint32_t value)
+static void decode_access(const uint16_t addr, const uint8_t rnw, const uint8_t apsel, const uint32_t value)
 {
 	if (rnw)
 		DEBUG_PROTO("Read ");
 	else
 		DEBUG_PROTO("Write ");
 
-	if (addr < 0x100U)
-		decode_dp_access(addr & 0xffU, rnw, value);
+	if (addr & ADIV5_APnDP)
+		decode_ap_access(apsel, addr & 0xffU);
 	else
-		decode_ap_access(addr >> 8U, addr & 0xffU);
+		decode_dp_access(addr & 0xffU, rnw, value);
 }
 
 void adiv5_dp_write(adiv5_debug_port_s *dp, uint16_t addr, uint32_t value)
 {
-	decode_access(addr, ADIV5_LOW_WRITE, value);
+	decode_access(addr, ADIV5_LOW_WRITE, 0U, value);
 	DEBUG_PROTO("0x%08" PRIx32 "\n", value);
 	dp->low_access(dp, ADIV5_LOW_WRITE, addr, value);
 }
@@ -689,7 +689,7 @@ void adiv5_dp_write(adiv5_debug_port_s *dp, uint16_t addr, uint32_t value)
 uint32_t adiv5_dp_read(adiv5_debug_port_s *dp, uint16_t addr)
 {
 	uint32_t ret = dp->dp_read(dp, addr);
-	decode_access(addr, ADIV5_LOW_READ, 0U);
+	decode_access(addr, ADIV5_LOW_READ, 0U, 0U);
 	DEBUG_PROTO("0x%08" PRIx32 "\n", ret);
 	return ret;
 }
@@ -704,7 +704,7 @@ uint32_t adiv5_dp_error(adiv5_debug_port_s *dp)
 uint32_t adiv5_dp_low_access(adiv5_debug_port_s *dp, uint8_t rnw, uint16_t addr, uint32_t value)
 {
 	uint32_t ret = dp->low_access(dp, rnw, addr, value);
-	decode_access(addr, rnw, value);
+	decode_access(addr, rnw, 0U, value);
 	DEBUG_PROTO("0x%08" PRIx32 "\n", rnw ? ret : value);
 	return ret;
 }
@@ -712,14 +712,14 @@ uint32_t adiv5_dp_low_access(adiv5_debug_port_s *dp, uint8_t rnw, uint16_t addr,
 uint32_t adiv5_ap_read(adiv5_access_port_s *ap, uint16_t addr)
 {
 	uint32_t ret = ap->dp->ap_read(ap, addr);
-	decode_access(addr, ADIV5_LOW_READ, 0U);
+	decode_access(addr, ADIV5_LOW_READ, ap->apsel, 0U);
 	DEBUG_PROTO("0x%08" PRIx32 "\n", ret);
 	return ret;
 }
 
 void adiv5_ap_write(adiv5_access_port_s *ap, uint16_t addr, uint32_t value)
 {
-	decode_access(addr, ADIV5_LOW_WRITE, value);
+	decode_access(addr, ADIV5_LOW_WRITE, ap->apsel, value);
 	DEBUG_PROTO("0x%08" PRIx32 "\n", value);
 	ap->dp->ap_write(ap, addr, value);
 }
