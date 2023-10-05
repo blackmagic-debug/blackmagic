@@ -50,7 +50,7 @@ typedef enum riscv_debug_version {
 typedef enum riscv_hart_status {
 	/* The Hart is in a good state */
 	RISCV_HART_NO_ERROR = 0,
-	/* The Hart was bust when the status was read */
+	/* The Hart was busy when the status was read */
 	RISCV_HART_BUSY = 1,
 	/* The operation requested of the Hart was not supported */
 	RISCV_HART_NOT_SUPP = 2,
