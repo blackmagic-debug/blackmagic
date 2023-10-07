@@ -101,6 +101,7 @@ typedef struct cortexr_priv {
 #define CORTEXR_DBG_DSCR_MOE_EXTERNAL_DBG   0x00000010U
 #define CORTEXR_DBG_DSCR_MOE_VEC_CATCH      0x00000014U
 #define CORTEXR_DBG_DSCR_MOE_SYNC_WATCH     0x00000028U
+#define CORTEXR_DBG_DSCR_INTERRUPT_DISABLE  (1U << 11U)
 #define CORTEXR_DBG_DSCR_ITR_ENABLE         (1U << 13U)
 #define CORTEXR_DBG_DSCR_HALTING_DBG_ENABLE (1U << 14U)
 #define CORTEXR_DBG_DSCR_INSN_COMPLETE      (1U << 24U)
@@ -761,18 +762,24 @@ static void cortexr_halt_resume(target_s *const target, const bool step)
 	/* Restore the core's registers so the running program doesn't know we've been in there */
 	cortexr_regs_restore(target);
 
+	uint32_t dscr = cortex_dbg_read32(target, CORTEXR_DBG_DSCR);
 	/*
 	 * If we're setting up to single-step the core, configure the final breakpoint slot approrpriately.
 	 * We always keep the final supported breakpoint reserved for this purpose so
 	 * `priv->base.breakpoints_available` represents this slot index.
+	 * Additionally, adjust DSCR to disable interrupts as necessary.
 	 */
-	if (step)
+	if (step) {
 		cortexr_config_breakpoint(target, priv->base.breakpoints_available,
 			CORTEXR_DBG_BCR_TYPE_UNLINKED_INSN_MISMATCH | ((priv->core_regs.cpsr & CORTEXR_CPSR_THUMB) ? 2 : 4),
 			priv->core_regs.r[CORTEX_REG_PC]);
-	else
+		dscr |= CORTEXR_DBG_DSCR_INTERRUPT_DISABLE;
+	} else {
 		cortex_dbg_write32(target, CORTEXR_DBG_BCR + (priv->base.breakpoints_available << 2U), 0U);
+		dscr &= ~CORTEXR_DBG_DSCR_INTERRUPT_DISABLE;
+	}
 
+	cortex_dbg_write32(target, CORTEXR_DBG_DSCR, dscr & ~CORTEXR_DBG_DSCR_ITR_ENABLE);
 	/* Ask to resume the core */
 	cortex_dbg_write32(target, CORTEXR_DBG_DRCR, CORTEXR_DBG_DRCR_CLR_STICKY_EXC | CORTEXR_DBG_DRCR_RESTART_REQ);
 
