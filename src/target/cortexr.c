@@ -85,6 +85,7 @@ typedef struct cortexr_priv {
 
 #define CORTEXR_CPUID 0xd00U
 #define CORTEXR_CTR   0xd04U
+#define CORTEXR_PFR1  0xd24U
 
 #define CORTEXR_DBG_IDR_BREAKPOINT_MASK  0xfU
 #define CORTEXR_DBG_IDR_BREAKPOINT_SHIFT 24U
@@ -196,7 +197,12 @@ static const uint16_t cortexr_spsr_encodings[5] = {
 #define CORTEXR_CPACR_CP10_FULL_ACCESS 0x00300000U
 #define CORTEXR_CPACR_CP11_FULL_ACCESS 0x00c00000U
 
-#define TOPT_FLAVOUR_FLOAT (1U << 1U) /* If set, core has a hardware FPU */
+#define CORTEXR_PFR1_SEC_EXT_MASK  0x000000f0U
+#define CORTEXR_PFR1_VIRT_EXT_MASK 0x0000f000U
+
+#define TOPT_FLAVOUR_FLOAT    (1U << 1U) /* If set, core has a hardware FPU */
+#define TOPT_FLAVOUR_SEC_EXT  (1U << 2U) /* If set, core has security extensions */
+#define TOPT_FLAVOUR_VIRT_EXT (1U << 3U) /* If set, core has virtualisation extensions */
 
 /*
  * Fields for Cortex-R special-purpose registers, used in the generation of GDB's target description XML.
@@ -499,6 +505,17 @@ bool cortexr_probe(adiv5_access_port_s *const ap, const target_addr_t base_addre
 		((debug_id >> CORTEXR_DBG_IDR_WATCHPOINT_SHIFT) & CORTEXR_DBG_IDR_WATCHPOINT_MASK) + 1U;
 	DEBUG_TARGET("%s %s core has %u breakpoint and %u watchpoint units available\n", target->driver, target->core,
 		priv->base.breakpoints_available + 1U, priv->base.watchpoints_available);
+
+	/* Read out processor feature register 1 and check for the security and virtualisation extensions */
+	const uint32_t proc_features = cortex_dbg_read32(target, CORTEXR_PFR1);
+	if (proc_features & CORTEXR_PFR1_SEC_EXT_MASK) {
+		target->target_options |= TOPT_FLAVOUR_SEC_EXT;
+		DEBUG_TARGET("%s: Core has security extensions\n", __func__);
+	}
+	if (proc_features & CORTEXR_PFR1_VIRT_EXT_MASK) {
+		target->target_options |= TOPT_FLAVOUR_VIRT_EXT;
+		DEBUG_TARGET("%s: Core has virtualisation extensions\n", __func__);
+	}
 
 	target->attach = cortexr_attach;
 	target->detach = cortexr_detach;
