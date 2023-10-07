@@ -86,6 +86,7 @@ typedef struct cortexr_priv {
 #define CORTEXR_CPUID 0xd00U
 #define CORTEXR_CTR   0xd04U
 #define CORTEXR_PFR1  0xd24U
+#define CORTEXR_MMFR0 0xd30U
 
 #define CORTEXR_DBG_IDR_BREAKPOINT_MASK  0xfU
 #define CORTEXR_DBG_IDR_BREAKPOINT_SHIFT 24U
@@ -200,9 +201,13 @@ static const uint16_t cortexr_spsr_encodings[5] = {
 #define CORTEXR_PFR1_SEC_EXT_MASK  0x000000f0U
 #define CORTEXR_PFR1_VIRT_EXT_MASK 0x0000f000U
 
+#define CORTEXR_MMFR0_VMSA_MASK 0x0000000fU
+#define CORTEXR_MMFR0_PMSA_MASK 0x000000f0U
+
 #define TOPT_FLAVOUR_FLOAT    (1U << 1U) /* If set, core has a hardware FPU */
 #define TOPT_FLAVOUR_SEC_EXT  (1U << 2U) /* If set, core has security extensions */
 #define TOPT_FLAVOUR_VIRT_EXT (1U << 3U) /* If set, core has virtualisation extensions */
+#define TOPT_FLAVOUR_VIRT_MEM (1U << 4U) /* If set, core uses the virtual memory model, not protected */
 
 /*
  * Fields for Cortex-R special-purpose registers, used in the generation of GDB's target description XML.
@@ -516,6 +521,19 @@ bool cortexr_probe(adiv5_access_port_s *const ap, const target_addr_t base_addre
 		target->target_options |= TOPT_FLAVOUR_VIRT_EXT;
 		DEBUG_TARGET("%s: Core has virtualisation extensions\n", __func__);
 	}
+
+	/*
+	 * Read out memory model feature register 0 and check for VMSA vs PMSA memory models to
+	 * configure address translation and determine which cp15 registers we can poke.
+	 */
+	const uint32_t memory_model = cortex_dbg_read32(target, CORTEXR_MMFR0);
+	/* The manual says this cannot happen, if it does then assume VMSA */
+	if ((memory_model & CORTEXR_MMFR0_VMSA_MASK) && (memory_model & CORTEXR_MMFR0_PMSA_MASK))
+		DEBUG_ERROR("%s: Core claims to support both virtual and protected memory modes!\n", __func__);
+	if (memory_model & CORTEXR_MMFR0_VMSA_MASK)
+		target->target_options |= TOPT_FLAVOUR_VIRT_MEM;
+	DEBUG_TARGET(
+		"%s: Core uses the %cMSA memory model\n", __func__, target->target_options & TOPT_FLAVOUR_VIRT_MEM ? 'V' : 'P');
 
 	target->attach = cortexr_attach;
 	target->detach = cortexr_detach;
