@@ -239,6 +239,9 @@ static_assert(ARRAY_LENGTH(cortexr_spr_types) == ARRAY_LENGTH(cortexr_spr_names)
 );
 /* clang-format on */
 
+static void cortexr_mem_read(target_s *target, void *dest, target_addr_t src, size_t len);
+static void cortexr_mem_write(target_s *target, target_addr_t dest, const void *src, size_t len);
+
 static void cortexr_regs_read(target_s *target, void *data);
 static void cortexr_regs_write(target_s *target, const void *data);
 static ssize_t cortexr_reg_read(target_s *target, uint32_t reg, void *data, size_t max);
@@ -256,16 +259,6 @@ bool cortexr_attach(target_s *target);
 void cortexr_detach(target_s *target);
 
 static const char *cortexr_target_description(target_s *target);
-
-static void cortexr_mem_read(target_s *const target, void *const dest, const target_addr_t src, const size_t len)
-{
-	adiv5_mem_read(cortex_ap(target), dest, src, len);
-}
-
-static void cortexr_mem_write(target_s *const target, const target_addr_t dest, const void *const src, const size_t len)
-{
-	adiv5_mem_write(cortex_ap(target), dest, src, len);
-}
 
 static void cortexr_run_insn(target_s *const target, const uint32_t insn)
 {
@@ -475,16 +468,11 @@ bool cortexr_probe(adiv5_access_port_s *const ap, const target_addr_t base_addre
 		return false;
 	}
 
+	target->driver = "ARM Cortex-R";
 	target->priv = priv;
 	target->priv_free = cortex_priv_free;
 	priv->base.ap = ap;
 	priv->base.base_addr = base_address;
-
-	target->check_error = cortex_check_error;
-	target->mem_read = cortexr_mem_read;
-	target->mem_write = cortexr_mem_write;
-
-	target->driver = "ARM Cortex-R";
 
 	target->halt_request = cortexr_halt_request;
 	target->halt_poll = cortexr_halt_poll;
@@ -557,6 +545,10 @@ bool cortexr_probe(adiv5_access_port_s *const ap, const target_addr_t base_addre
 		target->regs_size += sizeof(uint32_t) * CORTEX_FLOAT_REG_COUNT;
 		cortexr_float_regs_save(target);
 	}
+
+	target->check_error = cortex_check_error;
+	target->mem_read = cortexr_mem_read;
+	target->mem_write = cortexr_mem_write;
 
 	target->breakwatch_set = cortexr_breakwatch_set;
 	target->breakwatch_clear = cortexr_breakwatch_clear;
@@ -641,6 +633,15 @@ void cortexr_detach(target_s *const target)
 	}
 
 	target_halt_resume(target, false);
+}
+static void cortexr_mem_read(target_s *const target, void *const dest, const target_addr_t src, const size_t len)
+{
+	adiv5_mem_read(cortex_ap(target), dest, src, len);
+}
+
+static void cortexr_mem_write(target_s *const target, const target_addr_t dest, const void *const src, const size_t len)
+{
+	adiv5_mem_write(cortex_ap(target), dest, src, len);
 }
 
 static void cortexr_regs_read(target_s *const target, void *const data)
