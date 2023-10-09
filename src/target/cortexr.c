@@ -780,12 +780,22 @@ static target_halt_reason_e cortexr_halt_poll(target_s *const target, target_add
 	case CORTEXR_DBG_DSCR_MOE_VEC_CATCH:
 		reason = TARGET_HALT_BREAKPOINT;
 		break;
-	case CORTEXR_DBG_DSCR_MOE_ASYNC_WATCH:
 	case CORTEXR_DBG_DSCR_MOE_SYNC_WATCH:
-		/* TODO: determine the watchpoint we hit */
-		(void)watch;
-		reason = TARGET_HALT_WATCHPOINT;
+	case CORTEXR_DBG_DSCR_MOE_ASYNC_WATCH: {
+		const cortexr_priv_s *const priv = (cortexr_priv_s *)target->priv;
+		if (priv->base.watchpoints_mask == 1U) {
+			for (const breakwatch_s *breakwatch = target->bw_list; breakwatch; breakwatch = breakwatch->next) {
+				if (breakwatch->type != TARGET_WATCH_READ && breakwatch->type != TARGET_WATCH_WRITE &&
+					breakwatch->type != TARGET_WATCH_ACCESS)
+					continue;
+				*watch = breakwatch->addr;
+				break;
+			}
+			reason = TARGET_HALT_WATCHPOINT;
+		} else
+			reason = TARGET_HALT_BREAKPOINT;
 		break;
+	}
 	}
 	/* Check if we halted because we were actually single-stepping */
 	return reason;
