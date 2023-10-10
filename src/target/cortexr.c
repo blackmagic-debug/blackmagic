@@ -211,6 +211,8 @@ static const uint16_t cortexr_spsr_encodings[5] = {
 
 /* Coprocessor register definitions */
 #define CORTEXR_CPACR 15U, ENCODE_CP_REG(1U, 0U, 0U, 2U)
+#define CORTEXR_DFSR  15U, ENCODE_CP_REG(5U, 0U, 0U, 0U)
+#define CORTEXR_DFAR  15U, ENCODE_CP_REG(6U, 0U, 0U, 0U)
 
 #define CORTEXR_CPACR_CP10_FULL_ACCESS 0x00300000U
 #define CORTEXR_CPACR_CP11_FULL_ACCESS 0x00c00000U
@@ -695,7 +697,14 @@ static inline bool cortexr_mem_read_fast(target_s *const target, uint32_t *const
  */
 static void cortexr_mem_read(target_s *const target, void *const dest, const target_addr_t src, const size_t len)
 {
+	cortexr_priv_s *const priv = (cortexr_priv_s *)target->priv;
 	DEBUG_TARGET("%s: Reading %zu bytes @0x%" PRIx32 "\n", __func__, len, src);
+	/* Cache DFSR and DFAR in case we wind up triggering a data fault */
+	const uint32_t initial_fault_status = cortexr_coproc_read(target, CORTEXR_DFSR);
+	const uint32_t initial_fault_addr = cortexr_coproc_read(target, CORTEXR_DFAR);
+	/* Clear any existing fault state */
+	priv->core_status &= ~(CORTEXR_STATUS_DATA_FAULT | CORTEXR_STATUS_MMU_FAULT);
+
 	/* Move the start address into the core's r0 */
 	cortexr_core_reg_write(target, 0U, src);
 
@@ -704,6 +713,18 @@ static void cortexr_mem_read(target_s *const target, void *const dest, const tar
 		cortexr_mem_read_fast(target, (uint32_t *)dest, len >> 2U);
 	else
 		adiv5_mem_read(cortex_ap(target), dest, src, len);
+
+	/* If we suffered a fault of some kind, grab the reason and restore DFSR/DFAR */
+	if (priv->core_status & CORTEXR_STATUS_DATA_FAULT) {
+#ifdef ENABLE_DEBUG
+		const uint32_t fault_status = cortexr_coproc_read(target, CORTEXR_DFSR);
+		const uint32_t fault_addr = cortexr_coproc_read(target, CORTEXR_DFAR);
+#endif
+		cortexr_coproc_write(target, CORTEXR_DFAR, initial_fault_addr);
+		cortexr_coproc_write(target, CORTEXR_DFSR, initial_fault_status);
+
+		DEBUG_WARN("%s: Read failed at 0x%08" PRIx32 " (%08" PRIx32 ")\n", __func__, fault_addr, fault_status);
+	}
 }
 
 static void cortexr_mem_write(target_s *const target, const target_addr_t dest, const void *const src, const size_t len)
