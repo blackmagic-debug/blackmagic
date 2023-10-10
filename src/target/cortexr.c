@@ -103,6 +103,7 @@ typedef struct cortexr_priv {
 #define CORTEXR_DBG_DSCR_MOE_EXTERNAL_DBG   0x00000010U
 #define CORTEXR_DBG_DSCR_MOE_VEC_CATCH      0x00000014U
 #define CORTEXR_DBG_DSCR_MOE_SYNC_WATCH     0x00000028U
+#define CORTEXR_DBG_DSCR_SYNC_DATA_ABORT    (1U << 6U)
 #define CORTEXR_DBG_DSCR_INTERRUPT_DISABLE  (1U << 11U)
 #define CORTEXR_DBG_DSCR_ITR_ENABLE         (1U << 13U)
 #define CORTEXR_DBG_DSCR_HALTING_DBG_ENABLE (1U << 14U)
@@ -269,17 +270,24 @@ static void cortexr_run_insn(target_s *const target, const uint32_t insn)
 		continue;
 }
 
-static uint32_t cortexr_run_read_insn(target_s *const target, const uint32_t insn)
+static bool cortexr_run_read_insn(target_s *const target, const uint32_t insn, uint32_t *const result)
 {
 	/* Issue the requested instruction to the core */
 	cortex_dbg_write32(target, CORTEXR_DBG_ITR, insn);
 	/* Poll for the instruction to complete and the data to become ready in the DTR */
-	while ((cortex_dbg_read32(target, CORTEXR_DBG_DSCR) &
-			   (CORTEXR_DBG_DSCR_INSN_COMPLETE | CORTEXR_DBG_DSCR_DTR_READ_READY)) !=
-		(CORTEXR_DBG_DSCR_INSN_COMPLETE | CORTEXR_DBG_DSCR_DTR_READ_READY))
-		continue;
-	/* Read back the DTR to complete the read */
-	return cortex_dbg_read32(target, CORTEXR_DBG_DTRRX);
+	uint32_t status = 0;
+	while ((status & (CORTEXR_DBG_DSCR_INSN_COMPLETE | CORTEXR_DBG_DSCR_DTR_READ_READY)) !=
+		(CORTEXR_DBG_DSCR_INSN_COMPLETE | CORTEXR_DBG_DSCR_DTR_READ_READY)) {
+		status = cortex_dbg_read32(target, CORTEXR_DBG_DSCR);
+		/* If the instruction triggered a synchronous data abort, signal failure having cleared it */
+		if (status & CORTEXR_DBG_DSCR_SYNC_DATA_ABORT) {
+			cortex_dbg_write32(target, CORTEXR_DBG_DRCR, CORTEXR_DBG_DRCR_CLR_STICKY_EXC);
+			return false;
+		}
+	}
+	/* Read back the DTR to complete the read and signal success */
+	*result = cortex_dbg_read32(target, CORTEXR_DBG_DTRRX);
+	return true;
 }
 
 static void cortexr_run_write_insn(target_s *const target, const uint32_t insn, const uint32_t data)
@@ -300,9 +308,13 @@ static void cortexr_run_write_insn(target_s *const target, const uint32_t insn, 
 static inline uint32_t cortexr_core_reg_read(target_s *const target, const uint8_t reg)
 {
 	/* If the register is a GPR and not the program counter, use a "simple" MCR to read */
-	if (reg < 15U)
+	if (reg < 15U) {
+		uint32_t value = 0;
 		/* Build an issue a core to coprocessor transfer for the requested register and read back the result */
-		return cortexr_run_read_insn(target, ARM_MCR_INSN | ENCODE_CP_ACCESS(14, 0, reg, 0, 5, 0));
+		(void)cortexr_run_read_insn(target, ARM_MCR_INSN | ENCODE_CP_ACCESS(14, 0, reg, 0, 5, 0), &value);
+		/* Return whatever value was read as we don't care about DCSR.SDABORT here */
+		return value;
+	}
 	/* If the register is the program counter, we first have to extract it to r0 */
 	else if (reg == 15U) {
 		cortexr_run_insn(target, ARM_MOV_R0_PC_INSN);
