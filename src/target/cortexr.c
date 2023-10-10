@@ -67,6 +67,9 @@ typedef struct cortexr_priv {
 		uint64_t d[16U];
 		uint32_t fpcsr;
 	} core_regs;
+
+	/* Control and status information */
+	uint8_t core_status;
 } cortexr_priv_s;
 
 #define CORTEXR_DBG_IDR   0x000U
@@ -223,6 +226,9 @@ static const uint16_t cortexr_spsr_encodings[5] = {
 #define TOPT_FLAVOUR_VIRT_EXT (1U << 3U) /* If set, core has virtualisation extensions */
 #define TOPT_FLAVOUR_VIRT_MEM (1U << 4U) /* If set, core uses the virtual memory model, not protected */
 
+#define CORTEXR_STATUS_DATA_FAULT (1U << 0U)
+#define CORTEXR_STATUS_MMU_FAULT  (1U << 1U)
+
 /*
  * Fields for Cortex-R special-purpose registers, used in the generation of GDB's target description XML.
  * The general-purpose registers r0-r12 and the vector floating point (VFP) registers d0-d15 all follow a
@@ -253,6 +259,7 @@ static_assert(ARRAY_LENGTH(cortexr_spr_types) == ARRAY_LENGTH(cortexr_spr_names)
 );
 /* clang-format on */
 
+static bool cortexr_check_error(target_s *target);
 static void cortexr_mem_read(target_s *target, void *dest, target_addr_t src, size_t len);
 static void cortexr_mem_write(target_s *target, target_addr_t dest, const void *src, size_t len);
 
@@ -294,6 +301,8 @@ static bool cortexr_run_read_insn(target_s *const target, const uint32_t insn, u
 		status = cortex_dbg_read32(target, CORTEXR_DBG_DSCR);
 		/* If the instruction triggered a synchronous data abort, signal failure having cleared it */
 		if (status & CORTEXR_DBG_DSCR_SYNC_DATA_ABORT) {
+			cortexr_priv_s *const priv = (cortexr_priv_s *)target->priv;
+			priv->core_status |= CORTEXR_STATUS_DATA_FAULT;
 			cortex_dbg_write32(target, CORTEXR_DBG_DRCR, CORTEXR_DBG_DRCR_CLR_STICKY_EXC);
 			return false;
 		}
@@ -571,7 +580,7 @@ bool cortexr_probe(adiv5_access_port_s *const ap, const target_addr_t base_addre
 		cortexr_float_regs_save(target);
 	}
 
-	target->check_error = cortex_check_error;
+	target->check_error = cortexr_check_error;
 	target->mem_read = cortexr_mem_read;
 	target->mem_write = cortexr_mem_write;
 
@@ -658,6 +667,14 @@ void cortexr_detach(target_s *const target)
 	}
 
 	target_halt_resume(target, false);
+}
+
+static bool cortexr_check_error(target_s *const target)
+{
+	cortexr_priv_s *const priv = (cortexr_priv_s *)target->priv;
+	const bool fault = priv->core_status & (CORTEXR_STATUS_DATA_FAULT | CORTEXR_STATUS_MMU_FAULT);
+	priv->core_status = 0;
+	return fault || cortex_check_error(target);
 }
 
 /* Fast path for cortexr_mem_read(). Assumes the address to read data from is already loaded in r0. */
