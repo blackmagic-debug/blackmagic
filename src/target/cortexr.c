@@ -193,6 +193,19 @@ static const uint16_t cortexr_spsr_encodings[5] = {
 #define ENCODE_CP_REG(n, m, opc1, opc2) \
 	((((n)&0xfU) << 4U) | ((m)&0xfU) | (((opc1)&0x7U) << 8U) | (((opc2)&0x7U) << 12U))
 
+/*
+ * Instruction encodings for coprocessor load/store
+ * LDC -> Load Coprocessor (DDI0406C §A8.8.56, pg393)
+ */
+#define ARM_LDC_INSN 0xec100000U
+/*
+ * Pre-encoded LDC/STC operands for getting data in and out of the core
+ * The first is a LDC encoded to move [r0] to the debug DTR and then increment r0 by 4
+ * (`LDC p14, c5, [r0], #+4`, Preincrement = 0, Unindexed = 1, Doublelength = 0, Writeback = 1)
+ * The immediate is encoded shifted right by 2, and the reads are done 32 bits at a time.
+ */
+#define ARM_LDC_R0_POSTINC4_DTRTX_INSN (ARM_LDC_INSN | 0x00a05e01U)
+
 /* Coprocessor register definitions */
 #define CORTEXR_CPACR 15U, ENCODE_CP_REG(1U, 0U, 0U, 2U)
 
@@ -646,9 +659,34 @@ void cortexr_detach(target_s *const target)
 
 	target_halt_resume(target, false);
 }
+
+/* Fast path for cortexr_mem_read(). Assumes the address to read data from is already loaded in r0. */
+static inline bool cortexr_mem_read_fast(target_s *const target, uint32_t *const dest, const size_t count)
+{
+	/* Read each of the uint32_t's checking for failure */
+	for (size_t offset = 0; offset < count; ++offset) {
+		if (!cortexr_run_read_insn(target, ARM_LDC_R0_POSTINC4_DTRTX_INSN, dest + offset))
+			return false; /* Propagate failure if it happens */
+	}
+	return true; /* Signal success */
+}
+
+/*
+ * This reads memory by jumping from the debug unit bus to the system bus.
+ * NB: This requires the core to be halted! Uses instruction launches on
+ * the core and requires we're in debug mode to work. Trashes r0.
+ */
 static void cortexr_mem_read(target_s *const target, void *const dest, const target_addr_t src, const size_t len)
 {
-	adiv5_mem_read(cortex_ap(target), dest, src, len);
+	DEBUG_TARGET("%s: Reading %zu bytes @0x%" PRIx32 "\n", __func__, len, src);
+	/* Move the start address into the core's r0 */
+	cortexr_core_reg_write(target, 0U, src);
+
+	/* If the address is 32-bit aligned and we're reading 32 bits at a time, use the fast path */
+	if ((src & 3U) == 0U && (len & 3U) == 0U)
+		cortexr_mem_read_fast(target, (uint32_t *)dest, len >> 2U);
+	else
+		adiv5_mem_read(cortex_ap(target), dest, src, len);
 }
 
 static void cortexr_mem_write(target_s *const target, const target_addr_t dest, const void *const src, const size_t len)
