@@ -52,6 +52,7 @@
 #include "cortex_internal.h"
 #include "gdb_reg.h"
 #include "gdb_packet.h"
+#include "buffer_utils.h"
 
 #include <assert.h>
 
@@ -208,6 +209,19 @@ static const uint16_t cortexr_spsr_encodings[5] = {
  * The immediate is encoded shifted right by 2, and the reads are done 32 bits at a time.
  */
 #define ARM_LDC_R0_POSTINC4_DTRTX_INSN (ARM_LDC_INSN | 0x00a05e01U)
+
+/*
+ * Instruction encodings for indirect loads and stores of data via the CPU
+ * LDRB -> Load Register Byte (immediate) (DDI0406C §A8.8.69, pg419)
+ * LDRH -> Load Register Halfword (immediate) (DDI0406C §A8.8.81, pg443)
+ *
+ * The first is `LDRB r1, [r0], #+1` to load a uint8_t from [r0] into r1 and increment the
+ * address in r0 by 1, writing the new address back to r0.
+ * The second is `LDRH r1, [r0], #+2` to load a uint16_t from [r0] into r1 and increment
+ * the address in r0 by 2, writing the new address back to r0.
+ */
+#define ARM_LDRB_R0_R1_INSN 0xe4f01001U
+#define ARM_LDRH_R0_R1_INSN 0xe0f010b2U
 
 /* Coprocessor register definitions */
 #define CORTEXR_CPACR 15U, ENCODE_CP_REG(1U, 0U, 0U, 2U)
@@ -690,6 +704,40 @@ static inline bool cortexr_mem_read_fast(target_s *const target, uint32_t *const
 	return true; /* Signal success */
 }
 
+/* Slow path for cortexr_mem_read(). Trashes r0 and r1. */
+static bool cortexr_mem_read_slow(target_s *const target, uint8_t *const data, target_addr_t addr, const size_t length)
+{
+	size_t offset = 0;
+	/* If the address is odd, read a byte to get onto an even address */
+	if (addr & 1U) {
+		cortexr_run_insn(target, ARM_LDRB_R0_R1_INSN);
+		data[offset++] = (uint8_t)cortexr_core_reg_read(target, 1U);
+		++addr;
+	}
+	/* If the address is now even but only 16-bit aligned, read a uint16_t to get onto 32-bit alignment */
+	if ((addr & 2U) && length - offset >= 2U) {
+		cortexr_run_insn(target, ARM_LDRH_R0_R1_INSN);
+		write_le2(data, offset, (uint16_t)cortexr_core_reg_read(target, 1U));
+		offset += 2U;
+	}
+	/* Use the fast path to read as much as possible before doing a slow path fixup at the end */
+	if (!cortexr_mem_read_fast(target, (uint32_t *)(data + offset), (length - offset) >> 2U))
+		return false;
+	const uint8_t remainder = (length - offset) & 3U;
+	/* If the remainder needs at least 2 more bytes read, do this first */
+	if (remainder & 2U) {
+		cortexr_run_insn(target, ARM_LDRH_R0_R1_INSN);
+		write_le2(data, offset, (uint16_t)cortexr_core_reg_read(target, 1U));
+		offset += 2U;
+	}
+	/* Finally, fix things up if a final byte is required. */
+	if (remainder & 1U) {
+		cortexr_run_insn(target, ARM_LDRB_R0_R1_INSN);
+		data[offset] = (uint8_t)cortexr_core_reg_read(target, 1U);
+	}
+	return true; /* Signal success */
+}
+
 /*
  * This reads memory by jumping from the debug unit bus to the system bus.
  * NB: This requires the core to be halted! Uses instruction launches on
@@ -712,7 +760,7 @@ static void cortexr_mem_read(target_s *const target, void *const dest, const tar
 	if ((src & 3U) == 0U && (len & 3U) == 0U)
 		cortexr_mem_read_fast(target, (uint32_t *)dest, len >> 2U);
 	else
-		adiv5_mem_read(cortex_ap(target), dest, src, len);
+		cortexr_mem_read_slow(target, (uint8_t *)dest, src, len);
 
 	/* If we suffered a fault of some kind, grab the reason and restore DFSR/DFAR */
 	if (priv->core_status & CORTEXR_STATUS_DATA_FAULT) {
