@@ -200,15 +200,21 @@ static const uint16_t cortexr_spsr_encodings[5] = {
 /*
  * Instruction encodings for coprocessor load/store
  * LDC -> Load Coprocessor (DDI0406C §A8.8.56, pg393)
+ * STC -> Store Corprocessor (DDI0406C §A8.8.119, pg663)
  */
 #define ARM_LDC_INSN 0xec100000U
+#define ARM_STC_INSN 0xec000000U
 /*
  * Pre-encoded LDC/STC operands for getting data in and out of the core
  * The first is a LDC encoded to move [r0] to the debug DTR and then increment r0 by 4
  * (`LDC p14, c5, [r0], #+4`, Preincrement = 0, Unindexed = 1, Doublelength = 0, Writeback = 1)
  * The immediate is encoded shifted right by 2, and the reads are done 32 bits at a time.
+ * The second is a STC encoded to move from the debug DTR to [r0] and then increment r0 by 4
+ * (`STC p14, c5, [r0], #+4`, Preincrement = 0, Unindexed = 1, Doublelength = 0, Writeback = 1)
+ * As with read, the immediate is encoded shifted right by 2 and writes are done 32 bits at a time.
  */
 #define ARM_LDC_R0_POSTINC4_DTRTX_INSN (ARM_LDC_INSN | 0x00a05e01U)
+#define ARM_STC_DTRRX_R0_POSTINC4_INSN (ARM_STC_INSN | 0x00a05e01U)
 
 /*
  * Instruction encodings for indirect loads and stores of data via the CPU
@@ -805,9 +811,42 @@ static void cortexr_mem_read(target_s *const target, void *const dest, const tar
 	cortexr_mem_handle_fault(target, __func__, fault_status, fault_addr);
 }
 
+/* Fast path for cortexr_mem_write(). Assumes the address to read data from is already loaded in r0. */
+static inline bool cortexr_mem_write_fast(target_s *const target, const uint32_t *const src, const size_t count)
+{
+	/* Read each of the uint32_t's checking for failure */
+	for (size_t offset = 0; offset < count; ++offset) {
+		if (!cortexr_run_write_insn(target, ARM_STC_DTRRX_R0_POSTINC4_INSN, src[offset]))
+			return false; /* Propagate failure if it happens */
+	}
+	return true; /* Signal success */
+}
+
+/*
+ * This writes memory by jumping from the debug unit bus to the system bus.
+ * NB: This requires the core to be halted! Uses instruction launches on
+ * the core and requires we're in debug mode to work. Trashes r0.
+ */
 static void cortexr_mem_write(target_s *const target, const target_addr_t dest, const void *const src, const size_t len)
 {
-	adiv5_mem_write(cortex_ap(target), dest, src, len);
+	cortexr_priv_s *const priv = (cortexr_priv_s *)target->priv;
+	DEBUG_TARGET("%s: Writing %zu bytes @0x%" PRIx32 "\n", __func__, len, dest);
+	/* Cache DFSR and DFAR in case we wind up triggering a data fault */
+	const uint32_t fault_status = cortexr_coproc_read(target, CORTEXR_DFSR);
+	const uint32_t fault_addr = cortexr_coproc_read(target, CORTEXR_DFAR);
+	/* Clear any existing fault state */
+	priv->core_status &= ~(CORTEXR_STATUS_DATA_FAULT | CORTEXR_STATUS_MMU_FAULT);
+
+	/* Move the start address into the core's r0 */
+	cortexr_core_reg_write(target, 0U, dest);
+
+	/* If the address is 32-bit aligned and we're writing 32 bits at a time, use the fast path */
+	if ((dest & 3U) == 0U && (len & 3U) == 0U)
+		cortexr_mem_write_fast(target, (const uint32_t *)src, len >> 2U);
+	else
+		adiv5_mem_write(cortex_ap(target), dest, src, len);
+	/* Deal with any data faults that occured */
+	cortexr_mem_handle_fault(target, __func__, fault_status, fault_addr);
 }
 
 static void cortexr_regs_read(target_s *const target, void *const data)
