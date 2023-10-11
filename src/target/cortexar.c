@@ -238,9 +238,10 @@ static const uint16_t cortexr_spsr_encodings[5] = {
 #define ARM_STRH_R1_R0_INSN 0xe0e010b2U
 
 /* Coprocessor register definitions */
-#define CORTEXR_CPACR 15U, ENCODE_CP_REG(1U, 0U, 0U, 2U)
-#define CORTEXR_DFSR  15U, ENCODE_CP_REG(5U, 0U, 0U, 0U)
-#define CORTEXR_DFAR  15U, ENCODE_CP_REG(6U, 0U, 0U, 0U)
+#define CORTEXR_CPACR   15U, ENCODE_CP_REG(1U, 0U, 0U, 2U)
+#define CORTEXR_DFSR    15U, ENCODE_CP_REG(5U, 0U, 0U, 0U)
+#define CORTEXR_DFAR    15U, ENCODE_CP_REG(6U, 0U, 0U, 0U)
+#define CORTEXR_ICIALLU 15U, ENCODE_CP_REG(7U, 5U, 0U, 0U)
 
 #define CORTEXR_CPACR_CP10_FULL_ACCESS 0x00300000U
 #define CORTEXR_CPACR_CP11_FULL_ACCESS 0x00c00000U
@@ -1076,6 +1077,10 @@ static void cortexr_halt_resume(target_s *const target, const bool step)
 		cortex_dbg_write32(target, CORTEXR_DBG_BCR + (priv->base.breakpoints_available << 2U), 0U);
 		dscr &= ~CORTEXR_DBG_DSCR_INTERRUPT_DISABLE;
 	}
+
+	/* Invalidate all the instruction caches if we're on a VMSA model device */
+	if (target->target_options & TOPT_FLAVOUR_VIRT_MEM)
+		cortexr_coproc_write(target, CORTEXR_ICIALLU, 0U);
 
 	cortex_dbg_write32(target, CORTEXR_DBG_DSCR, dscr & ~CORTEXR_DBG_DSCR_ITR_ENABLE);
 	/* Ask to resume the core */
