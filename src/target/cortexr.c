@@ -718,13 +718,15 @@ static bool cortexr_mem_read_slow(target_s *const target, uint8_t *const data, t
 	size_t offset = 0;
 	/* If the address is odd, read a byte to get onto an even address */
 	if (addr & 1U) {
-		cortexr_run_insn(target, ARM_LDRB_R0_R1_INSN);
+		if (!cortexr_run_insn(target, ARM_LDRB_R0_R1_INSN))
+			return false;
 		data[offset++] = (uint8_t)cortexr_core_reg_read(target, 1U);
 		++addr;
 	}
 	/* If the address is now even but only 16-bit aligned, read a uint16_t to get onto 32-bit alignment */
 	if ((addr & 2U) && length - offset >= 2U) {
-		cortexr_run_insn(target, ARM_LDRH_R0_R1_INSN);
+		if (!cortexr_run_insn(target, ARM_LDRH_R0_R1_INSN))
+			return false;
 		write_le2(data, offset, (uint16_t)cortexr_core_reg_read(target, 1U));
 		offset += 2U;
 	}
@@ -734,13 +736,15 @@ static bool cortexr_mem_read_slow(target_s *const target, uint8_t *const data, t
 	const uint8_t remainder = (length - offset) & 3U;
 	/* If the remainder needs at least 2 more bytes read, do this first */
 	if (remainder & 2U) {
-		cortexr_run_insn(target, ARM_LDRH_R0_R1_INSN);
+		if (!cortexr_run_insn(target, ARM_LDRH_R0_R1_INSN))
+			return false;
 		write_le2(data, offset, (uint16_t)cortexr_core_reg_read(target, 1U));
 		offset += 2U;
 	}
 	/* Finally, fix things up if a final byte is required. */
 	if (remainder & 1U) {
-		cortexr_run_insn(target, ARM_LDRB_R0_R1_INSN);
+		if (!cortexr_run_insn(target, ARM_LDRB_R0_R1_INSN))
+			return false;
 		data[offset] = (uint8_t)cortexr_core_reg_read(target, 1U);
 	}
 	return true; /* Signal success */
