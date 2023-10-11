@@ -336,7 +336,7 @@ static bool cortexr_run_read_insn(target_s *const target, const uint32_t insn, u
 	return true;
 }
 
-static void cortexr_run_write_insn(target_s *const target, const uint32_t insn, const uint32_t data)
+static bool cortexr_run_write_insn(target_s *const target, const uint32_t insn, const uint32_t data)
 {
 	/* Set up the data in the DTR for the transaction */
 	cortex_dbg_write32(target, CORTEXR_DBG_DTRTX, data);
@@ -346,9 +346,19 @@ static void cortexr_run_write_insn(target_s *const target, const uint32_t insn, 
 	/* Issue the requested instruction to the core */
 	cortex_dbg_write32(target, CORTEXR_DBG_ITR, insn);
 	/* Poll for the instruction to complete and the data to be consumed from the DTR */
-	while ((cortex_dbg_read32(target, CORTEXR_DBG_DSCR) &
-			   (CORTEXR_DBG_DSCR_INSN_COMPLETE | CORTEXR_DBG_DSCR_DTR_WRITE_DONE)) != CORTEXR_DBG_DSCR_INSN_COMPLETE)
-		continue;
+	uint32_t status = 0;
+	while ((status & (CORTEXR_DBG_DSCR_INSN_COMPLETE | CORTEXR_DBG_DSCR_DTR_WRITE_DONE)) !=
+		CORTEXR_DBG_DSCR_INSN_COMPLETE) {
+		status = cortex_dbg_read32(target, CORTEXR_DBG_DSCR);
+		/* If the instruction triggered a synchronous data abort, signal failure having cleared it */
+		if (status & CORTEXR_DBG_DSCR_SYNC_DATA_ABORT) {
+			cortexr_priv_s *const priv = (cortexr_priv_s *)target->priv;
+			priv->core_status |= CORTEXR_STATUS_DATA_FAULT;
+			cortex_dbg_write32(target, CORTEXR_DBG_DRCR, CORTEXR_DBG_DRCR_CLR_STICKY_EXC);
+			return false;
+		}
+	}
+	return true;
 }
 
 static inline uint32_t cortexr_core_reg_read(target_s *const target, const uint8_t reg)
