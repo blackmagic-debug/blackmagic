@@ -311,7 +311,7 @@ static void cortexar_config_breakpoint(target_s *target, size_t slot, uint32_t m
 bool cortexr_attach(target_s *target);
 void cortexr_detach(target_s *target);
 
-static const char *cortexr_target_description(target_s *target);
+static const char *cortexar_target_description(target_s *target);
 
 static bool cortexar_run_insn(target_s *const target, const uint32_t insn)
 {
@@ -618,7 +618,7 @@ bool cortexr_probe(adiv5_access_port_s *const ap, const target_addr_t base_addre
 	const bool core_has_fpu = cortexar_coproc_read(target, CORTEXAR_CPACR) == cpacr;
 	DEBUG_TARGET("%s: FPU present? %s\n", __func__, core_has_fpu ? "yes" : "no");
 
-	target->regs_description = cortexr_target_description;
+	target->regs_description = cortexar_target_description;
 	target->regs_read = cortexar_regs_read;
 	target->regs_write = cortexar_regs_write;
 	target->reg_read = cortexar_reg_read;
@@ -1231,7 +1231,7 @@ static int cortexar_breakwatch_clear(target_s *const target, breakwatch_s *const
 
 /*
  * This function creates the target description XML substring for the FPU (VFPv2) on
- * a Cortex-R part. This has the same rationale as the function below.
+ * a Cortex-A/R part. This has the same rationale as the function below.
  *
  * The string it creates is conceptually the following:
  * <feature name="org.gnu.gdb.arm.vfp">
@@ -1254,7 +1254,7 @@ static int cortexar_breakwatch_clear(target_s *const target, breakwatch_s *const
  *   <reg name="fpscr" bitsize="32"/>
  * </feature>
  */
-static size_t cortexr_build_target_fpu_description(char *const buffer, size_t max_length)
+static size_t cortexar_build_target_fpu_description(char *const buffer, size_t max_length)
 {
 	size_t print_size = max_length;
 	/* Terminate the previous feature block and start the new */
@@ -1279,7 +1279,7 @@ static size_t cortexr_build_target_fpu_description(char *const buffer, size_t ma
 }
 
 /*
- * This function creates the target description XML string for a Cortex-R part.
+ * This function creates the target description XML string for a Cortex-A/R part.
  * This is done this way to decrease string duplications and thus code size,
  * making it unfortunately much less readable than the string literal it is
  * equivilent to.
@@ -1310,7 +1310,7 @@ static size_t cortexr_build_target_fpu_description(char *const buffer, size_t ma
  *   </feature>
  * </target>
  */
-static size_t cortexr_build_target_description(char *const buffer, size_t max_length, const bool has_fpu)
+static size_t cortexar_build_target_description(char *const buffer, size_t max_length, const bool has_fpu)
 {
 	size_t print_size = max_length;
 	/* Start with the "preamble" chunks which are mostly common across targets save for 2 words. */
@@ -1342,7 +1342,7 @@ static size_t cortexr_build_target_description(char *const buffer, size_t max_le
 		if (max_length != 0)
 			print_size = max_length - (size_t)offset;
 
-		offset += cortexr_build_target_fpu_description(buffer + offset, print_size);
+		offset += cortexar_build_target_fpu_description(buffer + offset, print_size);
 	}
 
 	/* Build the XML blob's termination */
@@ -1354,13 +1354,13 @@ static size_t cortexr_build_target_description(char *const buffer, size_t max_le
 	return (size_t)offset;
 }
 
-static const char *cortexr_target_description(target_s *const target)
+static const char *cortexar_target_description(target_s *const target)
 {
 	const size_t description_length =
-		cortexr_build_target_description(NULL, 0, target->target_options & TOPT_FLAVOUR_FLOAT) + 1U;
+		cortexar_build_target_description(NULL, 0, target->target_options & TOPT_FLAVOUR_FLOAT) + 1U;
 	char *const description = malloc(description_length);
 	if (description)
-		(void)cortexr_build_target_description(
+		(void)cortexar_build_target_description(
 			description, description_length, target->target_options & TOPT_FLAVOUR_FLOAT);
 	return description;
 }
