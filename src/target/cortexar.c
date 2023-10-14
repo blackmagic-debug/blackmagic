@@ -308,8 +308,8 @@ static int cortexar_breakwatch_set(target_s *target, breakwatch_s *breakwatch);
 static int cortexar_breakwatch_clear(target_s *target, breakwatch_s *breakwatch);
 static void cortexar_config_breakpoint(target_s *target, size_t slot, uint32_t mode, target_addr_t addr);
 
-bool cortexr_attach(target_s *target);
-void cortexr_detach(target_s *target);
+bool cortexar_attach(target_s *target);
+void cortexar_detach(target_s *target);
 
 static const char *cortexar_target_description(target_s *target);
 
@@ -608,8 +608,8 @@ bool cortexr_probe(adiv5_access_port_s *const ap, const target_addr_t base_addre
 	DEBUG_TARGET(
 		"%s: Core uses the %cMSA memory model\n", __func__, target->target_options & TOPT_FLAVOUR_VIRT_MEM ? 'V' : 'P');
 
-	target->attach = cortexr_attach;
-	target->detach = cortexr_detach;
+	target->attach = cortexar_attach;
+	target->detach = cortexar_detach;
 
 	/* Probe for FP extension. */
 	uint32_t cpacr = cortexar_coproc_read(target, CORTEXAR_CPACR);
@@ -662,7 +662,7 @@ bool cortexr_probe(adiv5_access_port_s *const ap, const target_addr_t base_addre
 	return true;
 }
 
-bool cortexr_attach(target_s *const target)
+bool cortexar_attach(target_s *const target)
 {
 	adiv5_access_port_s *ap = cortex_ap(target);
 	/* Mark the DP as being in fault so error recovery will switch to this core when in multi-drop mode */
@@ -701,7 +701,7 @@ bool cortexr_attach(target_s *const target)
 	return true;
 }
 
-void cortexr_detach(target_s *const target)
+void cortexar_detach(target_s *const target)
 {
 	const cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
 
