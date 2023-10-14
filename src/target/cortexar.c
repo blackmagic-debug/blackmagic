@@ -160,7 +160,7 @@ typedef struct cortexar_priv {
  * This allows these values to simply be shifted up a little to put them in the right spot
  * for use in the banked MRS/MSR instructions.
  */
-static const uint16_t cortexr_spsr_encodings[5] = {
+static const uint16_t cortexar_spsr_encodings[5] = {
 	0xc001U, /* FIQ */
 	0x1000U, /* IRQ */
 	0x5000U, /* SVC */
@@ -295,10 +295,10 @@ static bool cortexr_check_error(target_s *target);
 static void cortexr_mem_read(target_s *target, void *dest, target_addr_t src, size_t len);
 static void cortexr_mem_write(target_s *target, target_addr_t dest, const void *src, size_t len);
 
-static void cortexr_regs_read(target_s *target, void *data);
-static void cortexr_regs_write(target_s *target, const void *data);
-static ssize_t cortexr_reg_read(target_s *target, uint32_t reg, void *data, size_t max);
-static ssize_t cortexr_reg_write(target_s *target, uint32_t reg, const void *data, size_t max);
+static void cortexar_regs_read(target_s *target, void *data);
+static void cortexar_regs_write(target_s *target, const void *data);
+static ssize_t cortexar_reg_read(target_s *target, uint32_t reg, void *data, size_t max);
+static ssize_t cortexar_reg_write(target_s *target, uint32_t reg, const void *data, size_t max);
 
 static target_halt_reason_e cortexr_halt_poll(target_s *target, target_addr_t *watch);
 static void cortexr_halt_request(target_s *target);
@@ -313,7 +313,7 @@ void cortexr_detach(target_s *target);
 
 static const char *cortexr_target_description(target_s *target);
 
-static bool cortexr_run_insn(target_s *const target, const uint32_t insn)
+static bool cortexar_run_insn(target_s *const target, const uint32_t insn)
 {
 	/* Issue the requested instruction to the core */
 	cortex_dbg_write32(target, CORTEXAR_DBG_ITR, insn);
@@ -330,7 +330,7 @@ static bool cortexr_run_insn(target_s *const target, const uint32_t insn)
 	return !(status & CORTEXAR_DBG_DSCR_SYNC_DATA_ABORT);
 }
 
-static bool cortexr_run_read_insn(target_s *const target, const uint32_t insn, uint32_t *const result)
+static bool cortexar_run_read_insn(target_s *const target, const uint32_t insn, uint32_t *const result)
 {
 	/* Issue the requested instruction to the core */
 	cortex_dbg_write32(target, CORTEXAR_DBG_ITR, insn);
@@ -352,7 +352,7 @@ static bool cortexr_run_read_insn(target_s *const target, const uint32_t insn, u
 	return true;
 }
 
-static bool cortexr_run_write_insn(target_s *const target, const uint32_t insn, const uint32_t data)
+static bool cortexar_run_write_insn(target_s *const target, const uint32_t insn, const uint32_t data)
 {
 	/* Set up the data in the DTR for the transaction */
 	cortex_dbg_write32(target, CORTEXAR_DBG_DTRTX, data);
@@ -377,127 +377,127 @@ static bool cortexr_run_write_insn(target_s *const target, const uint32_t insn, 
 	return true;
 }
 
-static inline uint32_t cortexr_core_reg_read(target_s *const target, const uint8_t reg)
+static inline uint32_t cortexar_core_reg_read(target_s *const target, const uint8_t reg)
 {
 	/* If the register is a GPR and not the program counter, use a "simple" MCR to read */
 	if (reg < 15U) {
 		uint32_t value = 0;
 		/* Build an issue a core to coprocessor transfer for the requested register and read back the result */
-		(void)cortexr_run_read_insn(target, ARM_MCR_INSN | ENCODE_CP_ACCESS(14, 0, reg, 0, 5, 0), &value);
+		(void)cortexar_run_read_insn(target, ARM_MCR_INSN | ENCODE_CP_ACCESS(14, 0, reg, 0, 5, 0), &value);
 		/* Return whatever value was read as we don't care about DCSR.SDABORT here */
 		return value;
 	}
 	/* If the register is the program counter, we first have to extract it to r0 */
 	else if (reg == 15U) {
-		cortexr_run_insn(target, ARM_MOV_R0_PC_INSN);
-		return cortexr_core_reg_read(target, 0U);
+		cortexar_run_insn(target, ARM_MOV_R0_PC_INSN);
+		return cortexar_core_reg_read(target, 0U);
 	}
 	return 0U;
 }
 
-static void cortexr_core_regs_save(target_s *const target)
+static void cortexar_core_regs_save(target_s *const target)
 {
 	cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
 	/* Save out r0-r15 in that order (r15, aka pc, clobbers r0) */
 	for (size_t i = 0U; i < ARRAY_LENGTH(priv->core_regs.r); ++i)
-		priv->core_regs.r[i] = cortexr_core_reg_read(target, i);
+		priv->core_regs.r[i] = cortexar_core_reg_read(target, i);
 	/* Read CPSR to r0 and retrieve it */
-	cortexr_run_insn(target, ARM_MRS_R0_CPSR_INSN);
-	priv->core_regs.cpsr = cortexr_core_reg_read(target, 0U);
+	cortexar_run_insn(target, ARM_MRS_R0_CPSR_INSN);
+	priv->core_regs.cpsr = cortexar_core_reg_read(target, 0U);
 	/* Adjust the program counter according to the mode */
 	priv->core_regs.r[CORTEX_REG_PC] -= (priv->core_regs.cpsr & CORTEXAR_CPSR_THUMB) ? 4U : 8U;
 	/* Read the SPSRs into r0 and retrieve them */
 	for (size_t i = 0; i < ARRAY_LENGTH(priv->core_regs.spsr); ++i) {
 		/* Build and issue the banked MRS for the required SPSR */
-		cortexr_run_insn(target, ARM_MRS_R0_SPSR_INSN | (cortexr_spsr_encodings[i] << 4U));
-		priv->core_regs.spsr[i] = cortexr_core_reg_read(target, 0U);
+		cortexar_run_insn(target, ARM_MRS_R0_SPSR_INSN | (cortexar_spsr_encodings[i] << 4U));
+		priv->core_regs.spsr[i] = cortexar_core_reg_read(target, 0U);
 	}
 }
 
-static void cortexr_float_regs_save(target_s *const target)
+static void cortexar_float_regs_save(target_s *const target)
 {
 	cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
 	/* Read FPCSR to r0 and retrieve it */
-	cortexr_run_insn(target, ARM_VMRS_R0_FPCSR_INSN);
-	priv->core_regs.fpcsr = cortexr_core_reg_read(target, 0U);
+	cortexar_run_insn(target, ARM_VMRS_R0_FPCSR_INSN);
+	priv->core_regs.fpcsr = cortexar_core_reg_read(target, 0U);
 	/* Now step through each double-precision float register, reading it back to r0,r1 */
 	for (size_t i = 0; i < ARRAY_LENGTH(priv->core_regs.d); ++i) {
 		/* The float register to read slots into the bottom 4 bits of the instruction */
-		cortexr_run_insn(target, ARM_VMOV_R0_R1_DN_INSN | i);
+		cortexar_run_insn(target, ARM_VMOV_R0_R1_DN_INSN | i);
 		/* Read back the data */
-		const uint32_t d_low = cortexr_core_reg_read(target, 0U);
-		const uint32_t d_high = cortexr_core_reg_read(target, 1U);
+		const uint32_t d_low = cortexar_core_reg_read(target, 0U);
+		const uint32_t d_high = cortexar_core_reg_read(target, 1U);
 		/* Reassemble it as a full 64-bit value */
 		priv->core_regs.d[i] = d_low | ((uint64_t)d_high << 32U);
 	}
 }
 
-static void cortexr_regs_save(target_s *const target)
+static void cortexar_regs_save(target_s *const target)
 {
-	cortexr_core_regs_save(target);
+	cortexar_core_regs_save(target);
 	if (target->target_options & TOPT_FLAVOUR_FLOAT)
-		cortexr_float_regs_save(target);
+		cortexar_float_regs_save(target);
 }
 
-static inline void cortexr_core_reg_write(target_s *const target, const uint8_t reg, const uint32_t value)
+static inline void cortexar_core_reg_write(target_s *const target, const uint8_t reg, const uint32_t value)
 {
 	/* If the register is a GPR and not the program counter, use a "simple" MCR to read */
 	if (reg < 15U)
 		/* Build and issue a coprocessor to core transfer for the requested register and send the new data */
-		cortexr_run_write_insn(target, ARM_MRC_INSN | ENCODE_CP_ACCESS(14, 0, reg, 0, 5, 0), value);
+		cortexar_run_write_insn(target, ARM_MRC_INSN | ENCODE_CP_ACCESS(14, 0, reg, 0, 5, 0), value);
 	/* If the register is the program counter, we first have to write it to r0 */
 	else if (reg == 15U) {
-		cortexr_core_reg_write(target, 0U, value);
-		cortexr_run_insn(target, ARM_MOV_PC_R0_INSN);
+		cortexar_core_reg_write(target, 0U, value);
+		cortexar_run_insn(target, ARM_MOV_PC_R0_INSN);
 	}
 }
 
-static void cortexr_core_regs_restore(target_s *const target)
+static void cortexar_core_regs_restore(target_s *const target)
 {
 	cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
 	/* Load the values for each of the SPSRs in turn into r0 and shove them back into place */
 	for (size_t i = 0; i < ARRAY_LENGTH(priv->core_regs.spsr); ++i) {
-		cortexr_core_reg_write(target, 0U, priv->core_regs.spsr[i]);
+		cortexar_core_reg_write(target, 0U, priv->core_regs.spsr[i]);
 		/* Build and issue the banked MSR for the required SPSR */
-		cortexr_run_insn(target, ARM_MSR_SPSR_R0_INSN | (cortexr_spsr_encodings[i] << 4U));
+		cortexar_run_insn(target, ARM_MSR_SPSR_R0_INSN | (cortexar_spsr_encodings[i] << 4U));
 	}
 	/* Load the value for CPSR to r0 and then shove it back into place */
-	cortexr_core_reg_write(target, 0U, priv->core_regs.cpsr);
-	cortexr_run_insn(target, ARM_MSR_CPSR_R0_INSN);
+	cortexar_core_reg_write(target, 0U, priv->core_regs.cpsr);
+	cortexar_run_insn(target, ARM_MSR_CPSR_R0_INSN);
 	/* Fix up the program counter for the mode */
 	if (priv->core_regs.cpsr & CORTEXAR_CPSR_THUMB)
 		priv->core_regs.r[CORTEX_REG_PC] |= 1U;
 	/* Restore r1-15 in that order. Ignore r0 for the moment as it gets clobbered repeatedly */
 	for (size_t i = 1U; i < ARRAY_LENGTH(priv->core_regs.r); ++i)
-		cortexr_core_reg_write(target, i, priv->core_regs.r[i]);
+		cortexar_core_reg_write(target, i, priv->core_regs.r[i]);
 	/* Now we're done with the rest of the registers, restore r0 */
-	cortexr_core_reg_write(target, 0U, priv->core_regs.r[0U]);
+	cortexar_core_reg_write(target, 0U, priv->core_regs.r[0U]);
 }
 
-static void cortexr_float_regs_restore(target_s *const target)
+static void cortexar_float_regs_restore(target_s *const target)
 {
 	const cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
 	/* Step through each double-precision float register, writing it back via r0,r1 */
 	for (size_t i = 0; i < ARRAY_LENGTH(priv->core_regs.d); ++i) {
 		/* Load the low 32 bits into r0, and the high into r1 */
-		cortexr_core_reg_write(target, 0U, priv->core_regs.d[i] & UINT32_MAX);
-		cortexr_core_reg_write(target, 1U, priv->core_regs.d[i] >> 32U);
+		cortexar_core_reg_write(target, 0U, priv->core_regs.d[i] & UINT32_MAX);
+		cortexar_core_reg_write(target, 1U, priv->core_regs.d[i] >> 32U);
 		/* The float register to write slots into the bottom 4 bits of the instruction */
-		cortexr_run_insn(target, ARM_VMOV_DN_R0_R1_INSN | i);
+		cortexar_run_insn(target, ARM_VMOV_DN_R0_R1_INSN | i);
 	}
 	/* Load the value for FPCSR to r0 and then shove it back into place */
-	cortexr_core_reg_write(target, 0U, priv->core_regs.fpcsr);
-	cortexr_run_insn(target, ARM_VMSR_FPCSR_R0_INSN);
+	cortexar_core_reg_write(target, 0U, priv->core_regs.fpcsr);
+	cortexar_run_insn(target, ARM_VMSR_FPCSR_R0_INSN);
 }
 
-static void cortexr_regs_restore(target_s *const target)
+static void cortexar_regs_restore(target_s *const target)
 {
 	if (target->target_options & TOPT_FLAVOUR_FLOAT)
-		cortexr_float_regs_restore(target);
-	cortexr_core_regs_restore(target);
+		cortexar_float_regs_restore(target);
+	cortexar_core_regs_restore(target);
 }
 
-static uint32_t cortexr_coproc_read(target_s *const target, const uint8_t coproc, const uint16_t op)
+static uint32_t cortexar_coproc_read(target_s *const target, const uint8_t coproc, const uint16_t op)
 {
 	/*
 	 * Perform a read of a coprocessor - which one (between 0 and 15) is given by the coproc parameter
@@ -507,13 +507,13 @@ static uint32_t cortexr_coproc_read(target_s *const target, const uint8_t coproc
 	 * Encode the MCR (Move to ARM core register from Coprocessor) instruction in ARM ISA format
 	 * using core reg r0 as the read target.
 	 */
-	cortexr_run_insn(target,
+	cortexar_run_insn(target,
 		ARM_MRC_INSN |
 			ENCODE_CP_ACCESS(coproc & 0xfU, (op >> 8U) & 0x7U, 0U, (op >> 4U) & 0xfU, op & 0xfU, (op >> 12U) & 0x7U));
-	return cortexr_core_reg_read(target, 0U);
+	return cortexar_core_reg_read(target, 0U);
 }
 
-static void cortexr_coproc_write(target_s *const target, const uint8_t coproc, const uint16_t op, const uint32_t value)
+static void cortexar_coproc_write(target_s *const target, const uint8_t coproc, const uint16_t op, const uint32_t value)
 {
 	/*
 	 * Perform a write of a coprocessor - which one (between 0 and 15) is given by the coproc parameter
@@ -523,8 +523,8 @@ static void cortexr_coproc_write(target_s *const target, const uint8_t coproc, c
 	 * Encode the MRC (Move to Coprocessor from ARM core register) instruction in ARM ISA format
 	 * using core reg r0 as the write data source.
 	 */
-	cortexr_core_reg_write(target, 0U, value);
-	cortexr_run_insn(target,
+	cortexar_core_reg_write(target, 0U, value);
+	cortexar_run_insn(target,
 		ARM_MCR_INSN |
 			ENCODE_CP_ACCESS(coproc & 0xfU, (op >> 8U) & 0x7U, 0U, (op >> 4U) & 0xfU, op & 0xfU, (op >> 12U) & 0x7U));
 }
@@ -612,23 +612,23 @@ bool cortexr_probe(adiv5_access_port_s *const ap, const target_addr_t base_addre
 	target->detach = cortexr_detach;
 
 	/* Probe for FP extension. */
-	uint32_t cpacr = cortexr_coproc_read(target, CORTEXAR_CPACR);
+	uint32_t cpacr = cortexar_coproc_read(target, CORTEXAR_CPACR);
 	cpacr |= CORTEXAR_CPACR_CP10_FULL_ACCESS | CORTEXAR_CPACR_CP11_FULL_ACCESS;
-	cortexr_coproc_write(target, CORTEXAR_CPACR, cpacr);
-	const bool core_has_fpu = cortexr_coproc_read(target, CORTEXAR_CPACR) == cpacr;
+	cortexar_coproc_write(target, CORTEXAR_CPACR, cpacr);
+	const bool core_has_fpu = cortexar_coproc_read(target, CORTEXAR_CPACR) == cpacr;
 	DEBUG_TARGET("%s: FPU present? %s\n", __func__, core_has_fpu ? "yes" : "no");
 
 	target->regs_description = cortexr_target_description;
-	target->regs_read = cortexr_regs_read;
-	target->regs_write = cortexr_regs_write;
-	target->reg_read = cortexr_reg_read;
-	target->reg_write = cortexr_reg_write;
+	target->regs_read = cortexar_regs_read;
+	target->regs_write = cortexar_regs_write;
+	target->reg_read = cortexar_reg_read;
+	target->reg_write = cortexar_reg_write;
 	target->regs_size = sizeof(uint32_t) * CORTEXAR_GENERAL_REG_COUNT;
 
 	if (core_has_fpu) {
 		target->target_options |= TOPT_FLAVOUR_FLOAT;
 		target->regs_size += sizeof(uint32_t) * CORTEX_FLOAT_REG_COUNT;
-		cortexr_float_regs_save(target);
+		cortexar_float_regs_save(target);
 	}
 
 	target->check_error = cortexr_check_error;
@@ -733,7 +733,7 @@ static inline bool cortexr_mem_read_fast(target_s *const target, uint32_t *const
 {
 	/* Read each of the uint32_t's checking for failure */
 	for (size_t offset = 0; offset < count; ++offset) {
-		if (!cortexr_run_read_insn(target, ARM_LDC_R0_POSTINC4_DTRTX_INSN, dest + offset))
+		if (!cortexar_run_read_insn(target, ARM_LDC_R0_POSTINC4_DTRTX_INSN, dest + offset))
 			return false; /* Propagate failure if it happens */
 	}
 	return true; /* Signal success */
@@ -745,16 +745,16 @@ static bool cortexr_mem_read_slow(target_s *const target, uint8_t *const data, t
 	size_t offset = 0;
 	/* If the address is odd, read a byte to get onto an even address */
 	if (addr & 1U) {
-		if (!cortexr_run_insn(target, ARM_LDRB_R0_R1_INSN))
+		if (!cortexar_run_insn(target, ARM_LDRB_R0_R1_INSN))
 			return false;
-		data[offset++] = (uint8_t)cortexr_core_reg_read(target, 1U);
+		data[offset++] = (uint8_t)cortexar_core_reg_read(target, 1U);
 		++addr;
 	}
 	/* If the address is now even but only 16-bit aligned, read a uint16_t to get onto 32-bit alignment */
 	if ((addr & 2U) && length - offset >= 2U) {
-		if (!cortexr_run_insn(target, ARM_LDRH_R0_R1_INSN))
+		if (!cortexar_run_insn(target, ARM_LDRH_R0_R1_INSN))
 			return false;
-		write_le2(data, offset, (uint16_t)cortexr_core_reg_read(target, 1U));
+		write_le2(data, offset, (uint16_t)cortexar_core_reg_read(target, 1U));
 		offset += 2U;
 	}
 	/* Use the fast path to read as much as possible before doing a slow path fixup at the end */
@@ -763,16 +763,16 @@ static bool cortexr_mem_read_slow(target_s *const target, uint8_t *const data, t
 	const uint8_t remainder = (length - offset) & 3U;
 	/* If the remainder needs at least 2 more bytes read, do this first */
 	if (remainder & 2U) {
-		if (!cortexr_run_insn(target, ARM_LDRH_R0_R1_INSN))
+		if (!cortexar_run_insn(target, ARM_LDRH_R0_R1_INSN))
 			return false;
-		write_le2(data, offset, (uint16_t)cortexr_core_reg_read(target, 1U));
+		write_le2(data, offset, (uint16_t)cortexar_core_reg_read(target, 1U));
 		offset += 2U;
 	}
 	/* Finally, fix things up if a final byte is required. */
 	if (remainder & 1U) {
-		if (!cortexr_run_insn(target, ARM_LDRB_R0_R1_INSN))
+		if (!cortexar_run_insn(target, ARM_LDRB_R0_R1_INSN))
 			return false;
-		data[offset] = (uint8_t)cortexr_core_reg_read(target, 1U);
+		data[offset] = (uint8_t)cortexar_core_reg_read(target, 1U);
 	}
 	return true; /* Signal success */
 }
@@ -784,13 +784,13 @@ static void cortexr_mem_handle_fault(
 	/* If we suffered a fault of some kind, grab the reason and restore DFSR/DFAR */
 	if (priv->core_status & CORTEXAR_STATUS_DATA_FAULT) {
 #ifdef ENABLE_DEBUG
-		const uint32_t fault_status = cortexr_coproc_read(target, CORTEXAR_DFSR);
-		const uint32_t fault_addr = cortexr_coproc_read(target, CORTEXAR_DFAR);
+		const uint32_t fault_status = cortexar_coproc_read(target, CORTEXAR_DFSR);
+		const uint32_t fault_addr = cortexar_coproc_read(target, CORTEXAR_DFAR);
 #else
 		(void)func;
 #endif
-		cortexr_coproc_write(target, CORTEXAR_DFAR, orig_fault_addr);
-		cortexr_coproc_write(target, CORTEXAR_DFSR, orig_fault_status);
+		cortexar_coproc_write(target, CORTEXAR_DFAR, orig_fault_addr);
+		cortexar_coproc_write(target, CORTEXAR_DFSR, orig_fault_status);
 
 		DEBUG_WARN("%s: Failed at 0x%08" PRIx32 " (%08" PRIx32 ")\n", func, fault_addr, fault_status);
 	}
@@ -805,13 +805,13 @@ static void cortexr_mem_read(target_s *const target, void *const dest, const tar
 {
 	cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
 	/* Cache DFSR and DFAR in case we wind up triggering a data fault */
-	const uint32_t fault_status = cortexr_coproc_read(target, CORTEXAR_DFSR);
-	const uint32_t fault_addr = cortexr_coproc_read(target, CORTEXAR_DFAR);
+	const uint32_t fault_status = cortexar_coproc_read(target, CORTEXAR_DFSR);
+	const uint32_t fault_addr = cortexar_coproc_read(target, CORTEXAR_DFAR);
 	/* Clear any existing fault state */
 	priv->core_status &= ~(CORTEXAR_STATUS_DATA_FAULT | CORTEXAR_STATUS_MMU_FAULT);
 
 	/* Move the start address into the core's r0 */
-	cortexr_core_reg_write(target, 0U, src);
+	cortexar_core_reg_write(target, 0U, src);
 
 	/* If the address is 32-bit aligned and we're reading 32 bits at a time, use the fast path */
 	if ((src & 3U) == 0U && (len & 3U) == 0U)
@@ -827,7 +827,7 @@ static inline bool cortexr_mem_write_fast(target_s *const target, const uint32_t
 {
 	/* Read each of the uint32_t's checking for failure */
 	for (size_t offset = 0; offset < count; ++offset) {
-		if (!cortexr_run_write_insn(target, ARM_STC_DTRRX_R0_POSTINC4_INSN, src[offset]))
+		if (!cortexar_run_write_insn(target, ARM_STC_DTRRX_R0_POSTINC4_INSN, src[offset]))
 			return false; /* Propagate failure if it happens */
 	}
 	return true; /* Signal success */
@@ -840,15 +840,15 @@ static bool cortexr_mem_write_slow(
 	size_t offset = 0;
 	/* If the address is odd, write a byte to get onto an even address */
 	if (addr & 1U) {
-		cortexr_core_reg_write(target, 1U, data[offset++]);
-		if (!cortexr_run_insn(target, ARM_STRB_R1_R0_INSN))
+		cortexar_core_reg_write(target, 1U, data[offset++]);
+		if (!cortexar_run_insn(target, ARM_STRB_R1_R0_INSN))
 			return false;
 		++addr;
 	}
 	/* If the address is now even but only 16-bit aligned, write a uint16_t to get onto 32-bit alignment */
 	if ((addr & 2U) && length - offset >= 2U) {
-		cortexr_core_reg_write(target, 1U, read_le2(data, offset));
-		if (!cortexr_run_insn(target, ARM_STRH_R1_R0_INSN))
+		cortexar_core_reg_write(target, 1U, read_le2(data, offset));
+		if (!cortexar_run_insn(target, ARM_STRH_R1_R0_INSN))
 			return false;
 		offset += 2U;
 	}
@@ -858,15 +858,15 @@ static bool cortexr_mem_write_slow(
 	const uint8_t remainder = (length - offset) & 3U;
 	/* If the remainder needs at least 2 more bytes write, do this first */
 	if (remainder & 2U) {
-		cortexr_core_reg_write(target, 1U, read_le2(data, offset));
-		if (!cortexr_run_insn(target, ARM_STRH_R1_R0_INSN))
+		cortexar_core_reg_write(target, 1U, read_le2(data, offset));
+		if (!cortexar_run_insn(target, ARM_STRH_R1_R0_INSN))
 			return false;
 		offset += 2U;
 	}
 	/* Finally, fix things up if a final byte is required. */
 	if (remainder & 1U) {
-		cortexr_core_reg_write(target, 1U, data[offset]);
-		if (!cortexr_run_insn(target, ARM_STRB_R1_R0_INSN))
+		cortexar_core_reg_write(target, 1U, data[offset]);
+		if (!cortexar_run_insn(target, ARM_STRB_R1_R0_INSN))
 			return false;
 	}
 	return true; /* Signal success */
@@ -882,13 +882,13 @@ static void cortexr_mem_write(target_s *const target, const target_addr_t dest, 
 	cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
 	DEBUG_TARGET("%s: Writing %zu bytes @0x%" PRIx32 "\n", __func__, len, dest);
 	/* Cache DFSR and DFAR in case we wind up triggering a data fault */
-	const uint32_t fault_status = cortexr_coproc_read(target, CORTEXAR_DFSR);
-	const uint32_t fault_addr = cortexr_coproc_read(target, CORTEXAR_DFAR);
+	const uint32_t fault_status = cortexar_coproc_read(target, CORTEXAR_DFSR);
+	const uint32_t fault_addr = cortexar_coproc_read(target, CORTEXAR_DFAR);
 	/* Clear any existing fault state */
 	priv->core_status &= ~(CORTEXAR_STATUS_DATA_FAULT | CORTEXAR_STATUS_MMU_FAULT);
 
 	/* Move the start address into the core's r0 */
-	cortexr_core_reg_write(target, 0U, dest);
+	cortexar_core_reg_write(target, 0U, dest);
 
 	/* If the address is 32-bit aligned and we're writing 32 bits at a time, use the fast path */
 	if ((dest & 3U) == 0U && (len & 3U) == 0U)
@@ -899,7 +899,7 @@ static void cortexr_mem_write(target_s *const target, const target_addr_t dest, 
 	cortexr_mem_handle_fault(target, __func__, fault_status, fault_addr);
 }
 
-static void cortexr_regs_read(target_s *const target, void *const data)
+static void cortexar_regs_read(target_s *const target, void *const data)
 {
 	const cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
 	uint32_t *const regs = (uint32_t *)data;
@@ -912,7 +912,7 @@ static void cortexr_regs_read(target_s *const target, void *const data)
 	}
 }
 
-static void cortexr_regs_write(target_s *const target, const void *const data)
+static void cortexar_regs_write(target_s *const target, const void *const data)
 {
 	cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
 	const uint32_t *const regs = (const uint32_t *)data;
@@ -925,7 +925,7 @@ static void cortexr_regs_write(target_s *const target, const void *const data)
 	}
 }
 
-static void *cortexr_reg_ptr(target_s *const target, const size_t reg)
+static void *cortexar_reg_ptr(target_s *const target, const size_t reg)
 {
 	cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
 	/* r0-r15 */
@@ -946,7 +946,7 @@ static void *cortexr_reg_ptr(target_s *const target, const size_t reg)
 	return NULL;
 }
 
-static size_t cortexr_reg_width(const size_t reg)
+static size_t cortexar_reg_width(const size_t reg)
 {
 	/* r0-r15, cpsr, fpcsr */
 	if (reg < CORTEXAR_GENERAL_REG_COUNT || reg == 33U)
@@ -955,14 +955,14 @@ static size_t cortexr_reg_width(const size_t reg)
 	return 8U;
 }
 
-static ssize_t cortexr_reg_read(target_s *const target, const uint32_t reg, void *const data, const size_t max)
+static ssize_t cortexar_reg_read(target_s *const target, const uint32_t reg, void *const data, const size_t max)
 {
 	/* Try to get a pointer to the storage for the requested register, and return -1 if that fails */
-	const void *const reg_ptr = cortexr_reg_ptr(target, reg);
+	const void *const reg_ptr = cortexar_reg_ptr(target, reg);
 	if (!reg_ptr)
 		return -1;
 	/* Now we have a valid register, get its width in bytes, and check that against max */
-	const size_t reg_width = cortexr_reg_width(reg);
+	const size_t reg_width = cortexar_reg_width(reg);
 	if (max < reg_width)
 		return -1;
 	/* Finally, copy the register data out and return the width */
@@ -970,14 +970,14 @@ static ssize_t cortexr_reg_read(target_s *const target, const uint32_t reg, void
 	return reg_width;
 }
 
-static ssize_t cortexr_reg_write(target_s *const target, const uint32_t reg, const void *const data, const size_t max)
+static ssize_t cortexar_reg_write(target_s *const target, const uint32_t reg, const void *const data, const size_t max)
 {
 	/* Try to get a poitner to the storage for the requested register, and return -1 if that fails */
-	void *const reg_ptr = cortexr_reg_ptr(target, reg);
+	void *const reg_ptr = cortexar_reg_ptr(target, reg);
 	if (!reg_ptr)
 		return -1;
 	/* Now we have a valid register, get its width in bytes, and check that against max */
-	const size_t reg_width = cortexr_reg_width(reg);
+	const size_t reg_width = cortexar_reg_width(reg);
 	if (max < reg_width)
 		return -1;
 	/* Finally, copy the new register data in and return the width */
@@ -1022,7 +1022,7 @@ static target_halt_reason_e cortexr_halt_poll(target_s *const target, target_add
 		target, CORTEXAR_DBG_DSCR, dscr | CORTEXAR_DBG_DSCR_ITR_ENABLE | CORTEXAR_DBG_DSCR_HALTING_DBG_ENABLE);
 
 	/* Save the target core's registers as debugging operations clobber them */
-	cortexr_regs_save(target);
+	cortexar_regs_save(target);
 
 	target_halt_reason_e reason = TARGET_HALT_FAULT;
 	/* Determine why we halted exactly from the Method Of Entry bits */
@@ -1061,7 +1061,7 @@ static void cortexr_halt_resume(target_s *const target, const bool step)
 {
 	cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
 	/* Restore the core's registers so the running program doesn't know we've been in there */
-	cortexr_regs_restore(target);
+	cortexar_regs_restore(target);
 
 	uint32_t dscr = cortex_dbg_read32(target, CORTEXAR_DBG_DSCR);
 	/*
@@ -1082,7 +1082,7 @@ static void cortexr_halt_resume(target_s *const target, const bool step)
 
 	/* Invalidate all the instruction caches if we're on a VMSA model device */
 	if (target->target_options & TOPT_FLAVOUR_VIRT_MEM)
-		cortexr_coproc_write(target, CORTEXAR_ICIALLU, 0U);
+		cortexar_coproc_write(target, CORTEXAR_ICIALLU, 0U);
 
 	cortex_dbg_write32(target, CORTEXAR_DBG_DSCR, dscr & ~CORTEXAR_DBG_DSCR_ITR_ENABLE);
 	/* Ask to resume the core */
