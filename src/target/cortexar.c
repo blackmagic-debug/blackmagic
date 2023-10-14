@@ -529,11 +529,12 @@ static void cortexar_coproc_write(target_s *const target, const uint8_t coproc, 
 			ENCODE_CP_ACCESS(coproc & 0xfU, (op >> 8U) & 0x7U, 0U, (op >> 4U) & 0xfU, op & 0xfU, (op >> 12U) & 0x7U));
 }
 
-bool cortexr_probe(adiv5_access_port_s *const ap, const target_addr_t base_address)
+static target_s *cortexar_probe(
+	adiv5_access_port_s *const ap, const target_addr_t base_address, const char *const core_type)
 {
 	target_s *target = target_new();
 	if (!target)
-		return false;
+		return NULL;
 
 	adiv5_ap_ref(ap);
 	if (ap->dp->version >= 2 && ap->dp->target_designer_code != 0) {
@@ -549,10 +550,10 @@ bool cortexr_probe(adiv5_access_port_s *const ap, const target_addr_t base_addre
 	cortexar_priv_s *const priv = calloc(1, sizeof(*priv));
 	if (!priv) { /* calloc failed: heap exhaustion */
 		DEBUG_ERROR("calloc: failed in %s\n", __func__);
-		return false;
+		return NULL;
 	}
 
-	target->driver = "ARM Cortex-R";
+	target->driver = core_type;
 	target->priv = priv;
 	target->priv_free = cortex_priv_free;
 	priv->base.ap = ap;
@@ -652,6 +653,15 @@ bool cortexr_probe(adiv5_access_port_s *const ap, const target_addr_t base_addre
 			priv->base.icache_line_length << 2U, priv->base.dcache_line_length << 2U);
 	} else
 		target_check_error(target);
+
+	return target;
+}
+
+bool cortexr_probe(adiv5_access_port_s *const ap, const target_addr_t base_address)
+{
+	target_s *const target = cortexar_probe(ap, base_address, "ARM Cortex-R");
+	if (!target)
+		return false;
 
 #if PC_HOSTED == 0
 	gdb_outf("Please report unknown device with Designer 0x%x Part ID 0x%x\n", target->designer_code, target->part_id);
