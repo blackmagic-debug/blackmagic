@@ -238,14 +238,28 @@ static const uint16_t cortexar_spsr_encodings[5] = {
 #define ARM_STRB_R1_R0_INSN 0xe4e01001U
 #define ARM_STRH_R1_R0_INSN 0xe0e010b2U
 
+/* Instruction encodings for synchronisation barriers */
+#define ARM_ISB_INSN 0xe57ff06fU
+
 /* Coprocessor register definitions */
-#define CORTEXAR_CPACR   15U, ENCODE_CP_REG(1U, 0U, 0U, 2U)
-#define CORTEXAR_DFSR    15U, ENCODE_CP_REG(5U, 0U, 0U, 0U)
-#define CORTEXAR_DFAR    15U, ENCODE_CP_REG(6U, 0U, 0U, 0U)
+
+/* Co-Processor Access Control Register */
+#define CORTEXAR_CPACR 15U, ENCODE_CP_REG(1U, 0U, 0U, 2U)
+/* Data Fault Status Register */
+#define CORTEXAR_DFSR 15U, ENCODE_CP_REG(5U, 0U, 0U, 0U)
+/* Data Fault Address Register */
+#define CORTEXAR_DFAR 15U, ENCODE_CP_REG(6U, 0U, 0U, 0U)
+/* Physical Address Register */
+#define CORTEXAR_PAR32 15U, ENCODE_CP_REG(7U, 4U, 0U, 0U)
+/* Instruction Cache Invalidate ALL to Unification */
 #define CORTEXAR_ICIALLU 15U, ENCODE_CP_REG(7U, 5U, 0U, 0U)
+/* Address Translate Stage 1 Current state PL1 Read */
+#define CORTEXAR_ATS1CPR 15U, ENCODE_CP_REG(7U, 8U, 0U, 0U)
 
 #define CORTEXAR_CPACR_CP10_FULL_ACCESS 0x00300000U
 #define CORTEXAR_CPACR_CP11_FULL_ACCESS 0x00c00000U
+
+#define CORTEXAR_PAR32_FAULT 0x00000001U
 
 #define CORTEXAR_PFR1_SEC_EXT_MASK  0x000000f0U
 #define CORTEXAR_PFR1_VIRT_EXT_MASK 0x0000f000U
@@ -527,6 +541,41 @@ static void cortexar_coproc_write(target_s *const target, const uint8_t coproc, 
 	cortexar_run_insn(target,
 		ARM_MCR_INSN |
 			ENCODE_CP_ACCESS(coproc & 0xfU, (op >> 8U) & 0x7U, 0U, (op >> 4U) & 0xfU, op & 0xfU, (op >> 12U) & 0x7U));
+}
+
+/*
+ * Perform a virtual to physical address translation.
+ * NB: This requires the core to be halted! Trashes r0.
+ */
+static target_addr_t cortexar_virt_to_phys(target_s *const target, const target_addr_t virt_addr)
+{
+	/* Check if the target is PMSA and return early if it is */
+	if (!(target->target_options & TOPT_FLAVOUR_VIRT_MEM))
+		return virt_addr;
+
+	/*
+	 * Now we know the target is VMSA and so has the address translation machinary,
+	 * start by loading r0 with the VA to translate and request its translation
+	 */
+	cortexar_core_reg_write(target, 0U, virt_addr);
+	cortexar_coproc_write(target, CORTEXAR_ATS1CPR, 0U);
+	/*
+	 * Ensure that's complete with a sync barrier, then read the result back
+	 * from the physical address register into r0 so we can extract the result
+	 */
+	cortexar_run_insn(target, ARM_ISB_INSN);
+	cortexar_coproc_read(target, CORTEXAR_PAR32);
+
+	const uint32_t phys_addr = cortexar_core_reg_read(target, 0U);
+	/* Check if the MMU indicated a translation failure, marking a fault if it did */
+	if (phys_addr & CORTEXAR_PAR32_FAULT) {
+		cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
+		priv->core_status |= CORTEXAR_STATUS_MMU_FAULT;
+	}
+
+	/* Convert the physical address to a virtual one using the top 20 bits of PAR and the bottom 12 of the virtual. */
+	const target_addr_t address = (phys_addr & 0xfffff000U) | (virt_addr & 0x00000fffU);
+	return address;
 }
 
 static target_s *cortexar_probe(
@@ -1136,7 +1185,7 @@ static void cortexar_config_breakpoint(
 		mode |= CORTEXAR_DBG_BCR_BYTE_SELECT_ALL;
 
 	/* Configure the breakpoint slot */
-	cortex_dbg_write32(target, CORTEXAR_DBG_BVR + (slot << 2U), addr & ~3U);
+	cortex_dbg_write32(target, CORTEXAR_DBG_BVR + (slot << 2U), cortexar_virt_to_phys(target, addr & ~3U));
 	cortex_dbg_write32(
 		target, CORTEXAR_DBG_BCR + (slot << 2U), CORTEXAR_DBG_BCR_ENABLE | CORTEXAR_DBG_BCR_ALL_MODES | (mode & ~7U));
 }
@@ -1168,7 +1217,7 @@ static void cortexar_config_watchpoint(target_s *const target, const size_t slot
 	const uint32_t mode = cortexar_watchpoint_mode(breakwatch->type) | CORTEXAR_DBG_WCR_BYTE_SELECT(byte_mask);
 
 	/* Configure the watchpoint slot */
-	cortex_dbg_write32(target, CORTEXAR_DBG_WVR + (slot << 2U), breakwatch->addr & ~3U);
+	cortex_dbg_write32(target, CORTEXAR_DBG_WVR + (slot << 2U), cortexar_virt_to_phys(target, breakwatch->addr & ~3U));
 	cortex_dbg_write32(
 		target, CORTEXAR_DBG_WCR + (slot << 2U), CORTEXAR_DBG_WCR_ENABLE | CORTEXAR_DBG_WCR_ALL_MODES | mode);
 }
