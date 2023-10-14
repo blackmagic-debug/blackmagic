@@ -291,9 +291,9 @@ static_assert(ARRAY_LENGTH(cortexr_spr_types) == ARRAY_LENGTH(cortexr_spr_names)
 );
 /* clang-format on */
 
-static bool cortexr_check_error(target_s *target);
-static void cortexr_mem_read(target_s *target, void *dest, target_addr_t src, size_t len);
-static void cortexr_mem_write(target_s *target, target_addr_t dest, const void *src, size_t len);
+static bool cortexar_check_error(target_s *target);
+static void cortexar_mem_read(target_s *target, void *dest, target_addr_t src, size_t len);
+static void cortexar_mem_write(target_s *target, target_addr_t dest, const void *src, size_t len);
 
 static void cortexar_regs_read(target_s *target, void *data);
 static void cortexar_regs_write(target_s *target, const void *data);
@@ -631,9 +631,9 @@ bool cortexr_probe(adiv5_access_port_s *const ap, const target_addr_t base_addre
 		cortexar_float_regs_save(target);
 	}
 
-	target->check_error = cortexr_check_error;
-	target->mem_read = cortexr_mem_read;
-	target->mem_write = cortexr_mem_write;
+	target->check_error = cortexar_check_error;
+	target->mem_read = cortexar_mem_read;
+	target->mem_write = cortexar_mem_write;
 
 	target->breakwatch_set = cortexr_breakwatch_set;
 	target->breakwatch_clear = cortexr_breakwatch_clear;
@@ -720,7 +720,7 @@ void cortexr_detach(target_s *const target)
 	target_halt_resume(target, false);
 }
 
-static bool cortexr_check_error(target_s *const target)
+static bool cortexar_check_error(target_s *const target)
 {
 	cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
 	const bool fault = priv->core_status & (CORTEXAR_STATUS_DATA_FAULT | CORTEXAR_STATUS_MMU_FAULT);
@@ -728,7 +728,7 @@ static bool cortexr_check_error(target_s *const target)
 	return fault || cortex_check_error(target);
 }
 
-/* Fast path for cortexr_mem_read(). Assumes the address to read data from is already loaded in r0. */
+/* Fast path for cortexar_mem_read(). Assumes the address to read data from is already loaded in r0. */
 static inline bool cortexr_mem_read_fast(target_s *const target, uint32_t *const dest, const size_t count)
 {
 	/* Read each of the uint32_t's checking for failure */
@@ -739,7 +739,7 @@ static inline bool cortexr_mem_read_fast(target_s *const target, uint32_t *const
 	return true; /* Signal success */
 }
 
-/* Slow path for cortexr_mem_read(). Trashes r0 and r1. */
+/* Slow path for cortexar_mem_read(). Trashes r0 and r1. */
 static bool cortexr_mem_read_slow(target_s *const target, uint8_t *const data, target_addr_t addr, const size_t length)
 {
 	size_t offset = 0;
@@ -801,7 +801,7 @@ static void cortexr_mem_handle_fault(
  * NB: This requires the core to be halted! Uses instruction launches on
  * the core and requires we're in debug mode to work. Trashes r0.
  */
-static void cortexr_mem_read(target_s *const target, void *const dest, const target_addr_t src, const size_t len)
+static void cortexar_mem_read(target_s *const target, void *const dest, const target_addr_t src, const size_t len)
 {
 	cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
 	/* Cache DFSR and DFAR in case we wind up triggering a data fault */
@@ -822,7 +822,7 @@ static void cortexr_mem_read(target_s *const target, void *const dest, const tar
 	cortexr_mem_handle_fault(target, __func__, fault_status, fault_addr);
 }
 
-/* Fast path for cortexr_mem_write(). Assumes the address to read data from is already loaded in r0. */
+/* Fast path for cortexar_mem_write(). Assumes the address to read data from is already loaded in r0. */
 static inline bool cortexr_mem_write_fast(target_s *const target, const uint32_t *const src, const size_t count)
 {
 	/* Read each of the uint32_t's checking for failure */
@@ -833,7 +833,7 @@ static inline bool cortexr_mem_write_fast(target_s *const target, const uint32_t
 	return true; /* Signal success */
 }
 
-/* Slow path for cortexr_mem_write(). Trashes r0 and r1. */
+/* Slow path for cortexar_mem_write(). Trashes r0 and r1. */
 static bool cortexr_mem_write_slow(
 	target_s *const target, target_addr_t addr, const uint8_t *const data, const size_t length)
 {
@@ -877,7 +877,8 @@ static bool cortexr_mem_write_slow(
  * NB: This requires the core to be halted! Uses instruction launches on
  * the core and requires we're in debug mode to work. Trashes r0.
  */
-static void cortexr_mem_write(target_s *const target, const target_addr_t dest, const void *const src, const size_t len)
+static void cortexar_mem_write(
+	target_s *const target, const target_addr_t dest, const void *const src, const size_t len)
 {
 	cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
 	DEBUG_TARGET("%s: Writing %zu bytes @0x%" PRIx32 "\n", __func__, len, dest);
