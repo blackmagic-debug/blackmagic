@@ -31,7 +31,6 @@ SRC =              \
 	at32f43x.c     \
 	command.c      \
 	cortex.c       \
-	cortexa.c      \
 	cortexm.c      \
 	crc32.c        \
 	efm32.c        \

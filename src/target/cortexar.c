@@ -657,6 +657,21 @@ static target_s *cortexar_probe(
 	return target;
 }
 
+bool cortexa_probe(adiv5_access_port_s *const ap, const target_addr_t base_address)
+{
+	target_s *const target = cortexar_probe(ap, base_address, "ARM Cortex-A");
+	if (!target)
+		return false;
+
+#if PC_HOSTED == 0
+	gdb_outf("Please report unknown device with Designer 0x%x Part ID 0x%x\n", target->designer_code, target->part_id);
+#else
+	DEBUG_WARN(
+		"Please report unknown device with Designer 0x%x Part ID 0x%x\n", target->designer_code, target->part_id);
+#endif
+	return true;
+}
+
 bool cortexr_probe(adiv5_access_port_s *const ap, const target_addr_t base_address)
 {
 	target_s *const target = cortexar_probe(ap, base_address, "ARM Cortex-R");
