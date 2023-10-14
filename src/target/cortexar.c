@@ -56,7 +56,7 @@
 
 #include <assert.h>
 
-typedef struct cortexr_priv {
+typedef struct cortexar_priv {
 	/* Base core information */
 	cortex_priv_s base;
 
@@ -71,7 +71,7 @@ typedef struct cortexr_priv {
 
 	/* Control and status information */
 	uint8_t core_status;
-} cortexr_priv_s;
+} cortexar_priv_s;
 
 #define CORTEXR_DBG_IDR   0x000U
 #define CORTEXR_DBG_WFAR  0x018U
@@ -322,7 +322,7 @@ static bool cortexr_run_insn(target_s *const target, const uint32_t insn)
 		status = cortex_dbg_read32(target, CORTEXR_DBG_DSCR);
 	/* If the instruction triggered a synchronous data abort, signal failure having cleared it */
 	if (status & CORTEXR_DBG_DSCR_SYNC_DATA_ABORT) {
-		cortexr_priv_s *const priv = (cortexr_priv_s *)target->priv;
+		cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
 		priv->core_status |= CORTEXR_STATUS_DATA_FAULT;
 		cortex_dbg_write32(target, CORTEXR_DBG_DRCR, CORTEXR_DBG_DRCR_CLR_STICKY_EXC);
 	}
@@ -340,7 +340,7 @@ static bool cortexr_run_read_insn(target_s *const target, const uint32_t insn, u
 		status = cortex_dbg_read32(target, CORTEXR_DBG_DSCR);
 		/* If the instruction triggered a synchronous data abort, signal failure having cleared it */
 		if (status & CORTEXR_DBG_DSCR_SYNC_DATA_ABORT) {
-			cortexr_priv_s *const priv = (cortexr_priv_s *)target->priv;
+			cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
 			priv->core_status |= CORTEXR_STATUS_DATA_FAULT;
 			cortex_dbg_write32(target, CORTEXR_DBG_DRCR, CORTEXR_DBG_DRCR_CLR_STICKY_EXC);
 			return false;
@@ -367,7 +367,7 @@ static bool cortexr_run_write_insn(target_s *const target, const uint32_t insn, 
 		status = cortex_dbg_read32(target, CORTEXR_DBG_DSCR);
 		/* If the instruction triggered a synchronous data abort, signal failure having cleared it */
 		if (status & CORTEXR_DBG_DSCR_SYNC_DATA_ABORT) {
-			cortexr_priv_s *const priv = (cortexr_priv_s *)target->priv;
+			cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
 			priv->core_status |= CORTEXR_STATUS_DATA_FAULT;
 			cortex_dbg_write32(target, CORTEXR_DBG_DRCR, CORTEXR_DBG_DRCR_CLR_STICKY_EXC);
 			return false;
@@ -396,7 +396,7 @@ static inline uint32_t cortexr_core_reg_read(target_s *const target, const uint8
 
 static void cortexr_core_regs_save(target_s *const target)
 {
-	cortexr_priv_s *const priv = (cortexr_priv_s *)target->priv;
+	cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
 	/* Save out r0-r15 in that order (r15, aka pc, clobbers r0) */
 	for (size_t i = 0U; i < ARRAY_LENGTH(priv->core_regs.r); ++i)
 		priv->core_regs.r[i] = cortexr_core_reg_read(target, i);
@@ -415,7 +415,7 @@ static void cortexr_core_regs_save(target_s *const target)
 
 static void cortexr_float_regs_save(target_s *const target)
 {
-	cortexr_priv_s *const priv = (cortexr_priv_s *)target->priv;
+	cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
 	/* Read FPCSR to r0 and retrieve it */
 	cortexr_run_insn(target, ARM_VMRS_R0_FPCSR_INSN);
 	priv->core_regs.fpcsr = cortexr_core_reg_read(target, 0U);
@@ -453,7 +453,7 @@ static inline void cortexr_core_reg_write(target_s *const target, const uint8_t 
 
 static void cortexr_core_regs_restore(target_s *const target)
 {
-	cortexr_priv_s *const priv = (cortexr_priv_s *)target->priv;
+	cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
 	/* Load the values for each of the SPSRs in turn into r0 and shove them back into place */
 	for (size_t i = 0; i < ARRAY_LENGTH(priv->core_regs.spsr); ++i) {
 		cortexr_core_reg_write(target, 0U, priv->core_regs.spsr[i]);
@@ -475,7 +475,7 @@ static void cortexr_core_regs_restore(target_s *const target)
 
 static void cortexr_float_regs_restore(target_s *const target)
 {
-	const cortexr_priv_s *const priv = (cortexr_priv_s *)target->priv;
+	const cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
 	/* Step through each double-precision float register, writing it back via r0,r1 */
 	for (size_t i = 0; i < ARRAY_LENGTH(priv->core_regs.d); ++i) {
 		/* Load the low 32 bits into r0, and the high into r1 */
@@ -545,7 +545,7 @@ bool cortexr_probe(adiv5_access_port_s *const ap, const target_addr_t base_addre
 		target->part_id = ap->partno;
 	}
 
-	cortexr_priv_s *const priv = calloc(1, sizeof(*priv));
+	cortexar_priv_s *const priv = calloc(1, sizeof(*priv));
 	if (!priv) { /* calloc failed: heap exhaustion */
 		DEBUG_ERROR("calloc: failed in %s\n", __func__);
 		return false;
@@ -681,7 +681,7 @@ bool cortexr_attach(target_s *const target)
 		return false;
 	}
 
-	cortexr_priv_s *const priv = (cortexr_priv_s *)target->priv;
+	cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
 	/* Clear any stale breakpoints */
 	priv->base.breakpoints_mask = 0U;
 	for (size_t i = 0; i <= priv->base.breakpoints_available; ++i) {
@@ -701,7 +701,7 @@ bool cortexr_attach(target_s *const target)
 
 void cortexr_detach(target_s *const target)
 {
-	const cortexr_priv_s *const priv = (cortexr_priv_s *)target->priv;
+	const cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
 
 	/* Clear any set breakpoints */
 	for (size_t i = 0; i <= priv->base.breakpoints_available; ++i) {
@@ -720,7 +720,7 @@ void cortexr_detach(target_s *const target)
 
 static bool cortexr_check_error(target_s *const target)
 {
-	cortexr_priv_s *const priv = (cortexr_priv_s *)target->priv;
+	cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
 	const bool fault = priv->core_status & (CORTEXR_STATUS_DATA_FAULT | CORTEXR_STATUS_MMU_FAULT);
 	priv->core_status = 0;
 	return fault || cortex_check_error(target);
@@ -778,7 +778,7 @@ static bool cortexr_mem_read_slow(target_s *const target, uint8_t *const data, t
 static void cortexr_mem_handle_fault(
 	target_s *const target, const char *const func, const uint32_t orig_fault_status, const uint32_t orig_fault_addr)
 {
-	const cortexr_priv_s *const priv = (cortexr_priv_s *)target->priv;
+	const cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
 	/* If we suffered a fault of some kind, grab the reason and restore DFSR/DFAR */
 	if (priv->core_status & CORTEXR_STATUS_DATA_FAULT) {
 #ifdef ENABLE_DEBUG
@@ -801,7 +801,7 @@ static void cortexr_mem_handle_fault(
  */
 static void cortexr_mem_read(target_s *const target, void *const dest, const target_addr_t src, const size_t len)
 {
-	cortexr_priv_s *const priv = (cortexr_priv_s *)target->priv;
+	cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
 	/* Cache DFSR and DFAR in case we wind up triggering a data fault */
 	const uint32_t fault_status = cortexr_coproc_read(target, CORTEXR_DFSR);
 	const uint32_t fault_addr = cortexr_coproc_read(target, CORTEXR_DFAR);
@@ -877,7 +877,7 @@ static bool cortexr_mem_write_slow(
  */
 static void cortexr_mem_write(target_s *const target, const target_addr_t dest, const void *const src, const size_t len)
 {
-	cortexr_priv_s *const priv = (cortexr_priv_s *)target->priv;
+	cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
 	DEBUG_TARGET("%s: Writing %zu bytes @0x%" PRIx32 "\n", __func__, len, dest);
 	/* Cache DFSR and DFAR in case we wind up triggering a data fault */
 	const uint32_t fault_status = cortexr_coproc_read(target, CORTEXR_DFSR);
@@ -899,7 +899,7 @@ static void cortexr_mem_write(target_s *const target, const target_addr_t dest, 
 
 static void cortexr_regs_read(target_s *const target, void *const data)
 {
-	const cortexr_priv_s *const priv = (cortexr_priv_s *)target->priv;
+	const cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
 	uint32_t *const regs = (uint32_t *)data;
 	/* Copy the register values out from our cache */
 	memcpy(regs, priv->core_regs.r, sizeof(priv->core_regs.r));
@@ -912,7 +912,7 @@ static void cortexr_regs_read(target_s *const target, void *const data)
 
 static void cortexr_regs_write(target_s *const target, const void *const data)
 {
-	cortexr_priv_s *const priv = (cortexr_priv_s *)target->priv;
+	cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
 	const uint32_t *const regs = (const uint32_t *)data;
 	/* Copy the new register values into our cache */
 	memcpy(priv->core_regs.r, regs, sizeof(priv->core_regs.r));
@@ -925,7 +925,7 @@ static void cortexr_regs_write(target_s *const target, const void *const data)
 
 static void *cortexr_reg_ptr(target_s *const target, const size_t reg)
 {
-	cortexr_priv_s *const priv = (cortexr_priv_s *)target->priv;
+	cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
 	/* r0-r15 */
 	if (reg < 16U)
 		return &priv->core_regs.r[reg];
@@ -1036,7 +1036,7 @@ static target_halt_reason_e cortexr_halt_poll(target_s *const target, target_add
 		break;
 	case CORTEXR_DBG_DSCR_MOE_SYNC_WATCH:
 	case CORTEXR_DBG_DSCR_MOE_ASYNC_WATCH: {
-		const cortexr_priv_s *const priv = (cortexr_priv_s *)target->priv;
+		const cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
 		if (priv->base.watchpoints_mask == 1U) {
 			for (const breakwatch_s *breakwatch = target->bw_list; breakwatch; breakwatch = breakwatch->next) {
 				if (breakwatch->type != TARGET_WATCH_READ && breakwatch->type != TARGET_WATCH_WRITE &&
@@ -1057,7 +1057,7 @@ static target_halt_reason_e cortexr_halt_poll(target_s *const target, target_add
 
 static void cortexr_halt_resume(target_s *const target, const bool step)
 {
-	cortexr_priv_s *const priv = (cortexr_priv_s *)target->priv;
+	cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
 	/* Restore the core's registers so the running program doesn't know we've been in there */
 	cortexr_regs_restore(target);
 
@@ -1147,7 +1147,7 @@ static void cortexr_config_watchpoint(target_s *const target, const size_t slot,
 
 static int cortexr_breakwatch_set(target_s *const target, breakwatch_s *const breakwatch)
 {
-	cortexr_priv_s *const priv = (cortexr_priv_s *)target->priv;
+	cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
 
 	switch (breakwatch->type) {
 	case TARGET_BREAK_HARD: {
@@ -1199,7 +1199,7 @@ static int cortexr_breakwatch_set(target_s *const target, breakwatch_s *const br
 
 static int cortexr_breakwatch_clear(target_s *const target, breakwatch_s *const breakwatch)
 {
-	cortexr_priv_s *const priv = (cortexr_priv_s *)target->priv;
+	cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
 
 	switch (breakwatch->type) {
 	case TARGET_BREAK_HARD: {
