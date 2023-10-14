@@ -73,70 +73,71 @@ typedef struct cortexar_priv {
 	uint8_t core_status;
 } cortexar_priv_s;
 
-#define CORTEXR_DBG_IDR   0x000U
-#define CORTEXR_DBG_WFAR  0x018U
-#define CORTEXR_DBG_VCR   0x01cU
-#define CORTEXR_DBG_DSCCR 0x028U
-#define CORTEXR_DBG_DTRTX 0x080U
-#define CORTEXR_DBG_ITR   0x084U
-#define CORTEXR_DBG_DSCR  0x088U
-#define CORTEXR_DBG_DTRRX 0x08cU
-#define CORTEXR_DBG_DRCR  0x090U
-#define CORTEXR_DBG_BVR   0x100U
-#define CORTEXR_DBG_BCR   0x140U
-#define CORTEXR_DBG_WVR   0x180U
-#define CORTEXR_DBG_WCR   0x1c0U
+#define CORTEXAR_DBG_IDR   0x000U
+#define CORTEXAR_DBG_WFAR  0x018U
+#define CORTEXAR_DBG_VCR   0x01cU
+#define CORTEXAR_DBG_DSCCR 0x028U
+#define CORTEXAR_DBG_DTRTX 0x080U
+#define CORTEXAR_DBG_ITR   0x084U
+#define CORTEXAR_DBG_DSCR  0x088U
+#define CORTEXAR_DBG_DTRRX 0x08cU
+#define CORTEXAR_DBG_DRCR  0x090U
+#define CORTEXAR_DBG_BVR   0x100U
+#define CORTEXAR_DBG_BCR   0x140U
+#define CORTEXAR_DBG_WVR   0x180U
+#define CORTEXAR_DBG_WCR   0x1c0U
 
-#define CORTEXR_CPUID 0xd00U
-#define CORTEXR_CTR   0xd04U
-#define CORTEXR_PFR1  0xd24U
-#define CORTEXR_MMFR0 0xd30U
+#define CORTEXAR_CPUID 0xd00U
+#define CORTEXAR_CTR   0xd04U
+#define CORTEXAR_PFR1  0xd24U
+#define CORTEXAR_MMFR0 0xd30U
 
-#define CORTEXR_DBG_IDR_BREAKPOINT_MASK  0xfU
-#define CORTEXR_DBG_IDR_BREAKPOINT_SHIFT 24U
-#define CORTEXR_DBG_IDR_WATCHPOINT_MASK  0xfU
-#define CORTEXR_DBG_IDR_WATCHPOINT_SHIFT 28U
+#define CORTEXAR_DBG_IDR_BREAKPOINT_MASK  0xfU
+#define CORTEXAR_DBG_IDR_BREAKPOINT_SHIFT 24U
+#define CORTEXAR_DBG_IDR_WATCHPOINT_MASK  0xfU
+#define CORTEXAR_DBG_IDR_WATCHPOINT_SHIFT 28U
 
-#define CORTEXR_DBG_DSCR_HALTED             (1U << 0U)
-#define CORTEXR_DBG_DSCR_RESTARTED          (1U << 1U)
-#define CORTEXR_DBG_DSCR_MOE_MASK           0x0000003cU
-#define CORTEXR_DBG_DSCR_MOE_HALT_REQUEST   0x00000000U
-#define CORTEXR_DBG_DSCR_MOE_BREAKPOINT     0x00000004U
-#define CORTEXR_DBG_DSCR_MOE_ASYNC_WATCH    0x00000008U
-#define CORTEXR_DBG_DSCR_MOE_BKPT_INSN      0x0000000cU
-#define CORTEXR_DBG_DSCR_MOE_EXTERNAL_DBG   0x00000010U
-#define CORTEXR_DBG_DSCR_MOE_VEC_CATCH      0x00000014U
-#define CORTEXR_DBG_DSCR_MOE_SYNC_WATCH     0x00000028U
-#define CORTEXR_DBG_DSCR_SYNC_DATA_ABORT    (1U << 6U)
-#define CORTEXR_DBG_DSCR_INTERRUPT_DISABLE  (1U << 11U)
-#define CORTEXR_DBG_DSCR_ITR_ENABLE         (1U << 13U)
-#define CORTEXR_DBG_DSCR_HALTING_DBG_ENABLE (1U << 14U)
-#define CORTEXR_DBG_DSCR_INSN_COMPLETE      (1U << 24U)
-#define CORTEXR_DBG_DSCR_DTR_READ_READY     (1U << 29U)
-#define CORTEXR_DBG_DSCR_DTR_WRITE_DONE     (1U << 30U)
+#define CORTEXAR_DBG_DSCR_HALTED             (1U << 0U)
+#define CORTEXAR_DBG_DSCR_RESTARTED          (1U << 1U)
+#define CORTEXAR_DBG_DSCR_MOE_MASK           0x0000003cU
+#define CORTEXAR_DBG_DSCR_MOE_HALT_REQUEST   0x00000000U
+#define CORTEXAR_DBG_DSCR_MOE_BREAKPOINT     0x00000004U
+#define CORTEXAR_DBG_DSCR_MOE_ASYNC_WATCH    0x00000008U
+#define CORTEXAR_DBG_DSCR_MOE_BKPT_INSN      0x0000000cU
+#define CORTEXAR_DBG_DSCR_MOE_EXTERNAL_DBG   0x00000010U
+#define CORTEXAR_DBG_DSCR_MOE_VEC_CATCH      0x00000014U
+#define CORTEXAR_DBG_DSCR_MOE_SYNC_WATCH     0x00000028U
+#define CORTEXAR_DBG_DSCR_SYNC_DATA_ABORT    (1U << 6U)
+#define CORTEXAR_DBG_DSCR_INTERRUPT_DISABLE  (1U << 11U)
+#define CORTEXAR_DBG_DSCR_ITR_ENABLE         (1U << 13U)
+#define CORTEXAR_DBG_DSCR_HALTING_DBG_ENABLE (1U << 14U)
+#define CORTEXAR_DBG_DSCR_INSN_COMPLETE      (1U << 24U)
+#define CORTEXAR_DBG_DSCR_DTR_READ_READY     (1U << 29U)
+#define CORTEXAR_DBG_DSCR_DTR_WRITE_DONE     (1U << 30U)
 
-#define CORTEXR_DBG_DRCR_HALT_REQ           (1U << 0U)
-#define CORTEXR_DBG_DRCR_RESTART_REQ        (1U << 1U)
-#define CORTEXR_DBG_DRCR_CLR_STICKY_EXC     (1U << 2U)
-#define CORTEXR_DBG_DRCR_CLR_STICKY_PIPEADV (1U << 3U)
-#define CORTEXR_DBG_DRCR_CANCEL_BUS_REQ     (1U << 4U)
+#define CORTEXAR_DBG_DRCR_HALT_REQ           (1U << 0U)
+#define CORTEXAR_DBG_DRCR_RESTART_REQ        (1U << 1U)
+#define CORTEXAR_DBG_DRCR_CLR_STICKY_EXC     (1U << 2U)
+#define CORTEXAR_DBG_DRCR_CLR_STICKY_PIPEADV (1U << 3U)
+#define CORTEXAR_DBG_DRCR_CANCEL_BUS_REQ     (1U << 4U)
 
-#define CORTEXR_DBG_BCR_ENABLE                      0x00000001U
-#define CORTEXR_DBG_BCR_TYPE_UNLINKED_INSN_MATCH    0x00000000U
-#define CORTEXR_DBG_BCR_TYPE_UNLINKED_INSN_MISMATCH 0x00400000U
-#define CORTEXR_DBG_BCR_ALL_MODES                   0x00002006U
-#define CORTEXR_DBG_BCR_BYTE_SELECT_ALL             0x000001e0U
-#define CORTEXR_DBG_BCR_BYTE_SELECT_LOW_HALF        0x00000060U
-#define CORTEXR_DBG_BCR_BYTE_SELECT_HIGH_HALF       0x00000180U
+#define CORTEXAR_DBG_BCR_ENABLE                      0x00000001U
+#define CORTEXAR_DBG_BCR_TYPE_UNLINKED_INSN_MATCH    0x00000000U
+#define CORTEXAR_DBG_BCR_TYPE_UNLINKED_INSN_MISMATCH 0x00400000U
+#define CORTEXAR_DBG_BCR_ALL_MODES                   0x00002006U
+#define CORTEXAR_DBG_BCR_BYTE_SELECT_ALL             0x000001e0U
+#define CORTEXAR_DBG_BCR_BYTE_SELECT_LOW_HALF        0x00000060U
+#define CORTEXAR_DBG_BCR_BYTE_SELECT_HIGH_HALF       0x00000180U
 
-#define CORTEXR_DBG_WCR_ENABLE             0x00000001U
-#define CORTEXR_DBG_WCR_MATCH_ON_LOAD      0x00000008U
-#define CORTEXR_DBG_WCR_MATCH_ON_STORE     0x00000010U
-#define CORTEXR_DBG_WCR_MATCH_ANY_ACCESS   0x00000018U
-#define CORTEXR_DBG_WCR_ALL_MODES          0x00002006U
-#define CORTEXR_DBG_WCR_BYTE_SELECT_OFFSET 5U
-#define CORTEXR_DBG_WCR_BYTE_SELECT_MASK   0x00001fe0U
-#define CORTEXR_DBG_WCR_BYTE_SELECT(x)     (((x) << CORTEXR_DBG_WCR_BYTE_SELECT_OFFSET) & CORTEXR_DBG_WCR_BYTE_SELECT_MASK)
+#define CORTEXAR_DBG_WCR_ENABLE             0x00000001U
+#define CORTEXAR_DBG_WCR_MATCH_ON_LOAD      0x00000008U
+#define CORTEXAR_DBG_WCR_MATCH_ON_STORE     0x00000010U
+#define CORTEXAR_DBG_WCR_MATCH_ANY_ACCESS   0x00000018U
+#define CORTEXAR_DBG_WCR_ALL_MODES          0x00002006U
+#define CORTEXAR_DBG_WCR_BYTE_SELECT_OFFSET 5U
+#define CORTEXAR_DBG_WCR_BYTE_SELECT_MASK   0x00001fe0U
+#define CORTEXAR_DBG_WCR_BYTE_SELECT(x) \
+	(((x) << CORTEXAR_DBG_WCR_BYTE_SELECT_OFFSET) & CORTEXAR_DBG_WCR_BYTE_SELECT_MASK)
 
 /*
  * Instruction encodings for reading/writing the program counter to/from r0,
@@ -150,7 +151,7 @@ typedef struct cortexar_priv {
 #define ARM_MSR_SPSR_R0_INSN 0xe160f200U
 
 /* CPSR register definitions */
-#define CORTEXR_CPSR_THUMB (1U << 5U)
+#define CORTEXAR_CPSR_THUMB (1U << 5U)
 
 /*
  * Table of encodings for the banked SPSRs - These are encoded in the following format:
@@ -238,27 +239,27 @@ static const uint16_t cortexr_spsr_encodings[5] = {
 #define ARM_STRH_R1_R0_INSN 0xe0e010b2U
 
 /* Coprocessor register definitions */
-#define CORTEXR_CPACR   15U, ENCODE_CP_REG(1U, 0U, 0U, 2U)
-#define CORTEXR_DFSR    15U, ENCODE_CP_REG(5U, 0U, 0U, 0U)
-#define CORTEXR_DFAR    15U, ENCODE_CP_REG(6U, 0U, 0U, 0U)
-#define CORTEXR_ICIALLU 15U, ENCODE_CP_REG(7U, 5U, 0U, 0U)
+#define CORTEXAR_CPACR   15U, ENCODE_CP_REG(1U, 0U, 0U, 2U)
+#define CORTEXAR_DFSR    15U, ENCODE_CP_REG(5U, 0U, 0U, 0U)
+#define CORTEXAR_DFAR    15U, ENCODE_CP_REG(6U, 0U, 0U, 0U)
+#define CORTEXAR_ICIALLU 15U, ENCODE_CP_REG(7U, 5U, 0U, 0U)
 
-#define CORTEXR_CPACR_CP10_FULL_ACCESS 0x00300000U
-#define CORTEXR_CPACR_CP11_FULL_ACCESS 0x00c00000U
+#define CORTEXAR_CPACR_CP10_FULL_ACCESS 0x00300000U
+#define CORTEXAR_CPACR_CP11_FULL_ACCESS 0x00c00000U
 
-#define CORTEXR_PFR1_SEC_EXT_MASK  0x000000f0U
-#define CORTEXR_PFR1_VIRT_EXT_MASK 0x0000f000U
+#define CORTEXAR_PFR1_SEC_EXT_MASK  0x000000f0U
+#define CORTEXAR_PFR1_VIRT_EXT_MASK 0x0000f000U
 
-#define CORTEXR_MMFR0_VMSA_MASK 0x0000000fU
-#define CORTEXR_MMFR0_PMSA_MASK 0x000000f0U
+#define CORTEXAR_MMFR0_VMSA_MASK 0x0000000fU
+#define CORTEXAR_MMFR0_PMSA_MASK 0x000000f0U
 
 #define TOPT_FLAVOUR_FLOAT    (1U << 1U) /* If set, core has a hardware FPU */
 #define TOPT_FLAVOUR_SEC_EXT  (1U << 2U) /* If set, core has security extensions */
 #define TOPT_FLAVOUR_VIRT_EXT (1U << 3U) /* If set, core has virtualisation extensions */
 #define TOPT_FLAVOUR_VIRT_MEM (1U << 4U) /* If set, core uses the virtual memory model, not protected */
 
-#define CORTEXR_STATUS_DATA_FAULT (1U << 0U)
-#define CORTEXR_STATUS_MMU_FAULT  (1U << 1U)
+#define CORTEXAR_STATUS_DATA_FAULT (1U << 0U)
+#define CORTEXAR_STATUS_MMU_FAULT  (1U << 1U)
 
 /*
  * Fields for Cortex-R special-purpose registers, used in the generation of GDB's target description XML.
@@ -315,61 +316,61 @@ static const char *cortexr_target_description(target_s *target);
 static bool cortexr_run_insn(target_s *const target, const uint32_t insn)
 {
 	/* Issue the requested instruction to the core */
-	cortex_dbg_write32(target, CORTEXR_DBG_ITR, insn);
+	cortex_dbg_write32(target, CORTEXAR_DBG_ITR, insn);
 	/* Poll for the instruction to complete */
 	uint32_t status = 0;
-	while (!(status & CORTEXR_DBG_DSCR_INSN_COMPLETE))
-		status = cortex_dbg_read32(target, CORTEXR_DBG_DSCR);
+	while (!(status & CORTEXAR_DBG_DSCR_INSN_COMPLETE))
+		status = cortex_dbg_read32(target, CORTEXAR_DBG_DSCR);
 	/* If the instruction triggered a synchronous data abort, signal failure having cleared it */
-	if (status & CORTEXR_DBG_DSCR_SYNC_DATA_ABORT) {
+	if (status & CORTEXAR_DBG_DSCR_SYNC_DATA_ABORT) {
 		cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
-		priv->core_status |= CORTEXR_STATUS_DATA_FAULT;
-		cortex_dbg_write32(target, CORTEXR_DBG_DRCR, CORTEXR_DBG_DRCR_CLR_STICKY_EXC);
+		priv->core_status |= CORTEXAR_STATUS_DATA_FAULT;
+		cortex_dbg_write32(target, CORTEXAR_DBG_DRCR, CORTEXAR_DBG_DRCR_CLR_STICKY_EXC);
 	}
-	return !(status & CORTEXR_DBG_DSCR_SYNC_DATA_ABORT);
+	return !(status & CORTEXAR_DBG_DSCR_SYNC_DATA_ABORT);
 }
 
 static bool cortexr_run_read_insn(target_s *const target, const uint32_t insn, uint32_t *const result)
 {
 	/* Issue the requested instruction to the core */
-	cortex_dbg_write32(target, CORTEXR_DBG_ITR, insn);
+	cortex_dbg_write32(target, CORTEXAR_DBG_ITR, insn);
 	/* Poll for the instruction to complete and the data to become ready in the DTR */
 	uint32_t status = 0;
-	while ((status & (CORTEXR_DBG_DSCR_INSN_COMPLETE | CORTEXR_DBG_DSCR_DTR_READ_READY)) !=
-		(CORTEXR_DBG_DSCR_INSN_COMPLETE | CORTEXR_DBG_DSCR_DTR_READ_READY)) {
-		status = cortex_dbg_read32(target, CORTEXR_DBG_DSCR);
+	while ((status & (CORTEXAR_DBG_DSCR_INSN_COMPLETE | CORTEXAR_DBG_DSCR_DTR_READ_READY)) !=
+		(CORTEXAR_DBG_DSCR_INSN_COMPLETE | CORTEXAR_DBG_DSCR_DTR_READ_READY)) {
+		status = cortex_dbg_read32(target, CORTEXAR_DBG_DSCR);
 		/* If the instruction triggered a synchronous data abort, signal failure having cleared it */
-		if (status & CORTEXR_DBG_DSCR_SYNC_DATA_ABORT) {
+		if (status & CORTEXAR_DBG_DSCR_SYNC_DATA_ABORT) {
 			cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
-			priv->core_status |= CORTEXR_STATUS_DATA_FAULT;
-			cortex_dbg_write32(target, CORTEXR_DBG_DRCR, CORTEXR_DBG_DRCR_CLR_STICKY_EXC);
+			priv->core_status |= CORTEXAR_STATUS_DATA_FAULT;
+			cortex_dbg_write32(target, CORTEXAR_DBG_DRCR, CORTEXAR_DBG_DRCR_CLR_STICKY_EXC);
 			return false;
 		}
 	}
 	/* Read back the DTR to complete the read and signal success */
-	*result = cortex_dbg_read32(target, CORTEXR_DBG_DTRRX);
+	*result = cortex_dbg_read32(target, CORTEXAR_DBG_DTRRX);
 	return true;
 }
 
 static bool cortexr_run_write_insn(target_s *const target, const uint32_t insn, const uint32_t data)
 {
 	/* Set up the data in the DTR for the transaction */
-	cortex_dbg_write32(target, CORTEXR_DBG_DTRTX, data);
+	cortex_dbg_write32(target, CORTEXAR_DBG_DTRTX, data);
 	/* Poll for the data to become ready in the DTR */
-	while (!(cortex_dbg_read32(target, CORTEXR_DBG_DSCR) & CORTEXR_DBG_DSCR_DTR_WRITE_DONE))
+	while (!(cortex_dbg_read32(target, CORTEXAR_DBG_DSCR) & CORTEXAR_DBG_DSCR_DTR_WRITE_DONE))
 		continue;
 	/* Issue the requested instruction to the core */
-	cortex_dbg_write32(target, CORTEXR_DBG_ITR, insn);
+	cortex_dbg_write32(target, CORTEXAR_DBG_ITR, insn);
 	/* Poll for the instruction to complete and the data to be consumed from the DTR */
 	uint32_t status = 0;
-	while ((status & (CORTEXR_DBG_DSCR_INSN_COMPLETE | CORTEXR_DBG_DSCR_DTR_WRITE_DONE)) !=
-		CORTEXR_DBG_DSCR_INSN_COMPLETE) {
-		status = cortex_dbg_read32(target, CORTEXR_DBG_DSCR);
+	while ((status & (CORTEXAR_DBG_DSCR_INSN_COMPLETE | CORTEXAR_DBG_DSCR_DTR_WRITE_DONE)) !=
+		CORTEXAR_DBG_DSCR_INSN_COMPLETE) {
+		status = cortex_dbg_read32(target, CORTEXAR_DBG_DSCR);
 		/* If the instruction triggered a synchronous data abort, signal failure having cleared it */
-		if (status & CORTEXR_DBG_DSCR_SYNC_DATA_ABORT) {
+		if (status & CORTEXAR_DBG_DSCR_SYNC_DATA_ABORT) {
 			cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
-			priv->core_status |= CORTEXR_STATUS_DATA_FAULT;
-			cortex_dbg_write32(target, CORTEXR_DBG_DRCR, CORTEXR_DBG_DRCR_CLR_STICKY_EXC);
+			priv->core_status |= CORTEXAR_STATUS_DATA_FAULT;
+			cortex_dbg_write32(target, CORTEXAR_DBG_DRCR, CORTEXAR_DBG_DRCR_CLR_STICKY_EXC);
 			return false;
 		}
 	}
@@ -404,7 +405,7 @@ static void cortexr_core_regs_save(target_s *const target)
 	cortexr_run_insn(target, ARM_MRS_R0_CPSR_INSN);
 	priv->core_regs.cpsr = cortexr_core_reg_read(target, 0U);
 	/* Adjust the program counter according to the mode */
-	priv->core_regs.r[CORTEX_REG_PC] -= (priv->core_regs.cpsr & CORTEXR_CPSR_THUMB) ? 4U : 8U;
+	priv->core_regs.r[CORTEX_REG_PC] -= (priv->core_regs.cpsr & CORTEXAR_CPSR_THUMB) ? 4U : 8U;
 	/* Read the SPSRs into r0 and retrieve them */
 	for (size_t i = 0; i < ARRAY_LENGTH(priv->core_regs.spsr); ++i) {
 		/* Build and issue the banked MRS for the required SPSR */
@@ -464,7 +465,7 @@ static void cortexr_core_regs_restore(target_s *const target)
 	cortexr_core_reg_write(target, 0U, priv->core_regs.cpsr);
 	cortexr_run_insn(target, ARM_MSR_CPSR_R0_INSN);
 	/* Fix up the program counter for the mode */
-	if (priv->core_regs.cpsr & CORTEXR_CPSR_THUMB)
+	if (priv->core_regs.cpsr & CORTEXAR_CPSR_THUMB)
 		priv->core_regs.r[CORTEX_REG_PC] |= 1U;
 	/* Restore r1-15 in that order. Ignore r0 for the moment as it gets clobbered repeatedly */
 	for (size_t i = 1U; i < ARRAY_LENGTH(priv->core_regs.r); ++i)
@@ -574,21 +575,22 @@ bool cortexr_probe(adiv5_access_port_s *const ap, const target_addr_t base_addre
 
 	cortex_read_cpuid(target);
 	/* The format of the debug identification register is described in DDI0406C §C11.11.15 pg2217 */
-	const uint32_t debug_id = cortex_dbg_read32(target, CORTEXR_DBG_IDR);
+	const uint32_t debug_id = cortex_dbg_read32(target, CORTEXAR_DBG_IDR);
 	/* Reserve the last available breakpoint for our use to implement single-stepping */
-	priv->base.breakpoints_available = (debug_id >> CORTEXR_DBG_IDR_BREAKPOINT_SHIFT) & CORTEXR_DBG_IDR_BREAKPOINT_MASK;
+	priv->base.breakpoints_available =
+		(debug_id >> CORTEXAR_DBG_IDR_BREAKPOINT_SHIFT) & CORTEXAR_DBG_IDR_BREAKPOINT_MASK;
 	priv->base.watchpoints_available =
-		((debug_id >> CORTEXR_DBG_IDR_WATCHPOINT_SHIFT) & CORTEXR_DBG_IDR_WATCHPOINT_MASK) + 1U;
+		((debug_id >> CORTEXAR_DBG_IDR_WATCHPOINT_SHIFT) & CORTEXAR_DBG_IDR_WATCHPOINT_MASK) + 1U;
 	DEBUG_TARGET("%s %s core has %u breakpoint and %u watchpoint units available\n", target->driver, target->core,
 		priv->base.breakpoints_available + 1U, priv->base.watchpoints_available);
 
 	/* Read out processor feature register 1 and check for the security and virtualisation extensions */
-	const uint32_t proc_features = cortex_dbg_read32(target, CORTEXR_PFR1);
-	if (proc_features & CORTEXR_PFR1_SEC_EXT_MASK) {
+	const uint32_t proc_features = cortex_dbg_read32(target, CORTEXAR_PFR1);
+	if (proc_features & CORTEXAR_PFR1_SEC_EXT_MASK) {
 		target->target_options |= TOPT_FLAVOUR_SEC_EXT;
 		DEBUG_TARGET("%s: Core has security extensions\n", __func__);
 	}
-	if (proc_features & CORTEXR_PFR1_VIRT_EXT_MASK) {
+	if (proc_features & CORTEXAR_PFR1_VIRT_EXT_MASK) {
 		target->target_options |= TOPT_FLAVOUR_VIRT_EXT;
 		DEBUG_TARGET("%s: Core has virtualisation extensions\n", __func__);
 	}
@@ -597,11 +599,11 @@ bool cortexr_probe(adiv5_access_port_s *const ap, const target_addr_t base_addre
 	 * Read out memory model feature register 0 and check for VMSA vs PMSA memory models to
 	 * configure address translation and determine which cp15 registers we can poke.
 	 */
-	const uint32_t memory_model = cortex_dbg_read32(target, CORTEXR_MMFR0);
+	const uint32_t memory_model = cortex_dbg_read32(target, CORTEXAR_MMFR0);
 	/* The manual says this cannot happen, if it does then assume VMSA */
-	if ((memory_model & CORTEXR_MMFR0_VMSA_MASK) && (memory_model & CORTEXR_MMFR0_PMSA_MASK))
+	if ((memory_model & CORTEXAR_MMFR0_VMSA_MASK) && (memory_model & CORTEXAR_MMFR0_PMSA_MASK))
 		DEBUG_ERROR("%s: Core claims to support both virtual and protected memory modes!\n", __func__);
-	if (memory_model & CORTEXR_MMFR0_VMSA_MASK)
+	if (memory_model & CORTEXAR_MMFR0_VMSA_MASK)
 		target->target_options |= TOPT_FLAVOUR_VIRT_MEM;
 	DEBUG_TARGET(
 		"%s: Core uses the %cMSA memory model\n", __func__, target->target_options & TOPT_FLAVOUR_VIRT_MEM ? 'V' : 'P');
@@ -610,10 +612,10 @@ bool cortexr_probe(adiv5_access_port_s *const ap, const target_addr_t base_addre
 	target->detach = cortexr_detach;
 
 	/* Probe for FP extension. */
-	uint32_t cpacr = cortexr_coproc_read(target, CORTEXR_CPACR);
-	cpacr |= CORTEXR_CPACR_CP10_FULL_ACCESS | CORTEXR_CPACR_CP11_FULL_ACCESS;
-	cortexr_coproc_write(target, CORTEXR_CPACR, cpacr);
-	const bool core_has_fpu = cortexr_coproc_read(target, CORTEXR_CPACR) == cpacr;
+	uint32_t cpacr = cortexr_coproc_read(target, CORTEXAR_CPACR);
+	cpacr |= CORTEXAR_CPACR_CP10_FULL_ACCESS | CORTEXAR_CPACR_CP11_FULL_ACCESS;
+	cortexr_coproc_write(target, CORTEXAR_CPACR, cpacr);
+	const bool core_has_fpu = cortexr_coproc_read(target, CORTEXAR_CPACR) == cpacr;
 	DEBUG_TARGET("%s: FPU present? %s\n", __func__, core_has_fpu ? "yes" : "no");
 
 	target->regs_description = cortexr_target_description;
@@ -637,7 +639,7 @@ bool cortexr_probe(adiv5_access_port_s *const ap, const target_addr_t base_addre
 	target->breakwatch_clear = cortexr_breakwatch_clear;
 
 	/* Check cache type */
-	const uint32_t cache_type = cortex_dbg_read32(target, CORTEXR_CTR);
+	const uint32_t cache_type = cortex_dbg_read32(target, CORTEXAR_CTR);
 	if (cache_type >> CORTEX_CTR_FORMAT_SHIFT == CORTEX_CTR_FORMAT_ARMv7) {
 		/* If there is an ICache defined, decompress its length to a uint32_t count */
 		if (cache_type & CORTEX_CTR_ICACHE_LINE_MASK)
@@ -685,15 +687,15 @@ bool cortexr_attach(target_s *const target)
 	/* Clear any stale breakpoints */
 	priv->base.breakpoints_mask = 0U;
 	for (size_t i = 0; i <= priv->base.breakpoints_available; ++i) {
-		cortex_dbg_write32(target, CORTEXR_DBG_BVR + (i << 2U), 0U);
-		cortex_dbg_write32(target, CORTEXR_DBG_BCR + (i << 2U), 0U);
+		cortex_dbg_write32(target, CORTEXAR_DBG_BVR + (i << 2U), 0U);
+		cortex_dbg_write32(target, CORTEXAR_DBG_BCR + (i << 2U), 0U);
 	}
 
 	/* Clear any stale watchpoints */
 	priv->base.watchpoints_mask = 0U;
 	for (size_t i = 0; i < priv->base.watchpoints_available; ++i) {
-		cortex_dbg_write32(target, CORTEXR_DBG_WVR + (i << 2U), 0U);
-		cortex_dbg_write32(target, CORTEXR_DBG_WCR + (i << 2U), 0U);
+		cortex_dbg_write32(target, CORTEXAR_DBG_WVR + (i << 2U), 0U);
+		cortex_dbg_write32(target, CORTEXAR_DBG_WCR + (i << 2U), 0U);
 	}
 
 	return true;
@@ -705,14 +707,14 @@ void cortexr_detach(target_s *const target)
 
 	/* Clear any set breakpoints */
 	for (size_t i = 0; i <= priv->base.breakpoints_available; ++i) {
-		cortex_dbg_write32(target, CORTEXR_DBG_BVR + (i << 2U), 0U);
-		cortex_dbg_write32(target, CORTEXR_DBG_BCR + (i << 2U), 0U);
+		cortex_dbg_write32(target, CORTEXAR_DBG_BVR + (i << 2U), 0U);
+		cortex_dbg_write32(target, CORTEXAR_DBG_BCR + (i << 2U), 0U);
 	}
 
 	/* Clear any set watchpoints */
 	for (size_t i = 0; i < priv->base.watchpoints_available; ++i) {
-		cortex_dbg_write32(target, CORTEXR_DBG_WVR + (i << 2U), 0U);
-		cortex_dbg_write32(target, CORTEXR_DBG_WCR + (i << 2U), 0U);
+		cortex_dbg_write32(target, CORTEXAR_DBG_WVR + (i << 2U), 0U);
+		cortex_dbg_write32(target, CORTEXAR_DBG_WCR + (i << 2U), 0U);
 	}
 
 	target_halt_resume(target, false);
@@ -721,7 +723,7 @@ void cortexr_detach(target_s *const target)
 static bool cortexr_check_error(target_s *const target)
 {
 	cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
-	const bool fault = priv->core_status & (CORTEXR_STATUS_DATA_FAULT | CORTEXR_STATUS_MMU_FAULT);
+	const bool fault = priv->core_status & (CORTEXAR_STATUS_DATA_FAULT | CORTEXAR_STATUS_MMU_FAULT);
 	priv->core_status = 0;
 	return fault || cortex_check_error(target);
 }
@@ -780,15 +782,15 @@ static void cortexr_mem_handle_fault(
 {
 	const cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
 	/* If we suffered a fault of some kind, grab the reason and restore DFSR/DFAR */
-	if (priv->core_status & CORTEXR_STATUS_DATA_FAULT) {
+	if (priv->core_status & CORTEXAR_STATUS_DATA_FAULT) {
 #ifdef ENABLE_DEBUG
-		const uint32_t fault_status = cortexr_coproc_read(target, CORTEXR_DFSR);
-		const uint32_t fault_addr = cortexr_coproc_read(target, CORTEXR_DFAR);
+		const uint32_t fault_status = cortexr_coproc_read(target, CORTEXAR_DFSR);
+		const uint32_t fault_addr = cortexr_coproc_read(target, CORTEXAR_DFAR);
 #else
 		(void)func;
 #endif
-		cortexr_coproc_write(target, CORTEXR_DFAR, orig_fault_addr);
-		cortexr_coproc_write(target, CORTEXR_DFSR, orig_fault_status);
+		cortexr_coproc_write(target, CORTEXAR_DFAR, orig_fault_addr);
+		cortexr_coproc_write(target, CORTEXAR_DFSR, orig_fault_status);
 
 		DEBUG_WARN("%s: Failed at 0x%08" PRIx32 " (%08" PRIx32 ")\n", func, fault_addr, fault_status);
 	}
@@ -803,10 +805,10 @@ static void cortexr_mem_read(target_s *const target, void *const dest, const tar
 {
 	cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
 	/* Cache DFSR and DFAR in case we wind up triggering a data fault */
-	const uint32_t fault_status = cortexr_coproc_read(target, CORTEXR_DFSR);
-	const uint32_t fault_addr = cortexr_coproc_read(target, CORTEXR_DFAR);
+	const uint32_t fault_status = cortexr_coproc_read(target, CORTEXAR_DFSR);
+	const uint32_t fault_addr = cortexr_coproc_read(target, CORTEXAR_DFAR);
 	/* Clear any existing fault state */
-	priv->core_status &= ~(CORTEXR_STATUS_DATA_FAULT | CORTEXR_STATUS_MMU_FAULT);
+	priv->core_status &= ~(CORTEXAR_STATUS_DATA_FAULT | CORTEXAR_STATUS_MMU_FAULT);
 
 	/* Move the start address into the core's r0 */
 	cortexr_core_reg_write(target, 0U, src);
@@ -880,10 +882,10 @@ static void cortexr_mem_write(target_s *const target, const target_addr_t dest, 
 	cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
 	DEBUG_TARGET("%s: Writing %zu bytes @0x%" PRIx32 "\n", __func__, len, dest);
 	/* Cache DFSR and DFAR in case we wind up triggering a data fault */
-	const uint32_t fault_status = cortexr_coproc_read(target, CORTEXR_DFSR);
-	const uint32_t fault_addr = cortexr_coproc_read(target, CORTEXR_DFAR);
+	const uint32_t fault_status = cortexr_coproc_read(target, CORTEXAR_DFSR);
+	const uint32_t fault_addr = cortexr_coproc_read(target, CORTEXAR_DFAR);
 	/* Clear any existing fault state */
-	priv->core_status &= ~(CORTEXR_STATUS_DATA_FAULT | CORTEXR_STATUS_MMU_FAULT);
+	priv->core_status &= ~(CORTEXAR_STATUS_DATA_FAULT | CORTEXAR_STATUS_MMU_FAULT);
 
 	/* Move the start address into the core's r0 */
 	cortexr_core_reg_write(target, 0U, dest);
@@ -987,7 +989,7 @@ static void cortexr_halt_request(target_s *const target)
 {
 	volatile exception_s error;
 	TRY_CATCH (error, EXCEPTION_TIMEOUT) {
-		cortex_dbg_write32(target, CORTEXR_DBG_DRCR, CORTEXR_DBG_DRCR_HALT_REQ);
+		cortex_dbg_write32(target, CORTEXAR_DBG_DRCR, CORTEXAR_DBG_DRCR_HALT_REQ);
 	}
 	if (error.type)
 		tc_printf(target, "Timeout sending interrupt, is target in WFI?\n");
@@ -999,7 +1001,7 @@ static target_halt_reason_e cortexr_halt_poll(target_s *const target, target_add
 	volatile exception_s error;
 	TRY_CATCH (error, EXCEPTION_ALL) {
 		/* If this times out because the target is in WFI then the target is still running. */
-		dscr = cortex_dbg_read32(target, CORTEXR_DBG_DSCR);
+		dscr = cortex_dbg_read32(target, CORTEXAR_DBG_DSCR);
 	}
 	switch (error.type) {
 	case EXCEPTION_ERROR:
@@ -1012,30 +1014,30 @@ static target_halt_reason_e cortexr_halt_poll(target_s *const target, target_add
 	}
 
 	/* Check that the core actually halted */
-	if (!(dscr & CORTEXR_DBG_DSCR_HALTED))
+	if (!(dscr & CORTEXAR_DBG_DSCR_HALTED))
 		return TARGET_HALT_RUNNING;
 
 	/* Make sure ITR is enabled and likewise halting debug (so breakpoints work) */
 	cortex_dbg_write32(
-		target, CORTEXR_DBG_DSCR, dscr | CORTEXR_DBG_DSCR_ITR_ENABLE | CORTEXR_DBG_DSCR_HALTING_DBG_ENABLE);
+		target, CORTEXAR_DBG_DSCR, dscr | CORTEXAR_DBG_DSCR_ITR_ENABLE | CORTEXAR_DBG_DSCR_HALTING_DBG_ENABLE);
 
 	/* Save the target core's registers as debugging operations clobber them */
 	cortexr_regs_save(target);
 
 	target_halt_reason_e reason = TARGET_HALT_FAULT;
 	/* Determine why we halted exactly from the Method Of Entry bits */
-	switch (dscr & CORTEXR_DBG_DSCR_MOE_MASK) {
-	case CORTEXR_DBG_DSCR_MOE_HALT_REQUEST:
+	switch (dscr & CORTEXAR_DBG_DSCR_MOE_MASK) {
+	case CORTEXAR_DBG_DSCR_MOE_HALT_REQUEST:
 		reason = TARGET_HALT_REQUEST;
 		break;
-	case CORTEXR_DBG_DSCR_MOE_EXTERNAL_DBG:
-	case CORTEXR_DBG_DSCR_MOE_BREAKPOINT:
-	case CORTEXR_DBG_DSCR_MOE_BKPT_INSN:
-	case CORTEXR_DBG_DSCR_MOE_VEC_CATCH:
+	case CORTEXAR_DBG_DSCR_MOE_EXTERNAL_DBG:
+	case CORTEXAR_DBG_DSCR_MOE_BREAKPOINT:
+	case CORTEXAR_DBG_DSCR_MOE_BKPT_INSN:
+	case CORTEXAR_DBG_DSCR_MOE_VEC_CATCH:
 		reason = TARGET_HALT_BREAKPOINT;
 		break;
-	case CORTEXR_DBG_DSCR_MOE_SYNC_WATCH:
-	case CORTEXR_DBG_DSCR_MOE_ASYNC_WATCH: {
+	case CORTEXAR_DBG_DSCR_MOE_SYNC_WATCH:
+	case CORTEXAR_DBG_DSCR_MOE_ASYNC_WATCH: {
 		const cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
 		if (priv->base.watchpoints_mask == 1U) {
 			for (const breakwatch_s *breakwatch = target->bw_list; breakwatch; breakwatch = breakwatch->next) {
@@ -1061,7 +1063,7 @@ static void cortexr_halt_resume(target_s *const target, const bool step)
 	/* Restore the core's registers so the running program doesn't know we've been in there */
 	cortexr_regs_restore(target);
 
-	uint32_t dscr = cortex_dbg_read32(target, CORTEXR_DBG_DSCR);
+	uint32_t dscr = cortex_dbg_read32(target, CORTEXAR_DBG_DSCR);
 	/*
 	 * If we're setting up to single-step the core, configure the final breakpoint slot approrpriately.
 	 * We always keep the final supported breakpoint reserved for this purpose so
@@ -1070,28 +1072,28 @@ static void cortexr_halt_resume(target_s *const target, const bool step)
 	 */
 	if (step) {
 		cortexr_config_breakpoint(target, priv->base.breakpoints_available,
-			CORTEXR_DBG_BCR_TYPE_UNLINKED_INSN_MISMATCH | ((priv->core_regs.cpsr & CORTEXR_CPSR_THUMB) ? 2 : 4),
+			CORTEXAR_DBG_BCR_TYPE_UNLINKED_INSN_MISMATCH | ((priv->core_regs.cpsr & CORTEXAR_CPSR_THUMB) ? 2 : 4),
 			priv->core_regs.r[CORTEX_REG_PC]);
-		dscr |= CORTEXR_DBG_DSCR_INTERRUPT_DISABLE;
+		dscr |= CORTEXAR_DBG_DSCR_INTERRUPT_DISABLE;
 	} else {
-		cortex_dbg_write32(target, CORTEXR_DBG_BCR + (priv->base.breakpoints_available << 2U), 0U);
-		dscr &= ~CORTEXR_DBG_DSCR_INTERRUPT_DISABLE;
+		cortex_dbg_write32(target, CORTEXAR_DBG_BCR + (priv->base.breakpoints_available << 2U), 0U);
+		dscr &= ~CORTEXAR_DBG_DSCR_INTERRUPT_DISABLE;
 	}
 
 	/* Invalidate all the instruction caches if we're on a VMSA model device */
 	if (target->target_options & TOPT_FLAVOUR_VIRT_MEM)
-		cortexr_coproc_write(target, CORTEXR_ICIALLU, 0U);
+		cortexr_coproc_write(target, CORTEXAR_ICIALLU, 0U);
 
-	cortex_dbg_write32(target, CORTEXR_DBG_DSCR, dscr & ~CORTEXR_DBG_DSCR_ITR_ENABLE);
+	cortex_dbg_write32(target, CORTEXAR_DBG_DSCR, dscr & ~CORTEXAR_DBG_DSCR_ITR_ENABLE);
 	/* Ask to resume the core */
-	cortex_dbg_write32(target, CORTEXR_DBG_DRCR, CORTEXR_DBG_DRCR_CLR_STICKY_EXC | CORTEXR_DBG_DRCR_RESTART_REQ);
+	cortex_dbg_write32(target, CORTEXAR_DBG_DRCR, CORTEXAR_DBG_DRCR_CLR_STICKY_EXC | CORTEXAR_DBG_DRCR_RESTART_REQ);
 
 	/* Then poll for when the core actually resumes */
 	platform_timeout_s timeout;
 	platform_timeout_set(&timeout, 250);
-	uint32_t status = CORTEXR_DBG_DSCR_HALTED;
-	while (!(status & CORTEXR_DBG_DSCR_RESTARTED) && !platform_timeout_is_expired(&timeout))
-		status = cortex_dbg_read32(target, CORTEXR_DBG_DSCR);
+	uint32_t status = CORTEXAR_DBG_DSCR_HALTED;
+	while (!(status & CORTEXAR_DBG_DSCR_RESTARTED) && !platform_timeout_is_expired(&timeout))
+		status = cortex_dbg_read32(target, CORTEXAR_DBG_DSCR);
 }
 
 static void cortexr_config_breakpoint(
@@ -1103,25 +1105,25 @@ static void cortexr_config_breakpoint(
 	 */
 	const bool thumb_breakpoint = (mode & 7U) == 2U;
 	if (thumb_breakpoint)
-		mode |= (addr & 2U) ? CORTEXR_DBG_BCR_BYTE_SELECT_HIGH_HALF : CORTEXR_DBG_BCR_BYTE_SELECT_LOW_HALF;
+		mode |= (addr & 2U) ? CORTEXAR_DBG_BCR_BYTE_SELECT_HIGH_HALF : CORTEXAR_DBG_BCR_BYTE_SELECT_LOW_HALF;
 	else
-		mode |= CORTEXR_DBG_BCR_BYTE_SELECT_ALL;
+		mode |= CORTEXAR_DBG_BCR_BYTE_SELECT_ALL;
 
 	/* Configure the breakpoint slot */
-	cortex_dbg_write32(target, CORTEXR_DBG_BVR + (slot << 2U), addr & ~3U);
+	cortex_dbg_write32(target, CORTEXAR_DBG_BVR + (slot << 2U), addr & ~3U);
 	cortex_dbg_write32(
-		target, CORTEXR_DBG_BCR + (slot << 2U), CORTEXR_DBG_BCR_ENABLE | CORTEXR_DBG_BCR_ALL_MODES | (mode & ~7U));
+		target, CORTEXAR_DBG_BCR + (slot << 2U), CORTEXAR_DBG_BCR_ENABLE | CORTEXAR_DBG_BCR_ALL_MODES | (mode & ~7U));
 }
 
 static uint32_t cortexr_watchpoint_mode(const target_breakwatch_e type)
 {
 	switch (type) {
 	case TARGET_WATCH_READ:
-		return CORTEXR_DBG_WCR_MATCH_ON_LOAD;
+		return CORTEXAR_DBG_WCR_MATCH_ON_LOAD;
 	case TARGET_WATCH_WRITE:
-		return CORTEXR_DBG_WCR_MATCH_ON_STORE;
+		return CORTEXAR_DBG_WCR_MATCH_ON_STORE;
 	case TARGET_WATCH_ACCESS:
-		return CORTEXR_DBG_WCR_MATCH_ANY_ACCESS;
+		return CORTEXAR_DBG_WCR_MATCH_ANY_ACCESS;
 	default:
 		return 0U;
 	}
@@ -1137,12 +1139,12 @@ static void cortexr_config_watchpoint(target_s *const target, const size_t slot,
 	 * Which set of bits need to be 1's depends on the address low bits.
 	 */
 	const uint32_t byte_mask = ((1U << breakwatch->size) - 1U) << (breakwatch->addr & 3U);
-	const uint32_t mode = cortexr_watchpoint_mode(breakwatch->type) | CORTEXR_DBG_WCR_BYTE_SELECT(byte_mask);
+	const uint32_t mode = cortexr_watchpoint_mode(breakwatch->type) | CORTEXAR_DBG_WCR_BYTE_SELECT(byte_mask);
 
 	/* Configure the watchpoint slot */
-	cortex_dbg_write32(target, CORTEXR_DBG_WVR + (slot << 2U), breakwatch->addr & ~3U);
+	cortex_dbg_write32(target, CORTEXAR_DBG_WVR + (slot << 2U), breakwatch->addr & ~3U);
 	cortex_dbg_write32(
-		target, CORTEXR_DBG_WCR + (slot << 2U), CORTEXR_DBG_WCR_ENABLE | CORTEXR_DBG_WCR_ALL_MODES | mode);
+		target, CORTEXAR_DBG_WCR + (slot << 2U), CORTEXAR_DBG_WCR_ENABLE | CORTEXAR_DBG_WCR_ALL_MODES | mode);
 }
 
 static int cortexr_breakwatch_set(target_s *const target, breakwatch_s *const breakwatch)
@@ -1164,7 +1166,7 @@ static int cortexr_breakwatch_set(target_s *const target, breakwatch_s *const br
 
 		/* Set the breakpoint slot up and mark it used */
 		cortexr_config_breakpoint(
-			target, breakpoint, CORTEXR_DBG_BCR_TYPE_UNLINKED_INSN_MATCH | (breakwatch->size & 7U), breakwatch->addr);
+			target, breakpoint, CORTEXAR_DBG_BCR_TYPE_UNLINKED_INSN_MATCH | (breakwatch->size & 7U), breakwatch->addr);
 		priv->base.breakpoints_mask |= 1U << breakpoint;
 		breakwatch->reserved[0] = breakpoint;
 		/* Tell the debugger that it was successfully able to set the breakpoint */
@@ -1205,7 +1207,7 @@ static int cortexr_breakwatch_clear(target_s *const target, breakwatch_s *const 
 	case TARGET_BREAK_HARD: {
 		/* Clear the breakpoint slot this used */
 		const size_t breakpoint = breakwatch->reserved[0];
-		cortex_dbg_write32(target, CORTEXR_DBG_BCR + (breakpoint << 2U), 0);
+		cortex_dbg_write32(target, CORTEXAR_DBG_BCR + (breakpoint << 2U), 0);
 		priv->base.breakpoints_mask &= ~(1U << breakpoint);
 		/* Tell the debugger that it was successfully able to clear the breakpoint */
 		return 0;
@@ -1215,7 +1217,7 @@ static int cortexr_breakwatch_clear(target_s *const target, breakwatch_s *const 
 	case TARGET_WATCH_ACCESS: {
 		/* Clear the watchpoint slot this used */
 		const size_t watchpoint = breakwatch->reserved[0];
-		cortex_dbg_write32(target, CORTEXR_DBG_WCR + (watchpoint << 2U), 0);
+		cortex_dbg_write32(target, CORTEXAR_DBG_WCR + (watchpoint << 2U), 0);
 		priv->base.watchpoints_mask &= ~(1U << watchpoint);
 		/* Tell the debugger that it was successfully able to clear the watchpoint */
 		return 0;
