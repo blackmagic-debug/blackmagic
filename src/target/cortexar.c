@@ -304,9 +304,9 @@ static target_halt_reason_e cortexar_halt_poll(target_s *target, target_addr_t *
 static void cortexar_halt_request(target_s *target);
 static void cortexar_halt_resume(target_s *target, bool step);
 
-static int cortexr_breakwatch_set(target_s *target, breakwatch_s *breakwatch);
-static int cortexr_breakwatch_clear(target_s *target, breakwatch_s *breakwatch);
-static void cortexr_config_breakpoint(target_s *target, size_t slot, uint32_t mode, target_addr_t addr);
+static int cortexar_breakwatch_set(target_s *target, breakwatch_s *breakwatch);
+static int cortexar_breakwatch_clear(target_s *target, breakwatch_s *breakwatch);
+static void cortexar_config_breakpoint(target_s *target, size_t slot, uint32_t mode, target_addr_t addr);
 
 bool cortexr_attach(target_s *target);
 void cortexr_detach(target_s *target);
@@ -635,8 +635,8 @@ bool cortexr_probe(adiv5_access_port_s *const ap, const target_addr_t base_addre
 	target->mem_read = cortexar_mem_read;
 	target->mem_write = cortexar_mem_write;
 
-	target->breakwatch_set = cortexr_breakwatch_set;
-	target->breakwatch_clear = cortexr_breakwatch_clear;
+	target->breakwatch_set = cortexar_breakwatch_set;
+	target->breakwatch_clear = cortexar_breakwatch_clear;
 
 	/* Check cache type */
 	const uint32_t cache_type = cortex_dbg_read32(target, CORTEXAR_CTR);
@@ -1072,7 +1072,7 @@ static void cortexar_halt_resume(target_s *const target, const bool step)
 	 * Additionally, adjust DSCR to disable interrupts as necessary.
 	 */
 	if (step) {
-		cortexr_config_breakpoint(target, priv->base.breakpoints_available,
+		cortexar_config_breakpoint(target, priv->base.breakpoints_available,
 			CORTEXAR_DBG_BCR_TYPE_UNLINKED_INSN_MISMATCH | ((priv->core_regs.cpsr & CORTEXAR_CPSR_THUMB) ? 2 : 4),
 			priv->core_regs.r[CORTEX_REG_PC]);
 		dscr |= CORTEXAR_DBG_DSCR_INTERRUPT_DISABLE;
@@ -1097,7 +1097,7 @@ static void cortexar_halt_resume(target_s *const target, const bool step)
 		status = cortex_dbg_read32(target, CORTEXAR_DBG_DSCR);
 }
 
-static void cortexr_config_breakpoint(
+static void cortexar_config_breakpoint(
 	target_s *const target, const size_t slot, uint32_t mode, const target_addr_t addr)
 {
 	/*
@@ -1116,7 +1116,7 @@ static void cortexr_config_breakpoint(
 		target, CORTEXAR_DBG_BCR + (slot << 2U), CORTEXAR_DBG_BCR_ENABLE | CORTEXAR_DBG_BCR_ALL_MODES | (mode & ~7U));
 }
 
-static uint32_t cortexr_watchpoint_mode(const target_breakwatch_e type)
+static uint32_t cortexar_watchpoint_mode(const target_breakwatch_e type)
 {
 	switch (type) {
 	case TARGET_WATCH_READ:
@@ -1130,7 +1130,7 @@ static uint32_t cortexr_watchpoint_mode(const target_breakwatch_e type)
 	}
 }
 
-static void cortexr_config_watchpoint(target_s *const target, const size_t slot, const breakwatch_s *const breakwatch)
+static void cortexar_config_watchpoint(target_s *const target, const size_t slot, const breakwatch_s *const breakwatch)
 {
 	/*
 	 * Construct the access and bytes masks - starting with the bytes mask which uses the fact
@@ -1140,7 +1140,7 @@ static void cortexr_config_watchpoint(target_s *const target, const size_t slot,
 	 * Which set of bits need to be 1's depends on the address low bits.
 	 */
 	const uint32_t byte_mask = ((1U << breakwatch->size) - 1U) << (breakwatch->addr & 3U);
-	const uint32_t mode = cortexr_watchpoint_mode(breakwatch->type) | CORTEXAR_DBG_WCR_BYTE_SELECT(byte_mask);
+	const uint32_t mode = cortexar_watchpoint_mode(breakwatch->type) | CORTEXAR_DBG_WCR_BYTE_SELECT(byte_mask);
 
 	/* Configure the watchpoint slot */
 	cortex_dbg_write32(target, CORTEXAR_DBG_WVR + (slot << 2U), breakwatch->addr & ~3U);
@@ -1148,7 +1148,7 @@ static void cortexr_config_watchpoint(target_s *const target, const size_t slot,
 		target, CORTEXAR_DBG_WCR + (slot << 2U), CORTEXAR_DBG_WCR_ENABLE | CORTEXAR_DBG_WCR_ALL_MODES | mode);
 }
 
-static int cortexr_breakwatch_set(target_s *const target, breakwatch_s *const breakwatch)
+static int cortexar_breakwatch_set(target_s *const target, breakwatch_s *const breakwatch)
 {
 	cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
 
@@ -1166,7 +1166,7 @@ static int cortexr_breakwatch_set(target_s *const target, breakwatch_s *const br
 			return -1;
 
 		/* Set the breakpoint slot up and mark it used */
-		cortexr_config_breakpoint(
+		cortexar_config_breakpoint(
 			target, breakpoint, CORTEXAR_DBG_BCR_TYPE_UNLINKED_INSN_MATCH | (breakwatch->size & 7U), breakwatch->addr);
 		priv->base.breakpoints_mask |= 1U << breakpoint;
 		breakwatch->reserved[0] = breakpoint;
@@ -1188,7 +1188,7 @@ static int cortexr_breakwatch_set(target_s *const target, breakwatch_s *const br
 			return -1;
 
 		/* Set the watchpoint slot up and mark it used */
-		cortexr_config_watchpoint(target, watchpoint, breakwatch);
+		cortexar_config_watchpoint(target, watchpoint, breakwatch);
 		priv->base.watchpoints_mask |= 1U << watchpoint;
 		breakwatch->reserved[0] = watchpoint;
 		/* Tell the debugger that it was successfully able to set the watchpoint */
@@ -1200,7 +1200,7 @@ static int cortexr_breakwatch_set(target_s *const target, breakwatch_s *const br
 	}
 }
 
-static int cortexr_breakwatch_clear(target_s *const target, breakwatch_s *const breakwatch)
+static int cortexar_breakwatch_clear(target_s *const target, breakwatch_s *const breakwatch)
 {
 	cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
 
