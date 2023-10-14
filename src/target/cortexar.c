@@ -300,9 +300,9 @@ static void cortexar_regs_write(target_s *target, const void *data);
 static ssize_t cortexar_reg_read(target_s *target, uint32_t reg, void *data, size_t max);
 static ssize_t cortexar_reg_write(target_s *target, uint32_t reg, const void *data, size_t max);
 
-static target_halt_reason_e cortexr_halt_poll(target_s *target, target_addr_t *watch);
-static void cortexr_halt_request(target_s *target);
-static void cortexr_halt_resume(target_s *target, bool step);
+static target_halt_reason_e cortexar_halt_poll(target_s *target, target_addr_t *watch);
+static void cortexar_halt_request(target_s *target);
+static void cortexar_halt_resume(target_s *target, bool step);
 
 static int cortexr_breakwatch_set(target_s *target, breakwatch_s *breakwatch);
 static int cortexr_breakwatch_clear(target_s *target, breakwatch_s *breakwatch);
@@ -558,9 +558,9 @@ bool cortexr_probe(adiv5_access_port_s *const ap, const target_addr_t base_addre
 	priv->base.ap = ap;
 	priv->base.base_addr = base_address;
 
-	target->halt_request = cortexr_halt_request;
-	target->halt_poll = cortexr_halt_poll;
-	target->halt_resume = cortexr_halt_resume;
+	target->halt_request = cortexar_halt_request;
+	target->halt_poll = cortexar_halt_poll;
+	target->halt_resume = cortexar_halt_resume;
 
 	/* Try to halt the target core */
 	target_halt_request(target);
@@ -986,7 +986,7 @@ static ssize_t cortexar_reg_write(target_s *const target, const uint32_t reg, co
 	return reg_width;
 }
 
-static void cortexr_halt_request(target_s *const target)
+static void cortexar_halt_request(target_s *const target)
 {
 	volatile exception_s error;
 	TRY_CATCH (error, EXCEPTION_TIMEOUT) {
@@ -996,7 +996,7 @@ static void cortexr_halt_request(target_s *const target)
 		tc_printf(target, "Timeout sending interrupt, is target in WFI?\n");
 }
 
-static target_halt_reason_e cortexr_halt_poll(target_s *const target, target_addr_t *const watch)
+static target_halt_reason_e cortexar_halt_poll(target_s *const target, target_addr_t *const watch)
 {
 	volatile uint32_t dscr = 0;
 	volatile exception_s error;
@@ -1058,7 +1058,7 @@ static target_halt_reason_e cortexr_halt_poll(target_s *const target, target_add
 	return reason;
 }
 
-static void cortexr_halt_resume(target_s *const target, const bool step)
+static void cortexar_halt_resume(target_s *const target, const bool step)
 {
 	cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
 	/* Restore the core's registers so the running program doesn't know we've been in there */
