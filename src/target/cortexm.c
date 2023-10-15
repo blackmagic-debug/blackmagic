@@ -948,43 +948,50 @@ static void cortexm_pc_write(target_s *t, const uint32_t val)
  * The following three routines implement target halt/resume
  * using the core debug registers in the NVIC.
  */
-static void cortexm_reset(target_s *t)
+static void cortexm_reset(target_s *const target)
 {
 	/* Read DHCSR here to clear S_RESET_ST bit before reset */
-	target_mem_read32(t, CORTEXM_DHCSR);
-	platform_timeout_s reset_timeout;
-	if ((t->target_options & CORTEX_TOPT_INHIBIT_NRST) == 0) {
+	target_mem_read32(target, CORTEXM_DHCSR);
+	/* If the physical reset pin is not inhibited, use it */
+	if (!(target->target_options & CORTEX_TOPT_INHIBIT_NRST)) {
 		platform_nrst_set_val(true);
 		platform_nrst_set_val(false);
-		/* Some NRF52840 users saw invalid SWD transaction with  native/firmware without this delay.*/
+		/* Some NRF52840 users saw invalid SWD transaction with native/firmware without this delay.*/
 		platform_delay(10);
 	}
-	uint32_t dhcsr = target_mem_read32(t, CORTEXM_DHCSR);
-	if ((dhcsr & CORTEXM_DHCSR_S_RESET_ST) == 0) {
+
+	/* Check if the reset succeeded */
+	const uint32_t status = target_mem_read32(target, CORTEXM_DHCSR);
+	if (!(status & CORTEXM_DHCSR_S_RESET_ST)) {
 		/*
 		 * No reset seen yet, maybe as nRST is not connected, or device has CORTEX_TOPT_INHIBIT_NRST set.
 		 * Trigger reset by AIRCR.
 		 */
-		target_mem_write32(t, CORTEXM_AIRCR, CORTEXM_AIRCR_VECTKEY | CORTEXM_AIRCR_SYSRESETREQ);
+		target_mem_write32(target, CORTEXM_AIRCR, CORTEXM_AIRCR_VECTKEY | CORTEXM_AIRCR_SYSRESETREQ);
 	}
+
 	/* If target needs to do something extra (see Atmel SAM4L for example) */
-	if (t->extended_reset != NULL)
-		t->extended_reset(t);
+	if (target->extended_reset != NULL)
+		target->extended_reset(target);
+
 	/* Wait for CORTEXM_DHCSR_S_RESET_ST to read 0, meaning reset released.*/
+	platform_timeout_s reset_timeout;
 	platform_timeout_set(&reset_timeout, 1000);
-	while ((target_mem_read32(t, CORTEXM_DHCSR) & CORTEXM_DHCSR_S_RESET_ST) &&
+	while ((target_mem_read32(target, CORTEXM_DHCSR) & CORTEXM_DHCSR_S_RESET_ST) &&
 		!platform_timeout_is_expired(&reset_timeout))
 		continue;
+
 #if defined(PLATFORM_HAS_DEBUG)
 	if (platform_timeout_is_expired(&reset_timeout))
 		DEBUG_WARN("Reset seem to be stuck low!\n");
 #endif
+
 	/* 10 ms delay to ensure that things such as the STM32 HSI clock have started up fully. */
 	platform_delay(10);
 	/* Reset DFSR flags */
-	target_mem_write32(t, CORTEXM_DFSR, CORTEXM_DFSR_RESETALL);
+	target_mem_write32(target, CORTEXM_DFSR, CORTEXM_DFSR_RESETALL);
 	/* Make sure we ignore any initial DAP error */
-	target_check_error(t);
+	target_check_error(target);
 }
 
 static void cortexm_halt_request(target_s *t)
