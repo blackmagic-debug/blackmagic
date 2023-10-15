@@ -808,6 +808,12 @@ bool cortexa_probe(adiv5_access_port_s *const ap, const target_addr_t base_addre
 	if (!target)
 		return false;
 
+	switch (target->designer_code) {
+	case JEP106_MANUFACTURER_STM:
+		PROBE(stm32mp15_ca7_probe);
+		break;
+	}
+
 #if PC_HOSTED == 0
 	gdb_outf("Please report unknown device with Designer 0x%x Part ID 0x%x\n", target->designer_code, target->part_id);
 #else

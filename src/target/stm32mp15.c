@@ -111,6 +111,17 @@ bool stm32mp15_cm4_probe(target_s *target)
 	return true;
 }
 
+#ifdef ENABLE_CORTEXAR
+bool stm32mp15_ca7_probe(target_s *target)
+{
+	if (target->part_id != ID_STM32MP15x && target->part_id != ID_STM32MP15x_ERRATA)
+		return false;
+
+	target->driver = "STM32MP15";
+	return true;
+}
+#endif
+
 /*
  * Print the Unique device ID.
  * Can be reused for other STM32 devices with uid as parameter.
