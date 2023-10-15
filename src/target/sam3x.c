@@ -424,7 +424,7 @@ bool sam3x_probe(target_s *t)
 	case CHIPID_CIDR_ARCH_SAM3XxE | CHIPID_CIDR_EPROC_CM3:
 	case CHIPID_CIDR_ARCH_SAM3XxG | CHIPID_CIDR_EPROC_CM3:
 		t->driver = "Atmel SAM3X";
-		t->target_options |= CORTEXM_TOPT_INHIBIT_NRST;
+		t->target_options |= CORTEX_TOPT_INHIBIT_NRST;
 		target_add_ram(t, 0x20000000, 0x200000);
 		/* 2 Flash memories back-to-back starting at 0x80000 */
 		sam3_add_flash(t, SAM3X_EEFC_BASE(0), 0x80000, size / 2U);

@@ -470,7 +470,7 @@ bool lpc43xx_probe(target_s *const t)
 		return false;
 
 	const uint32_t chip_code = (chipid & LPC43xx_CHIPID_CHIP_MASK) >> LPC43xx_CHIPID_CHIP_SHIFT;
-	t->target_options |= CORTEXM_TOPT_INHIBIT_NRST;
+	t->target_options |= CORTEX_TOPT_INHIBIT_NRST;
 
 	/* If we're on the M4 core, poke the M0APP and M0SUB core resets to make them available */
 	if ((t->cpuid & CORTEX_CPUID_PARTNO_MASK) == CORTEX_M4) {

@@ -164,7 +164,7 @@ bool lpc546xx_probe(target_s *t)
 	target_add_ram(t, 0x20010000, sram123_size);
 	target_add_ram(t, 0x04000000, 0x8000U); /* SRAMX */
 	target_add_commands(t, lpc546xx_cmd_list, "LPC546xx");
-	t->target_options |= CORTEXM_TOPT_INHIBIT_NRST;
+	t->target_options |= CORTEX_TOPT_INHIBIT_NRST;
 	return true;
 }
 

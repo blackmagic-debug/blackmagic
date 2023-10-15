@@ -561,7 +561,7 @@ bool lpc55xx_probe(target_s *const target)
 	const uint32_t chipid = target_mem_read32(target, LPC55xx_CHIPID_ADDRESS);
 	DEBUG_WARN("Chip ID: %08" PRIx32 "\n", chipid);
 
-	target->target_options |= CORTEXM_TOPT_INHIBIT_NRST;
+	target->target_options |= CORTEX_TOPT_INHIBIT_NRST;
 	target->driver = lpc55xx_get_device_name(chipid);
 
 	switch (chipid) {

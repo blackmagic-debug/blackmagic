@@ -93,7 +93,7 @@ bool nrf91_probe(target_s *target)
 	switch (ap->dp->target_partno) {
 	case 0x90:
 		target->driver = "Nordic nRF9160";
-		target->target_options |= CORTEXM_TOPT_INHIBIT_NRST;
+		target->target_options |= CORTEX_TOPT_INHIBIT_NRST;
 		target_add_ram(target, 0x20000000, 256U * 1024U);
 		nrf91_add_flash(target, 0, 4096U * 256U, 4096U);
 		break;

@@ -164,7 +164,6 @@ extern unsigned cortexm_wait_timeout;
 #define CORTEXM_XPSR_THUMB          (1U << 24U)
 #define CORTEXM_XPSR_EXCEPTION_MASK 0x0000001fU
 
-#define CORTEXM_TOPT_INHIBIT_NRST (1U << 2U)
 #define CORTEXM_TOPT_FLAVOUR_V7MF (1U << 1U)
 
 bool cortexm_attach(target_s *t);

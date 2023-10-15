@@ -953,7 +953,7 @@ static void cortexm_reset(target_s *t)
 	/* Read DHCSR here to clear S_RESET_ST bit before reset */
 	target_mem_read32(t, CORTEXM_DHCSR);
 	platform_timeout_s reset_timeout;
-	if ((t->target_options & CORTEXM_TOPT_INHIBIT_NRST) == 0) {
+	if ((t->target_options & CORTEX_TOPT_INHIBIT_NRST) == 0) {
 		platform_nrst_set_val(true);
 		platform_nrst_set_val(false);
 		/* Some NRF52840 users saw invalid SWD transaction with  native/firmware without this delay.*/
@@ -962,7 +962,7 @@ static void cortexm_reset(target_s *t)
 	uint32_t dhcsr = target_mem_read32(t, CORTEXM_DHCSR);
 	if ((dhcsr & CORTEXM_DHCSR_S_RESET_ST) == 0) {
 		/*
-		 * No reset seen yet, maybe as nRST is not connected, or device has CORTEXM_TOPT_INHIBIT_NRST set.
+		 * No reset seen yet, maybe as nRST is not connected, or device has CORTEX_TOPT_INHIBIT_NRST set.
 		 * Trigger reset by AIRCR.
 		 */
 		target_mem_write32(t, CORTEXM_AIRCR, CORTEXM_AIRCR_VECTKEY | CORTEXM_AIRCR_SYSRESETREQ);
