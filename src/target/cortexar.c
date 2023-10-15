@@ -610,7 +610,7 @@ static target_addr_t cortexar_virt_to_phys(target_s *const target, const target_
 	return address;
 }
 
-static void cortexar_oslock_unlock(target_s *const target)
+static bool cortexar_oslock_unlock(target_s *const target)
 {
 	const uint32_t lock_status = cortex_dbg_read32(target, CORTEXAR_DBG_OSLSR);
 	DEBUG_TARGET("%s: OS lock status: %08" PRIx32 "\n", __func__, lock_status);
@@ -626,7 +626,48 @@ static void cortexar_oslock_unlock(target_s *const target)
 		const bool locked = cortex_dbg_read32(target, CORTEXAR_DBG_OSLSR) & CORTEXAR_DBG_OSLSR_LOCKED;
 		if (locked)
 			DEBUG_ERROR("%s: Lock sticky. Core not powered?\n", __func__);
+		return !locked;
 	}
+	return true;
+}
+
+static bool cortexar_ensure_core_powered(target_s *const target)
+{
+	/* Read the power/reset status register and check if the core is up or down */
+	uint8_t status = cortex_dbg_read32(target, CORTEXAR_DBG_PRSR) & 0xffU;
+	if (!(status & CORTEXAR_DBG_PRSR_POWERED_UP)) {
+		/* The core is powered down, so get it up. */
+		cortex_dbg_write32(
+			target, CORTEXAR_DBG_PRCR, CORTEXAR_DBG_PRCR_CORE_POWER_UP_REQ | CORTEXAR_DBG_PRCR_HOLD_CORE_WARM_RESET);
+		/* Spin waiting for the core to come up */
+		platform_timeout_s timeout;
+		platform_timeout_set(&timeout, 250);
+		while (!(cortex_dbg_read32(target, CORTEXAR_DBG_PRSR) & CORTEXAR_DBG_PRSR_POWERED_UP) &&
+			!platform_timeout_is_expired(&timeout))
+			continue;
+		/*
+		 * Assume it worked, because it's implementation-defined if we can even do a power-up this way.
+		 * Clear the PRCR back to 0 so the hold and power-up requests don't interfere further.
+		 */
+		cortex_dbg_write32(target, CORTEXAR_DBG_PRCR, 0U);
+	}
+	/* Re-read the PRSR and check if the core actually powered on */
+	status = cortex_dbg_read32(target, CORTEXAR_DBG_PRSR) & 0xffU;
+	if (!(status & CORTEXAR_DBG_PRSR_POWERED_UP))
+		return false;
+
+	/* Check for the OS double lock */
+	if (status & CORTEXAR_DBG_PRSR_DOUBLE_LOCK)
+		return false;
+
+	/*
+	 * Finally, check for the normal OS Lock and clear it if it's set prior to halting the core.
+	 * Trying to do this after target_halt_request() does not function over JTAG and triggers
+	 * the lock sticky message.
+	 */
+	if (status & CORTEXAR_DBG_PRSR_OS_LOCK)
+		return cortexar_oslock_unlock(target);
+	return true;
 }
 
 static target_s *cortexar_probe(
@@ -664,11 +705,8 @@ static target_s *cortexar_probe(
 	target->halt_poll = cortexar_halt_poll;
 	target->halt_resume = cortexar_halt_resume;
 
-	/*
-	 * Clear the OSLock if set prior to halting the core - trying to do this after target_halt_request()
-	 * does not function over JTAG and triggers the lock sticky message.
-	 */
-	cortexar_oslock_unlock(target);
+	/* Ensure the core is powered up and we can talk to it */
+	cortexar_ensure_core_powered(target);
 
 	/* Try to halt the target core */
 	target_halt_request(target);
