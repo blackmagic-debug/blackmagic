@@ -86,10 +86,12 @@ typedef struct cortexar_priv {
 #define CORTEXAR_DBG_BCR   0x140U
 #define CORTEXAR_DBG_WVR   0x180U
 #define CORTEXAR_DBG_WCR   0x1c0U
-#define CORTEXAR_DBG_OSLAR 0x300U /* OS lock access register */
-#define CORTEXAR_DBG_OSLSR 0x304U /* OS lock status register */
-#define CORTEXAR_DBG_OSSRR 0x308U /* OS save/restore register */
-#define CORTEXAR_DBG_OSDLR 0x30cU /* OS double-lock register */
+#define CORTEXAR_DBG_OSLAR 0x300U /* OS Lock Access register */
+#define CORTEXAR_DBG_OSLSR 0x304U /* OS Lock Status register */
+#define CORTEXAR_DBG_OSSRR 0x308U /* OS Save/Restore register */
+#define CORTEXAR_DBG_OSDLR 0x30cU /* OS Double-Lock register */
+#define CORTEXAR_DBG_PRCR  0x310U /* Power and Reset Control register */
+#define CORTEXAR_DBG_PRSR  0x314U /* Power and Reset Status register */
 
 #define CORTEXAR_CPUID 0xd00U
 #define CORTEXAR_CTR   0xd04U
@@ -147,6 +149,19 @@ typedef struct cortexar_priv {
 #define CORTEXAR_DBG_OSLSR_OS_LOCK_MODEL_FULL    0x00000001U
 #define CORTEXAR_DBG_OSLSR_OS_LOCK_MODEL_PARTIAL 0x00000008U
 #define CORTEXAR_DBG_OSLSR_LOCKED                (1U << 1U)
+
+#define CORTEXAR_DBG_PRCR_CORE_POWER_DOWN_REQ  (1U << 0U)
+#define CORTEXAR_DBG_PRCR_CORE_WARM_RESET_REQ  (1U << 1U)
+#define CORTEXAR_DBG_PRCR_HOLD_CORE_WARM_RESET (1U << 2U)
+#define CORTEXAR_DBG_PRCR_CORE_POWER_UP_REQ    (1U << 3U)
+
+#define CORTEXAR_DBG_PRSR_POWERED_UP   (1U << 0U)
+#define CORTEXAR_DBG_PRSR_STICKY_PD    (1U << 1U)
+#define CORTEXAR_DBG_PRSR_RESET_ACTIVE (1U << 2U)
+#define CORTEXAR_DBG_PRSR_STICKY_RESET (1U << 3U)
+#define CORTEXAR_DBG_PRSR_HALTED       (1U << 4U)
+#define CORTEXAR_DBG_PRSR_OS_LOCK      (1U << 5U)
+#define CORTEXAR_DBG_PRSR_DOUBLE_LOCK  (1U << 6U)
 
 /*
  * Instruction encodings for reading/writing the program counter to/from r0,
@@ -330,6 +345,7 @@ static void cortexar_regs_write(target_s *target, const void *data);
 static ssize_t cortexar_reg_read(target_s *target, uint32_t reg, void *data, size_t max);
 static ssize_t cortexar_reg_write(target_s *target, uint32_t reg, const void *data, size_t max);
 
+static void cortexar_reset(target_s *target);
 static target_halt_reason_e cortexar_halt_poll(target_s *target, target_addr_t *watch);
 static void cortexar_halt_request(target_s *target);
 static void cortexar_halt_resume(target_s *target, bool step);
@@ -643,6 +659,7 @@ static target_s *cortexar_probe(
 	priv->base.ap = ap;
 	priv->base.base_addr = base_address;
 
+	target->reset = cortexar_reset;
 	target->halt_request = cortexar_halt_request;
 	target->halt_poll = cortexar_halt_poll;
 	target->halt_resume = cortexar_halt_resume;
@@ -1101,6 +1118,47 @@ static ssize_t cortexar_reg_write(target_s *const target, const uint32_t reg, co
 	/* Finally, copy the new register data in and return the width */
 	memcpy(reg_ptr, data, reg_width);
 	return reg_width;
+}
+
+static void cortexar_reset(target_s *const target)
+{
+	/* Read PRSR here to clear DBG_PRSR.SR before reset */
+	cortex_dbg_read32(target, CORTEXAR_DBG_PRSR);
+	/* If the physical reset pin is not inhibited, use it */
+	if (!(target->target_options & CORTEX_TOPT_INHIBIT_NRST)) {
+		platform_nrst_set_val(true);
+		platform_nrst_set_val(false);
+		/* Precautionary delay as with the Cortex-M code for targets that take a hot minute to come back */
+		platform_delay(10);
+	}
+
+	/* Check if the reset succeeded */
+	const uint32_t status = cortex_dbg_read32(target, CORTEXAR_DBG_PRSR);
+	if (!(status & CORTEXAR_DBG_PRSR_STICKY_RESET))
+		/* No reset seen yet, or nRST is inhibited, so let's do this via PRCR */
+		cortex_dbg_write32(target, CORTEXAR_DBG_PRCR, CORTEXAR_DBG_PRCR_CORE_WARM_RESET_REQ);
+
+	/* If the targets needs to do something extra, handle that here */
+	if (target->extended_reset)
+		target->extended_reset(target);
+
+	/* Now wait for sticky reset to read high and reset low, indicating the reset has been completed */
+	platform_timeout_s reset_timeout;
+	platform_timeout_set(&reset_timeout, 1000);
+	while ((cortex_dbg_read32(target, CORTEXAR_DBG_PRSR) &
+			   (CORTEXAR_DBG_PRSR_STICKY_RESET | CORTEXAR_DBG_PRSR_RESET_ACTIVE)) &&
+		!platform_timeout_is_expired(&reset_timeout))
+		continue;
+
+#if defined(PLATFORM_HAS_DEBUG)
+	if (platform_timeout_is_expired(&reset_timeout))
+		DEBUG_WARN("Reset seems to be stuck low!\n");
+#endif
+
+	/* 10ms delay to ensure bootroms have had time to run */
+	platform_delay(10);
+	/* Ignore any initial errors out of reset */
+	target_check_error(target);
 }
 
 static void cortexar_halt_request(target_s *const target)
