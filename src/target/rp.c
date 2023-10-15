@@ -237,7 +237,7 @@ bool rp_probe(target_s *target)
 
 	target->mass_erase = bmp_spi_mass_erase;
 	target->driver = "Raspberry RP2040";
-	target->target_options |= CORTEXM_TOPT_INHIBIT_NRST;
+	target->target_options |= CORTEX_TOPT_INHIBIT_NRST;
 	target->attach = rp_attach;
 	target->enter_flash_mode = rp_flash_prepare;
 	target->exit_flash_mode = rp_flash_resume;

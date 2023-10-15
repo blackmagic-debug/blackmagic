@@ -579,7 +579,7 @@ bool efm32_probe(target_s *t)
 		device->name, part_number, flash_kib, device->description);
 
 	/* Setup Target */
-	t->target_options |= CORTEXM_TOPT_INHIBIT_NRST;
+	t->target_options |= CORTEX_TOPT_INHIBIT_NRST;
 	t->driver = priv_storage->efm32_variant_string;
 	tc_printf(t, "flash size %u page size %u\n", flash_size, flash_page_size);
 

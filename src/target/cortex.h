@@ -80,6 +80,8 @@
 #define CORTEXM_GENERAL_REG_COUNT  20U
 #define CORTEXAR_GENERAL_REG_COUNT 17U
 
+#define CORTEX_TOPT_INHIBIT_NRST (1U << 0U)
+
 adiv5_access_port_s *cortex_ap(target_s *target);
 
 #endif /* TARGET_CORTEX_H */

@@ -30,8 +30,8 @@ In summary, the following applies:
 * JTAG physical reset is referred to by 'nTRST'
 * Software reset as in the case of JTAG-PDI is referred to by 'SRST' if shortened.
 
-The upshot of this is that to inhibit physical reset in the ARM ADIv5/Cortex-M code, set
-`CORTEXM_TOPT_INHIBIT_NRST`, which refers to inhibiting the ADIv5 spec 'SRST'.
+The upshot of this is that to inhibit physical reset in the ARM ADIv5/Cortex code, set
+`CORTEX_TOPT_INHIBIT_NRST`, which refers to inhibiting the ADIv5 spec 'SRST'.
 
 ## Multiple-inclusion guarding
 

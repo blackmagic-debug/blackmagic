@@ -210,7 +210,7 @@ bool imxrt_probe(target_s *const target)
 		return false;
 	}
 	target->target_storage = priv;
-	target->target_options |= CORTEXM_TOPT_INHIBIT_NRST;
+	target->target_options |= CORTEX_TOPT_INHIBIT_NRST;
 
 	if (!imxrt_ident_device(target))
 		return false;

@@ -158,22 +158,22 @@ bool tm4c_probe(target_s *const t, const uint16_t did1)
 		/* On Tiva targets, asserting nRST results in the debug
 		 * logic also being reset.  We can't assert nRST and must
 		 * only use the AIRCR SYSRESETREQ. */
-		t->target_options |= CORTEXM_TOPT_INHIBIT_NRST;
+		t->target_options |= CORTEX_TOPT_INHIBIT_NRST;
 		break;
 	case DID1_TM4C1230C3PM:
 		target_add_ram(t, 0x20000000, 0x6000);
 		lmi_add_flash(t, 0x10000);
-		t->target_options |= CORTEXM_TOPT_INHIBIT_NRST;
+		t->target_options |= CORTEX_TOPT_INHIBIT_NRST;
 		break;
 	case DID1_TM4C1294KCPDT:
 		target_add_ram(t, 0x20000000, 0x40000);
 		lmi_add_flash(t, 0x80000);
-		t->target_options |= CORTEXM_TOPT_INHIBIT_NRST;
+		t->target_options |= CORTEX_TOPT_INHIBIT_NRST;
 		break;
 	case DID1_TM4C1294NCPDT:
 		target_add_ram(t, 0x20000000, 0x40000);
 		lmi_add_flash(t, 0x100000);
-		t->target_options |= CORTEXM_TOPT_INHIBIT_NRST;
+		t->target_options |= CORTEX_TOPT_INHIBIT_NRST;
 		break;
 	default:
 		t->driver = driver;
