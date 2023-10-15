@@ -73,23 +73,23 @@ typedef struct cortexar_priv {
 	uint8_t core_status;
 } cortexar_priv_s;
 
-#define CORTEXAR_DBG_IDR   0x000U
+#define CORTEXAR_DBG_IDR   0x000U /* ID register */
 #define CORTEXAR_DBG_WFAR  0x018U
-#define CORTEXAR_DBG_VCR   0x01cU
+#define CORTEXAR_DBG_VCR   0x01cU /* Vector Catch register */
 #define CORTEXAR_DBG_DSCCR 0x028U
-#define CORTEXAR_DBG_DTRTX 0x080U
-#define CORTEXAR_DBG_ITR   0x084U
-#define CORTEXAR_DBG_DSCR  0x088U
-#define CORTEXAR_DBG_DTRRX 0x08cU
-#define CORTEXAR_DBG_DRCR  0x090U
+#define CORTEXAR_DBG_DTRTX 0x080U /* DBGDTRRXext */
+#define CORTEXAR_DBG_ITR   0x084U /* Instruction register */
+#define CORTEXAR_DBG_DSCR  0x088U /* Debug Status and Control register */
+#define CORTEXAR_DBG_DTRRX 0x08cU /* DBGDTRTXext */
+#define CORTEXAR_DBG_DRCR  0x090U /* Debug Run Control register */
 #define CORTEXAR_DBG_BVR   0x100U
 #define CORTEXAR_DBG_BCR   0x140U
 #define CORTEXAR_DBG_WVR   0x180U
 #define CORTEXAR_DBG_WCR   0x1c0U
-#define CORTEXAR_DBG_OSLAR 0x300U
-#define CORTEXAR_DBG_OSLSR 0x304U
-#define CORTEXAR_DBG_OSSSR 0x308U
-#define CORTEXAR_DBG_OSDLR 0x30cU
+#define CORTEXAR_DBG_OSLAR 0x300U /* OS lock access register */
+#define CORTEXAR_DBG_OSLSR 0x304U /* OS lock status register */
+#define CORTEXAR_DBG_OSSRR 0x308U /* OS save/restore register */
+#define CORTEXAR_DBG_OSDLR 0x30cU /* OS double-lock register */
 
 #define CORTEXAR_CPUID 0xd00U
 #define CORTEXAR_CTR   0xd04U
@@ -160,7 +160,14 @@ typedef struct cortexar_priv {
 #define ARM_MSR_SPSR_R0_INSN 0xe160f200U
 
 /* CPSR register definitions */
-#define CORTEXAR_CPSR_THUMB (1U << 5U)
+#define CORTEXAR_CPSR_MODE_MASK 0xffffffe0U
+#define CORTEXAR_CPSR_MODE_USER 0x00000010U
+#define CORTEXAR_CPSR_MODE_SVC  0x00000013U
+#define CORTEXAR_CPSR_MODE_MON  0x00000016U
+#define CORTEXAR_CPSR_MODE_ABRT 0x00000017U
+#define CORTEXAR_CPSR_MODE_HYP  0x0000001aU
+#define CORTEXAR_CPSR_MODE_SYS  0x0000001fU
+#define CORTEXAR_CPSR_THUMB     (1U << 5U)
 
 /*
  * Table of encodings for the banked SPSRs - These are encoded in the following format:
