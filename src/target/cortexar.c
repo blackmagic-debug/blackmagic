@@ -86,6 +86,10 @@ typedef struct cortexar_priv {
 #define CORTEXAR_DBG_BCR   0x140U
 #define CORTEXAR_DBG_WVR   0x180U
 #define CORTEXAR_DBG_WCR   0x1c0U
+#define CORTEXAR_DBG_OSLAR 0x300U
+#define CORTEXAR_DBG_OSLSR 0x304U
+#define CORTEXAR_DBG_OSSSR 0x308U
+#define CORTEXAR_DBG_OSDLR 0x30cU
 
 #define CORTEXAR_CPUID 0xd00U
 #define CORTEXAR_CTR   0xd04U
@@ -138,6 +142,11 @@ typedef struct cortexar_priv {
 #define CORTEXAR_DBG_WCR_BYTE_SELECT_MASK   0x00001fe0U
 #define CORTEXAR_DBG_WCR_BYTE_SELECT(x) \
 	(((x) << CORTEXAR_DBG_WCR_BYTE_SELECT_OFFSET) & CORTEXAR_DBG_WCR_BYTE_SELECT_MASK)
+
+#define CORTEXAR_DBG_OSLSR_OS_LOCK_MODEL         0x00000009U
+#define CORTEXAR_DBG_OSLSR_OS_LOCK_MODEL_FULL    0x00000001U
+#define CORTEXAR_DBG_OSLSR_OS_LOCK_MODEL_PARTIAL 0x00000008U
+#define CORTEXAR_DBG_OSLSR_LOCKED                (1U << 1U)
 
 /*
  * Instruction encodings for reading/writing the program counter to/from r0,
@@ -578,6 +587,25 @@ static target_addr_t cortexar_virt_to_phys(target_s *const target, const target_
 	return address;
 }
 
+static void cortexar_oslock_unlock(target_s *const target)
+{
+	const uint32_t lock_status = cortex_dbg_read32(target, CORTEXAR_DBG_OSLSR);
+	DEBUG_TARGET("%s: OS lock status: %08" PRIx32 "\n", __func__, lock_status);
+	/* Check if the lock is implemented, then if it is, if it's set */
+	if (((lock_status & CORTEXAR_DBG_OSLSR_OS_LOCK_MODEL) == CORTEXAR_DBG_OSLSR_OS_LOCK_MODEL_FULL ||
+			(lock_status & CORTEXAR_DBG_OSLSR_OS_LOCK_MODEL) == CORTEXAR_DBG_OSLSR_OS_LOCK_MODEL_PARTIAL) &&
+		(lock_status & CORTEXAR_DBG_OSLSR_LOCKED)) {
+		/* Lock implemented, and set. Try to unlock */
+		DEBUG_WARN("%s: OS lock set, unlocking\n", __func__);
+		cortex_dbg_write32(target, CORTEXAR_DBG_OSLAR, 0U);
+
+		/* Read back to check if we succeeded */
+		const bool locked = cortex_dbg_read32(target, CORTEXAR_DBG_OSLSR) & CORTEXAR_DBG_OSLSR_LOCKED;
+		if (locked)
+			DEBUG_ERROR("%s: Lock sticky. Core not powered?\n", __func__);
+	}
+}
+
 static target_s *cortexar_probe(
 	adiv5_access_port_s *const ap, const target_addr_t base_address, const char *const core_type)
 {
@@ -611,6 +639,12 @@ static target_s *cortexar_probe(
 	target->halt_request = cortexar_halt_request;
 	target->halt_poll = cortexar_halt_poll;
 	target->halt_resume = cortexar_halt_resume;
+
+	/*
+	 * Clear the OSLock if set prior to halting the core - trying to do this after target_halt_request()
+	 * does not function over JTAG and triggers the lock sticky message.
+	 */
+	cortexar_oslock_unlock(target);
 
 	/* Try to halt the target core */
 	target_halt_request(target);
@@ -745,6 +779,8 @@ bool cortexar_attach(target_s *const target)
 	/* Clear any pending fault condition (and switch to this core) */
 	target_check_error(target);
 
+	/* Ensure the OS lock is unset just in case it was re-set between probe and attach */
+	cortexar_oslock_unlock(target);
 	/* Try to halt the core */
 	target_halt_request(target);
 	platform_timeout_s timeout;
@@ -1092,6 +1128,8 @@ static target_halt_reason_e cortexar_halt_poll(target_s *const target, target_ad
 	if (!(dscr & CORTEXAR_DBG_DSCR_HALTED))
 		return TARGET_HALT_RUNNING;
 
+	/* Ensure the OS lock is cleared as a precaution */
+	cortexar_oslock_unlock(target);
 	/* Make sure ITR is enabled and likewise halting debug (so breakpoints work) */
 	cortex_dbg_write32(
 		target, CORTEXAR_DBG_DSCR, dscr | CORTEXAR_DBG_DSCR_ITR_ENABLE | CORTEXAR_DBG_DSCR_HALTING_DBG_ENABLE);
