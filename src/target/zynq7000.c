@@ -46,6 +46,22 @@
 #include "general.h"
 #include "target.h"
 #include "target_internal.h"
+#include "cortex_internal.h"
+#include "exception.h"
+
+#define CORTEXA_DBG_IDR 0x000U
+
+/* System Level Control Registers */
+#define ZYNQ7_SLCR_BASE         0xf8000000U
+#define ZYNQ7_SLCR_UNLOCK       (ZYNQ7_SLCR_BASE + 0x008U)
+#define ZYNQ7_SLCR_PSS_RST_CTRL (ZYNQ7_SLCR_BASE + 0x200U)
+
+/* UG585 Appendix A: Register Details, pg1639 */
+#define ZYNQ7_SLCR_UNLOCK_KEY 0x0000df0dU
+/* UG585 Appendix A: Register Details, pg1672 */
+#define ZYNQ7_SLCR_PSS_RST_CTRL_SOFT_RESET (1U << 0U)
+
+static void zynq7_reset(target_s *target);
 
 #define ID_ZYNQ7020 0x3b2U
 
@@ -55,5 +71,31 @@ bool zynq7_probe(target_s *const target)
 		return false;
 
 	target->driver = "Zynq-7000";
+	target->reset = zynq7_reset;
 	return true;
+}
+
+static void zynq7_reset(target_s *const target)
+{
+	/* Try to unlock the SLCR registers and issue the reset */
+	target_mem_write32(target, ZYNQ7_SLCR_UNLOCK, ZYNQ7_SLCR_UNLOCK_KEY);
+	target_mem_write32(target, ZYNQ7_SLCR_PSS_RST_CTRL, ZYNQ7_SLCR_PSS_RST_CTRL_SOFT_RESET);
+
+	/* For good measure, also try pulsing the physical reset pin */
+	platform_nrst_set_val(true);
+	platform_nrst_set_val(false);
+
+	/* Spin until the Zynq comes back up */
+	platform_timeout_s reset_timeout;
+	platform_timeout_set(&reset_timeout, 1000U);
+	volatile exception_s error = {.type = EXCEPTION_ERROR};
+	while (error.type == EXCEPTION_ERROR && !platform_timeout_is_expired(&reset_timeout)) {
+		/* Try doing a new read of the core's ID register */
+		TRY_CATCH (error, EXCEPTION_ALL) {
+			cortex_dbg_read32(target, CORTEXA_DBG_IDR);
+		}
+	}
+	/* If that failed, propagate the error */
+	if (error.type == EXCEPTION_ERROR)
+		raise_exception(error.type, error.msg);
 }
