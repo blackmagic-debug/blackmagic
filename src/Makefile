@@ -84,7 +84,8 @@ SRC =              \
 	renesas.c      \
 	target.c       \
 	target_flash.c \
-	target_probe.c
+	target_probe.c \
+	zynq7000.c
 
 ifeq (,$(filter all_platforms,$(MAKECMDGOALS)))
 include $(PLATFORM_DIR)/Makefile.inc
