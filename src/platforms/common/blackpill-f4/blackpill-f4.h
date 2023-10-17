@@ -230,9 +230,13 @@
 	{                             \
 		running_status = (state); \
 	}
-#define SET_IDLE_STATE(state)                        \
-	{                                                \
-		gpio_set_val(LED_PORT, LED_IDLE_RUN, state); \
+/*
+ * The state of LED_IDLE_RUN is inverted, as the led used for
+ * LED_IDLE_RUN (PC13) needs to be pulled low to turn the led on.
+ */
+#define SET_IDLE_STATE(state)                         \
+	{                                                 \
+		gpio_set_val(LED_PORT, LED_IDLE_RUN, !state); \
 	}
 #define SET_ERROR_STATE(state)                    \
 	{                                             \
