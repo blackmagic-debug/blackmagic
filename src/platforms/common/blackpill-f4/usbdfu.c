@@ -41,9 +41,9 @@ int main(void)
 	rcc_periph_clock_enable(RCC_GPIOA);
 
 	/* Blackpill board has a floating button on PA0. Pull it up and use as active-low. */
-	gpio_mode_setup(GPIOA, GPIO_MODE_INPUT, GPIO_PUPD_PULLUP, GPIO0);
+	gpio_mode_setup(USER_BUTTON_KEY_PORT, GPIO_MODE_INPUT, GPIO_PUPD_PULLUP, USER_BUTTON_KEY_PIN);
 
-	if (!gpio_get(GPIOA, GPIO0) || (magic[0] == BOOTMAGIC0 && magic[1] == BOOTMAGIC1)) {
+	if (!gpio_get(USER_BUTTON_KEY_PORT, USER_BUTTON_KEY_PIN) || (magic[0] == BOOTMAGIC0 && magic[1] == BOOTMAGIC1)) {
 		magic[0] = 0;
 		magic[1] = 0;
 	} else
