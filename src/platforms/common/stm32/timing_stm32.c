@@ -33,7 +33,7 @@ static volatile uint32_t time_ms = 0;
 uint32_t target_clk_divider = 0;
 
 static size_t morse_tick = 0;
-#ifdef PLATFORM_HAS_POWER_SWITCH
+#if defined(PLATFORM_HAS_POWER_SWITCH) && defined(STM32F1)
 static uint8_t monitor_ticks = 0;
 
 /* Derived from calculating (1.2V / 3.0V) * 4096 */
@@ -90,7 +90,7 @@ void sys_tick_handler(void)
 	} else
 		++morse_tick;
 
-#ifdef PLATFORM_HAS_POWER_SWITCH
+#if defined(PLATFORM_HAS_POWER_SWITCH) && defined(STM32F1)
 	/* First check if target power is presently enabled */
 	if (platform_target_get_power()) {
 		/*
