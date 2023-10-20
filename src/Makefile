@@ -56,6 +56,7 @@ SRC =              \
 	kinetis.c      \
 	main.c         \
 	maths_utils.c  \
+	memwatch.c     \
 	morse.c        \
 	msp432e4.c     \
 	msp432p4.c     \

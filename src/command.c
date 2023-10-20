@@ -37,6 +37,7 @@
 #include "serialno.h"
 #include "jtagtap.h"
 #include "jtag_scan.h"
+#include "memwatch.h"
 
 #ifdef ENABLE_RTT
 #include "rtt.h"
@@ -51,6 +52,8 @@
 #else
 #include <alloca.h>
 #endif
+
+#include <ctype.h>
 
 static bool cmd_version(target_s *t, int argc, const char **argv);
 static bool cmd_help(target_s *t, int argc, const char **argv);
@@ -72,6 +75,7 @@ static bool cmd_target_power(target_s *t, int argc, const char **argv);
 static bool cmd_traceswo(target_s *t, int argc, const char **argv);
 #endif
 static bool cmd_heapinfo(target_s *t, int argc, const char **argv);
+static bool cmd_memwatch(target_s *t, int argc, const char **argv);
 #ifdef ENABLE_RTT
 static bool cmd_rtt(target_s *t, int argc, const char **argv);
 #endif
@@ -112,6 +116,7 @@ const command_s cmd_list[] = {
 	{"traceswo", cmd_traceswo, "Start trace capture, Manchester mode: [decode [CHANNEL_NR ...]]"},
 #endif
 #endif
+	{"memwatch", cmd_memwatch, "Print memory changes: [[NAME] [/d|/u|/x] ADDRESS]..."},
 	{"heapinfo", cmd_heapinfo, "Set semihosting heapinfo: HEAPINFO HEAP_BASE HEAP_LIMIT STACK_BASE STACK_LIMIT"},
 #if defined(PLATFORM_HAS_DEBUG) && PC_HOSTED == 0
 	{"debug_bmp", cmd_debug_bmp, "Output BMP \"debug\" strings to the second vcom: [enable|disable]"},
@@ -669,6 +674,61 @@ static bool cmd_shutdown_bmda(target_s *t, int argc, const char **argv)
 	return true;
 }
 #endif
+
+static bool cmd_memwatch(target_s *t, int argc, const char **argv)
+{
+	memwatch_format_e fmt = MEMWATCH_FMT_HEX;
+	char name[MEMWATCH_STRLEN] = {0};
+	(void)t;
+	memset(memwatch_table, 0, sizeof(memwatch_table));
+	memwatch_cnt = 0;
+	for (int32_t i = 1; i < argc; i++) {
+		if (argv[i][0] == '/') {
+			/* format follows */
+			switch (argv[i][1]) {
+			case 'd':
+				fmt = MEMWATCH_FMT_SIGNED;
+				break;
+			case 'u':
+				fmt = MEMWATCH_FMT_UNSIGNED;
+				break;
+			case 'x':
+				fmt = MEMWATCH_FMT_HEX;
+				break;
+			default:
+				break;
+			}
+		} else if (isalpha(argv[i][0])) {
+			/* name  follows */
+			strncpy(name, argv[i], sizeof(name));
+			name[sizeof(name) - 1] = '\0';
+		} else if (isdigit(argv[i][0])) {
+			/* address follows */
+			uint32_t addr = strtoul(argv[i], NULL, 0);
+			if (name[0] == '\0') {
+				/* no name given, use address as name */
+				snprintf(name, MEMWATCH_STRLEN, "0x%08" PRIx32, addr);
+				name[MEMWATCH_STRLEN - 1] = '\0';
+			}
+
+			/* add new name, format and address to memwatch table */
+			memwatch_table[memwatch_cnt].addr = addr;
+			memwatch_table[memwatch_cnt].value = 0xdeadbeef;
+			memwatch_table[memwatch_cnt].format = fmt;
+			memcpy(memwatch_table[memwatch_cnt].name, name, MEMWATCH_STRLEN);
+			memwatch_cnt++;
+			memset(name, 0, sizeof(name));
+			gdb_outf("0x%x ", addr);
+			if (memwatch_cnt == MEMWATCH_NUM)
+				break;
+		} else {
+			gdb_outf("?");
+			break;
+		}
+	}
+	gdb_outf("\n");
+	return true;
+}
 
 static bool cmd_heapinfo(target_s *t, int argc, const char **argv)
 {
