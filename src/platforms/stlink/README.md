@@ -18,6 +18,14 @@ then they often don't provide a UART interface. In this case, build the firmware
 
 Note: on some clones, SWIM is strongly pulled up by a 680 Ohm resistor.
 
+Some of the clones are not detected correctly by the firmware
+(`version` output will say e.g. `Hardware Version 1` instead of
+`Hardware Version 257`) because of differences in internal
+connections. In this case you can build the firmware with
+`STLINK_FORCE_CLONE=1` to force the firmware to use the clone pinmap
+(nRST on PB6).
+
+
 ## External connections
 
 | Function  | Normal Pin | Alt Pin |

@@ -88,6 +88,11 @@ uint32_t detect_rev(void)
 		RCC_CFGR |= (RCC_CFGR_MCO_HSE << 24U);
 		gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, GPIO8);
 	}
+
+	/* Override detection to use clone pinmap (i.e. PB6 as nRST). */
+#if defined(STLINK_FORCE_CLONE)
+	revision = 0x101;
+#endif
 	/* Clean up after ourself on boards that aren't identified as ST-Link v2.1's */
 	if ((revision & 0xff) < 2U) {
 		gpio_clear(GPIOA, GPIO12);
