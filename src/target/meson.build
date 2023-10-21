@@ -182,6 +182,7 @@ target_nxp = declare_dependency(
 		'imxrt.c',
 		'kinetis.c',
 		'nxpke04.c',
+		's32k3xx.c',
 	),
 	dependencies: target_cortexm,
 )
