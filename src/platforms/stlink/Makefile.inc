@@ -35,6 +35,10 @@ ifeq ($(BLUEPILL), 1)
 CFLAGS += -DBLUEPILL=1
 endif
 
+ifeq ($(STLINK_FORCE_CLONE), 1)
+CFLAGS += -DSTLINK_FORCE_CLONE=1
+endif
+
 VPATH += platforms/common/stm32
 
 SRC +=          \
