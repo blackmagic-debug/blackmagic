@@ -3,6 +3,7 @@
  *
  * Copyright (C) 2023 1BitSquared <info@1bitsquared.com>
  * Written by ALTracer <tolstov_den@mail.ru>
+ * Modified by Rachel Mant <git@dragonmux.network>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -33,10 +34,16 @@
 #include "cortexm.h"
 
 /* Memory map constants for STM32MP15x */
-#define STM32MP15_CM4_RETRAM_BASE  0x00000000U
-#define STM32MP15_RETRAM_SIZE      0x00001000U /* RETRAM, 64 KiB */
-#define STM32MP15_CM4_AHBSRAM_BASE 0x10000000U
-#define STM32MP15_AHBSRAM_SIZE     0x00060000U /* AHB SRAM 1+2+3+4, 128+128+64+64 KiB */
+#define STM32MP15_CM4_RETRAM_BASE        0x00000000U
+#define STM32MP15_CA7_RETRAM_BASE        0x38000000U
+#define STM32MP15_RETRAM_SIZE            0x00001000U /* RETRAM, 64 KiB */
+#define STM32MP15_AHBSRAM_BASE           0x10000000U
+#define STM32MP15_CA7_AHBSRAM_ALIAS_BASE 0x30000000U
+#define STM32MP15_AHBSRAM_SIZE           0x00060000U /* AHB SRAM 1+2+3+4, 128+128+64+64 KiB */
+#define STM32MP15_SYSRAM_BASE            0x2ffc0000U
+#define STM32MP15_SYSRAM_SIZE            0x00040000U
+#define STM32MP15_CAN_SRAM_BASE          0x44011000U
+#define STM32MP15_CAN_SRAM_SIZE          0x00002800U
 
 /* Access from processor address space.
  * Access via the debug APB is at 0xe0081000 over AP1. */
@@ -110,7 +117,7 @@ bool stm32mp15_cm4_probe(target_s *target)
 
 	/* Figure 4. Memory map from §2.5.2 in RM0436 rev 6, pg158 */
 	target_add_ram(target, STM32MP15_CM4_RETRAM_BASE, STM32MP15_RETRAM_SIZE);
-	target_add_ram(target, STM32MP15_CM4_AHBSRAM_BASE, STM32MP15_AHBSRAM_SIZE);
+	target_add_ram(target, STM32MP15_AHBSRAM_BASE, STM32MP15_AHBSRAM_SIZE);
 
 	return true;
 }
@@ -122,6 +129,18 @@ bool stm32mp15_ca7_probe(target_s *target)
 		return false;
 
 	target->driver = "STM32MP15";
+
+	/* Figure 4. Memory map from §2.5.2 in RM0436 rev 6, pg158 */
+	target_add_ram(target, STM32MP15_CA7_RETRAM_BASE, STM32MP15_RETRAM_SIZE);
+	target_add_ram(target, STM32MP15_AHBSRAM_BASE, STM32MP15_AHBSRAM_SIZE);
+	/*
+	 * The SRAM appears twice in the map as it's mapped to both the main SRAM
+	 * window and the alias window on the Cortex-A7 cores.
+	 * (Unlike the RETRAM which only appears in the alias window)
+	 */
+	target_add_ram(target, STM32MP15_CA7_AHBSRAM_ALIAS_BASE, STM32MP15_AHBSRAM_SIZE);
+	target_add_ram(target, STM32MP15_SYSRAM_BASE, STM32MP15_SYSRAM_SIZE);
+	target_add_ram(target, STM32MP15_CAN_SRAM_BASE, STM32MP15_CAN_SRAM_SIZE);
 	return true;
 }
 #endif
