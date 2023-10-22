@@ -102,6 +102,10 @@ bool stm32mp15_cm4_probe(target_s *target)
 
 	/* Allocate private storage */
 	stm32mp15_priv_s *priv = calloc(1, sizeof(*priv));
+	if (!priv) { /* calloc failed: heap exhaustion */
+		DEBUG_ERROR("calloc: failed in %s\n", __func__);
+		return false;
+	}
 	target->target_storage = priv;
 
 	/* Figure 4. Memory map from §2.5.2 in RM0436 rev 6, pg158 */
