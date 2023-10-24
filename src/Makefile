@@ -32,6 +32,7 @@ else
 CFLAGS += -DENABLE_DEBUG=0
 endif
 
+
 SRC =              \
 	adiv5.c        \
 	adiv5_jtag.c   \
@@ -146,6 +147,16 @@ CFLAGS += -DPC_HOSTED=1
 else
 CFLAGS += -DPC_HOSTED=0
 include platforms/common/Makefile.inc
+endif
+
+ifdef ENABLE_MEMWATCH
+CFLAGS += -DENABLE_MEMWATCH=$(ENABLE_MEMWATCH)
+SRC += memwatch.c
+ifndef PC_HOSTED
+ifeq ($(ENABLE_MEMWATCH), 1)
+SRC += ftoa.c
+endif
+endif
 endif
 
 ifeq ($(ENABLE_RTT), 1)

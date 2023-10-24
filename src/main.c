@@ -29,6 +29,7 @@
 #include "gdb_packet.h"
 #include "morse.h"
 #include "command.h"
+#include "memwatch.h"
 #ifdef ENABLE_RTT
 #include "rtt.h"
 #endif
@@ -58,6 +59,10 @@ static void bmp_poll_loop(void)
 #ifdef ENABLE_RTT
 		if (rtt_enabled)
 			poll_rtt(cur_target);
+#endif
+#ifdef ENABLE_MEMWATCH
+		if (memwatch_cnt != 0)
+			poll_memwatch(cur_target);
 #endif
 	}
 

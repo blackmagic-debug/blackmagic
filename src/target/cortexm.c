@@ -41,15 +41,25 @@
 #include "command.h"
 #include "gdb_packet.h"
 #include "semihosting.h"
+#ifdef ENABLE_MEMWATCH
+#include "memwatch.h"
+#include <ctype.h>
+#endif
 #include "platform.h"
 #include "maths_utils.h"
 
 #include <assert.h>
 
 static bool cortexm_vector_catch(target_s *target, int argc, const char **argv);
+#ifdef ENABLE_MEMWATCH
+static bool cortexm_memwatch(target_s *target, int argc, const char **argv);
+#endif
 
 const command_s cortexm_cmd_list[] = {
 	{"vector_catch", cortexm_vector_catch, "Catch exception vectors"},
+#ifdef ENABLE_MEMWATCH
+	{"memwatch", cortexm_memwatch, "Read memory while target running: [/t] [[NAME] [/d|/u|/f|/f[0..9]|/x] ADDRESS]..."},
+#endif
 	{NULL, NULL, NULL},
 };
 
@@ -1351,6 +1361,85 @@ static bool cortexm_vector_catch(target_s *target, int argc, const char **argv)
 	tc_printf(target, "\n");
 	return true;
 }
+
+#ifdef ENABLE_MEMWATCH
+static bool cortexm_memwatch(target_s *target, int argc, const char **argv)
+{
+	memwatch_format_e fmt = MEMWATCH_FMT_HEX;
+	char name[MEMWATCH_STRLEN] = {0};
+	int precision = 0;
+	char ch;
+	memset(memwatch_table, 0, sizeof(memwatch_table));
+	memwatch_cnt = 0;
+	memwatch_timestamp = false;
+	/* target has to support debugger memory access while running */
+	if (target_mem_access_needs_halt(target)) {
+		gdb_out("memwatch not supported for target\n");
+		return true;
+	}
+	for (int32_t i = 1; i < argc; i++) {
+		if (argv[i][0] == '/') {
+			/* format follows */
+			switch (argv[i][1]) {
+			case 'd':
+				fmt = MEMWATCH_FMT_SIGNED;
+				break;
+			case 'u':
+				fmt = MEMWATCH_FMT_UNSIGNED;
+				break;
+			case 'f':
+				fmt = MEMWATCH_FMT_FLOAT;
+#if PC_HOSTED == 1
+				precision = 6;
+#else
+				precision = -1;
+#endif
+				ch = argv[i][2];
+				if ((ch >= '0') && (ch <= '9'))
+					precision = ch - '0';
+				break;
+			case 'x':
+				fmt = MEMWATCH_FMT_HEX;
+				break;
+			case 't':
+				memwatch_timestamp = true;
+				break;
+			default:
+				break;
+			}
+		} else if (isalpha(argv[i][0])) {
+			/* name  follows */
+			strncpy(name, argv[i], sizeof(name));
+			name[sizeof(name) - 1] = '\0';
+		} else if (isdigit(argv[i][0])) {
+			/* address follows */
+			uint32_t addr = strtoul(argv[i], NULL, 0);
+
+			/* add new name, format and address to memwatch table */
+			if (name[0] == '\0') {
+				/* no name given, use address as name */
+				snprintf(name, MEMWATCH_STRLEN, "0x%08" PRIx32, addr);
+				name[MEMWATCH_STRLEN - 1] = '\0';
+			}
+			memwatch_table[memwatch_cnt].addr = addr;
+			memwatch_table[memwatch_cnt].value = 0xdeadbeef;
+			memwatch_table[memwatch_cnt].format = fmt;
+			memwatch_table[memwatch_cnt].precision = precision;
+			memcpy(memwatch_table[memwatch_cnt].name, name, MEMWATCH_STRLEN);
+			memwatch_cnt++;
+			memset(name, 0, sizeof(name));
+			gdb_outf("0x%08" PRIx32 " ", addr);
+			if (memwatch_cnt == MEMWATCH_NUM)
+				break;
+		} else {
+			gdb_outf("?");
+			break;
+		}
+	}
+	gdb_outf("\n");
+	return true;
+}
+#endif
 
 static bool cortexm_hostio_request(target_s *const target)
 {
