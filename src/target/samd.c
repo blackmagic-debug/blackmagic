@@ -28,6 +28,7 @@
  * * SAMD20J18A (rev B)
  * * SAMD21J18A (rev B)
  * * SAML21J17B (rev B)
+ * * SAMC21N18A (rev E)
  */
 
 /*
@@ -129,15 +130,15 @@ const command_s samd_cmd_list[] = {
 #define SAMD_STATUSB_PROT    (1U << 16U)
 
 /* Device Identification Register (DID) */
-#define SAMD_DID_MASK          0xff380000U
+#define SAMD_DID_MASK          0xfe380000U
 #define SAMD_DID_CONST_VALUE   0x10000000U
 #define SAMD_DID_DEVSEL_MASK   0xffU
 #define SAMD_DID_DEVSEL_POS    0U
 #define SAMD_DID_REVISION_MASK 0x0fU
 #define SAMD_DID_REVISION_POS  8U
-#define SAMD_DID_SERIES_MASK   0x1fU
+#define SAMD_DID_SERIES_MASK   0x3fU
 #define SAMD_DID_SERIES_POS    16U
-#define SAMD_DID_FAMILY_MASK   0x3fU
+#define SAMD_DID_FAMILY_MASK   0x1fU
 #define SAMD_DID_FAMILY_POS    23U
 
 /* Peripheral ID */
@@ -180,6 +181,24 @@ static const samd_part_s samd_d21_parts[] = {
 	{0x56, 'E', 15, 'B'}, /* SAMD21E15B (WLCSP) */
 	{0x62, 'E', 16, 'C'}, /* SAMD21E16C (WLCSP) */
 	{0x63, 'E', 15, 'C'}, /* SAMD21E15C (WLCSP) */
+	{0xff, 0, 0, 0},      /* Sentinel entry */
+};
+
+static const samd_part_s samd_c21_parts[] = {
+	{0x00, 'J', 18, 'A'}, /* SAMC21J18A */
+	{0x01, 'J', 17, 'A'}, /* SAMC21J17A */
+	{0x02, 'J', 16, 'A'}, /* SAMC21J16A */
+	{0x03, 'J', 15, 'A'}, /* SAMC21J15A */
+	{0x05, 'G', 18, 'A'}, /* SAMC21G18A */
+	{0x06, 'G', 17, 'A'}, /* SAMC21G17A */
+	{0x07, 'G', 16, 'A'}, /* SAMC21G16A */
+	{0x08, 'G', 15, 'A'}, /* SAMC21G15A */
+	{0x0a, 'E', 18, 'A'}, /* SAMC21E18A */
+	{0x0b, 'E', 17, 'A'}, /* SAMC21E17A */
+	{0x0c, 'E', 16, 'A'}, /* SAMC21E16A */
+	{0x0d, 'E', 15, 'A'}, /* SAMC21E15A */
+	{0x20, 'N', 18, 'A'}, /* SAMC21N18A */
+	{0x21, 'N', 17, 'A'}, /* SAMC21N17A */
 	{0xff, 0, 0, 0},      /* Sentinel entry */
 };
 
@@ -379,6 +398,8 @@ samd_descr_s samd_parse_device_id(uint32_t did)
 		samd.series = 20;
 		break;
 	case 1:
+		if (family == 2)
+			parts = samd_c21_parts;
 		samd.series = 21;
 		break;
 	case 2:
