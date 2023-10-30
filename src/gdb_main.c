@@ -744,7 +744,7 @@ static void handle_v_packet(char *packet, const size_t plen)
 		/* Write Flash Memory */
 		const uint32_t count = plen - bin;
 		DEBUG_GDB("Flash Write %08" PRIX32 " %08" PRIX32 "\n", addr, count);
-		if (cur_target && target_flash_write(cur_target, addr, (void *)packet + bin, count))
+		if (cur_target && target_flash_write(cur_target, addr, (uint8_t *)packet + bin, count))
 			gdb_putpacketz("OK");
 		else {
 			target_flash_complete(cur_target);

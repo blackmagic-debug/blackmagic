@@ -65,7 +65,7 @@ struct target_flash {
 	flash_erase_func erase;      /* Erase a range of flash */
 	flash_write_func write;      /* Write to flash */
 	flash_done_func done;        /* Finish flash operations */
-	void *buf;                   /* Buffer for flash operations */
+	uint8_t *buf;                /* Buffer for flash operations */
 	target_addr_t buf_addr_base; /* Address of block this buffer is for */
 	target_addr_t buf_addr_low;  /* Address of lowest byte written */
 	target_addr_t buf_addr_high; /* Address of highest byte written */
