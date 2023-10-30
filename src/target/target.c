@@ -313,7 +313,7 @@ void target_regs_read(target_s *t, void *data)
 		t->regs_read(t, data);
 	else {
 		for (size_t x = 0, i = 0; x < t->regs_size;)
-			x += target_reg_read(t, i++, data + x, t->regs_size - x);
+			x += target_reg_read(t, i++, (uint8_t *)data + x, t->regs_size - x);
 	}
 }
 
@@ -323,7 +323,7 @@ void target_regs_write(target_s *t, const void *data)
 		t->regs_write(t, data);
 	else {
 		for (size_t x = 0, i = 0; x < t->regs_size;)
-			x += target_reg_write(t, i++, data + x, t->regs_size - x);
+			x += target_reg_write(t, i++, (const uint8_t *)data + x, t->regs_size - x);
 	}
 }
 

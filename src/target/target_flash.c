@@ -213,7 +213,7 @@ static bool flash_buffered_flush(target_flash_s *flash)
 	return result;
 }
 
-static bool flash_buffered_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t len)
+static bool flash_buffered_write(target_flash_s *flash, target_addr_t dest, const uint8_t *src, size_t len)
 {
 	bool result = true; /* Catch false returns with &= */
 	while (len) {
@@ -292,7 +292,7 @@ bool target_flash_write(target_s *target, target_addr_t dest, const void *src, s
 		}
 
 		dest = local_end_addr;
-		src += local_length;
+		src = (const uint8_t *)src + local_length;
 		len -= local_length;
 	}
 	return result;

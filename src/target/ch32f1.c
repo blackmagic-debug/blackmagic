@@ -279,7 +279,7 @@ static bool ch32f1_wait_flash_ready(target_s *t, uint32_t addr)
 }
 
 /* Fast flash for ch32. Load 128 bytes chunk and then write them */
-static int ch32f1_upload(target_s *t, uint32_t dest, const void *src, uint32_t offset)
+static int ch32f1_upload(target_s *t, uint32_t dest, const uint8_t *src, uint32_t offset)
 {
 	volatile uint32_t sr, magic;
 	const uint32_t *ss = (const uint32_t *)(src + offset);
@@ -319,7 +319,7 @@ static bool ch32f1_flash_write(target_flash_s *f, target_addr_t dest, const void
 	size_t length = len;
 #ifdef CH32_VERIFY
 	target_addr_t org_dest = dest;
-	const void *org_src = src;
+	const uint8_t *org_src = (const uint8_t *)src;
 #endif
 	DEBUG_INFO("CH32: flash write 0x%" PRIx32 " ,size=%" PRIu32 "\n", dest, (uint32_t)len);
 
@@ -337,7 +337,7 @@ static bool ch32f1_flash_write(target_flash_s *f, target_addr_t dest, const void
 			return false;
 
 		for (size_t i = 0; i < 8U; i++) {
-			if (ch32f1_upload(t, dest, src, i * 16U)) {
+			if (ch32f1_upload(t, dest, (const uint8_t *)src, i * 16U)) {
 				DEBUG_ERROR("Cannot upload to buffer\n");
 				return false;
 			}
@@ -359,7 +359,7 @@ static bool ch32f1_flash_write(target_flash_s *f, target_addr_t dest, const void
 		else
 			length = 0;
 		dest += 128U;
-		src += 128U;
+		src = (const uint8_t *)src + 128U;
 
 		sr = target_mem_read32(t, FLASH_SR); // 13
 		ch32f1_flash_lock(t);

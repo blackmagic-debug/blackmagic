@@ -473,7 +473,7 @@ static bool kinetis_flash_cmd_write(target_flash_s *f, target_addr_t dest, const
 		else
 			len = 0;
 		dest += kf->write_len;
-		src += kf->write_len;
+		src = (const uint8_t *)src + kf->write_len;
 	}
 
 	return true;
