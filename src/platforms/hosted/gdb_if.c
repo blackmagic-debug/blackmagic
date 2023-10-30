@@ -64,8 +64,9 @@ typedef int32_t socket_t;
 #include "bmp_hosted.h"
 #include "command.h"
 
-static const uint16_t default_port = 2000U;
-static const uint16_t max_port = default_port + 4U;
+#define DEFAULT_PORT 2000U
+static const uint16_t default_port = DEFAULT_PORT;
+static const uint16_t max_port = (DEFAULT_PORT + 4U);
 
 #if defined(_WIN32) || defined(__CYGWIN__)
 const int op_would_block = WSAEWOULDBLOCK;
