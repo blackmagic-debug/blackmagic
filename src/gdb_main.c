@@ -143,7 +143,7 @@ int gdb_main_loop(target_controller_s *tc, char *pbuf, size_t pbuf_size, size_t 
 		ERROR_IF_NO_TARGET();
 		const size_t reg_size = target_regs_size(cur_target);
 		if (reg_size) {
-			uint8_t gp_regs[reg_size];
+			uint8_t *gp_regs = alloca(reg_size);
 			target_regs_read(cur_target, gp_regs);
 			gdb_putpacket(hexify(pbuf, gp_regs, reg_size), reg_size * 2U);
 		} else {
@@ -160,7 +160,7 @@ int gdb_main_loop(target_controller_s *tc, char *pbuf, size_t pbuf_size, size_t 
 			break;
 		}
 		DEBUG_GDB("m packet: addr = %" PRIx32 ", len = %" PRIx32 "\n", addr, len);
-		uint8_t mem[len];
+		uint8_t *mem = alloca(len);
 		if (target_mem_read(cur_target, mem, addr, len))
 			gdb_putpacketz("E01");
 		else
@@ -171,7 +171,7 @@ int gdb_main_loop(target_controller_s *tc, char *pbuf, size_t pbuf_size, size_t 
 		ERROR_IF_NO_TARGET();
 		const size_t reg_size = target_regs_size(cur_target);
 		if (reg_size) {
-			uint8_t gp_regs[reg_size];
+			uint8_t *gp_regs = alloca(reg_size);
 			unhexify(gp_regs, &pbuf[1], reg_size);
 			target_regs_write(cur_target, gp_regs);
 		}
@@ -189,7 +189,7 @@ int gdb_main_loop(target_controller_s *tc, char *pbuf, size_t pbuf_size, size_t 
 			break;
 		}
 		DEBUG_GDB("M packet: addr = %" PRIx32 ", len = %" PRIx32 "\n", addr, len);
-		uint8_t mem[len];
+		uint8_t *mem = alloca(len);
 		unhexify(mem, pbuf + hex, len);
 		if (target_mem_write(cur_target, addr, mem, len))
 			gdb_putpacketz("E01");
@@ -268,7 +268,7 @@ int gdb_main_loop(target_controller_s *tc, char *pbuf, size_t pbuf_size, size_t 
 			int n;
 			sscanf(pbuf, "P%" SCNx32 "=%n", &reg, &n);
 			// TODO: FIXME, VLAs considered harmful.
-			uint8_t val[strlen(pbuf + n) / 2U];
+			uint8_t *val = alloca(strlen(pbuf + n) / 2U);
 			unhexify(val, pbuf + n, sizeof(val));
 			if (target_reg_write(cur_target, reg, val, sizeof(val)) > 0)
 				gdb_putpacketz("OK");
@@ -403,7 +403,7 @@ static void exec_q_rcmd(const char *packet, const size_t length)
 	else {
 		const char *const response = "Failed\n";
 		const size_t response_length = strlen(response);
-		char pbuf[response_length * 2 + 1];
+		char *pbuf = alloca(response_length * 2 + 1);
 		gdb_putpacket(hexify(pbuf, response, response_length), 2 * response_length);
 	}
 }
