@@ -544,7 +544,7 @@ static void adiv5_component_probe(
 	}
 
 #if defined(ENABLE_DEBUG)
-	char indent[recursion + 1U];
+	char *indent = alloca(recursion + 1U);
 
 	for (size_t i = 0; i < recursion; i++)
 		indent[i] = ' ';

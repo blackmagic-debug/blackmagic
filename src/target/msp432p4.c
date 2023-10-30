@@ -285,7 +285,7 @@ static bool msp432_flash_write(target_flash_s *f, target_addr_t dest, const void
 	DEBUG_WARN("Flash protect: 0x%08" PRIX32 "\n", target_mem_read32(t, mf->flash_protect_register));
 
 	/* Prepare input data */
-	uint32_t regs[t->regs_size / sizeof(uint32_t)]; // Use of VLA
+	uint32_t *regs = alloca(t->regs_size / sizeof(uint32_t)); // Use of VLA
 	target_regs_read(t, regs);
 	regs[0] = SRAM_WRITE_BUFFER; // Address of buffer to be flashed in R0
 	regs[1] = dest;              // Flash address to be write to in R1

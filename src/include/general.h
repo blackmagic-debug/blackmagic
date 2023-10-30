@@ -33,6 +33,11 @@
 // NOLINTNEXTLINE(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp)
 #define __USE_MINGW_ANSI_STDIO 1
 #endif
+#if defined(_WIN32) || defined(__CYGWIN__)
+#include <malloc.h>
+#else
+#include <alloca.h>
+#endif
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdlib.h>
