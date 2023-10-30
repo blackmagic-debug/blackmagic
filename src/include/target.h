@@ -30,6 +30,12 @@
 #include <stdint.h>
 #include <sys/types.h>
 
+#if defined(_MSC_VER)
+#include <BaseTsd.h>
+typedef SSIZE_T ssize_t;
+typedef int32_t mode_t;
+#endif /* _MSC_VER */
+
 typedef struct target target_s;
 typedef uint32_t target_addr_t;
 typedef struct target_controller target_controller_s;
