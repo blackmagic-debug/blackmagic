@@ -104,6 +104,236 @@ const jtag_dev_descr_s dev_descr[] = {
 		.idmask = 0xffffffffU,
 		.descr = "NXP: LPC17xx family.",
 	},
+	{
+		.idcode = 0x1396d093U,
+		.idmask = 0xffffffffU,
+		.descr = "Xilinx XCVU440.",
+		.ir_quirks =
+			{
+				.ir_length = 18U,
+				.ir_value = 0x11451U,
+			},
+	},
+	{
+		.idcode = 0x0484a093U,
+		.idmask = 0x0fffffffU,
+		.descr = "Xilinx, 6-bit IR.",
+		.ir_quirks =
+			{
+				.ir_length = 6U,
+				.ir_value = 1U,
+			},
+	},
+	{
+		.idcode = 0x04af2093U,
+		.idmask = 0x0fffffffU,
+		.descr = "Xilinx 12-bit IR.",
+		.ir_quirks =
+			{
+				.ir_length = 12U,
+				.ir_value = 1U,
+			},
+	},
+	{
+		.idcode = 0x036d9093U,
+		.idmask = 0x0fffffffU,
+		.descr = "Xilinx 22-bit IR.",
+		.ir_quirks =
+			{
+				.ir_length = 22U,
+				.ir_value = 1U,
+			},
+	},
+	{
+		.idcode = 0x036db093U,
+		.idmask = 0x0fffffffU,
+		.descr = "Xilinx 38-bit IR.",
+		.ir_quirks =
+			{
+				.ir_length = 38U,
+				.ir_value = 1U,
+			},
+	},
+	{
+		.idcode = 0x0396d093U,
+		.idmask = 0x0fffdfffU,
+		.descr = "Xilinx 18-bit IR.",
+		.ir_quirks =
+			{
+				.ir_length = 18U,
+				.ir_value = 1U,
+			},
+	},
+	{
+		.idcode = 0x03931093U,
+		.idmask = 0x0fffdfffU,
+		.descr = "Xilinx 18-bit IR.",
+		.ir_quirks =
+			{
+				.ir_length = 18U,
+				.ir_value = 1U,
+			},
+	},
+	{
+		.idcode = 0x04b79093U,
+		.idmask = 0x0fffbfffU,
+		.descr = "Xilinx 18-bit IR.",
+		.ir_quirks =
+			{
+				.ir_length = 18U,
+				.ir_value = 1U,
+			},
+	},
+	{
+		.idcode = 0x04ac0033U,
+		.idmask = 0x0fff9fffU,
+		.descr = "Xilinx 6-bit IR.",
+		.ir_quirks =
+			{
+				.ir_length = 6U,
+				.ir_value = 1U,
+			},
+	},
+	{
+		.idcode = 0x0380d093U,
+		.idmask = 0x0feddfffU,
+		.descr = "Xilinx 12-bit IR.",
+		.ir_quirks =
+			{
+				.ir_length = 12U,
+				.ir_value = 1U,
+			},
+	},
+	{
+		.idcode = 0x04600093U,
+		.idmask = 0x0fe53fffU,
+		.descr = "Xilinx 12-bit IR.",
+		.ir_quirks =
+			{
+				.ir_length = 12U,
+				.ir_value = 1U,
+			},
+	},
+	{
+		.idcode = 0x04b21093U,
+		.idmask = 0x0ffa1fffU,
+		.descr = "Xilinx 12-bit IR.",
+		.ir_quirks =
+			{
+				.ir_length = 12U,
+				.ir_value = 1U,
+			},
+	},
+	{
+		.idcode = 0x04b01093U,
+		.idmask = 0x0ffa1fffU,
+		.descr = "Xilinx 18-bit IR.",
+		.ir_quirks =
+			{
+				.ir_length = 18U,
+				.ir_value = 1U,
+			},
+	},
+	{
+		.idcode = 0x04b01093U,
+		.idmask = 0x0ff81fffU,
+		.descr = "Xilinx 18-bit IR.",
+		.ir_quirks =
+			{
+				.ir_length = 18U,
+				.ir_value = 1U,
+			},
+	},
+	{
+		.idcode = 0x04b01093U,
+		.idmask = 0x0ff09fffU,
+		.descr = "Xilinx 24-bit IR.",
+		.ir_quirks =
+			{
+				.ir_length = 24U,
+				.ir_value = 1U,
+			},
+	},
+	{
+		.idcode = 0x04d00093U,
+		.idmask = 0x0ffc0fffU,
+		.descr = "Xilinx 21-bit OR 14-bit IR.",
+		.ir_quirks =
+			{
+				.ir_length = 21U, // Not ideal but *shrug*
+				.ir_value = 1U,
+			},
+	},
+	{
+		.idcode = 0x03681093U,
+		.idmask = 0x0ff81fffU,
+		.descr = "Xilinx 24-bit IR.",
+		.ir_quirks =
+			{
+				.ir_length = 6U,
+				.ir_value = 1U,
+			},
+	},
+	{
+		.idcode = 0x04c00093U,
+		.idmask = 0x0fe88fffU,
+		.descr = "Xilinx 28-bit IR.",
+		.ir_quirks =
+			{
+				.ir_length = 28U,
+				.ir_value = 1U,
+			},
+	},
+	{
+		.idcode = 0x03800093U,
+		.idmask = 0x0fe80fffU,
+		.descr = "Xilinx 6-bit IR.",
+		.ir_quirks =
+			{
+				.ir_length = 6U,
+				.ir_value = 1U,
+			},
+	},
+	{
+		.idcode = 0x03600093U,
+		.idmask = 0x0fe00fffU,
+		.descr = "Xilinx 6-bit IR.",
+		.ir_quirks =
+			{
+				.ir_length = 6U,
+				.ir_value = 0x11U,
+			},
+	},
+	{
+		.idcode = 0x04c00093U,
+		.idmask = 0x0fe00fffU,
+		.descr = "Xilinx 6-bit IR.",
+		.ir_quirks =
+			{
+				.ir_length = 6U,
+				.ir_value = 1U,
+			},
+	},
+	{
+		.idcode = 0x04a00093U,
+		.idmask = 0x0fe00fffU,
+		.descr = "Xilinx 6-bit IR.",
+		.ir_quirks =
+			{
+				.ir_length = 6U,
+				.ir_value = 1U,
+			},
+	},
+	{
+		.idcode = 0x04600093U,
+		.idmask = 0x0fe00fffU,
+		.descr = "Xilinx 12-bit IR.",
+		.ir_quirks =
+			{
+				.ir_length = 12U,
+				.ir_value = 1U,
+			},
+	},
 #endif
 	{
 		.idcode = 0x00000093U,

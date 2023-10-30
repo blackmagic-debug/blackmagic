@@ -223,7 +223,6 @@ int gdb_main_loop(target_controller_s *tc, char *pbuf, size_t pbuf_size, size_t 
 
 		target_halt_resume(cur_target, single_step);
 		SET_RUN_STATE(true);
-		single_step = false;
 		/* fall through */
 	case '?': { /* '?': Request reason for target halt */
 		/*
@@ -438,7 +437,7 @@ static void exec_q_supported(const char *packet, const size_t length)
 	(void)packet;
 	(void)length;
 
-	/* 
+	/*
 	 * This is the first packet sent by GDB, so we can reset the NoAckMode flag here in case
 	 * the previous session was terminated abruptly with NoAckMode enabled
 	 */
@@ -527,9 +526,9 @@ static void exec_q_thread_info(const char *packet, const size_t length)
 		gdb_putpacketz("l");
 }
 
-/* 
+/*
  * GDB will send the packet 'QStartNoAckMode' to enable NoAckMode
- * 
+ *
  * To tell GDB to not use NoAckMode do the following before connnecting to the probe:
  * set remote noack-packet off
  */

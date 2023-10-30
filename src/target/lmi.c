@@ -22,7 +22,10 @@
  * This file implements TI/LMI LM3S target specific functions providing
  * the XML memory map and Flash memory programming.
  *
- * According to: TivaTM TM4C123GH6PM Microcontroller Datasheet
+ * According to:
+ *   * TivaTM TM4C123GH6PM Microcontroller Datasheet
+ *   * TM4C1294KCPDT Datasheet (https://www.ti.com/lit/ds/symlink/tm4c1294kcpdt.pdf)
+ *   * LM3S3748 Datasheet (https://www.ti.com/lit/ds/symlink/lm3s3748.pdf)
  */
 
 #include "general.h"
@@ -39,18 +42,51 @@
 #define LMI_SCB_DID0 (LMI_SCB_BASE + 0x000U)
 #define LMI_SCB_DID1 (LMI_SCB_BASE + 0x004U)
 
-#define DID0_CLASS_MASK           0x00ff0000U
-#define DID0_CLASS_STELLARIS_FURY 0x00010000U
-#define DID0_CLASS_STELLARIS_DUST 0x00030000U
-#define DID0_CLASS_TIVA_C123      0x00050000U
-#define DID0_CLASS_TIVA_C129      0x000a0000U
+/*
+ * Format for DID0:
+ *  vXccMMmm
+ *   * v (30:28)    DID format version (1)
+ *   * X (31,27:24) Reserved
+ *   * c (13:16)    Device class/product line
+ *   * M (15:8)     Device major revision (die revision)
+ *   * m (7:0)      Device minor revision (metal layer change)
+ *
+ * Full family names are:
+ *  * LM3Sxxx:         Sandstorm
+ *  * LM3Sxxxx:        Fury
+ *  * LM3Sxxxx:        DustDevil
+ *  * TM4C123/LM4Fxxx: Blizzard
+ *  * TM4C129:         Snowflake
+ */
+#define DID0_CLASS_MASK                0x00ff0000U
+#define DID0_CLASS_STELLARIS_SANDSTORM 0x00000000U
+#define DID0_CLASS_STELLARIS_FURY      0x00010000U
+#define DID0_CLASS_STELLARIS_DUSTDEVIL 0x00030000U
+#define DID0_CLASS_TIVA_BLIZZARD       0x00050000U
+#define DID0_CLASS_TIVA_SNOWFLAKE      0x000a0000U
 
+/*
+ * Format for DID1:
+ *  vfppcXii
+ *   * v (31:28) DID format version (0 for some LM3S (?), 1 for TM4C)
+ *   * f (27:24) Family (0 for all LM3S/TM4C)
+ *   * c (23:16) Part number
+ *   * c (15:13) Pin count
+ *   * X (12:8)  Reserved
+ *   * i (7:0)   Information:
+ *       (7:5)     Temperature range
+ *       (4:3)     Package
+ *       (2)       ROHS Status
+ *       (1:0)     Qualification status
+ * These part numbers here are the upper 16-bits of DID1
+ */
 #define DID1_LM3S3748      0x1049U
 #define DID1_LM3S5732      0x1096U
 #define DID1_LM3S8962      0x10a6U
 #define DID1_TM4C123GH6PM  0x10a1U
 #define DID1_TM4C1230C3PM  0x1022U
 #define DID1_TM4C1294NCPDT 0x101fU
+#define DID1_TM4C1294KCPDT 0x1034U
 
 #define LMI_FLASH_BASE 0x400fd000U
 #define LMI_FLASH_FMA  (LMI_FLASH_BASE + 0x000U)
@@ -129,6 +165,11 @@ bool tm4c_probe(target_s *const t, const uint16_t did1)
 		lmi_add_flash(t, 0x10000);
 		t->target_options |= CORTEXM_TOPT_INHIBIT_NRST;
 		break;
+	case DID1_TM4C1294KCPDT:
+		target_add_ram(t, 0x20000000, 0x40000);
+		lmi_add_flash(t, 0x80000);
+		t->target_options |= CORTEXM_TOPT_INHIBIT_NRST;
+		break;
 	case DID1_TM4C1294NCPDT:
 		target_add_ram(t, 0x20000000, 0x40000);
 		lmi_add_flash(t, 0x100000);
@@ -149,10 +190,10 @@ bool lmi_probe(target_s *const t)
 
 	switch (did0 & DID0_CLASS_MASK) {
 	case DID0_CLASS_STELLARIS_FURY:
-	case DID0_CLASS_STELLARIS_DUST:
+	case DID0_CLASS_STELLARIS_DUSTDEVIL:
 		return lm3s_probe(t, did1);
-	case DID0_CLASS_TIVA_C123:
-	case DID0_CLASS_TIVA_C129:
+	case DID0_CLASS_TIVA_BLIZZARD:
+	case DID0_CLASS_TIVA_SNOWFLAKE:
 		return tm4c_probe(t, did1);
 	default:
 		return false;

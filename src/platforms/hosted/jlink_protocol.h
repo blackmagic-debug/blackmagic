@@ -518,4 +518,4 @@ bool jlink_transfer_fixed_tms(uint16_t clock_cycles, bool final_tms, const uint8
 bool jlink_transfer_swd(uint16_t clock_cycles, jlink_swd_dir_e direction, const uint8_t *data_in, uint8_t *data_out);
 bool jlink_select_interface(const uint8_t interface);
 
-#endif /*PLATFORMS_HOSTED_JLINK_PROTOCOL_H*/
+#endif /* PLATFORMS_HOSTED_JLINK_PROTOCOL_H */

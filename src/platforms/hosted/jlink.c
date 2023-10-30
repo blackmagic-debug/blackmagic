@@ -228,7 +228,7 @@ static bool jlink_claim_interface(void)
 		return false;
 	}
 	for (size_t i = 0; i < descriptor->bNumEndpoints; i++) {
-		const libusb_endpoint_descriptor_s *endpoint = &descriptor->endpoint[i];
+		const libusb_endpoint_descriptor_s *const endpoint = &descriptor->endpoint[i];
 		if (endpoint->bEndpointAddress & LIBUSB_ENDPOINT_IN)
 			bmda_probe_info.usb_link->ep_rx = endpoint->bEndpointAddress;
 		else
@@ -240,7 +240,7 @@ static bool jlink_claim_interface(void)
 
 /* J-Link command functions and utils */
 
-static char *jlink_hw_type_to_string(const uint8_t hw_type)
+static const char *jlink_hw_type_to_string(const uint8_t hw_type)
 {
 	switch (hw_type) {
 	case JLINK_HARDWARE_VERSION_TYPE_JLINK:
@@ -258,7 +258,7 @@ static char *jlink_hw_type_to_string(const uint8_t hw_type)
 	}
 }
 
-static char *jlink_interface_to_string(const uint8_t interface)
+static const char *jlink_interface_to_string(const uint8_t interface)
 {
 	switch (interface) {
 	case JLINK_INTERFACE_JTAG:
@@ -406,7 +406,7 @@ static bool jlink_get_interfaces(void)
 static bool jlink_get_interface_frequency(const uint8_t interface)
 {
 	if (!(jlink.capabilities & JLINK_CAPABILITY_INTERFACE_FREQUENCY)) {
-		DEBUG_WARN("J-Link does not support interface frequency commands\n");
+		DEBUG_WARN("J-Link interface frequency commands are not available\n");
 		return false;
 	}
 
@@ -477,7 +477,7 @@ static bool jlink_get_interface_frequency(const uint8_t interface)
 static bool jlink_set_interface_frequency(const uint8_t interface, const uint32_t frequency)
 {
 	if (!(jlink.capabilities & JLINK_CAPABILITY_INTERFACE_FREQUENCY)) {
-		DEBUG_WARN("J-Link does not support interface frequency command\n");
+		DEBUG_WARN("J-Link interface frequency commands are not available\n");
 		return false;
 	}
 
@@ -550,8 +550,7 @@ static bool jlink_kickstart_power(void)
 {
 	if (!(jlink.capabilities & JLINK_CAPABILITY_POWER_STATE)) {
 		if (jlink.capabilities & JLINK_CAPABILITY_KICKSTART_POWER)
-			DEBUG_ERROR("J-Link does not support JLINK_CMD_POWER_GET_STATE command, but does support kickstart power"
-						", this is unexpected\n");
+			DEBUG_ERROR("J-Link power state command is not available, but kickstart power is, this is unexpected\n");
 		return false;
 	}
 
@@ -585,7 +584,7 @@ static bool jlink_set_kickstart_power(const bool enable)
  */
 bool jlink_init(void)
 {
-	usb_link_s *link = calloc(1, sizeof(usb_link_s));
+	usb_link_s *const link = calloc(1U, sizeof(usb_link_s));
 	if (!link)
 		return false;
 	bmda_probe_info.usb_link = link;

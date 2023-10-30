@@ -46,6 +46,14 @@ make clean
 make PROBE_HOST=blackpill-f4x1cx ALTERNATIVE_PINOUT=1
 ```
 
+or, if you are using a PCB (printed circuit board) as a shield for your Black Pill F4, run:
+
+```sh
+cd blackmagic
+make clean
+make PROBE_HOST=blackpill-f4x1cx SHIELD=1
+```
+
 ## Firmware upgrade with dfu-util
 
 - Install [dfu-util](https://dfu-util.sourceforge.net).

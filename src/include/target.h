@@ -78,7 +78,12 @@ typedef enum target_halt_reason {
 	TARGET_HALT_ERROR,       /* Failed to read target status */
 	TARGET_HALT_REQUEST,
 	TARGET_HALT_STEPPING,
+	/*
+	 * Used to both indicate that the target hit a breakpoint, and to
+	 * indicate that the target hit a watchpoint but we can't figure out which
+	 */
 	TARGET_HALT_BREAKPOINT,
+	/* Used to indicate the target hit a watchpoint and we know which */
 	TARGET_HALT_WATCHPOINT,
 	TARGET_HALT_FAULT,
 } target_halt_reason_e;

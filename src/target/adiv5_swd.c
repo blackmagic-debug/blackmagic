@@ -125,7 +125,7 @@ static void jtag_to_swd_sequence()
 	swd_line_reset_sequence(true);
 }
 
-bool firmware_dp_low_write(const uint16_t addr, const uint32_t data)
+bool adiv5_swd_write_no_check(const uint16_t addr, const uint32_t data)
 {
 	const uint8_t request = make_packet_request(ADIV5_LOW_WRITE, addr);
 	swd_proc.seq_out(request, 8U);
@@ -135,7 +135,7 @@ bool firmware_dp_low_write(const uint16_t addr, const uint32_t data)
 	return res != SWDP_ACK_OK;
 }
 
-static uint32_t firmware_dp_low_read(const uint16_t addr)
+uint32_t adiv5_swd_read_no_check(const uint16_t addr)
 {
 	const uint8_t request = make_packet_request(ADIV5_LOW_READ, addr);
 	swd_proc.seq_out(request, 8U);
@@ -156,8 +156,9 @@ bool adiv5_swd_scan(const uint32_t targetid)
 		return false;
 	}
 
-	dp->dp_low_write = firmware_dp_low_write;
-	dp->error = firmware_swdp_error;
+	dp->write_no_check = adiv5_swd_write_no_check;
+	dp->read_no_check = adiv5_swd_read_no_check;
+	dp->error = adiv5_swd_clear_error;
 	dp->dp_read = firmware_swdp_read;
 	dp->low_access = firmware_swdp_low_access;
 	dp->abort = firmware_swdp_abort;
@@ -238,7 +239,7 @@ bool adiv5_swd_scan(const uint32_t targetid)
 		bool scan_multidrop = targetid || dp->version >= 2U;
 
 #if PC_HOSTED == 1
-	if (scan_multidrop && !dp->dp_low_write) {
+	if (scan_multidrop && !dp->write_no_check) {
 		DEBUG_WARN("Discovered multi-drop enabled target but CMSIS_DAP < v1.2 cannot handle multi-drop\n");
 		scan_multidrop = false;
 	}
@@ -299,7 +300,7 @@ void adiv5_swd_multidrop_scan(adiv5_debug_port_s *const dp, const uint32_t targe
 		dp->fault = 0;
 
 		/* Select the instance */
-		dp->dp_low_write(ADIV5_DP_TARGETSEL,
+		dp->write_no_check(ADIV5_DP_TARGETSEL,
 			instance << ADIV5_DP_TARGETSEL_TINSTANCE_OFFSET |
 				(targetid & (ADIV5_DP_TARGETID_TDESIGNER_MASK | ADIV5_DP_TARGETID_TPARTNO_MASK)) | 1U);
 
@@ -337,7 +338,7 @@ uint32_t firmware_swdp_read(adiv5_debug_port_s *dp, uint16_t addr)
 	return adiv5_dp_recoverable_access(dp, ADIV5_LOW_READ, addr, 0);
 }
 
-uint32_t firmware_swdp_error(adiv5_debug_port_s *dp, const bool protocol_recovery)
+uint32_t adiv5_swd_clear_error(adiv5_debug_port_s *const dp, const bool protocol_recovery)
 {
 	/* Only do the comms reset dance on DPv2+ w/ fault or to perform protocol recovery. */
 	if ((dp->version >= 2U && dp->fault) || protocol_recovery) {
@@ -349,11 +350,11 @@ uint32_t firmware_swdp_error(adiv5_debug_port_s *dp, const bool protocol_recover
 		 */
 		swd_line_reset_sequence(true);
 		if (dp->version >= 2U)
-			firmware_dp_low_write(ADIV5_DP_TARGETSEL, dp->targetsel);
-		firmware_dp_low_read(ADIV5_DP_DPIDR);
+			adiv5_write_no_check(dp, ADIV5_DP_TARGETSEL, dp->targetsel);
+		adiv5_read_no_check(dp, ADIV5_DP_DPIDR);
 		/* Exception here is unexpected, so do not catch */
 	}
-	const uint32_t err = firmware_dp_low_read(ADIV5_DP_CTRLSTAT) &
+	const uint32_t err = adiv5_read_no_check(dp, ADIV5_DP_CTRLSTAT) &
 		(ADIV5_DP_CTRLSTAT_STICKYORUN | ADIV5_DP_CTRLSTAT_STICKYCMP | ADIV5_DP_CTRLSTAT_STICKYERR |
 			ADIV5_DP_CTRLSTAT_WDATAERR);
 	uint32_t clr = 0;
@@ -368,7 +369,7 @@ uint32_t firmware_swdp_error(adiv5_debug_port_s *dp, const bool protocol_recover
 		clr |= ADIV5_DP_ABORT_WDERRCLR;
 
 	if (clr)
-		firmware_dp_low_write(ADIV5_DP_ABORT, clr);
+		adiv5_write_no_check(dp, ADIV5_DP_ABORT, clr);
 	dp->fault = 0;
 	return err;
 }

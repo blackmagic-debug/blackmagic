@@ -679,6 +679,21 @@ static void decode_access(const uint16_t addr, const uint8_t rnw, const uint8_t 
 		decode_dp_access(addr & 0xffU, rnw, value);
 }
 
+bool adiv5_write_no_check(adiv5_debug_port_s *dp, uint16_t addr, const uint32_t value)
+{
+	decode_access(addr, ADIV5_LOW_WRITE, 0U, value);
+	DEBUG_PROTO("0x%08" PRIx32 "\n", value);
+	return dp->write_no_check(addr, value);
+}
+
+uint32_t adiv5_read_no_check(adiv5_debug_port_s *dp, uint16_t addr)
+{
+	uint32_t result = dp->read_no_check(addr);
+	decode_access(addr, ADIV5_LOW_READ, 0U, 0U);
+	DEBUG_PROTO("0x%08" PRIx32 "\n", result);
+	return result;
+}
+
 void adiv5_dp_write(adiv5_debug_port_s *dp, uint16_t addr, uint32_t value)
 {
 	decode_access(addr, ADIV5_LOW_WRITE, 0U, value);
