@@ -135,9 +135,9 @@ const command_s samd_cmd_list[] = {
 #define SAMD_DID_DEVSEL_POS    0U
 #define SAMD_DID_REVISION_MASK 0x0fU
 #define SAMD_DID_REVISION_POS  8U
-#define SAMD_DID_SERIES_MASK   0x1fU
+#define SAMD_DID_SERIES_MASK   0x3fU
 #define SAMD_DID_SERIES_POS    16U
-#define SAMD_DID_FAMILY_MASK   0x3fU
+#define SAMD_DID_FAMILY_MASK   0x1fU
 #define SAMD_DID_FAMILY_POS    23U
 
 /* Peripheral ID */
