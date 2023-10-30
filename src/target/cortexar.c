@@ -818,6 +818,9 @@ bool cortexa_probe(adiv5_access_port_s *const ap, const target_addr_t base_addre
 	case JEP106_MANUFACTURER_XILINX:
 		PROBE(zynq7_probe);
 		break;
+	case JEP106_MANUFACTURER_RENESAS:
+		PROBE(renesas_rz_probe);
+		break;
 	}
 
 #if PC_HOSTED == 0

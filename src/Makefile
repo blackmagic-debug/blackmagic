@@ -99,7 +99,9 @@ endif
 
 ifeq ($(ENABLE_CORTEXAR), 1)
 CFLAGS += -DENABLE_CORTEXAR
-SRC += cortexar.c
+SRC +=           \
+	cortexar.c   \
+	renesas_rz.c
 endif
 
 ifeq ($(ENABLE_RISCV), 1)
