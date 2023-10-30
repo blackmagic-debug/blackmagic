@@ -168,10 +168,25 @@ target_nxp = declare_dependency(
 	dependencies: target_cortexm,
 )
 
-target_renesas = declare_dependency(
+target_renesas_ra = declare_dependency(
 	sources: files('renesas_ra.c'),
 	dependencies: target_cortexm,
 )
+
+target_renesas_rz = declare_dependency(
+	sources: files('renesas_rz.c'),
+	dependencies: target_cortexar,
+)
+
+# If the Cortex-A/R target is not enabled, don't enable Renesas RZ part support
+if not is_firmware_build or enabled_targets.contains('cortexar')
+target_renesas = [
+	target_renesas_ra,
+	target_renesas_rz,
+]
+else
+target_renesas = target_renesas_ra
+endif
 
 target_rp = declare_dependency(
 	sources: files('rp.c'),
