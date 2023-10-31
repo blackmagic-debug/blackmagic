@@ -253,7 +253,6 @@ bool imxrt_probe(target_s *const target)
 		spi_flash_id_s flash_id;
 		imxrt_spi_read(target, SPI_FLASH_CMD_READ_JEDEC_ID, 0, &flash_id, sizeof(flash_id));
 
-		target->mass_erase = bmp_spi_mass_erase;
 		target->enter_flash_mode = imxrt_enter_flash_mode;
 		target->exit_flash_mode = imxrt_exit_flash_mode;
 

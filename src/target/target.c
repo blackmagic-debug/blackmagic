@@ -205,6 +205,12 @@ void target_add_flash(target_s *target, target_flash_s *flash)
 	target->flash = flash;
 }
 
+bool target_enter_flash_mode_stub(target_s *target)
+{
+	(void)target;
+	return true;
+}
+
 static ssize_t map_ram(char *buf, size_t len, target_ram_s *ram)
 {
 	return snprintf(buf, len, "<memory type=\"ram\" start=\"0x%08" PRIx32 "\" length=\"0x%" PRIx32 "\"/>", ram->start,
@@ -436,12 +442,8 @@ static bool target_cmd_mass_erase(target_s *const t, const int argc, const char 
 {
 	(void)argc;
 	(void)argv;
-	if (!t || !t->mass_erase) {
-		gdb_out("Mass erase not implemented for target_s");
-		return true;
-	}
 	gdb_out("Erasing device Flash: ");
-	const bool result = t->mass_erase(t);
+	const bool result = target_flash_mass_erase(t);
 	gdb_out("done\n");
 	return result;
 }

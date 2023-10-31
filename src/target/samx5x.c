@@ -52,7 +52,7 @@ static bool samx5x_cmd_ssb(target_s *t, int argc, const char **argv);
 static bool samx5x_cmd_update_user_word(target_s *t, int argc, const char **argv);
 
 /* (The SAM D1x/2x implementation of erase_all is reused as it's identical)*/
-bool samd_mass_erase(target_s *t);
+extern bool samd_mass_erase(target_s *t, platform_timeout_s *print_progess);
 #define samx5x_mass_erase samd_mass_erase
 
 #ifdef SAMX5X_EXTRA_CMDS
