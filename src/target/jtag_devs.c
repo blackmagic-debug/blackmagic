@@ -348,13 +348,17 @@ const jtag_dev_descr_s dev_descr[] = {
 				.ir_value = 1U,
 			},
 	},
-#ifdef ENABLE_DEBUG
+#ifdef ENABLE_RISCV
 	{
 		.idcode = 0x0000563dU,
 		.idmask = 0x0fffffffU,
+#ifdef ENABLE_DEBUG
 		.descr = "RISC-V debug v0.13.",
+#endif
 		.handler = riscv_jtag_dtm_handler,
 	},
+#endif
+#ifdef ENABLE_DEBUG
 	{
 		.idcode = 0x000007a3U,
 		.idmask = 0x00000fffU,
