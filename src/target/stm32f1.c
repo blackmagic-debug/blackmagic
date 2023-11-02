@@ -539,6 +539,7 @@ bool stm32f1_probe(target_s *target)
 		break;
 
 	default: /* NONE */
+		target->mass_erase = NULL;
 		return false;
 	}
 
