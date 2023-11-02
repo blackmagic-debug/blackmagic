@@ -128,6 +128,7 @@ bool stm32mp15_ca7_probe(target_s *const target)
 		return false;
 
 	target->driver = "STM32MP15";
+	target_add_commands(target, stm32mp15_cmd_list, target->driver);
 
 	/* Figure 4. Memory map from §2.5.2 in RM0436 rev 6, pg158 */
 	target_add_ram(target, STM32MP15_CA7_RETRAM_BASE, STM32MP15_RETRAM_SIZE);
