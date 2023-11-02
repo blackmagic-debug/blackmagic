@@ -78,7 +78,7 @@ const command_s stm32mp15_cmd_list[] = {
 static bool stm32mp15_attach(target_s *target);
 static void stm32mp15_detach(target_s *target);
 
-bool stm32mp15_cm4_probe(target_s *target)
+bool stm32mp15_cm4_probe(target_s *const target)
 {
 	if (target->part_id != ID_STM32MP15x && target->part_id != ID_STM32MP15x_ERRATA)
 		return false;
@@ -104,7 +104,7 @@ bool stm32mp15_cm4_probe(target_s *target)
 }
 
 #ifdef ENABLE_CORTEXAR
-bool stm32mp15_ca7_probe(target_s *target)
+bool stm32mp15_ca7_probe(target_s *const target)
 {
 	if (target->part_id != ID_STM32MP15x && target->part_id != ID_STM32MP15x_ERRATA)
 		return false;
@@ -126,7 +126,7 @@ bool stm32mp15_ca7_probe(target_s *target)
 }
 #endif
 
-static bool stm32mp15_attach(target_s *target)
+static bool stm32mp15_attach(target_s *const target)
 {
 	if (!cortexm_attach(target))
 		return false;
@@ -141,7 +141,7 @@ static bool stm32mp15_attach(target_s *target)
 	return true;
 }
 
-static void stm32mp15_detach(target_s *target)
+static void stm32mp15_detach(target_s *const target)
 {
 	stm32mp15_priv_s *priv = (stm32mp15_priv_s *)target->target_storage;
 	target_mem_write32(target, DBGMCU_CTRL, priv->dbgmcu_ctrl);
@@ -152,7 +152,7 @@ static void stm32mp15_detach(target_s *target)
  * Print the Unique device ID.
  * Can be reused for other STM32 devices with uid as parameter.
  */
-static bool stm32mp15_uid(target_s *target, int argc, const char **argv)
+static bool stm32mp15_uid(target_s *const target, const int argc, const char **const argv)
 {
 	(void)argc;
 	(void)argv;
@@ -175,7 +175,7 @@ static const struct {
 	{0x2001U, 'Z'},
 };
 
-static bool stm32mp15_cmd_rev(target_s *target, int argc, const char **argv)
+static bool stm32mp15_cmd_rev(target_s *const target, const int argc, const char **const argv)
 {
 	(void)argc;
 	(void)argv;
