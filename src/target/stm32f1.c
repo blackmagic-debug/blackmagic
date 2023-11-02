@@ -182,6 +182,7 @@ bool gd32f1_probe(target_s *target)
 	return true;
 }
 
+#ifdef ENABLE_RISCV
 /* Identify RISC-V GD32VF1 chips */
 bool gd32vf1_probe(target_s *const target)
 {
@@ -210,6 +211,7 @@ bool gd32vf1_probe(target_s *const target)
 
 	return true;
 }
+#endif
 
 static bool at32f40_detect(target_s *target, const uint16_t part_id)
 {
