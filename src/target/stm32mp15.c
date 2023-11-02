@@ -58,7 +58,7 @@
 
 /* Taken from DP_TARGETID.TPARTNO = 0x5000 in §66.8.3 of RM0436 rev 6, pg3669 */
 /* Taken from DBGMCU_IDC.DEV_ID = 0x500 in §66.10.9 of RM0436 rev 6, pg3825 */
-#define ID_STM32MP15x 0x5000U
+#define ID_STM32MP15x 0x500U
 /* Taken from CM4ROM_PIDRx in 2.3.21 of ES0438 rev 7, pg18 */
 #define ID_STM32MP15x_ERRATA 0x450U
 
@@ -78,9 +78,27 @@ const command_s stm32mp15_cmd_list[] = {
 static bool stm32mp15_attach(target_s *target);
 static void stm32mp15_detach(target_s *target);
 
+static bool stm32mp15_ident(target_s *const target, const bool cortexm)
+{
+	const adiv5_access_port_s *const ap = cortex_ap(target);
+	/* Check if the part's a STM32MP15 */
+	if (ap->partno != ID_STM32MP15x) {
+		/* If it's not a Cortex-M core or it doesn't match the errata ID code, return false */
+		if (!cortexm || ap->partno != ID_STM32MP15x_ERRATA)
+			return false;
+	}
+	/*
+	 * We now know the part is either a Cortex-M core with the errata code, or matched the main ID code.
+	 * Copy the correct (AP) part number over to the target structure to handle the difference between
+	 * JTAG and SWD as ST has a different ID in the DP TARGETID register vs the ROM tables, which needs ignoring.
+	 */
+	target->part_id = ap->partno;
+	return true;
+}
+
 bool stm32mp15_cm4_probe(target_s *const target)
 {
-	if (target->part_id != ID_STM32MP15x && target->part_id != ID_STM32MP15x_ERRATA)
+	if (!stm32mp15_ident(target, true))
 		return false;
 
 	target->driver = "STM32MP15";
@@ -106,7 +124,7 @@ bool stm32mp15_cm4_probe(target_s *const target)
 #ifdef ENABLE_CORTEXAR
 bool stm32mp15_ca7_probe(target_s *const target)
 {
-	if (target->part_id != ID_STM32MP15x && target->part_id != ID_STM32MP15x_ERRATA)
+	if (!stm32mp15_ident(target, false))
 		return false;
 
 	target->driver = "STM32MP15";
