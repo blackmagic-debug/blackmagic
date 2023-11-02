@@ -237,7 +237,6 @@ bool platform_buffer_write(const void *const data, const size_t length)
 			DEBUG_ERROR("Serial write failed %lu, written %zu\n", GetLastError(), offset);
 			return false;
 		}
-		offset += written;
 	}
 	return true;
 }
