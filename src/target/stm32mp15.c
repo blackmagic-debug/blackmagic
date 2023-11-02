@@ -50,8 +50,8 @@
 #define STM32MP15_DBGMCU_BASE 0x50081000U
 #define STM32MP15_UID_BASE    0x5c005234U
 
-#define DBGMCU_IDCODE        (STM32MP15_DBGMCU_BASE + 0U)
-#define DBGMCU_CTRL          (STM32MP15_DBGMCU_BASE + 4U)
+#define DBGMCU_IDCODE        (STM32MP15_DBGMCU_BASE + 0x000U)
+#define DBGMCU_CTRL          (STM32MP15_DBGMCU_BASE + 0x004U)
 #define DBGMCU_CTRL_DBGSLEEP (1U << 0U)
 #define DBGMCU_CTRL_DBGSTOP  (1U << 1U)
 #define DBGMCU_CTRL_DBGSTBY  (1U << 2U)
@@ -75,27 +75,8 @@ const command_s stm32mp15_cmd_list[] = {
 	{NULL, NULL, NULL},
 };
 
-static bool stm32mp15_attach(target_s *target)
-{
-	if (!cortexm_attach(target))
-		return false;
-
-	/* Save DBGMCU_CR to restore it when detaching */
-	stm32mp15_priv_s *const priv = (stm32mp15_priv_s *)target->target_storage;
-	priv->dbgmcu_ctrl = target_mem_read32(target, DBGMCU_CTRL);
-
-	/* Disable C-Sleep, C-Stop, C-Standby for debugging */
-	target_mem_write32(target, DBGMCU_CTRL, DBGMCU_CTRL_DBGSLEEP | DBGMCU_CTRL_DBGSTOP | DBGMCU_CTRL_DBGSTBY);
-
-	return true;
-}
-
-static void stm32mp15_detach(target_s *target)
-{
-	stm32mp15_priv_s *priv = (stm32mp15_priv_s *)target->target_storage;
-	target_mem_write32(target, DBGMCU_CTRL, priv->dbgmcu_ctrl);
-	cortexm_detach(target);
-}
+static bool stm32mp15_attach(target_s *target);
+static void stm32mp15_detach(target_s *target);
 
 bool stm32mp15_cm4_probe(target_s *target)
 {
@@ -144,6 +125,28 @@ bool stm32mp15_ca7_probe(target_s *target)
 	return true;
 }
 #endif
+
+static bool stm32mp15_attach(target_s *target)
+{
+	if (!cortexm_attach(target))
+		return false;
+
+	/* Save DBGMCU_CR to restore it when detaching */
+	stm32mp15_priv_s *const priv = (stm32mp15_priv_s *)target->target_storage;
+	priv->dbgmcu_ctrl = target_mem_read32(target, DBGMCU_CTRL);
+
+	/* Disable C-Sleep, C-Stop, C-Standby for debugging */
+	target_mem_write32(target, DBGMCU_CTRL, DBGMCU_CTRL_DBGSLEEP | DBGMCU_CTRL_DBGSTOP | DBGMCU_CTRL_DBGSTBY);
+
+	return true;
+}
+
+static void stm32mp15_detach(target_s *target)
+{
+	stm32mp15_priv_s *priv = (stm32mp15_priv_s *)target->target_storage;
+	target_mem_write32(target, DBGMCU_CTRL, priv->dbgmcu_ctrl);
+	cortexm_detach(target);
+}
 
 /*
  * Print the Unique device ID.
