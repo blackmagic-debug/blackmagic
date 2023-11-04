@@ -27,6 +27,8 @@
 #include "platform_support.h"
 #include "target_probe.h"
 
+#define TOPT_INHIBIT_NRST (1U << 0U)
+
 extern target_s *target_list;
 
 typedef enum flash_operation {

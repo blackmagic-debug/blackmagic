@@ -192,8 +192,6 @@ typedef struct riscv_hart {
 #define RV_CSR_MTVAL      0x343
 #define RV_CSR_MIP        0x344
 
-#define RV_TOPT_INHIBIT_NRST 0x00000001U
-
 void riscv_jtag_dtm_handler(uint8_t dev_index);
 void riscv_dmi_init(riscv_dmi_s *dmi);
 riscv_hart_s *riscv_hart_struct(target_s *target);
