@@ -847,7 +847,7 @@ static void riscv_reset(target_s *const target)
 	riscv_hart_s *const hart = riscv_hart_struct(target);
 	bool has_reset = false;
 	/* If the target does not have the nRST pin inhibited, use that to initiate reset */
-	if (!(target->target_options & RV_TOPT_INHIBIT_NRST)) {
+	if (!(target->target_options & TOPT_INHIBIT_NRST)) {
 		platform_nrst_set_val(true);
 		has_reset = riscv_dm_poll_state(hart->dbg_module, RV_DM_STAT_ALL_RESET);
 		platform_nrst_set_val(false);

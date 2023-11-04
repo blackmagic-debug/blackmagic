@@ -1169,7 +1169,7 @@ static void cortexar_reset(target_s *const target)
 	/* Read PRSR here to clear DBG_PRSR.SR before reset */
 	cortex_dbg_read32(target, CORTEXAR_DBG_PRSR);
 	/* If the physical reset pin is not inhibited, use it */
-	if (!(target->target_options & CORTEX_TOPT_INHIBIT_NRST)) {
+	if (!(target->target_options & TOPT_INHIBIT_NRST)) {
 		platform_nrst_set_val(true);
 		platform_nrst_set_val(false);
 		/* Precautionary delay as with the Cortex-M code for targets that take a hot minute to come back */
