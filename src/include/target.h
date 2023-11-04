@@ -44,6 +44,8 @@ bool jtag_scan(void);
 size_t target_foreach(void (*callback)(size_t index, target_s *target, void *context), void *context);
 void target_list_free(void);
 
+target_s *target_new(void);
+
 /* Attach/detach functions */
 target_s *target_attach(target_s *target, target_controller_s *controller);
 target_s *target_attach_n(size_t n, target_controller_s *controller);
