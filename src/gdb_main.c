@@ -540,6 +540,32 @@ static void exec_q_noackmode(const char *packet, const size_t length)
 	gdb_putpacketz("OK");
 }
 
+/*
+ * qAttached queries determine if GDB attached to an existing process, or a new one.
+ * What that means in practical terms, is whether the session ending should `k` or `D`
+ * (kill or detach) the target. A reply of '1' indicates existing and therefore `D`.
+ * A reply of '0' indicates a new process and therefore `k`.
+ *
+ * We use this distinction by replying with whether the target tollerates `target_reset()`
+ * or not, with targets that have nRST inhibited due to bad reset behaviour, using the '1'
+ * reply.
+ *
+ * The request can be optionally followed by a PID which should only happen when we advertise
+ * multiprocess extensions support. Therefore, if it is followed by a PID, we signal an error
+ * with an `Enn` reply packet as we do not support these extensions.
+ */
+static void exec_q_attached(const char *packet, const size_t length)
+{
+	/* If the packet has a trailing PID, or we're not attached to anything, error response */
+	if ((length && packet[0] == ':') || !cur_target)
+		gdb_putpacketz("E01");
+	/* Check if the target tollerates being reset */
+	else if (cur_target->target_options & TOPT_INHIBIT_NRST)
+		gdb_putpacketz("1"); /* It does not. */
+	else
+		gdb_putpacketz("0"); /* It does tolelrate reset */
+}
+
 static const cmd_executer_s q_commands[] = {
 	{"qRcmd,", exec_q_rcmd},
 	{"qSupported", exec_q_supported},
@@ -550,6 +576,7 @@ static const cmd_executer_s q_commands[] = {
 	{"qfThreadInfo", exec_q_thread_info},
 	{"qsThreadInfo", exec_q_thread_info},
 	{"QStartNoAckMode", exec_q_noackmode},
+	{"qAttached", exec_q_attached},
 	{NULL, NULL},
 };
 
