@@ -28,7 +28,6 @@
 #include "target_probe.h"
 
 extern target_s *target_list;
-target_s *target_new(void);
 
 typedef enum flash_operation {
 	FLASH_OPERATION_NONE,
