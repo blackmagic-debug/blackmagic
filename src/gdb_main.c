@@ -443,8 +443,9 @@ static void exec_q_supported(const char *packet, const size_t length)
 	 */
 	gdb_set_noackmode(false);
 
-	gdb_putpacket_f(
-		"PacketSize=%X;qXfer:memory-map:read+;qXfer:features:read+" GDB_QSUPPORTED_NOACKMODE, GDB_MAX_PACKET_SIZE);
+	gdb_putpacket_f("PacketSize=%X;qXfer:memory-map:read+;qXfer:features:read+;"
+					"vContSupported+" GDB_QSUPPORTED_NOACKMODE,
+		GDB_MAX_PACKET_SIZE);
 }
 
 static void exec_q_memory_map(const char *packet, const size_t length)
@@ -681,6 +682,48 @@ static void handle_v_packet(char *packet, const size_t plen)
 
 		} else
 			gdb_putpacketz("E01");
+
+	} else if (!strncmp(packet, "vCont", 5U)) {
+		/* Check if this is a "vCont?" packet */
+		if (packet[5] == '?') {
+			/*
+			 * It is, so reply with what we support doing when receiving the command version of this packet.
+			 *
+			 * We support 'c' (continue), 'C' (continue + signal), and 's' (step) actions.
+			 * If we didn't support both 'c' and 'C', then GDB would disable vCont usage even though
+			 * 'C' doesn't make any sense in our context.
+			 * See https://github.com/bminor/binutils-gdb/blob/de2efa143e3652d69c278dd1eb10a856593917c0/gdb/remote.c#L6526
+			 * for more details.
+			 *
+			 * TODO: Support the 't' (stop) action needed for non-stop debug so GDB can request a halt.
+			 */
+			gdb_putpacketz("vCont;c;C;s;t");
+			return;
+		}
+
+		/* Otherwise it's a standard `vCont` packet, check if we're presently attached to a target */
+		if (!cur_target) {
+			gdb_putpacketz("E01");
+			return;
+		}
+
+		bool single_step = false;
+		switch (packet[6]) {
+		case 's': /* 's': Single step */
+			single_step = true;
+			/* fall through */
+		case 'c': /* 'c': Continue */
+		case 'C': /* 'C sig': Continue with signal */
+			if (!cur_target) {
+				gdb_putpacketz("X1D");
+				break;
+			}
+
+			target_halt_resume(cur_target, single_step);
+			SET_RUN_STATE(true);
+			gdb_target_running = true;
+			break;
+		}
 
 	} else if (sscanf(packet, "vFlashErase:%08" PRIx32 ",%08" PRIx32, &addr, &len) == 2) {
 		/* Erase Flash Memory */
