@@ -295,9 +295,16 @@ static bool jlink_get_version(void)
 	if (version_length > sizeof(jlink.fw_version))
 		return false;
 
-	/* Read vesion string directly into jlink.version */
+	/* Read version string directly into jlink.version */
 	bmda_usb_transfer(bmda_probe_info.usb_link, NULL, 0, jlink.fw_version, version_length, JLINK_USB_TIMEOUT);
-	jlink.fw_version[version_length - 1U] = '\0'; /* Ensure null termination */
+	/* Ensure null termination */
+	char *const null_termination = jlink.fw_version + version_length - 1U;
+	*null_termination = '\0';
+
+	/* Replace NULL separating version and copyright string, if it exists */
+	char *const null_separator = strchr(jlink.fw_version, '\0');
+	if (null_separator != NULL && null_separator != null_termination)
+		*null_separator = '\n';
 
 	DEBUG_INFO("Firmware version: %s\n", jlink.fw_version);
 
