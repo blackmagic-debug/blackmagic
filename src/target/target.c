@@ -437,7 +437,7 @@ static bool target_cmd_mass_erase(target_s *const t, const int argc, const char 
 	(void)argc;
 	(void)argv;
 	if (!t || !t->mass_erase) {
-		gdb_out("Mass erase not implemented for target_s");
+		gdb_out("Mass erase not implemented for target\n");
 		return true;
 	}
 	gdb_out("Erasing device Flash: ");
@@ -449,9 +449,9 @@ static bool target_cmd_mass_erase(target_s *const t, const int argc, const char 
 static bool target_cmd_range_erase(target_s *const t, const int argc, const char **const argv)
 {
 	if (argc < 3) {
-		gdb_out("usage: monitor erase_range <address> <count>");
-		gdb_out("\t<address> is an address in the first page to erase");
-		gdb_out("\t<count> is the number bytes after that to erase, rounded to the next higher whole page");
+		gdb_out("usage: monitor erase_range <address> <count>\n");
+		gdb_out("\t<address> is an address in the first page to erase\n");
+		gdb_out("\t<count> is the number bytes after that to erase, rounded to the next higher whole page\n");
 		return true;
 	}
 	const uint32_t addr = strtoul(argv[1], NULL, 0);
