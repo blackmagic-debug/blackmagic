@@ -317,6 +317,22 @@ static bool jlink_get_version(void)
 	return true;
 }
 
+static bool jlink_get_extended_capabilities(void)
+{
+	uint8_t buffer[32U];
+	if (!jlink_simple_query(JLINK_CMD_INFO_GET_PROBE_EXTENDED_CAPABILITIES, buffer, sizeof(buffer)))
+		return false;
+
+	uint32_t ext_caps[4];
+	for (size_t i = 0; i < 4; i++)
+		ext_caps[i] = read_le4(buffer, i * 4U);
+
+	DEBUG_INFO("Extended capabilities: 0x%08" PRIx32, ext_caps[0]);
+	DEBUG_INFO(" 0x%08" PRIx32 " 0x%08" PRIx32 " 0x%08" PRIx32 "\n", ext_caps[1], ext_caps[2], ext_caps[3]);
+
+	return true;
+}
+
 static bool jlink_get_capabilities(void)
 {
 	uint8_t buffer[4U];
@@ -324,8 +340,10 @@ static bool jlink_get_capabilities(void)
 		return false;
 
 	jlink.capabilities = read_le4(buffer, 0);
-	DEBUG_INFO("Capabilities: 0x%08" PRIx32 "\n", jlink.capabilities);
+	if (jlink.capabilities & JLINK_CAPABILITY_EXTENDED_CAPABILITIES)
+		return jlink_get_extended_capabilities();
 
+	DEBUG_INFO("Capabilities: 0x%08" PRIx32 "\n", jlink.capabilities);
 	return true;
 }
 
