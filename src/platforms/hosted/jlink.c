@@ -137,10 +137,17 @@ bool jlink_transfer(const uint16_t clock_cycles, const uint8_t *const tms, const
 	/* Copy in the TDI values to transmit (if present) */
 	if (tdi)
 		memcpy(buffer + 4U + byte_count, tdi, byte_count);
-	/* Send the resulting transaction and try to read back the response data */
-	if (bmda_usb_transfer(bmda_probe_info.usb_link, buffer, sizeof(*header) + (byte_count * 2U), buffer, byte_count,
-			JLINK_USB_TIMEOUT) < 0 ||
-		/* Try to read back the transaction return code */
+	/*
+	 * Send the resulting transaction and try to read back the response data (including the response code first try),
+	 * because V8 and newer adapters, once touched by libjlinkarm.so (via Commander or else) on Linux hosts,
+	 * start returning the transaction status code *in the same packet*.
+	 */
+	const ssize_t bytes_received = bmda_usb_transfer(bmda_probe_info.usb_link, buffer,
+		sizeof(*header) + (byte_count * 2U), buffer, byte_count + 1U, JLINK_USB_TIMEOUT);
+	if (bytes_received < 0)
+		return false;
+	/* If the first read didn't return the transaction return code, try to read it back separately */
+	if (bytes_received < (ssize_t)byte_count + 1 &&
 		bmda_usb_transfer(bmda_probe_info.usb_link, NULL, 0, buffer + byte_count, 1U, JLINK_USB_TIMEOUT) < 0)
 		return false;
 	/* Copy out the response into the TDO buffer (if present) */
