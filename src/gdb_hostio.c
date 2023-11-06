@@ -28,20 +28,20 @@ int hostio_reply(target_controller_s *const tc, char *const pbuf, const int len)
 {
 	(void)len;
 
-	/* 
+	/*
 	 * File-I/O Remote Protocol Extension
 	 * See https://sourceware.org/gdb/onlinedocs/gdb/Protocol-Basics.html#Protocol-Basics
-	 * 
+	 *
 	 * This handles the F Reply Packet, sent by GDB after handling the File-I/O Request Packet.
-	 * 
+	 *
 	 * The F reply packet consists of the following:
-	 * 
+	 *
 	 * - retcode, the return code of the system call as hexadecimal value.
 	 * - errno, the errno set by the call, in protocol-specific representation.
 	 * 		Can be omitted if the call was successful.
 	 * - Ctrl-C flag, sent only if user requested a break.
 	 * 		In this case, errno must be sent as well, even if the call was successful.
-	 * 		The Ctrl-C flag itself consists of the character ‘C’: 
+	 * 		The Ctrl-C flag itself consists of the character ‘C’:
 	 */
 
 	const bool retcode_is_negative = pbuf[1U] == '-';
@@ -52,7 +52,7 @@ int hostio_reply(target_controller_s *const tc, char *const pbuf, const int len)
 	const int items = sscanf(pbuf + (retcode_is_negative ? 2U : 1U), "%x,%x,%c", &retcode, &errno_, &ctrl_c_flag);
 
 	if (items < 1) {
-		/* 
+		/*
 		 * Something went wrong with the sscanf or the packet format, avoid UB
 		 * FIXME: how do we properly handle this?
 		 */
