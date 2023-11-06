@@ -90,7 +90,7 @@ static int hostio_get_response(target_controller_s *const tc)
 /* Interface to host system calls */
 int hostio_open(target_controller_s *tc, target_addr_t path, size_t path_len, target_open_flags_e flags, mode_t mode)
 {
-	gdb_putpacket_f("Fopen,%08X/%X,%08X,%08X", path, path_len, flags, mode);
+	gdb_putpacket_f("Fopen,%08" PRIX32 "/%08" PRIX32 ",%08X,%08" PRIX32, path, (uint32_t)path_len, flags, mode);
 	return hostio_get_response(tc);
 }
 
@@ -102,49 +102,50 @@ int hostio_close(target_controller_s *tc, int fd)
 
 int hostio_read(target_controller_s *tc, int fd, target_addr_t buf, unsigned int count)
 {
-	gdb_putpacket_f("Fread,%08X,%08X,%08X", fd, buf, count);
+	gdb_putpacket_f("Fread,%08X,%08" PRIX32 ",%08X", fd, buf, count);
 	return hostio_get_response(tc);
 }
 
 int hostio_write(target_controller_s *tc, int fd, target_addr_t buf, unsigned int count)
 {
-	gdb_putpacket_f("Fwrite,%08X,%08X,%08X", fd, buf, count);
+	gdb_putpacket_f("Fwrite,%08X,%08" PRIX32 ",%08X", fd, buf, count);
 	return hostio_get_response(tc);
 }
 
 long hostio_lseek(target_controller_s *tc, int fd, long offset, target_seek_flag_e flag)
 {
-	gdb_putpacket_f("Flseek,%08X,%08X,%08X", fd, offset, flag);
+	gdb_putpacket_f("Flseek,%08X,%08lX,%08X", fd, offset, flag);
 	return hostio_get_response(tc);
 }
 
 int hostio_rename(target_controller_s *tc, target_addr_t oldpath, size_t old_len, target_addr_t newpath, size_t new_len)
 {
-	gdb_putpacket_f("Frename,%08X/%X,%08X/%X", oldpath, old_len, newpath, new_len);
+	gdb_putpacket_f("Frename,%08" PRIX32 "/%08" PRIX32 ",%08" PRIX32 "/%08" PRIX32, oldpath, (uint32_t)old_len, newpath,
+		(uint32_t)new_len);
 	return hostio_get_response(tc);
 }
 
 int hostio_unlink(target_controller_s *tc, target_addr_t path, size_t path_len)
 {
-	gdb_putpacket_f("Funlink,%08X/%X", path, path_len);
+	gdb_putpacket_f("Funlink,%08" PRIX32 "/%08" PRIX32, path, (uint32_t)path_len);
 	return hostio_get_response(tc);
 }
 
 int hostio_stat(target_controller_s *tc, target_addr_t path, size_t path_len, target_addr_t buf)
 {
-	gdb_putpacket_f("Fstat,%08X/%X,%08X", path, path_len, buf);
+	gdb_putpacket_f("Fstat,%08" PRIX32 "/%08" PRIX32 ",%08" PRIX32, path, (uint32_t)path_len, buf);
 	return hostio_get_response(tc);
 }
 
 int hostio_fstat(target_controller_s *tc, int fd, target_addr_t buf)
 {
-	gdb_putpacket_f("Ffstat,%X,%08X", fd, buf);
+	gdb_putpacket_f("Ffstat,%X,%08" PRIX32, fd, buf);
 	return hostio_get_response(tc);
 }
 
 int hostio_gettimeofday(target_controller_s *tc, target_addr_t tv, target_addr_t tz)
 {
-	gdb_putpacket_f("Fgettimeofday,%08X,%08X", tv, tz);
+	gdb_putpacket_f("Fgettimeofday,%08" PRIX32 ",%08" PRIX32, tv, tz);
 	return hostio_get_response(tc);
 }
 
@@ -156,6 +157,6 @@ int hostio_isatty(target_controller_s *tc, int fd)
 
 int hostio_system(target_controller_s *tc, target_addr_t cmd, size_t cmd_len)
 {
-	gdb_putpacket_f("Fsystem,%08X/%X", cmd, cmd_len);
+	gdb_putpacket_f("Fsystem,%08" PRIX32 "/%08" PRIX32, cmd, (uint32_t)cmd_len);
 	return hostio_get_response(tc);
 }
