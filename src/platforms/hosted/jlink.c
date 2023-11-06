@@ -46,7 +46,7 @@
 typedef struct jlink {
 	char fw_version[256U];         /* Firmware version string */
 	uint32_t hw_version;           /* Hardware version */
-	uint32_t capabilities;         /* Bitfield of supported capabilities */
+	uint32_t capabilities[4];      /* Bitfield of supported capabilities */
 	uint32_t available_interfaces; /* Bitfield of available interfaces */
 
 	struct jlink_interface_frequency {
@@ -302,7 +302,7 @@ static bool jlink_get_version(void)
 	DEBUG_INFO("Firmware version: %s\n", jlink.fw_version);
 
 	/* Read the hardware version if supported */
-	if (jlink.capabilities & JLINK_CAPABILITY_HARDWARE_VERSION) {
+	if (jlink.capabilities[0] & JLINK_CAPABILITY_HARDWARE_VERSION) {
 		if (!jlink_simple_query(JLINK_CMD_INFO_GET_HARDWARE_VERSION, buffer, 4U))
 			return false;
 
@@ -323,12 +323,12 @@ static bool jlink_get_extended_capabilities(void)
 	if (!jlink_simple_query(JLINK_CMD_INFO_GET_PROBE_EXTENDED_CAPABILITIES, buffer, sizeof(buffer)))
 		return false;
 
-	uint32_t ext_caps[4];
-	for (size_t i = 0; i < 4; i++)
-		ext_caps[i] = read_le4(buffer, i * 4U);
-
-	DEBUG_INFO("Extended capabilities: 0x%08" PRIx32, ext_caps[0]);
-	DEBUG_INFO(" 0x%08" PRIx32 " 0x%08" PRIx32 " 0x%08" PRIx32 "\n", ext_caps[1], ext_caps[2], ext_caps[3]);
+	DEBUG_INFO("Extended capabilities:");
+	for (size_t i = 0; i < 4; i++) {
+		jlink.capabilities[i] = read_le4(buffer, i * 4U);
+		DEBUG_INFO(" 0x%08" PRIx32, jlink.capabilities[i]);
+	}
+	DEBUG_INFO("\n");
 
 	return true;
 }
@@ -339,11 +339,11 @@ static bool jlink_get_capabilities(void)
 	if (!jlink_simple_query(JLINK_CMD_INFO_GET_PROBE_CAPABILITIES, buffer, sizeof(buffer)))
 		return false;
 
-	jlink.capabilities = read_le4(buffer, 0);
-	if (jlink.capabilities & JLINK_CAPABILITY_EXTENDED_CAPABILITIES)
+	jlink.capabilities[0] = read_le4(buffer, 0);
+	if (jlink.capabilities[0] & JLINK_CAPABILITY_EXTENDED_CAPABILITIES)
 		return jlink_get_extended_capabilities();
 
-	DEBUG_INFO("Capabilities: 0x%08" PRIx32 "\n", jlink.capabilities);
+	DEBUG_INFO("Capabilities: 0x%08" PRIx32 "\n", jlink.capabilities[0]);
 	return true;
 }
 
@@ -355,7 +355,7 @@ static inline bool jlink_interface_available(const uint8_t interface)
 static uint8_t jlink_selected_interface(void)
 {
 	/* V5.4 does only JTAG and hangs on 0xc7 commands */
-	if (!(jlink.capabilities & JLINK_CAPABILITY_INTERFACES))
+	if (!(jlink.capabilities[0] & JLINK_CAPABILITY_INTERFACES))
 		return JLINK_INTERFACE_JTAG;
 
 	uint8_t buffer[4U];
@@ -395,7 +395,7 @@ static bool jlink_get_interfaces(void)
 	 * and is known to not implement SWD or anything else besides JTAG.
 	 * Check the dedicated capability bit
 	 */
-	if (!(jlink.capabilities & JLINK_CAPABILITY_INTERFACES))
+	if (!(jlink.capabilities[0] & JLINK_CAPABILITY_INTERFACES))
 		jlink.available_interfaces = JLINK_INTERFACE_AVAILABLE(JLINK_INTERFACE_JTAG);
 	else {
 		if (!jlink_simple_request_8(JLINK_CMD_INTERFACE_GET, JLINK_INTERFACE_GET_AVAILABLE, buffer, sizeof(buffer)))
@@ -423,7 +423,7 @@ static bool jlink_get_interfaces(void)
 
 static bool jlink_get_interface_frequency(const uint8_t interface)
 {
-	if (!(jlink.capabilities & JLINK_CAPABILITY_INTERFACE_FREQUENCY)) {
+	if (!(jlink.capabilities[0] & JLINK_CAPABILITY_INTERFACE_FREQUENCY)) {
 		DEBUG_WARN("J-Link interface frequency commands are not available\n");
 		return false;
 	}
@@ -494,7 +494,7 @@ static bool jlink_get_interface_frequency(const uint8_t interface)
 
 static bool jlink_set_interface_frequency(const uint8_t interface, const uint32_t frequency)
 {
-	if (!(jlink.capabilities & JLINK_CAPABILITY_INTERFACE_FREQUENCY)) {
+	if (!(jlink.capabilities[0] & JLINK_CAPABILITY_INTERFACE_FREQUENCY)) {
 		DEBUG_WARN("J-Link interface frequency commands are not available\n");
 		return false;
 	}
@@ -566,8 +566,8 @@ static uint16_t jlink_target_voltage(void)
 
 static bool jlink_kickstart_power(void)
 {
-	if (!(jlink.capabilities & JLINK_CAPABILITY_POWER_STATE)) {
-		if (jlink.capabilities & JLINK_CAPABILITY_KICKSTART_POWER)
+	if (!(jlink.capabilities[0] & JLINK_CAPABILITY_POWER_STATE)) {
+		if (jlink.capabilities[0] & JLINK_CAPABILITY_KICKSTART_POWER)
 			DEBUG_ERROR("J-Link power state command is not available, but kickstart power is, this is unexpected\n");
 		return false;
 	}
@@ -588,7 +588,7 @@ static bool jlink_set_kickstart_power(const bool enable)
 	 * Exposed on pin 19 of the J-Link 20 pin connector
 	 */
 
-	if (!(jlink.capabilities & JLINK_CAPABILITY_KICKSTART_POWER))
+	if (!(jlink.capabilities[0] & JLINK_CAPABILITY_KICKSTART_POWER))
 		return false;
 
 	return jlink_simple_request_8(JLINK_CMD_POWER_SET_KICKSTART, enable ? JLINK_POWER_KICKSTART_ENABLE : 0, NULL, 0);
