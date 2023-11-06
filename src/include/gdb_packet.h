@@ -45,6 +45,6 @@ void gdb_put_notification(const char *packet, size_t size);
 
 void gdb_out(const char *buf);
 void gdb_voutf(const char *fmt, va_list);
-void gdb_outf(const char *fmt, ...);
+void gdb_outf(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
 
 #endif /* INCLUDE_GDB_PACKET_H */
