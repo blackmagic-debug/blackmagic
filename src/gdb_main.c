@@ -496,7 +496,7 @@ static void exec_q_crc(const char *packet, const size_t length)
 		if (!generic_crc32(cur_target, &crc, addr, addr_length))
 			gdb_putpacketz("E03");
 		else
-			gdb_putpacket_f("C%lx", crc);
+			gdb_putpacket_f("C%" PRIx32, crc);
 	}
 }
 
@@ -846,7 +846,7 @@ void gdb_poll_target(void)
 		gdb_putpacket_f("T%02X", GDB_SIGINT);
 		break;
 	case TARGET_HALT_WATCHPOINT:
-		gdb_putpacket_f("T%02Xwatch:%08X;", GDB_SIGTRAP, watch);
+		gdb_putpacket_f("T%02Xwatch:%08" PRIX32 ";", GDB_SIGTRAP, watch);
 		break;
 	case TARGET_HALT_FAULT:
 		gdb_putpacket_f("T%02X", GDB_SIGSEGV);
