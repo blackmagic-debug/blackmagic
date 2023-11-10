@@ -217,7 +217,7 @@ uint32_t riscv32_pack_data(const void *const src, const uint8_t access_width)
 static void riscv32_abstract_mem_read(
 	riscv_hart_s *const hart, void *const dest, const target_addr_t src, const size_t len)
 {
-	/* Figure out the maxmial width of access to perform, up to the bitness of the target */
+	/* Figure out the maximal width of access to perform, up to the bitness of the target */
 	const uint8_t access_width = riscv_mem_access_width(hart, src, len);
 	const uint8_t access_length = 1U << access_width;
 	/* Build the access command */
