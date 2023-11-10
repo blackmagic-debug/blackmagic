@@ -283,14 +283,29 @@ static void riscv32_sysbus_mem_write(
 void riscv32_mem_read(target_s *const target, void *const dest, const target_addr_t src, const size_t len)
 {
 	/* If we're asked to do a 0-byte read, do nothing */
-	if (!len)
+	if (!len) {
+		DEBUG_PROTO("%s: @ %08" PRIx32 " len %zu\n", __func__, src, len);
 		return;
+	}
 
 	riscv_hart_s *const hart = riscv_hart_struct(target);
 	if (hart->flags & RV_HART_FLAG_MEMORY_SYSBUS)
 		riscv32_sysbus_mem_read(hart, dest, src, len);
 	else
 		riscv32_abstract_mem_read(hart, dest, src, len);
+
+#if ENABLE_DEBUG
+	DEBUG_PROTO("%s: @ %08" PRIx32 " len %zu:", __func__, src, len);
+	const uint8_t *const data = (const uint8_t *)dest;
+	for (size_t offset = 0; offset < len; ++offset) {
+		if (offset == 16U)
+			break;
+		DEBUG_PROTO(" %02x", data[offset]);
+	}
+	if (len > 16U)
+		DEBUG_PROTO(" ...");
+	DEBUG_PROTO("\n");
+#endif
 }
 
 void riscv32_mem_write(target_s *const target, const target_addr_t dest, const void *const src, const size_t len)
