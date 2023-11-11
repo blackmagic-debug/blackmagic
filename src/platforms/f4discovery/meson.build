@@ -34,32 +34,34 @@ probe_f4discovery_sources = files('platform.c')
 
 probe_f4discovery_dfu_sources = files('usbdfu.c')
 
-probe_f4discovery_args = []
+probe_f4discovery_dfu_serial_length = get_option('bmd_bootloader') ? '9' : '13'
 
-probe_f4discovery_link_args = [
+probe_f4discovery_args = [
+	f'-DDFU_SERIAL_LENGTH=@probe_f4discovery_dfu_serial_length@',
+]
+
+probe_f4discovery_commonn_link_args = [
 	'-L@0@'.format(meson.current_source_dir()),
 	'-T@0@'.format('f4discovery.ld'),
 ]
 
-probe_f4discovery_args += [
-	'-DDFU_SERIAL_LENGTH=9',
-]
-probe_f4discovery_link_args += [
-	'-Wl,-Ttext=0x8004000',
-]
-
-# TODO: support bootloader choice
-# if get_option('bmd_bootloader')
-# else
-# 	probe_f4discovery_args += [
-# 		'-DDFU_SERIAL_LENGTH=13',
-# 	]
-# endif
+probe_f4discovery_link_args = []
+if bmd_bootloader
+	probe_f4discovery_link_args += ['-Wl,-Ttext=0x8004000']
+endif
 
 probe_host = declare_dependency(
 	include_directories: probe_f4discovery_includes,
 	sources: probe_f4discovery_sources,
 	compile_args: probe_f4discovery_args,
-	link_args: probe_f4discovery_link_args,
+	link_args: [probe_f4discovery_commonn_link_args, probe_f4discovery_link_args],
 	dependencies: [platform_common, platform_stm32f4, fixme_platform_stm32_traceswo],
+)
+
+probe_bootloader = declare_dependency(
+	include_directories: [platform_common_includes, probe_f4discovery_includes],
+	sources: probe_f4discovery_dfu_sources,
+	compile_args: probe_f4discovery_args,
+	link_args: probe_f4discovery_commonn_link_args,
+	dependencies: platform_stm32f4_dfu,
 )
