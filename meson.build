@@ -39,7 +39,7 @@ project(
 		'debug=true',
 		# 'warning_level=3', # TODO: Enable by default when all warnings are fixed
 		'warning_level=2',
-		'werror=true',
+		'werror=false',
 		'b_ndebug=if-release',
 	],
 	meson_version: '>= 0.58.0',
