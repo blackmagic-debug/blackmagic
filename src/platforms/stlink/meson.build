@@ -35,32 +35,31 @@ probe_stlink_sources = files(
 	'stlink_common.c',
 )
 
-probe_stlink_dfu_sources = files('usbdfu.c')
+probe_stlink_dfu_sources = files(
+	'stlink_common.c',
+	'usbdfu.c',
+)
 
-probe_stlink_args = []
+bmd_bootloader = get_option('bmd_bootloader')
 
-probe_stlink_link_args = [
+probe_stlink_dfu_serial_length = bmd_bootloader ? '9' : '25'
+probe_stlink_load_address = bmd_bootloader ? '0x8002000' : '0x8004000'
+
+probe_stlink_args = [
+	f'-DDFU_SERIAL_LENGTH=@probe_stlink_dfu_serial_length@',
+]
+if not bmd_bootloader
+	probe_stlink_args += ['-DST_BOOTLOADER']
+endif
+
+probe_stlink_common_link_args = [
 	'-L@0@'.format(meson.current_source_dir()),
 	'-T@0@'.format('stlink.ld'),
 ]
 
-probe_stlink_args += [
-	'-DDFU_SERIAL_LENGTH=9',
+probe_stlink_link_args = [
+	f'-Wl,-Ttext=@probe_stlink_load_address@',
 ]
-probe_stlink_link_args += [
-	'-Wl,-Ttext=0x8002000',
-]
-
-# TODO: support bootloader choice
-# if get_option('bmd_bootloader')
-# else
-# 	probe_stlink_args += [
-# 		'-DDFU_SERIAL_LENGTH=25',
-# 	]
-# 	probe_stlink_link_args += [
-# 		'-Wl,-Ttext=0x8004000',
-# 	]
-# endif
 
 if probe == 'bluepill'
 	probe_stlink_args += ['-DBLUEPILL=1']
@@ -78,6 +77,14 @@ probe_host = declare_dependency(
 	include_directories: probe_stlink_includes,
 	sources: probe_stlink_sources,
 	compile_args: probe_stlink_args,
-	link_args: probe_stlink_link_args,
+	link_args: [probe_stlink_common_link_args, probe_stlink_link_args],
 	dependencies: probe_stlink_dependencies,
+)
+
+probe_bootloader = declare_dependency(
+	include_directories: [platform_common_includes, probe_stlink_includes],
+	sources: probe_stlink_dfu_sources,
+	compile_args: probe_stlink_args,
+	link_args: probe_stlink_common_link_args,
+	dependencies: platform_stm32f1_dfu,
 )
