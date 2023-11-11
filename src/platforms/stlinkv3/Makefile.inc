@@ -4,13 +4,13 @@ OBJCOPY = $(CROSS_COMPILE)objcopy
 
 OPT_FLAGS = -Og -g
 CFLAGS += -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard \
-	-DSTM32F7 -DDFU_SERIAL_LENGTH=25 -I../libopencm3/include \
+	-DSTM32F7 -DDFU_SERIAL_LENGTH=25 -I../deps/libopencm3/include \
 	-I platforms/common/stm32
 LDFLAGS_BOOT := $(LDFLAGS) -mfpu=fpv5-sp-d16 -mfloat-abi=hard \
 	--specs=nano.specs -lopencm3_stm32f7 \
 	-Wl,-T,platforms/stlinkv3/stlinkv3.ld -nostartfiles -lc \
 	-Wl,-Map=mapfile -mthumb -mcpu=cortex-m7 -Wl,-gc-sections \
-	-L../libopencm3/lib
+	-L../deps/libopencm3/lib
 
 ifeq ($(NO_BOOTLOADER), 1)
 APP_START = 0x08000000
@@ -52,7 +52,7 @@ endif
 
 blackmagic.elf: libopencm3_stm32f7
 libopencm3_stm32f7:
-	$(Q)$(MAKE) $(MFLAGS) -C ../libopencm3 lib/stm32/f7
+	$(Q)$(MAKE) $(MFLAGS) -C ../deps/libopencm3 lib/stm32/f7
 
 host_clean:
 	-$(Q)$(RM) *.bin *elf *hex *.o
@@ -77,4 +77,4 @@ SRC += usb_f723.c
 
 usb_f723.o: usb_f723.c
 	@echo "  CC      $<"
-	$(Q)$(CC) -I../libopencm3/lib/usb/ $(CFLAGS) $(OPT_FLAGS) -c $< -o $@
+	$(Q)$(CC) -I../deps/libopencm3/lib/usb/ $(CFLAGS) $(OPT_FLAGS) -c $< -o $@
