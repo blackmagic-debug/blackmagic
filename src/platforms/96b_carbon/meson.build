@@ -60,3 +60,12 @@ probe_bootloader = declare_dependency(
 	link_args: probe_96b_carbon_link_args,
 	dependencies: platform_stm32f4_dfu,
 )
+
+summary(
+	{
+		'Name': '96b Carbon',
+		'Platform': 'STM32F4',
+		'Bootloader': 'OEM Bootloader',
+	},
+	section: 'Probe',
+)

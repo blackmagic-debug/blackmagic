@@ -34,7 +34,9 @@ probe_f4discovery_sources = files('platform.c')
 
 probe_f4discovery_dfu_sources = files('usbdfu.c')
 
-probe_f4discovery_dfu_serial_length = get_option('bmd_bootloader') ? '9' : '13'
+bmd_bootloader = get_option('bmd_bootloader')
+
+probe_f4discovery_dfu_serial_length = bmd_bootloader ? '9' : '13'
 
 probe_f4discovery_args = [
 	f'-DDFU_SERIAL_LENGTH=@probe_f4discovery_dfu_serial_length@',
@@ -64,4 +66,13 @@ probe_bootloader = declare_dependency(
 	compile_args: probe_f4discovery_args,
 	link_args: probe_f4discovery_commonn_link_args,
 	dependencies: platform_stm32f4_dfu,
+)
+
+summary(
+	{
+		'Name': 'STM32F407 Discovery',
+		'Platform': 'STM32F4',
+		'Bootloader': bmd_bootloader ? 'Black Magic Debug Bootloader' : 'OEM ST Bootloader',
+	},
+	section: 'Probe',
 )

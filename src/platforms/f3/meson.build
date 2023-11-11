@@ -48,3 +48,12 @@ probe_host = declare_dependency(
 	link_args: probe_f3_link_args,
 	dependencies: [platform_common, platform_stm32f3, fixme_platform_stm32_traceswo],
 )
+
+summary(
+	{
+		'Name': 'STM32F303',
+		'Platform': 'STM32F3',
+		'Bootloader': 'OEM ST Bootloader',
+	},
+	section: 'Probe',
+)

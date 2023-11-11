@@ -188,23 +188,34 @@ target_xilinx = declare_dependency(
 	dependencies: target_cortexar,
 )
 
-# Convert targets option list into a list of dependencies
-enabled_target_deps = []
-foreach target : get_option('targets')
-	enabled_target_deps += get_variable(f'target_@target@')
-endforeach
+enabled_targets = get_option('targets')
 
 # Check that at least one target is enabled
 assert(
-	enabled_target_deps.length() > 0,
+	enabled_targets.length() > 0,
 	'''No debug targets enabled, please enable at least one target to build.
 See the 'targets' option for a list of available targets.
 ''',
 )
+
+# Convert targets option list into a list of dependencies
+enabled_target_deps = []
+foreach target : enabled_targets
+	enabled_target_deps += get_variable(f'target_@target@')
+endforeach
 
 # BMD target dependency
 bmd_targets = declare_dependency(
 	include_directories: target_common_includes,
 	sources: target_common_sources,
 	dependencies: enabled_target_deps,
+)
+
+summary(
+	{
+		'Warning': 'Not all enabled targets may be listed here',
+		'Targets': enabled_targets,
+	},
+	list_sep: ', ',
+	section: 'Targets',
 )
