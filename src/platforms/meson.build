@@ -38,6 +38,14 @@ Try adding the option `--cross-file @0@` for ARM based probes'''.format(
 	),
 )
 
+# Pull in the libopencm3 subproject for various platform dependencies
+libopencm3 = subproject(
+	'libopencm3',
+	default_options: [
+		'c_std=c11',
+	],
+)
+
 subdir('common')
 subdir('common/stm32')
 

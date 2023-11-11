@@ -1,0 +1,7 @@
+[wrap-git]
+url = https://github.com/blackmagic-debug/libopencm3
+revision = head
+depth = 1
+
+[provide]
+dependency_names = opencm3_efm32g, opencm3_efm32gg, opencm3_efm32hg, opencm3_efm32lg, opencm3_efm32tg, opencm3_efm32wg, opencm3_ezr32wg, opencm3_gd32f1x0, opencm3_lm3s, opencm3_lm4f, opencm3_lpc13xx, opencm3_lpc17xx, opencm3_lpc43xx_m0, opencm3_lpc43xx, opencm3_msp432e4, opencm3_nrf51, opencm3_nrf52, opencm3_pac55xx, opencm3_sam3a, opencm3_sam3n, opencm3_sam3s, opencm3_sam3u, opencm3_sam3x, opencm3_sam4l, opencm3_samd, opencm3_stm32f0, opencm3_stm32f1, opencm3_stm32f2, opencm3_stm32f3, opencm3_stm32f4, opencm3_stm32f7, opencm3_stm32g0, opencm3_stm32g4, opencm3_stm32h7, opencm3_stm32l0, opencm3_stm32l1, opencm3_stm32l4, opencm3_swm050, opencm3_vf6xx
