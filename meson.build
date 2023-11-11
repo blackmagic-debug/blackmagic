@@ -42,7 +42,7 @@ project(
 		'werror=false',
 		'b_ndebug=if-release',
 	],
-	meson_version: '>= 0.58.0',
+	meson_version: '>= 0.60.0',
 	subproject_dir: 'deps',
 )
 
@@ -136,14 +136,14 @@ bmf_base_name = 'black_magic_firmware_@0@'.format(get_option('probe')).to_lower(
 
 # Main firmware elf file
 bmf_elf = executable(
-	f'@bmf_base_name@.elf',
+	bmf_base_name,
+	name_suffix: 'elf',
 	dependencies: [bmd_core, probe_host],
 )
 alias_target('elf', bmf_elf)
 
 # Firmware binary and hex files
 bmf_bin = custom_target(
-	'bin',
 	output: f'@bmf_base_name@.bin',
 	input: bmf_elf,
 	command: [objcopy, ['-O', 'binary', '@INPUT@', '@OUTPUT@']],
@@ -153,9 +153,8 @@ bmf_bin = custom_target(
 alias_target('bin', bmf_bin)
 
 bmf_hex = custom_target(
-	'hex',
-	input: bmf_elf,
 	output: f'@bmf_base_name@.hex',
+	input: bmf_elf,
 	command: [objcopy, ['-O', 'ihex', '@INPUT@', '@OUTPUT@']],
 	depends: bmf_elf,
 )
@@ -179,7 +178,8 @@ if probe_bootloader.found() and get_option('bmd_bootloader')
 
 	# Bootloader elf file
 	bmf_boot_elf = executable(
-		f'@bmf_boot_base_name@.elf',
+		bmf_boot_base_name,
+		name_suffix: 'elf',
 		include_directories: bmd_core_includes,
 		dependencies: probe_bootloader,
 		build_by_default: false,
@@ -188,7 +188,6 @@ if probe_bootloader.found() and get_option('bmd_bootloader')
 
 	# Bootloader binary and hex files
 	bmf_boot_bin = custom_target(
-		'bootloader-bin',
 		output: f'@bmf_boot_base_name@.bin',
 		input: bmf_boot_elf,
 		command: [objcopy, ['-O', 'binary', '@INPUT@', '@OUTPUT@']],
@@ -197,9 +196,8 @@ if probe_bootloader.found() and get_option('bmd_bootloader')
 	alias_target('boot-bin', bmf_boot_bin)
 
 	bmf_boot_hex = custom_target(
-		'bootloader-hex',
-		input: bmf_boot_elf,
 		output: f'@bmf_boot_base_name@.hex',
+		input: bmf_boot_elf,
 		command: [objcopy, ['-O', 'ihex', '@INPUT@', '@OUTPUT@']],
 		depends: bmf_boot_elf,
 	)
