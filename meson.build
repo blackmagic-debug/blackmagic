@@ -37,6 +37,7 @@ project(
 		'c_std=c11',
 		'optimization=s',
 		'debug=true',
+		# 'warning_level=3', # TODO: Enable by default when all warnings are fixed
 		'warning_level=2',
 		'werror=true',
 		'b_ndebug=if-release',
@@ -58,16 +59,51 @@ version = vcs_tag(
 ## Black Magic Debug (BMD) sources
 ## _______________________________
 
+c = meson.get_compiler('c')
+
 # Project wide flags
-add_project_arguments('-Wreturn-type', '-Wno-char-subscripts', language: 'c')
-if host_machine.system() in ['macos', 'darwin']
-	add_project_arguments(
-		'-Wmaybe-uninitialized',
-		'-Wstringop-overflow',
-		'-Wunsafe-loop-optimizations',
-		language: 'c',
-	)
-endif
+extended_warnings = [
+	'-Warith-conversion',
+	'-Wbad-function-cast',
+	# '-Wcast-align=strict',
+	'-Wcast-function-type',
+	# '-Wcast-qual',
+	# '-Wconversion',
+	'-Wdangling-else',
+	'-Wdouble-promotion',
+	'-Wduplicated-branches',
+	'-Wfloat-conversion',
+	# '-Wformat-overflow=2',
+	# '-Wformat-signedness',
+	'-Wformat-truncation',
+	'-Wformat=2',
+	'-Wimplicit-fallthrough',
+	'-Wmaybe-uninitialized',
+	'-Wmissing-attributes',
+	'-Wmissing-braces',
+	'-Wno-char-subscripts',
+	'-Wnull-dereference',
+	# '-Wpacked',
+	'-Wredundant-decls',
+	'-Wreturn-type',
+	'-Wsequence-point',
+	'-Wshadow=local',
+	# '-Wsign-conversion',
+	# '-Wstack-protector',
+	'-Wstrict-aliasing',
+	'-Wstrict-overflow=3',
+	'-Wstring-compare',
+	'-Wstringop-overflow',
+	'-Wunknown-pragmas',
+	'-Wunsafe-loop-optimizations',
+	'-Wunsuffixed-float-constant',
+	'-Wunused-const-variable=2',
+	'-Wunused-local-typedefs',
+	'-Wunused',
+	'-Wvla-parameter',
+	'-Wvla',
+]
+add_project_arguments(c.get_supported_arguments(extended_warnings), language: 'c')
 
 # Null dependency to allow for checking and conditional compilation later
 probe_host = disabler()
