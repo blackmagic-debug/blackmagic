@@ -68,6 +68,12 @@ if rtt_support
 	endif
 endif
 
+# Advertise QStartNoAckMode
+advertise_noackmode = get_option('advertise_noackmode')
+if advertise_noackmode
+	bmd_core_args += ['-DADVERTISE_NOACKMODE=1']
+endif
+
 # Get BMD targets dependency
 subdir('target')
 
@@ -87,6 +93,7 @@ summary(
 	{
 		'Debug output': debug_output,
 		'RTT support': rtt_support,
+		'Advertise QStartNoAckMode': advertise_noackmode,
 	},
 	bool_yn: true,
 	section: 'Black Magic Debug',
