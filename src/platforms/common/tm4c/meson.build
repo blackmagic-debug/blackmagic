@@ -28,26 +28,42 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-# Ensure we are cross-compiling and not building for the build host
-# TODO: when support for build as a host library is added, this check needs to change
-assert(
-	meson.is_cross_build(),
-	'''Black Magic Firmware must be cross-compiled to the probe
-Try adding the option `--cross-file @0@` for ARM based probes'''.format(
-		meson.project_source_root() / 'cross-file' / 'arm-none-eabi.ini'
-	),
+platform_tm4c_includes = include_directories('.')
+
+platform_tm4c_sources = files(
+	'gdb_if.c',
+	'traceswo.c',
 )
 
-# Pull in the libopencm3 subproject for various platform dependencies
-libopencm3 = subproject(
-	'libopencm3',
-	default_options: [
-		'c_std=c11',
-	],
+platform_tm4c_args = [
+	'-mthumb',
+	'-nostdlib',
+	'-nostartfiles',
+	'-ffreestanding',
+	'-mcpu=cortex-m4',
+	'-mfloat-abi=hard',
+	'-mfpu=fpv4-sp-d16',
+	'-DLM4F',
+	'-DPC_HOSTED=0',
+]
+
+platform_tm4c_link_args = [
+	'-mcpu=cortex-m4',
+	'-mfloat-abi=hard',
+	'-mfpu=fpv4-sp-d16',
+	'-lc',
+	'-lgcc',
+	'-lnosys',
+	'-nostdlib',
+	'-nostartfiles',
+	'-ffreestanding',
+	'-Wl,-gc-sections',
+]
+
+platform_tm4c = declare_dependency(
+	include_directories: platform_tm4c_includes,
+	sources: platform_tm4c_sources,
+	compile_args: platform_tm4c_args,
+	link_args: platform_tm4c_link_args,
+	dependencies: dependency('opencm3_lm4f'),
 )
-
-subdir('common')
-subdir('common/stm32')
-subdir('common/tm4c')
-
-subdir(get_option('probe'))
