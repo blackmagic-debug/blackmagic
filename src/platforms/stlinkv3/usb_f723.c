@@ -25,8 +25,8 @@
 #include <libopencm3/usb/usbd.h>
 #include <libopencm3/usb/bos.h>
 #include <libopencm3/usb/dwc/otg_hs.h>
-#include "usb_private.h"
-#include "usb_dwc_common.h"
+#include "usb/usb_private.h"
+#include "usb/usb_dwc_common.h"
 
 /* Receive FIFO size in 32-bit words. */
 #define RX_FIFO_SIZE 512

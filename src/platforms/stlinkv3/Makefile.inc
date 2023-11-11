@@ -77,4 +77,4 @@ SRC += usb_f723.c
 
 usb_f723.o: usb_f723.c
 	@echo "  CC      $<"
-	$(Q)$(CC) -I../deps/libopencm3/lib/usb/ $(CFLAGS) $(OPT_FLAGS) -c $< -o $@
+	$(Q)$(CC) -I../deps/libopencm3/lib $(CFLAGS) $(OPT_FLAGS) -c $< -o $@
