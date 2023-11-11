@@ -35,15 +35,21 @@ probe_swlink_sources = files(
 	'platform_common.c',
 )
 
-probe_swlink_dfu_sources = files('usbdfu.c')
+probe_swlink_dfu_sources = files(
+	'platform_common.c',
+	'usbdfu.c',
+)
 
 probe_swlink_args = [
 	'-DDFU_SERIAL_LENGTH=9',
 ]
 
-probe_swlink_link_args = [
+probe_swlink_common_link_args = [
 	'-L@0@'.format(meson.current_source_dir()),
 	'-T@0@'.format('swlink.ld'),
+]
+
+probe_swlink_link_args = [
 	'-Wl,-Ttext=0x8002000',
 ]
 
@@ -51,6 +57,14 @@ probe_host = declare_dependency(
 	include_directories: probe_swlink_includes,
 	sources: probe_swlink_sources,
 	compile_args: probe_swlink_args,
-	link_args: probe_swlink_link_args,
+	link_args: [probe_swlink_common_link_args, probe_swlink_link_args],
 	dependencies: [platform_common, platform_stm32f1, fixme_platform_stm32_traceswoasync],
+)
+
+probe_bootloader = declare_dependency(
+	include_directories: [platform_common_includes, probe_swlink_includes],
+	sources: probe_swlink_dfu_sources,
+	compile_args: probe_swlink_args,
+	link_args: probe_swlink_common_link_args,
+	dependencies: platform_stm32f1_dfu,
 )
