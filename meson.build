@@ -33,6 +33,7 @@ project(
 	'c',
 	version: '1.10.0',
 	license: 'GPL-3.0-or-later OR BSD-3-Clause OR MIT',
+	# license_files: ['COPYING', 'COPYING-BSD', 'COPYING-MIT'], # Only available in meson 1.1.0
 	default_options: [
 		'c_std=c11',
 		'optimization=s',
@@ -55,6 +56,9 @@ version = vcs_tag(
 	output: 'version.h',
 	fallback: meson.project_version(),
 )
+
+# Import the filesystem module
+fs = import('fs')
 
 ## Black Magic Debug (BMD) sources
 ## _______________________________
@@ -144,7 +148,7 @@ alias_target('elf', bmf_elf)
 
 # Firmware binary and hex files
 bmf_bin = custom_target(
-	output: f'@bmf_base_name@.bin',
+	output: fs.replace_suffix(bmf_elf.name(), '.bin'),
 	input: bmf_elf,
 	command: [objcopy, ['-O', 'binary', '@INPUT@', '@OUTPUT@']],
 	depends: bmf_elf,
@@ -153,7 +157,7 @@ bmf_bin = custom_target(
 alias_target('bin', bmf_bin)
 
 bmf_hex = custom_target(
-	output: f'@bmf_base_name@.hex',
+	output: fs.replace_suffix(bmf_elf.name(), '.hex'),
 	input: bmf_elf,
 	command: [objcopy, ['-O', 'ihex', '@INPUT@', '@OUTPUT@']],
 	depends: bmf_elf,
@@ -173,12 +177,9 @@ run_target(
 if probe_bootloader.found() and get_option('bmd_bootloader')
 	message('Adding targets for Black Magic Firmware Bootloader')
 
-	# Base name for output files
-	bmf_boot_base_name = f'@bmf_base_name@_bootloader'
-
 	# Bootloader elf file
 	bmf_boot_elf = executable(
-		bmf_boot_base_name,
+		f'@bmf_base_name@_bootloader',
 		name_suffix: 'elf',
 		include_directories: bmd_core_includes,
 		dependencies: probe_bootloader,
@@ -188,7 +189,7 @@ if probe_bootloader.found() and get_option('bmd_bootloader')
 
 	# Bootloader binary and hex files
 	bmf_boot_bin = custom_target(
-		output: f'@bmf_boot_base_name@.bin',
+		output: fs.replace_suffix(bmf_boot_elf.name(), '.bin'),
 		input: bmf_boot_elf,
 		command: [objcopy, ['-O', 'binary', '@INPUT@', '@OUTPUT@']],
 		depends: bmf_boot_elf,
@@ -196,7 +197,7 @@ if probe_bootloader.found() and get_option('bmd_bootloader')
 	alias_target('boot-bin', bmf_boot_bin)
 
 	bmf_boot_hex = custom_target(
-		output: f'@bmf_boot_base_name@.hex',
+		output: fs.replace_suffix(bmf_boot_elf.name(), '.hex'),
 		input: bmf_boot_elf,
 		command: [objcopy, ['-O', 'ihex', '@INPUT@', '@OUTPUT@']],
 		depends: bmf_boot_elf,
