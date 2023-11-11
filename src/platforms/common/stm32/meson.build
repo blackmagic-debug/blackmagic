@@ -201,3 +201,10 @@ platform_stm32f7 = declare_dependency(
 	link_args: platform_stm32f7_link_args,
 	dependencies: [platform_stm32_common, dependency('opencm3_stm32f7')],
 )
+
+platform_stm32f7_dfu = declare_dependency(
+	sources: platform_stm32f4_dfu_sources,
+	compile_args: platform_stm32f7_args,
+	link_args: platform_stm32f7_link_args,
+	dependencies: [platform_stm32_dfu_common, dependency('opencm3_stm32f7')],
+)
