@@ -67,7 +67,9 @@ endif
 
 probe_stlink_dependencies = [platform_common, platform_stm32f1]
 
-if probe == 'stlink' and get_option('stlink_swim_as_uart')
+stlink_swim_as_uart = get_option('stlink_swim_as_uart')
+
+if probe == 'stlink' and stlink_swim_as_uart
 	probe_stlink_args += ['-DSWIM_AS_UART=1']
 else
 	probe_stlink_dependencies += fixme_platform_stm32_traceswoasync
@@ -87,4 +89,16 @@ probe_bootloader = declare_dependency(
 	compile_args: probe_stlink_args,
 	link_args: probe_stlink_common_link_args,
 	dependencies: platform_stm32f1_dfu,
+)
+
+summary(
+	{
+		'Name': probe == 'stlink' ? 'ST-Link' : 'BluePill',
+		'Platform': 'STM32F1',
+		'Bootloader': bmd_bootloader ? 'Black Magic Debug Bootloader' : 'OEM ST Bootloader',
+		'Load Address': probe_stlink_load_address,
+		'SWIM as UART': probe == 'stlink' and stlink_swim_as_uart,
+	},
+	bool_yn: true,
+	section: 'Probe',
 )

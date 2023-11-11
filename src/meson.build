@@ -51,12 +51,14 @@ bmd_core_sources = files(
 bmd_core_args = []
 
 # Debug output handling
-if (get_option('debug_output'))
+debug_output = get_option('debug_output')
+if debug_output
 	bmd_core_args += ['-DENABLE_DEBUG=1']
 endif
 
 # RTT support handling
-if get_option('rtt_support')
+rtt_support = get_option('rtt_support')
+if rtt_support
 	bmd_core_sources += files('rtt.c')
 	bmd_core_args += ['-DENABLE_RTT=1']
 
@@ -80,3 +82,12 @@ bmd_core = declare_dependency(
 # Get probe host and platform dependencies
 # TODO: when support for build as a host library is added, this can be conditional?
 subdir('platforms')
+
+summary(
+	{
+		'Debug output': debug_output,
+		'RTT support': rtt_support,
+	},
+	bool_yn: true,
+	section: 'Black Magic Debug',
+)

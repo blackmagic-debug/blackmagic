@@ -61,3 +61,12 @@ probe_host = declare_dependency(
 	link_args: probe_launchpad_icdi_link_args,
 	dependencies: [platform_common, platform_tm4c],
 )
+
+summary(
+	{
+		'Name': 'Launchpad ICDI',
+		'Platform': 'TM4C',
+		'Serial Number': serialno,
+	},
+	section: 'Probe',
+)

@@ -63,3 +63,13 @@ probe_bootloader = declare_dependency(
 	link_args: probe_native_common_link_args,
 	dependencies: platform_stm32f1_dfu,
 )
+
+summary(
+	{
+		'Name': 'Black Magic Probe (native)',
+		'Platform': 'STM32F1',
+		'Bootloader': 'Black Magic Debug Bootloader',
+		'Load Address': '0x8002000',
+	},
+	section: 'Probe',
+)

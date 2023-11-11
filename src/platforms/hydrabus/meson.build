@@ -58,3 +58,12 @@ probe_bootloader = declare_dependency(
 	link_args: probe_hydrabus_link_args,
 	dependencies: platform_stm32f4_dfu,
 )
+
+summary(
+	{
+		'Name': 'Hydrabus',
+		'Platform': 'STM32F4',
+		'Bootloader': 'OEM Bootloader',
+	},
+	section: 'Probe',
+)
