@@ -82,6 +82,24 @@ platform_stm32_dfu_common = declare_dependency(
 	link_args: platform_stm32_link_args,
 )
 
+## STM32F0 Platform
+## ________________
+
+platform_stm32f0_args = [
+	'-mcpu=cortex-m0',
+	'-DSTM32F0',
+]
+
+platform_stm32f0_link_args = [
+	'-mcpu=cortex-m0',
+]
+
+platform_stm32f0 = declare_dependency(
+	compile_args: platform_stm32f0_args,
+	link_args: platform_stm32f0_link_args,
+	dependencies: [platform_stm32_common, dependency('opencm3_stm32f0')],
+)
+
 ## STM32F1 Platform
 ## ________________
 
