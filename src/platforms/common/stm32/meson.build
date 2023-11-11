@@ -108,3 +108,34 @@ platform_stm32f1_dfu = declare_dependency(
 	link_args: platform_stm32f1_link_args,
 	dependencies: [platform_stm32_dfu_common, dependency('opencm3_stm32f1')],
 )
+
+## STM32F4 Platform
+## ________________
+
+platform_stm32f4_dfu_sources = files('dfu_f4.c')
+
+platform_stm32f4_args = [
+	'-mcpu=cortex-m4',
+	'-mfloat-abi=hard',
+	'-mfpu=fpv4-sp-d16',
+	'-DSTM32F4',
+]
+
+platform_stm32f4_link_args = [
+	'-mcpu=cortex-m4',
+	'-mfloat-abi=hard',
+	'-mfpu=fpv4-sp-d16',
+]
+
+platform_stm32f4 = declare_dependency(
+	compile_args: platform_stm32f4_args,
+	link_args: platform_stm32f4_link_args,
+	dependencies: [platform_stm32_common, dependency('opencm3_stm32f4')],
+)
+
+platform_stm32f4_dfu = declare_dependency(
+	sources: platform_stm32f4_dfu_sources,
+	compile_args: platform_stm32f4_args,
+	link_args: platform_stm32f4_link_args,
+	dependencies: [platform_stm32_dfu_common, dependency('opencm3_stm32f4')],
+)
