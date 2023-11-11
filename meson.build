@@ -69,10 +69,23 @@ if host_machine.system() in ['macos', 'darwin']
 	)
 endif
 
+# Null dependency to allow for checking and conditional compilation later
+probe_host = disabler()
+probe_bootloader = disabler()
+
 subdir('src')
 
 ## Black Magic Firmware (BMF) targets
 ## __________________________________
+
+message('Adding targets for Black Magic Firmware')
+
+assert(
+	probe_host.found(),
+	'''Probe host dependency not found, this is not supposed to happen...
+If you did not touch the build system this is not your fault, please report it
+''',
+)
 
 if get_option('print_memory_usage')
 	add_project_link_arguments('-Wl,--print-memory-usage', language: 'c')
@@ -118,6 +131,44 @@ run_target(
 	command: [size, bmf_elf.full_path(), '-B'],
 	depends: bmf_elf,
 )
+
+## Black Magic Firmware (BMF) Bootloader targets
+## _____________________________________________
+
+if probe_bootloader.found() and get_option('bmd_bootloader')
+	message('Adding targets for Black Magic Firmware Bootloader')
+
+	# Base name for output files
+	bmf_boot_base_name = f'@bmf_base_name@_bootloader'
+
+	# Bootloader elf file
+	bmf_boot_elf = executable(
+		f'@bmf_boot_base_name@.elf',
+		include_directories: bmd_core_includes,
+		dependencies: probe_bootloader,
+		build_by_default: false,
+	)
+	alias_target('boot-elf', bmf_boot_elf)
+
+	# Bootloader binary and hex files
+	bmf_boot_bin = custom_target(
+		'bootloader-bin',
+		output: f'@bmf_boot_base_name@.bin',
+		input: bmf_boot_elf,
+		command: [objcopy, ['-O', 'binary', '@INPUT@', '@OUTPUT@']],
+		depends: bmf_boot_elf,
+	)
+	alias_target('boot-bin', bmf_boot_bin)
+
+	bmf_boot_hex = custom_target(
+		'bootloader-hex',
+		input: bmf_boot_elf,
+		output: f'@bmf_boot_base_name@.hex',
+		command: [objcopy, ['-O', 'ihex', '@INPUT@', '@OUTPUT@']],
+		depends: bmf_boot_elf,
+	)
+	alias_target('boot-hex', bmf_boot_hex)
+endif
 
 # We report this at the end of the configuration, so it's easier to spot
 warning(
