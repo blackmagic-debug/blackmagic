@@ -223,8 +223,81 @@ jobs:
       - name: Build full BMDA
         run: make PROBE_HOST=hosted HOSTED_BMP_ONLY=0
 
+  # This workflow tests the experimental Meson build system
+  build-linux-meson:
+    # Name the job more appropriately so we can tell which windows and which MinGW ABI is in use
+    name: 'build-linux (${{ matrix.os.name }}, ${{ matrix.probe }}'
+    # The type of runner that the job will run on
+    runs-on: ${{ matrix.os.id }}
+
+    # We define a matrix of GCCs and OSes to build against so we can cover a variety of
+    # suitable compilation environments and early discover issues. The `build-and-upload`
+    # workflow contains an extended set.
+    strategy:
+      matrix:
+        os:
+          - {id: ubuntu-20.04, name: focal}
+        arm-compiler:
+          - '12.2.Rel1'
+        probe:
+          - '96b_carbon'
+          - 'bluepill'
+          - 'f072'
+          - 'f3'
+          - 'f4discovery'
+          - 'hydrabus'
+          - 'launchpad-icdi'
+          - 'native'
+          - 'stlink'
+          - 'stlinkv3'
+          - 'swlink'
+      fail-fast: false
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Build a suitable runtime environment
+      - name: Runtime environment
+        shell: bash
+        env:
+          WORKSPACE: ${{ github.workspace }}
+        # The GITHUB_WORKSPACE step here fixes https://github.com/actions/runner/issues/2058 which is an ongoing issue.
+        run: |
+          echo "$GITHUB_WORKSPACE=`pwd`" >> $GITHUB_ENV
+
+      # Setup and use a suitable ARM GCC for the firmware
+      - name: Setup ARM GCC
+        uses: carlosperate/arm-none-eabi-gcc-action@v1
+        with:
+          release: ${{ matrix.arm-compiler }}
+
+      # Install and setup a suitable Meson + Ninja
+      - name: Setup Meson + Ninja
+        run: |
+          sudo python3 -m pip install --upgrade pip setuptools wheel
+          sudo python3 -m pip install meson ninja
+        working-directory: ${{ runner.temp }}
+
+      # Record the versions of all the tools used in the build
+      - name: Version tools
+        run: |
+          arm-none-eabi-gcc --version
+          meson --version
+          ninja --version
+
+      # Checkout the repository and branch to build under the default location
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          submodules: true
+
+      # Build the firmware for all platform variants (currently available)
+      - name: Build
+        run: |
+          meson setup build --cross-file cross-file/${{ matrix.probe }}.ini
+          meson compile -C build
+
   size-diff:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
 
     steps:
       # Setup and use a suitable ARM GCC for the firmware
