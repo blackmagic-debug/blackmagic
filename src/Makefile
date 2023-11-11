@@ -194,12 +194,11 @@ else
 endif
 
 all_platforms:
-	$(Q)if [ ! -f ../libopencm3/Makefile ]; then \
+	$(Q)if [ ! -f ../deps/libopencm3/Makefile ]; then \
 		echo "Initialising git submodules..." ;\
-		git submodule init ;\
-		git submodule update ;\
+		git submodule update --init ;\
 	fi
-	$(Q)$(MAKE) $(MFLAGS) -C ../libopencm3 lib/stm32/f1 lib/stm32/f4 lib/stm32/f7 lib/lm4f
+	$(Q)$(MAKE) $(MFLAGS) -C ../deps/libopencm3 lib/stm32/f1 lib/stm32/f4 lib/stm32/f7 lib/lm4f
 	$(Q)set -e ;\
 	mkdir -p artifacts/$(shell git describe --always --dirty --tags) ;\
 	echo "<html><body><ul>" > artifacts/index.html ;\

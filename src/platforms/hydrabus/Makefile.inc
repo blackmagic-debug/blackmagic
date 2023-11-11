@@ -4,14 +4,14 @@ OBJCOPY = $(CROSS_COMPILE)objcopy
 
 CFLAGS += -Istm32/include -mcpu=cortex-m4 -mthumb \
 	-mfloat-abi=hard -mfpu=fpv4-sp-d16 \
-	-DSTM32F4 -I../libopencm3/include \
+	-DSTM32F4 -I../deps/libopencm3/include \
 	-Iplatforms/common/stm32 -DDFU_SERIAL_LENGTH=9
 
 LDFLAGS = -lopencm3_stm32f4 \
 	-Wl,-T,platforms/hydrabus/hydrabus.ld -nostartfiles -lc -lnosys \
 	-Wl,-Map=mapfile -mthumb -mcpu=cortex-m4 -Wl,-gc-sections \
 	-mfloat-abi=hard -mfpu=fpv4-sp-d16 \
-	-L../libopencm3/lib
+	-L../deps/libopencm3/lib
 
 VPATH += platforms/common/stm32
 

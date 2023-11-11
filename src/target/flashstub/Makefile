@@ -8,7 +8,7 @@ ifneq ($(V), 1)
 Q = @
 endif
 
-CFLAGS=-Os -std=gnu99 -mcpu=cortex-m0 -mthumb -I../../../libopencm3/include
+CFLAGS=-Os -std=gnu99 -mcpu=cortex-m0 -mthumb -I../../../deps/libopencm3/include
 ASFLAGS=-mcpu=cortex-m3 -mthumb
 
 all:	lmi.stub stm32l4.stub efm32.stub
