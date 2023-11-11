@@ -52,3 +52,11 @@ probe_host = declare_dependency(
 	link_args: probe_96b_carbon_link_args,
 	dependencies: [platform_common, platform_stm32f4, fixme_platform_stm32_traceswo],
 )
+
+probe_bootloader = declare_dependency(
+	include_directories: [platform_common_includes, probe_96b_carbon_includes],
+	sources: probe_96b_carbon_dfu_sources,
+	compile_args: probe_96b_carbon_args,
+	link_args: probe_96b_carbon_link_args,
+	dependencies: platform_stm32f4_dfu,
+)
