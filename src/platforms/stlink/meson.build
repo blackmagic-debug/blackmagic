@@ -62,9 +62,13 @@ probe_stlink_link_args += [
 # 	]
 # endif
 
+if probe == 'bluepill'
+	probe_stlink_args += ['-DBLUEPILL=1']
+endif
+
 probe_stlink_dependencies = [platform_common, platform_stm32f1]
 
-if get_option('probe') == 'stlink' and get_option('stlink_swim_as_uart')
+if probe == 'stlink' and get_option('stlink_swim_as_uart')
 	probe_stlink_args += ['-DSWIM_AS_UART=1']
 else
 	probe_stlink_dependencies += fixme_platform_stm32_traceswoasync

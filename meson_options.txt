@@ -1,4 +1,4 @@
-option('probe', type: 'combo', choices : ['launchpad-icdi', 'native', 'stlink'], value: 'native', description: 'Hardware platform where the BMD firmware will run')
+option('probe', type: 'combo', choices : ['bluepill', 'launchpad-icdi', 'native', 'stlink'], value: 'native', description: 'Hardware platform where the BMD firmware will run')
 option('targets', type : 'array', choices : ['cortexar', 'cortexm', 'riscv32', 'riscv64', 'efm', 'hc32', 'lpc', 'nrf', 'nxp', 'renesas', 'rp', 'sam', 'stm', 'ti', 'xilinx'], description: 'Enabled debug targets')
 option('print_memory_usage', type: 'boolean', value: true, description: 'Print firmware static memory usage at the end of the build')
 option('debug_output', type: 'boolean', value: false, description: 'Enable debug output (for debugging the BMD stack, not debug targets)')
