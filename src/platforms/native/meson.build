@@ -39,9 +39,12 @@ probe_native_args = [
 	'-DBLACKMAGIC',
 ]
 
-probe_native_link_args = [
+probe_native_common_link_args = [
 	'-L@0@'.format(meson.current_source_dir()),
 	'-T@0@'.format('native.ld'),
+]
+
+probe_native_link_args = [
 	'-Wl,-Ttext=0x8002000',
 ]
 
@@ -49,6 +52,14 @@ probe_host = declare_dependency(
 	include_directories: probe_native_includes,
 	sources: probe_native_sources,
 	compile_args: probe_native_args,
-	link_args: probe_native_link_args,
+	link_args: [probe_native_common_link_args, probe_native_link_args],
 	dependencies: [platform_common, platform_stm32f1, fixme_platform_stm32_traceswo],
+)
+
+probe_bootloader = declare_dependency(
+	include_directories: [platform_common_includes, probe_native_includes],
+	sources: probe_native_dfu_sources,
+	compile_args: probe_native_args,
+	link_args: probe_native_common_link_args,
+	dependencies: platform_stm32f1_dfu,
 )
