@@ -35,40 +35,39 @@ probe_stlinkv3_sources = files(
 	'usb_f723.c',
 )
 
-probe_stlinkv3_dfu_sources = files('usbdfu.c')
+probe_stlinkv3_dfu_sources = files(
+	'usb_f723.c',
+	'usbdfu.c',
+)
+
+probe_stlinkv3_load_address = get_option('bmd_bootloader') ? '0x08020000' : '0x08000000'
 
 probe_stlinkv3_args = [
 	'-DDFU_SERIAL_LENGTH=25',
+	f'-DAPP_START=@probe_stlinkv3_load_address@',
 ]
 
-probe_stlinkv3_link_args = [
+probe_stlinkv3_common_link_args = [
 	'-L@0@'.format(meson.current_source_dir()),
 	'-T@0@'.format('stlinkv3.ld'),
 ]
 
-probe_stlinkv3_args += [
-	'-DAPP_START=0x08020000',
+probe_stlinkv3_link_args = [
+	f'-Wl,-Ttext=@probe_stlinkv3_load_address@',
 ]
-
-probe_stlinkv3_link_args += [
-	'-Wl,-Ttext=0x08020000',
-]
-
-# TODO: support bootloader choice
-# if get_option('bmd_bootloader')
-# else
-# 	probe_stlinkv3_args = [
-# 		'-DAPP_START=0x08000000',
-# 	]
-# 	probe_stlink_link_args += [
-# 		'-Wl,-Ttext=0x08000000',
-# 	]
-# endif
 
 probe_host = declare_dependency(
 	include_directories: probe_stlinkv3_includes,
 	sources: probe_stlinkv3_sources,
 	compile_args: probe_stlinkv3_args,
-	link_args: probe_stlinkv3_link_args,
+	link_args: [probe_stlinkv3_common_link_args, probe_stlinkv3_link_args],
 	dependencies: [platform_common, platform_stm32f7, fixme_platform_stm32f7_traceswoasync],
+)
+
+probe_bootloader = declare_dependency(
+	include_directories: [platform_common_includes, probe_stlinkv3_includes],
+	sources: probe_stlinkv3_dfu_sources,
+	compile_args: probe_stlinkv3_args,
+	link_args: probe_stlinkv3_common_link_args,
+	dependencies: platform_stm32f7_dfu,
 )
