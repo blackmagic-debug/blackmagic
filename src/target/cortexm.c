@@ -117,6 +117,42 @@ typedef struct cortexm_priv {
 	uint32_t demcr;
 } cortexm_priv_s;
 
+#ifdef ENABLE_DEBUG
+const char *const semihosting_names[] = {
+	"",
+	"SYS_OPEN",
+	"SYS_CLOSE",
+	"SYS_WRITEC",
+	"SYS_WRITE0",
+	"SYS_WRITE",
+	"SYS_READ",
+	"SYS_READC",
+	"SYS_ISERROR",
+	"SYS_ISTTY",
+	"SYS_SEEK",
+	"0x0b",
+	"SYS_FLEN",
+	"SYS_TMPNAM",
+	"SYS_REMOVE",
+	"SYS_RENAME",
+	"SYS_CLOCK",
+	"SYS_TIME",
+	"SYS_SYSTEM",
+	"SYS_ERRNO",
+	"0x14",
+	"SYS_GET_CMDLINE",
+	"SYS_HEAPINFO",
+	"0x17",
+	[SEMIHOSTING_SYS_EXIT] = "SYS_EXIT",
+	/* 7 reserved */
+	[SEMIHOSTING_SYS_EXIT_EXTENDED] = "SYS_EXIT_EXTENDED",
+	/* 15 reserved */
+	[SEMIHOSTING_SYS_ELAPSED] = "SYS_ELAPSED",
+	[SEMIHOSTING_SYS_TICKFREQ] = "SYS_TICKFREQ",
+	"",
+};
+#endif
+
 /* Register number tables */
 static const uint32_t regnum_cortex_m[CORTEXM_GENERAL_REG_COUNT] = {
 	0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, /* standard r0-r15 */
@@ -1422,8 +1458,16 @@ static int cortexm_hostio_request(target_s *t)
 		target_mem_read(t, params, arm_regs[1], sizeof(params));
 	int32_t ret = 0;
 
-	DEBUG_INFO("syscall 0" PRIx32 "%" PRIx32 " (%" PRIx32 " %" PRIx32 " %" PRIx32 " %" PRIx32 ")\n", syscall, params[0],
-		params[1], params[2], params[3]);
+#ifdef ENABLE_DEBUG
+	const char *syscall_descr = NULL;
+	if (syscall < ARRAY_LENGTH(semihosting_names))
+		syscall_descr = semihosting_names[syscall];
+	if (syscall_descr == NULL)
+		syscall_descr = "";
+
+	DEBUG_INFO("syscall %12s (%" PRIx32 " %" PRIx32 " %" PRIx32 " %" PRIx32 ")\n", syscall_descr, params[0], params[1],
+		params[2], params[3]);
+#endif
 	switch (syscall) {
 #if PC_HOSTED == 1
 
