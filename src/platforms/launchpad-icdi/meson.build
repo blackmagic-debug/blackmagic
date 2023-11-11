@@ -37,9 +37,14 @@ if get_option('rtt_support')
 	probe_launchpad_icdi_sources += files('rtt_if.c')
 endif
 
+serialno = get_option('serialno')
+
+# Ensure serial number is valid (throws error if conversion fails)
+serialno.to_int()
+
 probe_launchpad_icdi_args = [
 	'-DDFU_SERIAL_LENGTH=9',
-	'-DSERIAL_NO=1',
+	f'-DSERIAL_NO=@serialno@',
 	'-DTARGET_IS_BLIZZARD_RB1',
 	'-DPART_TM4C123GH6PM',
 ]
