@@ -1,0 +1,6 @@
+option('probe', type: 'combo', choices : ['native'], value: 'native', description: 'Hardware platform where the BMD firmware will run')
+option('print_memory_usage', type: 'boolean', value: true, description: 'Print firmware static memory usage at the end of the build')
+option('debug_output', type: 'boolean', value: false, description: 'Enable debug output (for debugging the BMD stack, not debug targets)')
+option('rtt_support', type: 'boolean', value: true, description: 'Enable RTT (Real Time Transfer) support')
+option('rtt_ident', type: 'string', description: 'RTT (Real Time Transfer) identifier string')
+option('no_own_ll', type: 'boolean', value: false, description: 'Use generic interface routines (for when low level routines are not available)')
