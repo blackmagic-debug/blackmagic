@@ -147,7 +147,7 @@ bool gd32f1_probe(target_s *target)
 
 	switch (device_id) {
 	case 0x414U: /* Gigadevice gd32f303 */
-	case 0x430U:
+	case 0x430U: /* XL-density */
 		target->driver = "GD32F3";
 		break;
 	case 0x418U:
@@ -173,10 +173,24 @@ bool gd32f1_probe(target_s *target)
 	const uint16_t flash_size = signature & 0xffffU;
 	const uint16_t ram_size = signature >> 16U;
 
+	/*
+	 * GD32F303x User Manual Rev2.9, 2.3.1 Flash memory architecture:
+	 * HD and <=512 KiB CL devices have only bank0 with 2 KiB sized pages
+	 * XD and  >512 KiB CL devices also have bank1 with 4 KiB sized pages
+	 * Same boundaries found in other families.
+	 * XXX: This driver currently only supports parts with a FLASH_BANK_SPLIT
+	 * at the 512 KiB boundary (i.e. 0x08080000) like STM32F1 XL-density.
+	 */
+	if (flash_size > 512U) {
+		const uint16_t flash_size_bank1 = flash_size - 512U;
+		stm32f1_add_flash(target, 0x8000000, 512U * 1024U, block_size);
+		stm32f1_add_flash(target, 0x8080000, flash_size_bank1 * 1024U, 0x1000U);
+	} else
+		stm32f1_add_flash(target, 0x8000000, (size_t)flash_size * 1024U, block_size);
+
 	target->part_id = device_id;
 	target->mass_erase = stm32f1_mass_erase;
 	target_add_ram(target, 0x20000000, ram_size * 1024U);
-	stm32f1_add_flash(target, 0x8000000, (size_t)flash_size * 1024U, block_size);
 	target_add_commands(target, stm32f1_cmd_list, target->driver);
 
 	return true;
