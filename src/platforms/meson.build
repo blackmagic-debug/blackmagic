@@ -53,6 +53,9 @@ subdir('common/tm4c')
 # Map probe options aliases to probe directory
 # This is used to allow multiple probes share the same source code
 probe_alias_map = {
+	'blackpill-f401cc': 'common/blackpill-f4',
+	'blackpill-f401ce': 'common/blackpill-f4',
+	'blackpill-f411ce': 'common/blackpill-f4',
 	'bluepill': 'stlink',
 }
 

@@ -1,4 +1,4 @@
-option('probe', type: 'combo', choices : ['96b_carbon', 'bluepill', 'f072', 'f3', 'f4discovery', 'hydrabus', 'launchpad-icdi', 'native', 'stlink', 'stlinkv3', 'swlink'], value: 'native', description: 'Hardware platform where the BMD firmware will run')
+option('probe', type: 'combo', choices : ['96b_carbon', 'blackpill-f401cc', 'blackpill-f401ce', 'blackpill-f411ce', 'bluepill', 'f072', 'f3', 'f4discovery', 'hydrabus', 'launchpad-icdi', 'native', 'stlink', 'stlinkv3', 'swlink'], value: 'native', description: 'Hardware platform where the BMD firmware will run')
 option('targets', type : 'array', choices : ['cortexar', 'cortexm', 'riscv32', 'riscv64', 'efm', 'hc32', 'lpc', 'nrf', 'nxp', 'renesas', 'rp', 'sam', 'stm', 'ti', 'xilinx'], description: 'Enabled debug targets')
 option('print_memory_usage', type: 'boolean', value: true, description: 'Print firmware static memory usage at the end of the build')
 option('debug_output', type: 'boolean', value: false, description: 'Enable debug output (for debugging the BMD stack, not debug targets)')
@@ -9,3 +9,4 @@ option('bmd_bootloader', type: 'boolean', value: true, description: 'Use the BMD
 option('stlink_swim_as_uart', type: 'boolean', value: false, description: 'Repurpose the SWIM pins as the UART (only applicable to stlink)')
 option('serialno', type: 'string', value: '1', description: 'Serial number to report (only applicable to some probes)')
 option('advertise_noackmode', type: 'boolean', value: false, description: 'Let GDB know that the probe supports and prefers `QStartNoAckMode`')
+option('alternative_pinout', type: 'combo', choices : ['0', '1', '2', '3'], value: '0', description: 'Alternative pinout for probe (only applicable to blackpill-f4*)')
