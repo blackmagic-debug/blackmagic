@@ -51,10 +51,16 @@
 
 #define CORTEXA_DBG_IDR 0x000U
 
+/* On-Chip Memory (OCM) region definitions */
+#define ZYNQ7_OCM_LOW_BASE   0x00000000U
+#define ZYNQ7_OCM_HIGH_BASE  0xfffc0000U
+#define ZYNQ7_OCM_CHUNK_SIZE 0x00010000U
+
 /* System Level Control Registers */
 #define ZYNQ7_SLCR_BASE         0xf8000000U
 #define ZYNQ7_SLCR_UNLOCK       (ZYNQ7_SLCR_BASE + 0x008U)
 #define ZYNQ7_SLCR_PSS_RST_CTRL (ZYNQ7_SLCR_BASE + 0x200U)
+#define ZYNQ7_SLCR_OCM_CFG      (ZYNQ7_SLCR_BASE + 0x910U)
 
 /* UG585 Appendix A: Register Details, pg1639 */
 #define ZYNQ7_SLCR_UNLOCK_KEY 0x0000df0dU
@@ -72,6 +78,17 @@ bool zynq7_probe(target_s *const target)
 
 	target->driver = "Zynq-7000";
 	target->reset = zynq7_reset;
+
+	/* Read back the OCM mapping status */
+	const uint8_t ocm_mapping = target_mem_read32(target, ZYNQ7_SLCR_OCM_CFG) & 0x0fU;
+	/* For each of the 4 chunks, pull out if it's mapped low or high and define a mapping accordingly */
+	for (uint8_t chunk = 0U; chunk < 4U; ++chunk) {
+		const bool chunk_high = (ocm_mapping >> chunk) & 1U;
+		const uint32_t chunk_offset = chunk * ZYNQ7_OCM_CHUNK_SIZE;
+		target_add_ram(
+			target, (chunk_high ? ZYNQ7_OCM_HIGH_BASE : ZYNQ7_OCM_LOW_BASE) + chunk_offset, ZYNQ7_OCM_CHUNK_SIZE);
+	}
+
 	return true;
 }
 
