@@ -534,8 +534,8 @@ static bool cmd_rtt(target_s *t, int argc, const char **argv)
 		}
 		if (rtt_flag_ram)
 			gdb_outf("ram: 0x%08" PRIx32 " 0x%08" PRIx32, rtt_ram_start, rtt_ram_end);
-		gdb_outf(
-			"\nmax poll ms: %u min poll ms: %u max errs: %u\n", rtt_max_poll_ms, rtt_min_poll_ms, rtt_max_poll_errs);
+		gdb_outf("\nmax poll ms: %" PRIu32 " min poll ms: %" PRIu32 " max errs: %" PRIu32 "\n", rtt_max_poll_ms,
+			rtt_min_poll_ms, rtt_max_poll_errs);
 	} else if (argc >= 2 && strncmp(argv[1], "channel", command_len) == 0) {
 		/* mon rtt channel switches to auto rtt channel selection
 		   mon rtt channel number... selects channels given */
@@ -554,9 +554,9 @@ static bool cmd_rtt(target_s *t, int argc, const char **argv)
 	} else if (argc == 2 && strncmp(argv[1], "ident", command_len) == 0)
 		rtt_ident[0] = '\0';
 	else if (argc == 2 && strncmp(argv[1], "poll", command_len) == 0)
-		gdb_outf("%u %u %u\n", rtt_max_poll_ms, rtt_min_poll_ms, rtt_max_poll_errs);
+		gdb_outf("%" PRIu32 " %" PRIu32 " %" PRIu32 "\n", rtt_max_poll_ms, rtt_min_poll_ms, rtt_max_poll_errs);
 	else if (argc == 2 && strncmp(argv[1], "cblock", command_len) == 0) {
-		gdb_outf("cbaddr: 0x%x\n", rtt_cbaddr);
+		gdb_outf("cbaddr: 0x%08" PRIx32 "\n", rtt_cbaddr);
 		gdb_out("ch ena i/o buffer@      size   head   tail flag\n");
 		for (uint32_t i = 0; i < rtt_num_up_chan + rtt_num_down_chan; ++i) {
 			gdb_outf("%2" PRIu32 "   %c %s 0x%08" PRIx32 " %6" PRIu32 " %6" PRIu32 " %6" PRIu32 " %4" PRIu32 "\n", i,
