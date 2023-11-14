@@ -21,7 +21,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* 
+/*
  * This file implements a basic command interpreter for GDB 'monitor' commands.
  */
 
@@ -112,7 +112,7 @@ const command_s cmd_list[] = {
 	{"traceswo", cmd_traceswo, "Start trace capture, Manchester mode: [decode [CHANNEL_NR ...]]"},
 #endif
 #endif
-	{"heapinfo", cmd_heapinfo, "Set semihosting heapinfo: HEAPINFO HEAP_BASE HEAP_LIMIT STACK_BASE STACK_LIMIT"},
+	{"heapinfo", cmd_heapinfo, "Set semihosting heapinfo: HEAP_BASE HEAP_LIMIT STACK_BASE STACK_LIMIT"},
 #if defined(PLATFORM_HAS_DEBUG) && PC_HOSTED == 0
 	{"debug_bmp", cmd_debug_bmp, "Output BMP \"debug\" strings to the second vcom: [enable|disable]"},
 #endif
@@ -670,6 +670,14 @@ static bool cmd_shutdown_bmda(target_s *t, int argc, const char **argv)
 }
 #endif
 
+/*
+ * Heapinfo allows passing up to four uint32_t from host to target.
+ * Heapinfo can be used to quickly test a system with different heap and stack values, to see how much heap and stack is needed.
+ * - User sets up values for heap and stack using "mon heapinfo"
+ * - When the target boots, crt0.S does a heapinfo semihosting call to get these values for heap and stack.
+ * - If the target system crashes, increase heap or stack
+ * See newlib/libc/sys/arm/crt0.S "Issue Angel SWI to read stack info"
+ */
 static bool cmd_heapinfo(target_s *t, int argc, const char **argv)
 {
 	if (t == NULL)
@@ -679,10 +687,11 @@ static bool cmd_heapinfo(target_s *t, int argc, const char **argv)
 		target_addr_t heap_limit = strtoul(argv[2], NULL, 16);
 		target_addr_t stack_base = strtoul(argv[3], NULL, 16);
 		target_addr_t stack_limit = strtoul(argv[4], NULL, 16);
-		gdb_outf("heapinfo heap_base: %p heap_limit: %p stack_base: %p stack_limit: %p\n", heap_base, heap_limit,
-			stack_base, stack_limit);
+		gdb_outf("heap_base: %08" PRIx32 " heap_limit: %08" PRIx32 " stack_base: %08" PRIx32 " stack_limit: %08" PRIx32
+				 "\n",
+			heap_base, heap_limit, stack_base, stack_limit);
 		target_set_heapinfo(t, heap_base, heap_limit, stack_base, stack_limit);
 	} else
-		gdb_outf("heapinfo heap_base heap_limit stack_base stack_limit\n");
+		gdb_outf("%s\n", "Set semihosting heapinfo: HEAP_BASE HEAP_LIMIT STACK_BASE STACK_LIMIT");
 	return true;
 }
