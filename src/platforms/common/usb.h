@@ -43,6 +43,9 @@ extern uint16_t usb_config;
 #define CDCACM_UART_ENDPOINT 3U
 #define TRACE_ENDPOINT       5U
 
+#define CDCACM_GDB_NOTIF_ENDPOINT  2U
+#define CDCACM_UART_NOTIF_ENDPOINT 4U
+
 #define GDB_IF_NO  0U
 #define UART_IF_NO 2U
 #define DFU_IF_NO  4U
