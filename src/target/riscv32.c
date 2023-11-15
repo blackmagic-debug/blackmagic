@@ -562,7 +562,9 @@ void riscv32_mem_read(target_s *const target, void *const dest, const target_add
 
 #if ENABLE_DEBUG
 	DEBUG_PROTO("%s: @ %08" PRIx32 " len %zu:", __func__, src, len);
+#ifndef DEBUG_PROTO_IS_NOOP
 	const uint8_t *const data = (const uint8_t *)dest;
+#endif
 	for (size_t offset = 0; offset < len; ++offset) {
 		if (offset == 16U)
 			break;
@@ -578,7 +580,9 @@ void riscv32_mem_write(target_s *const target, const target_addr_t dest, const v
 {
 #if ENABLE_DEBUG
 	DEBUG_PROTO("%s: @ %" PRIx32 " len %zu:", __func__, dest, len);
+#ifndef DEBUG_PROTO_IS_NOOP
 	const uint8_t *const data = (const uint8_t *)src;
+#endif
 	for (size_t offset = 0; offset < len; ++offset) {
 		if (offset == 16U)
 			break;
