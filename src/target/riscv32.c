@@ -576,6 +576,7 @@ void riscv32_mem_read(target_s *const target, void *const dest, const target_add
 
 void riscv32_mem_write(target_s *const target, const target_addr_t dest, const void *const src, const size_t len)
 {
+#if ENABLE_DEBUG
 	DEBUG_PROTO("%s: @ %" PRIx32 " len %zu:", __func__, dest, len);
 	const uint8_t *const data = (const uint8_t *)src;
 	for (size_t offset = 0; offset < len; ++offset) {
@@ -586,6 +587,7 @@ void riscv32_mem_write(target_s *const target, const target_addr_t dest, const v
 	if (len > 16U)
 		DEBUG_PROTO(" ...");
 	DEBUG_PROTO("\n");
+#endif
 	/* If we're asked to do a 0-byte read, do nothing */
 	if (!len)
 		return;
