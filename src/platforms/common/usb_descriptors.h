@@ -61,9 +61,12 @@ static const usb_device_descriptor_s dev_desc = {
 
 /* GDB interface descriptors */
 
-/* This notification endpoint isn't implemented. According to CDC spec its
- * optional, but its absence causes a NULL pointer dereference in Linux cdc_acm
- * driver. */
+/*
+ * This interrupt endpoint serves to send "DSR+DCD high" serial state
+ * notification to nudge some host drivers to start talking to us.
+ * According to CDC spec it's optional, but its absence may cause
+ * a NULL pointer dereference in Linux cdc_acm driver.
+ */
 static const usb_endpoint_descriptor_s gdb_comm_endp = {
 	.bLength = USB_DT_ENDPOINT_SIZE,
 	.bDescriptorType = USB_DT_ENDPOINT,
@@ -174,6 +177,11 @@ static const usb_iface_assoc_descriptor_s gdb_assoc = {
 
 /* Physical/debug UART interface */
 
+/*
+ * This interrupt endpoint (when available, not on stm32f4) allows BMP to respond
+ * with CDC-ACM Serial state notifications. The only one implemented is DCD+DSR high.
+ * Possible other flags: break condition, RI, errors of framing/parity/overrun.
+ */
 static const usb_endpoint_descriptor_s uart_comm_endp = {
 	.bLength = USB_DT_ENDPOINT_SIZE,
 	.bDescriptorType = USB_DT_ENDPOINT,
