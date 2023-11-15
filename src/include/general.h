@@ -82,14 +82,22 @@
 #define DEBUG_INFO(...)  PLATFORM_PRINTF(__VA_ARGS__)
 #else
 #define DEBUG_ERROR(...) PRINT_NOOP(__VA_ARGS__)
-#define DEBUG_WARN(...)  PRINT_NOOP(__VA_ARGS__)
-#define DEBUG_INFO(...)  PRINT_NOOP(__VA_ARGS__)
+#define DEBUG_ERROR_IS_NOOP
+#define DEBUG_WARN(...) PRINT_NOOP(__VA_ARGS__)
+#define DEBUG_WARN_IS_NOOP
+#define DEBUG_INFO(...) PRINT_NOOP(__VA_ARGS__)
+#define DEBUG_INFO_IS_NOOP
 #endif
-#define DEBUG_GDB(...)    PRINT_NOOP(__VA_ARGS__)
+#define DEBUG_GDB(...) PRINT_NOOP(__VA_ARGS__)
+#define DEBUG_GDB_IS_NOOP
 #define DEBUG_TARGET(...) PRINT_NOOP(__VA_ARGS__)
-#define DEBUG_PROTO(...)  PRINT_NOOP(__VA_ARGS__)
-#define DEBUG_PROBE(...)  PRINT_NOOP(__VA_ARGS__)
-#define DEBUG_WIRE(...)   PRINT_NOOP(__VA_ARGS__)
+#define DEBUG_TARGET_IS_NOOP
+#define DEBUG_PROTO(...) PRINT_NOOP(__VA_ARGS__)
+#define DEBUG_PROTO_IS_NOOP
+#define DEBUG_PROBE(...) PRINT_NOOP(__VA_ARGS__)
+#define DEBUG_PROBE_IS_NOOP
+#define DEBUG_WIRE(...) PRINT_NOOP(__VA_ARGS__)
+#define DEBUG_WIRE_IS_NOOP
 
 void debug_serial_send_stdout(const uint8_t *data, size_t len);
 #else
