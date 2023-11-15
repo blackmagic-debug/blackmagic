@@ -103,7 +103,7 @@ static usbd_request_return_codes_e gdb_serial_control_request(usbd_device *dev, 
 	switch (req->bRequest) {
 	case USB_CDC_REQ_SET_CONTROL_LINE_STATE:
 		/* Send a notification back on the notification endpoint */
-		usb_serial_set_state(dev, req->wIndex, CDCACM_GDB_ENDPOINT + 1U);
+		usb_serial_set_state(dev, req->wIndex, CDCACM_GDB_NOTIF_ENDPOINT);
 		gdb_serial_dtr = req->wValue & 1U;
 		return USBD_REQ_HANDLED;
 	case USB_CDC_REQ_SET_LINE_CODING:
@@ -141,7 +141,7 @@ static usbd_request_return_codes_e debug_serial_control_request(usbd_device *dev
 	switch (req->bRequest) {
 	case USB_CDC_REQ_SET_CONTROL_LINE_STATE:
 		/* Send a notification back on the notification endpoint */
-		usb_serial_set_state(dev, req->wIndex, CDCACM_UART_ENDPOINT + 1U);
+		usb_serial_set_state(dev, req->wIndex, CDCACM_UART_NOTIF_ENDPOINT);
 #ifdef USBUSART_DTR_PIN
 		gpio_set_val(USBUSART_PORT, USBUSART_DTR_PIN, !(req->wValue & 1U));
 #endif
@@ -189,14 +189,14 @@ void usb_serial_set_config(usbd_device *dev, uint16_t value)
 	usbd_ep_setup(dev, CDCACM_GDB_ENDPOINT, USB_ENDPOINT_ATTR_BULK, CDCACM_PACKET_SIZE, NULL);
 #endif
 	usbd_ep_setup(dev, CDCACM_GDB_ENDPOINT | USB_REQ_TYPE_IN, USB_ENDPOINT_ATTR_BULK, CDCACM_PACKET_SIZE, NULL);
-	usbd_ep_setup(dev, (CDCACM_GDB_ENDPOINT + 1U) | USB_REQ_TYPE_IN, USB_ENDPOINT_ATTR_INTERRUPT, 16, NULL);
+	usbd_ep_setup(dev, CDCACM_GDB_NOTIF_ENDPOINT | USB_REQ_TYPE_IN, USB_ENDPOINT_ATTR_INTERRUPT, 16, NULL);
 
 	/* Serial interface */
 	usbd_ep_setup(
 		dev, CDCACM_UART_ENDPOINT, USB_ENDPOINT_ATTR_BULK, CDCACM_PACKET_SIZE / 2U, debug_serial_receive_callback);
 	usbd_ep_setup(dev, CDCACM_UART_ENDPOINT | USB_REQ_TYPE_IN, USB_ENDPOINT_ATTR_BULK, CDCACM_PACKET_SIZE,
 		debug_serial_send_callback);
-	usbd_ep_setup(dev, (CDCACM_UART_ENDPOINT + 1U) | USB_REQ_TYPE_IN, USB_ENDPOINT_ATTR_INTERRUPT, 16, NULL);
+	usbd_ep_setup(dev, CDCACM_UART_NOTIF_ENDPOINT | USB_REQ_TYPE_IN, USB_ENDPOINT_ATTR_INTERRUPT, 16, NULL);
 
 #ifdef PLATFORM_HAS_TRACESWO
 	/* Trace interface */
@@ -211,8 +211,8 @@ void usb_serial_set_config(usbd_device *dev, uint16_t value)
 	/* Notify the host that DCD is asserted.
 	 * Allows the use of /dev/tty* devices on *BSD/MacOS
 	 */
-	usb_serial_set_state(dev, GDB_IF_NO, CDCACM_GDB_ENDPOINT + 1U);
-	usb_serial_set_state(dev, UART_IF_NO, CDCACM_UART_ENDPOINT + 1U);
+	usb_serial_set_state(dev, GDB_IF_NO, CDCACM_GDB_NOTIF_ENDPOINT);
+	usb_serial_set_state(dev, UART_IF_NO, CDCACM_UART_NOTIF_ENDPOINT);
 
 #if ENABLE_DEBUG == 1 && defined(PLATFORM_HAS_DEBUG)
 	initialise_monitor_handles();
