@@ -160,6 +160,10 @@ static usbd_request_return_codes_e debug_serial_control_request(usbd_device *dev
 
 void usb_serial_set_state(usbd_device *const dev, const uint16_t iface, const uint8_t ep)
 {
+#if defined(STM32F4)
+	if (ep >= 4U)
+		return;
+#endif
 	uint8_t buf[10];
 	usb_cdc_notification_s *notif = (void *)buf;
 	/* We echo signals back to host as notification */
@@ -184,14 +188,22 @@ void usb_serial_set_config(usbd_device *dev, uint16_t value)
 	usbd_ep_setup(dev, CDCACM_GDB_ENDPOINT, USB_ENDPOINT_ATTR_BULK, CDCACM_PACKET_SIZE, NULL);
 #endif
 	usbd_ep_setup(dev, CDCACM_GDB_ENDPOINT | USB_REQ_TYPE_IN, USB_ENDPOINT_ATTR_BULK, CDCACM_PACKET_SIZE, NULL);
+#if defined(STM32F4) && CDCACM_GDB_NOTIF_ENDPOINT >= 4
+	/* skip setup for unimplemented EP */
+#else
 	usbd_ep_setup(dev, CDCACM_GDB_NOTIF_ENDPOINT | USB_REQ_TYPE_IN, USB_ENDPOINT_ATTR_INTERRUPT, 16, NULL);
+#endif
 
 	/* Serial interface */
 	usbd_ep_setup(
 		dev, CDCACM_UART_ENDPOINT, USB_ENDPOINT_ATTR_BULK, CDCACM_PACKET_SIZE / 2U, debug_serial_receive_callback);
 	usbd_ep_setup(dev, CDCACM_UART_ENDPOINT | USB_REQ_TYPE_IN, USB_ENDPOINT_ATTR_BULK, CDCACM_PACKET_SIZE,
 		debug_serial_send_callback);
+#if defined(STM32F4) && CDCACM_UART_NOTIF_ENDPOINT >= 4
+	/* skip setup for unimplemented EP */
+#else
 	usbd_ep_setup(dev, CDCACM_UART_NOTIF_ENDPOINT | USB_REQ_TYPE_IN, USB_ENDPOINT_ATTR_INTERRUPT, 16, NULL);
+#endif
 
 #ifdef PLATFORM_HAS_TRACESWO
 	/* Trace interface */
