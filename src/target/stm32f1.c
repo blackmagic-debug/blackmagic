@@ -263,6 +263,7 @@ static bool at32f40_detect(target_s *target, const uint16_t part_id)
 	// All parts have 96KB SRAM
 	target_add_ram(target, 0x20000000, 96U * 1024U);
 	target->driver = "AT32F403A/407";
+	target->part_id = part_id;
 	target->mass_erase = stm32f1_mass_erase;
 	return true;
 }
@@ -299,6 +300,7 @@ static bool at32f41_detect(target_s *target, const uint16_t part_id)
 	// All parts have 32KB SRAM
 	target_add_ram(target, 0x20000000, 32U * 1024U);
 	target->driver = "AT32F415";
+	target->part_id = part_id;
 	target->mass_erase = stm32f1_mass_erase;
 	return true;
 }
