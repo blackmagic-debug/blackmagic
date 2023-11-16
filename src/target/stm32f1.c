@@ -213,6 +213,22 @@ bool gd32vf1_probe(target_s *const target)
 }
 #endif
 
+static bool at32f40_is_dual_bank(const uint16_t part_id)
+{
+	switch (part_id) {
+	case 0x0344U: // AT32F403AVGT7 1024KB / LQFP100 (*)
+	case 0x0345U: // AT32F403ARGT7 1024KB / LQFP64 (*)
+	case 0x0346U: // AT32F403ACGT7 1024KB / LQFP48 (*)
+	case 0x0347U: // AT32F403ACGU7 1024KB / QFN48 (found on BlackPill+ WeAct Studio) (*)
+	case 0x034bU: // AT32F407VGT7 1024KB / LQFP100 (*)
+	case 0x034cU: // AT32F407VGT7 1024KB / LQFP64 (*)
+	case 0x0353U: // AT32F407AVGT7 1024KB / LQFP100 (*)
+		// Flash: 1024 KB / 2KB per block, dual-bank
+		return true;
+	}
+	return false;
+}
+
 static bool at32f40_detect(target_s *target, const uint16_t part_id)
 {
 	// Current driver supports only *default* memory layout (256 KB Flash / 96 KB SRAM)
@@ -237,20 +253,14 @@ static bool at32f40_detect(target_s *target, const uint16_t part_id)
 		// Flash: 512 KB / 2KB per block
 		stm32f1_add_flash(target, 0x08000000, 512U * 1024U, 2U * 1024U);
 		break;
-	case 0x0344U: // AT32F403AVGT7 1024KB / LQFP100 (*)
-	case 0x0345U: // AT32F403ARGT7 1024KB / LQFP64 (*)
-	case 0x0346U: // AT32F403ACGT7 1024KB / LQFP48 (*)
-	case 0x0347U: // AT32F403ACGU7 1024KB / QFN48 (found on BlackPill+ WeAct Studio) (*)
-	case 0x034bU: // AT32F407VGT7 1024KB / LQFP100 (*)
-	case 0x034cU: // AT32F407VGT7 1024KB / LQFP64 (*)
-	case 0x0353U: // AT32F407AVGT7 1024KB / LQFP100 (*)
-		// Flash: 1024 KB / 2KB per block, dual-bank
-		stm32f1_add_flash(target, 0x08000000, 512U * 1024U, 2U * 1024U);
-		stm32f1_add_flash(target, 0x08080000, 512U * 1024U, 2U * 1024U);
-		break;
-	// Unknown/undocumented
 	default:
-		return false;
+		if (at32f40_is_dual_bank(part_id)) {
+			// Flash: 1024 KB / 2KB per block, dual-bank
+			stm32f1_add_flash(target, 0x08000000, 512U * 1024U, 2U * 1024U);
+			stm32f1_add_flash(target, 0x08080000, 512U * 1024U, 2U * 1024U);
+			break;
+		} else // Unknown/undocumented
+			return false;
 	}
 	// All parts have 96KB SRAM
 	target_add_ram(target, 0x20000000, 96U * 1024U);
