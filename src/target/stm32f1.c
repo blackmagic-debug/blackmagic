@@ -606,6 +606,15 @@ static bool stm32f1_flash_busy_wait(
 	return !(status & SR_ERROR_MASK);
 }
 
+static bool stm32f1_is_dual_bank(const uint16_t part_id)
+{
+	if (part_id == 0x430U) /* XL-density */
+		return true;
+	if (at32f40_is_dual_bank(part_id))
+		return true;
+	return false;
+}
+
 static uint32_t stm32f1_bank_offset_for(target_addr_t addr)
 {
 	if (addr >= FLASH_BANK_SPLIT)
@@ -620,7 +629,8 @@ static bool stm32f1_flash_erase(target_flash_s *flash, target_addr_t addr, size_
 	DEBUG_TARGET("%s: at %08" PRIx32 "\n", __func__, addr);
 
 	/* Unlocked an appropriate flash bank */
-	if ((target->part_id == 0x430U && end >= FLASH_BANK_SPLIT && !stm32f1_flash_unlock(target, FLASH_BANK2_OFFSET)) ||
+	if ((stm32f1_is_dual_bank(target->part_id) && end >= FLASH_BANK_SPLIT &&
+			!stm32f1_flash_unlock(target, FLASH_BANK2_OFFSET)) ||
 		(addr < FLASH_BANK_SPLIT && !stm32f1_flash_unlock(target, 0)))
 		return false;
 
@@ -671,7 +681,7 @@ static bool stm32f1_flash_write(target_flash_s *flash, target_addr_t dest, const
 
 	/* If there's anything to write left over and we're on a part with a second bank, write to bank 2 */
 	const size_t remainder = len - offset;
-	if (target->part_id == 0x430U && remainder) {
+	if (stm32f1_is_dual_bank(target->part_id) && remainder) {
 		const uint8_t *data = src;
 		stm32f1_flash_clear_eop(target, FLASH_BANK2_OFFSET);
 
@@ -717,7 +727,7 @@ static bool stm32f1_mass_erase(target_s *target)
 		return false;
 
 	/* If we're on a part that has a second bank, mass erase that bank too */
-	if (target->part_id == 0x430U)
+	if (stm32f1_is_dual_bank(target->part_id))
 		return stm32f1_mass_erase_bank(target, FLASH_BANK2_OFFSET, &timeout);
 	return true;
 }
