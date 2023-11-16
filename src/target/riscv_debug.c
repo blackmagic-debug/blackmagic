@@ -429,6 +429,12 @@ static bool riscv_hart_init(riscv_hart_s *const hart)
 	target->designer_code = hart->vendorid ? hart->vendorid : hart->dbg_module->dmi_bus->designer_code;
 	target->cpuid = hart->archid;
 
+	/*
+	 * Now we've identified the target, and before we can do things like trigger discovery
+	 * we need to first run any target-specific setup (eg, halting the WDTs on the ESP32-C3)
+	 * so the next steps won't get screwed up by them.
+	 */
+	esp32c3_target_prepare(target);
 	/* Now we're in a safe environment, leasurely read out the triggers, etc. */
 	riscv_hart_discover_triggers(hart);
 

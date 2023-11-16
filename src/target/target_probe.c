@@ -149,5 +149,10 @@ TARGET_PROBE_WEAK_NOP(stm32mp15_cm4_probe)
 TARGET_PROBE_WEAK_NOP(zynq7_probe)
 
 LPC55_DP_PREPARE_WEAK_NOP(lpc55_dp_prepare)
+/*
+ * This isn't actually a probe routine, but it shares its signature with them,
+ * so uses the same no-op stub because we can get away with that.
+ */
+TARGET_PROBE_WEAK_NOP(esp32c3_target_prepare)
 
 #endif /* _WIN32 */
