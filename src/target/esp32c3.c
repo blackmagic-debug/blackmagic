@@ -51,6 +51,9 @@
 #define ESP32_C3_RTC_SRAM_BASE   0x50000000U
 #define ESP32_C3_RTC_SRAM_SIZE   0x00002000U
 
+#define ESP32_C3_IBUS_FLASH_BASE 0x42000000U
+#define ESP32_C3_IBUS_FLASH_SIZE 0x00800000U
+
 #define ESP32_C3_SPI1_BASE         0x60002000U
 #define ESP32_C3_SPI1_CMD          (ESP32_C3_SPI1_BASE + 0x000U)
 #define ESP32_C3_SPI1_ADDR         (ESP32_C3_SPI1_BASE + 0x004U)
@@ -118,6 +121,9 @@ static void esp32c3_halt_resume(target_s *target, bool step);
 static target_halt_reason_e esp32c3_halt_poll(target_s *target, target_addr32_t *watch);
 
 static void esp32c3_spi_read(target_s *target, uint16_t command, target_addr32_t address, void *buffer, size_t length);
+static void esp32c3_spi_write(
+	target_s *target, uint16_t command, target_addr32_t address, const void *buffer, size_t length);
+static void esp32c3_spi_run_command(target_s *target, uint16_t command, target_addr32_t address);
 
 /* Make an ESP32-C3 ready for probe operations having identified one */
 bool esp32c3_target_prepare(target_s *const target)
@@ -171,6 +177,10 @@ bool esp32c3_probe(target_s *const target)
 		const uint32_t capacity = 1U << flash_id.capacity;
 		DEBUG_INFO("SPI Flash: mfr = %02x, type = %02x, capacity = %08" PRIx32 "\n", flash_id.manufacturer,
 			flash_id.type, capacity);
+		spi_flash_s *const flash = bmp_spi_add_flash(
+			target, ESP32_C3_IBUS_FLASH_BASE, capacity, esp32c3_spi_read, esp32c3_spi_write, esp32c3_spi_run_command);
+		/* Adjust the resulting capacity to not exceed the available memory mapping window size */
+		flash->flash.length = MIN(flash->flash.length, ESP32_C3_IBUS_FLASH_SIZE);
 	}
 	return true;
 }
@@ -313,4 +323,49 @@ static void esp32c3_spi_read(
 		/* Extract and unpack the received data */
 		target_mem32_read(target, data + offset, ESP32_C3_SPI1_DATA, amount);
 	}
+}
+
+static void esp32c3_spi_write(target_s *const target, const uint16_t command, const target_addr32_t address,
+	const void *const buffer, const size_t length)
+{
+	/* Start by setting up the common components of the transaction */
+	const uint32_t enabled_stages = esp32c3_spi_config(target, command, address, length);
+	const uint8_t *const data = (const uint8_t *)buffer;
+	const uint32_t misc_reg = target_mem32_read32(target, ESP32_C3_SPI1_MISC) & ~ESP32_C3_SPI_MISC_CS_HOLD;
+
+	/*
+	 * The transfer has to proceed in no more than 64 bytes at a time because that's
+	 * how many data registers are available in the SPI peripheral
+	 */
+	for (size_t offset = 0U; offset < length; offset += 64U) {
+		const uint32_t amount = MIN(length - offset, 64U);
+		/* Tell the controller how many bytes we want sent in this transaction */
+		target_mem32_write32(target, ESP32_C3_SPI1_DATA_OUT_LEN, ESP32_C3_SPI_DATA_BIT_LEN(amount));
+		/* Configure which transaction stages to use */
+		if (offset)
+			target_mem32_write32(target, ESP32_C3_SPI1_USER0, ESP32_C3_SPI_USER0_DATA_OUT);
+		else
+			target_mem32_write32(target, ESP32_C3_SPI1_USER0, enabled_stages);
+
+		/* On the final transfer, clear the chip select hold bit, otherwise set it */
+		if (length - offset == amount)
+			target_mem32_write32(target, ESP32_C3_SPI1_MISC, misc_reg);
+		else
+			target_mem32_write32(target, ESP32_C3_SPI1_MISC, misc_reg | ESP32_C3_SPI_MISC_CS_HOLD);
+
+		/* Pack and stage the data to transmit */
+		target_mem32_write(target, ESP32_C3_SPI1_DATA, data + offset, amount);
+
+		/* Run the transaction */
+		esp32c3_spi_wait_complete(target);
+	}
+}
+
+static void esp32c3_spi_run_command(target_s *const target, const uint16_t command, const target_addr_t address)
+{
+	/* Start by setting up the common components of the transaction */
+	const uint32_t enabled_stages = esp32c3_spi_config(target, command, address, 0U);
+	/* Write the stages to execute and run the transaction */
+	target_mem32_write32(target, ESP32_C3_SPI1_USER0, enabled_stages);
+	esp32c3_spi_wait_complete(target);
 }
