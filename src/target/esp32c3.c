@@ -162,6 +162,8 @@ bool esp32c3_probe(target_s *const target)
 	target->halt_request = esp32c3_halt_request;
 	target->halt_resume = esp32c3_halt_resume;
 	target->halt_poll = esp32c3_halt_poll;
+	/* Provide an implementation of the mass erase command */
+	target->mass_erase = bmp_spi_mass_erase;
 
 	/* Establish the target RAM mappings */
 	target_add_ram32(target, ESP32_C3_IBUS_SRAM0_BASE, ESP32_C3_IBUS_SRAM0_SIZE);
