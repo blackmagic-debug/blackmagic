@@ -73,8 +73,18 @@ int hostio_reply(target_controller_s *const tc, char *const pbuf, const int len)
 static int hostio_get_response(target_controller_s *const tc)
 {
 	char *const packet_buffer = gdb_packet_buffer();
-	const size_t size = gdb_getpacket(packet_buffer, GDB_PACKET_BUFFER_SIZE);
-	return gdb_main_loop(tc, packet_buffer, GDB_PACKET_BUFFER_SIZE, size, true);
+	/* Still have to service normal 'X'/'m'-packets */
+	while (true) {
+		/* Get back the next packet to process and have the main loop handle it */
+		const size_t size = gdb_getpacket(packet_buffer, GDB_PACKET_BUFFER_SIZE);
+		/* If this was an escape packet (or gdb_if reports link closed), fail the call */
+		if (size == 1U && packet_buffer[0] == '\x04')
+			return -1;
+		const int result = gdb_main_loop(tc, packet_buffer, GDB_PACKET_BUFFER_SIZE, size, true);
+		/* If this was an F-packet, we're done */
+		if (packet_buffer[0] == 'F')
+			return result;
+	}
 }
 
 /* Interface to host system calls */
