@@ -214,14 +214,14 @@ bool gd32vf1_probe(target_s *const target)
 static bool at32f40_is_dual_bank(const uint16_t part_id)
 {
 	switch (part_id) {
-	case 0x0344U: // AT32F403AVGT7 1024KB / LQFP100 (*)
-	case 0x0345U: // AT32F403ARGT7 1024KB / LQFP64 (*)
-	case 0x0346U: // AT32F403ACGT7 1024KB / LQFP48 (*)
-	case 0x0347U: // AT32F403ACGU7 1024KB / QFN48 (found on BlackPill+ WeAct Studio) (*)
-	case 0x034bU: // AT32F407VGT7 1024KB / LQFP100 (*)
-	case 0x034cU: // AT32F407VGT7 1024KB / LQFP64 (*)
-	case 0x0353U: // AT32F407AVGT7 1024KB / LQFP100 (*)
-		// Flash: 1024 KB / 2KB per block, dual-bank
+	case 0x0344U: // AT32F403AVGT7 / LQFP100
+	case 0x0345U: // AT32F403ARGT7 / LQFP64
+	case 0x0346U: // AT32F403ACGT7 / LQFP48
+	case 0x0347U: // AT32F403ACGU7 / QFN48 (found on BlackPill+ WeAct Studio)
+	case 0x034bU: // AT32F407VGT7 / LQFP100
+	case 0x034cU: // AT32F407VGT7 / LQFP64
+	case 0x0353U: // AT32F407AVGT7 / LQFP100
+		// Flash (G): 1024 KiB / 2 KiB per block, dual-bank
 		return true;
 	}
 	return false;
@@ -229,38 +229,38 @@ static bool at32f40_is_dual_bank(const uint16_t part_id)
 
 static bool at32f40_detect(target_s *target, const uint16_t part_id)
 {
-	// Current driver supports only *default* memory layout (256 KB Flash / 96 KB SRAM)
-	// XXX: Support for external Flash for 512KB and 1024KB parts requires specific flash code (not implemented)
+	// Current driver supports only *default* memory layout (256 KB ZW Flash / 96 KB SRAM)
+	// XXX: Support for external Flash on SPIM requires specific flash code (not implemented)
 	switch (part_id) {
-	case 0x0240U: // AT32F403AVCT7 256KB / LQFP100
-	case 0x0241U: // AT32F403ARCT7 256KB / LQFP64
-	case 0x0242U: // AT32F403ACCT7 256KB / LQFP48
-	case 0x0243U: // AT32F403ACCU7 256KB / QFN48
-	case 0x0249U: // AT32F407VCT7 256KB / LQFP100
-	case 0x024aU: // AT32F407RCT7 256KB / LQFP64
-	case 0x0254U: // AT32F407AVCT7 256KB / LQFP100
-		// Flash: 256 KB / 2KB per block
+	case 0x0240U: // AT32F403AVCT7 / LQFP100
+	case 0x0241U: // AT32F403ARCT7 / LQFP64
+	case 0x0242U: // AT32F403ACCT7 / LQFP48
+	case 0x0243U: // AT32F403ACCU7 / QFN48
+	case 0x0249U: // AT32F407VCT7 / LQFP100
+	case 0x024aU: // AT32F407RCT7 / LQFP64
+	case 0x0254U: // AT32F407AVCT7 / LQFP100
+		// Flash (C): 256 KiB / 2 KiB per block
 		stm32f1_add_flash(target, 0x08000000, 256U * 1024U, 2U * 1024U);
 		break;
-	case 0x02cdU: // AT32F403AVET7 512KB / LQFP100 (*)
-	case 0x02ceU: // AT32F403ARET7 512KB / LQFP64 (*)
-	case 0x02cfU: // AT32F403ACET7 512KB / LQFP48 (*)
-	case 0x02d0U: // AT32F403ACEU7 512KB / QFN48 (*)
-	case 0x02d1U: // AT32F407VET7 512KB / LQFP100 (*)
-	case 0x02d2U: // AT32F407RET7 512KB / LQFP64 (*)
-		// Flash: 512 KB / 2KB per block
+	case 0x02cdU: // AT32F403AVET7 / LQFP100
+	case 0x02ceU: // AT32F403ARET7 / LQFP64
+	case 0x02cfU: // AT32F403ACET7 / LQFP48
+	case 0x02d0U: // AT32F403ACEU7 / QFN48
+	case 0x02d1U: // AT32F407VET7 / LQFP100
+	case 0x02d2U: // AT32F407RET7 / LQFP64
+		// Flash (E): 512 KiB / 2 KiB per block
 		stm32f1_add_flash(target, 0x08000000, 512U * 1024U, 2U * 1024U);
 		break;
 	default:
 		if (at32f40_is_dual_bank(part_id)) {
-			// Flash: 1024 KB / 2KB per block, dual-bank
+			// Flash (G): 1024 KiB / 2 KiB per block, dual-bank
 			stm32f1_add_flash(target, 0x08000000, 512U * 1024U, 2U * 1024U);
 			stm32f1_add_flash(target, 0x08080000, 512U * 1024U, 2U * 1024U);
 			break;
 		} else // Unknown/undocumented
 			return false;
 	}
-	// All parts have 96KB SRAM
+	// All parts have 96 KiB SRAM
 	target_add_ram(target, 0x20000000, 96U * 1024U);
 	target->driver = "AT32F403A/407";
 	target->part_id = part_id;
@@ -276,7 +276,7 @@ static bool at32f41_detect(target_s *target, const uint16_t part_id)
 	case 0x0242U: // QFN32_4x4
 	case 0x0243U: // LQFP64_7x7
 	case 0x024cU: // QFN48_6x6
-		// Flash: 256 KB / 2KB per block
+		// Flash (C): 256 KiB / 2 KiB per block
 		stm32f1_add_flash(target, 0x08000000, 256U * 1024U, 2U * 1024U);
 		break;
 	case 0x01c4U: // LQFP64_10x10
@@ -284,20 +284,20 @@ static bool at32f41_detect(target_s *target, const uint16_t part_id)
 	case 0x01c6U: // QFN32_4x4
 	case 0x01c7U: // LQFP64_7x7
 	case 0x01cdU: // QFN48_6x6
-		// Flash: 128 KB / 2KB per block
+		// Flash (B): 128 KiB / 2 KiB per block
 		stm32f1_add_flash(target, 0x08000000, 128U * 1024U, 2U * 1024U);
 		break;
 	case 0x0108U: // LQFP64_10x10
 	case 0x0109U: // LQFP48_7x7
 	case 0x010aU: // QFN32_4x4
-		// Flash: 64 KB / 2KB per block
+		// Flash (8): 64 KiB / 2 KiB per block
 		stm32f1_add_flash(target, 0x08000000, 64U * 1024U, 2U * 1024U);
 		break;
 	// Unknown/undocumented
 	default:
 		return false;
 	}
-	// All parts have 32KB SRAM
+	// All parts have 32 KiB SRAM
 	target_add_ram(target, 0x20000000, 32U * 1024U);
 	target->driver = "AT32F415";
 	target->part_id = part_id;
