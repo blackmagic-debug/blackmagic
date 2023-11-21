@@ -48,6 +48,7 @@
 #ifdef PLATFORM_HAS_TRACESWO
 #include "serialno.h"
 #include "traceswo.h"
+#include "usb.h"
 #endif
 
 static bool cmd_version(target_s *t, int argc, const char **argv);
@@ -640,7 +641,7 @@ static bool cmd_traceswo(target_s *t, int argc, const char **argv)
 	traceswo_init(swo_channelmask);
 #endif
 
-	gdb_outf("Trace enabled for BMP serial %s, USB EP 5\n", serial_no);
+	gdb_outf("Trace enabled for BMP serial %s, USB EP %u\n", serial_no, TRACE_ENDPOINT);
 	return true;
 }
 #endif
