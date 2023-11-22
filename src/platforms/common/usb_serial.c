@@ -211,8 +211,8 @@ void usb_serial_set_config(usbd_device *dev, uint16_t value)
 	/* Notify the host that DCD is asserted.
 	 * Allows the use of /dev/tty* devices on *BSD/MacOS
 	 */
-	usb_serial_set_state(dev, GDB_IF_NO, CDCACM_GDB_ENDPOINT);
-	usb_serial_set_state(dev, UART_IF_NO, CDCACM_UART_ENDPOINT);
+	usb_serial_set_state(dev, GDB_IF_NO, CDCACM_GDB_ENDPOINT + 1U);
+	usb_serial_set_state(dev, UART_IF_NO, CDCACM_UART_ENDPOINT + 1U);
 
 #if defined(ENABLE_DEBUG) && defined(PLATFORM_HAS_DEBUG)
 	initialise_monitor_handles();
