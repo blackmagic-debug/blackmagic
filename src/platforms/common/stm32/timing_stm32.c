@@ -140,9 +140,23 @@ uint32_t platform_time_ms(void)
  * per delay loop count with 2 delay loops per clock
  */
 
+#if defined(STM32F4)
+/* Values for STM32F411 at 96 MHz */
+#define USED_SWD_CYCLES 12
+#define CYCLES_PER_CNT  4
+#elif defined(STM32F1)
 /* Values for STM32F103 at 72 MHz */
+#define USED_SWD_CYCLES 18
+#define CYCLES_PER_CNT  4
+#elif defined(STM32F0)
+/* Values for STM32F072 at 48 MHz */
+#define USED_SWD_CYCLES 16
+#define CYCLES_PER_CNT  6
+#else
+/* Inherit defaults for other platforms (F3, F7) */
 #define USED_SWD_CYCLES 22
 #define CYCLES_PER_CNT  10
+#endif
 
 void platform_max_frequency_set(const uint32_t frequency)
 {
