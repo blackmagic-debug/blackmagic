@@ -79,10 +79,12 @@ static void swdptap_turnaround(const swdio_status_t dir)
 	} else
 		gpio_clear(SWCLK_PORT, SWCLK_PIN);
 
-	platform_delay_busy(target_clk_divider + 1);
+	if (target_clk_divider != UINT32_MAX)
+		platform_delay_busy(target_clk_divider);
 
 	gpio_set(SWCLK_PORT, SWCLK_PIN);
-	platform_delay_busy(target_clk_divider + 1);
+	if (target_clk_divider != UINT32_MAX)
+		platform_delay_busy(target_clk_divider);
 
 	if (dir == SWDIO_STATUS_DRIVE) {
 		gpio_clear(SWCLK_PORT, SWCLK_PIN);
@@ -135,13 +137,15 @@ static uint32_t swdptap_seq_in(size_t clock_cycles)
 static bool swdptap_seq_in_parity(uint32_t *ret, size_t clock_cycles)
 {
 	const uint32_t result = swdptap_seq_in(clock_cycles);
-	platform_delay_busy(target_clk_divider + 1);
+	if (target_clk_divider != UINT32_MAX)
+		platform_delay_busy(target_clk_divider);
 
 	const bool parity = calculate_odd_parity(result);
 	const bool bit = gpio_get(SWDIO_IN_PORT, SWDIO_IN_PIN);
 
 	gpio_set(SWCLK_PORT, SWCLK_PIN);
-	platform_delay_busy(target_clk_divider + 1);
+	if (target_clk_divider != UINT32_MAX)
+		platform_delay_busy(target_clk_divider);
 
 	*ret = result;
 	/* Terminate the read cycle now */
@@ -194,8 +198,12 @@ static void swdptap_seq_out_parity(const uint32_t tms_states, const size_t clock
 	const bool parity = calculate_odd_parity(tms_states);
 	swdptap_seq_out(tms_states, clock_cycles);
 	gpio_set_val(SWDIO_PORT, SWDIO_PIN, parity);
-	platform_delay_busy(target_clk_divider + 1);
+	if (target_clk_divider != UINT32_MAX)
+		platform_delay_busy(target_clk_divider);
+
 	gpio_set(SWCLK_PORT, SWCLK_PIN);
-	platform_delay_busy(target_clk_divider + 1);
+	if (target_clk_divider != UINT32_MAX)
+		platform_delay_busy(target_clk_divider);
+
 	gpio_clear(SWCLK_PORT, SWCLK_PIN);
 }
