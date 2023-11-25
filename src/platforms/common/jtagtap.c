@@ -62,8 +62,8 @@ static void jtagtap_reset(void)
 #ifdef TRST_PORT
 	if (platform_hwversion() == 0) {
 		gpio_clear(TRST_PORT, TRST_PIN);
-		for (volatile size_t i = 0; i < 10000U; i++)
-			continue;
+		/* Hold low for approximately 1.5 ms */
+		platform_delay(1U); /* Requires SysTick interrupt to be unblocked */
 		gpio_set(TRST_PORT, TRST_PIN);
 	}
 #endif
@@ -73,8 +73,8 @@ static void jtagtap_reset(void)
 /* Busy-looping delay snippet for GPIO bitbanging (rely on inlining) */
 static inline void platform_delay_busy(const uint32_t loops)
 {
-	for (volatile uint32_t counter = loops; counter > 0; --counter)
-		continue;
+	for (register uint32_t counter = loops; --counter > 0U;)
+		__asm__("");
 }
 
 static bool jtagtap_next_clk_delay()

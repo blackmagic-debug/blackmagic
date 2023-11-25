@@ -58,8 +58,8 @@ void swdptap_init(void)
 /* Busy-looping delay snippet for GPIO bitbanging (rely on inlining) */
 static inline void platform_delay_busy(const uint32_t loops)
 {
-	for (volatile uint32_t counter = loops; counter > 0; --counter)
-		continue;
+	for (register uint32_t counter = loops; --counter > 0U;)
+		__asm__("");
 }
 
 static void swdptap_turnaround(const swdio_status_t dir)
