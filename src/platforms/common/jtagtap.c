@@ -32,11 +32,12 @@ jtag_proc_s jtag_proc;
 
 static void jtagtap_reset(void);
 static inline void platform_delay_busy(const uint32_t loops) __attribute__((always_inline));
-static void jtagtap_tms_seq(uint32_t tms_states, size_t ticks);
-static void jtagtap_tdi_tdo_seq(uint8_t *data_out, bool final_tms, const uint8_t *data_in, size_t clock_cycles);
-static void jtagtap_tdi_seq(bool final_tms, const uint8_t *data_in, size_t clock_cycles);
-static bool jtagtap_next(bool tms, bool tdi);
-static void jtagtap_cycle(bool tms, bool tdi, size_t clock_cycles);
+static void jtagtap_tms_seq(uint32_t tms_states, size_t clock_cycles) __attribute__((optimize(3)));
+static void jtagtap_tdi_tdo_seq(uint8_t *data_out, bool final_tms, const uint8_t *data_in, size_t clock_cycles)
+	__attribute__((optimize(3)));
+static void jtagtap_tdi_seq(bool final_tms, const uint8_t *data_in, size_t clock_cycles) __attribute__((optimize(3)));
+static bool jtagtap_next(bool tms, bool tdi) __attribute__((optimize(3)));
+static void jtagtap_cycle(bool tms, bool tdi, size_t clock_cycles) __attribute__((optimize(3)));
 
 void jtagtap_init(void)
 {
@@ -87,6 +88,8 @@ static bool jtagtap_next_clk_delay()
 	return result != 0;
 }
 
+static bool jtagtap_next_no_delay() __attribute__((optimize(3)));
+
 static bool jtagtap_next_no_delay()
 {
 	gpio_set(TCK_PORT, TCK_PIN);
@@ -119,6 +122,9 @@ static void jtagtap_tms_seq_clk_delay(uint32_t tms_states, const size_t clock_cy
 }
 
 static void jtagtap_tms_seq_no_delay(uint32_t tms_states, const size_t clock_cycles)
+	__attribute__((noinline, optimize(3)));
+
+static void jtagtap_tms_seq_no_delay(uint32_t tms_states, const size_t clock_cycles)
 {
 	bool state = tms_states & 1U;
 	for (size_t cycle = 0; cycle < clock_cycles; ++cycle) {
@@ -134,13 +140,13 @@ static void jtagtap_tms_seq_no_delay(uint32_t tms_states, const size_t clock_cyc
 	}
 }
 
-static void jtagtap_tms_seq(const uint32_t tms_states, const size_t ticks)
+static void jtagtap_tms_seq(const uint32_t tms_states, const size_t clock_cycles)
 {
 	gpio_set(TDI_PORT, TDI_PIN);
 	if (target_clk_divider != UINT32_MAX)
-		jtagtap_tms_seq_clk_delay(tms_states, ticks);
+		jtagtap_tms_seq_clk_delay(tms_states, clock_cycles);
 	else
-		jtagtap_tms_seq_no_delay(tms_states, ticks);
+		jtagtap_tms_seq_no_delay(tms_states, clock_cycles);
 }
 
 static void jtagtap_tdi_tdo_seq_clk_delay(
@@ -175,6 +181,9 @@ static void jtagtap_tdi_tdo_seq_clk_delay(
 		data_out[byte] = value;
 	}
 }
+
+static void jtagtap_tdi_tdo_seq_no_delay(const uint8_t *const data_in, uint8_t *const data_out, const bool final_tms,
+	const size_t clock_cycles) __attribute__((optimize(3)));
 
 static void jtagtap_tdi_tdo_seq_no_delay(
 	const uint8_t *const data_in, uint8_t *const data_out, const bool final_tms, const size_t clock_cycles)
@@ -251,6 +260,9 @@ static void jtagtap_tdi_seq_clk_delay(const uint8_t *const data_in, const bool f
 }
 
 static void jtagtap_tdi_seq_no_delay(const uint8_t *const data_in, const bool final_tms, size_t clock_cycles)
+	__attribute__((optimize(3)));
+
+static void jtagtap_tdi_seq_no_delay(const uint8_t *const data_in, const bool final_tms, size_t clock_cycles)
 {
 	for (size_t cycle = 0; cycle < clock_cycles;) {
 		const uint8_t bit = cycle & 7U;
@@ -299,6 +311,8 @@ static void jtagtap_cycle_clk_delay(const size_t clock_cycles)
 		platform_delay_busy(target_clk_divider);
 	}
 }
+
+static void jtagtap_cycle_no_delay(const size_t clock_cycles) __attribute__((optimize(3)));
 
 static void jtagtap_cycle_no_delay(const size_t clock_cycles)
 {
