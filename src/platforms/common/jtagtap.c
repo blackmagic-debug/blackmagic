@@ -53,9 +53,8 @@ void jtagtap_init(void)
 	jtag_proc.tap_idle_cycles = 1;
 
 	/* Ensure we're in JTAG mode */
-	for (size_t i = 0; i <= 50U; ++i)
-		jtagtap_next(true, false); /* 50 + 1 idle cycles for SWD reset */
-	jtagtap_tms_seq(0xe73cU, 16U); /* SWD to JTAG sequence */
+	jtagtap_cycle(true, false, 51U); /* 50 + 1 idle cycles for SWD reset */
+	jtagtap_tms_seq(0xe73cU, 16U);   /* SWD to JTAG sequence */
 }
 
 static void jtagtap_reset(void)
@@ -93,8 +92,12 @@ static bool jtagtap_next_no_delay() __attribute__((optimize(3)));
 static bool jtagtap_next_no_delay()
 {
 	gpio_set(TCK_PORT, TCK_PIN);
+	/* Stretch the clock high time */
+	__asm__("nop" ::: "memory");
 	const uint16_t result = gpio_get(TDO_PORT, TDO_PIN);
 	gpio_clear(TCK_PORT, TCK_PIN);
+	/* Stretch the clock low time */
+	__asm__("nop" ::: "memory");
 	return result != 0;
 }
 
@@ -318,8 +321,11 @@ static void jtagtap_cycle_no_delay(const size_t clock_cycles)
 {
 	for (size_t cycle = 0; cycle < clock_cycles; ++cycle) {
 		gpio_set(TCK_PORT, TCK_PIN);
+		/* Stretch the clock high time */
 		__asm__ volatile("nop" ::: "memory");
 		gpio_clear(TCK_PORT, TCK_PIN);
+		/* Stretch the clock low time */
+		__asm__ volatile("nop" ::: "memory");
 	}
 }
 
