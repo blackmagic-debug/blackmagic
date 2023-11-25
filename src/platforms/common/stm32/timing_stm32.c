@@ -199,3 +199,29 @@ uint32_t platform_max_frequency_get(void)
 	return result;
 #endif
 }
+
+/* Busy-looping delay for GPIO bitbanging operations. SUBS+BNE.N take 4 cycles. */
+void platform_delay_busy(const uint32_t loops)
+{
+	/* Avoid using `volatile` variables which incur stack accesses */
+#if 0
+	register uint32_t i = loops;
+	do {
+		/*
+		 * A "tactical" single NOP takes 0-1 cycles on Cortex-M0/M3/M4/M7
+		 * and avoids DCE, but consumes 2 bytes of flash, amplified by static/inline.
+		 * A normal `continue` in for/while/do-loops with no side-effects
+		 * makes the whole loop disappear to DCE at higher than -O1.
+		 */
+		__asm__("nop");
+	} while (--i > 0U);
+#else
+	/*
+	 * Another version which still assembles to SUBS+BNE.N; the NOP can be eliminated
+	 * in favor of an empty inline asm/volatile block if it's enough to suppress DCE.
+	 * Note that the predecrement has to be merged into the condition expression.
+	 */
+	for (register uint32_t i = loops; --i > 0U;)
+		__asm__("");
+#endif
+}
