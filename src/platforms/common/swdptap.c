@@ -114,8 +114,10 @@ static uint32_t swdptap_seq_in_no_delay(const size_t clock_cycles)
 	for (size_t cycle = 0; cycle < clock_cycles; ++cycle) {
 		gpio_clear(SWCLK_PORT, SWCLK_PIN);
 		value |= gpio_get(SWDIO_IN_PORT, SWDIO_IN_PIN) ? 1U << cycle : 0U;
+		/* Reordering barrier (in place of a delay) to retain timings */
+		__asm__("" ::: "memory");
 		gpio_set(SWCLK_PORT, SWCLK_PIN);
-		__asm__("nop");
+		__asm__("" ::: "memory");
 	}
 	gpio_clear(SWCLK_PORT, SWCLK_PIN);
 	return value;
@@ -166,9 +168,14 @@ static void swdptap_seq_out_no_delay(uint32_t tms_states, size_t clock_cycles) _
 static void swdptap_seq_out_no_delay(const uint32_t tms_states, const size_t clock_cycles)
 {
 	for (size_t cycle = 0; cycle < clock_cycles; ++cycle) {
+		const bool state = tms_states & (1U << cycle);
+		/* Block the compiler from re-ordering the TMS states calculation to preserve timings */
+		__asm__("" ::: "memory");
 		gpio_clear(SWCLK_PORT, SWCLK_PIN);
-		gpio_set_val(SWDIO_PORT, SWDIO_PIN, tms_states & (1 << cycle));
+		gpio_set_val(SWDIO_PORT, SWDIO_PIN, state);
+		__asm__("" ::: "memory");
 		gpio_set(SWCLK_PORT, SWCLK_PIN);
+		__asm__("" ::: "memory");
 	}
 	gpio_clear(SWCLK_PORT, SWCLK_PIN);
 }
