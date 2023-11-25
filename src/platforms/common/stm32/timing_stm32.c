@@ -30,7 +30,7 @@
 
 bool running_status = false;
 static volatile uint32_t time_ms = 0;
-uint32_t target_clk_divider = 0;
+uint32_t target_clk_divider = UINT32_MAX;
 
 static size_t morse_tick = 0;
 #if defined(PLATFORM_HAS_POWER_SWITCH) && defined(STM32F1)
@@ -172,6 +172,11 @@ void platform_max_frequency_set(const uint32_t frequency)
 		target_clk_divider = UINT32_MAX;
 		return;
 	}
+	/* A zero loops delay will underflow and hang in platform_delay_busy() */
+	if (divisor == 0U) {
+		target_clk_divider = UINT32_MAX;
+		return;
+	}
 	divisor /= 2U;
 	target_clk_divider = divisor / (CYCLES_PER_CNT * frequency);
 	if (target_clk_divider * (CYCLES_PER_CNT * frequency) < divisor)
@@ -194,8 +199,10 @@ uint32_t platform_max_frequency_get(void)
 	const uint32_t ratio = (target_clk_divider * BITBANG_DIVIDER_FACTOR) + BITBANG_DIVIDER_OFFSET;
 	return rcc_ahb_frequency / ratio;
 #else
+	if (target_clk_divider == UINT32_MAX)
+		return rcc_ahb_frequency / USED_SWD_CYCLES;
 	uint32_t result = rcc_ahb_frequency;
-	result /= USED_SWD_CYCLES + CYCLES_PER_CNT * target_clk_divider;
+	result /= USED_SWD_CYCLES + CYCLES_PER_CNT * target_clk_divider * 2U;
 	return result;
 #endif
 }
