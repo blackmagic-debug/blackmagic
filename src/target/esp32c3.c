@@ -138,6 +138,7 @@ static void esp32c3_spi_write(
 	target_s *target, uint16_t command, target_addr32_t address, const void *buffer, size_t length);
 static void esp32c3_spi_run_command(target_s *target, uint16_t command, target_addr32_t address);
 
+static void esp32c3_mem_read(target_s *target, void *dest, target_addr64_t src, size_t len);
 static bool esp32c3_enter_flash_mode(target_s *target);
 static bool esp32c3_exit_flash_mode(target_s *target);
 static bool esp32c3_spi_flash_write(target_flash_s *flash, target_addr32_t dest, const void *src, size_t length);
@@ -205,6 +206,8 @@ bool esp32c3_probe(target_s *const target)
 		flash->flash.length = MIN(flash->flash.length, ESP32_C3_IBUS_FLASH_SIZE);
 		/* Adjust over to our slightly modified versions of the Flash routines */
 		flash->flash.write = esp32c3_spi_flash_write;
+
+		target->mem_read = esp32c3_mem_read;
 	}
 	return true;
 }
@@ -418,6 +421,18 @@ static bool esp32c3_exit_flash_mode(target_s *const target)
 		continue;
 	target_reset(target);
 	return true;
+}
+
+static void esp32c3_mem_read(target_s *const target, void *const dest, const target_addr64_t src, const size_t len)
+{
+	/* If the read is somewhere inside Flash, we have to special-case it */
+	if (src >= target->flash->start && src < target->flash->start + target->flash->length)
+		/* Reach entirely past the I-Cache system and read the SPI Flash directly using a standard read command */
+		esp32c3_spi_read(target, SPI_FLASH_OPCODE_3B_ADDR | SPI_FLASH_DUMMY_LEN(0U) | SPI_FLASH_OPCODE(0x03U),
+			src - target->flash->start, dest, len);
+	else
+		/* Otherwise delegate to the normal RISC-V 32 memory read routine */
+		riscv32_mem_read(target, dest, src, len);
 }
 
 static bool esp32c3_spi_flash_write(
