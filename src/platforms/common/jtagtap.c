@@ -237,6 +237,9 @@ static void jtagtap_tdi_tdo_seq_no_delay(
 static void jtagtap_tdi_tdo_seq(
 	uint8_t *const data_out, const bool final_tms, const uint8_t *const data_in, size_t clock_cycles)
 {
+	/* In case the callsite passes NULL for data_out, don't bother sampling TDO */
+	if (!data_out)
+		return jtagtap_tdi_seq(final_tms, data_in, clock_cycles);
 	gpio_clear(TMS_PORT, TMS_PIN);
 	gpio_clear(TDI_PORT, TDI_PIN);
 	if (target_clk_divider != UINT32_MAX)
