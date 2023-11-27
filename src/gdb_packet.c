@@ -55,7 +55,10 @@ void gdb_set_noackmode(bool enable)
 	if (!enable && noackmode)
 		gdb_if_putchar(GDB_PACKET_ACK, 1U);
 
-	DEBUG_GDB("%s NoAckMode\n", enable ? "Enabling" : "Disabling");
+	/* Log only changes */
+	if (noackmode != enable)
+		DEBUG_GDB("%s NoAckMode\n", enable ? "Enabling" : "Disabling");
+
 	noackmode = enable;
 }
 
