@@ -115,6 +115,31 @@
 #define SWDIO_PORT TMS_PORT
 #define SWDIO_PIN  TMS_PIN
 
+#define SWDIO_MODE_REG_MULT_PB9 (1U << (9U << 1U))
+#define SWDIO_MODE_REG_MULT_PB8 (1U << (8U << 1U))
+/* Update when adding more alternative pinouts */
+#define SWDIO_MODE_REG_MULT PINOUT_SWITCH(SWDIO_MODE_REG_MULT_PB9, SWDIO_MODE_REG_MULT_PB8)
+#define SWDIO_MODE_REG      GPIO_MODER(TMS_PORT)
+
+#define TMS_SET_MODE()                                                    \
+	gpio_mode_setup(TMS_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, TMS_PIN); \
+	gpio_set_output_options(TMS_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_2MHZ, TMS_PIN);
+
+/* Perform SWDIO bus turnaround faster than a gpio_mode_setup() call */
+#define SWDIO_MODE_FLOAT()                       \
+	do {                                         \
+		uint32_t mode_reg = SWDIO_MODE_REG;      \
+		mode_reg &= ~(3U * SWDIO_MODE_REG_MULT); \
+		SWDIO_MODE_REG = mode_reg;               \
+	} while (0)
+
+#define SWDIO_MODE_DRIVE()                      \
+	do {                                        \
+		uint32_t mode_reg = SWDIO_MODE_REG;     \
+		mode_reg |= (1U * SWDIO_MODE_REG_MULT); \
+		SWDIO_MODE_REG = mode_reg;              \
+	} while (0)
+
 #define TRST_PORT PINOUT_SWITCH(GPIOA, GPIOB)
 #define TRST_PIN  PINOUT_SWITCH(GPIO6, GPIO3)
 
@@ -221,10 +246,6 @@
 #define BOOTMAGIC0 UINT32_C(0xb007da7a)
 #define BOOTMAGIC1 UINT32_C(0xbaadfeed)
 
-#define TMS_SET_MODE()     gpio_mode_setup(TMS_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, TMS_PIN);
-#define SWDIO_MODE_FLOAT() gpio_mode_setup(SWDIO_PORT, GPIO_MODE_INPUT, GPIO_PUPD_NONE, SWDIO_PIN);
-
-#define SWDIO_MODE_DRIVE() gpio_mode_setup(SWDIO_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, SWDIO_PIN);
 #define UART_PIN_SETUP()                                                                            \
 	do {                                                                                            \
 		gpio_mode_setup(USBUSART_PORT, GPIO_MODE_AF, GPIO_PUPD_NONE, USBUSART_TX_PIN);              \
