@@ -88,7 +88,8 @@ static void gdb_if_update_buf(void)
 	count_out = usbd_ep_read_packet(usbdev, CDCACM_GDB_ENDPOINT, buffer_out, CDCACM_PACKET_SIZE);
 	out_ptr = 0;
 #else
-	__asm__ volatile("cpsid i; isb");
+	cm_disable_interrupts();
+	__asm__ volatile("isb");
 	if (count_new) {
 		memcpy(buffer_out, double_buffer_out, count_new);
 		count_out = count_new;
@@ -96,7 +97,10 @@ static void gdb_if_update_buf(void)
 		out_ptr = 0;
 		usbd_ep_nak_set(usbdev, CDCACM_GDB_ENDPOINT, 0);
 	}
-	__asm__ volatile("cpsie i; isb");
+	cm_enable_interrupts();
+	__asm__ volatile("isb");
+	if (!count_new)
+		__WFI();
 #endif
 	if (!count_out)
 		__WFI();
