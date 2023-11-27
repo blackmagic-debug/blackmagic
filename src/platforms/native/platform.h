@@ -27,6 +27,7 @@
 #include "timing.h"
 #include "timing_stm32.h"
 
+#define TRACESWO_PROTOCOL 1U /* 1 = Manchester, 2 = NRZ / async */
 #define PLATFORM_HAS_TRACESWO
 #define PLATFORM_HAS_POWER_SWITCH
 
@@ -288,10 +289,15 @@ extern int hwversion;
 #define USBUSART2_DMA_RX_IRQ    NVIC_DMA1_CHANNEL6_IRQ
 #define USBUSART2_DMA_RX_ISR(x) dma1_channel6_isr(x)
 
+#if TRACESWO_PROTOCOL == 1
+/* Use TIM3 Input 1 (from PA6/TDO) */
 #define TRACE_TIM          TIM3
 #define TRACE_TIM_CLK_EN() rcc_periph_clock_enable(RCC_TIM3)
 #define TRACE_IRQ          NVIC_TIM3_IRQ
 #define TRACE_ISR(x)       tim3_isr(x)
+#define TRACE_IC_IN        TIM_IC_IN_TI1
+#define TRACE_TRIG_IN      TIM_SMCR_TS_TI1FP1
+#endif
 
 #define SET_RUN_STATE(state)   running_status = (state)
 #define SET_IDLE_STATE(state)  gpio_set_val(LED_PORT, LED_IDLE_RUN, state)

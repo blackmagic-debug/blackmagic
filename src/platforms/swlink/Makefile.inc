@@ -25,8 +25,15 @@ SRC +=          \
 	timing.c	\
 	timing_stm32.c	\
 	traceswodecode.c	\
-	traceswoasync.c	\
-	platform_common.c \
+	platform_common.c
+
+ifeq ($(TRACESWO_PROTOCOL), 1)
+SRC += traceswo.c
+CFLAGS += -DTRACESWO_PROTOCOL=1
+else
+SRC += traceswoasync.c
+CFLAGS += -DTRACESWO_PROTOCOL=2
+endif
 
 all:	blackmagic.bin blackmagic_dfu.bin blackmagic_dfu.hex
 
