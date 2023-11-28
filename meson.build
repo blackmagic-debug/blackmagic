@@ -63,6 +63,12 @@ fs = import('fs')
 # Grab if we're in cross-compilation mode or not
 is_cross_build = meson.is_cross_build()
 
+# Grab the target probe from project options
+probe = get_option('probe')
+
+# Determine if we are building the firmware or just the native library
+is_firmware_build = probe != ''
+
 ## Black Magic Debug (BMD) sources
 ## _______________________________
 
@@ -134,107 +140,109 @@ subdir('src')
 ## Black Magic Firmware (BMF) targets
 ## __________________________________
 
-message('Adding targets for Black Magic Firmware')
+if is_firmware_build
+	message('Adding targets for Black Magic Firmware')
 
-assert(
-	probe_host.found(),
-	'''Probe host dependency not found, this is not supposed to happen...
+	assert(
+		probe_host.found(),
+		'''Probe host dependency not found, this is not supposed to happen...
 If you did not touch the build system this is not your fault, please report it
 ''',
-)
+	)
 
-if get_option('print_memory_usage')
-	add_project_link_arguments('-Wl,--print-memory-usage', language: 'c')
-endif
+	if get_option('print_memory_usage')
+		add_project_link_arguments('-Wl,--print-memory-usage', language: 'c')
+	endif
 
-# System binary utilities
-size = find_program('size')
-objcopy = find_program('objcopy')
+	# System binary utilities
+	size = find_program('size')
+	objcopy = find_program('objcopy')
 
-# Base name for output files
-bmf_base_name = 'black_magic_firmware_@0@'.format(get_option('probe')).to_lower().underscorify()
+	# Base name for output files
+	bmf_base_name = 'blackmagic_@0@'.format(probe).to_lower().underscorify()
 
-# Main firmware elf file
-bmf_elf = executable(
-	bmf_base_name,
-	name_suffix: 'elf',
-	dependencies: [bmd_core, probe_host],
-)
-alias_target('elf', bmf_elf)
-
-# Firmware binary and hex files
-bmf_bin = custom_target(
-	output: fs.replace_suffix(bmf_elf.name(), '.bin'),
-	input: bmf_elf,
-	command: [objcopy, ['-O', 'binary', '@INPUT@', '@OUTPUT@']],
-	depends: bmf_elf,
-	build_by_default: true,
-)
-alias_target('bin', bmf_bin)
-
-bmf_hex = custom_target(
-	output: fs.replace_suffix(bmf_elf.name(), '.hex'),
-	input: bmf_elf,
-	command: [objcopy, ['-O', 'ihex', '@INPUT@', '@OUTPUT@']],
-	depends: bmf_elf,
-)
-alias_target('hex', bmf_hex)
-
-# Firmware size report
-run_target(
-	'size',
-	command: [size, bmf_elf.full_path(), '-B'],
-	depends: bmf_elf,
-)
-
-## Black Magic Firmware (BMF) Bootloader targets
-## _____________________________________________
-
-if probe_bootloader.found() and get_option('bmd_bootloader')
-	message('Adding targets for Black Magic Firmware Bootloader')
-
-	# Bootloader elf file
-	bmf_boot_elf = executable(
-		f'@bmf_base_name@_bootloader',
+	# Main firmware elf file
+	bmf_elf = executable(
+		f'@bmf_base_name@_firmware',
 		name_suffix: 'elf',
-		include_directories: bmd_core_includes,
-		dependencies: probe_bootloader,
-		build_by_default: false,
+		dependencies: [bmd_core, probe_host],
 	)
-	alias_target('boot-elf', bmf_boot_elf)
+	alias_target('elf', bmf_elf)
 
-	# Bootloader binary and hex files
-	bmf_boot_bin = custom_target(
-		output: fs.replace_suffix(bmf_boot_elf.name(), '.bin'),
-		input: bmf_boot_elf,
+	# Firmware binary and hex files
+	bmf_bin = custom_target(
+		output: fs.replace_suffix(bmf_elf.name(), '.bin'),
+		input: bmf_elf,
 		command: [objcopy, ['-O', 'binary', '@INPUT@', '@OUTPUT@']],
-		depends: bmf_boot_elf,
+		depends: bmf_elf,
+		build_by_default: true,
 	)
-	alias_target('boot-bin', bmf_boot_bin)
+	alias_target('bin', bmf_bin)
 
-	bmf_boot_hex = custom_target(
-		output: fs.replace_suffix(bmf_boot_elf.name(), '.hex'),
-		input: bmf_boot_elf,
+	bmf_hex = custom_target(
+		output: fs.replace_suffix(bmf_elf.name(), '.hex'),
+		input: bmf_elf,
 		command: [objcopy, ['-O', 'ihex', '@INPUT@', '@OUTPUT@']],
-		depends: bmf_boot_elf,
-	)
-	alias_target('boot-hex', bmf_boot_hex)
-endif
-
-## Utility targets
-## _______________
-
-# Black Magic Probe Firmware Manager
-bmputil = find_program('bmputil', required: false)
-if bmputil.found()
-	message('Adding target for firmware update')
-
-	# Firmware update target
-	run_target(
-		'flash',
-		command: [bmputil, 'flash', bmf_elf.full_path()],
 		depends: bmf_elf,
 	)
+	alias_target('hex', bmf_hex)
+
+	# Firmware size report
+	run_target(
+		'size',
+		command: [size, bmf_elf.full_path(), '-B'],
+		depends: bmf_elf,
+	)
+
+	## Black Magic Firmware (BMF) Bootloader targets
+	## _____________________________________________
+
+	if probe_bootloader.found() and get_option('bmd_bootloader')
+		message('Adding targets for Black Magic Firmware Bootloader')
+
+		# Bootloader elf file
+		bmf_boot_elf = executable(
+			f'@bmf_base_name@_bootloader',
+			name_suffix: 'elf',
+			include_directories: bmd_core_includes,
+			dependencies: probe_bootloader,
+			build_by_default: false,
+		)
+		alias_target('boot-elf', bmf_boot_elf)
+
+		# Bootloader binary and hex files
+		bmf_boot_bin = custom_target(
+			output: fs.replace_suffix(bmf_boot_elf.name(), '.bin'),
+			input: bmf_boot_elf,
+			command: [objcopy, ['-O', 'binary', '@INPUT@', '@OUTPUT@']],
+			depends: bmf_boot_elf,
+		)
+		alias_target('boot-bin', bmf_boot_bin)
+
+		bmf_boot_hex = custom_target(
+			output: fs.replace_suffix(bmf_boot_elf.name(), '.hex'),
+			input: bmf_boot_elf,
+			command: [objcopy, ['-O', 'ihex', '@INPUT@', '@OUTPUT@']],
+			depends: bmf_boot_elf,
+		)
+		alias_target('boot-hex', bmf_boot_hex)
+	endif
+
+	## Utility targets
+	## _______________
+
+	# Black Magic Probe Firmware Manager
+	bmputil = find_program('bmputil', required: false)
+	if bmputil.found()
+		message('Adding target for firmware update')
+
+		# Firmware update target
+		run_target(
+			'flash',
+			command: [bmputil, 'flash', bmf_elf.full_path()],
+			depends: bmf_elf,
+		)
+	endif
 endif
 
 # We report this at the end of the configuration, so it's easier to spot
