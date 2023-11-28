@@ -77,17 +77,21 @@ endif
 # Get BMD targets dependency
 subdir('target')
 
-# Core BMD "library" (a dependency with all sources and flags to build the BMD core)
-bmd_core = declare_dependency(
-	compile_args: bmd_core_args,
-	include_directories: bmd_core_includes,
-	sources: [bmd_core_sources, version],
-	dependencies: bmd_targets,
+if is_firmware_build
+	# Core BMD "library" (a dependency with all sources and flags to build the BMD core)
+	bmd_core = declare_dependency(
+		compile_args: bmd_core_args,
+		include_directories: bmd_core_includes,
+		sources: [bmd_core_sources, version],
+		dependencies: bmd_targets,
+	)
+endif
 )
 
-# Get probe host and platform dependencies
-# TODO: when support for build as a host library is added, this can be conditional?
-subdir('platforms')
+if is_firmware_build
+	# Get probe host and platform dependencies
+	subdir('platforms')
+endif
 
 summary(
 	{
