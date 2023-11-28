@@ -33,22 +33,33 @@ bmd_core_includes = include_directories(
 	'include',
 )
 
-bmd_core_sources = files(
+# Define sources used in both the firwmare and when built as a library
+libbmd_core_sources = files(
 	'command.c',
 	'crc32.c',
 	'exception.c',
-	'gdb_hostio.c',
 	'gdb_main.c',
 	'gdb_packet.c',
 	'hex_utils.c',
 	'main.c',
 	'maths_utils.c',
 	'morse.c',
-	'remote.c',
 	'timing.c',
 )
 
+# Define sources used only by the firmware
+bmd_core_sources = [
+	libbmd_core_sources,
+	files(
+		'gdb_hostio.c',
+		'remote.c',
+	),
+]
+
 bmd_core_args = []
+libbmd_core_args = [
+	'-DENABLE_DEBUG=1',
+]
 
 # Debug output handling
 debug_output = get_option('debug_output')
@@ -58,6 +69,8 @@ endif
 
 # RTT support handling
 rtt_support = get_option('rtt_support')
+libbmd_core_sources += files('rtt.c')
+libbmd_core_args += ['-DENABLE_RTT=1']
 if rtt_support
 	bmd_core_sources += files('rtt.c')
 	bmd_core_args += ['-DENABLE_RTT=1']
@@ -65,6 +78,7 @@ if rtt_support
 	rtt_ident = get_option('rtt_ident')
 	if rtt_ident != ''
 		bmd_core_args += [f'-DRTT_IDENT=@rtt_ident@']
+		libbmd_core_args += [f'-DRTT_IDENT=@rtt_ident@']
 	endif
 endif
 
@@ -72,6 +86,7 @@ endif
 advertise_noackmode = get_option('advertise_noackmode')
 if advertise_noackmode
 	bmd_core_args += ['-DADVERTISE_NOACKMODE=1']
+	libbmd_core_args += ['-DADVERTISE_NOACKMODE=1']
 endif
 
 # Get BMD targets dependency
@@ -86,6 +101,13 @@ if is_firmware_build
 		dependencies: bmd_targets,
 	)
 endif
+
+# libbmd core "library" dependency
+libbmd_core = declare_dependency(
+	compile_args: libbmd_core_args,
+	include_directories: [bmd_core_includes, include_directories('platforms/hosted')],
+	sources: [libbmd_core_sources, version],
+	dependencies: libbmd_targets,
 )
 
 if is_firmware_build
