@@ -255,6 +255,24 @@ If you did not touch the build system this is not your fault, please report it
 	endif
 endif
 
+if meson.is_subproject()
+	# libbmd library (static or dynamic, based on the user's choice)
+	libbmd = static_library(
+		'blackmagicdebug',
+		c_args: [
+			'-DPC_HOSTED=1',
+			'-DHOSTED_BMP_ONLY=1',
+		],
+		dependencies: [libbmd_core],
+		native: is_cross_build,
+	)
+
+	libbmd_dep = declare_dependency(
+		include_directories: bmd_core_includes,
+		link_with: libbmd,
+	)
+endif
+
 # We report this at the end of the configuration, so it's easier to spot
 warning(
 	'''The meson build system is experimental and not yet fully supported. Please use the Makefile build system instead.
