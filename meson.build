@@ -60,10 +60,16 @@ version = vcs_tag(
 # Import the filesystem module
 fs = import('fs')
 
+# Grab if we're in cross-compilation mode or not
+is_cross_build = meson.is_cross_build()
+
 ## Black Magic Debug (BMD) sources
 ## _______________________________
 
-c = meson.get_compiler('c')
+cc_host = meson.get_compiler('c')
+if is_cross_build
+	cc_native = meson.get_compiler('c', native: true)
+endif
 
 # Project wide flags
 extended_warnings = [
@@ -107,7 +113,17 @@ extended_warnings = [
 	'-Wvla-parameter',
 	'-Wvla',
 ]
-add_project_arguments(c.get_supported_arguments(extended_warnings), language: 'c')
+add_project_arguments(
+	cc_host.get_supported_arguments(extended_warnings),
+	language: 'c',
+)
+if is_cross_build
+	add_project_arguments(
+		cc_native.get_supported_arguments(extended_warnings),
+		language: 'c',
+		native: true,
+	)
+endif
 
 # Null dependency to allow for checking and conditional compilation later
 probe_host = disabler()
