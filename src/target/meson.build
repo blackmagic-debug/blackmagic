@@ -213,6 +213,33 @@ if is_firmware_build
 	)
 endif
 
+libbmd_target_deps = [
+	# Enable all architectures for libbmd
+	target_cortexar,
+	target_cortexm,
+	target_riscv32,
+	target_riscv64,
+	# Enable all targets for libbmd
+	target_efm,
+	target_hc32,
+	target_lpc,
+	target_nrf,
+	target_nxp,
+	target_renesas,
+	target_rp,
+	target_sam,
+	target_stm,
+	target_ti,
+	target_xilinx,
+]
+
+# Define the libbmd target dependency
+libbmd_targets = declare_dependency(
+	include_directories: target_common_includes,
+	sources: target_common_sources,
+	dependencies: libbmd_target_deps,
+)
+
 if is_firmware_build
 	summary(
 		{
