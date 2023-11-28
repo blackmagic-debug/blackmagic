@@ -59,5 +59,4 @@ probe_alias_map = {
 	'bluepill': 'stlink',
 }
 
-probe = get_option('probe')
 subdir(probe in probe_alias_map ? probe_alias_map[probe] : probe)
