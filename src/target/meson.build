@@ -188,34 +188,38 @@ target_xilinx = declare_dependency(
 	dependencies: target_cortexar,
 )
 
-enabled_targets = get_option('targets')
+if is_firmware_build
+	enabled_targets = get_option('targets')
 
-# Check that at least one target is enabled
-assert(
-	enabled_targets.length() > 0,
-	'''No debug targets enabled, please enable at least one target to build.
-See the 'targets' option for a list of available targets.
-''',
-)
+	# Check that at least one target is enabled
+	assert(
+		enabled_targets.length() > 0,
+		'''No debug targets enabled, please enable at least one target to build.
+	See the 'targets' option for a list of available targets.
+	''',
+	)
 
-# Convert targets option list into a list of dependencies
-enabled_target_deps = []
-foreach target : enabled_targets
-	enabled_target_deps += get_variable(f'target_@target@')
-endforeach
+	# Convert targets option list into a list of dependencies
+	enabled_target_deps = []
+	foreach target : enabled_targets
+		enabled_target_deps += get_variable(f'target_@target@')
+	endforeach
 
-# BMD target dependency
-bmd_targets = declare_dependency(
-	include_directories: target_common_includes,
-	sources: target_common_sources,
-	dependencies: enabled_target_deps,
-)
+	# BMD target dependency
+	bmd_targets = declare_dependency(
+		include_directories: target_common_includes,
+		sources: target_common_sources,
+		dependencies: enabled_target_deps,
+	)
+endif
 
-summary(
-	{
-		'Warning': 'Not all enabled targets may be listed here',
-		'Targets': enabled_targets,
-	},
-	list_sep: ', ',
-	section: 'Targets',
-)
+if is_firmware_build
+	summary(
+		{
+			'Warning': 'Not all enabled targets may be listed here',
+			'Targets': enabled_targets,
+		},
+		list_sep: ', ',
+		section: 'Targets',
+	)
+endif
