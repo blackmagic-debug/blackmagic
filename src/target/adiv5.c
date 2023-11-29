@@ -476,7 +476,7 @@ static uint32_t cortexm_initial_halt(adiv5_access_port_s *ap)
  */
 static bool cortexm_prepare(adiv5_access_port_s *ap)
 {
-#if (defined(PC_HOSTED) && PC_HOSTED == 1) || ENABLE_DEBUG == 1
+#if PC_HOSTED == 1 || ENABLE_DEBUG == 1
 	uint32_t start_time = platform_time_ms();
 #endif
 	uint32_t dhcsr = cortexm_initial_halt(ap);
