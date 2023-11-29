@@ -676,7 +676,12 @@ static void riscv_hart_discover_triggers(riscv_hart_s *const hart)
 		riscv_csr_write(hart, RV_TRIG_SELECT | RV_CSR_FORCE_32_BIT, &trigger);
 		/* Try reading the trigger info */
 		uint32_t info = 0;
-		if (!riscv_csr_read(hart, RV_TRIG_INFO | RV_CSR_FORCE_32_BIT, &info)) {
+		/*
+		 * If the read succeeds but info is still 0, assume we're talking to something like a WCH device
+		 * which'll do this despite not actually implementing the tinfo register. Handle it the same as
+		 * the read explicitly failing.
+		 */
+		if (!riscv_csr_read(hart, RV_TRIG_INFO | RV_CSR_FORCE_32_BIT, &info) || !info) {
 			/*
 			 * If that fails, it's probably because the tinfo register isn't implemented, so read
 			 * the tdata1 register instead and extract the type from the MSb and build the info bitset from that
