@@ -41,7 +41,7 @@
 #include "rtt.h"
 #endif
 
-#if ADVERTISE_NOACKMODE == 1
+#if defined(ADVERTISE_NOACKMODE) && ADVERTISE_NOACKMODE == 1
 /*
  * This lets GDB know that the probe supports ‘QStartNoAckMode’
  * and prefers to operate in no-acknowledgment mode
