@@ -656,7 +656,7 @@ static bool efm32_flash_write(target_flash_s *f, target_addr_t dest, const void 
 	/* Run flashloader */
 	const bool ret = cortexm_run_stub(t, SRAM_BASE, dest, STUB_BUFFER_BASE, len, priv_storage->device->msc_addr) == 0;
 
-#ifdef ENABLE_DEBUG
+#if ENABLE_DEBUG == 1
 	/* Check the MSC_IF */
 	uint32_t msc = priv_storage->device->msc_addr;
 	uint32_t msc_if = target_mem_read32(t, EFM32_MSC_IF(msc));

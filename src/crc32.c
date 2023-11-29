@@ -113,7 +113,7 @@ bool generic_crc32(target_s *const target, uint32_t *const result, const uint32_
 	uint8_t bytes[128U];
 #endif
 
-#if defined(ENABLE_DEBUG)
+#if ENABLE_DEBUG == 1
 	const uint32_t start_time = platform_time_ms();
 #endif
 	uint32_t last_time = platform_time_ms();

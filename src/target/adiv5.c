@@ -126,7 +126,7 @@ typedef enum arm_arch {
 	aa_end
 } arm_arch_e;
 
-#ifdef ENABLE_DEBUG
+#if ENABLE_DEBUG == 1
 #define ARM_COMPONENT_STR(...) __VA_ARGS__
 #else
 #define ARM_COMPONENT_STR(...)
@@ -177,7 +177,7 @@ static const struct {
 	uint16_t arch_id;
 	arm_arch_e arch;
 	cid_class_e cidc;
-#ifdef ENABLE_DEBUG
+#if ENABLE_DEBUG == 1
 	const char *type;
 	const char *full;
 #endif
@@ -272,7 +272,7 @@ static const struct {
 	{0xfff, 0x00, 0, aa_end, cidc_unknown, ARM_COMPONENT_STR("end", "end")},
 };
 
-#ifdef ENABLE_DEBUG
+#if ENABLE_DEBUG == 1
 static const char *adiv5_arm_ap_type_string(const uint8_t ap_type, const uint8_t ap_class)
 {
 	/*
@@ -543,7 +543,7 @@ static void adiv5_component_probe(
 		return;
 	}
 
-#if defined(ENABLE_DEBUG)
+#if ENABLE_DEBUG == 1
 	char *indent = alloca(recursion + 1U);
 
 	for (size_t i = 0; i < recursion; i++)
@@ -608,7 +608,7 @@ static void adiv5_component_probe(
 			}
 		}
 
-#if defined(ENABLE_DEBUG) && defined(PLATFORM_HAS_DEBUG)
+#if (ENABLE_DEBUG == 1) && defined(PLATFORM_HAS_DEBUG)
 		/* Check SYSMEM bit */
 		const uint32_t memtype = adiv5_mem_read32(ap, addr | ADIV5_ROM_MEMTYPE) & ADIV5_ROM_MEMTYPE_SYSMEM;
 
@@ -747,7 +747,7 @@ adiv5_access_port_s *adiv5_new_ap(adiv5_debug_port_s *dp, uint8_t apsel)
 
 	memcpy(ap, &tmpap, sizeof(*ap));
 
-#if defined(ENABLE_DEBUG)
+#if ENABLE_DEBUG == 1
 	/* Grab the config register to get a complete set */
 	uint32_t cfg = adiv5_ap_read(ap, ADIV5_AP_CFG);
 	DEBUG_INFO("AP %3u: IDR=%08" PRIx32 " CFG=%08" PRIx32 " BASE=%08" PRIx32 " CSW=%08" PRIx32, apsel, ap->idr, cfg,

@@ -81,7 +81,12 @@
 #define PRINT_NOOP(...) \
 	do {                \
 	} while (false)
-#if defined(ENABLE_DEBUG)
+
+#ifndef ENABLE_DEBUG
+#define ENABLE_DEBUG 0
+#endif
+
+#if ENABLE_DEBUG == 1
 #define DEBUG_ERROR(...) PLATFORM_PRINTF(__VA_ARGS__)
 #define DEBUG_WARN(...)  PLATFORM_PRINTF(__VA_ARGS__)
 #define DEBUG_INFO(...)  PLATFORM_PRINTF(__VA_ARGS__)

@@ -21,8 +21,14 @@ ifeq (filter, macosx darwin, $(SYS))
 CFLAGS += -Wmaybe-uninitialized -Wstringop-overflow -Wunsafe-loop-optimizations
 endif
 
+ifeq ($(PROBE_HOST),hosted)
+ENABLE_DEBUG = 1
+endif
+
 ifeq ($(ENABLE_DEBUG), 1)
-CFLAGS += -DENABLE_DEBUG
+CFLAGS += -DENABLE_DEBUG=1
+else
+CFLAGS += -DENABLE_DEBUG=0
 endif
 
 SRC =              \

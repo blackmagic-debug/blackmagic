@@ -2,7 +2,7 @@ ifeq ($(origin CC),default)
     CC := gcc
 endif
 SYS := $(shell $(CC) -dumpmachine)
-CFLAGS += -DENABLE_DEBUG -DPLATFORM_HAS_DEBUG
+CFLAGS += -DPLATFORM_HAS_DEBUG
 CFLAGS +=-I ./target
 
 ENABLE_CORTEXAR := 1

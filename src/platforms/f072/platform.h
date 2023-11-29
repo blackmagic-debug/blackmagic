@@ -133,7 +133,7 @@
 #define TRACE_IRQ          NVIC_TIM3_IRQ
 #define TRACE_ISR          tim3_isr
 
-#ifdef ENABLE_DEBUG
+#if ENABLE_DEBUG == 1
 extern bool debug_bmp;
 #define DEBUG printf
 #else

@@ -218,7 +218,7 @@ bool imxrt_probe(target_s *const target)
 	snprintf(priv->name, IMXRT_NAME_MAX_LENGTH, "i.MXRT%u", priv->chip_id);
 	target->driver = priv->name;
 
-#if defined(ENABLE_DEBUG) && (PC_HOSTED == 1 || defined(ESP_LOGD))
+#if (ENABLE_DEBUG == 1) && (PC_HOSTED == 1 || defined(ESP_LOGD))
 	const uint8_t boot_mode = (target_mem_read32(target, IMXRT_SRC_BOOT_MODE2) >> 24U) & 3U;
 #endif
 	DEBUG_TARGET("i.MXRT boot mode is %x\n", boot_mode);
@@ -521,7 +521,7 @@ static void imxrt_spi_wait_complete(target_s *const target)
 	target_mem_write32(target, IMXRT_FLEXSPI1_INT(priv), IMXRT_FLEXSPI1_INT_PRG_CMD_DONE);
 	/* Check if any errors occured */
 	if (target_mem_read32(target, IMXRT_FLEXSPI1_INT(priv)) & IMXRT_FLEXSPI1_INT_CMD_ERR) {
-#if defined(ENABLE_DEBUG) && PC_HOSTED == 1
+#if (ENABLE_DEBUG == 1) && PC_HOSTED == 1
 		/* Read out the status code and display it */
 		const uint32_t status = target_mem_read32(target, IMXRT_FLEXSPI1_STAT1(priv));
 		DEBUG_TARGET("Error executing sequence, offset %u, error code %u\n", (uint8_t)(status >> 16U) & 0xfU,

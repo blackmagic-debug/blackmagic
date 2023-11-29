@@ -29,12 +29,12 @@ const jtag_dev_descr_s dev_descr[] = {
 	{
 		.idcode = 0x0ba00477U,
 		.idmask = 0x0fff0fffU,
-#ifdef ENABLE_DEBUG
+#if ENABLE_DEBUG == 1
 		.descr = "ADIv5 JTAG-DP port.",
 #endif
 		.handler = adiv5_jtag_dp_handler,
 	},
-#ifdef ENABLE_DEBUG
+#if ENABLE_DEBUG == 1
 	{
 		.idcode = 0x00000477U,
 		.idmask = 0x00000fffU,
@@ -339,7 +339,7 @@ const jtag_dev_descr_s dev_descr[] = {
 	{
 		.idcode = 0x00000093U,
 		.idmask = 0x00000fffU,
-#ifdef ENABLE_DEBUG
+#if ENABLE_DEBUG == 1
 		.descr = "Xilinx.",
 #endif
 		.ir_quirks =
@@ -352,13 +352,13 @@ const jtag_dev_descr_s dev_descr[] = {
 	{
 		.idcode = 0x0000563dU,
 		.idmask = 0x0fffffffU,
-#ifdef ENABLE_DEBUG
+#if ENABLE_DEBUG == 1
 		.descr = "RISC-V debug v0.13.",
 #endif
 		.handler = riscv_jtag_dtm_handler,
 	},
 #endif
-#ifdef ENABLE_DEBUG
+#if ENABLE_DEBUG == 1
 	{
 		.idcode = 0x000007a3U,
 		.idmask = 0x00000fffU,
@@ -394,7 +394,7 @@ const jtag_dev_descr_s dev_descr[] = {
 	{
 		.idcode = 0U,
 		.idmask = 0U,
-#ifdef ENABLE_DEBUG
+#if ENABLE_DEBUG == 1
 		.descr = "Unknown",
 #endif
 	},

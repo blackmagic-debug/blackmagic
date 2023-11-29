@@ -117,7 +117,7 @@ typedef struct cortexm_priv {
 	uint32_t demcr;
 } cortexm_priv_s;
 
-#ifdef ENABLE_DEBUG
+#if ENABLE_DEBUG == 1
 const char *const semihosting_names[] = {
 	"",
 	"SYS_OPEN",
@@ -1470,7 +1470,7 @@ static int cortexm_hostio_request(target_s *target)
 		target_mem_read(target, params, arm_regs[1], sizeof(params));
 	int32_t ret = 0;
 
-#ifdef ENABLE_DEBUG
+#if ENABLE_DEBUG == 1
 	const char *syscall_descr = NULL;
 	if (syscall < ARRAY_LENGTH(semihosting_names))
 		syscall_descr = semihosting_names[syscall];
