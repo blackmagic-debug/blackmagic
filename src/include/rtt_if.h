@@ -68,8 +68,8 @@ int rtt_if_exit(void);
 /* target to host: write len bytes from the buffer starting at buf. return number bytes written */
 uint32_t rtt_write(const char *buf, uint32_t len);
 /* host to target: read one character, non-blocking. return character, -1 if no character */
-int32_t rtt_getchar();
+int32_t rtt_getchar(void);
 /* host to target: true if no characters available for reading */
-bool rtt_nodata();
+bool rtt_nodata(void);
 
 #endif /* INCLUDE_RTT_IF_H */

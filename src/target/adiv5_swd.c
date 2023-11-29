@@ -19,7 +19,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* 
+/*
  * This file implements the SWD specific functions of the
  * ARM Debug Interface v5 Architecture Specification, ARM doc IHI0031A.
  */
@@ -67,7 +67,7 @@ static void swd_line_reset_sequence(const bool idle_cycles)
 }
 
 /* Switch out of dormant state into SWD */
-static void dormant_to_swd_sequence()
+static void dormant_to_swd_sequence(void)
 {
 	/*
 	 * ARM Debug Interface Architecture Specification, ADIv5.0 to ADIv5.2. ARM IHI 0031C
@@ -102,7 +102,7 @@ static void dormant_to_swd_sequence()
 }
 
 /* Deprecated JTAG-to-SWD select sequence */
-static void jtag_to_swd_sequence()
+static void jtag_to_swd_sequence(void)
 {
 	/*
 	 * ARM Debug Interface Architecture Specification, ADIv5.0 to ADIv5.2. ARM IHI 0031C
