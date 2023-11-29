@@ -22,7 +22,7 @@ CFLAGS += -Wmaybe-uninitialized -Wstringop-overflow -Wunsafe-loop-optimizations
 endif
 
 ifeq ($(PROBE_HOST),hosted)
-ENABLE_DEBUG = 1
+ENABLE_DEBUG := 1
 endif
 
 ifeq ($(ENABLE_DEBUG), 1)
@@ -150,6 +150,8 @@ endif
 
 ifeq ($(ADVERTISE_NOACKMODE), 1)
 CFLAGS += -DADVERTISE_NOACKMODE=1
+else
+CFLAGS += -DADVERTISE_NOACKMODE=0
 endif
 
 OBJ = $(patsubst %.S,%.o,$(patsubst %.c,%.o,$(SRC)))
