@@ -191,7 +191,7 @@ static bool jtag_read_idcodes(void)
 
 static void jtag_display_idcodes(void)
 {
-#if ENABLE_DEBUG
+#if ENABLE_DEBUG == 1
 	for (size_t device = 0; device < jtag_dev_count; ++device) {
 		const char *description = "Unknown";
 		for (size_t idx = 0; dev_descr[idx].idcode; ++idx) {

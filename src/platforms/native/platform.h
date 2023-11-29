@@ -30,7 +30,7 @@
 #define PLATFORM_HAS_TRACESWO
 #define PLATFORM_HAS_POWER_SWITCH
 
-#ifdef ENABLE_DEBUG
+#if ENABLE_DEBUG == 1
 #define PLATFORM_HAS_DEBUG
 extern bool debug_bmp;
 #endif

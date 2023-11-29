@@ -41,7 +41,7 @@ typedef struct __attribute__((aligned(4))) iap_frame {
 	iap_result_s result;
 } iap_frame_s;
 
-#if defined(ENABLE_DEBUG)
+#if ENABLE_DEBUG == 1
 static const char *const iap_error[] = {
 	"CMD_SUCCESS",
 	"Invalid command",
@@ -261,7 +261,7 @@ iap_status_e lpc_iap_call(lpc_flash_s *const flash, iap_result_s *const result, 
 		*result = results;
 
 /* This guard block deals with the fact iap_error is only defined when ENABLE_DEBUG is */
-#if defined(ENABLE_DEBUG)
+#if ENABLE_DEBUG == 1
 	if (results.return_code < ARRAY_LENGTH(iap_error))
 		DEBUG_INFO("%s: result %s, ", __func__, iap_error[results.return_code]);
 	else

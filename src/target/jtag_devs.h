@@ -31,7 +31,7 @@ typedef struct jtag_ir_quirks {
 typedef struct jtag_dev_descr {
 	uint32_t idcode;
 	uint32_t idmask;
-#ifdef ENABLE_DEBUG
+#if ENABLE_DEBUG == 1
 	const char *descr;
 #endif
 	void (*handler)(uint8_t jd_index);

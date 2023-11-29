@@ -108,7 +108,7 @@ static void dap_jtag_tdi_seq(const bool final_tms, const uint8_t *const data_in,
 
 static bool dap_jtag_next(const bool tms, const bool tdi)
 {
-#ifdef ENABLE_DEBUG
+#if ENABLE_DEBUG == 1
 	const uint8_t tms_byte = tms ? 1 : 0;
 #endif
 	const uint8_t tdi_byte = tdi ? 1 : 0;

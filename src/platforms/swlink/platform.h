@@ -28,7 +28,7 @@
 #include "timing.h"
 #include "timing_stm32.h"
 
-#ifdef ENABLE_DEBUG
+#if ENABLE_DEBUG == 1
 #define PLATFORM_HAS_DEBUG
 extern bool debug_bmp;
 #endif

@@ -964,7 +964,7 @@ static void cortexr_mem_handle_fault(
 	const cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
 	/* If we suffered a fault of some kind, grab the reason and restore DFSR/DFAR */
 	if (priv->core_status & CORTEXAR_STATUS_DATA_FAULT) {
-#ifdef ENABLE_DEBUG
+#if ENABLE_DEBUG == 1
 		const uint32_t fault_status = cortexar_coproc_read(target, CORTEXAR_DFSR);
 		const uint32_t fault_addr = cortexar_coproc_read(target, CORTEXAR_DFAR);
 #else

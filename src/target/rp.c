@@ -223,7 +223,7 @@ bool rp_probe(target_s *target)
 		return false;
 	}
 
-#if defined(ENABLE_DEBUG)
+#if ENABLE_DEBUG == 1
 	if ((boot_magic >> BOOTROM_VERSION_SHIFT) == 1)
 		DEBUG_WARN("Old Bootrom Version 1!\n");
 #endif

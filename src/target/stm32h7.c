@@ -465,7 +465,7 @@ static bool stm32h7_crc_bank(target_s *target, uint32_t addr)
 	target_mem_write32(target, reg_base + FLASH_CRCCR, crc_ctrl);
 	target_mem_write32(target, reg_base + FLASH_CRCCR, crc_ctrl | FLASH_CRCCR_START_CRC);
 	uint32_t status = FLASH_SR_CRC_BUSY;
-#ifdef ENABLE_DEBUG
+#if ENABLE_DEBUG == 1
 	const uint8_t bank = reg_base == FPEC1_BASE ? 1 : 2;
 #endif
 	while (status & FLASH_SR_CRC_BUSY) {

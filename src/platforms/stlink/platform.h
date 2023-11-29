@@ -31,7 +31,7 @@
 #include <libopencm3/stm32/memorymap.h>
 #include <libopencm3/usb/usbd.h>
 
-#ifdef ENABLE_DEBUG
+#if ENABLE_DEBUG == 1
 #define PLATFORM_HAS_DEBUG
 extern bool debug_bmp;
 #endif
