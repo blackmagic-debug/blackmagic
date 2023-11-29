@@ -443,7 +443,7 @@ static bool cmd_halt_timeout(target_s *t, int argc, const char **argv)
 	(void)t;
 	if (argc > 1)
 		cortexm_wait_timeout = strtoul(argv[1], NULL, 0);
-	gdb_outf("Cortex-M timeout to wait for device halts: %d\n", cortexm_wait_timeout);
+	gdb_outf("Cortex-M timeout to wait for device halts: %u\n", cortexm_wait_timeout);
 	return true;
 }
 
