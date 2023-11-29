@@ -791,7 +791,7 @@ static bool stm32l4_cmd_erase_bank1(target_s *const t, const int argc, const cha
 {
 	(void)argc;
 	(void)argv;
-	gdb_outf("Erasing bank %u: ", 1);
+	gdb_outf("Erasing bank %u: ", 1U);
 	const bool result = stm32l4_cmd_erase(t, FLASH_CR_MER1);
 	gdb_out("done\n");
 	return result;
@@ -801,7 +801,7 @@ static bool stm32l4_cmd_erase_bank2(target_s *const t, const int argc, const cha
 {
 	(void)argc;
 	(void)argv;
-	gdb_outf("Erasing bank %u: ", 2);
+	gdb_outf("Erasing bank %u: ", 2U);
 	const bool result = stm32l4_cmd_erase(t, FLASH_CR_MER2);
 	gdb_out("done\n");
 	return result;
