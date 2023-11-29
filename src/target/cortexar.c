@@ -798,7 +798,7 @@ static target_s *cortexar_probe(
 			priv->base.dcache_line_length = CORTEX_CTR_DCACHE_LINE(cache_type);
 
 		DEBUG_TARGET("%s: ICache line length = %u, DCache line length = %u\n", __func__,
-			priv->base.icache_line_length << 2U, priv->base.dcache_line_length << 2U);
+			priv->base.icache_line_length * 4U, priv->base.dcache_line_length * 4U);
 	} else
 		target_check_error(target);
 
