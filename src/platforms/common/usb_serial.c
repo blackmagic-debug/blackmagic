@@ -77,7 +77,7 @@ static void debug_serial_receive_callback(usbd_device *dev, uint8_t ep);
 static bool debug_serial_send_complete = true;
 #endif
 
-#if (ENABLE_DEBUG == 1) && defined(PLATFORM_HAS_DEBUG)
+#if ENABLE_DEBUG == 1 && defined(PLATFORM_HAS_DEBUG)
 /*
  * This call initialises "SemiHosting", only we then do our own SVC interrupt things to
  * route all output through to the debug USB serial interface if debug_bmp is true.
@@ -214,7 +214,7 @@ void usb_serial_set_config(usbd_device *dev, uint16_t value)
 	usb_serial_set_state(dev, GDB_IF_NO, CDCACM_GDB_ENDPOINT + 1U);
 	usb_serial_set_state(dev, UART_IF_NO, CDCACM_UART_ENDPOINT + 1U);
 
-#if (ENABLE_DEBUG == 1) && defined(PLATFORM_HAS_DEBUG)
+#if ENABLE_DEBUG == 1 && defined(PLATFORM_HAS_DEBUG)
 	initialise_monitor_handles();
 #endif
 }
@@ -249,7 +249,7 @@ uint32_t debug_serial_fifo_send(const char *const fifo, const uint32_t fifo_begi
 	return fifo_begin;
 }
 
-#if (ENABLE_DEBUG == 1) && defined(PLATFORM_HAS_DEBUG)
+#if ENABLE_DEBUG == 1 && defined(PLATFORM_HAS_DEBUG)
 static bool debug_serial_fifo_buffer_empty(void)
 {
 	return debug_serial_debug_write_index == debug_serial_debug_read_index;
@@ -270,17 +270,17 @@ static void debug_serial_send_data(void)
 	 * If fifo empty, nothing further to do. */
 	if (usb_get_config() != 1 ||
 		(aux_serial_receive_buffer_empty()
-#if (ENABLE_DEBUG == 1) && defined(PLATFORM_HAS_DEBUG)
+#if ENABLE_DEBUG == 1 && defined(PLATFORM_HAS_DEBUG)
 			&& debug_serial_fifo_buffer_empty()
 #endif
 				)) {
-#if (ENABLE_DEBUG == 1) && defined(PLATFORM_HAS_DEBUG)
+#if ENABLE_DEBUG == 1 && defined(PLATFORM_HAS_DEBUG)
 		debug_serial_debug_read_index = debug_serial_debug_write_index;
 #endif
 		aux_serial_drain_receive_buffer();
 		debug_serial_send_complete = true;
 	} else {
-#if (ENABLE_DEBUG == 1) && defined(PLATFORM_HAS_DEBUG)
+#if ENABLE_DEBUG == 1 && defined(PLATFORM_HAS_DEBUG)
 		debug_serial_debug_read_index = debug_serial_fifo_send(
 			debug_serial_debug_buffer, debug_serial_debug_read_index, debug_serial_debug_write_index);
 #endif

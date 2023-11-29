@@ -476,7 +476,7 @@ static uint32_t cortexm_initial_halt(adiv5_access_port_s *ap)
  */
 static bool cortexm_prepare(adiv5_access_port_s *ap)
 {
-#if (defined(PC_HOSTED) && PC_HOSTED == 1) || (ENABLE_DEBUG == 1)
+#if (defined(PC_HOSTED) && PC_HOSTED == 1) || ENABLE_DEBUG == 1
 	uint32_t start_time = platform_time_ms();
 #endif
 	uint32_t dhcsr = cortexm_initial_halt(ap);
@@ -608,7 +608,7 @@ static void adiv5_component_probe(
 			}
 		}
 
-#if (ENABLE_DEBUG == 1) && defined(PLATFORM_HAS_DEBUG)
+#if ENABLE_DEBUG == 1 && defined(PLATFORM_HAS_DEBUG)
 		/* Check SYSMEM bit */
 		const uint32_t memtype = adiv5_mem_read32(ap, addr | ADIV5_ROM_MEMTYPE) & ADIV5_ROM_MEMTYPE_SYSMEM;
 

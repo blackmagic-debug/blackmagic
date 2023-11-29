@@ -317,7 +317,7 @@ static void remote_packet_process_general(char *packet, const size_t packet_len)
 #endif
 		break;
 	case REMOTE_START:
-#if (ENABLE_DEBUG == 1) && defined(PLATFORM_HAS_DEBUG)
+#if ENABLE_DEBUG == 1 && defined(PLATFORM_HAS_DEBUG)
 		debug_bmp = true;
 #endif
 		remote_respond_string(REMOTE_RESP_OK, PLATFORM_IDENT "" FIRMWARE_VERSION);
