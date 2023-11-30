@@ -994,6 +994,7 @@ void adiv5_dp_init(adiv5_debug_port_s *const dp)
 			 */
 			if (target->priv_free == cortex_priv_free && cortex_ap(target) == ap &&
 				strstr(target->driver, "Tiva") != NULL) {
+				adiv5_ap_unref(ap);
 				adiv5_dp_unref(dp);
 				return;
 			}
