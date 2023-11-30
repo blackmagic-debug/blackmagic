@@ -224,7 +224,8 @@ bool msp432e4_probe(target_s *const target)
 		(devid1 & MSP432E4_SYS_CTRL_DID1_FAMILY_MASK) != MSP432E4_SYS_CTRL_DID1_MSP432E4)
 		return false;
 
-	DEBUG_TARGET("%s: Device version %x:%x, part ID %x, pin count %u, temperature grade %x, package type %x\n",
+	DEBUG_TARGET("%s: Device version %" PRIx32 ":%" PRIx32 ", part ID %" PRIx32 ", pin count %" PRIu32
+				 ", temperature grade %" PRIx32 ", package type %" PRIx32 "\n",
 		__func__, (devid0 >> MSP432E4_SYS_CTRL_DID0_VERSION_MAJ_SHIFT) & MSP432E4_SYS_CTRL_DID0_VERSION_MAJ_MASK,
 		devid0 & MSP432E4_SYS_CTRL_DID0_VERSION_MIN_MASK,
 		(devid1 >> MSP432E4_SYS_CTRL_DID1_PART_NUM_SHIFT) & MSP432E4_SYS_CTRL_DID1_PART_NUM_MASK,
