@@ -964,16 +964,15 @@ static void cortexr_mem_handle_fault(
 	const cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
 	/* If we suffered a fault of some kind, grab the reason and restore DFSR/DFAR */
 	if (priv->core_status & CORTEXAR_STATUS_DATA_FAULT) {
-#if ENABLE_DEBUG == 1
+#ifndef DEBUG_WARN_IS_NOOP
 		const uint32_t fault_status = cortexar_coproc_read(target, CORTEXAR_DFSR);
 		const uint32_t fault_addr = cortexar_coproc_read(target, CORTEXAR_DFAR);
+		DEBUG_WARN("%s: Failed at 0x%08" PRIx32 " (%08" PRIx32 ")\n", func, fault_addr, fault_status);
 #else
 		(void)func;
 #endif
 		cortexar_coproc_write(target, CORTEXAR_DFAR, orig_fault_addr);
 		cortexar_coproc_write(target, CORTEXAR_DFSR, orig_fault_status);
-
-		DEBUG_WARN("%s: Failed at 0x%08" PRIx32 " (%08" PRIx32 ")\n", func, fault_addr, fault_status);
 	}
 }
 
