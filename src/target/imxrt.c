@@ -331,7 +331,7 @@ static bool imxrt_ident_device(target_s *const target)
 		priv->flexspi_base = IMXRT117x_FLEXSPI1_BASE;
 		break;
 	default:
-		DEBUG_TARGET("Unknown ROM fingerprint at %08x = %08x\n", rom_location, fingerprint);
+		DEBUG_TARGET("Unknown ROM fingerprint at %08" PRIx32 " = %08" PRIx32 "\n", rom_location, fingerprint);
 		break;
 	}
 
