@@ -484,9 +484,9 @@ static bool renesas_rv40_error_check(target_s *const target, const uint32_t erro
 	return error;
 }
 
-static bool renesas_rv40_prepare(target_flash_s *const f)
+static bool renesas_rv40_prepare(target_flash_s *const flash)
 {
-	target_s *const target = f->t;
+	target_s *const target = flash->t;
 
 	if (!(target_mem_read32(target, RV40_FSTATR) & RV40_FSTATR_RDY) || target_mem_read16(target, RV40_FENTRYR) != 0) {
 		DEBUG_WARN("flash is not ready, may be hanging mid unfinished command due to something going wrong, "
@@ -496,7 +496,7 @@ static bool renesas_rv40_prepare(target_flash_s *const f)
 	}
 
 	/* Code flash or data flash operation */
-	const bool code_flash = f->start < RENESAS_CF_END;
+	const bool code_flash = flash->start < RENESAS_CF_END;
 
 	/* Transition to PE mode */
 	const pe_mode_e pe_mode = code_flash ? PE_MODE_CF : PE_MODE_DF;
@@ -504,18 +504,18 @@ static bool renesas_rv40_prepare(target_flash_s *const f)
 	return renesas_rv40_pe_mode(target, pe_mode) && !renesas_rv40_error_check(target, RV40_FSTATR_ILGLERR);
 }
 
-static bool renesas_rv40_done(target_flash_s *const f)
+static bool renesas_rv40_done(target_flash_s *const flash)
 {
-	target_s *const target = f->t;
+	target_s *const target = flash->t;
 
 	/* Return to read mode */
 	return renesas_rv40_pe_mode(target, PE_MODE_READ);
 }
 
 /* !TODO: implement blank check */
-static bool renesas_rv40_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
+static bool renesas_rv40_flash_erase(target_flash_s *const flash, target_addr_t addr, size_t len)
 {
-	target_s *const target = f->t;
+	target_s *const target = flash->t;
 
 	/* Code flash or data flash operation */
 	const bool code_flash = addr < RENESAS_CF_END;
@@ -559,9 +559,9 @@ static bool renesas_rv40_flash_erase(target_flash_s *f, target_addr_t addr, size
 	return true;
 }
 
-static bool renesas_rv40_flash_write(target_flash_s *const f, target_addr_t dest, const void *src, size_t len)
+static bool renesas_rv40_flash_write(target_flash_s *const flash, target_addr_t dest, const void *src, size_t len)
 {
-	target_s *const target = f->t;
+	target_s *const target = flash->t;
 
 	/* code flash or data flash operation */
 	const bool code_flash = dest < RENESAS_CF_END;
@@ -613,29 +613,29 @@ static bool renesas_rv40_flash_write(target_flash_s *const f, target_addr_t dest
 
 static void renesas_add_rv40_flash(target_s *const target, const target_addr_t addr, const size_t length)
 {
-	target_flash_s *f = calloc(1, sizeof(*f));
-	if (!f) /* calloc failed: heap exhaustion */
+	target_flash_s *flash = calloc(1, sizeof(*flash));
+	if (!flash) /* calloc failed: heap exhaustion */
 		return;
 
 	const bool code_flash = addr < RENESAS_CF_END;
 
-	f->start = addr;
-	f->length = length;
-	f->erased = 0xffU;
-	f->erase = renesas_rv40_flash_erase;
-	f->write = renesas_rv40_flash_write;
-	f->prepare = renesas_rv40_prepare;
-	f->done = renesas_rv40_done;
+	flash->start = addr;
+	flash->length = length;
+	flash->erased = 0xffU;
+	flash->erase = renesas_rv40_flash_erase;
+	flash->write = renesas_rv40_flash_write;
+	flash->prepare = renesas_rv40_prepare;
+	flash->done = renesas_rv40_done;
 
 	if (code_flash) {
-		f->blocksize = RV40_CF_REGION1_BLOCK_SIZE;
-		f->writesize = RV40_CF_WRITE_SIZE;
+		flash->blocksize = RV40_CF_REGION1_BLOCK_SIZE;
+		flash->writesize = RV40_CF_WRITE_SIZE;
 	} else {
-		f->blocksize = RV40_DF_BLOCK_SIZE;
-		f->writesize = RV40_DF_WRITE_SIZE;
+		flash->blocksize = RV40_DF_BLOCK_SIZE;
+		flash->writesize = RV40_DF_WRITE_SIZE;
 	}
 
-	target_add_flash(target, f);
+	target_add_flash(target, flash);
 }
 
 static void renesas_add_flash(target_s *const target, const target_addr_t addr, const size_t length)
