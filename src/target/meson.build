@@ -169,7 +169,7 @@ target_nxp = declare_dependency(
 )
 
 target_renesas = declare_dependency(
-	sources: files('renesas.c'),
+	sources: files('renesas_ra.c'),
 	dependencies: target_cortexm,
 )
 

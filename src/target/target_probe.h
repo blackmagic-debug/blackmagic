@@ -91,7 +91,7 @@ bool msp432e4_probe(target_s *target);
 bool msp432p4_probe(target_s *target);
 bool ke04_probe(target_s *target);
 bool rp_probe(target_s *target);
-bool renesas_probe(target_s *target);
+bool renesas_ra_probe(target_s *target);
 bool imxrt_probe(target_s *target);
 bool zynq7_probe(target_s *target);
 
