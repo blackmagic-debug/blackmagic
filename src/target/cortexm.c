@@ -678,7 +678,7 @@ bool cortexm_probe(adiv5_access_port_s *ap)
 		PROBE(rp_probe);
 		break;
 	case JEP106_MANUFACTURER_RENESAS:
-		PROBE(renesas_probe);
+		PROBE(renesas_ra_probe);
 		break;
 	case JEP106_MANUFACTURER_NXP:
 		if ((target->cpuid & CORTEX_CPUID_PARTNO_MASK) == CORTEX_M33)

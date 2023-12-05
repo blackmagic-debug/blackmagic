@@ -1,8 +1,9 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
- * Copyright (C) 2022 1BitSquared <info@1bitsquared.com>
+ * Copyright (C) 2022-2023 1BitSquared <info@1bitsquared.com>
  * Written by Rafael Silva <perigoso@riseup.net>
+ * Modified by Rachel Mant <git@dragonmux.network>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -30,7 +31,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/* Support for Renesas RA family of microcontrollers (Arm Core) */
+/* Support for the Renesas RA family of microcontrollers (Arm Core) */
 
 #include "general.h"
 #include "target.h"
@@ -56,7 +57,7 @@
  *  |    |   |   |    |   \_________________ Feature set
  *  |    |   |   |    \_____________________ Group number
  *  |    |   |   \__________________________ Series name
- *  |    |   \______________________________ family (A: RA)
+ *  |    |   \______________________________ Family (A: RA)
  *  |    \__________________________________ Flash memory
  *  \_______________________________________ Renesas microcontroller (always 'R7')
  *
@@ -394,7 +395,7 @@ static void renesas_add_flash(target_s *const target, const target_addr_t addr, 
 	}
 }
 
-bool renesas_probe(target_s *const target)
+bool renesas_ra_probe(target_s *const target)
 {
 	uint8_t pnr[16]; /* 16-byte PNR */
 	target_addr_t flash_root_table = 0;
