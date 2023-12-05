@@ -392,13 +392,10 @@ typedef enum pe_mode {
 static bool renesas_rv40_pe_mode(target_s *const target, const pe_mode_e pe_mode)
 {
 	/* See "Transition to Code Flash P/E Mode": Section 47.9.3.3 of the RA6M4 manual R01UH0890EJ0100. */
-
-	const renesas_priv_s *const priv_storage = (renesas_priv_s *)target->target_storage;
-	if (!priv_storage)
-		return false;
+	const renesas_priv_s *const priv = (renesas_priv_s *)target->target_storage;
 
 	bool has_fmeprot = false; /* Code Flash P/E Mode Entry Protection */
-	switch (priv_storage->series) {
+	switch (priv->series) {
 	case PNR_SERIES_RA4E1:
 	case PNR_SERIES_RA4E2:
 	case PNR_SERIES_RA4M2:
@@ -643,9 +640,7 @@ static void renesas_add_rv40_flash(target_s *const target, const target_addr_t a
 
 static void renesas_add_flash(target_s *const target, const target_addr_t addr, const size_t length)
 {
-	renesas_priv_s *priv_storage = (renesas_priv_s *)target->target_storage;
-	if (!priv_storage)
-		return;
+	renesas_priv_s *priv = (renesas_priv_s *)target->target_storage;
 
 	/*
 	 * Renesas RA MCUs can have one of two kinds of flash memory, MF3/4 and RV40
@@ -671,7 +666,7 @@ static void renesas_add_flash(target_s *const target, const target_addr_t addr, 
 	 * ra6t2 - RV40
 	 */
 
-	switch (priv_storage->series) {
+	switch (priv->series) {
 	case PNR_SERIES_RA2L1:
 	case PNR_SERIES_RA2E1:
 	case PNR_SERIES_RA2E2:
@@ -790,18 +785,18 @@ bool renesas_probe(target_s *const target)
 		return false;
 	}
 
-	renesas_priv_s *const priv_storage = calloc(1, sizeof(renesas_priv_s));
-	if (!priv_storage) /* calloc failed: heap exhaustion */
+	renesas_priv_s *const priv = calloc(1, sizeof(renesas_priv_s));
+	if (!priv) /* calloc failed: heap exhaustion */
 		return false;
-	memcpy(priv_storage->pnr, pnr, sizeof(pnr));
+	memcpy(priv->pnr, pnr, sizeof(pnr));
 
-	priv_storage->series = renesas_series(pnr);
-	priv_storage->flash_root_table = flash_root_table;
+	priv->series = renesas_series(pnr);
+	priv->flash_root_table = flash_root_table;
 
-	target->target_storage = priv_storage;
-	target->driver = (char *)priv_storage->pnr;
+	target->target_storage = priv;
+	target->driver = (char *)priv->pnr;
 
-	switch (priv_storage->series) {
+	switch (priv->series) {
 	case PNR_SERIES_RA2L1:
 	case PNR_SERIES_RA2A1:
 	case PNR_SERIES_RA4M1:
@@ -903,14 +898,10 @@ static bool renesas_uid(target_s *const target, const int argc, const char **con
 	(void)argc;
 	(void)argv;
 
-	renesas_priv_s *priv_storage = (renesas_priv_s *)target->target_storage;
-	if (!priv_storage)
-		return false;
-
-	uint8_t uid[16];
+	const renesas_priv_s *const priv = (renesas_priv_s *)target->target_storage;
 	target_addr_t uid_addr;
 
-	switch (priv_storage->series) {
+	switch (priv->series) {
 	case PNR_SERIES_RA2L1:
 	case PNR_SERIES_RA2E1:
 	case PNR_SERIES_RA2E2:
@@ -936,7 +927,7 @@ static bool renesas_uid(target_s *const target, const int argc, const char **con
 	case PNR_SERIES_RA6M2:
 	case PNR_SERIES_RA6M3:
 	case PNR_SERIES_RA6T1:
-		uid_addr = RENESAS_FMIFRT_UID(priv_storage->flash_root_table);
+		uid_addr = RENESAS_FMIFRT_UID(priv->flash_root_table);
 		break;
 
 	default:
