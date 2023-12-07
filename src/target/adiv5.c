@@ -642,8 +642,9 @@ static void adiv5_component_probe(
 	} else {
 		if (designer_code != JEP106_MANUFACTURER_ARM && designer_code != JEP106_MANUFACTURER_ARM_CHINA) {
 			/* non arm components not supported currently */
-			DEBUG_WARN("%s0x%" PRIx32 ": 0x%08" PRIx32 "%08" PRIx32 " Non ARM component ignored\n", indent, addr,
-				(uint32_t)(pidr >> 32U), (uint32_t)pidr);
+			DEBUG_WARN("%s%" PRIu32 " 0x%" PRIx32 ": 0x%08" PRIx32 "%08" PRIx32 " Non ARM component ignored\n",
+				indent + 1, num_entry, addr, (uint32_t)(pidr >> 32U), (uint32_t)pidr);
+			DEBUG_TARGET("%s -> designer: %x, part no: %x\n", indent, designer_code, part_number);
 			return;
 		}
 
