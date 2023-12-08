@@ -91,14 +91,30 @@
 #define RENESAS_BSCAN_BSID_RZ_A1LU   0x08178447U
 #define RENESAS_BSCAN_BSID_RZ_A1LC   0x082f4447U
 
+/* SPI Multi I/O Bus Controller registers, from R01UH0437EJ0600 §17.4, pg739 (17-4) */
+#define RENESAS_MULTI_IO_SPI_BASE        0x3fefa000U
+#define RENESAS_MULTI_IO_SPI_COMMON_CTRL (RENESAS_MULTI_IO_SPI_BASE + 0x000U)
+#define RENESAS_MULTI_IO_SPI_READ_CTRL   (RENESAS_MULTI_IO_SPI_BASE + 0x00cU)
+#define RENESAS_MULTI_IO_SPI_MODE_STATUS (RENESAS_MULTI_IO_SPI_BASE + 0x048U)
+
+#define RENESAS_MULTI_IO_SPI_COMMON_CTRL_MODE_SPI      (1U << 31U)
+#define RENESAS_MULTI_IO_SPI_READ_CTRL_CS_UNSELECT     (1U << 24U)
+#define RENESAS_MULTI_IO_SPI_MODE_STATUS_XFER_COMPLETE (1U << 0U)
+
 /* This is the part number from the ROM table of a R7S721030 and is a guess */
 #define ID_RZ_A1LU 0x012U
 
 static const char *renesas_rz_part_name(uint32_t part_id);
+static bool renesas_rz_flash_prepare(target_s *target);
+static bool renesas_rz_flash_resume(target_s *target);
 
 static void renesas_rz_add_flash(target_s *const target)
 {
-	(void)target;
+	target->enter_flash_mode = renesas_rz_flash_prepare;
+	target->exit_flash_mode = renesas_rz_flash_resume;
+
+	renesas_rz_flash_prepare(target);
+	renesas_rz_flash_resume(target);
 }
 
 bool renesas_rz_probe(target_s *const target)
@@ -136,4 +152,27 @@ static const char *renesas_rz_part_name(const uint32_t part_id)
 		return "RZ/A1LU";
 	}
 	return "Unknown";
+}
+
+static bool renesas_rz_flash_prepare(target_s *const target)
+{
+	/* Halt any ongoing bust reads */
+	target_mem_write32(target, RENESAS_MULTI_IO_SPI_READ_CTRL,
+		target_mem_read32(target, RENESAS_MULTI_IO_SPI_READ_CTRL) | RENESAS_MULTI_IO_SPI_READ_CTRL_CS_UNSELECT);
+	/* Wait for any existing operations to complete */
+	while (
+		!(target_mem_read32(target, RENESAS_MULTI_IO_SPI_MODE_STATUS) & RENESAS_MULTI_IO_SPI_MODE_STATUS_XFER_COMPLETE))
+		continue;
+	/* Bring the controller out of bus usage mode */
+	target_mem_write32(target, RENESAS_MULTI_IO_SPI_COMMON_CTRL,
+		target_mem_read32(target, RENESAS_MULTI_IO_SPI_COMMON_CTRL) | RENESAS_MULTI_IO_SPI_COMMON_CTRL_MODE_SPI);
+	return true;
+}
+
+static bool renesas_rz_flash_resume(target_s *const target)
+{
+	/* Put the controller back into bus usage mode */
+	target_mem_write32(target, RENESAS_MULTI_IO_SPI_COMMON_CTRL,
+		target_mem_read32(target, RENESAS_MULTI_IO_SPI_COMMON_CTRL) & ~RENESAS_MULTI_IO_SPI_COMMON_CTRL_MODE_SPI);
+	return true;
 }
