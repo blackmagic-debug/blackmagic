@@ -85,14 +85,21 @@
 #define RENESAS_BSCAN_BOOT_MODE (RENESAS_BSCAN_BASE + 0x000U)
 #define RENESAS_BSCAN_BSID      (RENESAS_BSCAN_BASE + 0x004U)
 
-#define RENESAS_BSCAN_BSID_RZ_A1L  0x081a6447U
-#define RENESAS_BSCAN_BSID_RZ_A1LU 0x08178447U
-#define RENESAS_BSCAN_BSID_RZ_A1LC 0x082f4447U
+#define RENESAS_BSCAN_BOOT_MODE_SPI  0x00000004U
+#define RENESAS_BSCAN_BOOT_MODE_MASK 0x00000006U
+#define RENESAS_BSCAN_BSID_RZ_A1L    0x081a6447U
+#define RENESAS_BSCAN_BSID_RZ_A1LU   0x08178447U
+#define RENESAS_BSCAN_BSID_RZ_A1LC   0x082f4447U
 
 /* This is the part number from the ROM table of a R7S721030 and is a guess */
 #define ID_RZ_A1LU 0x012U
 
 static const char *renesas_rz_part_name(uint32_t part_id);
+
+static void renesas_rz_add_flash(target_s *const target)
+{
+	(void)target;
+}
 
 bool renesas_rz_probe(target_s *const target)
 {
@@ -107,6 +114,11 @@ bool renesas_rz_probe(target_s *const target)
 		return false;
 
 	target->driver = renesas_rz_part_name(part_id);
+
+	/* Now determine the boot mode */
+	const uint8_t boot_mode = target_mem_read32(target, RENESAS_BSCAN_BOOT_MODE) & RENESAS_BSCAN_BOOT_MODE_MASK;
+	if (boot_mode == RENESAS_BSCAN_BOOT_MODE_SPI)
+		renesas_rz_add_flash(target);
 
 	target_add_ram(target, RENESAS_OCRAM_BASE, RENESAS_OCRAM_SIZE);
 	target_add_ram(target, RENESAS_OCRAM_MIRROR_BASE, RENESAS_OCRAM_SIZE);
