@@ -44,6 +44,10 @@ HIDAPILIB = hidapi
 ifneq (,$(findstring linux,$(SYS)))
     SRC += serial_unix.c
     HIDAPILIB = hidapi-hidraw
+else ifneq (,$(findstring freebsd,$(SYS)))
+    # On FreeBSD, only the hidapi on libusb-1.0 variant exists
+    SRC += serial_unix.c
+    HIDAPILIB = hidapi
 else ifneq (,$(findstring mingw,$(SYS)))
     FLAVOUR = $(shell which $(CC))
     ifneq (,$(findstring ucrt64,$(FLAVOUR)))

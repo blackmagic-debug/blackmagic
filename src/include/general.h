@@ -35,7 +35,8 @@
 #endif
 #if defined(_WIN32) || defined(__CYGWIN__)
 #include <malloc.h>
-#else
+/* `alloca()` on FreeBSD is visible from <stdlib.h>, and <alloca.h> does not exist */
+#elif !defined(__FreeBSD__)
 #include <alloca.h>
 #endif
 #include <stdint.h>
