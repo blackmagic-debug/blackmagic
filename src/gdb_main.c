@@ -55,11 +55,6 @@
 #define GDB_QSUPPORTED_NOACKMODE
 #endif
 
-#if defined(_WIN32)
-#include <malloc.h>
-#else
-#include <alloca.h>
-#endif
 #include <stdlib.h>
 
 typedef enum gdb_signal {
