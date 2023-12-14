@@ -28,16 +28,6 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-# Ensure we are cross-compiling and not building for the build host
-# TODO: when support for build as a host library is added, this check needs to change
-assert(
-	meson.is_cross_build(),
-	'''Black Magic Firmware must be cross-compiled to the probe
-Try adding the option `--cross-file @0@` for ARM based probes'''.format(
-		meson.project_source_root() / 'cross-file' / 'arm-none-eabi.ini'
-	),
-)
-
 # Pull in the libopencm3 subproject for various platform dependencies
 libopencm3 = subproject(
 	'libopencm3',
