@@ -68,6 +68,16 @@ probe = get_option('probe')
 
 # Determine if we are building the firmware or just the native library
 is_firmware_build = probe != ''
+if is_firmware_build
+	# Ensure we are cross-compiling and not building for the build host
+	assert(
+		is_cross_build,
+		'''Black Magic Firmware must be cross-compiled to the probe
+Try adding the option `--cross-file @0@` to the configuration'''.format(
+			meson.project_source_root() / 'cross-file' / probe + '.ini'
+		),
+	)
+endif
 
 ## Black Magic Debug (BMD) sources
 ## _______________________________
