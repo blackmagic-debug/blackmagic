@@ -85,7 +85,7 @@ void remote_v0_jtag_tdi_tdo_seq(uint8_t *data_out, bool final_tms, const uint8_t
 		const size_t bytes = (chunk_length + 7U) >> 3U;
 		if (data_in) {
 			for (size_t idx = 0; idx < bytes; ++idx)
-				packet_data_in |= data_in[offset + idx] << (idx * 8U);
+				packet_data_in |= (uint32_t)data_in[offset + idx] << (idx * 8U);
 		}
 		/*
 		 * Build the remote protocol message to send, and send it.
