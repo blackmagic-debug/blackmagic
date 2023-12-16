@@ -76,6 +76,9 @@
 #define RENESAS_OCRAM_BASE        0x20000000U
 #define RENESAS_OCRAM_MIRROR_BASE 0x60000000U
 #define RENESAS_OCRAM_SIZE        0x00200000U
+/* Base address and max size for the SPI Flash XIP region */
+#define RENESAS_SPI_FLASH_BASE 0x18000000U
+#define RENESAS_SPI_FLASH_SIZE 0x04000000U
 
 /* Base address for the boundary scan controller and boot mode register */
 /*
@@ -129,6 +132,9 @@ static const char *renesas_rz_part_name(uint32_t part_id);
 static bool renesas_rz_flash_prepare(target_s *target);
 static bool renesas_rz_flash_resume(target_s *target);
 static void renesas_rz_spi_read(target_s *target, uint16_t command, target_addr_t address, void *buffer, size_t length);
+static void renesas_rz_spi_write(
+	target_s *target, uint16_t command, target_addr_t address, const void *buffer, size_t length);
+static void renesas_rz_spi_run_command(target_s *target, uint16_t command, target_addr_t address);
 
 static void renesas_rz_add_flash(target_s *const target)
 {
@@ -136,8 +142,8 @@ static void renesas_rz_add_flash(target_s *const target)
 	target->exit_flash_mode = renesas_rz_flash_resume;
 
 	renesas_rz_flash_prepare(target);
-	spi_parameters_s parameters;
-	sfdp_read_parameters(target, &parameters, renesas_rz_spi_read);
+	bmp_spi_add_flash(target, RENESAS_SPI_FLASH_BASE, RENESAS_SPI_FLASH_SIZE, renesas_rz_spi_read, renesas_rz_spi_write,
+		renesas_rz_spi_run_command);
 	renesas_rz_flash_resume(target);
 }
 
@@ -277,4 +283,36 @@ static void renesas_rz_spi_read(target_s *const target, const uint16_t command, 
 		if (length - offset <= 4U)
 			ctrl &= ~RENESAS_MULTI_IO_SPI_MODE_CTRL_CS_HOLD;
 	}
+}
+
+static void renesas_rz_spi_write(target_s *const target, const uint16_t command, const target_addr_t address,
+	const void *const buffer, const size_t length)
+{
+	/* Set up the transaction */
+	uint32_t ctrl = renesas_rz_spi_setup_xfer(target, command, address, length);
+	const uint8_t *const data = (const uint8_t *)buffer;
+	/* For each 4 byte chunk to be written */
+	for (size_t offset = 0U; offset < length;) {
+		/* Prepare the data to send from the input buffer and write it to the target */
+		uint32_t value = 0U;
+		memcpy(&value, data + offset, MIN(length - offset, 4U));
+		target_mem_write32(target, RENESAS_MULTI_IO_SPI_MODE_WRITE_DATA, value);
+		/* Run the transfer that's configured */
+		renesas_rz_spi_run_xfer(target, ctrl);
+		/* Turn off all the optional phases and set up the next transfer chunk */
+		offset += 4U;
+		const uint8_t amount = MIN(4U, length - offset);
+		target_mem_write32(target, RENESAS_MULTI_IO_SPI_MODE_XFER_CONFIG,
+			(((1U << amount) - 1U) << (4U - amount)) << RENESAS_MULTI_IO_SPI_MODE_XFER_CONFIG_DATA_XFER_SHIFT);
+		/* Adjust the control value if we're going into the last write of the block */
+		if (length - offset <= 4U)
+			ctrl &= ~RENESAS_MULTI_IO_SPI_MODE_CTRL_CS_HOLD;
+	}
+}
+
+static void renesas_rz_spi_run_command(target_s *const target, const uint16_t command, const target_addr_t address)
+{
+	/* Set up and run the requested command transaction */
+	const uint32_t ctrl = renesas_rz_spi_setup_xfer(target, command, address, 0U);
+	renesas_rz_spi_run_xfer(target, ctrl);
 }
