@@ -242,7 +242,17 @@ static uint32_t renesas_rz_spi_setup_xfer(
 	 */
 	return ((command & SPI_FLASH_DATA_MASK) == SPI_FLASH_DATA_IN ? RENESAS_MULTI_IO_SPI_MODE_CTRL_READ_ENABLE :
 																   RENESAS_MULTI_IO_SPI_MODE_CTRL_WRITE_ENABLE) |
-		(length > 4U ? RENESAS_MULTI_IO_SPI_MODE_CTRL_CS_HOLD : 0U) | RENESAS_MULTI_IO_SPI_MODE_CTRL_RUN_XFER;
+		(length > 4U ? RENESAS_MULTI_IO_SPI_MODE_CTRL_CS_HOLD : 0U);
+}
+
+static void renesas_rz_spi_run_xfer(target_s *const target, const uint32_t ctrl)
+{
+	/* Set the requested transfer running */
+	target_mem_write32(target, RENESAS_MULTI_IO_SPI_MODE_CTRL, ctrl | RENESAS_MULTI_IO_SPI_MODE_CTRL_RUN_XFER);
+	/* Wait for it to complete */
+	while (
+		!(target_mem_read32(target, RENESAS_MULTI_IO_SPI_MODE_STATUS) & RENESAS_MULTI_IO_SPI_MODE_STATUS_XFER_COMPLETE))
+		continue;
 }
 
 static void renesas_rz_spi_read(target_s *const target, const uint16_t command, const target_addr_t address,
@@ -254,11 +264,7 @@ static void renesas_rz_spi_read(target_s *const target, const uint16_t command, 
 	/* For each 4 byte chunk to be read */
 	for (size_t offset = 0U; offset < length;) {
 		/* Run the transfer that's configured */
-		target_mem_write32(target, RENESAS_MULTI_IO_SPI_MODE_CTRL, ctrl);
-		/* Wait for it to complete */
-		while (!(target_mem_read32(target, RENESAS_MULTI_IO_SPI_MODE_STATUS) &
-			RENESAS_MULTI_IO_SPI_MODE_STATUS_XFER_COMPLETE))
-			continue;
+		renesas_rz_spi_run_xfer(target, ctrl);
 		/* Read back the data read and copy it into the output buffer */
 		const uint32_t value = target_mem_read32(target, RENESAS_MULTI_IO_SPI_MODE_READ_DATA);
 		memcpy(data + offset, &value, MIN(length - offset, 4U));
