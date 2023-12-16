@@ -249,5 +249,26 @@ static void renesas_rz_spi_read(target_s *const target, const uint16_t command, 
 	void *const buffer, const size_t length)
 {
 	/* Set up the transaction */
-	renesas_rz_spi_setup_xfer(target, command, address, length);
+	uint32_t ctrl = renesas_rz_spi_setup_xfer(target, command, address, length);
+	uint8_t *const data = (uint8_t *)buffer;
+	/* For each 4 byte chunk to be read */
+	for (size_t offset = 0U; offset < length;) {
+		/* Run the transfer that's configured */
+		target_mem_write32(target, RENESAS_MULTI_IO_SPI_MODE_CTRL, ctrl);
+		/* Wait for it to complete */
+		while (!(target_mem_read32(target, RENESAS_MULTI_IO_SPI_MODE_STATUS) &
+			RENESAS_MULTI_IO_SPI_MODE_STATUS_XFER_COMPLETE))
+			continue;
+		/* Read back the data read and copy it into the output buffer */
+		const uint32_t value = target_mem_read32(target, RENESAS_MULTI_IO_SPI_MODE_READ_DATA);
+		memcpy(data + offset, &value, MIN(length - offset, 4U));
+		/* Turn off all the optional phases and set up the next transfer chunk */
+		offset += 4U;
+		const uint8_t amount = MIN(4U, length - offset);
+		target_mem_write32(target, RENESAS_MULTI_IO_SPI_MODE_XFER_CONFIG,
+			(((1U << amount) - 1U) << (4U - amount)) << RENESAS_MULTI_IO_SPI_MODE_XFER_CONFIG_DATA_XFER_SHIFT);
+		/* Adjust the control value if we're going into the last read of the block */
+		if (length - offset <= 4U)
+			ctrl &= ~RENESAS_MULTI_IO_SPI_MODE_CTRL_CS_HOLD;
+	}
 }
