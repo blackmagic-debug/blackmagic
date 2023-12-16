@@ -1061,7 +1061,19 @@ static void cortexar_mem_write(
 	target_s *const target, const target_addr_t dest, const void *const src, const size_t len)
 {
 	cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
-	DEBUG_TARGET("%s: Writing %zu bytes @0x%" PRIx32 "\n", __func__, len, dest);
+	DEBUG_PROTO("%s: Writing %zu bytes @0x%" PRIx32 ":", __func__, len, dest);
+#ifndef DEBUG_PROTO_IS_NOOP
+	const uint8_t *const data = (const uint8_t *)src;
+#endif
+	for (size_t offset = 0; offset < len; ++offset) {
+		if (offset == 16U)
+			break;
+		DEBUG_PROTO(" %02x", data[offset]);
+	}
+	if (len > 16U)
+		DEBUG_PROTO(" ...");
+	DEBUG_PROTO("\n");
+
 	/* Cache DFSR and DFAR in case we wind up triggering a data fault */
 	const uint32_t fault_status = cortexar_coproc_read(target, CORTEXAR_DFSR);
 	const uint32_t fault_addr = cortexar_coproc_read(target, CORTEXAR_DFAR);
