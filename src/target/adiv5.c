@@ -310,7 +310,7 @@ static uint32_t adiv5_ap_read_id(adiv5_access_port_s *ap, uint32_t addr)
 	uint8_t data[16];
 	adiv5_mem_read(ap, data, addr, sizeof(data));
 	for (size_t i = 0; i < 4U; ++i)
-		res |= (data[4U * i] << (i * 8U));
+		res |= (uint32_t)data[4U * i] << (i * 8U);
 	return res;
 }
 
