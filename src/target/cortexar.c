@@ -1000,6 +1000,19 @@ static void cortexar_mem_read(target_s *const target, void *const dest, const ta
 		cortexr_mem_read_slow(target, (uint8_t *)dest, src, len);
 	/* Deal with any data faults that occurred */
 	cortexr_mem_handle_fault(target, __func__, fault_status, fault_addr);
+
+	DEBUG_PROTO("%s: Reading %zu bytes @0x%" PRIx32 ":", __func__, len, src);
+#ifndef DEBUG_PROTO_IS_NOOP
+	const uint8_t *const data = (const uint8_t *)dest;
+#endif
+	for (size_t offset = 0; offset < len; ++offset) {
+		if (offset == 16U)
+			break;
+		DEBUG_PROTO(" %02x", data[offset]);
+	}
+	if (len > 16U)
+		DEBUG_PROTO(" ...");
+	DEBUG_PROTO("\n");
 }
 
 /* Fast path for cortexar_mem_write(). Assumes the address to read data from is already loaded in r0. */
