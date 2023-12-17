@@ -24,6 +24,7 @@
 #include "platform.h"
 #include "timing.h"
 #include "swd.h"
+#include "maths_utils.h"
 
 #if !defined(SWDIO_IN_PORT)
 #define SWDIO_IN_PORT SWDIO_PORT
@@ -130,7 +131,7 @@ static bool swdptap_seq_in_parity(uint32_t *ret, size_t clock_cycles)
 	for (volatile uint32_t counter = target_clk_divider + 1; counter > 0; --counter)
 		continue;
 
-	const bool parity = __builtin_parity(result);
+	const bool parity = calculate_odd_parity(result);
 	const bool bit = gpio_get(SWDIO_IN_PORT, SWDIO_IN_PIN);
 
 	gpio_set(SWCLK_PORT, SWCLK_PIN);
@@ -182,7 +183,7 @@ static void swdptap_seq_out(const uint32_t tms_states, const size_t clock_cycles
 
 static void swdptap_seq_out_parity(const uint32_t tms_states, const size_t clock_cycles)
 {
-	const bool parity = __builtin_parity(tms_states);
+	const bool parity = calculate_odd_parity(tms_states);
 	swdptap_seq_out(tms_states, clock_cycles);
 	gpio_set_val(SWDIO_PORT, SWDIO_PIN, parity);
 	for (volatile uint32_t counter = target_clk_divider + 1; counter > 0; --counter)
