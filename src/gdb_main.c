@@ -28,6 +28,7 @@
 #include "platform.h"
 #include "ctype.h"
 #include "hex_utils.h"
+#include "buffer_utils.h"
 #include "gdb_if.h"
 #include "gdb_packet.h"
 #include "gdb_main.h"
@@ -126,7 +127,6 @@ target_controller_s gdb_controller = {
 };
 
 /* execute gdb remote command stored in 'pbuf'. returns immediately, no busy waiting. */
-
 int gdb_main_loop(target_controller_s *tc, char *pbuf, size_t pbuf_size, size_t size, bool in_syscall)
 {
 	bool single_step = false;
@@ -259,13 +259,28 @@ int gdb_main_loop(target_controller_s *tc, char *pbuf, size_t pbuf_size, size_t 
 	case 'P': { /* Write single register */
 		ERROR_IF_NO_TARGET();
 		if (cur_target->reg_write) {
-			uint32_t reg;
-			int n;
-			sscanf(pbuf, "P%" SCNx32 "=%n", &reg, &n);
-			// TODO: FIXME, VLAs considered harmful.
-			uint8_t *val = alloca(strlen(pbuf + n) / 2U);
-			unhexify(val, pbuf + n, sizeof(val));
-			if (target_reg_write(cur_target, reg, val, sizeof(val)) > 0)
+			/*
+			 * P packets are in the form P[reg]=<value> where [reg] is a hexadecimal-encoded register number
+			 * and <value> is a hexadecimal encoded value to write to the register. Seeing a register and
+			 * its value must be present, use tools like strtoul() and unhexify() to extract the value.
+			 * For now we only support 32-bit targets which have registers the same width, so constrain
+			 * the value buffer accordingly. If the `=` is missing it's an invalid packet.
+			 */
+			char *packet = NULL;
+			/* Extract the register number */
+			uint32_t reg = strtoul(pbuf + 1, &packet, 16);
+			/* Check that the conversion succeeded and we have that '=' */
+			if (packet == NULL || packet[0] != '=') {
+				gdb_putpacketz("EFF");
+				break;
+			}
+			/* Skip past the '=' and convert the value */
+			++packet;
+			const size_t value_length = strlen(packet) / 2U;
+			uint8_t value[4] = {0};
+			unhexify(value, packet, value_length);
+			/* Finally, write the converted value to the target */
+			if (target_reg_write(cur_target, reg, value, sizeof(value)) > 0)
 				gdb_putpacketz("OK");
 			else
 				gdb_putpacketz("EFF");
