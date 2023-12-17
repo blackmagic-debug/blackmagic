@@ -447,7 +447,7 @@ void debug_monitor_handler(void)
 	__asm__("bx lr");
 }
 #else
-/* This defines stubs for the newlib fake file IO layer for compatability with GCC 12 `-spec=nosys.spec` */
+/* This defines stubs for the newlib fake file IO layer for compatibility with GCC 12 `-spec=nosys.spec` */
 
 /* NOLINTNEXTLINE(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp) */
 int _write(const int file, const void *const buffer, const size_t length)

@@ -25,7 +25,7 @@
  * This file implements MSP432 target specific functions for detecting
  * the device, providing the XML memory map and Flash memory programming.
  *
- * Refereces:
+ * References:
  * TI doc - SLAU723a
  *   MSP423e4xx Technical Reference Manual (https://www.ti.com/lit/ug/slau723a/slau723a.pdf)
  */

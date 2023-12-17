@@ -74,7 +74,7 @@ For other firmware upgrade instructions see the [Firmware Upgrade](https://black
 
 ## SWD/JTAG frequency setting
 
-In special cases the SWD/JTAG frequency needs to be adapted. The fequency can be set to `900k`, as this value was found to be helpful in practice, using:
+In special cases the SWD/JTAG frequency needs to be adapted. The frequency can be set to `900k`, as this value was found to be helpful in practice, using:
 
 ```
 mon freq 900k

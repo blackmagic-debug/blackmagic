@@ -102,7 +102,7 @@ bool jtag_scan(void)
 		!jtag_read_irs())
 		return false;
 
-	/* IRs are all succesfully accounted for, so clean up and do housekeeping */
+	/* IRs are all successfully accounted for, so clean up and do housekeeping */
 	DEBUG_INFO("Return to Run-Test/Idle\n");
 	jtag_proc.jtagtap_next(true, true);
 	jtagtap_return_idle(1);
@@ -171,7 +171,7 @@ static bool jtag_read_idcodes(void)
 		/* If the IDCode read is all 1's, we've reached the end */
 		if (idcode == 0xffffffffU)
 			break;
-		/* Check if the max suported chain length is exceeded */
+		/* Check if the max supported chain length is exceeded */
 		if (device == JTAG_MAX_DEVS) {
 			DEBUG_ERROR("jtag_scan: Maximum chain length exceeded\n");
 			jtag_dev_count = 0;

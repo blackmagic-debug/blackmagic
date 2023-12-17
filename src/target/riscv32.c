@@ -607,7 +607,7 @@ void riscv32_mem_write(target_s *const target, const target_addr_t dest, const v
  * The following can be used as a key for understanding the various return results from the breakwatch functions:
  * 0 -> success
  * 1 -> not supported
- * -1 -> an error occured
+ * -1 -> an error occurred
  */
 
 static int riscv32_breakwatch_set(target_s *const target, breakwatch_s *const breakwatch)

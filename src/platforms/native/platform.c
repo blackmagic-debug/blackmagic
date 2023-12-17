@@ -221,7 +221,7 @@ void platform_init(void)
 		 * Configure Timer 1 to run the the power control pin PWM and switch the timer on
 		 * NB: We don't configure the pin mode here but rather we configure it to the alt-mode and back in
 		 * platform_target_set_power() below due to GD32 errata involving PB2 (AUX serial LED).
-		 * See §3.7.6 of the GD32F103 Compatability Summary for details.
+		 * See §3.7.6 of the GD32F103 Compatibility Summary for details.
 		 */
 		timer_set_mode(TIM1, TIM_CR1_CKD_CK_INT, TIM_CR1_CMS_EDGE, TIM_CR1_DIR_UP);
 		/* Use PWM mode 1 so that the signal generated is low till it exceeds the set value */

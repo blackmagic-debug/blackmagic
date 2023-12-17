@@ -53,7 +53,7 @@ static bool remote_adiv5_check_error(
 		/* If the error part of the response code indicates a fault, store the fault value */
 		if (error == REMOTE_ERROR_FAULT)
 			dp->fault = response_code >> 8U;
-		/* If the error part indicates an exception had occured, make that happen here too */
+		/* If the error part indicates an exception had occurred, make that happen here too */
 		else if (error == REMOTE_ERROR_EXCEPTION)
 			raise_exception(response_code >> 8U, "Remote protocol exception");
 		/* Otherwise it's an unexpected error */
@@ -65,7 +65,7 @@ static bool remote_adiv5_check_error(
 	/* Check if the firmware is reporting some other kind of error */
 	else if (buffer[0] != REMOTE_RESP_OK)
 		DEBUG_ERROR("%s: Firmware reported unexpected error: %c\n", func, buffer[0]);
-	/* Return whether the remote indicated the request was successfull */
+	/* Return whether the remote indicated the request was successful */
 	return buffer[0] == REMOTE_RESP_OK;
 }
 

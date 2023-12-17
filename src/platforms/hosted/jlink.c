@@ -419,7 +419,7 @@ static bool jlink_get_interfaces(void)
 		jlink.available_interfaces = read_le4(buffer, 0);
 	}
 
-	/* Print the available interfaces, marking the selected one, and unsuported ones */
+	/* Print the available interfaces, marking the selected one, and unsupported ones */
 	const uint8_t selected_interface = jlink_selected_interface();
 	DEBUG_INFO("Available interfaces: \n");
 	for (size_t i = 0; i < JLINK_INTERFACE_MAX; i++) {

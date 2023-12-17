@@ -524,7 +524,7 @@ int find_debuggers(bmda_cli_options_s *cl_opts, bmda_probe_s *info)
 	/* Count up how many were found and filter the list for a match to the program options request */
 	const size_t probes = probe_info_count(probe_list);
 	const probe_info_s *probe = NULL;
-	/* If there's just one probe and we didn't get match critera, pick it */
+	/* If there's just one probe and we didn't get match criteria, pick it */
 	if (probes == 1 && !cl_opts->opt_serial && !cl_opts->opt_position)
 		probe = probe_list;
 	else /* Otherwise filter the list */
@@ -569,7 +569,7 @@ int find_debuggers(bmda_cli_options_s *cl_opts, bmda_probe_s *info)
  *
  * NB: The lengths represent the maximum number of expected bytes and the actual amount
  *   sent/received may be less (per libusb's documentation). If used, rx_buffer must be
- *   suitably intialised up front to avoid UB reads when accessed.
+ *   suitably initialised up front to avoid UB reads when accessed.
  */
 int bmda_usb_transfer(
 	usb_link_s *link, const void *tx_buffer, size_t tx_len, void *rx_buffer, size_t rx_len, uint16_t timeout)

@@ -657,7 +657,7 @@ static bool lpc43x0_attach(target_s *const target)
 		 * If the boot source is anything other than SPI and the image contains no header,
 		 * the chip sets switches execution to that boot source.
 		 *
-		 * This process is laid out in Chaper 5 of UM10503. See Fig 16 on pg 59 for a more detailed view.
+		 * This process is laid out in Chapter 5 of UM10503. See Fig 16 on pg 59 for a more detailed view.
 		 */
 		lpc43x0_determine_flash_interface(target);
 	}

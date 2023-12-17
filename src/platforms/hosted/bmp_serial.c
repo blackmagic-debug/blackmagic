@@ -335,7 +335,7 @@ int find_debuggers(bmda_cli_options_s *cl_opts, bmda_probe_s *info)
 	/* Count up how many were found and filter the list for a match to the program options request */
 	const size_t probes = probe_info_count(probe_list);
 	const probe_info_s *probe = NULL;
-	/* If there's just one probe and we didn't get match critera, pick it */
+	/* If there's just one probe and we didn't get match criteria, pick it */
 	if (probes == 1U && !cl_opts->opt_serial && !cl_opts->opt_position)
 		probe = probe_list;
 	else /* Otherwise filter the list */

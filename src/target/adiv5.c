@@ -810,7 +810,7 @@ uint32_t adiv5_dp_read_dpidr(adiv5_debug_port_s *const dp)
 void adiv5_dp_init(adiv5_debug_port_s *const dp)
 {
 	/*
-	 * We have to initialse the DP routines up front before any adiv5_* functions are called or
+	 * We have to initialise the DP routines up front before any adiv5_* functions are called or
 	 * bad things happen under BMDA (particularly CMSIS-DAP)
 	 */
 	dp->ap_write = firmware_ap_write;
@@ -912,7 +912,7 @@ void adiv5_dp_init(adiv5_debug_port_s *const dp)
 	platform_timeout_s timeout;
 	platform_timeout_set(&timeout, 250);
 
-	/* Start by resetting the DP contol state so the debug domain powers down */
+	/* Start by resetting the DP control state so the debug domain powers down */
 	adiv5_dp_write(dp, ADIV5_DP_CTRLSTAT, 0U);
 	uint32_t status = ADIV5_DP_CTRLSTAT_CSYSPWRUPACK | ADIV5_DP_CTRLSTAT_CDBGPWRUPACK;
 	/* Wait for the acknowledgements to go low */
