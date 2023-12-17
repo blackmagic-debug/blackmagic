@@ -35,6 +35,7 @@
 #include "exception.h"
 #include "cortexm.h"
 #include "buffer_utils.h"
+#include "maths_utils.h"
 
 #include <assert.h>
 #include <unistd.h>

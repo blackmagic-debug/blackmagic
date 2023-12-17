@@ -42,6 +42,7 @@
 #include "gdb_packet.h"
 #include "semihosting.h"
 #include "platform.h"
+#include "maths_utils.h"
 
 #include <string.h>
 #include <assert.h>
