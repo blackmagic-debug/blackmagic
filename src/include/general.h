@@ -48,7 +48,6 @@
 #include <inttypes.h>
 #include <sys/types.h>
 
-#include "maths_utils.h"
 #include "timing.h"
 #include "platform_support.h"
 #include "align.h"
