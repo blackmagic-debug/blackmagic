@@ -849,7 +849,7 @@ static void stlink_v2_set_frequency(const uint32_t freq)
 		stlink_v2_divisor = 1U << ulog2(divisor);
 		stlink_v2_divisor /= STLINK_V2_JTAG_MUL_FACTOR;
 	} else {
-		/* Adjust the clock frequency request to result in the corrector dividor */
+		/* Adjust the clock frequency request to result in the corrector divider */
 		const uint32_t adjusted_freq = MAX(STLINK_V2_MIN_SWD_CLOCK_FREQ, MIN(freq, STLINK_V2_MAX_SWD_CLOCK_FREQ) + 1U);
 		const uint32_t divisor = STLINK_V2_CPU_CLOCK_FREQ / adjusted_freq;
 		/* Then compute the divisor using the multiplication factor */

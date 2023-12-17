@@ -318,7 +318,7 @@ dap_version_s dap_adaptor_version(const dap_info_e version_kind)
 	if ((size_t)(end - version_str) >= version_length || end[0] != '.')
 		return version;
 
-	/* Now skip the delimeter and try to parse out the next component */
+	/* Now skip the delimiter and try to parse out the next component */
 	begin = end + 1U;
 	const uint16_t minor = strtoul(begin, &end, 10);
 	/* If that failed, return just the major */
@@ -329,7 +329,7 @@ dap_version_s dap_adaptor_version(const dap_info_e version_kind)
 	if ((size_t)(end - version_str) >= version_length || end[0] != '.')
 		return version;
 
-	/* Finally skip the delimeter and try to parse out the final component */
+	/* Finally skip the delimiter and try to parse out the final component */
 	begin = end + 1U;
 	const uint16_t revision = strtoul(begin, &end, 10);
 	/* If that failed, return just the major + minor */

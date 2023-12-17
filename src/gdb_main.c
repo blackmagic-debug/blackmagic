@@ -525,7 +525,7 @@ static void exec_q_thread_info(const char *packet, const size_t length)
 /*
  * GDB will send the packet 'QStartNoAckMode' to enable NoAckMode
  *
- * To tell GDB to not use NoAckMode do the following before connnecting to the probe:
+ * To tell GDB to not use NoAckMode do the following before connecting to the probe:
  * set remote noack-packet off
  */
 static void exec_q_noackmode(const char *packet, const size_t length)

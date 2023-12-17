@@ -225,7 +225,7 @@ static const uint16_t cortexar_spsr_encodings[5] = {
  */
 #define ENCODE_CP_ACCESS(coproc, opc1, rt, crn, crm, opc2) \
 	(((opc1) << 21U) | ((crn) << 16U) | ((rt) << 12U) | ((coproc) << 8U) | ((opc2) << 5U) | (crm))
-/* Packs a CRn and CRm value for the coprocessor IO rouines below to unpack */
+/* Packs a CRn and CRm value for the coprocessor IO routines below to unpack */
 #define ENCODE_CP_REG(n, m, opc1, opc2) \
 	((((n)&0xfU) << 4U) | ((m)&0xfU) | (((opc1)&0x7U) << 8U) | (((opc2)&0x7U) << 12U))
 
@@ -332,7 +332,7 @@ static const gdb_reg_type_e cortexr_spr_types[] = {
 
 /* clang-format off */
 static_assert(ARRAY_LENGTH(cortexr_spr_types) == ARRAY_LENGTH(cortexr_spr_names),
-	"SPR array length mistmatch! SPR type array should ahve the same length as SPR name array."
+	"SPR array length mistmatch! SPR type array should have the same length as SPR name array."
 );
 /* clang-format on */
 
@@ -586,7 +586,7 @@ static target_addr_t cortexar_virt_to_phys(target_s *const target, const target_
 		return virt_addr;
 
 	/*
-	 * Now we know the target is VMSA and so has the address translation machinary,
+	 * Now we know the target is VMSA and so has the address translation machinery,
 	 * start by loading r0 with the VA to translate and request its translation
 	 */
 	cortexar_core_reg_write(target, 0U, virt_addr);
@@ -998,7 +998,7 @@ static void cortexar_mem_read(target_s *const target, void *const dest, const ta
 		cortexr_mem_read_fast(target, (uint32_t *)dest, len >> 2U);
 	else
 		cortexr_mem_read_slow(target, (uint8_t *)dest, src, len);
-	/* Deal with any data faults that occured */
+	/* Deal with any data faults that occurred */
 	cortexr_mem_handle_fault(target, __func__, fault_status, fault_addr);
 }
 
@@ -1076,7 +1076,7 @@ static void cortexar_mem_write(
 		cortexr_mem_write_fast(target, (const uint32_t *)src, len >> 2U);
 	else
 		cortexr_mem_write_slow(target, dest, (const uint8_t *)src, len);
-	/* Deal with any data faults that occured */
+	/* Deal with any data faults that occurred */
 	cortexr_mem_handle_fault(target, __func__, fault_status, fault_addr);
 }
 
@@ -1153,7 +1153,7 @@ static ssize_t cortexar_reg_read(target_s *const target, const uint32_t reg, voi
 
 static ssize_t cortexar_reg_write(target_s *const target, const uint32_t reg, const void *const data, const size_t max)
 {
-	/* Try to get a poitner to the storage for the requested register, and return -1 if that fails */
+	/* Try to get a pointer to the storage for the requested register, and return -1 if that fails */
 	void *const reg_ptr = cortexar_reg_ptr(target, reg);
 	if (!reg_ptr)
 		return -1;
@@ -1289,7 +1289,7 @@ static void cortexar_halt_resume(target_s *const target, const bool step)
 
 	uint32_t dscr = cortex_dbg_read32(target, CORTEXAR_DBG_DSCR);
 	/*
-	 * If we're setting up to single-step the core, configure the final breakpoint slot approrpriately.
+	 * If we're setting up to single-step the core, configure the final breakpoint slot appropriately.
 	 * We always keep the final supported breakpoint reserved for this purpose so
 	 * `priv->base.breakpoints_available` represents this slot index.
 	 * Additionally, adjust DSCR to disable interrupts as necessary.
@@ -1505,9 +1505,9 @@ static size_t cortexar_build_target_fpu_description(char *const buffer, size_t m
  * This function creates the target description XML string for a Cortex-A/R part.
  * This is done this way to decrease string duplications and thus code size,
  * making it unfortunately much less readable than the string literal it is
- * equivilent to.
+ * equivalent to.
  *
- * The string it creates is aproximately the following:
+ * The string it creates is approximately the following:
  * <?xml version="1.0"?>
  * <!DOCTYPE target SYSTEM "gdb-target.dtd">
  * <target>

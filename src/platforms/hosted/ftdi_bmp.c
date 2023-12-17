@@ -774,7 +774,7 @@ void ftdi_jtag_tdi_tdo_seq(uint8_t *data_out, const bool final_tms, const uint8_
 		ftdi_mpsse_cmd_bits_s command = {
 			MPSSE_WRITE_TMS | (data_out ? MPSSE_DO_READ : 0) | MPSSE_LSB | MPSSE_BITMODE | MPSSE_WRITE_NEG};
 		ftdi_buffer_write_val(command);
-		/* The LSb determins what TMS gets set to */
+		/* The LSb determines what TMS gets set to */
 		uint8_t data = 1U;
 		/* If there's data to send, queue it */
 		if (data_in) {
@@ -798,7 +798,7 @@ void ftdi_jtag_tdi_tdo_seq(uint8_t *data_out, const bool final_tms, const uint8_
 			const size_t shift = bits - (final_tms ? 1U : 0U);
 			data_out[bytes] >>= 8U - shift;
 		}
-		/* And read the data assocated with the TMS transaction and adjust the final byte */
+		/* And read the data associated with the TMS transaction and adjust the final byte */
 		if (final_tms) {
 			uint8_t value = 0;
 			ftdi_buffer_read_val(value);

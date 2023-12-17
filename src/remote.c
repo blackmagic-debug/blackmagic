@@ -488,7 +488,7 @@ static void remote_packet_process_adiv5(const char *const packet, const size_t p
 static void remote_spi_respond(const bool result)
 {
 	if (result)
-		/* If the request suceeded, send an OK response */
+		/* If the request succeeded, send an OK response */
 		remote_respond(REMOTE_RESP_OK, 0);
 	else
 		/* Otherwise signal that something went wrong with the request */

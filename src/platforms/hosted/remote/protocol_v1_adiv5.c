@@ -55,7 +55,7 @@ static bool remote_adiv5_check_error(const char *const func, const char *const b
 	/* Check if the firmware is reporting some other kind of error */
 	else if (buffer[0] != REMOTE_RESP_OK)
 		DEBUG_ERROR("%s: Firmware reported unexpected error: %c\n", func, buffer[0]);
-	/* Return whether the remote indicated the request was successfull */
+	/* Return whether the remote indicated the request was successful */
 	return buffer[0] == REMOTE_RESP_OK;
 }
 

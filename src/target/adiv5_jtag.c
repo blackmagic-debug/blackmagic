@@ -59,7 +59,7 @@ void adiv5_jtag_dp_handler(const uint8_t dev_index)
 	const uint32_t idcode = jtag_devs[dev_index].jd_idcode;
 	/*
 	 * Pulling out the designer code which will be used to attempt to detect a DPv0 DP.
-	 * This will get overriden later by DPIDR if the DP turns out to be DPv1+.
+	 * This will get overridden later by DPIDR if the DP turns out to be DPv1+.
 	 */
 	const uint16_t designer = (idcode & JTAG_IDCODE_DESIGNER_MASK) >> JTAG_IDCODE_DESIGNER_OFFSET;
 	/*

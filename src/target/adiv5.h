@@ -157,7 +157,7 @@
 #define ADIV5_AP_CSW_HPROT1           (1U << 25U)
 #define ADIV5_AP_CSW_SPIDEN           (1U << 23U)
 /* Bits 22:16 - Reserved */
-/* Bit 15 - MTE (Memory Tagging Enable) for AXI busses */
+/* Bit 15 - MTE (Memory Tagging Enable) for AXI buses */
 #define ADIV5_AP_CSW_MTE (1U << 15U)
 /* Bits 14:12 - Reserved */
 /* Bits 11:8 - Mode, must be zero */

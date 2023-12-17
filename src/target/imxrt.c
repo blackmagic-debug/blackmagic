@@ -483,7 +483,7 @@ static uint8_t imxrt_spi_build_insn_sequence(target_s *const target, const uint1
 				IMXRT_FLEXSPI_LUT_OPCODE(IMXRT_FLEXSPI_LUT_OP_READ) | IMXRT_FLEXSPI_LUT_MODE_SERIAL;
 		sequence[offset++].value = 0;
 	}
-	/* Because sequence gets 0 initalised above when it's declared, the STOP entry is already present */
+	/* Because sequence gets 0 initialised above when it's declared, the STOP entry is already present */
 	DEBUG_TARGET("Writing new instruction sequence to slot %u\n", slot);
 	for (size_t idx = 0; idx < 8U; ++idx)
 		DEBUG_TARGET("%zu: %02x %02x\n", idx, sequence[idx].opcode_mode, sequence[idx].value);
@@ -519,7 +519,7 @@ static void imxrt_spi_wait_complete(target_s *const target)
 		continue;
 	/* Then clear the interrupt bit it sets. */
 	target_mem_write32(target, IMXRT_FLEXSPI1_INT(priv), IMXRT_FLEXSPI1_INT_PRG_CMD_DONE);
-	/* Check if any errors occured */
+	/* Check if any errors occurred */
 	if (target_mem_read32(target, IMXRT_FLEXSPI1_INT(priv)) & IMXRT_FLEXSPI1_INT_CMD_ERR) {
 #if ENABLE_DEBUG == 1 && PC_HOSTED == 1
 		/* Read out the status code and display it */

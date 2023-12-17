@@ -54,7 +54,7 @@ typedef enum riscv_hart_status {
 	RISCV_HART_BUSY = 1,
 	/* The operation requested of the Hart was not supported */
 	RISCV_HART_NOT_SUPP = 2,
-	/* An exception occured on the Hart while running the operation */
+	/* An exception occurred on the Hart while running the operation */
 	RISCV_HART_EXCEPTION = 3,
 	/* The Hart is in the wrong state for the requested operation */
 	RISCV_HART_WRONG_STATE = 4,
@@ -124,7 +124,7 @@ typedef struct riscv_dm {
 
 #define RV_TRIGGERS_MAX 8U
 
-/* This represents a specifc Hart on a DM */
+/* This represents a specific Hart on a DM */
 typedef struct riscv_hart {
 	riscv_dm_s *dbg_module;
 	uint32_t hart_idx;
@@ -201,7 +201,7 @@ typedef struct riscv_hart {
 #define RV_TRIGGER_SUPPORT_BREAKWATCH 0x00000004U
 
 // The CSR id when reported by GDB is shifted by RV_CSR_GDB_OFFSET
-// so they cannot collide with GPR registers, so you have to substract
+// so they cannot collide with GPR registers, so you have to subtract
 // RV_CSR_GDB_OFFSET from the value received from gdb
 #define RV_CSR_GDB_OFFSET 128
 #define RV_CSR_STATUS     0x300

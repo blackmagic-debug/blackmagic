@@ -210,7 +210,7 @@ static uint32_t jlink_adiv5_raw_read_no_check(const uint16_t addr)
 		DEBUG_ERROR("jlink_adiv5_raw_read_no_check failed\n");
 		return 0U;
 	}
-	/* Extract the data phase and return it if the transaction suceeded */
+	/* Extract the data phase and return it if the transaction succeeded */
 	const uint32_t data = read_le4(response, 0);
 	DEBUG_PROBE("jlink_adiv5_raw_read_no_check %04x -> %08" PRIx32 " %s\n", addr, data,
 		__builtin_parity(data) ^ response[4] ? "ERR" : "OK");
