@@ -96,7 +96,7 @@ const command_s cmd_list[] = {
 #endif
 #ifdef ENABLE_RTT
 	{"rtt", cmd_rtt,
-		"[enable|disable|status|channel [0..15 ...]|ident [STR]|cblock|ram [RAM_START RAM_END]|poll [MAXMS MINMS "
+		"[enable|disable|status|channel [0..15 ...]|ident [STR]|down [STR]|cblock|ram [RAM_START RAM_END]|poll [MAXMS MINMS "
 		"MAXERR]]"},
 #endif
 #ifdef PLATFORM_HAS_TRACESWO
@@ -564,7 +564,19 @@ static bool cmd_rtt(target_s *t, int argc, const char **argv)
 			if (rtt_ident[i] == '_')
 				rtt_ident[i] = ' ';
 		}
-	} else if (argc == 2 && strncmp(argv[1], "ram", command_len) == 0)
+	} else if (argc == 3 && strncmp(argv[1], "down", command_len) == 0) {
+		/*
+		 * here we bypass the if statement to save flash
+		 * as it's not critical to check if the rtt block is found
+		 */
+		if(rtt_found || true) {
+			uint16_t len = strlen(argv[2]);
+			rtt_load_recv_buf(argv[2], len);
+		} else {
+			gdb_out("the rtt block is not yet found\n");
+		}
+	}
+	else if (argc == 2 && strncmp(argv[1], "ram", command_len) == 0)
 		rtt_flag_ram = false;
 	else if (argc == 4 && strncmp(argv[1], "ram", command_len) == 0) {
 		const int cnt1 = sscanf(argv[2], "%" SCNx32, &rtt_ram_start);

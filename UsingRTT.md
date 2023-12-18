@@ -119,6 +119,10 @@ grep 2000 HelloWorld.ino.map | grep RTT
 	sets RTT ident to *string*. If *string* contains a space, replace the space with an
         underscore _. Setting ident string is optional, RTT works fine without.
 
+- ``monitor rtt down string``
+
+	push *string* to the rtt down buffer. It is equivalent to pushing the string to ttyBmpTarg.
+
 - ``monitor rtt ident``
 
 	clears ident string. (default)
