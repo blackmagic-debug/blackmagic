@@ -35,6 +35,7 @@
 #include "general.h"
 #include "target.h"
 #include "target_internal.h"
+#include "cortexar.h"
 #include "spi.h"
 #include "sfdp.h"
 
@@ -125,6 +126,14 @@
 #define RENESAS_MULTI_IO_SPI_MODE_XFER_CONFIG_DATA_XFER_SHIFT 0U
 #define RENESAS_MULTI_IO_SPI_MODE_STATUS_XFER_COMPLETE        (1U << 0U)
 
+/* ARM PL310 L2 cache controller registers, from DDI0246C §3.2, pg83 (3-5) */
+#define ARM_PL310_BASE                        0x3ffff000U
+#define ARM_PL310_CACHE_SYNC                  (ARM_PL310_BASE + 0x730U)
+#define ARM_PL310_INVALIDATE_BY_WAY           (ARM_PL310_BASE + 0x77cU)
+#define ARM_PL310_CLEAN_AND_INVALIDATE_BY_WAY (ARM_PL310_BASE + 0x7fcU)
+
+#define RENESAS_ARM_PL310_CACHE_ASSOCIATIVITY 8U
+
 /* This is the part number from the ROM table of a R7S721030 and is a guess */
 #define ID_RZ_A1LU 0x012U
 
@@ -204,6 +213,14 @@ static bool renesas_rz_flash_resume(target_s *const target)
 	/* Put the controller back into bus usage mode */
 	target_mem_write32(target, RENESAS_MULTI_IO_SPI_COMMON_CTRL,
 		target_mem_read32(target, RENESAS_MULTI_IO_SPI_COMMON_CTRL) & ~RENESAS_MULTI_IO_SPI_COMMON_CTRL_MODE_SPI);
+	/* Invalidate the L1 D-caches and I-caches */
+	cortexar_invalidate_all_caches(target);
+	/* Invalidate the L2 cache ways so we get a clean state */
+	const uint32_t l2_cache_ways_mask = (1U << RENESAS_ARM_PL310_CACHE_ASSOCIATIVITY) - 1U;
+	target_mem_write32(target, ARM_PL310_CLEAN_AND_INVALIDATE_BY_WAY, l2_cache_ways_mask);
+	while (target_mem_read32(target, ARM_PL310_CLEAN_AND_INVALIDATE_BY_WAY) & l2_cache_ways_mask)
+		continue;
+	target_mem_write32(target, ARM_PL310_CACHE_SYNC, 0U);
 	return true;
 }
 
