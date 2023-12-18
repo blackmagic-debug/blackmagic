@@ -49,9 +49,11 @@
 #include "target_probe.h"
 #include "jep106.h"
 #include "cortex.h"
+#include "cortexar.h"
 #include "cortex_internal.h"
 #include "gdb_reg.h"
 #include "gdb_packet.h"
+#include "maths_utils.h"
 #include "buffer_utils.h"
 
 #include <assert.h>
@@ -276,6 +278,12 @@ static const uint16_t cortexar_spsr_encodings[5] = {
 
 /* Co-Processor Access Control Register */
 #define CORTEXAR_CPACR 15U, ENCODE_CP_REG(1U, 0U, 0U, 2U)
+/* Current Cache Size ID Register */
+#define CORTEXAR_CCSIDR 15U, ENCODE_CP_REG(0U, 0U, 1U, 0U)
+/* Cache Level ID Register */
+#define CORTEXAR_CLIDR 15U, ENCODE_CP_REG(0U, 0U, 1U, 1U)
+/* Cache Size Selection Register */
+#define CORTEXAR_CSSELR 15U, ENCODE_CP_REG(0U, 0U, 2U, 0U)
 /* Data Fault Status Register */
 #define CORTEXAR_DFSR 15U, ENCODE_CP_REG(5U, 0U, 0U, 0U)
 /* Data Fault Address Register */
@@ -284,11 +292,24 @@ static const uint16_t cortexar_spsr_encodings[5] = {
 #define CORTEXAR_PAR32 15U, ENCODE_CP_REG(7U, 4U, 0U, 0U)
 /* Instruction Cache Invalidate ALL to Unification */
 #define CORTEXAR_ICIALLU 15U, ENCODE_CP_REG(7U, 5U, 0U, 0U)
+/* Data Cache Clean + Invalidate by Set/Way to Unification */
+#define CORTEXAR_DCCISW 15U, ENCODE_CP_REG(7U, 14U, 0U, 2U)
 /* Address Translate Stage 1 Current state PL1 Read */
 #define CORTEXAR_ATS1CPR 15U, ENCODE_CP_REG(7U, 8U, 0U, 0U)
 
 #define CORTEXAR_CPACR_CP10_FULL_ACCESS 0x00300000U
 #define CORTEXAR_CPACR_CP11_FULL_ACCESS 0x00c00000U
+
+#define CORTEXAR_CLIDR_LEVEL_OF_COHERENCE_MASK  0x07000000U
+#define CORTEXAR_CLIDR_LEVEL_OF_COHERENCE_SHIFT 24U
+
+#define CORTEXAR_CACHE_MASK   0x07U
+#define CORTEXAR_ICACHE_MASK  0x01U
+#define CORTEXAR_DCACHE_MASK  0x02U
+#define CORTEXAR_HAS_NO_CACHE 0x00U
+#define CORTEXAR_HAS_ICACHE   0x01U
+#define CORTEXAR_HAS_DCACHE   0x02U
+#define CORTEXAR_HAS_UCACHE   0x04U
 
 #define CORTEXAR_PAR32_FAULT 0x00000001U
 
@@ -1349,6 +1370,46 @@ static void cortexar_halt_resume(target_s *const target, const bool step)
 	uint32_t status = CORTEXAR_DBG_DSCR_HALTED;
 	while (!(status & CORTEXAR_DBG_DSCR_RESTARTED) && !platform_timeout_is_expired(&timeout))
 		status = cortex_dbg_read32(target, CORTEXAR_DBG_DSCR);
+}
+
+void cortexar_invalidate_all_caches(target_s *const target)
+{
+	/* Extract the cache geometry */
+	const uint32_t cache_geometry = cortexar_coproc_read(target, CORTEXAR_CLIDR);
+	/* Extract the LoC bits which determines the cache level where coherence is reached */
+	const uint8_t coherence_level =
+		(cache_geometry & CORTEXAR_CLIDR_LEVEL_OF_COHERENCE_MASK) >> CORTEXAR_CLIDR_LEVEL_OF_COHERENCE_SHIFT;
+
+	/* For each cache level to invalidate */
+	for (uint8_t cache_level = 0; cache_level < coherence_level; ++cache_level) {
+		/* Extract what kind of cache is at this level */
+		const uint8_t cache_type = (cache_geometry >> (cache_level * 3U)) & CORTEXAR_CACHE_MASK;
+		/* If there's no D-cache at this level, skip */
+		if ((cache_type & CORTEXAR_DCACHE_MASK) != CORTEXAR_HAS_DCACHE)
+			continue;
+		/* Next, select the cache to read out the size for */
+		cortexar_coproc_write(target, CORTEXAR_CSSELR, cache_level << 1U);
+		const uint32_t cache_size = cortexar_coproc_read(target, CORTEXAR_CCSIDR);
+		/* Extract the size of a cache line ulog2() */
+		const uint8_t cache_line_size = (cache_size & 7U) + 2U;
+		/* Extract the cache associativity (number of ways) */
+		const uint16_t cache_ways = ((cache_size >> 3U) & 0x3ffU) + 1U;
+		/* Extract the number of cache sets */
+		const uint16_t cache_sets = ((cache_size >> 13U) & 0x7fffU) + 1U;
+		/* Calculate how much to shift the cache way number by */
+		const uint8_t cache_ways_shift = 32U - ulog2(cache_ways - 1U);
+		/* For each set in the cache */
+		for (uint16_t cache_set = 0U; cache_set < cache_sets; ++cache_set) {
+			/* For each way in the cache */
+			for (uint16_t cache_way = 0U; cache_way < cache_ways; ++cache_way) {
+				/* Invalidate and clean the cache set + way for the current cache level */
+				cortexar_coproc_write(target, CORTEXAR_DCCISW,
+					(cache_way << cache_ways_shift) | (cache_set << (cache_line_size + 2U)) | (cache_level << 1U));
+			}
+		}
+	}
+
+	cortexar_coproc_write(target, CORTEXAR_ICIALLU, 0U);
 }
 
 static void cortexar_config_breakpoint(
