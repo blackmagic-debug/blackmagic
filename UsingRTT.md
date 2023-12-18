@@ -121,7 +121,7 @@ grep 2000 HelloWorld.ino.map | grep RTT
 
 - ``monitor rtt send string``
 
-	push *string* to the rtt down buffer. It is equivalent to pushing the string to ttyBmpTarg.
+	push *string* to the RTT down buffer. It is equivalent to pushing the string to ttyBmpTarg.
 
 - ``monitor rtt ident``
 

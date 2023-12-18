@@ -90,7 +90,7 @@ void rtt_serial_receive_callback(usbd_device *dev, uint8_t ep)
 		return;
 	}
 
-		rtt_load_recv_buf(usb_buf, len);
+	rtt_load_recv_buf(usb_buf, len);
 
 	/* block flag: flow control closed if not enough free buffer space */
 	if (!(rtt_flag_block && recv_set_nak()))

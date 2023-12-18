@@ -97,7 +97,7 @@ const command_s cmd_list[] = {
 #ifdef ENABLE_RTT
 	{"rtt", cmd_rtt,
 		"[enable|disable|status|channel [0..15 ...]|ident [STR]|send [STR]|cblock|ram [RAM_START RAM_END]|"
-		"poll [MAXMS MMINMS AXERR]]"},
+		"poll [MAXMS MINMS MAXERR]]"},
 #endif
 #ifdef PLATFORM_HAS_TRACESWO
 #if defined TRACESWO_PROTOCOL && TRACESWO_PROTOCOL == 2
