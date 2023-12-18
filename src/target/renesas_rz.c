@@ -150,10 +150,14 @@ static void renesas_rz_add_flash(target_s *const target)
 	target->enter_flash_mode = renesas_rz_flash_prepare;
 	target->exit_flash_mode = renesas_rz_flash_resume;
 
+	/* Put the controller into manual SPI operations mode */
 	renesas_rz_flash_prepare(target);
+	/* Register the Flash via the SPI Flash implementation */
 	bmp_spi_add_flash(target, RENESAS_SPI_FLASH_BASE, RENESAS_SPI_FLASH_SIZE, renesas_rz_spi_read, renesas_rz_spi_write,
 		renesas_rz_spi_run_command);
-	renesas_rz_flash_resume(target);
+	/* Put the controller back into bus usage mode */
+	target_mem_write32(target, RENESAS_MULTI_IO_SPI_COMMON_CTRL,
+		target_mem_read32(target, RENESAS_MULTI_IO_SPI_COMMON_CTRL) & ~RENESAS_MULTI_IO_SPI_COMMON_CTRL_MODE_SPI);
 }
 
 bool renesas_rz_probe(target_s *const target)
