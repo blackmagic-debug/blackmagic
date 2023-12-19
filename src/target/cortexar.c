@@ -71,6 +71,10 @@ typedef struct cortexar_priv {
 		uint32_t fpcsr;
 	} core_regs;
 
+	/* Fault status/address cache */
+	uint32_t fault_status;
+	uint32_t fault_address;
+
 	/* Control and status information */
 	uint8_t core_status;
 } cortexar_priv_s;
@@ -324,8 +328,9 @@ static const uint16_t cortexar_spsr_encodings[5] = {
 #define TOPT_FLAVOUR_VIRT_EXT (1U << 3U) /* If set, core has virtualisation extensions */
 #define TOPT_FLAVOUR_VIRT_MEM (1U << 4U) /* If set, core uses the virtual memory model, not protected */
 
-#define CORTEXAR_STATUS_DATA_FAULT (1U << 0U)
-#define CORTEXAR_STATUS_MMU_FAULT  (1U << 1U)
+#define CORTEXAR_STATUS_DATA_FAULT        (1U << 0U)
+#define CORTEXAR_STATUS_MMU_FAULT         (1U << 1U)
+#define CORTEXAR_STATUS_FAULT_CACHE_VALID (1U << 2U)
 
 /*
  * Fields for Cortex-R special-purpose registers, used in the generation of GDB's target description XML.
@@ -932,7 +937,7 @@ static bool cortexar_check_error(target_s *const target)
 {
 	cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
 	const bool fault = priv->core_status & (CORTEXAR_STATUS_DATA_FAULT | CORTEXAR_STATUS_MMU_FAULT);
-	priv->core_status = 0;
+	priv->core_status = (uint8_t) ~(CORTEXAR_STATUS_DATA_FAULT | CORTEXAR_STATUS_MMU_FAULT);
 	return fault || cortex_check_error(target);
 }
 
@@ -985,21 +990,20 @@ static bool cortexr_mem_read_slow(target_s *const target, uint8_t *const data, t
 	return true; /* Signal success */
 }
 
-static void cortexr_mem_handle_fault(
-	target_s *const target, const char *const func, const uint32_t orig_fault_status, const uint32_t orig_fault_addr)
+static void cortexr_mem_handle_fault(target_s *const target, const char *const func)
 {
 	const cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
 	/* If we suffered a fault of some kind, grab the reason and restore DFSR/DFAR */
 	if (priv->core_status & CORTEXAR_STATUS_DATA_FAULT) {
 #ifndef DEBUG_WARN_IS_NOOP
 		const uint32_t fault_status = cortexar_coproc_read(target, CORTEXAR_DFSR);
-		const uint32_t fault_addr = cortexar_coproc_read(target, CORTEXAR_DFAR);
-		DEBUG_WARN("%s: Failed at 0x%08" PRIx32 " (%08" PRIx32 ")\n", func, fault_addr, fault_status);
+		const uint32_t fault_address = cortexar_coproc_read(target, CORTEXAR_DFAR);
+		DEBUG_WARN("%s: Failed at 0x%08" PRIx32 " (%08" PRIx32 ")\n", func, fault_address, fault_status);
 #else
 		(void)func;
 #endif
-		cortexar_coproc_write(target, CORTEXAR_DFAR, orig_fault_addr);
-		cortexar_coproc_write(target, CORTEXAR_DFSR, orig_fault_status);
+		cortexar_coproc_write(target, CORTEXAR_DFAR, priv->fault_address);
+		cortexar_coproc_write(target, CORTEXAR_DFSR, priv->fault_status);
 	}
 }
 
@@ -1012,8 +1016,11 @@ static void cortexar_mem_read(target_s *const target, void *const dest, const ta
 {
 	cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
 	/* Cache DFSR and DFAR in case we wind up triggering a data fault */
-	const uint32_t fault_status = cortexar_coproc_read(target, CORTEXAR_DFSR);
-	const uint32_t fault_addr = cortexar_coproc_read(target, CORTEXAR_DFAR);
+	if (!(priv->core_status & CORTEXAR_STATUS_FAULT_CACHE_VALID)) {
+		priv->fault_status = cortexar_coproc_read(target, CORTEXAR_DFSR);
+		priv->fault_address = cortexar_coproc_read(target, CORTEXAR_DFAR);
+		priv->core_status |= CORTEXAR_STATUS_FAULT_CACHE_VALID;
+	}
 	/* Clear any existing fault state */
 	priv->core_status &= ~(CORTEXAR_STATUS_DATA_FAULT | CORTEXAR_STATUS_MMU_FAULT);
 
@@ -1026,7 +1033,7 @@ static void cortexar_mem_read(target_s *const target, void *const dest, const ta
 	else
 		cortexr_mem_read_slow(target, (uint8_t *)dest, src, len);
 	/* Deal with any data faults that occurred */
-	cortexr_mem_handle_fault(target, __func__, fault_status, fault_addr);
+	cortexr_mem_handle_fault(target, __func__);
 
 	DEBUG_PROTO("%s: Reading %zu bytes @0x%" PRIx32 ":", __func__, len, src);
 #ifndef DEBUG_PROTO_IS_NOOP
@@ -1115,8 +1122,11 @@ static void cortexar_mem_write(
 	DEBUG_PROTO("\n");
 
 	/* Cache DFSR and DFAR in case we wind up triggering a data fault */
-	const uint32_t fault_status = cortexar_coproc_read(target, CORTEXAR_DFSR);
-	const uint32_t fault_addr = cortexar_coproc_read(target, CORTEXAR_DFAR);
+	if (!(priv->core_status & CORTEXAR_STATUS_FAULT_CACHE_VALID)) {
+		priv->fault_status = cortexar_coproc_read(target, CORTEXAR_DFSR);
+		priv->fault_address = cortexar_coproc_read(target, CORTEXAR_DFAR);
+		priv->core_status |= CORTEXAR_STATUS_FAULT_CACHE_VALID;
+	}
 	/* Clear any existing fault state */
 	priv->core_status &= ~(CORTEXAR_STATUS_DATA_FAULT | CORTEXAR_STATUS_MMU_FAULT);
 
@@ -1129,7 +1139,7 @@ static void cortexar_mem_write(
 	else
 		cortexr_mem_write_slow(target, dest, (const uint8_t *)src, len);
 	/* Deal with any data faults that occurred */
-	cortexr_mem_handle_fault(target, __func__, fault_status, fault_addr);
+	cortexr_mem_handle_fault(target, __func__);
 }
 
 static void cortexar_regs_read(target_s *const target, void *const data)
@@ -1359,6 +1369,8 @@ static void cortexar_halt_resume(target_s *const target, const bool step)
 	/* Invalidate all the instruction caches if we're on a VMSA model device */
 	if (target->target_options & TOPT_FLAVOUR_VIRT_MEM)
 		cortexar_coproc_write(target, CORTEXAR_ICIALLU, 0U);
+	/* Mark the fault status and address cache invalid */
+	priv->core_status &= ~CORTEXAR_STATUS_FAULT_CACHE_VALID;
 
 	cortex_dbg_write32(target, CORTEXAR_DBG_DSCR, dscr & ~CORTEXAR_DBG_DSCR_ITR_ENABLE);
 	/* Ask to resume the core */
