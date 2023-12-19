@@ -112,6 +112,7 @@
 
 #define RENESAS_MULTI_IO_SPI_COMMON_CTRL_MODE_SPI             (1U << 31U)
 #define RENESAS_MULTI_IO_SPI_READ_CTRL_CS_UNSELECT            (1U << 24U)
+#define RENESAS_MULTI_IO_SPI_READ_CTRL_CACHE_FLUSH            (1U << 9U)
 #define RENESAS_MULTI_IO_SPI_MODE_CTRL_CS_HOLD                (1U << 8U)
 #define RENESAS_MULTI_IO_SPI_MODE_CTRL_READ_ENABLE            (1U << 2U)
 #define RENESAS_MULTI_IO_SPI_MODE_CTRL_WRITE_ENABLE           (1U << 1U)
@@ -214,6 +215,10 @@ static bool renesas_rz_flash_prepare(target_s *const target)
 
 static bool renesas_rz_flash_resume(target_s *const target)
 {
+	/* Flush the controller's read cache */
+	target_mem_write32(target, RENESAS_MULTI_IO_SPI_READ_CTRL,
+		target_mem_read32(target, RENESAS_MULTI_IO_SPI_READ_CTRL) | RENESAS_MULTI_IO_SPI_READ_CTRL_CACHE_FLUSH);
+	target_mem_read32(target, RENESAS_MULTI_IO_SPI_READ_CTRL);
 	/* Put the controller back into bus usage mode */
 	target_mem_write32(target, RENESAS_MULTI_IO_SPI_COMMON_CTRL,
 		target_mem_read32(target, RENESAS_MULTI_IO_SPI_COMMON_CTRL) & ~RENESAS_MULTI_IO_SPI_COMMON_CTRL_MODE_SPI);
