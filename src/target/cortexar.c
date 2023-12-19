@@ -1390,8 +1390,8 @@ void cortexar_invalidate_all_caches(target_s *const target)
 		/* Next, select the cache to read out the size for */
 		cortexar_coproc_write(target, CORTEXAR_CSSELR, cache_level << 1U);
 		const uint32_t cache_size = cortexar_coproc_read(target, CORTEXAR_CCSIDR);
-		/* Extract the size of a cache line ulog2() */
-		const uint8_t cache_line_size = (cache_size & 7U) + 2U;
+		/* Extract the size of a cache line in uint32_t's ulog2()-2 and adjust to get to a size in uint8_t's ulog2() */
+		const uint8_t cache_set_shift = (cache_size & 7U) + 4U;
 		/* Extract the cache associativity (number of ways) */
 		const uint16_t cache_ways = ((cache_size >> 3U) & 0x3ffU) + 1U;
 		/* Extract the number of cache sets */
@@ -1402,9 +1402,24 @@ void cortexar_invalidate_all_caches(target_s *const target)
 		for (uint16_t cache_set = 0U; cache_set < cache_sets; ++cache_set) {
 			/* For each way in the cache */
 			for (uint16_t cache_way = 0U; cache_way < cache_ways; ++cache_way) {
-				/* Invalidate and clean the cache set + way for the current cache level */
+				/*
+				 * Invalidate and clean the cache set + way for the current cache level
+				 *
+				 * The register involved here has the following form:
+				 * 31  31-A        B     L … 4   3 2 1   0
+				 * ├─────┼─────────┼─────┼─────┬───────┬───╮
+				 * │ Way │    0    │ Set │  0  │ Level │ 0 │
+				 * ╰─────┴─────────┴─────┴─────┴───────┴───╯
+				 * Where:
+				 *  A is log2(cache_ways)
+				 *  L is log2(cache_line_length)
+				 *  S is log2(cache_sets)
+				 *  B is L + S
+				 *
+				 * log2(cache_line_length) is (cache_size & 7U) + 4U
+				 */
 				cortexar_coproc_write(target, CORTEXAR_DCCISW,
-					(cache_way << cache_ways_shift) | (cache_set << (cache_line_size + 2U)) | (cache_level << 1U));
+					(cache_way << cache_ways_shift) | (cache_set << cache_set_shift) | (cache_level << 1U));
 			}
 		}
 	}
