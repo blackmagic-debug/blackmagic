@@ -62,6 +62,25 @@ if is_firmware_build
 	See the 'targets' option for a list of available targets.
 	''',
 	)
+
+	# Build a dictionary mapping all target short names to proper textual naming
+	target_names = {
+		'cortexar': 'Cortex-A/R support',
+		'cortexm': 'Cortex-M support',
+		'riscv32': 'RISC-V 32-bit support',
+		'riscv64': 'RISC-V 64-bit support',
+		'efm': 'Energy Micro parts',
+		'hc32': 'HC32 parts',
+		'lpc': 'LPC series parts',
+		'nrf': 'nRF series parts',
+		'nxp': 'Kinetis series parts',
+		'renesas': 'Renesas parts',
+		'rp': 'RP2040',
+		'sam': 'ATSAM series parts',
+		'stm': 'STM32 (and clones) parts',
+		'ti': 'Texas Instruments parts',
+		'xilinx': 'Xilinx parts',
+	}
 endif
 
 # Conditional file compilation based on target selection
@@ -243,12 +262,16 @@ libbmd_targets = declare_dependency(
 )
 
 if is_firmware_build
+	# Build a dictionary of the targets that have been selected for the firmware build
+	target_states = {}
+	foreach target_id, target_name : target_names
+		target_states += {target_name: target_id in enabled_targets}
+	endforeach
+
+	# Include the target enable list in the summary output
 	summary(
-		{
-			'Warning': 'Not all enabled targets may be listed here',
-			'Targets': enabled_targets,
-		},
-		list_sep: ', ',
+		target_states,
+		bool_yn: true,
 		section: 'Targets',
 	)
 endif
