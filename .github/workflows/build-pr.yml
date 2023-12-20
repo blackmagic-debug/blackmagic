@@ -277,6 +277,10 @@ jobs:
           sudo python3 -m pip install meson ninja
         working-directory: ${{ runner.temp }}
 
+      # Install BMDA's deps (libftdi1, hidapi-hidraw)
+      - name: Install BMDA dependencies
+        run: sudo apt-get -y install libftdi1-dev libhidapi-dev
+
       # Record the versions of all the tools used in the build
       - name: Version tools
         run: |
