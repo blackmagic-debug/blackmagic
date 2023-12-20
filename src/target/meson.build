@@ -52,6 +52,18 @@ if get_option('no_own_ll')
 	)
 endif
 
+if is_firmware_build
+	enabled_targets = get_option('targets')
+
+	# Check that at least one target is enabled
+	assert(
+		enabled_targets.length() > 0,
+		'''No debug targets enabled, please enable at least one target to build.
+	See the 'targets' option for a list of available targets.
+	''',
+	)
+endif
+
 # Conditional file compilation based on target selection
 # We declare a dependency for each target group with the source files required
 # these dependencies are then added to the BMD core, conditinal on the targets option
@@ -152,7 +164,7 @@ target_sam = declare_dependency(
 
 target_stm_deps = [target_cortexm]
 # If the 32-bit RISC-V target is not enabled, don't enable GD32VF103 support
-if get_option('targets').contains('riscv32')
+if not is_firmware_build or enabled_targets.contains('riscv32')
 	target_stm_deps += [target_riscv32]
 endif
 
@@ -189,16 +201,6 @@ target_xilinx = declare_dependency(
 )
 
 if is_firmware_build
-	enabled_targets = get_option('targets')
-
-	# Check that at least one target is enabled
-	assert(
-		enabled_targets.length() > 0,
-		'''No debug targets enabled, please enable at least one target to build.
-	See the 'targets' option for a list of available targets.
-	''',
-	)
-
 	# Convert targets option list into a list of dependencies
 	enabled_target_deps = []
 	foreach target : enabled_targets
