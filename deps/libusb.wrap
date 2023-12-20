@@ -1,0 +1,7 @@
+[wrap-git]
+url = https://github.com/dragonCodecs/libusb
+revision = blackmagic/meson
+clone-recursive = false
+
+[provide]
+libusb-1.0 = libusb_dep
