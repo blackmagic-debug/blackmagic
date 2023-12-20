@@ -109,7 +109,6 @@ ifneq ($(HOSTED_BMP_ONLY), 1)
 endif
 
 ifneq ($(HOSTED_BMP_ONLY), 1)
-    CFLAGS += -DCMSIS_DAP
     SRC += cmsis_dap.c dap.c dap_command.c dap_swd.c dap_jtag.c
     ifneq ($(shell pkg-config --exists $(HIDAPILIB); echo $$?), 0)
         $(error Please install $(HIDAPILIB) dependency or set HOSTED_BMP_ONLY to 1)
