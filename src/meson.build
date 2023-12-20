@@ -38,22 +38,20 @@ libbmd_core_sources = files(
 	'command.c',
 	'crc32.c',
 	'exception.c',
+	'gdb_hostio.c',
 	'gdb_main.c',
 	'gdb_packet.c',
 	'hex_utils.c',
 	'main.c',
 	'maths_utils.c',
 	'morse.c',
+	'remote.c',
 	'timing.c',
 )
 
 # Define sources used only by the firmware
 bmd_core_sources = [
 	libbmd_core_sources,
-	files(
-		'gdb_hostio.c',
-		'remote.c',
-	),
 ]
 
 bmd_core_args = []
@@ -114,6 +112,7 @@ if is_firmware_build
 	# Get probe host and platform dependencies
 	subdir('platforms')
 endif
+subdir('platforms/hosted')
 
 summary(
 	{

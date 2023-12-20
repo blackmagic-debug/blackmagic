@@ -43,7 +43,7 @@ project(
 		'werror=false',
 		'b_ndebug=if-release',
 	],
-	meson_version: '>= 0.60.0',
+	meson_version: '>= 0.61.0',
 	subproject_dir: 'deps',
 )
 
@@ -271,6 +271,34 @@ if meson.is_subproject()
 		include_directories: bmd_core_includes,
 		link_with: libbmd,
 	)
+# Build BMDA only if all the dependencies are satisfied etc
+elif bmda_platform.found()
+	# If we're on windows, copy the FTD2xx DLL into the output directory where it's needed
+	if build_machine.system() in ['windows', 'cygwin']
+		configure_file(
+			input: '3rdparty' / 'ftdi' / processor / 'ftd2xx.dll',
+			output: 'ftd2xx.dll',
+			copy: true,
+		)
+	endif
+
+	# BMDA executable
+	bmda = executable(
+		'blackmagic',
+		dependencies: [libbmd_core, bmda_platform],
+		native: is_cross_build,
+	)
+	alias_target('bmda', bmda)
+elif not is_firmware_build
+	error('''
+One or more dependencies for BMDA were not found, and you are not building the firmware.
+You would build nothing in this configuration, so aborting.
+
+Dependencies:
+	libftdi: @0@
+	hidapi: @1@
+	libusb: @2@
+'''.format(libftdi.found(), hidapi.found(), libusb.found()))
 endif
 
 # We report this at the end of the configuration, so it's easier to spot
