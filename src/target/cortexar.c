@@ -556,11 +556,14 @@ static uint32_t cortexar_coproc_read(target_s *const target, const uint8_t copro
 	cortexar_run_insn(target,
 		ARM_MRC_INSN |
 			ENCODE_CP_ACCESS(coproc & 0xfU, (op >> 8U) & 0x7U, 0U, (op >> 4U) & 0xfU, op & 0xfU, (op >> 12U) & 0x7U));
-	return cortexar_core_reg_read(target, 0U);
+	const uint32_t result = cortexar_core_reg_read(target, 0U);
+	DEBUG_PROTO("%s: coproc %u (%04x): %08" PRIx32 "\n", __func__, coproc, op, result);
+	return result;
 }
 
 static void cortexar_coproc_write(target_s *const target, const uint8_t coproc, const uint16_t op, const uint32_t value)
 {
+	DEBUG_PROTO("%s: coproc %u (%04x): %08" PRIx32 "\n", __func__, coproc, op, value);
 	/*
 	 * Perform a write of a coprocessor - which one (between 0 and 15) is given by the coproc parameter
 	 * and which register of the coprocessor to write and the operands required is given by op.
