@@ -229,7 +229,6 @@ int hostio_system(target_controller_s *tc, target_addr_t cmd, size_t cmd_len)
 /* Interface to host system calls */
 int tc_write(target_s *t, int fd, target_addr_t buf, unsigned int count)
 {
-#if PC_HOSTED == 0
 	if (t->stdout_redirected && (fd == STDOUT_FILENO || fd == STDERR_FILENO)) {
 		while (count) {
 			uint8_t tmp[STDOUT_READ_BUF_SIZE];
@@ -243,11 +242,7 @@ int tc_write(target_s *t, int fd, target_addr_t buf, unsigned int count)
 		}
 		return 0;
 	}
-#endif
-
-	if (t->tc->write == NULL)
-		return 0;
-	return t->tc->write(t->tc, fd, buf, count);
+	return hostio_write(t->tc, fd, buf, count);
 }
 
 /* probe memory access functions */
