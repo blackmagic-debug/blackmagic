@@ -454,6 +454,18 @@ int32_t semihosting_isatty(target_s *const target, const semihosting_s *const re
 #endif
 }
 
+int32_t semihosting_seek(target_s *const target, const semihosting_s *const request)
+{
+	const int32_t fd = request->params[0] - 1;
+	const off_t pos = request->params[1];
+#if PC_HOSTED == 1
+	(void)target;
+	return lseek(fd, pos, SEEK_SET) == pos ? 0 : -1;
+#else
+	return hostio_lseek(target->tc, fd, pos, TARGET_SEEK_SET) == pos ? 0 : -1;
+#endif
+}
+
 int cortexm_hostio_request(target_s *const target)
 {
 	semihosting_s request;
@@ -505,17 +517,12 @@ int cortexm_hostio_request(target_s *const target)
 		ret = semihosting_isatty(target, &request);
 		break;
 
+	case SEMIHOSTING_SYS_SEEK: /* lseek */
+		ret = semihosting_seek(target, &request);
+		break;
+
 #if PC_HOSTED == 1
 		/* code that runs in pc-hosted process. use linux system calls. */
-
-	case SEMIHOSTING_SYS_SEEK: { /* lseek */
-		off_t pos = request.params[1];
-		if (lseek(request.params[0] - 1, pos, SEEK_SET) == (off_t)pos)
-			ret = 0;
-		else
-			ret = -1;
-		break;
-	}
 
 	case SEMIHOSTING_SYS_RENAME: { /* rename */
 		ret = -1;
@@ -644,13 +651,6 @@ int cortexm_hostio_request(target_s *const target)
 #else
 		/* code that runs in probe. use gdb fileio calls. */
 
-	case SEMIHOSTING_SYS_SEEK: /* lseek */
-		if (hostio_lseek(target->tc, request.params[0] - 1, request.params[1], TARGET_SEEK_SET) ==
-			(long)request.params[1])
-			ret = 0;
-		else
-			ret = -1;
-		break;
 	case SEMIHOSTING_SYS_RENAME: /* rename */
 		ret = hostio_rename(
 			target->tc, request.params[0], request.params[1] + 1U, request.params[2], request.params[3] + 1U);
