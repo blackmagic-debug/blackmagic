@@ -165,6 +165,7 @@ struct target_controller {
 	void (*destroy_callback)(target_controller_s *, target_s *target);
 	void (*printf)(target_controller_s *, const char *fmt, va_list);
 
+#if PC_HOSTED == 0
 	/* Interface to host system calls */
 	int (*open)(target_controller_s *, target_addr_t path, size_t path_len, target_open_flags_e flags, mode_t mode);
 	int (*close)(target_controller_s *, int fd);
@@ -178,6 +179,7 @@ struct target_controller {
 	int (*gettimeofday)(target_controller_s *, target_addr_t tv, target_addr_t tz);
 	int (*isatty)(target_controller_s *, int fd);
 	int (*system)(target_controller_s *, target_addr_t cmd, size_t cmd_len);
+#endif
 	target_errno_e errno_;
 	bool interrupted;
 };

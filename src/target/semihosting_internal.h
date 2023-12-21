@@ -60,4 +60,6 @@
 
 #define TARGET_NULL ((target_addr_t)0)
 
+#define STDOUT_READ_BUF_SIZE 64U
+
 #endif /* TARGET_SEMIHOSTING_INTERNAL_H */

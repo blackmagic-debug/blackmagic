@@ -112,6 +112,7 @@ target_controller_s gdb_controller = {
 	.destroy_callback = gdb_target_destroy_callback,
 	.printf = gdb_target_printf,
 
+#if PC_HOSTED == 0
 	.open = hostio_open,
 	.close = hostio_close,
 	.read = hostio_read,
@@ -124,6 +125,7 @@ target_controller_s gdb_controller = {
 	.gettimeofday = hostio_gettimeofday,
 	.isatty = hostio_isatty,
 	.system = hostio_system,
+#endif
 };
 
 /* execute gdb remote command stored in 'pbuf'. returns immediately, no busy waiting. */
@@ -290,6 +292,7 @@ int gdb_main_loop(target_controller_s *tc, char *pbuf, size_t pbuf_size, size_t 
 		break;
 	}
 
+#if PC_HOSTED == 0
 	case 'F': /* Semihosting call finished */
 		if (in_syscall)
 			return hostio_reply(tc, pbuf, size);
@@ -298,6 +301,10 @@ int gdb_main_loop(target_controller_s *tc, char *pbuf, size_t pbuf_size, size_t 
 			gdb_putpacketz("");
 		}
 		break;
+#else
+		(void)tc;
+		(void)in_syscall;
+#endif
 
 	case '!': /* Enable Extended GDB Protocol. */
 		/*
