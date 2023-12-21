@@ -399,6 +399,22 @@ int32_t semihosting_write(target_s *const target, const semihosting_s *const req
 	return result;
 }
 
+int32_t semihosting_writec(target_s *const target, const semihosting_s *const request)
+{
+	const target_addr_t ch_taddr = request->r1;
+	if (ch_taddr == TARGET_NULL)
+		return -1;
+#if PC_HOSTED == 1
+	const uint8_t ch = target_mem_read8(target, ch_taddr);
+	if (target_check_error(target))
+		return -1;
+	fputc(ch, stderr);
+	return 0;
+#else
+	return tc_write(target, STDERR_FILENO, ch_taddr, 1);
+#endif
+}
+
 int cortexm_hostio_request(target_s *const target)
 {
 	semihosting_s request;
@@ -438,22 +454,12 @@ int cortexm_hostio_request(target_s *const target)
 		ret = semihosting_write(target, &request);
 		break;
 
+	case SEMIHOSTING_SYS_WRITEC: /* writec */
+		ret = semihosting_writec(target, &request);
+		break;
+
 #if PC_HOSTED == 1
 		/* code that runs in pc-hosted process. use linux system calls. */
-
-	case SEMIHOSTING_SYS_WRITEC: { /* writec */
-		ret = -1;
-		uint8_t ch;
-		target_addr_t ch_taddr = request.r1;
-		if (ch_taddr == TARGET_NULL)
-			break;
-		ch = target_mem_read8(target, ch_taddr);
-		if (target_check_error(target))
-			break;
-		fputc(ch, stderr);
-		ret = 0;
-		break;
-	}
 
 	case SEMIHOSTING_SYS_WRITE0: { /* write0 */
 		ret = -1;
@@ -610,9 +616,6 @@ int cortexm_hostio_request(target_s *const target)
 #else
 		/* code that runs in probe. use gdb fileio calls. */
 
-	case SEMIHOSTING_SYS_WRITEC: /* writec */
-		ret = tc_write(target, STDERR_FILENO, request.r1, 1);
-		break;
 	case SEMIHOSTING_SYS_WRITE0: { /* write0 */
 		ret = -1;
 		target_addr_t str_begin = request.r1;
