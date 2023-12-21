@@ -370,6 +370,35 @@ int32_t semihosting_read(target_s *const target, const semihosting_s *const requ
 	return result;
 }
 
+int32_t semihosting_write(target_s *const target, const semihosting_s *const request)
+{
+	const int32_t fd = request->params[0] - 1;
+	const target_addr_t buf_taddr = request->params[1];
+	if (buf_taddr == TARGET_NULL)
+		return -1;
+	const uint32_t buf_len = request->params[2];
+	if (buf_len == 0)
+		return 0;
+
+#if PC_HOSTED == 1
+	uint8_t *const buf = malloc(buf_len);
+	if (buf == NULL)
+		return -1;
+	target_mem_read(target, buf, buf_taddr, buf_len);
+	if (target_check_error(target)) {
+		free(buf);
+		return -1;
+	}
+	const int32_t result = write(fd, buf, buf_len);
+	free(buf);
+#else
+	const int32_t result = tc_write(target, fd, buf_taddr, buf_len);
+#endif
+	if (result >= 0)
+		return buf_len - result;
+	return result;
+}
+
 int cortexm_hostio_request(target_s *const target)
 {
 	semihosting_s request;
@@ -405,33 +434,12 @@ int cortexm_hostio_request(target_s *const target)
 		ret = semihosting_read(target, &request);
 		break;
 
+	case SEMIHOSTING_SYS_WRITE: /* write */
+		ret = semihosting_write(target, &request);
+		break;
+
 #if PC_HOSTED == 1
 		/* code that runs in pc-hosted process. use linux system calls. */
-
-	case SEMIHOSTING_SYS_WRITE: { /* write */
-		ret = -1;
-		target_addr_t buf_taddr = request.params[1];
-		uint32_t buf_len = request.params[2];
-		if (buf_taddr == TARGET_NULL)
-			break;
-		if (buf_len == 0) {
-			ret = 0;
-			break;
-		}
-		uint8_t *buf = malloc(buf_len);
-		if (buf == NULL)
-			break;
-		target_mem_read(target, buf, buf_taddr, buf_len);
-		if (target_check_error(target)) {
-			free(buf);
-			break;
-		}
-		ret = write(request.params[0] - 1, buf, buf_len);
-		free(buf);
-		if (ret >= 0)
-			ret = buf_len - ret;
-		break;
-	}
 
 	case SEMIHOSTING_SYS_WRITEC: { /* writec */
 		ret = -1;
@@ -602,11 +610,6 @@ int cortexm_hostio_request(target_s *const target)
 #else
 		/* code that runs in probe. use gdb fileio calls. */
 
-	case SEMIHOSTING_SYS_WRITE: /* write */
-		ret = tc_write(target, request.params[0] - 1, request.params[1], request.params[2]);
-		if (ret >= 0)
-			ret = request.params[2] - ret;
-		break;
 	case SEMIHOSTING_SYS_WRITEC: /* writec */
 		ret = tc_write(target, STDERR_FILENO, request.r1, 1);
 		break;
