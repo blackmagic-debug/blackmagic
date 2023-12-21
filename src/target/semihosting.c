@@ -498,6 +498,20 @@ int32_t semihosting_rename(target_s *const target, const semihosting_s *const re
 #endif
 }
 
+int32_t semihosting_remove(target_s *const target, const semihosting_s *const request)
+{
+#if PC_HOSTED == 1
+	const char *const file_name = semihosting_read_string(target, request->params[0], request->params[1]);
+	if (file_name == NULL)
+		return -1;
+	const int32_t result = remove(file_name);
+	free((void *)file_name);
+	return result;
+#else
+	return hostio_unlink(target->tc, request->params[0], request->params[1] + 1U);
+#endif
+}
+
 int cortexm_hostio_request(target_s *const target)
 {
 	semihosting_s request;
@@ -557,30 +571,12 @@ int cortexm_hostio_request(target_s *const target)
 		ret = semihosting_rename(target, &request);
 		break;
 
+	case SEMIHOSTING_SYS_REMOVE: /* unlink */
+		ret = semihosting_remove(target, &request);
+		break;
+
 #if PC_HOSTED == 1
 		/* code that runs in pc-hosted process. use linux system calls. */
-
-	case SEMIHOSTING_SYS_REMOVE: { /* unlink */
-		ret = -1;
-		target_addr_t fnam_taddr = request.params[0];
-		if (fnam_taddr == TARGET_NULL)
-			break;
-		uint32_t fnam_len = request.params[1];
-		if (fnam_len == 0)
-			break;
-		char *fnam = malloc(fnam_len + 1U);
-		if (fnam == NULL)
-			break;
-		target_mem_read(target, fnam, fnam_taddr, fnam_len + 1U);
-		if (target_check_error(target)) {
-			free(fnam);
-			break;
-		}
-		fnam[fnam_len] = '\0';
-		ret = remove(fnam);
-		free(fnam);
-		break;
-	}
 
 	case SEMIHOSTING_SYS_SYSTEM: { /* system */
 		ret = -1;
@@ -646,9 +642,6 @@ int cortexm_hostio_request(target_s *const target)
 #else
 		/* code that runs in probe. use gdb fileio calls. */
 
-	case SEMIHOSTING_SYS_REMOVE: /* unlink */
-		ret = hostio_unlink(target->tc, request.params[0], request.params[1] + 1U);
-		break;
 	case SEMIHOSTING_SYS_SYSTEM: /* system */
 		/* before use first enable system calls with the following gdb command: 'set remote system-call-allowed 1' */
 		ret = hostio_system(target->tc, request.params[0], request.params[1] + 1U);
