@@ -24,7 +24,6 @@
 #include "target.h"
 #include "target_internal.h"
 #include "gdb_main.h"
-#include "gdb_hostio.h"
 #include "gdb_packet.h"
 #include "cortexm.h"
 #include "semihosting.h"
