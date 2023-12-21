@@ -38,7 +38,6 @@ libbmd_core_sources = files(
 	'command.c',
 	'crc32.c',
 	'exception.c',
-	'gdb_hostio.c',
 	'gdb_main.c',
 	'gdb_packet.c',
 	'hex_utils.c',

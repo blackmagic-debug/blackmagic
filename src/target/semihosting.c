@@ -23,6 +23,9 @@
 #include "general.h"
 #include "target.h"
 #include "target_internal.h"
+#include "gdb_main.h"
+#include "gdb_hostio.h"
+#include "gdb_packet.h"
 #include "cortexm.h"
 #include "semihosting.h"
 #include "semihosting_internal.h"
@@ -86,6 +89,143 @@ const char *const semihosting_names[] = {
 #endif
 
 #if PC_HOSTED == 0
+int hostio_reply(target_controller_s *const tc, char *const pbuf, const int len)
+{
+	(void)len;
+
+	/*
+	 * File-I/O Remote Protocol Extension
+	 * See https://sourceware.org/gdb/onlinedocs/gdb/Protocol-Basics.html#Protocol-Basics
+	 *
+	 * This handles the F Reply Packet, sent by GDB after handling the File-I/O Request Packet.
+	 *
+	 * The F reply packet consists of the following:
+	 *
+	 * - retcode, the return code of the system call as hexadecimal value.
+	 * - errno, the errno set by the call, in protocol-specific representation.
+	 * 		Can be omitted if the call was successful.
+	 * - Ctrl-C flag, sent only if user requested a break.
+	 * 		In this case, errno must be sent as well, even if the call was successful.
+	 * 		The Ctrl-C flag itself consists of the character ‘C’:
+	 */
+
+	const bool retcode_is_negative = pbuf[1U] == '-';
+
+	unsigned int retcode = 0;
+	unsigned int errno_ = 0;
+	char ctrl_c_flag = '\0';
+	const int items = sscanf(pbuf + (retcode_is_negative ? 2U : 1U), "%x,%x,%c", &retcode, &errno_, &ctrl_c_flag);
+
+	if (items < 1) {
+		/*
+		 * Something went wrong with the sscanf or the packet format, avoid UB
+		 * FIXME: how do we properly handle this?
+		 */
+		tc->interrupted = false;
+		tc->errno_ = TARGET_EUNKNOWN;
+		return -1;
+	}
+
+	/* If the call was successful the errno may be omitted */
+	tc->errno_ = items >= 2 ? errno_ : 0;
+
+	/* If break is requested */
+	tc->interrupted = items == 3 && ctrl_c_flag == 'C';
+
+	return retcode_is_negative ? -retcode : retcode;
+}
+
+static int hostio_get_response(target_controller_s *const tc)
+{
+	char *const packet_buffer = gdb_packet_buffer();
+	/* Still have to service normal 'X'/'m'-packets */
+	while (true) {
+		/* Get back the next packet to process and have the main loop handle it */
+		const size_t size = gdb_getpacket(packet_buffer, GDB_PACKET_BUFFER_SIZE);
+		/* If this was an escape packet (or gdb_if reports link closed), fail the call */
+		if (size == 1U && packet_buffer[0] == '\x04')
+			return -1;
+		const int result = gdb_main_loop(tc, packet_buffer, GDB_PACKET_BUFFER_SIZE, size, true);
+		/* If this was an F-packet, we're done */
+		if (packet_buffer[0] == 'F')
+			return result;
+	}
+}
+
+/* Interface to host system calls */
+int hostio_open(target_controller_s *tc, target_addr_t path, size_t path_len, target_open_flags_e flags, mode_t mode)
+{
+	gdb_putpacket_f("Fopen,%08" PRIX32 "/%08" PRIX32 ",%08X,%08" PRIX32, path, (uint32_t)path_len, flags, mode);
+	return hostio_get_response(tc);
+}
+
+int hostio_close(target_controller_s *tc, int fd)
+{
+	gdb_putpacket_f("Fclose,%08X", fd);
+	return hostio_get_response(tc);
+}
+
+int hostio_read(target_controller_s *tc, int fd, target_addr_t buf, unsigned int count)
+{
+	gdb_putpacket_f("Fread,%08X,%08" PRIX32 ",%08X", fd, buf, count);
+	return hostio_get_response(tc);
+}
+
+int hostio_write(target_controller_s *tc, int fd, target_addr_t buf, unsigned int count)
+{
+	gdb_putpacket_f("Fwrite,%08X,%08" PRIX32 ",%08X", fd, buf, count);
+	return hostio_get_response(tc);
+}
+
+long hostio_lseek(target_controller_s *tc, int fd, long offset, target_seek_flag_e flag)
+{
+	gdb_putpacket_f("Flseek,%08X,%08lX,%08X", fd, offset, flag);
+	return hostio_get_response(tc);
+}
+
+int hostio_rename(target_controller_s *tc, target_addr_t oldpath, size_t old_len, target_addr_t newpath, size_t new_len)
+{
+	gdb_putpacket_f("Frename,%08" PRIX32 "/%08" PRIX32 ",%08" PRIX32 "/%08" PRIX32, oldpath, (uint32_t)old_len, newpath,
+		(uint32_t)new_len);
+	return hostio_get_response(tc);
+}
+
+int hostio_unlink(target_controller_s *tc, target_addr_t path, size_t path_len)
+{
+	gdb_putpacket_f("Funlink,%08" PRIX32 "/%08" PRIX32, path, (uint32_t)path_len);
+	return hostio_get_response(tc);
+}
+
+int hostio_stat(target_controller_s *tc, target_addr_t path, size_t path_len, target_addr_t buf)
+{
+	gdb_putpacket_f("Fstat,%08" PRIX32 "/%08" PRIX32 ",%08" PRIX32, path, (uint32_t)path_len, buf);
+	return hostio_get_response(tc);
+}
+
+int hostio_fstat(target_controller_s *tc, int fd, target_addr_t buf)
+{
+	gdb_putpacket_f("Ffstat,%X,%08" PRIX32, fd, buf);
+	return hostio_get_response(tc);
+}
+
+int hostio_gettimeofday(target_controller_s *tc, target_addr_t tv, target_addr_t tz)
+{
+	gdb_putpacket_f("Fgettimeofday,%08" PRIX32 ",%08" PRIX32, tv, tz);
+	return hostio_get_response(tc);
+}
+
+int hostio_isatty(target_controller_s *tc, int fd)
+{
+	gdb_putpacket_f("Fisatty,%08X", fd);
+	return hostio_get_response(tc);
+}
+
+int hostio_system(target_controller_s *tc, target_addr_t cmd, size_t cmd_len)
+{
+	gdb_putpacket_f("Fsystem,%08" PRIX32 "/%08" PRIX32, cmd, (uint32_t)cmd_len);
+	return hostio_get_response(tc);
+}
+
 /* Interface to host system calls */
 int tc_open(target_s *t, target_addr_t path, size_t plen, target_open_flags_e flags, mode_t mode)
 {

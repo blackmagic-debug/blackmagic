@@ -44,7 +44,6 @@ SRC =              \
 	exception.c    \
 	gdb_if.c       \
 	gdb_main.c     \
-	gdb_hostio.c   \
 	gdb_packet.c   \
 	gdb_reg.c      \
 	hex_utils.c    \
@@ -76,6 +75,7 @@ SRC =              \
 	sam4l.c        \
 	samd.c         \
 	samx5x.c       \
+	semihosting.c  \
 	sfdp.c         \
 	spi.c          \
 	stm32f1.c      \
