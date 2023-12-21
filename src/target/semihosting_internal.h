@@ -21,6 +21,8 @@
 #ifndef TARGET_SEMIHOSTING_INTERNAL_H
 #define TARGET_SEMIHOSTING_INTERNAL_H
 
+#include "general.h"
+
 /*
  * If the target wants to read the special filename ":semihosting-features"
  * to know what semihosting features are supported, it's easiest to create
@@ -61,5 +63,11 @@
 #define TARGET_NULL ((target_addr_t)0)
 
 #define STDOUT_READ_BUF_SIZE 64U
+
+typedef struct semihosting {
+	uint32_t syscall;
+	uint32_t r1;
+	uint32_t params[4U];
+} semihosting_s;
 
 #endif /* TARGET_SEMIHOSTING_INTERNAL_H */
