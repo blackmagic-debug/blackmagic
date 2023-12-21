@@ -32,9 +32,9 @@
 #include "gdb_if.h"
 #include "gdb_packet.h"
 #include "gdb_main.h"
-#include "gdb_hostio.h"
 #include "target.h"
 #include "target_internal.h"
+#include "semihosting.h"
 #include "command.h"
 #include "crc32.h"
 #include "morse.h"
@@ -111,21 +111,6 @@ static void gdb_target_printf(target_controller_s *tc, const char *fmt, va_list 
 target_controller_s gdb_controller = {
 	.destroy_callback = gdb_target_destroy_callback,
 	.printf = gdb_target_printf,
-
-#if PC_HOSTED == 0
-	.open = hostio_open,
-	.close = hostio_close,
-	.read = hostio_read,
-	.write = hostio_write,
-	.lseek = hostio_lseek,
-	.rename = hostio_rename,
-	.unlink = hostio_unlink,
-	.stat = hostio_stat,
-	.fstat = hostio_fstat,
-	.gettimeofday = hostio_gettimeofday,
-	.isatty = hostio_isatty,
-	.system = hostio_system,
-#endif
 };
 
 /* execute gdb remote command stored in 'pbuf'. returns immediately, no busy waiting. */

@@ -26,5 +26,6 @@
 #include "general.h"
 
 int cortexm_hostio_request(target_s *target);
+int hostio_reply(target_controller_s *tc, char *packet, int len);
 
 #endif /* TARGET_SEMIHOSTING_H */
