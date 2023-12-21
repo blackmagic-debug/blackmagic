@@ -202,18 +202,4 @@ bool target_check_error(target_s *target);
 /* Access to host controller interface */
 void tc_printf(target_s *target, const char *fmt, ...);
 
-/* Interface to host system calls */
-int tc_open(target_s *, target_addr_t path, size_t plen, target_open_flags_e flags, mode_t mode);
-int tc_close(target_s *target, int fd);
-int tc_read(target_s *target, int fd, target_addr_t buf, unsigned int count);
-int tc_write(target_s *target, int fd, target_addr_t buf, unsigned int count);
-long tc_lseek(target_s *target, int fd, long offset, target_seek_flag_e flag);
-int tc_rename(target_s *target, target_addr_t oldpath, size_t oldlen, target_addr_t newpath, size_t newlen);
-int tc_unlink(target_s *target, target_addr_t path, size_t plen);
-int tc_stat(target_s *target, target_addr_t path, size_t plen, target_addr_t buf);
-int tc_fstat(target_s *target, int fd, target_addr_t buf);
-int tc_gettimeofday(target_s *target, target_addr_t tv, target_addr_t tz);
-int tc_isatty(target_s *target, int fd);
-int tc_system(target_s *target, target_addr_t cmd, size_t cmdlen);
-
 #endif /* TARGET_TARGET_INTERNAL_H */
