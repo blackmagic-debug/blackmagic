@@ -227,31 +227,6 @@ int hostio_system(target_controller_s *tc, target_addr_t cmd, size_t cmd_len)
 }
 
 /* Interface to host system calls */
-int tc_open(target_s *t, target_addr_t path, size_t plen, target_open_flags_e flags, mode_t mode)
-{
-	if (t->tc->open == NULL) {
-		t->tc->errno_ = TARGET_ENFILE;
-		return -1;
-	}
-	return t->tc->open(t->tc, path, plen, flags, mode);
-}
-
-int tc_close(target_s *t, int fd)
-{
-	if (t->tc->close == NULL) {
-		t->tc->errno_ = TARGET_EBADF;
-		return -1;
-	}
-	return t->tc->close(t->tc, fd);
-}
-
-int tc_read(target_s *t, int fd, target_addr_t buf, unsigned int count)
-{
-	if (t->tc->read == NULL)
-		return 0;
-	return t->tc->read(t->tc, fd, buf, count);
-}
-
 int tc_write(target_s *t, int fd, target_addr_t buf, unsigned int count)
 {
 #if PC_HOSTED == 0
@@ -273,72 +248,6 @@ int tc_write(target_s *t, int fd, target_addr_t buf, unsigned int count)
 	if (t->tc->write == NULL)
 		return 0;
 	return t->tc->write(t->tc, fd, buf, count);
-}
-
-long tc_lseek(target_s *t, int fd, long offset, target_seek_flag_e flag)
-{
-	if (t->tc->lseek == NULL)
-		return 0;
-	return t->tc->lseek(t->tc, fd, offset, flag);
-}
-
-int tc_rename(target_s *t, target_addr_t oldpath, size_t oldlen, target_addr_t newpath, size_t newlen)
-{
-	if (t->tc->rename == NULL) {
-		t->tc->errno_ = TARGET_ENOENT;
-		return -1;
-	}
-	return t->tc->rename(t->tc, oldpath, oldlen, newpath, newlen);
-}
-
-int tc_unlink(target_s *t, target_addr_t path, size_t plen)
-{
-	if (t->tc->unlink == NULL) {
-		t->tc->errno_ = TARGET_ENOENT;
-		return -1;
-	}
-	return t->tc->unlink(t->tc, path, plen);
-}
-
-int tc_stat(target_s *t, target_addr_t path, size_t plen, target_addr_t buf)
-{
-	if (t->tc->stat == NULL) {
-		t->tc->errno_ = TARGET_ENOENT;
-		return -1;
-	}
-	return t->tc->stat(t->tc, path, plen, buf);
-}
-
-int tc_fstat(target_s *t, int fd, target_addr_t buf)
-{
-	if (t->tc->fstat == NULL) {
-		return 0;
-	}
-	return t->tc->fstat(t->tc, fd, buf);
-}
-
-int tc_gettimeofday(target_s *t, target_addr_t tv, target_addr_t tz)
-{
-	if (t->tc->gettimeofday == NULL) {
-		return -1;
-	}
-	return t->tc->gettimeofday(t->tc, tv, tz);
-}
-
-int tc_isatty(target_s *t, int fd)
-{
-	if (t->tc->isatty == NULL) {
-		return 1;
-	}
-	return t->tc->isatty(t->tc, fd);
-}
-
-int tc_system(target_s *t, target_addr_t cmd, size_t cmdlen)
-{
-	if (t->tc->system == NULL) {
-		return -1;
-	}
-	return t->tc->system(t->tc, cmd, cmdlen);
 }
 
 /* probe memory access functions */
@@ -689,17 +598,17 @@ int cortexm_hostio_request(target_s *target)
 			break;
 		}
 
-		ret = tc_open(target, params[0], params[2] + 1U, pflag, 0644);
+		ret = hostio_open(target->tc, params[0], params[2] + 1U, pflag, 0644);
 		if (ret != -1)
 			ret++;
 		break;
 	}
 
 	case SEMIHOSTING_SYS_CLOSE: /* close */
-		ret = tc_close(target, params[0] - 1);
+		ret = hostio_close(target->tc, params[0] - 1);
 		break;
 	case SEMIHOSTING_SYS_READ: /* read */
-		ret = tc_read(target, params[0] - 1, params[1], params[2]);
+		ret = hostio_read(target->tc, params[0] - 1, params[1], params[2]);
 		if (ret >= 0)
 			ret = params[2] - ret;
 		break;
@@ -730,23 +639,23 @@ int cortexm_hostio_request(target_s *target)
 		break;
 	}
 	case SEMIHOSTING_SYS_ISTTY: /* isatty */
-		ret = tc_isatty(target, params[0] - 1);
+		ret = hostio_isatty(target->tc, params[0] - 1);
 		break;
 	case SEMIHOSTING_SYS_SEEK: /* lseek */
-		if (tc_lseek(target, params[0] - 1, params[1], TARGET_SEEK_SET) == (long)params[1])
+		if (hostio_lseek(target->tc, params[0] - 1, params[1], TARGET_SEEK_SET) == (long)params[1])
 			ret = 0;
 		else
 			ret = -1;
 		break;
 	case SEMIHOSTING_SYS_RENAME: /* rename */
-		ret = tc_rename(target, params[0], params[1] + 1U, params[2], params[3] + 1U);
+		ret = hostio_rename(target->tc, params[0], params[1] + 1U, params[2], params[3] + 1U);
 		break;
 	case SEMIHOSTING_SYS_REMOVE: /* unlink */
-		ret = tc_unlink(target, params[0], params[1] + 1U);
+		ret = hostio_unlink(target->tc, params[0], params[1] + 1U);
 		break;
 	case SEMIHOSTING_SYS_SYSTEM: /* system */
 		/* before use first enable system calls with the following gdb command: 'set remote system-call-allowed 1' */
-		ret = tc_system(target, params[0], params[1] + 1U);
+		ret = hostio_system(target->tc, params[0], params[1] + 1U);
 		break;
 
 	case SEMIHOSTING_SYS_FLEN: { /* file length */
@@ -759,7 +668,8 @@ int cortexm_hostio_request(target_s *target)
 		saved_mem_write = target->mem_write;
 		target->mem_read = probe_mem_read;
 		target->mem_write = probe_mem_write;
-		int rc = tc_fstat(target, params[0] - 1, (target_addr_t)fio_stat); /* write fstat() result in fio_stat[] */
+		int rc =
+			hostio_fstat(target->tc, params[0] - 1, (target_addr_t)fio_stat); /* write fstat() result in fio_stat[] */
 		target->mem_read = saved_mem_read;
 		target->mem_write = saved_mem_write;
 		if (rc)
@@ -792,7 +702,7 @@ int cortexm_hostio_request(target_s *target)
 		target->mem_read = probe_mem_read;
 		target->mem_write = probe_mem_write;
 		/* write gettimeofday() result in fio_timeval[] */
-		int rc = tc_gettimeofday(target, (target_addr_t)&fio_timeval, (target_addr_t)NULL);
+		int rc = hostio_gettimeofday(target->tc, (target_addr_t)&fio_timeval, (target_addr_t)NULL);
 		target->mem_read = saved_mem_read;
 		target->mem_write = saved_mem_write;
 		if (rc) /* tc_gettimeofday() failed */
@@ -824,7 +734,7 @@ int cortexm_hostio_request(target_s *target)
 		saved_mem_write = target->mem_write;
 		target->mem_read = probe_mem_read;
 		target->mem_write = probe_mem_write;
-		int rc = tc_read(target, STDIN_FILENO, (target_addr_t)&ch, 1); /* read a character in ch */
+		int rc = hostio_read(target->tc, STDIN_FILENO, (target_addr_t)&ch, 1); /* read a character in ch */
 		target->mem_read = saved_mem_read;
 		target->mem_write = saved_mem_write;
 		if (rc == 1)
