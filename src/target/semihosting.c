@@ -267,12 +267,29 @@ static void probe_mem_write(
 }
 #endif
 
+#if PC_HOSTED == 1
+const char *semihosting_read_string(
+	target_s *const target, const target_addr_t string_taddr, const uint32_t string_length)
+{
+	if (string_taddr == TARGET_NULL || string_length == 0)
+		return NULL;
+	char *string = malloc(string_length + 1U);
+	if (string == NULL)
+		return NULL;
+	target_mem_read(target, string, string_taddr, string_length + 1U);
+	if (target_check_error(target)) {
+		free(string);
+		return NULL;
+	}
+	string[string_length] = '\0';
+	return string;
+}
+#endif
+
 int32_t semihosting_open(target_s *const target, const semihosting_s *const request)
 {
 	const target_addr_t file_name_taddr = request->params[0];
 	const uint32_t file_name_length = request->params[2];
-	if (file_name_taddr == TARGET_NULL || file_name_length == 0)
-		return -1;
 
 	/*
 	 * Translation table of fopen modes to open() flags
@@ -313,17 +330,11 @@ int32_t semihosting_open(target_s *const target, const semihosting_s *const requ
 	}
 
 #if PC_HOSTED == 1
-	char *file_name = malloc(file_name_length + 1U);
+	const char *const file_name = semihosting_read_string(target, file_name_taddr, file_name_length);
 	if (file_name == NULL)
 		return -1;
-	target_mem_read(target, file_name, file_name_taddr, file_name_length + 1U);
-	if (target_check_error(target)) {
-		free(file_name);
-		return -1;
-	}
-	file_name[file_name_length] = '\0';
 	const int32_t result = open(file_name, open_mode, 0644);
-	free(file_name);
+	free((void *)file_name);
 #else
 	const int32_t result = hostio_open(target->tc, file_name_taddr, file_name_length + 1U, open_mode, 0644U);
 #endif
