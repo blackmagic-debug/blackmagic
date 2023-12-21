@@ -443,6 +443,17 @@ int32_t semihosting_write0(target_s *const target, const semihosting_s *const re
 	return 0;
 }
 
+int32_t semihosting_isatty(target_s *const target, const semihosting_s *const request)
+{
+	const int32_t fd = request->params[0] - 1;
+#if PC_HOSTED == 1
+	(void)target;
+	return isatty(fd);
+#else
+	return hostio_isatty(target->tc, fd);
+#endif
+}
+
 int cortexm_hostio_request(target_s *const target)
 {
 	semihosting_s request;
@@ -490,12 +501,12 @@ int cortexm_hostio_request(target_s *const target)
 		ret = semihosting_write0(target, &request);
 		break;
 
+	case SEMIHOSTING_SYS_ISTTY: /* isatty */
+		ret = semihosting_isatty(target, &request);
+		break;
+
 #if PC_HOSTED == 1
 		/* code that runs in pc-hosted process. use linux system calls. */
-
-	case SEMIHOSTING_SYS_ISTTY: /* isatty */
-		ret = isatty(request.params[0] - 1);
-		break;
 
 	case SEMIHOSTING_SYS_SEEK: { /* lseek */
 		off_t pos = request.params[1];
@@ -633,9 +644,6 @@ int cortexm_hostio_request(target_s *const target)
 #else
 		/* code that runs in probe. use gdb fileio calls. */
 
-	case SEMIHOSTING_SYS_ISTTY: /* isatty */
-		ret = hostio_isatty(target->tc, request.params[0] - 1);
-		break;
 	case SEMIHOSTING_SYS_SEEK: /* lseek */
 		if (hostio_lseek(target->tc, request.params[0] - 1, request.params[1], TARGET_SEEK_SET) ==
 			(long)request.params[1])
