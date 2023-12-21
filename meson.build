@@ -300,10 +300,3 @@ Dependencies:
 	libusb: @2@
 '''.format(libftdi.found(), hidapi.found(), libusb.found()))
 endif
-
-# We report this at the end of the configuration, so it's easier to spot
-warning(
-	'''The meson build system is experimental and not yet fully supported. Please use the Makefile build system instead.
-Please report any issues you find to https://github.com/blackmagic-debug/blackmagic/issues
-'''
-)
