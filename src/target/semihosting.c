@@ -415,6 +415,34 @@ int32_t semihosting_writec(target_s *const target, const semihosting_s *const re
 #endif
 }
 
+int32_t semihosting_write0(target_s *const target, const semihosting_s *const request)
+{
+	const target_addr_t str_begin_taddr = request->r1;
+	if (str_begin_taddr == TARGET_NULL)
+		return -1;
+#if PC_HOSTED == 1
+	for (target_addr_t char_taddr = str_begin_taddr; !target_check_error(target); ++char_taddr) {
+		const uint8_t chr = target_mem_read8(target, char_taddr);
+		if (chr == 0U)
+			break;
+		fputc(chr, stderr);
+	}
+#else
+	target_addr_t str_end_taddr;
+	for (str_end_taddr = str_begin_taddr; target_mem_read8(target, str_end_taddr) != 0; ++str_end_taddr) {
+		if (target_check_error(target))
+			break;
+	}
+	const int32_t len = str_end_taddr - str_begin_taddr;
+	if (len >= 0) {
+		const int32_t result = tc_write(target, STDERR_FILENO, str_begin_taddr, len);
+		if (result != len)
+			return -1;
+	}
+#endif
+	return 0;
+}
+
 int cortexm_hostio_request(target_s *const target)
 {
 	semihosting_s request;
@@ -458,23 +486,12 @@ int cortexm_hostio_request(target_s *const target)
 		ret = semihosting_writec(target, &request);
 		break;
 
+	case SEMIHOSTING_SYS_WRITE0: /* write0 */
+		ret = semihosting_write0(target, &request);
+		break;
+
 #if PC_HOSTED == 1
 		/* code that runs in pc-hosted process. use linux system calls. */
-
-	case SEMIHOSTING_SYS_WRITE0: { /* write0 */
-		ret = -1;
-		target_addr_t str_addr = request.r1;
-		if (str_addr == TARGET_NULL)
-			break;
-		while (true) {
-			const uint8_t str_c = target_mem_read8(target, str_addr++);
-			if (target_check_error(target) || str_c == 0x00)
-				break;
-			fputc(str_c, stderr);
-		}
-		ret = 0;
-		break;
-	}
 
 	case SEMIHOSTING_SYS_ISTTY: /* isatty */
 		ret = isatty(request.params[0] - 1);
@@ -616,24 +633,6 @@ int cortexm_hostio_request(target_s *const target)
 #else
 		/* code that runs in probe. use gdb fileio calls. */
 
-	case SEMIHOSTING_SYS_WRITE0: { /* write0 */
-		ret = -1;
-		target_addr_t str_begin = request.r1;
-		target_addr_t str_end = str_begin;
-		while (target_mem_read8(target, str_end) != 0) {
-			if (target_check_error(target))
-				break;
-			str_end++;
-		}
-		int len = str_end - str_begin;
-		if (len != 0) {
-			int rc = tc_write(target, STDERR_FILENO, str_begin, len);
-			if (rc != len)
-				break;
-		}
-		ret = 0;
-		break;
-	}
 	case SEMIHOSTING_SYS_ISTTY: /* isatty */
 		ret = hostio_isatty(target->tc, request.params[0] - 1);
 		break;
