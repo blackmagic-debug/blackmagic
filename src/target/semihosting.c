@@ -332,6 +332,17 @@ int32_t semihosting_open(target_s *const target, const semihosting_s *const requ
 	return result;
 }
 
+int32_t semihosting_close(target_s *const target, const semihosting_s *const request)
+{
+	const int32_t fd = request->params[0] - 1;
+#if PC_HOSTED == 1
+	(void)target;
+	return close(fd);
+#else
+	return hostio_close(target->tc, fd);
+#endif
+}
+
 int cortexm_hostio_request(target_s *const target)
 {
 	semihosting_s request;
@@ -359,12 +370,12 @@ int cortexm_hostio_request(target_s *const target)
 		ret = semihosting_open(target, &request);
 		break;
 
+	case SEMIHOSTING_SYS_CLOSE: /* close */
+		ret = semihosting_close(target, &request);
+		break;
+
 #if PC_HOSTED == 1
 		/* code that runs in pc-hosted process. use linux system calls. */
-
-	case SEMIHOSTING_SYS_CLOSE: /* close */
-		ret = close(request.params[0] - 1);
-		break;
 
 	case SEMIHOSTING_SYS_READ: { /* read */
 		ret = -1;
@@ -584,9 +595,6 @@ int cortexm_hostio_request(target_s *const target)
 #else
 		/* code that runs in probe. use gdb fileio calls. */
 
-	case SEMIHOSTING_SYS_CLOSE: /* close */
-		ret = hostio_close(target->tc, request.params[0] - 1);
-		break;
 	case SEMIHOSTING_SYS_READ: /* read */
 		ret = hostio_read(target->tc, request.params[0] - 1, request.params[1], request.params[2]);
 		if (ret >= 0)
