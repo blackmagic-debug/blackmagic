@@ -477,6 +477,27 @@ int32_t semihosting_seek(target_s *const target, const semihosting_s *const requ
 #endif
 }
 
+int32_t semihosting_rename(target_s *const target, const semihosting_s *const request)
+{
+#if PC_HOSTED == 1
+	const char *const old_file_name = semihosting_read_string(target, request->params[0], request->params[1]);
+	if (old_file_name == NULL)
+		return -1;
+	const char *const new_file_name = semihosting_read_string(target, request->params[2], request->params[3]);
+	if (new_file_name == NULL) {
+		free((void *)old_file_name);
+		return -1;
+	}
+	const int32_t result = rename(old_file_name, new_file_name);
+	free((void *)old_file_name);
+	free((void *)new_file_name);
+	return result;
+#else
+	return hostio_rename(
+		target->tc, request->params[0], request->params[1] + 1U, request->params[2], request->params[3] + 1U);
+#endif
+}
+
 int cortexm_hostio_request(target_s *const target)
 {
 	semihosting_s request;
@@ -532,49 +553,12 @@ int cortexm_hostio_request(target_s *const target)
 		ret = semihosting_seek(target, &request);
 		break;
 
+	case SEMIHOSTING_SYS_RENAME: /* rename */
+		ret = semihosting_rename(target, &request);
+		break;
+
 #if PC_HOSTED == 1
 		/* code that runs in pc-hosted process. use linux system calls. */
-
-	case SEMIHOSTING_SYS_RENAME: { /* rename */
-		ret = -1;
-		target_addr_t fnam1_taddr = request.params[0];
-		uint32_t fnam1_len = request.params[1];
-		if (fnam1_taddr == TARGET_NULL)
-			break;
-		if (fnam1_len == 0)
-			break;
-		target_addr_t fnam2_taddr = request.params[2];
-		uint32_t fnam2_len = request.params[3];
-		if (fnam2_taddr == TARGET_NULL)
-			break;
-		if (fnam2_len == 0)
-			break;
-		char *fnam1 = malloc(fnam1_len + 1U);
-		if (fnam1 == NULL)
-			break;
-		target_mem_read(target, fnam1, fnam1_taddr, fnam1_len + 1U);
-		if (target_check_error(target)) {
-			free(fnam1);
-			break;
-		}
-		fnam1[fnam1_len] = '\0';
-		char *fnam2 = malloc(fnam2_len + 1U);
-		if (fnam2 == NULL) {
-			free(fnam1);
-			break;
-		}
-		target_mem_read(target, fnam2, fnam2_taddr, fnam2_len + 1U);
-		if (target_check_error(target)) {
-			free(fnam1);
-			free(fnam2);
-			break;
-		}
-		fnam2[fnam2_len] = '\0';
-		ret = rename(fnam1, fnam2);
-		free(fnam1);
-		free(fnam2);
-		break;
-	}
 
 	case SEMIHOSTING_SYS_REMOVE: { /* unlink */
 		ret = -1;
@@ -662,10 +646,6 @@ int cortexm_hostio_request(target_s *const target)
 #else
 		/* code that runs in probe. use gdb fileio calls. */
 
-	case SEMIHOSTING_SYS_RENAME: /* rename */
-		ret = hostio_rename(
-			target->tc, request.params[0], request.params[1] + 1U, request.params[2], request.params[3] + 1U);
-		break;
 	case SEMIHOSTING_SYS_REMOVE: /* unlink */
 		ret = hostio_unlink(target->tc, request.params[0], request.params[1] + 1U);
 		break;
