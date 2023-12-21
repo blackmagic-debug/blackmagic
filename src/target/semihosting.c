@@ -267,7 +267,72 @@ static void probe_mem_write(
 }
 #endif
 
-int cortexm_hostio_request(target_s *target)
+int32_t semihosting_open(target_s *const target, const uint32_t params[4])
+{
+	const target_addr_t file_name_taddr = params[0];
+	const uint32_t file_name_length = params[2];
+	if (file_name_taddr == TARGET_NULL || file_name_length == 0)
+		return -1;
+
+	/*
+	 * Translation table of fopen modes to open() flags
+	 * See DUI0471C, Table 8-3
+	 */
+	static const uint32_t open_mode_flags[] = {
+#if PC_HOSTED == 1
+		O_RDONLY,                      /* r, rb */
+		O_RDWR,                        /* r+, r+b */
+		O_WRONLY | O_CREAT | O_TRUNC,  /*w*/
+		O_RDWR | O_CREAT | O_TRUNC,    /*w+*/
+		O_WRONLY | O_CREAT | O_APPEND, /*a*/
+		O_RDWR | O_CREAT | O_APPEND,   /*a+*/
+#else
+		TARGET_O_RDONLY,                                    /* r, rb */
+		TARGET_O_RDWR,                                      /* r+, r+b */
+		TARGET_O_WRONLY | TARGET_O_CREAT | TARGET_O_TRUNC,  /*w*/
+		TARGET_O_RDWR | TARGET_O_CREAT | TARGET_O_TRUNC,    /*w+*/
+		TARGET_O_WRONLY | TARGET_O_CREAT | TARGET_O_APPEND, /*a*/
+		TARGET_O_RDWR | TARGET_O_CREAT | TARGET_O_APPEND,   /*a+*/
+#endif
+	};
+	const uint32_t open_mode = open_mode_flags[params[1] >> 1U];
+
+	char filename[4];
+	target_mem_read(target, filename, params[0], sizeof(filename));
+
+	/* Handle requests for console I/O */
+	if (!strncmp(filename, ":tt", 4U)) {
+		int32_t result = -1;
+		if (open_mode == TARGET_O_RDONLY)
+			result = STDIN_FILENO;
+		else if (open_mode & TARGET_O_TRUNC)
+			result = STDOUT_FILENO;
+		else
+			result = STDERR_FILENO;
+		return result + 1;
+	}
+
+#if PC_HOSTED == 1
+	char *file_name = malloc(file_name_length + 1U);
+	if (file_name == NULL)
+		return -1;
+	target_mem_read(target, file_name, file_name_taddr, file_name_length + 1U);
+	if (target_check_error(target)) {
+		free(file_name);
+		return -1;
+	}
+	file_name[file_name_length] = '\0';
+	const int32_t result = open(file_name, open_mode, 0644);
+	free(file_name);
+#else
+	const int32_t result = hostio_open(target->tc, file_name_taddr, file_name_length + 1U, open_mode, 0644U);
+#endif
+	if (result != -1)
+		return result + 1;
+	return result;
+}
+
+int cortexm_hostio_request(target_s *const target)
 {
 	uint32_t arm_regs[CORTEXM_GENERAL_REG_COUNT + CORTEX_FLOAT_REG_COUNT];
 	uint32_t params[4] = {0};
@@ -291,57 +356,12 @@ int cortexm_hostio_request(target_s *target)
 #endif
 
 	switch (syscall) {
+	case SEMIHOSTING_SYS_OPEN: /* open */
+		ret = semihosting_open(target, params);
+		break;
+
 #if PC_HOSTED == 1
 		/* code that runs in pc-hosted process. use linux system calls. */
-
-	case SEMIHOSTING_SYS_OPEN: { /* open */
-		target_addr_t fnam_taddr = params[0];
-		uint32_t fnam_len = params[2];
-		ret = -1;
-		if (fnam_taddr == TARGET_NULL || fnam_len == 0)
-			break;
-
-		/* Translate stupid fopen modes to open flags.
-		 * See DUI0471C, Table 8-3 */
-		static const uint32_t flags[] = {
-			O_RDONLY,                      /* r, rb */
-			O_RDWR,                        /* r+, r+b */
-			O_WRONLY | O_CREAT | O_TRUNC,  /*w*/
-			O_RDWR | O_CREAT | O_TRUNC,    /*w+*/
-			O_WRONLY | O_CREAT | O_APPEND, /*a*/
-			O_RDWR | O_CREAT | O_APPEND,   /*a+*/
-		};
-		uint32_t pflag = flags[params[1] >> 1U];
-		char filename[4];
-
-		target_mem_read(target, filename, fnam_taddr, sizeof(filename));
-		/* handle requests for console i/o */
-		if (!strcmp(filename, ":tt")) {
-			if (pflag == TARGET_O_RDONLY)
-				ret = STDIN_FILENO;
-			else if (pflag & TARGET_O_TRUNC)
-				ret = STDOUT_FILENO;
-			else
-				ret = STDERR_FILENO;
-			ret++;
-			break;
-		}
-
-		char *fnam = malloc(fnam_len + 1U);
-		if (fnam == NULL)
-			break;
-		target_mem_read(target, fnam, fnam_taddr, fnam_len + 1U);
-		if (target_check_error(target)) {
-			free(fnam);
-			break;
-		}
-		fnam[fnam_len] = '\0';
-		ret = open(fnam, pflag, 0644);
-		free(fnam);
-		if (ret != -1)
-			ret++;
-		break;
-	}
 
 	case SEMIHOSTING_SYS_CLOSE: /* close */
 		ret = close(params[0] - 1);
@@ -564,39 +584,6 @@ int cortexm_hostio_request(target_s *target)
 		break;
 #else
 		/* code that runs in probe. use gdb fileio calls. */
-
-	case SEMIHOSTING_SYS_OPEN: { /* open */
-		/* Translate stupid fopen modes to open flags.
-		 * See DUI0471C, Table 8-3 */
-		static const uint32_t flags[] = {
-			TARGET_O_RDONLY,                                    /* r, rb */
-			TARGET_O_RDWR,                                      /* r+, r+b */
-			TARGET_O_WRONLY | TARGET_O_CREAT | TARGET_O_TRUNC,  /*w*/
-			TARGET_O_RDWR | TARGET_O_CREAT | TARGET_O_TRUNC,    /*w+*/
-			TARGET_O_WRONLY | TARGET_O_CREAT | TARGET_O_APPEND, /*a*/
-			TARGET_O_RDWR | TARGET_O_CREAT | TARGET_O_APPEND,   /*a+*/
-		};
-		uint32_t pflag = flags[params[1] >> 1U];
-		char filename[4];
-
-		target_mem_read(target, filename, params[0], sizeof(filename));
-		/* handle requests for console i/o */
-		if (!strcmp(filename, ":tt")) {
-			if (pflag == TARGET_O_RDONLY)
-				ret = STDIN_FILENO;
-			else if (pflag & TARGET_O_TRUNC)
-				ret = STDOUT_FILENO;
-			else
-				ret = STDERR_FILENO;
-			ret++;
-			break;
-		}
-
-		ret = hostio_open(target->tc, params[0], params[2] + 1U, pflag, 0644);
-		if (ret != -1)
-			ret++;
-		break;
-	}
 
 	case SEMIHOSTING_SYS_CLOSE: /* close */
 		ret = hostio_close(target->tc, params[0] - 1);
