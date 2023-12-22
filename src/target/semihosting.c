@@ -587,22 +587,21 @@ int32_t semihosting_readc(target_s *const target)
 	(void)target;
 	return getchar();
 #else
-	target->target_options |= TOPT_IN_SEMIHOSTING_SYSCALL;
-	void (*saved_mem_read)(target_s *target, void *dest, target_addr_t src, size_t len);
-	void (*saved_mem_write)(target_s *target, target_addr_t dest, const void *src, size_t len);
-	saved_mem_read = target->mem_read;
-	saved_mem_write = target->mem_write;
-	target->mem_read = probe_mem_read;
-	target->mem_write = probe_mem_write;
+	/* Define space for a character */
 	uint8_t ch = '?';
-	/* Read a character into ch */
-	const int32_t result = hostio_read(target->tc, STDIN_FILENO, (target_addr_t)&ch, 1);
-	target->mem_read = saved_mem_read;
-	target->mem_write = saved_mem_write;
+
+	/* Tell the target layer to write to this character as a buffer for the IO */
+	target->target_options |= TOPT_IN_SEMIHOSTING_SYSCALL;
+	target->tc->semihosting_buffer_ptr = &ch;
+	target->tc->semihosting_buffer_len = 1U;
+	/* Call GDB and ask for a character using read(STDIN_FILENO) */
+	const int32_t result = hostio_read(target->tc, STDIN_FILENO, target->ram->start, 1U);
 	target->target_options &= ~TOPT_IN_SEMIHOSTING_SYSCALL;
-	if (result == 1)
-		return ch;
-	return -1;
+	/* Check if the GDB remote read() */
+	if (result != 1)
+		return -1;
+	/* Extract the character read from the buffer */
+	return ch;
 #endif
 }
 
