@@ -616,6 +616,23 @@ int32_t semihosting_clock(target_s *const target)
 	return centiseconds & 0x7fffffffU;
 }
 
+int32_t semihosting_time(target_s *const target)
+{
+#if PC_HOSTED == 1
+	(void)target;
+	/* Get the current time in seconds from the host */
+	return time(NULL);
+#else
+	/* Get the current time from the host */
+	const semihosting_time_s current_time = semihosting_get_time(target);
+	/*
+	 * If the operation failed, the seconds member is already UINT32_MAX which is `-1`,
+	 * so just return it without validation having cast it to an int32_t
+	 */
+	return (int32_t)current_time.seconds;
+#endif
+}
+
 int cortexm_hostio_request(target_s *const target)
 {
 	semihosting_s request;
@@ -691,12 +708,12 @@ int cortexm_hostio_request(target_s *const target)
 		ret = semihosting_clock(target);
 		break;
 
+	case SEMIHOSTING_SYS_TIME: /* time */
+		ret = semihosting_time(target);
+		break;
+
 #if PC_HOSTED == 1
 		/* code that runs in pc-hosted process. use linux system calls. */
-
-	case SEMIHOSTING_SYS_TIME: /* time */
-		ret = time(NULL);
-		break;
 
 	case SEMIHOSTING_SYS_READC: /* readc */
 		ret = getchar();
@@ -707,46 +724,6 @@ int cortexm_hostio_request(target_s *const target)
 		break;
 #else
 		/* code that runs in probe. use gdb fileio calls. */
-
-	case SEMIHOSTING_SYS_TIME: { /* time */
-		/* use same code for SYS_CLOCK and SYS_TIME, more compact */
-		ret = -1;
-
-		struct __attribute__((packed, aligned(4))) {
-			uint32_t ftv_sec;
-			uint64_t ftv_usec;
-		} fio_timeval;
-
-		//DEBUG("SYS_TIME fio_timeval addr %p\n", &fio_timeval);
-		void (*saved_mem_read)(target_s *target, void *dest, target_addr_t src, size_t len);
-		void (*saved_mem_write)(target_s *target, target_addr_t dest, const void *src, size_t len);
-		saved_mem_read = target->mem_read;
-		saved_mem_write = target->mem_write;
-		target->mem_read = probe_mem_read;
-		target->mem_write = probe_mem_write;
-		/* write gettimeofday() result in fio_timeval[] */
-		int rc = hostio_gettimeofday(target->tc, (target_addr_t)&fio_timeval, (target_addr_t)NULL);
-		target->mem_read = saved_mem_read;
-		target->mem_write = saved_mem_write;
-		if (rc) /* tc_gettimeofday() failed */
-			break;
-		/* convert from bigendian to target order */
-		/* XXX: Replace this madness with endian-aware IO */
-		uint32_t sec = __builtin_bswap32(fio_timeval.ftv_sec);
-		uint64_t usec = __builtin_bswap64(fio_timeval.ftv_usec);
-		if (request.syscall == SEMIHOSTING_SYS_TIME) /* SYS_TIME: time in seconds */
-			ret = sec;
-		else { /* SYS_CLOCK: time in hundredths of seconds */
-			if (time0_sec > sec)
-				time0_sec = sec; /* set sys_clock time origin */
-			sec -= time0_sec;
-			/* Cast down microseconds to avoid u64 division */
-			uint32_t csec32 = ((uint32_t)usec / 10000U) + (sec * 100U);
-			int32_t csec = csec32 & 0x7fffffffU;
-			ret = csec;
-		}
-		break;
-	}
 
 	case SEMIHOSTING_SYS_READC: { /* readc */
 		uint8_t ch = '?';
