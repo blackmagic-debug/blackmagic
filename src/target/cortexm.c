@@ -78,6 +78,8 @@ static int cortexm_breakwatch_set(target_s *target, breakwatch_s *breakwatch);
 static int cortexm_breakwatch_clear(target_s *target, breakwatch_s *breakwatch);
 static target_addr_t cortexm_check_watch(target_s *target);
 
+static bool cortexm_hostio_request(target_s *const target);
+
 typedef struct cortexm_priv {
 	cortex_priv_s base;
 	bool stepping;
@@ -1368,3 +1370,20 @@ static bool cortexm_redirect_stdout(target_s *target, int argc, const char **arg
 	return true;
 }
 #endif
+
+static bool cortexm_hostio_request(target_s *const target)
+{
+	/* Read out the information from the target needed to complete the request */
+	uint32_t syscall = 0U;
+	target_reg_read(target, 0, &syscall, sizeof(syscall));
+	uint32_t r1 = 0U;
+	target_reg_read(target, 1, &r1, sizeof(r1));
+
+	/* Hand off to the main semihosting implementation */
+	const int32_t result = semihosting_request(target, syscall, r1);
+
+	/* Write the result back to the target */
+	target_reg_write(target, 0, &result, sizeof(result));
+	/* Return if the request was in any way interrupted */
+	return target->tc->interrupted;
+}

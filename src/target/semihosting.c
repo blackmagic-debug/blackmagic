@@ -601,12 +601,10 @@ int32_t semihosting_readc(target_s *const target)
 #endif
 }
 
-int cortexm_hostio_request(target_s *const target)
+int32_t semihosting_request(target_s *const target, const uint32_t syscall, const uint32_t r1)
 {
-	semihosting_s request;
+	semihosting_s request = {syscall, r1, {}};
 	target->tc->interrupted = false;
-	target_reg_read(target, 0, &request.syscall, sizeof(request.syscall));
-	target_reg_read(target, 1, &request.r1, sizeof(request.r1));
 
 	if (request.syscall != SEMIHOSTING_SYS_EXIT)
 		target_mem_read(target, request.params, request.r1, sizeof(request.params));
@@ -767,6 +765,5 @@ int cortexm_hostio_request(target_s *const target)
 		break;
 	}
 
-	target_reg_write(target, 0, &ret, sizeof(ret));
-	return target->tc->interrupted;
+	return ret;
 }
