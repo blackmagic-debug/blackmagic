@@ -153,12 +153,6 @@ static int semihosting_get_gdb_response(target_controller_s *const tc)
 }
 
 /* Interface to host system calls */
-int hostio_close(target_controller_s *tc, int fd)
-{
-	gdb_putpacket_f("Fclose,%08X", fd);
-	return semihosting_get_gdb_response(tc);
-}
-
 int hostio_read(target_controller_s *tc, int fd, target_addr_t buf, unsigned int count)
 {
 	gdb_putpacket_f("Fread,%08X,%08" PRIX32 ",%08X", fd, buf, count);
@@ -347,7 +341,8 @@ int32_t semihosting_close(target_s *const target, const semihosting_s *const req
 	(void)target;
 	return close(fd);
 #else
-	return hostio_close(target->tc, fd);
+	gdb_putpacket_f("Fclose,%08X", (unsigned)fd);
+	return semihosting_get_gdb_response(target->tc);
 #endif
 }
 
