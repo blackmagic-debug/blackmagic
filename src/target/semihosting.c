@@ -112,9 +112,9 @@ int semihosting_reply(target_controller_s *const tc, char *const pbuf, const int
 	const bool retcode_is_negative = pbuf[1U] == '-';
 
 	unsigned int retcode = 0;
-	unsigned int errno_ = 0;
+	unsigned int gdb_errno = 0;
 	char ctrl_c_flag = '\0';
-	const int items = sscanf(pbuf + (retcode_is_negative ? 2U : 1U), "%x,%x,%c", &retcode, &errno_, &ctrl_c_flag);
+	const int items = sscanf(pbuf + (retcode_is_negative ? 2U : 1U), "%x,%x,%c", &retcode, &gdb_errno, &ctrl_c_flag);
 
 	if (items < 1) {
 		/*
@@ -122,12 +122,12 @@ int semihosting_reply(target_controller_s *const tc, char *const pbuf, const int
 		 * FIXME: how do we properly handle this?
 		 */
 		tc->interrupted = false;
-		tc->errno_ = TARGET_EUNKNOWN;
+		tc->gdb_errno = TARGET_EUNKNOWN;
 		return -1;
 	}
 
 	/* If the call was successful the errno may be omitted */
-	tc->errno_ = items >= 2 ? errno_ : 0;
+	tc->gdb_errno = items >= 2 ? gdb_errno : 0;
 
 	/* If break is requested */
 	tc->interrupted = items == 3 && ctrl_c_flag == 'C';
@@ -739,19 +739,15 @@ int cortexm_hostio_request(target_s *const target)
 		ret = semihosting_readc(target);
 		break;
 
-#if PC_HOSTED == 1
-		/* code that runs in pc-hosted process. use linux system calls. */
-
 	case SEMIHOSTING_SYS_ERRNO: /* errno */
+#if PC_HOSTED == 1
+		/* Return whatever the current errno value is */
 		ret = errno;
-		break;
 #else
-		/* code that runs in probe. use gdb fileio calls. */
-
-	case SEMIHOSTING_SYS_ERRNO: /* Return last errno from GDB */
-		ret = target->tc->errno_;
-		break;
+		/* Return the last errno we got from GDB */
+		ret = target->tc->gdb_errno;
 #endif
+		break;
 
 	case SEMIHOSTING_SYS_EXIT: /* _exit() */
 		tc_printf(target, "_exit(0x%x)\n", request.r1);

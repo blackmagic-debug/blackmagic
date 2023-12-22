@@ -165,7 +165,7 @@ struct target_controller {
 	void (*destroy_callback)(target_controller_s *, target_s *target);
 	void (*printf)(target_controller_s *, const char *fmt, va_list);
 
-	target_errno_e errno_;
+	target_errno_e gdb_errno;
 	bool interrupted;
 };
 
