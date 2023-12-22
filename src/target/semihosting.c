@@ -512,23 +512,17 @@ int32_t semihosting_file_length(target_s *const target, const semihosting_s *con
 #if PC_HOSTED == 0
 semihosting_time_s semihosting_get_time(target_s *const target)
 {
-	/* Provide space for a packed uint32_t and uint64_t */
+	/* Provide space for reciving a fio_timeval structure from GDB */
 	uint8_t time_value[12U];
-
+	/* Tell the target layer to use this buffer for the IO */
 	target->target_options |= TOPT_IN_SEMIHOSTING_SYSCALL;
-	void (*saved_mem_read)(target_s *target, void *dest, target_addr_t src, size_t len);
-	void (*saved_mem_write)(target_s *target, target_addr_t dest, const void *src, size_t len);
-	saved_mem_read = target->mem_read;
-	saved_mem_write = target->mem_write;
-	target->mem_read = probe_mem_read;
-	target->mem_write = probe_mem_write;
-	/* Write gettimeofday() result in time_value */
-	gdb_putpacket_f("Fgettimeofday,%08" PRIX32 ",%08" PRIX32, (target_addr_t)time_value, (target_addr_t)NULL);
+	target->tc->semihosting_buffer_ptr = time_value;
+	target->tc->semihosting_buffer_len = sizeof(time_value);
+	/* Call GDB and ask for the current time using gettimeofday() */
+	gdb_putpacket_f("Fgettimeofday,%08" PRIX32 ",%08" PRIX32, target->ram->start, (target_addr_t)NULL);
 	const int32_t result = semihosting_get_gdb_response(target->tc);
-	target->mem_read = saved_mem_read;
-	target->mem_write = saved_mem_write;
 	target->target_options &= ~TOPT_IN_SEMIHOSTING_SYSCALL;
-	/* Check if tc_gettimeofday() failed */
+	/* Check if the GDB remote gettimeofday() failed */
 	if (result)
 		return (semihosting_time_s){UINT64_MAX, UINT32_MAX};
 	/* Convert the resulting time value from big endian */
