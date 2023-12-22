@@ -512,6 +512,21 @@ int32_t semihosting_remove(target_s *const target, const semihosting_s *const re
 #endif
 }
 
+int32_t semihosting_system(target_s *const target, const semihosting_s *const request)
+{
+#if PC_HOSTED == 1
+	const char *cmd = semihosting_read_string(target, request->params[0], request->params[1]);
+	if (cmd == NULL)
+		return -1;
+	const int32_t result = system(cmd);
+	free((void *)cmd);
+	return result;
+#else
+	/* before use first enable system calls with the following gdb command: 'set remote system-call-allowed 1' */
+	return hostio_system(target->tc, request->params[0], request->params[1] + 1U);
+#endif
+}
+
 int cortexm_hostio_request(target_s *const target)
 {
 	semihosting_s request;
@@ -575,30 +590,12 @@ int cortexm_hostio_request(target_s *const target)
 		ret = semihosting_remove(target, &request);
 		break;
 
+	case SEMIHOSTING_SYS_SYSTEM: /* system */
+		ret = semihosting_system(target, &request);
+		break;
+
 #if PC_HOSTED == 1
 		/* code that runs in pc-hosted process. use linux system calls. */
-
-	case SEMIHOSTING_SYS_SYSTEM: { /* system */
-		ret = -1;
-		target_addr_t cmd_taddr = request.params[0];
-		if (cmd_taddr == TARGET_NULL)
-			break;
-		uint32_t cmd_len = request.params[1];
-		if (cmd_len == 0)
-			break;
-		char *cmd = malloc(cmd_len + 1U);
-		if (cmd == NULL)
-			break;
-		target_mem_read(target, cmd, cmd_taddr, cmd_len + 1U);
-		if (target_check_error(target)) {
-			free(cmd);
-			break;
-		}
-		cmd[cmd_len] = '\0';
-		ret = system(cmd);
-		free(cmd);
-		break;
-	}
 
 	case SEMIHOSTING_SYS_FLEN: { /* file length */
 		ret = -1;
@@ -641,11 +638,6 @@ int cortexm_hostio_request(target_s *const target)
 		break;
 #else
 		/* code that runs in probe. use gdb fileio calls. */
-
-	case SEMIHOSTING_SYS_SYSTEM: /* system */
-		/* before use first enable system calls with the following gdb command: 'set remote system-call-allowed 1' */
-		ret = hostio_system(target->tc, request.params[0], request.params[1] + 1U);
-		break;
 
 	case SEMIHOSTING_SYS_FLEN: { /* file length */
 		ret = -1;
