@@ -183,12 +183,6 @@ int hostio_isatty(target_controller_s *tc, int fd)
 	return semihosting_get_gdb_response(tc);
 }
 
-int hostio_system(target_controller_s *tc, target_addr_t cmd, size_t cmd_len)
-{
-	gdb_putpacket_f("Fsystem,%08" PRIX32 "/%08" PRIX32, cmd, (uint32_t)cmd_len);
-	return semihosting_get_gdb_response(tc);
-}
-
 /* Interface to host system calls */
 int tc_write(target_s *target, int fd, target_addr_t buf, uint32_t count)
 {
@@ -494,8 +488,9 @@ int32_t semihosting_system(target_s *const target, const semihosting_s *const re
 	free((void *)cmd);
 	return result;
 #else
-	/* before use first enable system calls with the following gdb command: 'set remote system-call-allowed 1' */
-	return hostio_system(target->tc, request->params[0], request->params[1] + 1U);
+	/* NB: Before use first enable system calls with the following gdb command: 'set remote system-call-allowed 1' */
+	gdb_putpacket_f("Fsystem,%08" PRIX32 "/%08" PRIX32, request->params[0], request->params[1] + 1U);
+	return semihosting_get_gdb_response(target->tc);
 #endif
 }
 
