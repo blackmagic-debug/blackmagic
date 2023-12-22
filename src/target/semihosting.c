@@ -484,25 +484,27 @@ int32_t semihosting_file_length(target_s *const target, const semihosting_s *con
 		return -1;
 	return file_stat.st_size;
 #else
-	uint32_t fio_stat[16]; /* Same size as fio_stat in gdb/include/gdb/fileio.h */
+	/*
+	 * Provide space for receiving a fio_stat structure from GDB
+	 * defined as per GDB's gdbsupport/fileio.h
+	 * Note that the structure's fields are in big endian.
+	 * The field we're interested in (fst_size) starts at uint32_t 7
+	 * (the upper half of the file size), and includes uint32_t 8.
+	 */
+	uint32_t file_stat[16];
+	/* Tell the target layer to use this buffer for the IO */
 	target->target_options |= TOPT_IN_SEMIHOSTING_SYSCALL;
-	void (*saved_mem_read)(target_s *target, void *dest, target_addr_t src, size_t len);
-	void (*saved_mem_write)(target_s *target, target_addr_t dest, const void *src, size_t len);
-	saved_mem_read = target->mem_read;
-	saved_mem_write = target->mem_write;
-	target->mem_read = probe_mem_read;
-	target->mem_write = probe_mem_write;
-	/* Write fstat() result into fio_stat */
-	gdb_putpacket_f("Ffstat,%X,%08" PRIX32, (unsigned)fd, (target_addr_t)fio_stat);
+	target->tc->semihosting_buffer_ptr = file_stat;
+	target->tc->semihosting_buffer_len = sizeof(file_stat);
+	/* Call GDB and ask for the file descriptor's stat info */
+	gdb_putpacket_f("Ffstat,%X,%08" PRIX32, (unsigned)fd, target->ram->start);
 	const int32_t stat_result = semihosting_get_gdb_response(target->tc);
-	target->mem_read = saved_mem_read;
-	target->mem_write = saved_mem_write;
 	target->target_options &= ~TOPT_IN_SEMIHOSTING_SYSCALL;
-	/* Extract the big endian file size from the buffer */
-	const uint32_t result = read_be4((uint8_t *)fio_stat, sizeof(uint32_t) * 8U);
-	/* Check if tc_fstat() failed or if the size was more than 2GiB */
-	if (stat_result || fio_stat[7] != 0 || (result & 0x80000000U) != 0)
-		return -1; /* tc_fstat() failed */
+	/* Extract the lower half of the file size from the buffer */
+	const uint32_t result = read_be4((uint8_t *)file_stat, sizeof(uint32_t) * 8U);
+	/* Check if the GDB remote fstat() failed or if the size was more than 2GiB */
+	if (stat_result || file_stat[7] != 0 || (result & 0x80000000U) != 0)
+		return -1;
 	return result;
 #endif
 }
