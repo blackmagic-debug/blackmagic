@@ -65,7 +65,6 @@
 #define STDOUT_READ_BUF_SIZE 64U
 
 typedef struct semihosting {
-	uint32_t syscall;
 	uint32_t r1;
 	uint32_t params[4U];
 } semihosting_s;

@@ -603,17 +603,19 @@ int32_t semihosting_readc(target_s *const target)
 
 int32_t semihosting_request(target_s *const target, const uint32_t syscall, const uint32_t r1)
 {
-	semihosting_s request = {syscall, r1, {}};
+	/* Reset the interruption state so we can tell if it was this request that was interrupted */
 	target->tc->interrupted = false;
 
-	if (request.syscall != SEMIHOSTING_SYS_EXIT)
-		target_mem_read(target, request.params, request.r1, sizeof(request.params));
+	/* Set up the request block appropriately */
+	semihosting_s request = {r1, {}};
+	if (syscall != SEMIHOSTING_SYS_EXIT)
+		target_mem_read(target, request.params, r1, sizeof(request.params));
 	int32_t ret = 0;
 
 #if ENABLE_DEBUG == 1
 	const char *syscall_descr = NULL;
-	if (request.syscall < ARRAY_LENGTH(semihosting_names))
-		syscall_descr = semihosting_names[request.syscall];
+	if (syscall < ARRAY_LENGTH(semihosting_names))
+		syscall_descr = semihosting_names[syscall];
 	if (syscall_descr == NULL)
 		syscall_descr = "";
 
@@ -621,76 +623,60 @@ int32_t semihosting_request(target_s *const target, const uint32_t syscall, cons
 		request.params[1], request.params[2], request.params[3]);
 #endif
 
-	switch (request.syscall) {
+	switch (syscall) {
 	case SEMIHOSTING_SYS_OPEN: /* open */
-		ret = semihosting_open(target, &request);
-		break;
+		return semihosting_open(target, &request);
 
 	case SEMIHOSTING_SYS_CLOSE: /* close */
-		ret = semihosting_close(target, &request);
-		break;
+		return semihosting_close(target, &request);
 
 	case SEMIHOSTING_SYS_READ: /* read */
-		ret = semihosting_read(target, &request);
-		break;
+		return semihosting_read(target, &request);
 
 	case SEMIHOSTING_SYS_WRITE: /* write */
-		ret = semihosting_write(target, &request);
-		break;
+		return semihosting_write(target, &request);
 
 	case SEMIHOSTING_SYS_WRITEC: /* writec */
-		ret = semihosting_writec(target, &request);
-		break;
+		return semihosting_writec(target, &request);
 
 	case SEMIHOSTING_SYS_WRITE0: /* write0 */
-		ret = semihosting_write0(target, &request);
-		break;
+		return semihosting_write0(target, &request);
 
 	case SEMIHOSTING_SYS_ISTTY: /* isatty */
-		ret = semihosting_isatty(target, &request);
-		break;
+		return semihosting_isatty(target, &request);
 
 	case SEMIHOSTING_SYS_SEEK: /* lseek */
-		ret = semihosting_seek(target, &request);
-		break;
+		return semihosting_seek(target, &request);
 
 	case SEMIHOSTING_SYS_RENAME: /* rename */
-		ret = semihosting_rename(target, &request);
-		break;
+		return semihosting_rename(target, &request);
 
 	case SEMIHOSTING_SYS_REMOVE: /* unlink */
-		ret = semihosting_remove(target, &request);
-		break;
+		return semihosting_remove(target, &request);
 
 	case SEMIHOSTING_SYS_SYSTEM: /* system */
-		ret = semihosting_system(target, &request);
-		break;
+		return semihosting_system(target, &request);
 
 	case SEMIHOSTING_SYS_FLEN: /* file length */
-		ret = semihosting_file_length(target, &request);
-		break;
+		return semihosting_file_length(target, &request);
 
 	case SEMIHOSTING_SYS_CLOCK: /* clock */
-		ret = semihosting_clock(target);
-		break;
+		return semihosting_clock(target);
 
 	case SEMIHOSTING_SYS_TIME: /* time */
-		ret = semihosting_time(target);
-		break;
+		return semihosting_time(target);
 
 	case SEMIHOSTING_SYS_READC: /* readc */
-		ret = semihosting_readc(target);
-		break;
+		return semihosting_readc(target);
 
 	case SEMIHOSTING_SYS_ERRNO: /* errno */
 #if PC_HOSTED == 1
 		/* Return whatever the current errno value is */
-		ret = errno;
+		return errno;
 #else
 		/* Return the last errno we got from GDB */
-		ret = target->tc->gdb_errno;
+		return target->tc->gdb_errno;
 #endif
-		break;
 
 	case SEMIHOSTING_SYS_EXIT: /* _exit() */
 		tc_printf(target, "_exit(0x%x)\n", request.r1);
@@ -761,8 +747,7 @@ int32_t semihosting_request(target_s *const target, const uint32_t syscall, cons
 	// not implemented yet:
 	case SEMIHOSTING_SYS_ELAPSED:  /* elapsed */
 	case SEMIHOSTING_SYS_TICKFREQ: /* tickfreq */
-		ret = -1;
-		break;
+		return -1;
 	}
 
 	return ret;
