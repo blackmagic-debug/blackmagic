@@ -633,6 +633,29 @@ int32_t semihosting_time(target_s *const target)
 #endif
 }
 
+int32_t semihosting_readc(target_s *const target)
+{
+#if PC_HOSTED == 1
+	(void)target;
+	return getchar();
+#else
+	void (*saved_mem_read)(target_s *target, void *dest, target_addr_t src, size_t len);
+	void (*saved_mem_write)(target_s *target, target_addr_t dest, const void *src, size_t len);
+	saved_mem_read = target->mem_read;
+	saved_mem_write = target->mem_write;
+	target->mem_read = probe_mem_read;
+	target->mem_write = probe_mem_write;
+	uint8_t ch = '?';
+	/* Read a character into ch */
+	const int32_t result = hostio_read(target->tc, STDIN_FILENO, (target_addr_t)&ch, 1);
+	target->mem_read = saved_mem_read;
+	target->mem_write = saved_mem_write;
+	if (result == 1)
+		return ch;
+	return -1;
+#endif
+}
+
 int cortexm_hostio_request(target_s *const target)
 {
 	semihosting_s request;
@@ -712,37 +735,18 @@ int cortexm_hostio_request(target_s *const target)
 		ret = semihosting_time(target);
 		break;
 
+	case SEMIHOSTING_SYS_READC: /* readc */
+		ret = semihosting_readc(target);
+		break;
+
 #if PC_HOSTED == 1
 		/* code that runs in pc-hosted process. use linux system calls. */
-
-	case SEMIHOSTING_SYS_READC: /* readc */
-		ret = getchar();
-		break;
 
 	case SEMIHOSTING_SYS_ERRNO: /* errno */
 		ret = errno;
 		break;
 #else
 		/* code that runs in probe. use gdb fileio calls. */
-
-	case SEMIHOSTING_SYS_READC: { /* readc */
-		uint8_t ch = '?';
-		//DEBUG("SYS_READC ch addr %p\n", &ch);
-		void (*saved_mem_read)(target_s *target, void *dest, target_addr_t src, size_t len);
-		void (*saved_mem_write)(target_s *target, target_addr_t dest, const void *src, size_t len);
-		saved_mem_read = target->mem_read;
-		saved_mem_write = target->mem_write;
-		target->mem_read = probe_mem_read;
-		target->mem_write = probe_mem_write;
-		int rc = hostio_read(target->tc, STDIN_FILENO, (target_addr_t)&ch, 1); /* read a character in ch */
-		target->mem_read = saved_mem_read;
-		target->mem_write = saved_mem_write;
-		if (rc == 1)
-			ret = ch;
-		else
-			ret = -1;
-		break;
-	}
 
 	case SEMIHOSTING_SYS_ERRNO: /* Return last errno from GDB */
 		ret = target->tc->errno_;
