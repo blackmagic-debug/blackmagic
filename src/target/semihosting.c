@@ -28,6 +28,7 @@
 #include "cortexm.h"
 #include "semihosting.h"
 #include "semihosting_internal.h"
+#include "buffer_utils.h"
 
 #include <string.h>
 #include <stdio.h>
@@ -527,6 +528,36 @@ int32_t semihosting_system(target_s *const target, const semihosting_s *const re
 #endif
 }
 
+int32_t semihosting_file_length(target_s *const target, const semihosting_s *const request)
+{
+	const int32_t fd = request->params[0] - 1;
+#if PC_HOSTED == 1
+	(void)target;
+	struct stat file_stat;
+	if (fstat(fd, &file_stat) != 0 || file_stat.st_size > INT32_MAX)
+		return -1;
+	return file_stat.st_size;
+#else
+	uint32_t fio_stat[16]; /* Same size as fio_stat in gdb/include/gdb/fileio.h */
+	void (*saved_mem_read)(target_s *target, void *dest, target_addr_t src, size_t len);
+	void (*saved_mem_write)(target_s *target, target_addr_t dest, const void *src, size_t len);
+	saved_mem_read = target->mem_read;
+	saved_mem_write = target->mem_write;
+	target->mem_read = probe_mem_read;
+	target->mem_write = probe_mem_write;
+	/* Write fstat() result into fio_stat */
+	const int32_t stat_result = hostio_fstat(target->tc, fd, (target_addr_t)fio_stat);
+	target->mem_read = saved_mem_read;
+	target->mem_write = saved_mem_write;
+	/* Extract the big endian file size from the buffer */
+	const uint32_t result = read_be4((uint8_t *)fio_stat, sizeof(uint32_t) * 8U);
+	/* Check if tc_fstat() failed or if the size was more than 2GiB */
+	if (stat_result || fio_stat[7] != 0 || (result & 0x80000000U) != 0)
+		return -1; /* tc_fstat() failed */
+	return result;
+#endif
+}
+
 int cortexm_hostio_request(target_s *const target)
 {
 	semihosting_s request;
@@ -594,19 +625,12 @@ int cortexm_hostio_request(target_s *const target)
 		ret = semihosting_system(target, &request);
 		break;
 
+	case SEMIHOSTING_SYS_FLEN: /* file length */
+		ret = semihosting_file_length(target, &request);
+		break;
+
 #if PC_HOSTED == 1
 		/* code that runs in pc-hosted process. use linux system calls. */
-
-	case SEMIHOSTING_SYS_FLEN: { /* file length */
-		ret = -1;
-		struct stat stat_buf;
-		if (fstat(request.params[0] - 1, &stat_buf) != 0)
-			break;
-		if (stat_buf.st_size > INT32_MAX)
-			break;
-		ret = stat_buf.st_size;
-		break;
-	}
 
 	case SEMIHOSTING_SYS_CLOCK: { /* clock */
 		/* can't use clock() because that would give cpu time of pc-hosted process */
@@ -638,32 +662,6 @@ int cortexm_hostio_request(target_s *const target)
 		break;
 #else
 		/* code that runs in probe. use gdb fileio calls. */
-
-	case SEMIHOSTING_SYS_FLEN: { /* file length */
-		ret = -1;
-		uint32_t fio_stat[16]; /* same size as fio_stat in gdb/include/gdb/fileio.h */
-		//DEBUG("SYS_FLEN fio_stat addr %p\n", fio_stat);
-		void (*saved_mem_read)(target_s *target, void *dest, target_addr_t src, size_t len);
-		void (*saved_mem_write)(target_s *target, target_addr_t dest, const void *src, size_t len);
-		saved_mem_read = target->mem_read;
-		saved_mem_write = target->mem_write;
-		target->mem_read = probe_mem_read;
-		target->mem_write = probe_mem_write;
-		int rc = hostio_fstat(
-			target->tc, request.params[0] - 1, (target_addr_t)fio_stat); /* write fstat() result in fio_stat[] */
-		target->mem_read = saved_mem_read;
-		target->mem_write = saved_mem_write;
-		if (rc)
-			break;                           /* tc_fstat() failed */
-		uint32_t fst_size_msw = fio_stat[7]; /* most significant 32 bits of fst_size in fio_stat */
-		uint32_t fst_size_lsw = fio_stat[8]; /* least significant 32 bits of fst_size in fio_stat */
-		if (fst_size_msw != 0)
-			break;                             /* file size too large for int32_t return type */
-		ret = __builtin_bswap32(fst_size_lsw); /* convert from bigendian to target order */
-		if (ret < 0)
-			ret = -1; /* file size too large for int32_t return type */
-		break;
-	}
 
 	case SEMIHOSTING_SYS_CLOCK:  /* clock */
 	case SEMIHOSTING_SYS_TIME: { /* time */
