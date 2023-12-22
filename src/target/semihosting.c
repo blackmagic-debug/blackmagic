@@ -159,12 +159,6 @@ int hostio_read(target_controller_s *tc, int fd, target_addr_t buf, unsigned int
 	return semihosting_get_gdb_response(tc);
 }
 
-long hostio_lseek(target_controller_s *tc, int fd, long offset, target_seek_flag_e flag)
-{
-	gdb_putpacket_f("Flseek,%08X,%08lX,%08X", fd, offset, flag);
-	return semihosting_get_gdb_response(tc);
-}
-
 int hostio_rename(target_controller_s *tc, target_addr_t oldpath, size_t old_len, target_addr_t newpath, size_t new_len)
 {
 	gdb_putpacket_f("Frename,%08" PRIX32 "/%08" PRIX32 ",%08" PRIX32 "/%08" PRIX32, oldpath, (uint32_t)old_len, newpath,
@@ -456,12 +450,13 @@ int32_t semihosting_isatty(target_s *const target, const semihosting_s *const re
 int32_t semihosting_seek(target_s *const target, const semihosting_s *const request)
 {
 	const int32_t fd = request->params[0] - 1;
-	const off_t pos = request->params[1];
+	const off_t offset = request->params[1];
 #if PC_HOSTED == 1
 	(void)target;
-	return lseek(fd, pos, SEEK_SET) == pos ? 0 : -1;
+	return lseek(fd, offset, SEEK_SET) == offset ? 0 : -1;
 #else
-	return hostio_lseek(target->tc, fd, pos, TARGET_SEEK_SET) == pos ? 0 : -1;
+	gdb_putpacket_f("Flseek,%08X,%08lX,%08X", (unsigned)fd, (unsigned long)offset, TARGET_SEEK_SET);
+	return semihosting_get_gdb_response(target->tc) == offset ? 0 : -1;
 #endif
 }
 
