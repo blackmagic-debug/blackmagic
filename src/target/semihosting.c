@@ -277,11 +277,15 @@ int32_t semihosting_close(target_s *const target, const semihosting_s *const req
 int32_t semihosting_read(target_s *const target, const semihosting_s *const request)
 {
 	const target_addr_t buf_taddr = request->params[1];
+#if PC_HOSTED == 1
 	if (buf_taddr == TARGET_NULL)
 		return -1;
+#endif
 	const uint32_t buf_len = request->params[2];
+#if PC_HOSTED == 1
 	if (buf_len == 0)
 		return 0;
+#endif
 	const int32_t fd = request->params[0] - 1;
 
 #if PC_HOSTED == 1
@@ -305,11 +309,15 @@ int32_t semihosting_write(target_s *const target, const semihosting_s *const req
 {
 	const int32_t fd = request->params[0] - 1;
 	const target_addr_t buf_taddr = request->params[1];
+#if PC_HOSTED == 1
 	if (buf_taddr == TARGET_NULL)
 		return -1;
+#endif
 	const uint32_t buf_len = request->params[2];
+#if PC_HOSTED == 1
 	if (buf_len == 0)
 		return 0;
+#endif
 
 #if PC_HOSTED == 1
 	uint8_t *const buf = malloc(buf_len);
@@ -333,9 +341,9 @@ int32_t semihosting_write(target_s *const target, const semihosting_s *const req
 int32_t semihosting_writec(target_s *const target, const semihosting_s *const request)
 {
 	const target_addr_t ch_taddr = request->r1;
+#if PC_HOSTED == 1
 	if (ch_taddr == TARGET_NULL)
 		return -1;
-#if PC_HOSTED == 1
 	const uint8_t ch = target_mem_read8(target, ch_taddr);
 	if (target_check_error(target))
 		return -1;
@@ -349,9 +357,9 @@ int32_t semihosting_writec(target_s *const target, const semihosting_s *const re
 int32_t semihosting_write0(target_s *const target, const semihosting_s *const request)
 {
 	const target_addr_t str_begin_taddr = request->r1;
+#if PC_HOSTED == 1
 	if (str_begin_taddr == TARGET_NULL)
 		return -1;
-#if PC_HOSTED == 1
 	for (target_addr_t char_taddr = str_begin_taddr; !target_check_error(target); ++char_taddr) {
 		const uint8_t chr = target_mem_read8(target, char_taddr);
 		if (chr == 0U)
