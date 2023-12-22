@@ -159,12 +159,6 @@ int hostio_read(target_controller_s *tc, int fd, target_addr_t buf, unsigned int
 	return semihosting_get_gdb_response(tc);
 }
 
-int hostio_stat(target_controller_s *tc, target_addr_t path, size_t path_len, target_addr_t buf)
-{
-	gdb_putpacket_f("Fstat,%08" PRIX32 "/%08" PRIX32 ",%08" PRIX32, path, (uint32_t)path_len, buf);
-	return semihosting_get_gdb_response(tc);
-}
-
 /* Interface to host system calls */
 int tc_write(target_s *target, int fd, target_addr_t buf, uint32_t count)
 {
