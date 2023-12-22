@@ -159,12 +159,6 @@ int hostio_read(target_controller_s *tc, int fd, target_addr_t buf, unsigned int
 	return semihosting_get_gdb_response(tc);
 }
 
-int hostio_unlink(target_controller_s *tc, target_addr_t path, size_t path_len)
-{
-	gdb_putpacket_f("Funlink,%08" PRIX32 "/%08" PRIX32, path, (uint32_t)path_len);
-	return semihosting_get_gdb_response(tc);
-}
-
 int hostio_stat(target_controller_s *tc, target_addr_t path, size_t path_len, target_addr_t buf)
 {
 	gdb_putpacket_f("Fstat,%08" PRIX32 "/%08" PRIX32 ",%08" PRIX32, path, (uint32_t)path_len, buf);
@@ -485,7 +479,8 @@ int32_t semihosting_remove(target_s *const target, const semihosting_s *const re
 	free((void *)file_name);
 	return result;
 #else
-	return hostio_unlink(target->tc, request->params[0], request->params[1] + 1U);
+	gdb_putpacket_f("Funlink,%08" PRIX32 "/%08" PRIX32, request->params[0], request->params[1] + 1U);
+	return semihosting_get_gdb_response(target->tc);
 #endif
 }
 
