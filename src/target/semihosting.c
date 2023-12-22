@@ -171,12 +171,6 @@ int hostio_fstat(target_controller_s *tc, int fd, target_addr_t buf)
 	return semihosting_get_gdb_response(tc);
 }
 
-int hostio_gettimeofday(target_controller_s *tc, target_addr_t tv, target_addr_t tz)
-{
-	gdb_putpacket_f("Fgettimeofday,%08" PRIX32 ",%08" PRIX32, tv, tz);
-	return semihosting_get_gdb_response(tc);
-}
-
 /* Interface to host system calls */
 int tc_write(target_s *target, int fd, target_addr_t buf, uint32_t count)
 {
@@ -532,7 +526,8 @@ semihosting_time_s semihosting_get_time(target_s *const target)
 	target->mem_read = probe_mem_read;
 	target->mem_write = probe_mem_write;
 	/* Write gettimeofday() result in time_value */
-	const int32_t result = hostio_gettimeofday(target->tc, (target_addr_t)time_value, (target_addr_t)NULL);
+	gdb_putpacket_f("Fgettimeofday,%08" PRIX32 ",%08" PRIX32, (target_addr_t)time_value, (target_addr_t)NULL);
+	const int32_t result = semihosting_get_gdb_response(target->tc);
 	target->mem_read = saved_mem_read;
 	target->mem_write = saved_mem_write;
 	/* Check if tc_gettimeofday() failed */
