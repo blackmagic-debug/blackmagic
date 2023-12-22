@@ -70,4 +70,9 @@ typedef struct semihosting {
 	uint32_t params[4U];
 } semihosting_s;
 
+typedef struct semihosting_time {
+	uint64_t microseconds;
+	uint32_t seconds;
+} semihosting_time_s;
+
 #endif /* TARGET_SEMIHOSTING_INTERNAL_H */

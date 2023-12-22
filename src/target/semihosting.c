@@ -558,6 +558,64 @@ int32_t semihosting_file_length(target_s *const target, const semihosting_s *con
 #endif
 }
 
+#if PC_HOSTED == 0
+semihosting_time_s semihosting_get_time(target_s *const target)
+{
+	/* Provide space for a packed uint32_t and uint64_t */
+	uint8_t time_value[12U];
+
+	void (*saved_mem_read)(target_s *target, void *dest, target_addr_t src, size_t len);
+	void (*saved_mem_write)(target_s *target, target_addr_t dest, const void *src, size_t len);
+	saved_mem_read = target->mem_read;
+	saved_mem_write = target->mem_write;
+	target->mem_read = probe_mem_read;
+	target->mem_write = probe_mem_write;
+	/* Write gettimeofday() result in time_value */
+	const int32_t result = hostio_gettimeofday(target->tc, (target_addr_t)time_value, (target_addr_t)NULL);
+	target->mem_read = saved_mem_read;
+	target->mem_write = saved_mem_write;
+	/* Check if tc_gettimeofday() failed */
+	if (result)
+		return (semihosting_time_s){UINT64_MAX, UINT32_MAX};
+	/* Convert the resulting time value from big endian */
+	return (semihosting_time_s){read_be8(time_value, 4), read_be4(time_value, 0)};
+}
+#endif
+
+int32_t semihosting_clock(target_s *const target)
+{
+#if PC_HOSTED == 1
+	(void)target;
+	/* NB: Can't use clock() because that would give cpu time of BMDA process */
+	struct timeval current_time;
+	/* Get the current time from the host */
+	if (gettimeofday(&current_time, NULL) != 0)
+		return -1;
+	/* Extract the time value components */
+	uint32_t seconds = current_time.tv_sec;
+	const uint32_t microseconds = (uint32_t)current_time.tv_usec;
+#else
+	/* Get the current time from the host */
+	const semihosting_time_s current_time = semihosting_get_time(target);
+	if (current_time.seconds == UINT32_MAX && current_time.microseconds == UINT64_MAX)
+		return (int32_t)current_time.seconds;
+	uint32_t seconds = current_time.seconds;
+	uint32_t microseconds = (uint32_t)current_time.microseconds;
+#endif
+	/* Clamp the seconds value appropriately */
+	if (time0_sec > seconds)
+		time0_sec = seconds;
+	seconds -= time0_sec;
+	/*
+	 * Convert the resulting time to centiseconds (hundredths of a second)
+	 * NB: At the potential cost of some precision, the microseconds value has been
+	 *   cast down to a uint32_t to avoid doing a 64-bit division in the firmware.
+	 */
+	const uint64_t centiseconds = (seconds * 100U) + (microseconds / 10000U);
+	/* Truncate the result back to a positive 32-bit integer */
+	return centiseconds & 0x7fffffffU;
+}
+
 int cortexm_hostio_request(target_s *const target)
 {
 	semihosting_s request;
@@ -629,25 +687,12 @@ int cortexm_hostio_request(target_s *const target)
 		ret = semihosting_file_length(target, &request);
 		break;
 
+	case SEMIHOSTING_SYS_CLOCK: /* clock */
+		ret = semihosting_clock(target);
+		break;
+
 #if PC_HOSTED == 1
 		/* code that runs in pc-hosted process. use linux system calls. */
-
-	case SEMIHOSTING_SYS_CLOCK: { /* clock */
-		/* can't use clock() because that would give cpu time of pc-hosted process */
-		ret = -1;
-		struct timeval timeval_buf;
-		if (gettimeofday(&timeval_buf, NULL) != 0)
-			break;
-		uint32_t sec = timeval_buf.tv_sec;
-		uint64_t usec = timeval_buf.tv_usec;
-		if (time0_sec > sec)
-			time0_sec = sec;
-		sec -= time0_sec;
-		uint64_t csec64 = (sec * UINT64_C(1000000) + usec) / UINT64_C(10000);
-		uint32_t csec = csec64 & 0x7fffffffU;
-		ret = csec;
-		break;
-	}
 
 	case SEMIHOSTING_SYS_TIME: /* time */
 		ret = time(NULL);
@@ -663,7 +708,6 @@ int cortexm_hostio_request(target_s *const target)
 #else
 		/* code that runs in probe. use gdb fileio calls. */
 
-	case SEMIHOSTING_SYS_CLOCK:  /* clock */
 	case SEMIHOSTING_SYS_TIME: { /* time */
 		/* use same code for SYS_CLOCK and SYS_TIME, more compact */
 		ret = -1;

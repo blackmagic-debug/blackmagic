@@ -68,4 +68,12 @@ static inline uint32_t read_be4(const uint8_t *const buffer, const size_t offset
 		((uint32_t)buffer[offset + 2U] << 8U) | buffer[offset + 3U];
 }
 
+static inline uint64_t read_be8(const uint8_t *const buffer, const size_t offset)
+{
+	return ((uint64_t)buffer[offset + 0] << 56U) | ((uint64_t)buffer[offset + 1] << 48U) |
+		((uint64_t)buffer[offset + 2] << 40U) | ((uint64_t)buffer[offset + 3] << 32U) |
+		((uint64_t)buffer[offset + 4] << 24U) | ((uint64_t)buffer[offset + 5] << 16U) |
+		((uint64_t)buffer[offset + 6] << 8U) | buffer[offset + 7];
+}
+
 #endif /*INCLUDE_BUFFER_UTILS_H*/
