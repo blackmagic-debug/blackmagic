@@ -163,7 +163,7 @@ static int semihosting_remote_read(target_controller_s *tc, int fd, target_addr_
 }
 
 /* Interface to host system calls */
-static int tc_write(target_s *target, int fd, target_addr_t buf, uint32_t count)
+static int semihosting_remote_write(target_s *target, int fd, target_addr_t buf, uint32_t count)
 {
 	if (target->stdout_redirected && (fd == STDOUT_FILENO || fd == STDERR_FILENO)) {
 		while (count) {
@@ -331,7 +331,7 @@ int32_t semihosting_write(target_s *const target, const semihosting_s *const req
 	const int32_t result = write(fd, buf, buf_len);
 	free(buf);
 #else
-	const int32_t result = tc_write(target, fd, buf_taddr, buf_len);
+	const int32_t result = semihosting_remote_write(target, fd, buf_taddr, buf_len);
 #endif
 	if (result >= 0)
 		return buf_len - result;
@@ -350,7 +350,7 @@ int32_t semihosting_writec(target_s *const target, const semihosting_s *const re
 	fputc(ch, stderr);
 	return 0;
 #else
-	return tc_write(target, STDERR_FILENO, ch_taddr, 1);
+	return semihosting_remote_write(target, STDERR_FILENO, ch_taddr, 1);
 #endif
 }
 
@@ -374,7 +374,7 @@ int32_t semihosting_write0(target_s *const target, const semihosting_s *const re
 	}
 	const int32_t len = str_end_taddr - str_begin_taddr;
 	if (len >= 0) {
-		const int32_t result = tc_write(target, STDERR_FILENO, str_begin_taddr, len);
+		const int32_t result = semihosting_remote_write(target, STDERR_FILENO, str_begin_taddr, len);
 		if (result != len)
 			return -1;
 	}
