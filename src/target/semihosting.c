@@ -485,6 +485,7 @@ int32_t semihosting_file_length(target_s *const target, const semihosting_s *con
 	return file_stat.st_size;
 #else
 	uint32_t fio_stat[16]; /* Same size as fio_stat in gdb/include/gdb/fileio.h */
+	target->target_options |= TOPT_IN_SEMIHOSTING_SYSCALL;
 	void (*saved_mem_read)(target_s *target, void *dest, target_addr_t src, size_t len);
 	void (*saved_mem_write)(target_s *target, target_addr_t dest, const void *src, size_t len);
 	saved_mem_read = target->mem_read;
@@ -496,6 +497,7 @@ int32_t semihosting_file_length(target_s *const target, const semihosting_s *con
 	const int32_t stat_result = semihosting_get_gdb_response(target->tc);
 	target->mem_read = saved_mem_read;
 	target->mem_write = saved_mem_write;
+	target->target_options &= ~TOPT_IN_SEMIHOSTING_SYSCALL;
 	/* Extract the big endian file size from the buffer */
 	const uint32_t result = read_be4((uint8_t *)fio_stat, sizeof(uint32_t) * 8U);
 	/* Check if tc_fstat() failed or if the size was more than 2GiB */
@@ -511,6 +513,7 @@ semihosting_time_s semihosting_get_time(target_s *const target)
 	/* Provide space for a packed uint32_t and uint64_t */
 	uint8_t time_value[12U];
 
+	target->target_options |= TOPT_IN_SEMIHOSTING_SYSCALL;
 	void (*saved_mem_read)(target_s *target, void *dest, target_addr_t src, size_t len);
 	void (*saved_mem_write)(target_s *target, target_addr_t dest, const void *src, size_t len);
 	saved_mem_read = target->mem_read;
@@ -522,6 +525,7 @@ semihosting_time_s semihosting_get_time(target_s *const target)
 	const int32_t result = semihosting_get_gdb_response(target->tc);
 	target->mem_read = saved_mem_read;
 	target->mem_write = saved_mem_write;
+	target->target_options &= ~TOPT_IN_SEMIHOSTING_SYSCALL;
 	/* Check if tc_gettimeofday() failed */
 	if (result)
 		return (semihosting_time_s){UINT64_MAX, UINT32_MAX};
@@ -587,6 +591,7 @@ int32_t semihosting_readc(target_s *const target)
 	(void)target;
 	return getchar();
 #else
+	target->target_options |= TOPT_IN_SEMIHOSTING_SYSCALL;
 	void (*saved_mem_read)(target_s *target, void *dest, target_addr_t src, size_t len);
 	void (*saved_mem_write)(target_s *target, target_addr_t dest, const void *src, size_t len);
 	saved_mem_read = target->mem_read;
@@ -598,6 +603,7 @@ int32_t semihosting_readc(target_s *const target)
 	const int32_t result = hostio_read(target->tc, STDIN_FILENO, (target_addr_t)&ch, 1);
 	target->mem_read = saved_mem_read;
 	target->mem_write = saved_mem_write;
+	target->target_options &= ~TOPT_IN_SEMIHOSTING_SYSCALL;
 	if (result == 1)
 		return ch;
 	return -1;

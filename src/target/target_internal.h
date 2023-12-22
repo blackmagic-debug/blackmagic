@@ -27,7 +27,8 @@
 #include "platform_support.h"
 #include "target_probe.h"
 
-#define TOPT_INHIBIT_NRST (1U << 0U)
+#define TOPT_INHIBIT_NRST           (1U << 0U)
+#define TOPT_IN_SEMIHOSTING_SYSCALL (1U << 31U)
 
 extern target_s *target_list;
 
