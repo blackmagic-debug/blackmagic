@@ -153,12 +153,6 @@ static int semihosting_get_gdb_response(target_controller_s *const tc)
 }
 
 /* Interface to host system calls */
-int hostio_open(target_controller_s *tc, target_addr_t path, size_t path_len, target_open_flags_e flags, mode_t mode)
-{
-	gdb_putpacket_f("Fopen,%08" PRIX32 "/%08" PRIX32 ",%08X,%08" PRIX32, path, (uint32_t)path_len, flags, mode);
-	return semihosting_get_gdb_response(tc);
-}
-
 int hostio_close(target_controller_s *tc, int fd)
 {
 	gdb_putpacket_f("Fclose,%08X", fd);
@@ -337,7 +331,9 @@ int32_t semihosting_open(target_s *const target, const semihosting_s *const requ
 	const int32_t result = open(file_name, open_mode, 0644);
 	free((void *)file_name);
 #else
-	const int32_t result = hostio_open(target->tc, file_name_taddr, file_name_length + 1U, open_mode, 0644U);
+	gdb_putpacket_f("Fopen,%08" PRIX32 "/%08" PRIX32 ",%08" PRIX32 ",%08X", file_name_taddr, file_name_length + 1U,
+		open_mode, 0644U);
+	const int32_t result = semihosting_get_gdb_response(target->tc);
 #endif
 	if (result != -1)
 		return result + 1;
