@@ -165,12 +165,6 @@ int hostio_stat(target_controller_s *tc, target_addr_t path, size_t path_len, ta
 	return semihosting_get_gdb_response(tc);
 }
 
-int hostio_fstat(target_controller_s *tc, int fd, target_addr_t buf)
-{
-	gdb_putpacket_f("Ffstat,%X,%08" PRIX32, fd, buf);
-	return semihosting_get_gdb_response(tc);
-}
-
 /* Interface to host system calls */
 int tc_write(target_s *target, int fd, target_addr_t buf, uint32_t count)
 {
@@ -501,7 +495,8 @@ int32_t semihosting_file_length(target_s *const target, const semihosting_s *con
 	target->mem_read = probe_mem_read;
 	target->mem_write = probe_mem_write;
 	/* Write fstat() result into fio_stat */
-	const int32_t stat_result = hostio_fstat(target->tc, fd, (target_addr_t)fio_stat);
+	gdb_putpacket_f("Ffstat,%X,%08" PRIX32, (unsigned)fd, (target_addr_t)fio_stat);
+	const int32_t stat_result = semihosting_get_gdb_response(target->tc);
 	target->mem_read = saved_mem_read;
 	target->mem_write = saved_mem_write;
 	/* Extract the big endian file size from the buffer */
