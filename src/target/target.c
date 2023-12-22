@@ -273,18 +273,40 @@ bool target_attached(target_s *target)
 }
 
 /* Memory access functions */
-int target_mem_read(target_s *t, void *dest, target_addr_t src, size_t len)
+int target_mem_read(target_s *const target, void *const dest, const target_addr_t src, const size_t len)
 {
-	if (t->mem_read)
-		t->mem_read(t, dest, src, len);
-	return target_check_error(t);
+#if PC_HOSTED == 0
+	/* If we're processing a semihosting syscall and it needs IO redirected, handle that instead */
+	if (target->target_options & TOPT_IN_SEMIHOSTING_SYSCALL) {
+		/* Make sure we can't go over the bounds of the buffer */
+		const size_t amount = MIN(len, target->tc->semihosting_buffer_len);
+		/* Copy data into the request destination buffer from the semihosting buffer */
+		memcpy(dest, target->tc->semihosting_buffer_ptr, amount);
+		return false;
+	}
+#endif
+	/* Otherwise if the target defines a memory read function, call that instead and check for errors */
+	if (target->mem_read)
+		target->mem_read(target, dest, src, len);
+	return target_check_error(target);
 }
 
-int target_mem_write(target_s *t, target_addr_t dest, const void *src, size_t len)
+int target_mem_write(target_s *const target, const target_addr_t dest, const void *const src, const size_t len)
 {
-	if (t->mem_write)
-		t->mem_write(t, dest, src, len);
-	return target_check_error(t);
+#if PC_HOSTED == 0
+	/* If we're processing a semihosting syscall and it needs IO redirected, handle that instead */
+	if (target->target_options & TOPT_IN_SEMIHOSTING_SYSCALL) {
+		/* Make sure we can't go over the bounds of the buffer */
+		const size_t amount = MIN(len, target->tc->semihosting_buffer_len);
+		/* Copy data into the semihosting buffer from the request source buffer */
+		memcpy(target->tc->semihosting_buffer_ptr, src, amount);
+		return false;
+	}
+#endif
+	/* Otherwise if the target defines a memory write function, call that instead and check for errors */
+	if (target->mem_write)
+		target->mem_write(target, dest, src, len);
+	return target_check_error(target);
 }
 
 /* target_mem_access_needs_halt() is true if the target needs to be halted during jtag memory access */
