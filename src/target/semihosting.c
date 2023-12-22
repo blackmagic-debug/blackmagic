@@ -135,7 +135,7 @@ int semihosting_reply(target_controller_s *const tc, char *const pbuf, const int
 	return retcode_is_negative ? -retcode : retcode;
 }
 
-static int semihosting_get_gdb_response(target_controller_s *const tc)
+static int32_t semihosting_get_gdb_response(target_controller_s *const tc)
 {
 	char *const packet_buffer = gdb_packet_buffer();
 	/* Still have to service normal 'X'/'m'-packets */
@@ -145,7 +145,7 @@ static int semihosting_get_gdb_response(target_controller_s *const tc)
 		/* If this was an escape packet (or gdb_if reports link closed), fail the call */
 		if (size == 1U && packet_buffer[0] == '\x04')
 			return -1;
-		const int result = gdb_main_loop(tc, packet_buffer, GDB_PACKET_BUFFER_SIZE, size, true);
+		const int32_t result = gdb_main_loop(tc, packet_buffer, GDB_PACKET_BUFFER_SIZE, size, true);
 		/* If this was an F-packet, we're done */
 		if (packet_buffer[0] == 'F')
 			return result;
@@ -153,14 +153,14 @@ static int semihosting_get_gdb_response(target_controller_s *const tc)
 }
 
 /* Interface to host system calls */
-int hostio_read(target_controller_s *tc, int fd, target_addr_t buf, unsigned int count)
+static int hostio_read(target_controller_s *tc, int fd, target_addr_t buf, unsigned int count)
 {
 	gdb_putpacket_f("Fread,%08X,%08" PRIX32 ",%08X", fd, buf, count);
 	return semihosting_get_gdb_response(tc);
 }
 
 /* Interface to host system calls */
-int tc_write(target_s *target, int fd, target_addr_t buf, uint32_t count)
+static int tc_write(target_s *target, int fd, target_addr_t buf, uint32_t count)
 {
 	if (target->stdout_redirected && (fd == STDOUT_FILENO || fd == STDERR_FILENO)) {
 		while (count) {
