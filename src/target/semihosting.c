@@ -156,7 +156,7 @@ static int32_t semihosting_get_gdb_response(target_controller_s *const tc)
 }
 
 /* Interface to host system calls */
-static int hostio_read(target_controller_s *tc, int fd, target_addr_t buf, unsigned int count)
+static int semihosting_remote_read(target_controller_s *tc, int fd, target_addr_t buf, unsigned int count)
 {
 	gdb_putpacket_f("Fread,%08X,%08" PRIX32 ",%08X", fd, buf, count);
 	return semihosting_get_gdb_response(tc);
@@ -298,7 +298,7 @@ int32_t semihosting_read(target_s *const target, const semihosting_s *const requ
 	if (target_check_error(target))
 		return -1;
 #else
-	const int32_t result = hostio_read(target->tc, fd, buf_taddr, buf_len);
+	const int32_t result = semihosting_remote_read(target->tc, fd, buf_taddr, buf_len);
 #endif
 	if (result >= 0)
 		return buf_len - result;
@@ -581,7 +581,7 @@ int32_t semihosting_readc(target_s *const target)
 	target->tc->semihosting_buffer_ptr = &ch;
 	target->tc->semihosting_buffer_len = 1U;
 	/* Call GDB and ask for a character using read(STDIN_FILENO) */
-	const int32_t result = hostio_read(target->tc, STDIN_FILENO, target->ram->start, 1U);
+	const int32_t result = semihosting_remote_read(target->tc, STDIN_FILENO, target->ram->start, 1U);
 	target->target_options &= ~TOPT_IN_SEMIHOSTING_SYSCALL;
 	/* Check if the GDB remote read() */
 	if (result != 1)
