@@ -159,13 +159,6 @@ int hostio_read(target_controller_s *tc, int fd, target_addr_t buf, unsigned int
 	return semihosting_get_gdb_response(tc);
 }
 
-int hostio_rename(target_controller_s *tc, target_addr_t oldpath, size_t old_len, target_addr_t newpath, size_t new_len)
-{
-	gdb_putpacket_f("Frename,%08" PRIX32 "/%08" PRIX32 ",%08" PRIX32 "/%08" PRIX32, oldpath, (uint32_t)old_len, newpath,
-		(uint32_t)new_len);
-	return semihosting_get_gdb_response(tc);
-}
-
 int hostio_unlink(target_controller_s *tc, target_addr_t path, size_t path_len)
 {
 	gdb_putpacket_f("Funlink,%08" PRIX32 "/%08" PRIX32, path, (uint32_t)path_len);
@@ -476,8 +469,9 @@ int32_t semihosting_rename(target_s *const target, const semihosting_s *const re
 	free((void *)new_file_name);
 	return result;
 #else
-	return hostio_rename(
-		target->tc, request->params[0], request->params[1] + 1U, request->params[2], request->params[3] + 1U);
+	gdb_putpacket_f("Frename,%08" PRIX32 "/%08" PRIX32 ",%08" PRIX32 "/%08" PRIX32, request->params[0],
+		request->params[1] + 1U, request->params[2], request->params[3] + 1U);
+	return semihosting_get_gdb_response(target->tc);
 #endif
 }
 
