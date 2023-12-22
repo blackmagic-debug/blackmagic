@@ -182,28 +182,6 @@ static int tc_write(target_s *target, int fd, target_addr_t buf, uint32_t count)
 	gdb_putpacket_f("Fwrite,%08X,%08" PRIX32 ",%08" PRIX32, (unsigned)fd, buf, count);
 	return semihosting_get_gdb_response(target->tc);
 }
-
-/* probe memory access functions */
-static void probe_mem_read(
-	target_s *target __attribute__((unused)), void *probe_dest, target_addr_t target_src, size_t len)
-{
-	uint8_t *dst = (uint8_t *)probe_dest;
-	uint8_t *src = (uint8_t *)target_src;
-
-	DEBUG_INFO("probe_mem_read\n");
-
-	memcpy(dst, src, len);
-}
-
-static void probe_mem_write(
-	target_s *target __attribute__((unused)), target_addr_t target_dest, const void *probe_src, size_t len)
-{
-	uint8_t *dst = (uint8_t *)target_dest;
-	uint8_t *src = (uint8_t *)probe_src;
-
-	DEBUG_INFO("probe_mem_write\n");
-	memcpy(dst, src, len);
-}
 #endif
 
 #if PC_HOSTED == 1
