@@ -159,12 +159,6 @@ int hostio_read(target_controller_s *tc, int fd, target_addr_t buf, unsigned int
 	return semihosting_get_gdb_response(tc);
 }
 
-int hostio_write(target_controller_s *tc, int fd, target_addr_t buf, unsigned int count)
-{
-	gdb_putpacket_f("Fwrite,%08X,%08" PRIX32 ",%08X", fd, buf, count);
-	return semihosting_get_gdb_response(tc);
-}
-
 long hostio_lseek(target_controller_s *tc, int fd, long offset, target_seek_flag_e flag)
 {
 	gdb_putpacket_f("Flseek,%08X,%08lX,%08X", fd, offset, flag);
@@ -215,22 +209,24 @@ int hostio_system(target_controller_s *tc, target_addr_t cmd, size_t cmd_len)
 }
 
 /* Interface to host system calls */
-int tc_write(target_s *t, int fd, target_addr_t buf, unsigned int count)
+int tc_write(target_s *target, int fd, target_addr_t buf, uint32_t count)
 {
-	if (t->stdout_redirected && (fd == STDOUT_FILENO || fd == STDERR_FILENO)) {
+	if (target->stdout_redirected && (fd == STDOUT_FILENO || fd == STDERR_FILENO)) {
 		while (count) {
 			uint8_t tmp[STDOUT_READ_BUF_SIZE];
-			unsigned int cnt = sizeof(tmp);
+			size_t cnt = sizeof(tmp);
 			if (cnt > count)
 				cnt = count;
-			target_mem_read(t, tmp, buf, cnt);
+			target_mem_read(target, tmp, buf, cnt);
 			debug_serial_send_stdout(tmp, cnt);
 			count -= cnt;
 			buf += cnt;
 		}
 		return 0;
 	}
-	return hostio_write(t->tc, fd, buf, count);
+
+	gdb_putpacket_f("Fwrite,%08X,%08" PRIX32 ",%08" PRIX32, (unsigned)fd, buf, count);
+	return semihosting_get_gdb_response(target->tc);
 }
 
 /* probe memory access functions */
