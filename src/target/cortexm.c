@@ -60,7 +60,7 @@ const command_s cortexm_cmd_list[] = {
 };
 
 /* target options recognised by the Cortex-M target */
-#define TOPT_FLAVOUR_V6M (1U << 0U) /* if not set, target is assumed to be v7m */
+#define CORTEXM_TOPT_FLAVOUR_V6M (1U << 1U) /* if not set, target is assumed to be v7m */
 
 static const char *cortexm_regs_description(target_s *target);
 static void cortexm_regs_read(target_s *target, void *data);
@@ -1216,7 +1216,7 @@ static uint32_t cortexm_dwt_func(target_s *target, target_breakwatch_e type)
 {
 	uint32_t x = 0;
 
-	if ((target->target_options & TOPT_FLAVOUR_V6M) == 0)
+	if ((target->target_options & CORTEXM_TOPT_FLAVOUR_V6M) == 0)
 		x = CORTEXM_DWT_FUNC_DATAVSIZE_WORD;
 
 	switch (type) {
