@@ -33,6 +33,8 @@
 #include "target_internal.h"
 #include "cortexm.h"
 #include "stm32_common.h"
+#include "adiv5.h"
+#include "cortexar.h"
 
 /* Memory map constants for STM32MP15x */
 #define STM32MP15_CM4_RETRAM_BASE        0x00000000U
@@ -167,12 +169,60 @@ bool stm32mp15_cm4_probe(target_s *const target)
 }
 
 #ifdef CONFIG_CORTEXAR
+/*
+ * Override memory r/w operations to go via the AXI (AP0) MEM-AP
+ * (instead of halting the core and using DTRTX, which cortexar_mem_read/write do by default)
+ */
+static void stm32mp15_ca7_mem_read(target_s *target, void *dest, target_addr64_t src, size_t len)
+{
+	adiv5_access_port_s *const ap0 = (adiv5_access_port_s *)target->target_storage;
+	adiv5_mem_read(ap0, dest, src, len);
+}
+
+static void stm32mp15_ca7_mem_write(target_s *target, target_addr64_t dest, const void *src, size_t len)
+{
+	adiv5_access_port_s *const ap0 = (adiv5_access_port_s *)target->target_storage;
+	adiv5_mem_write(ap0, dest, src, len);
+}
+
+static void stm32mp15_ca7_setup_axi_ap(target_s *const target)
+{
+	adiv5_access_port_s *ap0 = calloc(1, sizeof(*ap0));
+	if (!ap0) { /* calloc failed: heap exhaustion */
+		DEBUG_ERROR("calloc: failed in %s\n", __func__);
+		return;
+	}
+	adiv5_access_port_s *const ap = cortex_ap(target);
+	memcpy(ap0, ap, sizeof(*ap0));
+	ap0->refcnt = 0;
+
+	ap0->apsel = 0; // Set to AXI-AP
+	ap0->idr = adiv5_ap_read(ap0, ADIV5_AP_IDR);
+	ap0->base = adiv5_ap_read(ap0, ADIV5_AP_BASE_LOW);
+	ap0->csw = adiv5_ap_read(ap0, ADIV5_AP_CSW);
+
+	adiv5_ap_ref(ap0);
+	target->target_storage = ap0;
+}
+
+static void stm32mp15_ca7_detach(target_s *target)
+{
+	/* Deallocate any extra AP */
+	adiv5_access_port_s *ap0 = (adiv5_access_port_s *)target->target_storage;
+	adiv5_ap_unref(ap0);
+	cortexar_detach(target);
+}
+
 bool stm32mp15_ca7_probe(target_s *const target)
 {
 	if (!stm32mp15_ident(target, false))
 		return false;
 
 	target->driver = "STM32MP15";
+	stm32mp15_ca7_setup_axi_ap(target);
+	target->mem_read = stm32mp15_ca7_mem_read;
+	target->mem_write = stm32mp15_ca7_mem_write;
+	target->detach = stm32mp15_ca7_detach;
 	target_add_commands(target, stm32mp15_cmd_list, target->driver);
 
 	/* Figure 4. Memory map from §2.5.2 in RM0436 rev 6, pg158 */
