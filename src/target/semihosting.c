@@ -265,6 +265,10 @@ int32_t semihosting_open(target_s *const target, const semihosting_s *const requ
 int32_t semihosting_close(target_s *const target, const semihosting_s *const request)
 {
 	const int32_t fd = request->params[0] - 1;
+	/* If the file descriptor requested is one of the special ones from ":tt" operations, do nothing */
+	if (fd == STDIN_FILENO || fd == STDOUT_FILENO || fd == STDERR_FILENO)
+		return 0;
+		/* Otherwise close the descriptor returned by semihosting_open() */
 #if PC_HOSTED == 1
 	(void)target;
 	return close(fd);
