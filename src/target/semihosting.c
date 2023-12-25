@@ -167,9 +167,10 @@ static int32_t semihosting_get_gdb_response(target_controller_s *const tc)
 }
 
 /* Interface to host system calls */
-static int semihosting_remote_read(target_controller_s *tc, int fd, target_addr_t buf, unsigned int count)
+static int32_t semihosting_remote_read(
+	target_controller_s *const tc, const int32_t fd, const target_addr_t buf, const uint32_t count)
 {
-	gdb_putpacket_f("Fread,%08X,%08" PRIX32 ",%08X", fd, buf, count);
+	gdb_putpacket_f("Fread,%08X,%08" PRIX32 ",%08" PRIX32, (unsigned)fd, buf, count);
 	return semihosting_get_gdb_response(tc);
 }
 
