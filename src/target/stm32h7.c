@@ -24,8 +24,14 @@
  * the device, providing the XML memory map and Flash memory programming.
  *
  * References:
+ * RM0399 - STM32H745/755 and STM32H747/757 advanced Arm®-based 32-bit MCUs, Rev. 4
+ *   https://www.st.com/resource/en/reference_manual/rm0399-stm32h745755-and-stm32h747757-advanced-armbased-32bit-mcus-stmicroelectronics.pdf
  * RM0433 - STM32H742, STM32H743/753 and STM32H750 Value line advanced Arm®-based 32-bit MCUs, Rev. 8
  *   https://www.st.com/resource/en/reference_manual/dm00314099-stm32h742-stm32h743-753-and-stm32h750-value-line-advanced-arm-based-32-bit-mcus-stmicroelectronics.pdf
+ * RM0455 - STM32H7A3/7B3 and STM32H7B0 Value line advanced Arm®-based 32-bit MCUs, Rev. 10
+ *   https://www.st.com/resource/en/reference_manual/rm0455-stm32h7a37b3-and-stm32h7b0-value-line-advanced-armbased-32bit-mcus-stmicroelectronics.pdf
+ * RM0468 - STM32H723/733, STM32H725/735 and STM32H730 Value line advanced Arm®-based 32-bit MCUs, Rev. 3
+ *   https://www.st.com/resource/en/reference_manual/rm0468-stm32h723733-stm32h725735-and-stm32h730-value-line-advanced-armbased-32bit-mcus-stmicroelectronics.pdf
  */
 
 /*
@@ -207,14 +213,40 @@ bool stm32h7_probe(target_s *target)
 	target->target_storage = priv_storage;
 
 	/* Build the RAM map */
-	/* Table 7. Memory map and default device memory area attributes RM0433, pg130 */
 	target_add_ram(target, 0x00000000, 0x10000); /* ITCM RAM,   64 KiB */
 	target_add_ram(target, 0x20000000, 0x20000); /* DTCM RAM,  128 KiB */
-	target_add_ram(target, 0x24000000, 0x80000); /* AXI RAM,   512 KiB */
-	target_add_ram(target, 0x30000000, 0x20000); /* AHB SRAM1, 128 KiB */
-	target_add_ram(target, 0x30020000, 0x20000); /* AHB SRAM2, 128 KiB */
-	target_add_ram(target, 0x30040000, 0x08000); /* AHB SRAM3,  32 KiB */
-	target_add_ram(target, 0x38000000, 0x10000); /* AHB SRAM4,  64 KiB */
+	switch (target->part_id) {
+	case ID_STM32H72x: {
+		/* Table 6. Memory map and default device memory area attributes RM0468, pg133 */
+		target_add_ram(target, 0x24000000, 0x20000); /* AXI RAM,  128 KiB */
+		target_add_ram(target, 0x24020000, 0x30000); /* AXI RAM,  192 KiB (TCM_AXI_SHARED) */
+		target_add_ram(target, 0x30000000, 0x4000);  /* AHB SRAM1, 16 KiB */
+		target_add_ram(target, 0x30004000, 0x4000);  /* AHB SRAM2, 16 KiB */
+		target_add_ram(target, 0x38000000, 0x4000);  /* AHB SRAM4, 16 KiB */
+		break;
+	}
+	case ID_STM32H74x: {
+		/* Table 7. Memory map and default device memory area attributes RM0433, pg130 */
+		target_add_ram(target, 0x24000000, 0x80000); /* AXI RAM,   512 KiB */
+		target_add_ram(target, 0x30000000, 0x20000); /* AHB SRAM1, 128 KiB */
+		target_add_ram(target, 0x30020000, 0x20000); /* AHB SRAM2, 128 KiB */
+		target_add_ram(target, 0x30040000, 0x08000); /* AHB SRAM3,  32 KiB */
+		target_add_ram(target, 0x38000000, 0x10000); /* AHB SRAM4,  64 KiB */
+		break;
+	}
+	case ID_STM32H7Bx: {
+		/* Table 6. Memory map and default device memory area attributes RM0455, pg131 */
+		target_add_ram(target, 0x24000000, 0x40000); /* AXI RAM1, 256 KiB */
+		target_add_ram(target, 0x24040000, 0x60000); /* AXI RAM2, 384 KiB */
+		target_add_ram(target, 0x240a0000, 0x60000); /* AXI RAM3, 384 KiB */
+		target_add_ram(target, 0x30000000, 0x10000); /* AHB SRAM1, 64 KiB */
+		target_add_ram(target, 0x30010000, 0x10000); /* AHB SRAM2, 64 KiB */
+		target_add_ram(target, 0x38000000, 0x08000); /* SRD SRAM,  32 KiB */
+		break;
+	}
+	default:
+		break;
+	}
 
 	/* Build the Flash map */
 	switch (target->part_id) {
