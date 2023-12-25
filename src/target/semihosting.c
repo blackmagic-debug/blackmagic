@@ -231,19 +231,21 @@ int32_t semihosting_open(target_s *const target, const semihosting_s *const requ
 	};
 	const uint32_t open_mode = open_mode_flags[request->params[1] >> 1U];
 
-	char filename[4];
-	target_mem_read(target, filename, file_name_taddr, sizeof(filename));
+	if (file_name_length <= 4U) {
+		char file_name[4U];
+		target_mem_read(target, file_name, file_name_taddr, file_name_length + 1U);
 
-	/* Handle requests for console I/O */
-	if (!strncmp(filename, ":tt", 4U)) {
-		int32_t result = -1;
-		if (open_mode == TARGET_O_RDONLY)
-			result = STDIN_FILENO;
-		else if (open_mode & TARGET_O_TRUNC)
-			result = STDOUT_FILENO;
-		else
-			result = STDERR_FILENO;
-		return result + 1;
+		/* Handle requests for console I/O */
+		if (!strncmp(file_name, ":tt", 4U)) {
+			int32_t result = -1;
+			if (open_mode == TARGET_O_RDONLY)
+				result = STDIN_FILENO;
+			else if (open_mode & TARGET_O_TRUNC)
+				result = STDOUT_FILENO;
+			else
+				result = STDERR_FILENO;
+			return result + 1;
+		}
 	}
 
 #if PC_HOSTED == 1
