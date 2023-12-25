@@ -51,6 +51,17 @@
 #endif
 
 static uint32_t time0_sec = UINT32_MAX; /* sys_clock time origin */
+static uint8_t semihosting_features_offset = 0U;
+
+/*
+ * "SHFB" is the magic number header for the :semihosting-features "file"
+ * Following that comes a byte of feature bits:
+ * - bit 0 defines if we support extended exit
+ * - bit 1 defines if we support both stdout and stderr via :tt
+ * Given we support both, we set this to 0b00000011
+ */
+#define SEMIHOSTING_FEATURES_LENGTH 5U
+static const char semihosting_features[SEMIHOSTING_FEATURES_LENGTH] = {'S', 'H', 'F', 'B', '\x03'};
 
 static const char semihosting_tempname_template[] = "tempAA.tmp";
 #define SEMIHOSTING_TEMPNAME_LENGTH ARRAY_LENGTH(semihosting_tempname_template)
@@ -246,6 +257,19 @@ int32_t semihosting_open(target_s *const target, const semihosting_s *const requ
 				result = STDERR_FILENO;
 			return result + 1;
 		}
+	} else if (file_name_length <= 22U) {
+		char file_name[22U];
+		target_mem_read(target, file_name, file_name_taddr, file_name_length + 1U);
+
+		/* Handle a request for the features "file" */
+		if (!strncmp(file_name, ":semihosting-features", 22U)) {
+			/* Only let the firmware "open" the file if they ask for it in read-only mode */
+			if (open_mode == TARGET_O_RDONLY) {
+				semihosting_features_offset = 0U;
+				return INT32_MAX;
+			}
+			return -1;
+		}
 	}
 
 #if PC_HOSTED == 1
@@ -267,8 +291,11 @@ int32_t semihosting_open(target_s *const target, const semihosting_s *const requ
 int32_t semihosting_close(target_s *const target, const semihosting_s *const request)
 {
 	const int32_t fd = request->params[0] - 1;
-	/* If the file descriptor requested is one of the special ones from ":tt" operations, do nothing */
-	if (fd == STDIN_FILENO || fd == STDOUT_FILENO || fd == STDERR_FILENO)
+	/*
+	 * If the file descriptor requested is one of the special ones from ":tt" operations,
+	 * or from "":semihosting-features", do nothing
+	 */
+	if (fd == STDIN_FILENO || fd == STDOUT_FILENO || fd == STDERR_FILENO || request->params[0] == INT32_MAX)
 		return 0;
 		/* Otherwise close the descriptor returned by semihosting_open() */
 #if PC_HOSTED == 1
@@ -292,6 +319,18 @@ int32_t semihosting_read(target_s *const target, const semihosting_s *const requ
 	if (buf_len == 0)
 		return 0;
 #endif
+
+	/* Check if this is a request to read from the :semihosting-features "file" */
+	if (request->params[0] == INT32_MAX) {
+		/* Clamp the requested amount to the amount we actually have left */
+		const uint32_t amount = MIN(buf_len, SEMIHOSTING_FEATURES_LENGTH - semihosting_features_offset);
+		/* Copy the chunk requested to the target, updating our internal offset */
+		target_mem_write(target, buf_taddr, semihosting_features + semihosting_features_offset, amount);
+		semihosting_features_offset += amount;
+		/* Return how much was left from what we transferred */
+		return buf_len - amount;
+	}
+
 	const int32_t fd = request->params[0] - 1;
 
 #if PC_HOSTED == 1
@@ -313,6 +352,10 @@ int32_t semihosting_read(target_s *const target, const semihosting_s *const requ
 
 int32_t semihosting_write(target_s *const target, const semihosting_s *const request)
 {
+	/* Write requests to the :semihosting-features "file" always fail */
+	if (request->params[0] == INT32_MAX)
+		return -1;
+
 	const int32_t fd = request->params[0] - 1;
 	const target_addr_t buf_taddr = request->params[1];
 #if PC_HOSTED == 1
@@ -404,6 +447,14 @@ int32_t semihosting_seek(target_s *const target, const semihosting_s *const requ
 {
 	const int32_t fd = request->params[0] - 1;
 	const off_t offset = request->params[1];
+	/* Check if this is a request to seek in the :semihosting-features "file" */
+	if (request->params[0] == INT32_MAX) {
+		if (offset >= 0 && offset < (off_t)SEMIHOSTING_FEATURES_LENGTH)
+			semihosting_features_offset = (uint8_t)offset;
+		else
+			semihosting_features_offset = SEMIHOSTING_FEATURES_LENGTH;
+		return 0;
+	}
 #if PC_HOSTED == 1
 	(void)target;
 	return lseek(fd, offset, SEEK_SET) == offset ? 0 : -1;
@@ -468,6 +519,10 @@ int32_t semihosting_system(target_s *const target, const semihosting_s *const re
 
 int32_t semihosting_file_length(target_s *const target, const semihosting_s *const request)
 {
+	/* Check if this is a request for the length of the :semihosting-features "file" */
+	if (request->params[0] == INT32_MAX)
+		return SEMIHOSTING_FEATURES_LENGTH;
+
 	const int32_t fd = request->params[0] - 1;
 #if PC_HOSTED == 1
 	(void)target;

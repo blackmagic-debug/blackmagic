@@ -23,16 +23,6 @@
 
 #include "general.h"
 
-/*
- * If the target wants to read the special filename ":semihosting-features"
- * to know what semihosting features are supported, it's easiest to create
- * that file on the host in the directory where gdb runs,
- * or, if using pc-hosted, where blackmagic_hosted runs.
- *
- * $ echo -e 'SHFB\x03' > ":semihosting-features"
- * $ chmod 0444 ":semihosting-features"
- */
-
 /* ARM Semihosting syscall numbers, from "Semihosting for AArch32 and AArch64 Version 3.0" */
 
 #define SEMIHOSTING_SYS_CLOCK         0x10U
