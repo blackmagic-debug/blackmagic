@@ -174,20 +174,17 @@ static int semihosting_remote_read(target_controller_s *tc, int fd, target_addr_
 }
 
 /* Interface to host system calls */
-static int semihosting_remote_write(target_s *target, int fd, target_addr_t buf, uint32_t count)
+static int32_t semihosting_remote_write(
+	target_s *const target, const int32_t fd, const target_addr_t buf, const uint32_t count)
 {
 	if (target->stdout_redirected && (fd == STDOUT_FILENO || fd == STDERR_FILENO)) {
-		while (count) {
-			uint8_t tmp[STDOUT_READ_BUF_SIZE];
-			size_t cnt = sizeof(tmp);
-			if (cnt > count)
-				cnt = count;
-			target_mem_read(target, tmp, buf, cnt);
-			debug_serial_send_stdout(tmp, cnt);
-			count -= cnt;
-			buf += cnt;
+		uint8_t buffer[STDOUT_READ_BUF_SIZE];
+		for (size_t offset = 0; offset < count; offset += STDOUT_READ_BUF_SIZE) {
+			const size_t amount = MIN(count - offset, STDOUT_READ_BUF_SIZE);
+			target_mem_read(target, buffer, buf, amount);
+			debug_serial_send_stdout(buffer, amount);
 		}
-		return 0;
+		return (int32_t)count;
 	}
 
 	gdb_putpacket_f("Fwrite,%08X,%08" PRIX32 ",%08" PRIX32, (unsigned)fd, buf, count);
