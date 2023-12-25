@@ -397,7 +397,8 @@ int32_t semihosting_writec(target_s *const target, const semihosting_s *const re
 	fputc(ch, stderr);
 	return 0;
 #else
-	return semihosting_remote_write(target, STDERR_FILENO, ch_taddr, 1);
+	(void)semihosting_remote_write(target, STDOUT_FILENO, ch_taddr, 1);
+	return 0;
 #endif
 }
 
@@ -421,7 +422,7 @@ int32_t semihosting_write0(target_s *const target, const semihosting_s *const re
 	}
 	const int32_t len = str_end_taddr - str_begin_taddr;
 	if (len >= 0) {
-		const int32_t result = semihosting_remote_write(target, STDERR_FILENO, str_begin_taddr, len);
+		const int32_t result = semihosting_remote_write(target, STDOUT_FILENO, str_begin_taddr, len);
 		if (result != len)
 			return -1;
 	}
