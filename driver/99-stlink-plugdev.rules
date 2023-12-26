@@ -27,4 +27,4 @@ SUBSYSTEMS=="usb", ATTRS{idVendor}=="0483", ATTRS{idProduct}=="374d", TAG+="uacc
 SUBSYSTEMS=="usb", ATTRS{idVendor}=="0483", ATTRS{idProduct}=="374e", TAG+="uaccess", MODE="0664", GROUP="plugdev"
 #   
 # STLink V3SET in normal mode
-SUBSYSTEMS=="usb", ATTRS{idVendor}=="0483", ATTRS{idProduct}=="374f", TAG+="uaccess", MODE="0664", GROUP='plugdev"
+SUBSYSTEMS=="usb", ATTRS{idVendor}=="0483", ATTRS{idProduct}=="374f", TAG+="uaccess", MODE="0664", GROUP="plugdev"
