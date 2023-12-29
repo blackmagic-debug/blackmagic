@@ -24,6 +24,7 @@
 
 #include <stdarg.h>
 #include <unistd.h>
+#include <assert.h>
 
 /* Fixup for when _FILE_OFFSET_BITS == 64 as unistd.h screws this up for us */
 #if defined(lseek)
@@ -380,14 +381,16 @@ void target_halt_resume(target_s *t, bool step)
 		t->halt_resume(t, step);
 }
 
-/* Command line for semihosting get_cmdline */
-void target_set_cmdline(target_s *t, char *cmdline)
+/* Command line for semihosting SYS_GET_CMDLINE */
+void target_set_cmdline(target_s *target, const char *const cmdline, const size_t cmdline_len)
 {
-	const size_t cmdline_len = strlen(cmdline);
-	const size_t copy_len = MIN(sizeof(t->cmdline) - 1U, cmdline_len);
-	memcpy(t->cmdline, cmdline, copy_len);
-	t->cmdline[copy_len] = '\0';
-	DEBUG_INFO("cmdline: >%s<\n", t->cmdline);
+	/* This assertion is really expensive, so only include it on BMDA builds */
+#if PC_HOSTED == 1
+	/* Check and make sure that we don't exceed the target buffer size */
+	assert(cmdline_len < MAX_CMDLINE);
+#endif
+	memcpy(target->cmdline, cmdline, cmdline_len + 1U);
+	DEBUG_INFO("cmdline: >%s<\n", target->cmdline);
 }
 
 /* Set heapinfo for semihosting */
