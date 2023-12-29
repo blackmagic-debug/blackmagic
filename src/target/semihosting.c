@@ -681,12 +681,9 @@ int32_t semihosting_get_command_line(target_s *const target, const semihosting_s
 	/* Figure out how long the command line string is */
 	const size_t command_line_length = strlen(target->cmdline) + 1U;
 	/* Check that we won't exceed the target buffer with the write */
-	if (command_line_length > buffer_length) {
-		target->tc->gdb_errno = TARGET_EINVAL;
-		return -1;
-	}
-	/* Try to write the data to the target along with the actual length value */
-	if (target_mem_write(target, buffer_taddr, target->cmdline, command_line_length))
+	if (command_line_length > buffer_length ||
+		/* Try to write the data to the target along with the actual length value */
+		target_mem_write(target, buffer_taddr, target->cmdline, command_line_length))
 		return -1;
 	target_mem_write32(target, request->r1 + 4U, command_line_length);
 	return target_check_error(target) ? -1 : 0;
@@ -729,10 +726,8 @@ int32_t semihosting_temp_name(target_s *const target, const semihosting_s *const
 	/* Now extract and check that we have enough space to write the result back to */
 	const target_addr_t buffer_taddr = request->params[0];
 	const size_t buffer_length = request->params[2];
-	if (buffer_length < sizeof(file_name)) {
-		target->tc->gdb_errno = TARGET_EINVAL;
+	if (buffer_length < sizeof(file_name))
 		return -1;
-	}
 	/* If we have enough space, attempt the write back */
 	return target_mem_write(target, buffer_taddr, file_name, SEMIHOSTING_TEMPNAME_LENGTH) ? -1 : 0;
 }
