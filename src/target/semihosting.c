@@ -20,6 +20,18 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+/*
+ * This file implements support for the ARM-defined semihosting interface for
+ * target to debugger service syscalls
+ *
+ * References:
+ * DUI0471 - ARM Compiler Software DEvelopment Guide Version 5.06 (semihosting v1)
+ *   https://developer.arm.com/documentation/dui0471/m/what-is-semihosting-
+ * ARM Architecture ABI: Semihosting v2
+ *   https://developer.arm.com/documentation/100863/latest/ ->
+ *   https://github.com/ARM-software/abi-aa/blob/main/semihosting/semihosting.rst
+ */
+
 #include "general.h"
 #include "target.h"
 #include "target_internal.h"
