@@ -623,6 +623,18 @@ int32_t semihosting_get_command_line(target_s *const target, const semihosting_s
 	return target_check_error(target) ? -1 : 0;
 }
 
+int32_t semihosting_heap_info(target_s *const target, const semihosting_s *const request)
+{
+	/* Extract where the write should occur to */
+	const target_addr_t block_taddr = request->r1;
+	/*
+	 * Write the heapinfo block to the target
+	 * See https://github.com/ARM-software/abi-aa/blob/main/semihosting/semihosting.rst#69sys_heapinfo-0x16
+	 * for more information on the layout of is block and the significance of how this is structured
+	 */
+	return target_mem_write(target, block_taddr, target->heapinfo, sizeof(target->heapinfo)) ? -1 : 0;
+}
+
 int32_t semihosting_temp_name(target_s *const target, const semihosting_s *const request)
 {
 	/* Pull out the value to format into the result string (clamping it into the range 0-255) */
@@ -745,9 +757,7 @@ int32_t semihosting_request(target_s *const target, const uint32_t syscall, cons
 	}
 
 	case SEMIHOSTING_SYS_HEAPINFO: /* heapinfo */
-		target_mem_write(
-			target, request.r1, &target->heapinfo, sizeof(target->heapinfo)); /* See newlib/libc/sys/arm/crt0.S */
-		break;
+		return semihosting_heap_info(target, &request);
 
 	case SEMIHOSTING_SYS_TMPNAM: /* tmpnam */
 		return semihosting_temp_name(target, &request);
