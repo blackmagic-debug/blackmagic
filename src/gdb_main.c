@@ -631,36 +631,40 @@ static void handle_v_packet(char *packet, const size_t plen)
 		gdb_putpacketz("OK");
 
 	} else if (!strncmp(packet, "vRun", 4U)) {
-		/* Parse command line for get_cmdline semihosting call */
-		char cmdline[83];
-		char *pcmdline = cmdline;
+		/* Parse command line for SYS_GET_CMDLINE semihosting call */
+		char cmdline[MAX_CMDLINE];
+		size_t offset = 0;
 		char *tok = packet + 4U;
-		if (*tok == ';')
+		if (tok[0] == ';')
 			++tok;
-		cmdline[0] = '\0';
 		while (*tok != '\0') {
-			if (strlen(cmdline) + 3U >= sizeof(cmdline))
+			/* Check if there's space for another character */
+			if (offset + 1U >= MAX_CMDLINE)
 				break;
-			if (*tok == ';') {
-				*pcmdline++ = ' ';
-				pcmdline[0] = '\0';
-				tok++;
+			/* Translate ';' delimeters into spaces */
+			if (tok[0] == ';') {
+				cmdline[offset++] = ' ';
+				++tok;
 				continue;
 			}
-			/* isxdigit expects int, to handle EOF */
-			if (isxdigit((int8_t)tok[0U]) && isxdigit((int8_t)tok[1U])) {
-				unhexify(pcmdline, tok, 2U);
-				if ((*pcmdline == ' ') || (*pcmdline == '\\')) {
-					pcmdline[1U] = *pcmdline;
-					*pcmdline++ = '\\';
+			/* If the next thing's a hex digit pair, decode that */
+			if (is_hex(tok[0U]) && is_hex(tok[1U])) {
+				unhexify(cmdline + offset, tok, 2U);
+				/* If the character decoded is ' ' or '\' then prefix it with a leading '\' */
+				if (cmdline[offset] == ' ' || cmdline[offset] == '\\') {
+					/* First check if there's space */
+					if (offset + 2U >= MAX_CMDLINE)
+						break;
+					cmdline[offset + 1] = cmdline[offset];
+					cmdline[offset++] = '\\';
 				}
-				pcmdline++;
+				++offset;
 				tok += 2U;
-				pcmdline[0] = '\0';
 				continue;
 			}
 			break;
 		}
+		cmdline[offset] = '\0';
 		/* Reset the semihosting SYS_CLOCK start point */
 		semihosting_wallclock_epoch = UINT32_MAX;
 #ifdef ENABLE_RTT
