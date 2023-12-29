@@ -31,7 +31,7 @@
 
 /* maybe rewrite this as tcp server */
 
-#ifndef WIN32
+#ifndef _WIN32
 #include <termios.h>
 
 typedef struct termios terminal_io_state_s;
