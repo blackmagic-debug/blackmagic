@@ -601,6 +601,25 @@ int32_t semihosting_readc(target_s *const target)
 #endif
 }
 
+int32_t semihosting_get_command_line(target_s *const target, const semihosting_s *const request)
+{
+	/* Extract the location of the result buffer and its length */
+	const target_addr_t buffer_taddr = request->params[0];
+	const size_t buffer_length = request->params[1];
+	/* Figure out how long the command line string is */
+	const size_t command_line_length = strlen(target->cmdline) + 1U;
+	/* Check that we won't exceed the target buffer with the write */
+	if (command_line_length > buffer_length) {
+		target->tc->gdb_errno = TARGET_EINVAL;
+		return -1;
+	}
+	/* Try to write the data to the target along with the actual length value */
+	if (target_mem_write(target, buffer_taddr, target->cmdline, command_line_length))
+		return -1;
+	target_mem_write32(target, request->r1 + 4U, command_line_length);
+	return target_check_error(target) ? -1 : 0;
+}
+
 int32_t semihosting_request(target_s *const target, const uint32_t syscall, const uint32_t r1)
 {
 	/* Reset the interruption state so we can tell if it was this request that was interrupted */
@@ -688,22 +707,8 @@ int32_t semihosting_request(target_s *const target, const uint32_t syscall, cons
 		target_halt_resume(target, 1);
 		break;
 
-	case SEMIHOSTING_SYS_GET_CMDLINE: { /* get_cmdline */
-		uint32_t retval[2];
-		ret = -1;
-		target_addr_t buf_ptr = request.params[0];
-		target_addr_t buf_len = request.params[1];
-		if (strlen(target->cmdline) + 1U > buf_len)
-			break;
-		if (target_mem_write(target, buf_ptr, target->cmdline, strlen(target->cmdline) + 1U))
-			break;
-		retval[0] = buf_ptr;
-		retval[1] = strlen(target->cmdline) + 1U;
-		if (target_mem_write(target, request.r1, retval, sizeof(retval)))
-			break;
-		ret = 0;
-		break;
-	}
+	case SEMIHOSTING_SYS_GET_CMDLINE: /* get_cmdline */
+		return semihosting_get_command_line(target, &request);
 
 	case SEMIHOSTING_SYS_ISERROR: { /* iserror */
 		int error = request.params[0];
