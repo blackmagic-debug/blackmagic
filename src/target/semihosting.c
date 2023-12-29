@@ -623,6 +623,19 @@ int32_t semihosting_get_command_line(target_s *const target, const semihosting_s
 	return target_check_error(target) ? -1 : 0;
 }
 
+int32_t semihosting_is_error(const target_errno_e code)
+{
+	/* Convert a FileIO-domain errno into whether it indicates an error has occured or not */
+	const bool is_error = code == TARGET_EPERM || code == TARGET_ENOENT || code == TARGET_EINTR || code == TARGET_EIO ||
+		code == TARGET_EBADF || code == TARGET_EACCES || code == TARGET_EFAULT || code == TARGET_EBUSY ||
+		code == TARGET_EEXIST || code == TARGET_ENODEV || code == TARGET_ENOTDIR || code == TARGET_EISDIR ||
+		code == TARGET_EINVAL || code == TARGET_ENFILE || code == TARGET_EMFILE || code == TARGET_EFBIG ||
+		code == TARGET_ENOSPC || code == TARGET_ESPIPE || code == TARGET_EROFS || code == TARGET_ENOSYS ||
+		code == TARGET_ENAMETOOLONG || code == TARGET_EUNKNOWN;
+	/* The Semihosting ABI specifies any non-zero response s a truthy one, so just return the bool as-is */
+	return is_error;
+}
+
 int32_t semihosting_heap_info(target_s *const target, const semihosting_s *const request)
 {
 	/* Extract where the write should occur to */
@@ -745,16 +758,8 @@ int32_t semihosting_request(target_s *const target, const uint32_t syscall, cons
 	case SEMIHOSTING_SYS_GET_CMDLINE: /* get_cmdline */
 		return semihosting_get_command_line(target, &request);
 
-	case SEMIHOSTING_SYS_ISERROR: { /* iserror */
-		int error = request.params[0];
-		ret = error == TARGET_EPERM || error == TARGET_ENOENT || error == TARGET_EINTR || error == TARGET_EIO ||
-			error == TARGET_EBADF || error == TARGET_EACCES || error == TARGET_EFAULT || error == TARGET_EBUSY ||
-			error == TARGET_EEXIST || error == TARGET_ENODEV || error == TARGET_ENOTDIR || error == TARGET_EISDIR ||
-			error == TARGET_EINVAL || error == TARGET_ENFILE || error == TARGET_EMFILE || error == TARGET_EFBIG ||
-			error == TARGET_ENOSPC || error == TARGET_ESPIPE || error == TARGET_EROFS || error == TARGET_ENOSYS ||
-			error == TARGET_ENAMETOOLONG || error == TARGET_EUNKNOWN;
-		break;
-	}
+	case SEMIHOSTING_SYS_ISERROR: /* iserror */
+		return semihosting_is_error(request.params[0]);
 
 	case SEMIHOSTING_SYS_HEAPINFO: /* heapinfo */
 		return semihosting_heap_info(target, &request);
