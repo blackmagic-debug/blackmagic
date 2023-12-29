@@ -32,6 +32,7 @@
  */
 
 #include "bmp_remote.h"
+#include "hex_utils.h"
 #include "protocol_v0_defs.h"
 #include "protocol_v0_jtag.h"
 
@@ -103,7 +104,7 @@ void remote_v0_jtag_tdi_tdo_seq(uint8_t *data_out, bool final_tms, const uint8_t
 			exit(-1);
 		}
 		if (data_out) {
-			const uint64_t packet_data_out = remote_hex_string_to_num(-1, buffer + 1);
+			const uint64_t packet_data_out = hex_string_to_num(-1, buffer + 1);
 			for (size_t idx = 0; idx < bytes; ++idx)
 				data_out[offset + idx] = (uint8_t)(packet_data_out >> (idx * 8U));
 		}
@@ -128,7 +129,7 @@ bool remote_v0_jtag_next(bool tms, bool tdi)
 		exit(-1);
 	}
 
-	return remote_hex_string_to_num(1, buffer + 1);
+	return hex_string_to_num(1, buffer + 1);
 }
 
 void remote_v0_jtag_cycle(const bool tms, const bool tdi, const size_t clock_cycles)

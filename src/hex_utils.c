@@ -65,3 +65,16 @@ char *unhexify(void *const buf, const char *hex, const size_t size)
 		dst[idx] = (unhex_digit(hex[0]) << 4U) | unhex_digit(hex[1]);
 	return buf;
 }
+
+uint64_t hex_string_to_num(const size_t max_digits, const char *const str)
+{
+	uint64_t ret = 0;
+	for (size_t offset = 0; offset < max_digits; ++offset) {
+		const char value = str[offset];
+		if (!is_hex(value))
+			return ret;
+		ret <<= 4U;
+		ret |= unhex_digit(value);
+	}
+	return ret;
+}

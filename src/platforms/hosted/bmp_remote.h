@@ -63,6 +63,5 @@ void remote_adiv5_dp_init(adiv5_debug_port_s *dp);
 void remote_add_jtag_dev(uint32_t dev_index, const jtag_dev_s *jtag_dev);
 
 uint64_t remote_decode_response(const char *response, size_t digits);
-uint64_t remote_hex_string_to_num(uint32_t limit, const char *str);
 
 #endif /* PLATFORMS_HOSTED_BMP_REMOTE_H */
