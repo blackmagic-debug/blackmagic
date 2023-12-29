@@ -52,6 +52,9 @@
 
 static uint32_t time0_sec = UINT32_MAX; /* sys_clock time origin */
 
+static const char semihosting_tempname_template[] = "tempAA.tmp";
+#define SEMIHOSTING_TEMPNAME_LENGTH ARRAY_LENGTH(semihosting_tempname_template)
+
 #if ENABLE_DEBUG == 1
 const char *const semihosting_names[] = {
 	"",
@@ -620,6 +623,26 @@ int32_t semihosting_get_command_line(target_s *const target, const semihosting_s
 	return target_check_error(target) ? -1 : 0;
 }
 
+int32_t semihosting_temp_name(target_s *const target, const semihosting_s *const request)
+{
+	/* Pull out the value to format into the result string (clamping it into the range 0-255) */
+	const uint8_t target_id = request->params[1];
+	/* Format the new ID into the file name string */
+	char file_name[SEMIHOSTING_TEMPNAME_LENGTH];
+	memcpy(file_name, semihosting_tempname_template, SEMIHOSTING_TEMPNAME_LENGTH);
+	file_name[4] += target_id >> 4U;
+	file_name[5] += target_id & 0xffU;
+	/* Now extract and check that we have enough space to write the result back to */
+	const target_addr_t buffer_taddr = request->params[0];
+	const size_t buffer_length = request->params[2];
+	if (buffer_length < sizeof(file_name)) {
+		target->tc->gdb_errno = TARGET_EINVAL;
+		return -1;
+	}
+	/* If we have enough space, attempt the write back */
+	return target_mem_write(target, buffer_taddr, file_name, SEMIHOSTING_TEMPNAME_LENGTH) ? -1 : 0;
+}
+
 int32_t semihosting_request(target_s *const target, const uint32_t syscall, const uint32_t r1)
 {
 	/* Reset the interruption state so we can tell if it was this request that was interrupted */
@@ -726,28 +749,8 @@ int32_t semihosting_request(target_s *const target, const uint32_t syscall, cons
 			target, request.r1, &target->heapinfo, sizeof(target->heapinfo)); /* See newlib/libc/sys/arm/crt0.S */
 		break;
 
-	case SEMIHOSTING_SYS_TMPNAM: { /* tmpnam */
-		/* Given a target identifier between 0 and 255, returns a temporary name */
-		target_addr_t buf_ptr = request.params[0];
-		int target_id = request.params[1];
-		int buf_size = request.params[2];
-		char fnam[] = "tempXX.tmp";
-		ret = -1;
-		if (buf_ptr == 0)
-			break;
-		if (buf_size <= 0)
-			break;
-		if ((target_id < 0) || (target_id > 255))
-			break;                         /* target id out of range */
-		fnam[5] = 'A' + (target_id & 0xf); /* create filename */
-		fnam[4] = 'A' + (target_id >> 4 & 0xf);
-		if (strlen(fnam) + 1U > (uint32_t)buf_size)
-			break; /* target buffer too small */
-		if (target_mem_write(target, buf_ptr, fnam, strlen(fnam) + 1U))
-			break; /* copy filename to target */
-		ret = 0;
-		break;
-	}
+	case SEMIHOSTING_SYS_TMPNAM: /* tmpnam */
+		return semihosting_temp_name(target, &request);
 
 	// not implemented yet:
 	case SEMIHOSTING_SYS_ELAPSED:  /* elapsed */
