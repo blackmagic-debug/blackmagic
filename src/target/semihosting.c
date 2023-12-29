@@ -687,7 +687,6 @@ int32_t semihosting_request(target_s *const target, const uint32_t syscall, cons
 	semihosting_s request = {r1, {}};
 	if (syscall != SEMIHOSTING_SYS_EXIT)
 		target_mem_read(target, request.params, r1, sizeof(request.params));
-	int32_t ret = 0;
 
 #if ENABLE_DEBUG == 1
 	const char *syscall_descr = NULL;
@@ -776,8 +775,7 @@ int32_t semihosting_request(target_s *const target, const uint32_t syscall, cons
 	// not implemented yet:
 	case SEMIHOSTING_SYS_ELAPSED:  /* elapsed */
 	case SEMIHOSTING_SYS_TICKFREQ: /* tickfreq */
+	default:
 		return -1;
 	}
-
-	return ret;
 }
