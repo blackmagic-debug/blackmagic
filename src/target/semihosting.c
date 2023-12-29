@@ -604,6 +604,16 @@ int32_t semihosting_readc(target_s *const target)
 #endif
 }
 
+int32_t semihosting_exit(target_s *const target, const semihosting_exit_reason_e reason, const uint32_t status_code)
+{
+	if (reason == EXIT_REASON_APPLICATION_EXIT)
+		tc_printf(target, "exit(%" PRIu32 ")\n", status_code);
+	else
+		tc_printf(target, "Exception trapped: %" PRIx32 " (%" PRIu32 ")\n", reason, status_code);
+	target_halt_resume(target, true);
+	return 0;
+}
+
 int32_t semihosting_get_command_line(target_s *const target, const semihosting_s *const request)
 {
 	/* Extract the location of the result buffer and its length */
@@ -745,15 +755,11 @@ int32_t semihosting_request(target_s *const target, const uint32_t syscall, cons
 		return target->tc->gdb_errno;
 #endif
 
-	case SEMIHOSTING_SYS_EXIT: /* _exit() */
-		tc_printf(target, "_exit(0x%x)\n", request.r1);
-		target_halt_resume(target, 1);
-		break;
+	case SEMIHOSTING_SYS_EXIT: /* exit */
+		return semihosting_exit(target, request.r1, 0);
 
-	case SEMIHOSTING_SYS_EXIT_EXTENDED:                                               /* _exit() */
-		tc_printf(target, "_exit(0x%x%08x)\n", request.params[1], request.params[0]); /* exit() with 64bit exit value */
-		target_halt_resume(target, 1);
-		break;
+	case SEMIHOSTING_SYS_EXIT_EXTENDED: /* exit extended */
+		return semihosting_exit(target, request.params[0], request.params[1]);
 
 	case SEMIHOSTING_SYS_GET_CMDLINE: /* get_cmdline */
 		return semihosting_get_command_line(target, &request);
