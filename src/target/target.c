@@ -25,6 +25,11 @@
 #include <stdarg.h>
 #include <unistd.h>
 
+/* Fixup for when _FILE_OFFSET_BITS == 64 as unistd.h screws this up for us */
+#if defined(lseek)
+#undef lseek
+#endif
+
 target_s *target_list = NULL;
 
 #define STDOUT_READ_BUF_SIZE       64U
