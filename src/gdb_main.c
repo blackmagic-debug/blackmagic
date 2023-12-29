@@ -661,8 +661,10 @@ static void handle_v_packet(char *packet, const size_t plen)
 			}
 			break;
 		}
+		/* Reset the semihosting SYS_CLOCK start point */
+		semihosting_wallclock_epoch = UINT32_MAX;
 #ifdef ENABLE_RTT
-		/* force searching rtt control block */
+		/* Force searching for the RTT control block */
 		rtt_found = false;
 #endif
 		/* Run target program. For us (embedded) this means reset. */

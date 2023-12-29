@@ -62,7 +62,9 @@
 #include <fcntl.h>
 #endif
 
-static uint32_t time0_sec = UINT32_MAX; /* sys_clock time origin */
+/* This stores the current SYS_CLOCK epoch relative to the values from SYS_TIME */
+uint32_t semihosting_wallclock_epoch = UINT32_MAX;
+/* This stores the current :semihosting-features "file" access offset */
 static uint8_t semihosting_features_offset = 0U;
 
 /*
@@ -598,26 +600,26 @@ int32_t semihosting_clock(target_s *const target)
 	if (gettimeofday(&current_time, NULL) != 0)
 		return -1;
 	/* Extract the time value components */
-	uint32_t seconds = current_time.tv_sec;
+	const uint32_t seconds = current_time.tv_sec;
 	const uint32_t microseconds = (uint32_t)current_time.tv_usec;
 #else
 	/* Get the current time from the host */
 	const semihosting_time_s current_time = semihosting_get_time(target);
 	if (current_time.seconds == UINT32_MAX && current_time.microseconds == UINT64_MAX)
 		return (int32_t)current_time.seconds;
-	uint32_t seconds = current_time.seconds;
-	uint32_t microseconds = (uint32_t)current_time.microseconds;
+	const uint32_t seconds = current_time.seconds;
+	const uint32_t microseconds = (uint32_t)current_time.microseconds;
 #endif
-	/* Clamp the seconds value appropriately */
-	if (time0_sec > seconds)
-		time0_sec = seconds;
-	seconds -= time0_sec;
 	/*
 	 * Convert the resulting time to centiseconds (hundredths of a second)
 	 * NB: At the potential cost of some precision, the microseconds value has been
 	 *   cast down to a uint32_t to avoid doing a 64-bit division in the firmware.
 	 */
-	const uint64_t centiseconds = (seconds * 100U) + (microseconds / 10000U);
+	uint32_t centiseconds = (seconds * 100U) + (microseconds / 10000U);
+	/* If this is the first request for the wallclock since the target started, consider it the start */
+	if (semihosting_wallclock_epoch > centiseconds)
+		semihosting_wallclock_epoch = centiseconds;
+	centiseconds -= semihosting_wallclock_epoch;
 	/* Truncate the result back to a positive 32-bit integer */
 	return centiseconds & 0x7fffffffU;
 }
