@@ -32,4 +32,9 @@ char *unhexify(void *buf, const char *hex, size_t size);
 char hex_digit(uint8_t value);
 uint8_t unhex_digit(char hex);
 
+static inline bool is_hex(const char x)
+{
+	return (x >= '0' && x <= '9') || (x >= 'A' && x <= 'F') || (x >= 'a' && x <= 'f');
+}
+
 #endif /* INCLUDE_HEX_UTILS_H */

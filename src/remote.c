@@ -40,7 +40,6 @@
 
 #define HTON(x)    (((x) <= '9') ? (x) - '0' : ((TOUPPER(x)) - 'A' + 10))
 #define TOUPPER(x) ((((x) >= 'a') && ((x) <= 'z')) ? ((x) - ('a' - 'A')) : (x))
-#define ISHEX(x)   ((((x) >= '0') && ((x) <= '9')) || (((x) >= 'A') && ((x) <= 'F')) || (((x) >= 'a') && ((x) <= 'f')))
 
 /* Return numeric version of string, until illegal hex digit, or max */
 uint64_t remote_hex_string_to_num(const uint32_t max, const char *const str)
@@ -48,7 +47,7 @@ uint64_t remote_hex_string_to_num(const uint32_t max, const char *const str)
 	uint64_t ret = 0;
 	for (size_t i = 0; i < max; ++i) {
 		const char value = str[i];
-		if (!ISHEX(value))
+		if (!is_hex(value))
 			return ret;
 		ret = (ret << 4U) | HTON(value);
 	}
