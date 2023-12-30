@@ -30,6 +30,14 @@
  * ARM Architecture ABI: Semihosting v2
  *   https://developer.arm.com/documentation/100863/latest/ ->
  *   https://github.com/ARM-software/abi-aa/blob/main/semihosting/semihosting.rst
+ *
+ * This implementation uses GDB's File I/O upcalls in the firmware and for stdio
+ * to implement the semihosted syscall utilities, and uses native syscalls otherwise
+ * when built as BMDA.
+ *
+ * Additionally we simulate two special files - :tt for the stdio facilities, and
+ * :semihosting-features so the firmware can determine what Semihosting v2 extensions
+ * this implementation supports. More on this latter part is noted below.
  */
 
 #include "general.h"
@@ -48,13 +56,6 @@
 #include <unistd.h>
 
 #if PC_HOSTED == 1
-/*
- * pc-hosted semihosting does keyboard, file and screen i/o on the system
- * where blackmagic_hosted runs, using linux system calls.
- * semihosting in the probe does keyboard, file and screen i/o on the system
- * where gdb runs, using gdb file i/o calls.
- */
-
 #include <errno.h>
 #include <time.h>
 #include <sys/time.h>
@@ -756,52 +757,52 @@ int32_t semihosting_request(target_s *const target, const uint32_t syscall, cons
 #endif
 
 	switch (syscall) {
-	case SEMIHOSTING_SYS_OPEN: /* open */
+	case SEMIHOSTING_SYS_OPEN:
 		return semihosting_open(target, &request);
 
-	case SEMIHOSTING_SYS_CLOSE: /* close */
+	case SEMIHOSTING_SYS_CLOSE:
 		return semihosting_close(target, &request);
 
-	case SEMIHOSTING_SYS_READ: /* read */
+	case SEMIHOSTING_SYS_READ:
 		return semihosting_read(target, &request);
 
-	case SEMIHOSTING_SYS_WRITE: /* write */
+	case SEMIHOSTING_SYS_WRITE:
 		return semihosting_write(target, &request);
 
-	case SEMIHOSTING_SYS_WRITEC: /* writec */
+	case SEMIHOSTING_SYS_WRITEC:
 		return semihosting_writec(target, &request);
 
-	case SEMIHOSTING_SYS_WRITE0: /* write0 */
+	case SEMIHOSTING_SYS_WRITE0:
 		return semihosting_write0(target, &request);
 
-	case SEMIHOSTING_SYS_ISTTY: /* isatty */
+	case SEMIHOSTING_SYS_ISTTY:
 		return semihosting_isatty(target, &request);
 
-	case SEMIHOSTING_SYS_SEEK: /* lseek */
+	case SEMIHOSTING_SYS_SEEK:
 		return semihosting_seek(target, &request);
 
-	case SEMIHOSTING_SYS_RENAME: /* rename */
+	case SEMIHOSTING_SYS_RENAME:
 		return semihosting_rename(target, &request);
 
-	case SEMIHOSTING_SYS_REMOVE: /* unlink */
+	case SEMIHOSTING_SYS_REMOVE:
 		return semihosting_remove(target, &request);
 
-	case SEMIHOSTING_SYS_SYSTEM: /* system */
+	case SEMIHOSTING_SYS_SYSTEM:
 		return semihosting_system(target, &request);
 
-	case SEMIHOSTING_SYS_FLEN: /* file length */
+	case SEMIHOSTING_SYS_FLEN:
 		return semihosting_file_length(target, &request);
 
-	case SEMIHOSTING_SYS_CLOCK: /* clock */
+	case SEMIHOSTING_SYS_CLOCK:
 		return semihosting_clock(target);
 
-	case SEMIHOSTING_SYS_TIME: /* time */
+	case SEMIHOSTING_SYS_TIME:
 		return semihosting_time(target);
 
-	case SEMIHOSTING_SYS_READC: /* readc */
+	case SEMIHOSTING_SYS_READC:
 		return semihosting_readc(target);
 
-	case SEMIHOSTING_SYS_ERRNO: /* errno */
+	case SEMIHOSTING_SYS_ERRNO:
 #if PC_HOSTED == 1
 		/* Return whatever the current errno value is */
 		return errno;
@@ -810,22 +811,22 @@ int32_t semihosting_request(target_s *const target, const uint32_t syscall, cons
 		return target->tc->gdb_errno;
 #endif
 
-	case SEMIHOSTING_SYS_EXIT: /* exit */
+	case SEMIHOSTING_SYS_EXIT:
 		return semihosting_exit(target, request.r1, 0);
 
-	case SEMIHOSTING_SYS_EXIT_EXTENDED: /* exit extended */
+	case SEMIHOSTING_SYS_EXIT_EXTENDED:
 		return semihosting_exit(target, request.params[0], request.params[1]);
 
-	case SEMIHOSTING_SYS_GET_CMDLINE: /* get_cmdline */
+	case SEMIHOSTING_SYS_GET_CMDLINE:
 		return semihosting_get_command_line(target, &request);
 
-	case SEMIHOSTING_SYS_ISERROR: /* iserror */
+	case SEMIHOSTING_SYS_ISERROR:
 		return semihosting_is_error(request.params[0]);
 
-	case SEMIHOSTING_SYS_HEAPINFO: /* heapinfo */
+	case SEMIHOSTING_SYS_HEAPINFO:
 		return semihosting_heap_info(target, &request);
 
-	case SEMIHOSTING_SYS_TMPNAM: /* tmpnam */
+	case SEMIHOSTING_SYS_TMPNAM:
 		return semihosting_temp_name(target, &request);
 
 	// not implemented yet:
