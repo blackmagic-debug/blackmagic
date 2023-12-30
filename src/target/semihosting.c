@@ -735,6 +735,89 @@ int32_t semihosting_temp_name(target_s *const target, const semihosting_s *const
 	return target_mem_write(target, buffer_taddr, file_name, SEMIHOSTING_TEMPNAME_LENGTH) ? -1 : 0;
 }
 
+int32_t semihosting_handle_request(target_s *const target, const semihosting_s *const request, const uint32_t syscall)
+{
+	switch (syscall) {
+	case SEMIHOSTING_SYS_OPEN:
+		return semihosting_open(target, request);
+
+	case SEMIHOSTING_SYS_CLOSE:
+		return semihosting_close(target, request);
+
+	case SEMIHOSTING_SYS_READ:
+		return semihosting_read(target, request);
+
+	case SEMIHOSTING_SYS_WRITE:
+		return semihosting_write(target, request);
+
+	case SEMIHOSTING_SYS_WRITEC:
+		return semihosting_writec(target, request);
+
+	case SEMIHOSTING_SYS_WRITE0:
+		return semihosting_write0(target, request);
+
+	case SEMIHOSTING_SYS_ISTTY:
+		return semihosting_isatty(target, request);
+
+	case SEMIHOSTING_SYS_SEEK:
+		return semihosting_seek(target, request);
+
+	case SEMIHOSTING_SYS_RENAME:
+		return semihosting_rename(target, request);
+
+	case SEMIHOSTING_SYS_REMOVE:
+		return semihosting_remove(target, request);
+
+	case SEMIHOSTING_SYS_SYSTEM:
+		return semihosting_system(target, request);
+
+	case SEMIHOSTING_SYS_FLEN:
+		return semihosting_file_length(target, request);
+
+	case SEMIHOSTING_SYS_CLOCK:
+		return semihosting_clock(target);
+
+	case SEMIHOSTING_SYS_TIME:
+		return semihosting_time(target);
+
+	case SEMIHOSTING_SYS_READC:
+		return semihosting_readc(target);
+
+	case SEMIHOSTING_SYS_ERRNO:
+#if PC_HOSTED == 1
+		/* Return whatever the current errno value is */
+		return errno;
+#else
+		/* Return the last errno we got from GDB */
+		return target->tc->gdb_errno;
+#endif
+
+	case SEMIHOSTING_SYS_EXIT:
+		return semihosting_exit(target, request->r1, 0);
+
+	case SEMIHOSTING_SYS_EXIT_EXTENDED:
+		return semihosting_exit(target, request->params[0], request->params[1]);
+
+	case SEMIHOSTING_SYS_GET_CMDLINE:
+		return semihosting_get_command_line(target, request);
+
+	case SEMIHOSTING_SYS_ISERROR:
+		return semihosting_is_error(request->params[0]);
+
+	case SEMIHOSTING_SYS_HEAPINFO:
+		return semihosting_heap_info(target, request);
+
+	case SEMIHOSTING_SYS_TMPNAM:
+		return semihosting_temp_name(target, request);
+
+	// not implemented yet:
+	case SEMIHOSTING_SYS_ELAPSED:  /* elapsed */
+	case SEMIHOSTING_SYS_TICKFREQ: /* tickfreq */
+	default:
+		return -1;
+	}
+}
+
 int32_t semihosting_request(target_s *const target, const uint32_t syscall, const uint32_t r1)
 {
 	/* Reset the interruption state so we can tell if it was this request that was interrupted */
@@ -756,83 +839,5 @@ int32_t semihosting_request(target_s *const target, const uint32_t syscall, cons
 		request.params[1], request.params[2], request.params[3]);
 #endif
 
-	switch (syscall) {
-	case SEMIHOSTING_SYS_OPEN:
-		return semihosting_open(target, &request);
-
-	case SEMIHOSTING_SYS_CLOSE:
-		return semihosting_close(target, &request);
-
-	case SEMIHOSTING_SYS_READ:
-		return semihosting_read(target, &request);
-
-	case SEMIHOSTING_SYS_WRITE:
-		return semihosting_write(target, &request);
-
-	case SEMIHOSTING_SYS_WRITEC:
-		return semihosting_writec(target, &request);
-
-	case SEMIHOSTING_SYS_WRITE0:
-		return semihosting_write0(target, &request);
-
-	case SEMIHOSTING_SYS_ISTTY:
-		return semihosting_isatty(target, &request);
-
-	case SEMIHOSTING_SYS_SEEK:
-		return semihosting_seek(target, &request);
-
-	case SEMIHOSTING_SYS_RENAME:
-		return semihosting_rename(target, &request);
-
-	case SEMIHOSTING_SYS_REMOVE:
-		return semihosting_remove(target, &request);
-
-	case SEMIHOSTING_SYS_SYSTEM:
-		return semihosting_system(target, &request);
-
-	case SEMIHOSTING_SYS_FLEN:
-		return semihosting_file_length(target, &request);
-
-	case SEMIHOSTING_SYS_CLOCK:
-		return semihosting_clock(target);
-
-	case SEMIHOSTING_SYS_TIME:
-		return semihosting_time(target);
-
-	case SEMIHOSTING_SYS_READC:
-		return semihosting_readc(target);
-
-	case SEMIHOSTING_SYS_ERRNO:
-#if PC_HOSTED == 1
-		/* Return whatever the current errno value is */
-		return errno;
-#else
-		/* Return the last errno we got from GDB */
-		return target->tc->gdb_errno;
-#endif
-
-	case SEMIHOSTING_SYS_EXIT:
-		return semihosting_exit(target, request.r1, 0);
-
-	case SEMIHOSTING_SYS_EXIT_EXTENDED:
-		return semihosting_exit(target, request.params[0], request.params[1]);
-
-	case SEMIHOSTING_SYS_GET_CMDLINE:
-		return semihosting_get_command_line(target, &request);
-
-	case SEMIHOSTING_SYS_ISERROR:
-		return semihosting_is_error(request.params[0]);
-
-	case SEMIHOSTING_SYS_HEAPINFO:
-		return semihosting_heap_info(target, &request);
-
-	case SEMIHOSTING_SYS_TMPNAM:
-		return semihosting_temp_name(target, &request);
-
-	// not implemented yet:
-	case SEMIHOSTING_SYS_ELAPSED:  /* elapsed */
-	case SEMIHOSTING_SYS_TICKFREQ: /* tickfreq */
-	default:
-		return -1;
-	}
+	return semihosting_handle_request(target, &request, syscall);
 }
