@@ -50,7 +50,14 @@ static char *format_string(const char *format, ...)
 	return ret;
 }
 
+#define READ_BUFFER_LENGTH 4096U
+
+/* Windows handle for the connection to the remote BMP */
 static HANDLE port_handle = INVALID_HANDLE_VALUE;
+/* Buffer for read request data + fullness and next read position values */
+static uint8_t read_buffer[READ_BUFFER_LENGTH];
+static size_t read_buffer_fullness = 0U;
+static size_t read_buffer_offset = 0U;
 
 static void display_error(const LSTATUS error, const char *const operation, const char *const path)
 {
@@ -241,43 +248,75 @@ bool platform_buffer_write(const void *const data, const size_t length)
 	return true;
 }
 
+static ssize_t bmda_read_more_data(const uint32_t end_time)
+{
+	DWORD bytes_received = 0;
+	/* Try to fill the read buffer, and if that fails, bail */
+	if (!ReadFile(port_handle, read_buffer, READ_BUFFER_LENGTH, &bytes_received, NULL)) {
+		DEBUG_ERROR("Failed to read response: %lu\n", GetLastError());
+		return -3;
+	}
+	/* If we timed out, bail differently */
+	if (platform_time_ms() > end_time) {
+		DEBUG_ERROR("Timeout while waiting for BMP response\n");
+		return -4;
+	}
+	/* We now have more data, so update the read buffer counters */
+	read_buffer_fullness = bytes_received;
+	read_buffer_offset = 0U;
+	return 0;
+}
+
 /* XXX: We should either return size_t or bool */
 /* XXX: This needs documenting that it can abort the program with exit(), or the error handling fixed */
 int platform_buffer_read(void *const data, const size_t length)
 {
-	DWORD read = 0;
-	char response = 0;
+	char *const buffer = (char *)data;
 	const uint32_t start_time = platform_time_ms();
 	const uint32_t end_time = start_time + cortexm_wait_timeout;
 	/* Drain the buffer for the remote till we see a start-of-response byte */
-	while (response != REMOTE_RESP) {
-		if (!ReadFile(port_handle, &response, 1, &read, NULL)) {
-			DEBUG_ERROR("error occurred while reading response: %lu\n", GetLastError());
-			exit(-3);
+	for (char response = 0; response != REMOTE_RESP;) {
+		if (read_buffer_offset == read_buffer_fullness) {
+			const ssize_t result = bmda_read_more_data(end_time);
+			if (result < 0)
+				return result;
 		}
-		if (platform_time_ms() > end_time) {
-			DEBUG_ERROR("Timeout while waiting for BMP response\n");
-			exit(-4);
-		}
+		response = read_buffer[read_buffer_offset++];
 	}
-	char *const buffer = (char *)data;
 	/* Now collect the response */
-	for (size_t offset = 0; offset < length && platform_time_ms() < end_time;) {
-		if (!ReadFile(port_handle, buffer + offset, 1, &read, NULL)) {
-			DEBUG_ERROR("Error on read\n");
-			exit(-3);
+	for (size_t offset = 0; offset < length;) {
+		/* Check if we've exceeded the allowed time */
+		if (platform_time_ms() >= end_time) {
+			DEBUG_ERROR("Failed to read response after %ums\n", platform_time_ms() - start_time);
+			return -4;
 		}
-		if (read > 0) {
-			DEBUG_WIRE("%c", buffer[offset]);
-			if (buffer[offset] == REMOTE_EOM) {
-				buffer[offset] = 0;
-				DEBUG_WIRE("\n");
-				return offset;
+		/* Check if we need more data or should use what's in the buffer already */
+		if (read_buffer_offset == read_buffer_fullness) {
+			const ssize_t result = bmda_read_more_data(end_time);
+			if (result < 0)
+				return result;
+		}
+		/* Look for an end of packet marker */
+		size_t response_length = 0U;
+		for (; read_buffer_offset + response_length < read_buffer_fullness && offset + response_length < length;
+			 ++response_length) {
+			/* If we've found a REMOTE_EOM then stop scanning */
+			if (read_buffer[read_buffer_offset + response_length] == REMOTE_EOM) {
+				++response_length;
+				break;
 			}
-			++offset;
 		}
+		/* We now either have a REMOTE_EOM or need all the data from the buffer */
+		memcpy(buffer + offset, read_buffer + read_buffer_offset, response_length);
+		read_buffer_offset += response_length;
+		offset += response_length - 1U;
+		/* If this was because of REMOTE_EOM, return */
+		if (buffer[offset] == REMOTE_EOM) {
+			buffer[offset] = 0;
+			DEBUG_WIRE("       %s\n", buffer);
+			return offset;
+		}
+		++offset;
 	}
-	DEBUG_ERROR("Failed to read response after %ums\n", platform_time_ms() - start_time);
-	exit(-3);
-	return 0;
+	return length;
 }
