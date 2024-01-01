@@ -398,7 +398,7 @@ const char *platform_target_voltage(void)
 void platform_request_boot(void)
 {
 	/* Disconnect USB cable */
-	gpio_set_mode(USB_PU_PORT, GPIO_MODE_INPUT, 0, USB_PU_PIN);
+	gpio_set_mode(USB_PU_PORT, GPIO_MODE_INPUT, GPIO_CNF_INPUT_FLOAT, USB_PU_PIN);
 
 	/* Drive boot request pin */
 	gpio_set_mode(GPIOB, GPIO_MODE_OUTPUT_2_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, GPIO12);
