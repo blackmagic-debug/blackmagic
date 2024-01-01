@@ -155,7 +155,7 @@ __attribute__((alias("generic_crc32"))) bool bmd_crc32(
 
 bool stm32_crc32(target_s *const target, uint32_t *const result, const uint32_t base, const size_t len)
 {
-	uint8_t bytes[128U];
+	uint8_t bytes[1024U]; /* ADIv5 MEM-AP AutoInc range */
 
 	CRC_CR |= CRC_CR_RESET;
 
