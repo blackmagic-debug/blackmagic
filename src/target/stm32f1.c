@@ -149,16 +149,19 @@ bool gd32f1_probe(target_s *target)
 	case 0x414U: /* Gigadevice gd32f303 */
 	case 0x430U: /* XL-density */
 		target->driver = "GD32F3";
+		block_size = 0x800;
 		break;
 	case 0x418U:
 		target->driver = "GD32F2";
+		block_size = 0x800;
 		break;
 	case 0x410U: /* Gigadevice gd32f103, gd32e230 */
 		if ((target->cpuid & CORTEX_CPUID_PARTNO_MASK) == CORTEX_M23)
 			target->driver = "GD32E230";
-		else if ((target->cpuid & CORTEX_CPUID_PARTNO_MASK) == CORTEX_M4)
+		else if ((target->cpuid & CORTEX_CPUID_PARTNO_MASK) == CORTEX_M4) {
 			target->driver = "GD32F3";
-		else
+			block_size = 0x800;
+		} else
 			target->driver = "GD32F1";
 		break;
 	case 0x444U: /* Gigadevice gd32e50x */
