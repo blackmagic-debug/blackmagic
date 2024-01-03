@@ -113,7 +113,7 @@ bool generic_crc32(target_s *const target, uint32_t *const result, const uint32_
 	uint8_t bytes[128U];
 #endif
 
-#if ENABLE_DEBUG == 1
+#ifndef DEBUG_INFO_IS_NOOP
 	const uint32_t start_time = platform_time_ms();
 #endif
 	uint32_t last_time = platform_time_ms();
@@ -132,7 +132,9 @@ bool generic_crc32(target_s *const target, uint32_t *const result, const uint32_
 		for (size_t i = 0; i < read_len; i++)
 			crc = crc32_calc(crc, bytes[i]);
 	}
-	DEBUG_WARN("%" PRIu32 " ms\n", platform_time_ms() - start_time);
+#ifndef DEBUG_INFO_IS_NOOP
+	DEBUG_INFO("%s: %" PRIu32 " ms\n", __func__, platform_time_ms() - start_time);
+#endif
 	*result = crc;
 	return true;
 }
@@ -149,6 +151,9 @@ bool stm32_crc32(target_s *const target, uint32_t *const result, const uint32_t 
 
 	CRC_CR |= CRC_CR_RESET;
 
+#ifndef DEBUG_INFO_IS_NOOP
+	const uint32_t start_time = platform_time_ms();
+#endif
 	uint32_t last_time = platform_time_ms();
 	const size_t adjusted_len = len & ~3U;
 	for (size_t offset = 0; offset < adjusted_len; offset += sizeof(bytes)) {
@@ -185,6 +190,9 @@ bool stm32_crc32(target_s *const target, uint32_t *const result, const uint32_t 
 			}
 		}
 	}
+#ifndef DEBUG_INFO_IS_NOOP
+	DEBUG_INFO("%s: %" PRIu32 " ms\n", __func__, platform_time_ms() - start_time);
+#endif
 	*result = crc;
 	return true;
 }
