@@ -50,17 +50,18 @@ static void swdptap_turnaround(const swdio_status_t dir)
 
 	if (dir == SWDIO_STATUS_FLOAT) {
 		SWDIO_MODE_FLOAT();
-	} else {
+	} else
 		gpio_clear(SWCLK_PORT, SWCLK_PIN);
-		for (volatile int32_t cnt = swd_delay_cnt - 2; cnt > 0; cnt--)
-			continue;
-	}
+
+	for (volatile int32_t cnt = swd_delay_cnt - 2; cnt > 0; cnt--)
+		continue;
 
 	gpio_set(SWCLK_PORT, SWCLK_PIN);
 	for (volatile int32_t cnt = swd_delay_cnt; --cnt > 0;)
 		continue;
 
 	if (dir == SWDIO_STATUS_DRIVE) {
+		gpio_clear(SWCLK_PORT, SWCLK_PIN);
 		SWDIO_MODE_DRIVE();
 	}
 }
