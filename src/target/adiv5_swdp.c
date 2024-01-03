@@ -75,6 +75,7 @@ uint32_t firmware_dp_low_read(adiv5_debug_port_s *dp, const uint16_t addr)
 	const uint8_t res = dp->seq_in(3);
 	uint32_t data = 0;
 	dp->seq_in_parity(&data, 32);
+	dp->seq_out(0, 8U);
 	return res == SWDP_ACK_OK ? data : 0;
 }
 
@@ -299,19 +300,20 @@ uint32_t firmware_swdp_low_access(adiv5_debug_port_s *dp, const uint8_t RnW, con
 			DEBUG_WARN("SWD access resulted in parity error\n");
 			raise_exception(EXCEPTION_ERROR, "SWD parity error");
 		}
-	} else {
+	} else
 		dp->seq_out_parity(value, 32);
-		/* ARM Debug Interface Architecture Specification ADIv5.0 to ADIv5.2
-		 * tells to clock the data through SW-DP to either :
-		 * - immediate start a new transaction
-		 * - continue to drive idle cycles
-		 * - or clock at least 8 idle cycles
-		 *
-		 * Implement last option to favour correctness over
-		 *   slight speed decrease
-		 */
-		dp->seq_out(0, 8);
-	}
+
+	/* ARM Debug Interface Architecture Specification ADIv5.0 to ADIv5.2
+	 * tells to clock the data through SW-DP to either :
+	 * - immediate start a new transaction
+	 * - continue to drive idle cycles
+	 * - or clock at least 8 idle cycles
+	 *
+	 * Implement last option to favour correctness over
+	 *   slight speed decrease
+	 */
+	dp->seq_out(0, 8);
+
 	return response;
 }
 
