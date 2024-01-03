@@ -136,11 +136,14 @@ bool generic_crc32(target_s *const target, uint32_t *const result, const uint32_
 	*result = crc;
 	return true;
 }
+
+__attribute__((alias("generic_crc32"))) bool bmd_crc32(
+	target_s *const target, uint32_t *const result, const uint32_t base, const size_t len);
 #else
 #include <libopencm3/stm32/crc.h>
 #include "buffer_utils.h"
 
-bool generic_crc32(target_s *const target, uint32_t *const result, const uint32_t base, const size_t len)
+bool stm32_crc32(target_s *const target, uint32_t *const result, const uint32_t base, const size_t len)
 {
 	uint8_t bytes[128U];
 
@@ -185,4 +188,7 @@ bool generic_crc32(target_s *const target, uint32_t *const result, const uint32_
 	*result = crc;
 	return true;
 }
+
+__attribute__((alias("stm32_crc32"))) bool bmd_crc32(
+	target_s *const target, uint32_t *const result, const uint32_t base, const size_t len);
 #endif
