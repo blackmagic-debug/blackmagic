@@ -125,7 +125,7 @@ bool generic_crc32(target_s *const target, uint32_t *const result, const uint32_
 		}
 		const size_t read_len = MIN(sizeof(bytes), len - offset);
 		if (target_mem_read(target, bytes, base + offset, (read_len + 3U) & ~3U)) {
-			DEBUG_ERROR("generic_crc32 error around address 0x%08" PRIx32 "\n", (uint32_t)(base + offset));
+			DEBUG_ERROR("%s: error around address 0x%08" PRIx32 "\n", __func__, (uint32_t)(base + offset));
 			return false;
 		}
 
@@ -156,7 +156,7 @@ bool generic_crc32(target_s *const target, uint32_t *const result, const uint32_
 		}
 		const size_t read_len = MIN(sizeof(bytes), adjusted_len - offset);
 		if (target_mem_read(target, bytes, base + offset, read_len)) {
-			DEBUG_ERROR("generic_crc32 error around address 0x%08" PRIx32 "\n", (uint32_t)(base + offset));
+			DEBUG_ERROR("%s: error around address 0x%08" PRIx32 "\n", __func__, (uint32_t)(base + offset));
 			return false;
 		}
 
@@ -169,7 +169,7 @@ bool generic_crc32(target_s *const target, uint32_t *const result, const uint32_
 	const size_t remainder = len - adjusted_len;
 	if (remainder) {
 		if (target_mem_read(target, bytes, base + adjusted_len, remainder)) {
-			DEBUG_ERROR("generic_crc32 error around address 0x%08" PRIx32 "\n", (uint32_t)(base + adjusted_len));
+			DEBUG_ERROR("%s: error around address 0x%08" PRIx32 "\n", __func__, (uint32_t)(base + adjusted_len));
 			return false;
 		}
 		for (size_t offset = 0; offset < remainder; ++offset) {
