@@ -218,35 +218,34 @@ bool stm32h7_probe(target_s *target)
 	switch (target->part_id) {
 	case ID_STM32H72x: {
 		/* Table 6. Memory map and default device memory area attributes RM0468, pg133 */
-		target_add_ram(target, 0x24000000, 0x20000); /* AXI RAM,  128 KiB */
-		target_add_ram(target, 0x24020000, 0x30000); /* AXI RAM,  192 KiB (TCM_AXI_SHARED) */
-		target_add_ram(target, 0x30000000, 0x4000);  /* AHB SRAM1, 16 KiB */
-		target_add_ram(target, 0x30004000, 0x4000);  /* AHB SRAM2, 16 KiB */
-		target_add_ram(target, 0x38000000, 0x4000);  /* AHB SRAM4, 16 KiB */
+		target_add_ram(target, 0x24000000, 0x20000); /* AXI RAM,    128 KiB */
+		target_add_ram(target, 0x24020000, 0x30000); /* AXI RAM,    192 KiB (TCM_AXI_SHARED) */
+		target_add_ram(target, 0x30000000, 0x8000);  /* AHB SRAM1+2, 32 KiB [16+16] contiguous */
+		target_add_ram(target, 0x38000000, 0x4000);  /* AHB SRAM4,   16 KiB, D3 domain */
 		break;
 	}
 	case ID_STM32H74x: {
 		/* Table 7. Memory map and default device memory area attributes RM0433, pg130 */
-		target_add_ram(target, 0x24000000, 0x80000); /* AXI RAM,   512 KiB */
-		target_add_ram(target, 0x30000000, 0x20000); /* AHB SRAM1, 128 KiB */
-		target_add_ram(target, 0x30020000, 0x20000); /* AHB SRAM2, 128 KiB */
-		target_add_ram(target, 0x30040000, 0x08000); /* AHB SRAM3,  32 KiB */
-		target_add_ram(target, 0x38000000, 0x10000); /* AHB SRAM4,  64 KiB */
+		target_add_ram(target, 0x24000000, 0x80000); /* AXI RAM,       512 KiB */
+		target_add_ram(target, 0x30000000, 0x48000); /* AHB SRAM1+2+3, 288 KiB [128+128+32] contiguous */
+		target_add_ram(target, 0x38000000, 0x10000); /* AHB SRAM4,      64 KiB, D3 domain */
 		break;
 	}
 	case ID_STM32H7Bx: {
 		/* Table 6. Memory map and default device memory area attributes RM0455, pg131 */
-		target_add_ram(target, 0x24000000, 0x40000); /* AXI RAM1, 256 KiB */
-		target_add_ram(target, 0x24040000, 0x60000); /* AXI RAM2, 384 KiB */
-		target_add_ram(target, 0x240a0000, 0x60000); /* AXI RAM3, 384 KiB */
-		target_add_ram(target, 0x30000000, 0x10000); /* AHB SRAM1, 64 KiB */
-		target_add_ram(target, 0x30010000, 0x10000); /* AHB SRAM2, 64 KiB */
-		target_add_ram(target, 0x38000000, 0x08000); /* SRD SRAM,  32 KiB */
+		target_add_ram(target, 0x24000000, 0x100000); /* AXI RAM1+2+3, 1024 KiB [256+384+384] contiguous, */
+		target_add_ram(target, 0x30000000, 0x10000);  /* AHB SRAM1+2,   128 KiB [64+64] contiguous, */
+		target_add_ram(target, 0x38000000, 0x8000);   /* SRD SRAM4,      32 KiB, Smart run domain */
 		break;
 	}
 	default:
 		break;
 	}
+
+	/*
+	 * Note on SRD from AN5293, 3. System architecture differences between STM32F7 and STM32H7 Series
+	 * > The D3 domain evolved into a domain called SRD domain (or smart-run domain).
+	 */
 
 	/* Build the Flash map */
 	switch (target->part_id) {
