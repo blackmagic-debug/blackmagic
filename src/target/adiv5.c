@@ -608,16 +608,15 @@ static void adiv5_component_probe(
 			}
 		}
 
-#if ENABLE_DEBUG == 1 && defined(PLATFORM_HAS_DEBUG)
+#ifndef DEBUG_WARN_IS_NOOP
 		/* Check SYSMEM bit */
 		const uint32_t memtype = adiv5_mem_read32(ap, addr | ADIV5_ROM_MEMTYPE) & ADIV5_ROM_MEMTYPE_SYSMEM;
-
 		if (adiv5_dp_error(ap->dp))
 			DEBUG_ERROR("Fault reading ROM table entry\n");
-
+#endif
 		DEBUG_INFO("ROM: Table BASE=0x%" PRIx32 " SYSMEM=0x%08" PRIx32 ", Manufacturer %03x Partno %03x\n", addr,
 			memtype, designer_code, part_number);
-#endif
+
 		for (uint32_t i = 0; i < 960U; i++) {
 			adiv5_dp_error(ap->dp);
 
