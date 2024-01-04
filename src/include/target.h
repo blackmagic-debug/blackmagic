@@ -122,6 +122,7 @@ int target_command(target_s *target, int argc, const char *argv[]);
 
 /* keep target_errno in sync with errno values in gdb/include/gdb/fileio.h */
 typedef enum target_errno {
+	TARGET_SUCCESS = 0,
 	TARGET_EPERM = 1,
 	TARGET_ENOENT = 2,
 	TARGET_EINTR = 4,

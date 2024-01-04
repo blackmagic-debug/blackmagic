@@ -156,7 +156,7 @@ int semihosting_reply(target_controller_s *const tc, char *const pbuf, const int
 	}
 
 	/* If the call was successful the errno may be omitted */
-	tc->gdb_errno = items >= 2 ? gdb_errno : 0;
+	tc->gdb_errno = items >= 2 ? gdb_errno : TARGET_SUCCESS;
 
 	/* If break is requested */
 	tc->interrupted = items == 3 && ctrl_c_flag == 'C';
