@@ -113,9 +113,6 @@ static bool generic_crc32(target_s *const target, uint32_t *const result, const 
 	uint8_t bytes[128U];
 #endif
 
-#ifndef DEBUG_INFO_IS_NOOP
-	const uint32_t start_time = platform_time_ms();
-#endif
 	uint32_t last_time = platform_time_ms();
 	for (size_t offset = 0; offset < len; offset += sizeof(bytes)) {
 		const uint32_t actual_time = platform_time_ms();
@@ -132,17 +129,6 @@ static bool generic_crc32(target_s *const target, uint32_t *const result, const 
 		for (size_t i = 0; i < read_len; i++)
 			crc = crc32_calc(crc, bytes[i]);
 	}
-#ifndef DEBUG_INFO_IS_NOOP
-	/* "generic_crc32: 08000110+75272 -> 1353ms, 54 KiB/s" */
-	const uint32_t end_time = platform_time_ms();
-	const uint32_t time_elapsed = end_time - start_time;
-	DEBUG_INFO("%s: %08" PRIx32 "+%" PRIu32 " -> %" PRIu32 "ms", __func__, base, (uint32_t)len, time_elapsed);
-	if (len >= 512U) {
-		const uint32_t speed = len * 1000U / time_elapsed / 1024U;
-		DEBUG_INFO(", %" PRIu32 " KiB/s", speed);
-	}
-	DEBUG_INFO("\n");
-#endif
 	*result = crc;
 	return true;
 }
@@ -157,9 +143,6 @@ static bool stm32_crc32(target_s *const target, uint32_t *const result, const ui
 
 	CRC_CR |= CRC_CR_RESET;
 
-#ifndef DEBUG_INFO_IS_NOOP
-	const uint32_t start_time = platform_time_ms();
-#endif
 	uint32_t last_time = platform_time_ms();
 	const size_t adjusted_len = len & ~3U;
 	for (size_t offset = 0; offset < adjusted_len; offset += sizeof(bytes)) {
@@ -196,17 +179,6 @@ static bool stm32_crc32(target_s *const target, uint32_t *const result, const ui
 			}
 		}
 	}
-#ifndef DEBUG_INFO_IS_NOOP
-	/* "stm32_crc32: 08000110+75272 -> 237ms, 310 KiB/s" */
-	const uint32_t end_time = platform_time_ms();
-	const uint32_t time_elapsed = end_time - start_time;
-	DEBUG_INFO("%s: %08" PRIx32 "+%" PRIu32 " -> %" PRIu32 "ms", __func__, base, (uint32_t)len, time_elapsed);
-	if (len >= 512U) {
-		const uint32_t speed = len * 1000U / time_elapsed / 1024U;
-		DEBUG_INFO(", %" PRIu32 " KiB/s", speed);
-	}
-	DEBUG_INFO("\n");
-#endif
 	*result = crc;
 	return true;
 }
@@ -215,10 +187,26 @@ static bool stm32_crc32(target_s *const target, uint32_t *const result, const ui
 /* Shim to dispatch host-specific implementation (and keep the `__func__` meaningful) */
 bool bmd_crc32(target_s *const target, uint32_t *const result, const uint32_t base, const size_t len)
 {
+#ifndef DEBUG_INFO_IS_NOOP
+	const uint32_t start_time = platform_time_ms();
+#endif
 #if !defined(STM32F0) && !defined(STM32F1) && !defined(STM32F2) && !defined(STM32F3) && !defined(STM32F4) && \
 	!defined(STM32F7) && !defined(STM32L0) && !defined(STM32L1) && !defined(STM32G0) && !defined(STM32G4)
-	return generic_crc32(target, result, base, len);
+	const bool status = generic_crc32(target, result, base, len);
 #else
-	return stm32_crc32(target, result, base, len);
+	const bool status = stm32_crc32(target, result, base, len);
 #endif
+#ifndef DEBUG_INFO_IS_NOOP
+	/* "generic_crc32: 08000110+75272 -> 1353ms, 54 KiB/s" */
+	/* "stm32_crc32: 08000110+75272 -> 237ms, 310 KiB/s" */
+	const uint32_t end_time = platform_time_ms();
+	const uint32_t time_elapsed = end_time - start_time;
+	DEBUG_INFO("%s: 0x%08" PRIx32 "+%" PRIu32 " -> %" PRIu32 "ms", __func__, base, (uint32_t)len, time_elapsed);
+	if (len >= 512U) {
+		const uint32_t speed = len * 1000U / time_elapsed / 1024U;
+		DEBUG_INFO(", %" PRIu32 " KiB/s", speed);
+	}
+	DEBUG_INFO("\n");
+#endif
+	return status;
 }
