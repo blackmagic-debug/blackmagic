@@ -100,7 +100,7 @@ static uint32_t crc32_calc(const uint32_t crc, const uint8_t data)
 	return (crc << 8U) ^ crc32_table[((crc >> 24U) ^ data) & 0xffU];
 }
 
-bool generic_crc32(target_s *const target, uint32_t *const result, const uint32_t base, const size_t len)
+static bool generic_crc32(target_s *const target, uint32_t *const result, const uint32_t base, const size_t len)
 {
 	uint32_t crc = 0xffffffffU;
 #if PC_HOSTED == 1
@@ -147,13 +147,11 @@ bool generic_crc32(target_s *const target, uint32_t *const result, const uint32_
 	return true;
 }
 
-__attribute__((alias("generic_crc32"))) bool bmd_crc32(
-	target_s *const target, uint32_t *const result, const uint32_t base, const size_t len);
 #else
 #include <libopencm3/stm32/crc.h>
 #include "buffer_utils.h"
 
-bool stm32_crc32(target_s *const target, uint32_t *const result, const uint32_t base, const size_t len)
+static bool stm32_crc32(target_s *const target, uint32_t *const result, const uint32_t base, const size_t len)
 {
 	uint8_t bytes[1024U]; /* ADIv5 MEM-AP AutoInc range */
 
@@ -212,7 +210,15 @@ bool stm32_crc32(target_s *const target, uint32_t *const result, const uint32_t 
 	*result = crc;
 	return true;
 }
-
-__attribute__((alias("stm32_crc32"))) bool bmd_crc32(
-	target_s *const target, uint32_t *const result, const uint32_t base, const size_t len);
 #endif
+
+/* Shim to dispatch host-specific implementation (and keep the `__func__` meaningful) */
+bool bmd_crc32(target_s *const target, uint32_t *const result, const uint32_t base, const size_t len)
+{
+#if !defined(STM32F0) && !defined(STM32F1) && !defined(STM32F2) && !defined(STM32F3) && !defined(STM32F4) && \
+	!defined(STM32F7) && !defined(STM32L0) && !defined(STM32L1) && !defined(STM32G0) && !defined(STM32G4)
+	return generic_crc32(target, result, base, len);
+#else
+	return stm32_crc32(target, result, base, len);
+#endif
+}
