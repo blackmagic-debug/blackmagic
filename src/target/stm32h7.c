@@ -208,18 +208,18 @@ bool stm32h7_probe(target_s *target)
 
 	/* Build the RAM map */
 	/* Table 7. Memory map and default device memory area attributes RM0433, pg130 */
-	target_add_ram(target, 0x00000000, 0x10000); /* ITCM RAM,   64kiB */
-	target_add_ram(target, 0x20000000, 0x20000); /* DTCM RAM,  128kiB */
-	target_add_ram(target, 0x24000000, 0x80000); /* AXI RAM,   512kiB */
-	target_add_ram(target, 0x30000000, 0x20000); /* AHB SRAM1, 128kiB */
-	target_add_ram(target, 0x30020000, 0x20000); /* AHB SRAM2, 128kiB */
-	target_add_ram(target, 0x30040000, 0x08000); /* AHB SRAM3,  32kiB */
-	target_add_ram(target, 0x38000000, 0x10000); /* AHB SRAM4,  64kiB */
+	target_add_ram(target, 0x00000000, 0x10000); /* ITCM RAM,   64 KiB */
+	target_add_ram(target, 0x20000000, 0x20000); /* DTCM RAM,  128 KiB */
+	target_add_ram(target, 0x24000000, 0x80000); /* AXI RAM,   512 KiB */
+	target_add_ram(target, 0x30000000, 0x20000); /* AHB SRAM1, 128 KiB */
+	target_add_ram(target, 0x30020000, 0x20000); /* AHB SRAM2, 128 KiB */
+	target_add_ram(target, 0x30040000, 0x08000); /* AHB SRAM3,  32 KiB */
+	target_add_ram(target, 0x38000000, 0x10000); /* AHB SRAM4,  64 KiB */
 
 	/* Build the Flash map */
 	switch (target->part_id) {
 	case ID_STM32H74x: {
-		/* Read the Flash size from the device (expressed in kiB) and multiply it by 1024 */
+		/* Read the Flash size from the device (expressed in KiB) and multiply it by 1024 */
 		const uint32_t flash_size = target_mem_read32(target, STM32H7_FLASH_SIZE) << 10U;
 		/* STM32H750nB */
 		if (flash_size == FLASH_SECTOR_SIZE)
