@@ -21,6 +21,7 @@
 #include "general.h"
 #include "target_internal.h"
 #include "gdb_packet.h"
+#include "command.h"
 
 #include <stdarg.h>
 #include <unistd.h>
@@ -37,10 +38,12 @@ target_s *target_list = NULL;
 
 static bool target_cmd_mass_erase(target_s *target, int argc, const char **argv);
 static bool target_cmd_range_erase(target_s *target, int argc, const char **argv);
+static bool target_cmd_redirect_output(target_s *target, int argc, const char **argv);
 
 const command_s target_cmd_list[] = {
 	{"erase_mass", target_cmd_mass_erase, "Erase whole device Flash"},
 	{"erase_range", target_cmd_range_erase, "Erase a range of memory on a device"},
+	{"redirect_stdout", target_cmd_redirect_output, "Redirect semihosting output to aux USB serial"},
 	{NULL, NULL, NULL},
 };
 
@@ -487,6 +490,15 @@ static bool target_cmd_range_erase(target_s *const t, const int argc, const char
 	const uint32_t length = strtoul(argv[2], NULL, 0);
 
 	return target_flash_erase(t, addr, length);
+}
+
+static bool target_cmd_redirect_output(target_s *target, int argc, const char **argv)
+{
+	if (argc == 1) {
+		gdb_outf("Semihosting stdout redirection: %s\n", target->stdout_redirected ? "enabled" : "disabled");
+		return true;
+	}
+	return parse_enable_or_disable(argv[1], &target->stdout_redirected);
 }
 
 /* Accessor functions */

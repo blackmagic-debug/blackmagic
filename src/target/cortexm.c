@@ -47,15 +47,9 @@
 #include <assert.h>
 
 static bool cortexm_vector_catch(target_s *target, int argc, const char **argv);
-#if PC_HOSTED == 0
-static bool cortexm_redirect_stdout(target_s *target, int argc, const char **argv);
-#endif
 
 const command_s cortexm_cmd_list[] = {
 	{"vector_catch", cortexm_vector_catch, "Catch exception vectors"},
-#if PC_HOSTED == 0
-	{"redirect_stdout", cortexm_redirect_stdout, "Redirect semihosting stdout to USB UART"},
-#endif
 	{NULL, NULL, NULL},
 };
 
@@ -1359,17 +1353,6 @@ static bool cortexm_vector_catch(target_s *target, int argc, const char **argv)
 	tc_printf(target, "\n");
 	return true;
 }
-
-#if PC_HOSTED == 0
-static bool cortexm_redirect_stdout(target_s *target, int argc, const char **argv)
-{
-	if (argc == 1)
-		gdb_outf("Semihosting stdout redirection: %s\n", target->stdout_redirected ? "enabled" : "disabled");
-	else
-		target->stdout_redirected = !strncmp(argv[1], "enable", strlen(argv[1]));
-	return true;
-}
-#endif
 
 static bool cortexm_hostio_request(target_s *const target)
 {
