@@ -61,6 +61,12 @@
 #include <sys/time.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#ifdef _WIN32
+#define O_BINARY _O_BINARY
+#define O_NOCTTY 0
+#else
+#define O_BINARY 0
+#endif
 #endif
 
 /* This stores the current SYS_CLOCK epoch relative to the values from SYS_TIME */
@@ -287,25 +293,16 @@ int32_t semihosting_open(target_s *const target, const semihosting_s *const requ
 	const uint32_t file_name_length = request->params[2];
 
 	/*
-	 * Translation table of fopen modes to open() flags
+	 * Translation table of fopen() modes to GDB-compatible open flags
 	 * See DUI0471C, Table 8-3
 	 */
-	static const uint32_t open_mode_flags[] = {
-#if PC_HOSTED == 1
-		O_RDONLY,                      /* r, rb */
-		O_RDWR,                        /* r+, r+b */
-		O_WRONLY | O_CREAT | O_TRUNC,  /*w*/
-		O_RDWR | O_CREAT | O_TRUNC,    /*w+*/
-		O_WRONLY | O_CREAT | O_APPEND, /*a*/
-		O_RDWR | O_CREAT | O_APPEND,   /*a+*/
-#else
+	static const uint16_t open_mode_flags[] = {
 		TARGET_O_RDONLY,                                    /* r, rb */
 		TARGET_O_RDWR,                                      /* r+, r+b */
-		TARGET_O_WRONLY | TARGET_O_CREAT | TARGET_O_TRUNC,  /*w*/
-		TARGET_O_RDWR | TARGET_O_CREAT | TARGET_O_TRUNC,    /*w+*/
-		TARGET_O_WRONLY | TARGET_O_CREAT | TARGET_O_APPEND, /*a*/
-		TARGET_O_RDWR | TARGET_O_CREAT | TARGET_O_APPEND,   /*a+*/
-#endif
+		TARGET_O_WRONLY | TARGET_O_CREAT | TARGET_O_TRUNC,  /* w, wb */
+		TARGET_O_RDWR | TARGET_O_CREAT | TARGET_O_TRUNC,    /* w+, w+b */
+		TARGET_O_WRONLY | TARGET_O_CREAT | TARGET_O_APPEND, /* a, ab */
+		TARGET_O_RDWR | TARGET_O_CREAT | TARGET_O_APPEND,   /* a+, a+b */
 	};
 	const uint32_t open_mode = open_mode_flags[request->params[1] >> 1U];
 
@@ -343,7 +340,20 @@ int32_t semihosting_open(target_s *const target, const semihosting_s *const requ
 	const char *const file_name = semihosting_read_string(target, file_name_taddr, file_name_length);
 	if (file_name == NULL)
 		return -1;
-	const int32_t result = open(file_name, open_mode, 0644);
+
+	/* Translation table of fopen() modes to libc-native open() mode flags */
+	static const int32_t native_open_mode_flags[] = {
+		O_RDONLY,                      /* r, rb */
+		O_RDWR,                        /* r+, r+b */
+		O_WRONLY | O_CREAT | O_TRUNC,  /* w, wb */
+		O_RDWR | O_CREAT | O_TRUNC,    /* w+, w+b */
+		O_WRONLY | O_CREAT | O_APPEND, /* a, ab */
+		O_RDWR | O_CREAT | O_APPEND,   /* a+, a+b */
+	};
+	const int32_t native_open_mode =
+		native_open_mode_flags[request->params[1] >> 1U] | ((request->params[1] & 1U) ? O_BINARY : 0U);
+
+	const int32_t result = open(file_name, native_open_mode | O_NOCTTY, 0644);
 	target->tc->gdb_errno = semihosting_errno();
 	free((void *)file_name);
 #else
