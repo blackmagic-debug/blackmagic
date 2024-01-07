@@ -117,7 +117,6 @@ const char *const semihosting_names[] = {
 };
 #endif
 
-#if PC_HOSTED == 0
 int semihosting_reply(target_controller_s *const tc, char *const pbuf, const int len)
 {
 	(void)len;
@@ -206,7 +205,6 @@ static int32_t semihosting_remote_write(
 	gdb_putpacket_f("Fwrite,%08X,%08" PRIX32 ",%08" PRIX32, (unsigned)fd, buf, count);
 	return semihosting_get_gdb_response(target->tc);
 }
-#endif
 
 #if PC_HOSTED == 1
 /*
