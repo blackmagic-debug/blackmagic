@@ -41,7 +41,29 @@ static uint32_t sector_addr[] = {
 	0,
 };
 
-static uint16_t sector_erase_time[] = {500, 500, 500, 500, 1100, 2600, 2600, 2600, 2600, 2600, 2600, 2600, 2600};
+/* Sector erase times in milliseconds, max, for x32 parallelism at 2.7-3.6v */
+typedef enum erase_times_f4 {
+	ERASE_TIME_16KB = 500,
+	ERASE_TIME_64KB = 1100,
+	ERASE_TIME_128KB = 2600,
+} erase_times_f4_e;
+
+static erase_times_f4_e sector_erase_time[] = {
+	ERASE_TIME_16KB,
+	ERASE_TIME_16KB,
+	ERASE_TIME_16KB,
+	ERASE_TIME_16KB,
+	ERASE_TIME_64KB,
+	ERASE_TIME_128KB,
+	ERASE_TIME_128KB,
+	ERASE_TIME_128KB,
+	ERASE_TIME_128KB,
+	ERASE_TIME_128KB,
+	ERASE_TIME_128KB,
+	ERASE_TIME_128KB,
+	ERASE_TIME_128KB,
+};
+
 static uint8_t sector_num = 0xff;
 
 static_assert(ARRAY_LENGTH(sector_erase_time) == ARRAY_LENGTH(sector_addr) - 1U,
