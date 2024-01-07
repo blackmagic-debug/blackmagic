@@ -29,6 +29,11 @@
 
 #define PLATFORM_HAS_TRACESWO
 
+#if ENABLE_DEBUG == 1
+#define PLATFORM_HAS_DEBUG
+extern bool debug_bmp;
+#endif
+
 /*
  * If the SHIELD macro is passed to make, other macros are defined.
  * Build the code using `make PROBE_HOST=blackpill-f4x1cx SHIELD=1` to define the SHIELD macro.
