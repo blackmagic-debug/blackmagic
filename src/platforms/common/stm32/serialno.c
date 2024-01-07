@@ -23,6 +23,8 @@
 
 char serial_no[DFU_SERIAL_LENGTH];
 
+static char *utoa_upper(uint32_t value, char *const str, uint8_t base) __attribute__((unused));
+
 void read_serial_number(void)
 {
 #if DFU_SERIAL_LENGTH == 9
@@ -63,4 +65,47 @@ void read_serial_number(void)
 #warning "Unhandled DFU_SERIAL_LENGTH"
 #endif
 	serial_no[DFU_SERIAL_LENGTH - 1] = '\0';
+}
+
+/*
+ * Converts an unsigned integer value into an equivalent base-N ASCII printable representation.
+ * It takes as arguments (in order): the value to convert,
+ * a pointer to a buffer large enough to store the result,
+ * and the base to perform the conversion to, in between 2 and 36 inclusive.
+ * The result of this function is NULL on error (unsupported base),
+ * or a pointer into the input buffer advanced by the amount written,
+ * not including the nul terminator guaranteed by this function.
+ */
+static char *utoa_upper(uint32_t value, char *const str, const uint8_t base)
+{
+	static const char digits[] = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+	static char buf[32] = {0};
+	size_t total = 0;
+
+	/* Check base is supported. */
+	if (base < 2 || base > 36) {
+		str[0] = '\0';
+		return NULL;
+	}
+
+	/* Push up to 32 symbols (base-2 aka binary, worst case) */
+	for (size_t offset = 0; offset < 32; ++offset) {
+		const div_t result = div(value, base);
+		const uint32_t remainder = result.rem;
+		buf[offset] = digits[remainder];
+		if (result.quot == 0) {
+			total = offset;
+			break;
+		}
+		value = result.quot;
+	}
+
+	/* Reverse local buffer into caller buffer */
+	for (size_t i = 0; i <= total; ++i)
+		str[i] = buf[total - i];
+
+	/* Terminate the result just in case */
+	str[++total] = '\0';
+
+	return str + total;
 }
