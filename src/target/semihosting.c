@@ -123,6 +123,10 @@ const char *const semihosting_names[] = {
 };
 #endif
 
+#if PC_HOSTED == 1
+static target_errno_e semihosting_errno(void);
+#endif
+
 int semihosting_reply(target_controller_s *const tc, char *const pbuf, const int len)
 {
 	(void)len;
@@ -188,10 +192,24 @@ static int32_t semihosting_get_gdb_response(target_controller_s *const tc)
 
 /* Interface to host system calls */
 static int32_t semihosting_remote_read(
-	target_controller_s *const tc, const int32_t fd, const target_addr_t buf, const uint32_t count)
+	target_s *const target, const int32_t fd, const target_addr_t buf_taddr, const uint32_t count)
 {
-	gdb_putpacket_f("Fread,%08X,%08" PRIX32 ",%08" PRIX32, (unsigned)fd, buf, count);
-	return semihosting_get_gdb_response(tc);
+#if PC_HOSTED == 1
+	if ((target->stdout_redirected && fd == STDIN_FILENO) || fd > STDERR_FILENO) {
+		uint8_t *const buf = malloc(count);
+		if (buf == NULL)
+			return -1;
+		const ssize_t result = read(fd, buf, count);
+		target->tc->gdb_errno = semihosting_errno();
+		target_mem_write(target, buf_taddr, buf, count);
+		free(buf);
+		if (target_check_error(target))
+			return -1;
+		return result;
+	}
+#endif
+	gdb_putpacket_f("Fread,%08X,%08" PRIX32 ",%08" PRIX32, (unsigned)fd, buf_taddr, count);
+	return semihosting_get_gdb_response(target->tc);
 }
 
 /* Interface to host system calls */
@@ -389,10 +407,6 @@ int32_t semihosting_close(target_s *const target, const semihosting_s *const req
 int32_t semihosting_read(target_s *const target, const semihosting_s *const request)
 {
 	const target_addr_t buf_taddr = request->params[1];
-#if PC_HOSTED == 1
-	if (buf_taddr == TARGET_NULL)
-		return -1;
-#endif
 	const uint32_t buf_len = request->params[2];
 #if PC_HOSTED == 1
 	if (buf_len == 0)
@@ -411,20 +425,7 @@ int32_t semihosting_read(target_s *const target, const semihosting_s *const requ
 	}
 
 	const int32_t fd = request->params[0] - 1;
-
-#if PC_HOSTED == 1
-	uint8_t *const buf = malloc(buf_len);
-	if (buf == NULL)
-		return -1;
-	const ssize_t result = read(fd, buf, buf_len);
-	target->tc->gdb_errno = semihosting_errno();
-	target_mem_write(target, buf_taddr, buf, buf_len);
-	free(buf);
-	if (target_check_error(target))
-		return -1;
-#else
-	const int32_t result = semihosting_remote_read(target->tc, fd, buf_taddr, buf_len);
-#endif
+	const int32_t result = semihosting_remote_read(target, fd, buf_taddr, buf_len);
 	if (result >= 0)
 		return buf_len - result;
 	return result;
@@ -737,7 +738,7 @@ int32_t semihosting_readc(target_s *const target)
 	target->tc->semihosting_buffer_ptr = &ch;
 	target->tc->semihosting_buffer_len = 1U;
 	/* Call GDB and ask for a character using read(STDIN_FILENO) */
-	const int32_t result = semihosting_remote_read(target->tc, STDIN_FILENO, target->ram->start, 1U);
+	const int32_t result = semihosting_remote_read(target, STDIN_FILENO, target->ram->start, 1U);
 	target->target_options &= ~TOPT_IN_SEMIHOSTING_SYSCALL;
 	/* Check if the GDB remote read() */
 	if (result != 1)
