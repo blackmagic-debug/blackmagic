@@ -42,6 +42,7 @@ void dfu_detach(void)
 
 int main(void)
 {
+	/* Enable GPIO peripherals */
 	rcc_periph_clock_enable(RCC_GPIOA);
 
 	/* Blackpill board has a floating button on PA0. Pull it up and use as active-low. */
@@ -62,9 +63,6 @@ int main(void)
 
 	/* Run heartbeat on blue LED */
 	sys_tick_init();
-
-	/* Enable peripherals */
-	rcc_periph_clock_enable(RCC_OTGFS);
 
 	/* Set up USB Pins and alternate function*/
 	gpio_mode_setup(GPIOA, GPIO_MODE_AF, GPIO_PUPD_NONE, GPIO11 | GPIO12);
