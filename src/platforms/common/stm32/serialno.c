@@ -2,7 +2,12 @@
  * This file is part of the Black Magic Debug project.
  *
  * Copyright (C) 2015  Black Sphere Technologies Ltd.
+ * Copyright (C) 2017-2021 Uwe Bonnes <bon@elektron.ikp.physik.tu-darmstadt.de>
+ * Copyright (C) 2022-2024 1BitSquared <info@1bitsquared.com>
  * Written by Gareth McMullin <gareth@blacksphere.co.nz>
+ * Modified by Uwe Bonnes <bon@elektron.ikp.physik.tu-darmstadt.de>
+ * Modified by Rachel Mant <git@dragonmux.network>
+ * Modified by ALTracer <tolstov_den@mail.ru>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
