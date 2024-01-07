@@ -147,15 +147,6 @@ typedef enum target_errno {
 	TARGET_EUNKNOWN = 9999,
 } target_errno_e;
 
-typedef enum target_open_flags {
-	TARGET_O_RDONLY = 0x0,
-	TARGET_O_WRONLY = 0x1,
-	TARGET_O_RDWR = 0x2,
-	TARGET_O_APPEND = 0x8,
-	TARGET_O_CREAT = 0x200,
-	TARGET_O_TRUNC = 0x400,
-} target_open_flags_e;
-
 typedef enum target_seek_flag {
 	TARGET_SEEK_SET = 0,
 	TARGET_SEEK_CUR = 1,

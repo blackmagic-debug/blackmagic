@@ -340,12 +340,12 @@ int32_t semihosting_open(target_s *const target, const semihosting_s *const requ
 	 * See DUI0471C, Table 8-3
 	 */
 	static const uint16_t open_mode_flags[] = {
-		TARGET_O_RDONLY,                                    /* r, rb */
-		TARGET_O_RDWR,                                      /* r+, r+b */
-		TARGET_O_WRONLY | TARGET_O_CREAT | TARGET_O_TRUNC,  /* w, wb */
-		TARGET_O_RDWR | TARGET_O_CREAT | TARGET_O_TRUNC,    /* w+, w+b */
-		TARGET_O_WRONLY | TARGET_O_CREAT | TARGET_O_APPEND, /* a, ab */
-		TARGET_O_RDWR | TARGET_O_CREAT | TARGET_O_APPEND,   /* a+, a+b */
+		OPEN_MODE_RDONLY,                                      /* r, rb */
+		OPEN_MODE_RDWR,                                        /* r+, r+b */
+		OPEN_MODE_WRONLY | OPEN_MODE_CREAT | OPEN_MODE_TRUNC,  /* w, wb */
+		OPEN_MODE_RDWR | OPEN_MODE_CREAT | OPEN_MODE_TRUNC,    /* w+, w+b */
+		OPEN_MODE_WRONLY | OPEN_MODE_CREAT | OPEN_MODE_APPEND, /* a, ab */
+		OPEN_MODE_RDWR | OPEN_MODE_CREAT | OPEN_MODE_APPEND,   /* a+, a+b */
 	};
 	const uint32_t open_mode = open_mode_flags[request->params[1] >> 1U];
 
@@ -356,9 +356,9 @@ int32_t semihosting_open(target_s *const target, const semihosting_s *const requ
 		/* Handle requests for console I/O */
 		if (!strncmp(file_name, ":tt", 4U)) {
 			int32_t result = -1;
-			if (open_mode == TARGET_O_RDONLY)
+			if (open_mode == OPEN_MODE_RDONLY)
 				result = STDIN_FILENO;
-			else if (open_mode & TARGET_O_TRUNC)
+			else if (open_mode & OPEN_MODE_TRUNC)
 				result = STDOUT_FILENO;
 			else
 				result = STDERR_FILENO;
@@ -371,7 +371,7 @@ int32_t semihosting_open(target_s *const target, const semihosting_s *const requ
 		/* Handle a request for the features "file" */
 		if (!strncmp(file_name, ":semihosting-features", 22U)) {
 			/* Only let the firmware "open" the file if they ask for it in read-only mode */
-			if (open_mode == TARGET_O_RDONLY) {
+			if (open_mode == OPEN_MODE_RDONLY) {
 				semihosting_features_offset = 0U;
 				return INT32_MAX;
 			}

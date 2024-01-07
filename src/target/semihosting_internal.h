@@ -64,6 +64,15 @@ typedef struct semihosting_time {
 	uint32_t seconds;
 } semihosting_time_s;
 
+typedef enum semihosting_open_flags {
+	OPEN_MODE_RDONLY = 0x0,
+	OPEN_MODE_WRONLY = 0x1,
+	OPEN_MODE_RDWR = 0x2,
+	OPEN_MODE_APPEND = 0x8,
+	OPEN_MODE_CREAT = 0x200,
+	OPEN_MODE_TRUNC = 0x400,
+} semihosting_open_flags_e;
+
 typedef enum semihosting_exit_reason {
 	/* Hardware exceptions */
 	EXIT_REASON_BRANCH_THROUGH_ZERO = 0x20000U,
