@@ -29,6 +29,7 @@
 
 #include <libopencm3/stm32/rcc.h>
 #include <libopencm3/cm3/scb.h>
+#include <libopencm3/cm3/scs.h>
 #include <libopencm3/cm3/nvic.h>
 #include <libopencm3/stm32/exti.h>
 #include <libopencm3/stm32/usart.h>
@@ -103,6 +104,10 @@ void platform_init(void)
 #endif
 
 	platform_timing_init();
+#if ENABLE_DEBUG == 1
+	/* Allow vectoring to DebugMon exception handler upon semihosting breakpoints */
+	SCS_DEMCR |= SCS_DEMCR_VC_MON_EN;
+#endif
 	blackmagic_usb_init();
 	aux_serial_init();
 
