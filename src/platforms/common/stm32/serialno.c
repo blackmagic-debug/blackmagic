@@ -50,7 +50,9 @@ void read_serial_number(void)
 #elif defined(STM32L0) || defined(STM32F0) || defined(STM32F3)
 	int offset = 5;
 #endif
-	sprintf(serial_no, "%04X%04X%04X", uid[1] + uid[5], uid[0] + uid[4], uid[offset]);
+	utoa_upper(uid[1] + uid[5], serial_no, 16);
+	utoa_upper(uid[0] + uid[4], serial_no + 4, 16);
+	utoa_upper(uid[offset], serial_no + 8, 16);
 #elif DFU_SERIAL_LENGTH == 25
 	const volatile uint32_t *const unique_id_p = (uint32_t *)DESIG_UNIQUE_ID_BASE;
 	uint32_t unique_id = 0;
