@@ -214,19 +214,44 @@ static int32_t semihosting_remote_read(
 
 /* Interface to host system calls */
 static int32_t semihosting_remote_write(
-	target_s *const target, const int32_t fd, const target_addr_t buf, const uint32_t count)
+	target_s *const target, const int32_t fd, const target_addr_t buf_taddr, const uint32_t count)
 {
+#if PC_HOSTED == 1
+	if (fd > STDERR_FILENO) {
+		uint8_t *const buf = malloc(count);
+		if (buf == NULL)
+			return -1;
+		target_mem_read(target, buf, buf_taddr, count);
+		if (target_check_error(target)) {
+			free(buf);
+			return -1;
+		}
+		const int32_t result = write(fd, buf, count);
+		target->tc->gdb_errno = semihosting_errno();
+		free(buf);
+		return result;
+	}
+#endif
+
 	if (target->stdout_redirected && (fd == STDOUT_FILENO || fd == STDERR_FILENO)) {
 		uint8_t buffer[STDOUT_READ_BUF_SIZE];
 		for (size_t offset = 0; offset < count; offset += STDOUT_READ_BUF_SIZE) {
 			const size_t amount = MIN(count - offset, STDOUT_READ_BUF_SIZE);
-			target_mem_read(target, buffer, buf, amount);
+			target_mem_read(target, buffer, buf_taddr, amount);
+#if PC_HOSTED == 0
 			debug_serial_send_stdout(buffer, amount);
+#else
+			const ssize_t result = write(fd, buffer, amount);
+			if (result == -1) {
+				target->tc->gdb_errno = semihosting_errno();
+				return offset;
+			}
+#endif
 		}
 		return (int32_t)count;
 	}
 
-	gdb_putpacket_f("Fwrite,%08X,%08" PRIX32 ",%08" PRIX32, (unsigned)fd, buf, count);
+	gdb_putpacket_f("Fwrite,%08X,%08" PRIX32 ",%08" PRIX32, (unsigned)fd, buf_taddr, count);
 	return semihosting_get_gdb_response(target->tc);
 }
 
@@ -439,31 +464,13 @@ int32_t semihosting_write(target_s *const target, const semihosting_s *const req
 
 	const int32_t fd = request->params[0] - 1;
 	const target_addr_t buf_taddr = request->params[1];
-#if PC_HOSTED == 1
-	if (buf_taddr == TARGET_NULL)
-		return -1;
-#endif
 	const uint32_t buf_len = request->params[2];
 #if PC_HOSTED == 1
 	if (buf_len == 0)
 		return 0;
 #endif
 
-#if PC_HOSTED == 1
-	uint8_t *const buf = malloc(buf_len);
-	if (buf == NULL)
-		return -1;
-	target_mem_read(target, buf, buf_taddr, buf_len);
-	if (target_check_error(target)) {
-		free(buf);
-		return -1;
-	}
-	const int32_t result = write(fd, buf, buf_len);
-	target->tc->gdb_errno = semihosting_errno();
-	free(buf);
-#else
 	const int32_t result = semihosting_remote_write(target, fd, buf_taddr, buf_len);
-#endif
 	if (result >= 0)
 		return buf_len - result;
 	return result;
