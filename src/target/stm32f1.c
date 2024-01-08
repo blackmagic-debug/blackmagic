@@ -109,6 +109,8 @@ static bool stm32f1_mass_erase(target_s *target);
 #define DBGMCU_IDCODE_MM32L0 0x40013400U
 #define DBGMCU_IDCODE_MM32F3 0x40007080U
 
+#define STM32F1_TOPT_32BIT_WRITES (1U << 8U)
+
 static void stm32f1_add_flash(target_s *target, uint32_t addr, size_t length, size_t erasesize)
 {
 	target_flash_s *flash = calloc(1, sizeof(*flash));
@@ -192,6 +194,7 @@ bool gd32f1_probe(target_s *target)
 		stm32f1_add_flash(target, 0x8000000, (size_t)flash_size * 1024U, block_size);
 
 	target->part_id = device_id;
+	target->target_options |= STM32F1_TOPT_32BIT_WRITES;
 	target->mass_erase = stm32f1_mass_erase;
 	target_add_ram(target, 0x20000000, ram_size * 1024U);
 	target_add_commands(target, stm32f1_cmd_list, target->driver);
@@ -283,6 +286,7 @@ static bool at32f40_detect(target_s *target, const uint16_t part_id)
 	target_add_ram(target, 0x20000000, 96U * 1024U);
 	target->driver = "AT32F403A/407";
 	target->part_id = part_id;
+	target->target_options |= STM32F1_TOPT_32BIT_WRITES;
 	target->mass_erase = stm32f1_mass_erase;
 	return true;
 }
@@ -320,6 +324,7 @@ static bool at32f41_detect(target_s *target, const uint16_t part_id)
 	target_add_ram(target, 0x20000000, 32U * 1024U);
 	target->driver = "AT32F415";
 	target->part_id = part_id;
+	target->target_options |= STM32F1_TOPT_32BIT_WRITES;
 	target->mass_erase = stm32f1_mass_erase;
 	return true;
 }
@@ -685,6 +690,9 @@ static bool stm32f1_flash_write(target_flash_s *flash, target_addr_t dest, const
 	const size_t offset = stm32f1_bank1_length(dest, len);
 	DEBUG_TARGET("%s: at %08" PRIx32 " for %zu bytes\n", __func__, dest, len);
 
+	/* Allow wider writes on Gigadevices and Arterytek */
+	const align_e psize = (target->target_options & STM32F1_TOPT_32BIT_WRITES) ? ALIGN_32BIT : ALIGN_16BIT;
+
 	/* Start by writing any bank 1 data */
 	if (offset) {
 		stm32f1_flash_clear_eop(target, FLASH_BANK1_OFFSET);
@@ -694,7 +702,7 @@ static bool stm32f1_flash_write(target_flash_s *flash, target_addr_t dest, const
 		if (target->designer_code == JEP106_MANUFACTURER_RV_GIGADEVICE && target->cpuid == 0x80000022U)
 			target_mem_write(target, dest, src, offset);
 		else
-			cortexm_mem_write_sized(target, dest, src, offset, ALIGN_16BIT);
+			cortexm_mem_write_sized(target, dest, src, offset, psize);
 
 		/* Wait for completion or an error */
 		if (!stm32f1_flash_busy_wait(target, FLASH_BANK1_OFFSET, NULL))
@@ -712,7 +720,7 @@ static bool stm32f1_flash_write(target_flash_s *flash, target_addr_t dest, const
 		if (target->designer_code == JEP106_MANUFACTURER_RV_GIGADEVICE && target->cpuid == 0x80000022U)
 			target_mem_write(target, dest + offset, data + offset, remainder);
 		else
-			cortexm_mem_write_sized(target, dest + offset, data + offset, remainder, ALIGN_16BIT);
+			cortexm_mem_write_sized(target, dest + offset, data + offset, remainder, psize);
 
 		/* Wait for completion or an error */
 		if (!stm32f1_flash_busy_wait(target, FLASH_BANK2_OFFSET, NULL))
