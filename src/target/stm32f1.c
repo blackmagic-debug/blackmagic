@@ -573,7 +573,7 @@ static bool stm32f1_flash_unlock(target_s *target, uint32_t bank_offset)
 {
 	target_mem_write32(target, FLASH_KEYR + bank_offset, KEY1);
 	target_mem_write32(target, FLASH_KEYR + bank_offset, KEY2);
-	uint32_t ctrl = target_mem_read32(target, FLASH_CR);
+	uint32_t ctrl = target_mem_read32(target, FLASH_CR + bank_offset);
 	if (ctrl & FLASH_CR_LOCK)
 		DEBUG_ERROR("unlock failed, cr: 0x%08" PRIx32 "\n", ctrl);
 	return !(ctrl & FLASH_CR_LOCK);
