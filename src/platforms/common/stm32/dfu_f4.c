@@ -17,6 +17,32 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+/*
+ * References, ST datasheets:
+ *
+ * DS8626 - STM32F405xx/407xx Rev 9 pg108, Table 40. Flash memory programming
+ *   https://www.st.com/resource/en/datasheet/stm32f407vg.pdf
+ *   (f4discovery:stm32f407vg, 128/1024 KiB;
+ *    hydrabus:stm32f405rg, 128/1024 KiB)
+ *
+ * DS9716 - STM32F401xB/xC Rev 11 pg85, Table 45. Flash memory programming
+ *   https://www.st.com/resource/en/datasheet/stm32f401cb.pdf
+ *   (blackpill-f4:stm32f401cc, 64/256 KiB)
+ *
+ * DS10086 - STM32F401xD/xE Rev 3 pg86, Table 45. Flash memory programming
+ *   https://www.st.com/resource/en/datasheet/stm32f401re.pdf
+ *   (blackpill-f4:stm32f401ce, 96/512 KiB;
+ *    96b_carbon:stm32f401re, 96/512 KiB)
+ *
+ * DS10314 - STM32F411xC/xE Rev 7 pg92, Table 45. Flash memory programming
+ *   https://www.st.com/resource/en/datasheet/stm32f411ce.pdf
+ *   (blackpill-f4:stm32f411ce, 128/512 KiB)
+ *
+ * DS11853 - STM32F722xx/723xx Rev 9 pg138, Table 53. Flash memory programming
+ *   https://www.st.com/resource/en/datasheet/stm32f723ie.pdf
+ *   (stlinkv3:stm32f723ie, 256/512 KiB; and F7 has slightly smaller timings than F4 family)
+ */
+
 #include "general.h"
 #include "usbdfu.h"
 
@@ -41,11 +67,11 @@ static uint32_t sector_addr[] = {
 	0,
 };
 
-/* Sector erase times in milliseconds, max, for x32 parallelism at 2.7-3.6v */
+/* Sector erase times in milliseconds, typ, for x32 parallelism at 2.7-3.6v */
 typedef enum erase_times_f4 {
-	ERASE_TIME_16KB = 500,
-	ERASE_TIME_64KB = 1100,
-	ERASE_TIME_128KB = 2600,
+	ERASE_TIME_16KB = 250,   /*  500 * 0.5 */
+	ERASE_TIME_64KB = 550,   /* 1100 * 0.5 */
+	ERASE_TIME_128KB = 1000, /* 2000 * 0.5 */
 } erase_times_f4_e;
 
 static erase_times_f4_e sector_erase_time[] = {
@@ -104,16 +130,18 @@ void dfu_flash_program_buffer(const uint32_t baseaddr, const void *const buf, co
 
 uint32_t dfu_poll_timeout(uint8_t cmd, uint32_t addr, uint16_t blocknum)
 {
-	/* Erase for big pages on STM2/4 needs "long" time
-	   Try not to hit USB timeouts*/
+	/*
+	 * Sector erase for big pages of STM32 F2/F4/F7 needs "long" time,
+	 * up to 1-2 seconds. Try not to hit USB timeouts.
+	 */
 	if (blocknum == 0 && cmd == CMD_ERASE) {
 		get_sector_num(addr);
 		if (addr == sector_addr[sector_num])
 			return sector_erase_time[sector_num];
 	}
 
-	/* Programming 256 word with 100 us(max) per word*/
-	return 26U;
+	/* Programming 256 words (32-bit) with 16 us(typ), 100 us(max) per word */
+	return 16U * 1024U / 4U / 1000U;
 }
 
 void dfu_protect(bool enable)
