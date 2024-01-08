@@ -75,6 +75,9 @@ void dfu_flash_program_buffer(const uint32_t baseaddr, const void *const buf, co
 	const uint32_t *const buffer = (const uint32_t *)buf;
 	for (size_t i = 0; i < len; i += 4U)
 		flash_program_word(baseaddr + i, buffer[i >> 2U]);
+
+	/* Call the platform specific dfu event callback. */
+	dfu_event();
 }
 
 uint32_t dfu_poll_timeout(uint8_t cmd, uint32_t addr, uint16_t blocknum)
