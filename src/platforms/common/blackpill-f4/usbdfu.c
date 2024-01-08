@@ -31,6 +31,7 @@
 
 uintptr_t app_address = 0x08004000U;
 volatile uint32_t magic[2] __attribute__((section(".noinit")));
+static uint32_t dfu_activity_counter;
 
 static void sys_tick_init(void);
 
@@ -81,6 +82,12 @@ int main(void)
 
 void dfu_event(void)
 {
+	static bool idle_state = false;
+	/* Ask systick to pause blinking for 1 second */
+	dfu_activity_counter = 10U;
+	/* Toggle-blink it ourself */
+	SET_IDLE_STATE(idle_state);
+	idle_state = !idle_state;
 }
 
 static void sys_tick_init(void)
@@ -98,15 +105,19 @@ static void sys_tick_init(void)
 void sys_tick_handler(void)
 {
 	static uint32_t count = 0U;
+	if (dfu_activity_counter > 0U) {
+		dfu_activity_counter--;
+		return;
+	}
 	switch (count) {
 	case 0U:
-		/* Reload downcounter */
+		/* Reload downcounter and disable LED */
 		count = 10U;
 		SET_IDLE_STATE(false);
 		break;
 	case 1U:
 		count--;
-		/* Blink like a very slow PWM */
+		/* Enable LED for 1/10th of cycle */
 		SET_IDLE_STATE(true);
 		break;
 	default:
