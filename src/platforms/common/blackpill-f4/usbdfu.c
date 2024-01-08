@@ -97,5 +97,20 @@ static void sys_tick_init(void)
 
 void sys_tick_handler(void)
 {
-	gpio_toggle(LED_PORT, LED_BOOTLOADER | LED_IDLE_RUN);
+	static uint32_t count = 0U;
+	switch (count) {
+	case 0U:
+		/* Reload downcounter */
+		count = 10U;
+		SET_IDLE_STATE(false);
+		break;
+	case 1U:
+		count--;
+		/* Blink like a very slow PWM */
+		SET_IDLE_STATE(true);
+		break;
+	default:
+		count--;
+		break;
+	}
 }
