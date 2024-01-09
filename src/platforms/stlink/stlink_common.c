@@ -25,6 +25,8 @@
 
 #include "platform.h"
 
+/* If we force CLONE or V2_ISOL variant, we don't need to read GPIO levels */
+#if !(defined(STLINK_FORCE_CLONE) || defined(STLINK_V2_ISOL))
 static bool stlink_stable_read(const uint32_t gpio_port, const uint16_t gpio)
 {
 	bool result = false;
@@ -32,6 +34,7 @@ static bool stlink_stable_read(const uint32_t gpio_port, const uint16_t gpio)
 		result = gpio_get(gpio_port, gpio);
 	return result;
 }
+#endif
 
 /* Return 0 for ST-Link v1, 1 for ST-Link v2 and 2 for ST-Link v2.1 */
 uint32_t detect_rev(void)
@@ -45,6 +48,17 @@ uint32_t detect_rev(void)
 	rcc_periph_reset_pulse(RST_USB);
 	rcc_periph_clock_enable(RCC_AFIO);
 	rcc_periph_clock_enable(RCC_CRC);
+
+#if defined(STLINK_FORCE_CLONE)
+	/* PA12 is USB D+ pin */
+	gpio_clear(GPIOA, GPIO12);
+	gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ, GPIO_CNF_OUTPUT_OPENDRAIN, GPIO12);
+	/* Override detection to use clone pinmap (i.e. PB6 as nRST). */
+	return 0x101;
+#elif defined(STLINK_V2_ISOL)
+	/* Override detection to stlink v2 isol*/
+	return 0x103;
+#else
 	/*
 	 * First, get the board revision by pulling PC13/14 up then reading them.
 	 * This gives us the following table of values for these pins:
@@ -89,16 +103,13 @@ uint32_t detect_rev(void)
 		gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, GPIO8);
 	}
 
-	/* Override detection to use clone pinmap (i.e. PB6 as nRST). */
-#if defined(STLINK_FORCE_CLONE)
-	revision = 0x101;
-#endif
 	/* Clean up after ourself on boards that aren't identified as ST-Link v2.1's */
 	if ((revision & 0xff) < 2U) {
 		gpio_clear(GPIOA, GPIO12);
 		gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ, GPIO_CNF_OUTPUT_OPENDRAIN, GPIO12);
 	}
 	return revision;
+#endif
 }
 
 void platform_request_boot(void)

@@ -53,6 +53,11 @@ extern bool debug_bmp;
 #define SWDIO_PIN  TMS_PIN
 #define SWCLK_PIN  TCK_PIN
 
+#ifdef STLINK_V2_ISOL
+#define SWDIO_IN_PORT GPIOB
+#define SWDIO_IN_PIN  GPIO12
+#endif
+
 #define NRST_PORT      GPIOB
 #define NRST_PIN_V1    GPIO1
 #define NRST_PIN_V2    GPIO0
@@ -77,7 +82,22 @@ extern bool debug_bmp;
 #define SWD_CR      GPIO_CRH(SWDIO_PORT)
 #define SWD_CR_MULT (1U << ((14U - 8U) << 2U))
 
+#define SWDIODIR_ODR GPIO_ODR(GPIOA)
+
 #define TMS_SET_MODE() gpio_set_mode(TMS_PORT, GPIO_MODE_OUTPUT_2_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, TMS_PIN);
+
+#ifdef STLINK_V2_ISOL
+/* The ISOL variant floats SWDIO with GPIO A1 */
+#define SWDIO_MODE_FLOAT()       \
+	do {                         \
+		SWDIODIR_ODR |= (GPIO1); \
+	} while (0)
+#define SWDIO_MODE_DRIVE()        \
+	do {                          \
+		SWDIODIR_ODR &= ~(GPIO1); \
+	} while (0)
+#else
+/* All other variants just set SWDIO_PIN to floating */
 #define SWDIO_MODE_FLOAT()           \
 	do {                             \
 		uint32_t cr = SWD_CR;        \
@@ -92,6 +112,7 @@ extern bool debug_bmp;
 		cr |= (0x1U * SWD_CR_MULT);  \
 		SWD_CR = cr;                 \
 	} while (0)
+#endif
 #define UART_PIN_SETUP()                                                                                        \
 	do {                                                                                                        \
 		gpio_set_mode(USBUSART_PORT, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, USBUSART_TX_PIN); \
