@@ -16,12 +16,14 @@ section.
 
 In one window open a terminal emulator (minicom, putty) and connect to the USB
 UART:
-```
-$ minicom -c on -D /dev/ttyBmpTarg
+
+```sh
+minicom -c on -D /dev/ttyBmpTarg
 ```
 
 In another window open a debugger:
-```
+
+```console
 $ gdb
 (gdb) target extended-remote /dev/ttyBmpGdb
 (gdb) monitor swd_scan
@@ -41,65 +43,65 @@ It is possible to use RTT and the built-in serial port at the same time. If both
 
 Characters typed in at the terminal go to RTT if RTT is enabled, or to the serial port if RTT is not enabled.
 
-- ``monitor rtt``: If RTT is enabled, characters typed in at the terminal are sent to target RTT.
-- ``monitor rtt disable``: if RTT is disabled (default), characters typed in at the terminal are sent to the built-in serial port.
+- `monitor rtt`: If RTT is enabled, characters typed in at the terminal are sent to target RTT.
+- `monitor rtt disable`: if RTT is disabled (default), characters typed in at the terminal are sent to the built-in serial port.
 
 ## GDB Commands
 
 The following new gdb commands are available:
 
-- ``monitor rtt``
+- `monitor rtt`
 
-	switch rtt on
+    switch rtt on
 
-- ``monitor rtt enable``
+- `monitor rtt enable`
 
-	switch rtt on
+    switch rtt on
 
-- ``monitor rtt disable``
+- `monitor rtt disable`
 
-	switch rtt off
+    switch rtt off
 
-- ``monitor rtt poll `` max_poll_ms min_poll_ms max_errs
+- `monitor rtt poll max_poll_ms min_poll_ms max_errs`
 
-	sets maximum time between polls, minimum time between polls, and the maximum number of
+    sets maximum time between polls, minimum time between polls, and the maximum number of
         errors before RTT disconnects from the target. Times in milliseconds. It is best if
         max_poll_ms/min_poll_ms is a power of two. As an example, if you wish to check for RTT
-        output between once per second to eight times per second: ``monitor rtt poll 1000 125 10``.
+        output between once per second to eight times per second: `monitor rtt poll 1000 125 10`.
 
-- ``monitor rtt status``
+- `monitor rtt status`
 
-	show status.
+    show status.
 
-rtt|found|state
----|---|---
-rtt: off|found: no|rtt inactive
-rtt: on|found: no|searching for rtt control block
-rtt: on|found: yes|rtt active
-rtt: off|found: yes|corrupt rtt control block, or target memory access error
+RTT | Found | State
+----|-------|-------
+off | no    | RTT inactive
+on  | no    | Searching for RTT control block
+on  | yes   | RTT active
+off | yes   | Corrupt rtt control block, or target memory access error
 
 A status of `rtt: on found: no` indicates bmp is still searching for the rtt control block in
 target ram, but has not found anything yet. A status of  `rtt: on found: yes` indicates the
 control block has been found and rtt is active.
 
-- ``monitor rtt channel``
+- `monitor rtt channel`
 
-	enables the first two output channels, and the first input channel. (default)
+    enables the first two output channels, and the first input channel. (default)
 
-- ``monitor rtt channel number...``
+- `monitor rtt channel number...`
 
-	enables the given RTT channel numbers. Channels are numbers from 0 to 15, inclusive.
-        Eg. ``monitor rtt channel 0 1 4`` to enable channels 0, 1, and 4.
+    enables the given RTT channel numbers. Channels are numbers from 0 to 15, inclusive.
+        Eg. `monitor rtt channel 0 1 4` to enable channels 0, 1, and 4.
 
-- ``monitor rtt ram``
+- `monitor rtt ram`
 
-	rtt scans all of target memory for the rtt control block. (default)
+    rtt scans all of target memory for the rtt control block. (default)
 
-- ``monitor rtt ram startaddress endaddress``
+- `monitor rtt ram startaddress endaddress`
 
-	limit rtt scan of target memory to address range given. Values in hex. Use if scanning memory hangs the debugger. E.g. to limit rtt scans to the first 8kbyte of ram, beginning at 0x20000000:
+    limit rtt scan of target memory to address range given. Values in hex. Use if scanning memory hangs the debugger. E.g. to limit rtt scans to the first 8kbyte of ram, beginning at 0x20000000:
 
-```
+```console
 (gdb) mon rtt ram 0x20000000 0x20002000
 (gdb) mon rtt status
 rtt: off found: no ident: off halt: off channels: auto ram: 0x20000000 0x20002000
@@ -108,27 +110,27 @@ max poll ms: 256 min poll ms: 8 max errs: 10
 
 If automatic detection fails, please take the linker map of your firmware, and search for a symbol that contains the word RTT somewhere at the beginning of ram. Look for a block with size a multiple of 24 decimal, word-aligned. For instance:
 
-```
+```sh
 grep 2000 HelloWorld.ino.map | grep RTT
 ```
 
  For bmp to find the rtt control block, the rtt control block has to exist, be within the address range of `(gdb)info mem`, or if `mon rtt ram` has been specified, within the address range of `mon rtt ram`.
 
-- ``monitor rtt ident string``
+- `monitor rtt ident string`
 
-	sets RTT ident to *string*. If *string* contains a space, replace the space with an
+    sets RTT ident to *string*. If *string* contains a space, replace the space with an
         underscore _. Setting ident string is optional, RTT works fine without.
 
-- ``monitor rtt ident``
+- `monitor rtt ident`
 
-	clears ident string. (default)
+    clears ident string. (default)
 
-- ``monitor rtt cblock``
+- `monitor rtt cblock`
 
-	shows rtt control block data, and which channels are enabled. This is an example
+    shows rtt control block data, and which channels are enabled. This is an example
         control block:
 
-```
+```console
 (gdb) mon rtt cb
 cbaddr: 0x2000071c
 ch ena i/o buffer@      size   head   tail flag
@@ -151,7 +153,8 @@ change which channels are shown with the `monitor rtt channel` command.
 
 It is possible to set an RTT identifier string.
 As an example, if the RTT identifier is "IDENT STR":
-```
+
+```console
 $ gdb
 (gdb) target extended-remote /dev/ttyBmpGdb
 (gdb) monitor swd_scan
@@ -164,6 +167,7 @@ $ gdb
 rtt: on found: yes ident: "IDENT STR" halt: off channels: auto 0 1 3
 max poll ms: 256 min poll ms: 8 max errs: 10
 ```
+
 Note replacing space with underscore _ in *monitor rtt ident*.
 
 Setting an identifier string is optional. RTT gives the same output at the same speed, with or
@@ -175,13 +179,14 @@ without specifying identifier string.
 
 ### Windows
 
-After configuration, Black Magic Probe shows up in Windows as two _USB Serial (CDC)_ ports.
+After configuration, Black Magic Probe shows up in Windows as two USB Serial (COM) ports.
 
 Connect arm-none-eabi-gdb, the gnu debugger for arm processors, to the lower numbered of the
 two COM ports. Connect an ansi terminal emulator to the higher numbered of the two COM ports.
 
 Sample gdb session:
-```
+
+```console
 (gdb) target extended-remote COM3
 (gdb) monitor swd_scan
 (gdb) attach 1
@@ -190,7 +195,8 @@ Sample gdb session:
 ```
 
 For COM port COM10 and higher, add the prefix `\\.\`, e.g.
-```
+
+```console
 target extended-remote \\.\COM10
 ```
 
@@ -201,20 +207,25 @@ to the RTT input of the target.
 
 On Linux, install udev rules as described in the [driver
 documentation](https://github.com/blackmagic-debug/blackmagic/blob/main/driver/README.md).
-Disconnect and re-connect the BMP. Check the device shows up in /dev/ :
-```
+Disconnect and re-connect the BMP. Check the device shows up in `/dev/`:
+
+```sh
 $ ls -l /dev/ttyBmp*
 lrwxrwxrwx 1 root root 7 Dec 13 07:29 /dev/ttyBmpGdb -> ttyACM0
 lrwxrwxrwx 1 root root 7 Dec 13 07:29 /dev/ttyBmpTarg -> ttyACM2
 ```
-Connect terminal emulator to /dev/ttyBmpTarg and gdb to /dev/ttyBmpGdb .
+
+Connect terminal emulator to `/dev/ttyBmpTarg` and gdb to `/dev/ttyBmpGdb`.
 
 In one window:
-```
+
+```sh
 minicom -c on -D /dev/ttyBmpTarg
 ```
-In another window :
-```
+
+In another window:
+
+```console
 gdb
 (gdb) target extended-remote /dev/ttyBmpGdb
 (gdb) monitor swd_scan
@@ -230,13 +241,15 @@ computer 4 devices are created, 2 'tty' and 2 'cu' devices. Gdb connects to the 
 (e.g.: `target extended-remote /dev/cu.usbmodemDDCEC9EC1`), while RTT is connected to the
 second tty device (`minicom -c on -D /dev/tty.usbmodemDDCEC9EC3`). In full:
 
-In one Terminal window, connect a terminal emulator to /dev/tty.usbmodemDDCEC9EC3 :
+In one Terminal window, connect a terminal emulator to `/dev/tty.usbmodemDDCEC9EC3`:
 
-```
+```sh
 minicom -c on -D /dev/tty.usbmodemDDCEC9EC3
 ```
-In another Terminal window, connect gdb to /dev/cu.usbmodemDDCEC9EC1 :
-```
+
+In another Terminal window, connect gdb to `/dev/cu.usbmodemDDCEC9EC1`:
+
+```console
 gdb
 (gdb) target extended-remote /dev/cu.usbmodemDDCEC9EC1
 (gdb) monitor swd_scan
@@ -244,7 +257,8 @@ gdb
 (gdb) monitor rtt
 (gdb) run
 ```
-RTT input/output is in the window running _minicom_.
+
+RTT input/output is in the window running `minicom`.
 
 ## Notes
 
@@ -273,11 +287,11 @@ during polling. If the target is halted during polling, `monitor rtt status` sho
 
 - Measured RTT speed.
 
-| debugger                  | char/s |
-| ------------------------- | ------ |
-| bmp stm32f723 stlinkv3    | 49811  |
-| bmp stm32f411 black pill  | 50073  |
-| bmp stm32f103 blue pill   | 50142  |
+| debugger                    | char/s |
+| --------------------------- | ------ |
+| BMP on STM32F723 ST-Link v3 | 49811  |
+| BMP on STM32F411 Black Pill | 50073  |
+| BMP on STM32F103 Blue Pill  | 50142  |
 
 This is the speed at which characters can be sent from target to debugger probe, in reasonable
 circumstances. Test target is an stm32f103 blue pill running an [Arduino
@@ -287,28 +301,27 @@ debugger. Overhead for printf() calls included.
 
 ## Build instructions
 
-To compile with RTT support, add *ENABLE_RTT=1*.
+To compile with RTT support, set the `rtt_support` option to `true`, this may be the default for some
+build configurations.
 
-Eg. for Black Magic Probe (native) hardware:
-```
-make clean
-make ENABLE_RTT=1
+For instance, for Black Magic Probe (native) hardware:
+
+```sh
+meson setup build --cross-file=cross-file/native.ini -Drtt_support=true
 ```
 
-Setting an ident string is optional. But if you wish, you can set the default RTT ident at
-compile time.
+Setting an ident string is optional. But if you wish, you can set the default RTT ident at compile time with
+the `rtt_ident` option.
 
-Eg. for Black Magic Probe (native) hardware:
-```
-make clean
-make ENABLE_RTT=1 "RTT_IDENT=IDENT\ STR"
-```
-Note the backslash \\ before the space.
+For instance, for Black Magic Probe (native) hardware:
 
-When compiling for other targets like bluepill, blackpill or stlink, the `PROBE_HOST` variable
-has to be also set appropriately, selecting the correct host target.
+```sh
+meson setup build --cross-file=cross-file/native.ini -Drtt_support=true -Drtt_ident="IDENT STR"
+```
 
 ## Links
- - [OpenOCD](https://openocd.org/doc/html/General-Commands.html#Real-Time-Transfer-_0028RTT_0029)
- - [probe-rs](https://probe.rs/) and [rtt-target](https://github.com/mvirkkunen/rtt-target) for the _rust_ programming language.
- - [RTT Stream](https://github.com/koendv/Arduino-RTTStream) for Arduino on arm processors
+
+- [OpenOCD](https://openocd.org/doc/html/General-Commands.html#Real-Time-Transfer-_0028RTT_0029)
+- [probe-rs](https://probe.rs/) and [rtt-target](https://github.com/mvirkkunen/rtt-target)
+  for the Rust programming language.
+- [RTT Stream](https://github.com/koendv/Arduino-RTTStream) for Arduino on arm processors
