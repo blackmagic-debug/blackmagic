@@ -157,10 +157,8 @@ struct target_controller {
 	void (*destroy_callback)(target_controller_s *, target_s *target);
 	void (*printf)(target_controller_s *, const char *fmt, va_list);
 
-#if PC_HOSTED == 0
 	void *semihosting_buffer_ptr;
 	size_t semihosting_buffer_len;
-#endif
 	target_errno_e gdb_errno;
 	bool interrupted;
 };

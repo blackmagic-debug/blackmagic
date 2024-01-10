@@ -601,13 +601,15 @@ int32_t semihosting_file_length(target_s *const target, const semihosting_s *con
 
 	const int32_t fd = request->params[0] - 1;
 #if PC_HOSTED == 1
-	struct stat file_stat;
-	const bool result = fstat(fd, &file_stat) == 0;
-	target->tc->gdb_errno = semihosting_errno();
-	if (!result || file_stat.st_size > INT32_MAX)
-		return -1;
-	return file_stat.st_size;
-#else
+	if (!target->stdout_redirected || fd > STDERR_FILENO) {
+		struct stat file_stat;
+		const bool result = fstat(fd, &file_stat) == 0;
+		target->tc->gdb_errno = semihosting_errno();
+		if (!result || file_stat.st_size > INT32_MAX)
+			return -1;
+		return file_stat.st_size;
+	}
+#endif
 	/*
 	 * Provide space for receiving a fio_stat structure from GDB
 	 * defined as per GDB's gdbsupport/fileio.h
@@ -630,7 +632,6 @@ int32_t semihosting_file_length(target_s *const target, const semihosting_s *con
 	if (stat_result || file_stat[7] != 0 || (result & 0x80000000U) != 0)
 		return -1;
 	return result;
-#endif
 }
 
 #if PC_HOSTED == 0
