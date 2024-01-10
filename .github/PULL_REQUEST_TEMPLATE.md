@@ -15,8 +15,8 @@ Information embedded in the description part of the commits doesn't count.
 
 * [ ] I've read the [Code of Conduct](https://github.com/blackmagic-debug/blackmagic/blob/main/CODE_OF_CONDUCT.md)
 * [ ] I've read the [guidelines for contributing](https://github.com/blackmagic-debug/blackmagic/blob/main/CONTRIBUTING.md) to this repository
-* [ ] It builds for hardware native (`make PROBE_HOST=native`)
-* [ ] It builds as BMDA (`make PROBE_HOST=hosted`)
+* [ ] It builds for hardware native (see [Building the firmware](https://github.com/blackmagic-debug/blackmagic?tab=readme-ov-file#building-black-magic-debug-firmware))
+* [ ] It builds as BMDA (see [Building the BMDA](https://github.com/blackmagic-debug/blackmagic?tab=readme-ov-file#building-black-magic-debug-app))
 * [ ] I've tested it to the best of my ability
 * [ ] My commit messages provide a useful short description of what the commits do
 
