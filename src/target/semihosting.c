@@ -504,13 +504,14 @@ int32_t semihosting_isatty(target_s *const target, const semihosting_s *const re
 {
 	const int32_t fd = request->params[0] - 1;
 #if PC_HOSTED == 1
-	const int32_t result = isatty(fd);
-	target->tc->gdb_errno = semihosting_errno();
-	return result;
-#else
+	if (!target->stdout_redirected || fd > STDERR_FILENO) {
+		const int32_t result = isatty(fd);
+		target->tc->gdb_errno = semihosting_errno();
+		return result;
+	}
+#endif
 	gdb_putpacket_f("Fisatty,%08X", (unsigned)fd);
 	return semihosting_get_gdb_response(target->tc);
-#endif
 }
 
 int32_t semihosting_seek(target_s *const target, const semihosting_s *const request)
@@ -526,13 +527,14 @@ int32_t semihosting_seek(target_s *const target, const semihosting_s *const requ
 		return 0;
 	}
 #if PC_HOSTED == 1
-	const int32_t result = lseek(fd, offset, SEEK_SET) == offset ? 0 : -1;
-	target->tc->gdb_errno = semihosting_errno();
-	return result;
-#else
+	if (!target->stdout_redirected || fd > STDERR_FILENO) {
+		const int32_t result = lseek(fd, offset, SEEK_SET) == offset ? 0 : -1;
+		target->tc->gdb_errno = semihosting_errno();
+		return result;
+	}
+#endif
 	gdb_putpacket_f("Flseek,%08X,%08lX,%08X", (unsigned)fd, (unsigned long)offset, TARGET_SEEK_SET);
 	return semihosting_get_gdb_response(target->tc) == offset ? 0 : -1;
-#endif
 }
 
 int32_t semihosting_rename(target_s *const target, const semihosting_s *const request)
