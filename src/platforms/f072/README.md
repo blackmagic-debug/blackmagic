@@ -24,26 +24,29 @@ system bootloader is used. This gives additional 4 kB for the BMP firmware.
 
 Get into ST bootloader mode with reset or repower and BOOT pulled high. If BMP firmware is already loaded and running, dfu-util can also invoke the bootloader.
 
-```
+```sh
 dfu-util -d 1d50:6018 -e
 ```
 
 List the available devices
 
-```
+```sh
 dfu-util -l
 ```
 
-dfu-util should now list "[0483:df11]" and "@Internal Flash  /0x08000000/064*0002Kg".Compilethe firmware with:
+dfu-util should now list "[0483:df11]" and "@Internal Flash  /0x08000000/064*0002Kg".
 
+Compile the firmware with:
+
+```sh
+meson setup build --cross-file=cross-file/f072.ini
+meson compile -C build
 ```
- make PROBE_HOST=f072 clean && make PROBE_HOST=f072
- ```
 
 Load firmware:
 
- ```
- dfu-util -d 0483:df11 -a 0 -s 0x08000000:leave -D blackmagic.bin
- ```
+```sh
+dfu-util -d 0483:df11 -a 0 -s 0x08000000:leave -D blackmagic_f072_firmware.bin
+```
 
 Multiple BMP devices or STM devices on the USB bus may require additional dfu-util arguments for device selection.
