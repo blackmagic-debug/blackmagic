@@ -56,7 +56,7 @@ Breakpoint 1, main () at /devel/en_apps/gpio/f4_discovery/../gpio.c:70
 
 ### Black Magic Debug App
 
-You can also build the Black Magic Debug suite as a PC program called Black Magic Debug App (BMDA)
+You can also build the Black Magic Debug suite as a PC program called Black Magic Debug App (BMDA).
 
 This builds the same GDB server that is running on the Black Magic Probe.
 While connection to the Black Magic Probe GDB server is via serial line,
@@ -104,7 +104,8 @@ connected target. Use `-h`/`--help` to get a list of supported options.
 
 #### OS specific remarks
 
-On *BSD and macOS, using `/dev/tty.usbmodemXXX` should work but unresolved discussions indicate a hanging `open()` call on the second invocation. If that happens, try with `/dev/cu.usbmodemXXX`.
+On *BSD and macOS, you should use `/dev/cu.usbmodemXXX`. There are unresolved issues with trying to
+use the `/dev/tty.usbmodemXXX` device node involving how it operates under the hood.
 
 ## Getting started
 
@@ -112,45 +113,51 @@ On *BSD and macOS, using `/dev/tty.usbmodemXXX` should work but unresolved discu
 
 When developing this project, the following tools are required:
 
- * [git](https://git-scm.com)
- * [meson](https://mesonbuild.com/Getting-meson.html) (version 0.61 or greater)
- * [ninja](https://ninja-build.org)
+* [git](https://git-scm.com)
+* [meson](https://mesonbuild.com/Getting-meson.html) (version 0.61 or greater)
+* [ninja](https://ninja-build.org)
 
 Additionally, depending on if you want to build/work on the firmware or Black Magic Debug App (BMDA), you also need:
 
 #### Black Magic Debug Firmware
 
- * [`arm-none-eabi-gcc`](https://developer.arm.com/tools-and-software/open-source-software/developer-tools/gnu-toolchain/downloads) (from ARM, self-built and distro-supplied is currently broken)
+* [`arm-none-eabi-gcc`](https://developer.arm.com/tools-and-software/open-source-software/developer-tools/gnu-toolchain/downloads) (from ARM, self-built and distro-supplied is currently broken)
 
-If you wish to use the older [gnu-rm](https://developer.arm.com/downloads/-/gnu-rm) ARM toolchain, this is fine and works well.
+If you wish to use the older [gnu-rm](https://developer.arm.com/downloads/-/gnu-rm) ARM toolchain,
+this is fine and works well.
 
-If you have a toolchain from other sources and find problems, check if it's an issue with your toolchain first, and if not then open an issue, or better, submit a pull request with a fix.
+If you have a toolchain from other sources and find problems, check if it's an issue with your toolchain first,
+and if not then open an issue, or better, submit a pull request with a fix.
 
 #### Black Magic Debug App
 
- * [GCC](https://gcc.gnu.org) or Clang (Clang is not strictly officially supported)
+* [GCC](https://gcc.gnu.org) or Clang (Clang is not officially supported)
 
 If you wish to enable support for 3rd party probes, and not only the official native hardware, you will also need:
 
- * libusb1
- * libftdi1
- * libhidapi
+* libusb1
+* libftdi1
+* libhidapi
 
 ### Building
 
-The project is configured and built using the Meson build system, you will need to create a build directory and then configure the build depending on what you want.
+The project is configured and built using the Meson build system, you will need to create a build directory
+and then configure the build depending on what you want.
 
-The project has a couple of build options you may configure, which affect the resulting binaries, this is how you will configure the firmware for you respective probe, or enable certain features.
+The project has a couple of build options you may configure, which affect the resulting binaries.
+This is how you will configure the firmware for your respective probe, or enable certain features.
 
 A non-exhaustive list of project options:
- * probe: Hardware platform where the BMD firmware will run
- * targets: Enabled debug targets
- * debug_output: Enable debug output (for debugging the BMD stack, not debug targets)
- * rtt_support: Enable RTT (Real Time Transfer) support
+
+* `probe`: Hardware platform where the BMD firmware will run
+* `targets`: Enabled debug targets
+* `debug_output`: Enable debug output (for debugging the BMD stack, not debug targets)
+* `rtt_support`: Enable RTT (Real Time Transfer) support
 
 You may see all available project options and valid values under  `Project options` in the output of the `meson configure` command.
 
 The following commands are ran from the root of your clone of the `blackmagic` repository:
+
 ```sh
 cd /path/to/repository/blackmagic
 ```
@@ -162,6 +169,7 @@ To build the firmware you need to configure the probe hardware the firmware will
 For convenience, a cross-file for each supported hardware probe is available which provides a sane default configuration for it.
 
 The build configuration command for the native probe may look like:
+
 ```sh
 meson setup build --cross-file cross-file/native.ini
 ```
@@ -169,6 +177,7 @@ meson setup build --cross-file cross-file/native.ini
 Note that even if you are using the pre-configured cross-file, you may still override it's defaults with `-Doption=value` in the same configuration command, or later as highlighted in [Changing the build configuration](#changing-the-build-configuration).
 
 Alternatively (for advanced users), if you wish to configure manually, for instance while writing support for a new probe, or a different toolchain, you can run:
+
 ```sh
 meson setup build --cross-file cross-file/arm-none-eabi.ini -Dprobe=native -Dtargets=cortexm,stm
 ```
@@ -176,20 +185,23 @@ meson setup build --cross-file cross-file/arm-none-eabi.ini -Dprobe=native -Dtar
 You now should have a `build` directory from where you can build the firmware, this is also where your binary files will appear.
 
 The command `meson compile` will build the default targets, you may omit `-C build` if you run the command from within the `build` directory:
+
 ```sh
 meson compile -C build
 ```
 
 You should now see the resulting binaries in `build`, in this case:
- - `blackmagic_native_firmware.bin`
- - `blackmagic_native_firmware.elf`
+
+* `blackmagic_native_firmware.bin`
+* `blackmagic_native_firmware.elf`
 
 These are the binary files you will use to flash to your probe.
 
 ##### region `rom' overflowed
 
 It may happen, while working with non default configurations or the project's latest version from Git, that the firmware does not fit in the available space for the configured probe, this could look something like:
-```
+
+```console
 arm-none-eabi/bin/ld: region `rom' overflowed by 4088 bytes
 Memory region         Used Size  Region Size  %age Used
              rom:      135160 B       128 KB    103.12%
@@ -198,6 +210,7 @@ collect2: error: ld returned 1 exit status
 ```
 
 This is not unexpected, as some hardware probe have limited space for firmware. You can get around it by disabling some features or targets support:
+
 ```sh
 meson configure build -Dtargets=cortexm,stm -Drtt_support=false
 ```
@@ -207,6 +220,7 @@ meson configure build -Dtargets=cortexm,stm -Drtt_support=false
 The Black Magic Debug App (BMDA) is always built by default, even for firmware builds. So long as all its dependencies are found, you can find the executable under the `build` directory, named simply `blackmagic`.
 
 If you wish to build only BMDA, you can set the hardware `probe` option to an empty string `-Dprobe=''`, this is the default value:
+
 ```sh
 meson setup build
 ```
@@ -214,32 +228,39 @@ meson setup build
 You now should have a `build` directory from where you can build the app, this is also where your executable will appear.
 
 The command `meson compile` will build the default targets, you may omit `-C build` if you run the command from within the `build` directory:
+
 ```sh
 meson compile -C build
 ```
 
 You should now see the resulting executable in `build`:
- - `blackmagic`
+
+* `blackmagic`
 
 ### Changing the build configuration
 
 You may change the configuration at any time after configuring the project, if may also change the default options while configuring for the first time.
 
 Changing options at configure time:
+
 ```sh
 meson setup build -Ddebug_output=true
 ```
 
 Changing options after configuration:
+
 ```sh
 meson configure build -Dtargets=cortexm,stm
 ```
+
 Alternatively, you can use the equivalent but more verbose `meson setup` command:
+
 ```sh
 meson setup build --reconfigure -Dtargets=cortexm,stm
 ```
 
 Keep in mind that when changing the configured probe, the other default options will not change, and you may end up with a configuration that does not make sense for it. In such cases it's best to use the *cross-file* for the probe, not just change the `probe` option. For this you will need to use the `meson setup` command again:
+
 ```sh
 meson setup build --reconfigure --cross-file=cross-file/bluepill.ini
 ```
@@ -250,12 +271,16 @@ You can have multiple build directories! So if you are regularly building firmwa
 
 ### Working with an existing clone (used before the new meson build system was introduced)
 
-If you are working with an existing clone of the project where you used the old `make` build system, or simply initialized the submodules, you may encounter issues while trying the new `meson` workflow, this may look something like:
-```
+If you are working with an existing clone of the project where you used the old `make` build system,
+or simply initialized the submodules, you may encounter issues while trying the new Meson workflow,
+this may look something like:
+
+```console
 fatal: Fetched in submodule path 'deps/libopencm3', but it did not contain bed4a785eecb6c9e77e7491e196565feb96c617b. Direct fetching of that commit failed.
 ```
 
 To get around this try running the following commands:
+
 ```sh
 cd deps/libopencm3
 git remote set-url origin https://github.com/blackmagic-debug/libopencm3
@@ -263,8 +288,9 @@ cd ../..
 git submodule update
 ```
 
-Alternatively, the nuclear option:
-*BEWARE, THIS WILL ERASE ANY CHANGES THAT HAVE NOT BEEN PUSHED UPSTREAM*
+Alternatively, the nuclear option
+(**BEWARE, THIS WILL ERASE ANY CHANGES THAT HAVE NOT BEEN PUSHED UPSTREAM**)
+
 ```sh
 git submodule deinit --force --all
 meson subprojects purge --confirm

@@ -45,10 +45,10 @@ NB: SWDIO/TMS is on P**B**14, not P**A**14.
 ## Upload BMP Firmware
 
 * Keep the original ST Bootloader.
-* Compile firmware with `make PROBE_HOST=stlink ST_BOOTLOADER=1`
-* Upload firmware with stlink-tool from [stlink-tool](https://github.com/UweBonnes/stlink-tool/tree/stlinkv21)(*3).
+* Compile firmware with the option `-Dbmd_bootloader=false`
+* Upload firmware with stlink-tool from [stlink-tool](https://github.com/blackmagic-debug/stlink-tool)(*3).
 * For ST-Link v2, as on older disco boards, un- and replug USB to enter the bootloader.
-* Upload BMP firmware with `stlink-tool blackmagic.bin`
+* Upload BMP firmware with `stlink-tool blackmagic_stlink_firmware.bin`
 * For ST-Link v2, after each stlink replug, call either `blackmacic -t` or `stlink-tool` without arguments  or on Linux use some udev rule like the one shown below to enter the BMP firmware
 
 ```sh

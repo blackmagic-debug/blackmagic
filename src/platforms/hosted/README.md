@@ -1,7 +1,9 @@
 # PC-Hosted BMP
-Compile in src with "make PROBE_HOST=hosted". This needs minimal external
-support.  "make PROBE_HOST=hosted HOSTED_BMP_ONLY=0" will compile support for FTDI,
-STLink, CMSIS-DAP and J-Link probes, but requires external libraries.
+Compile with:
+```sh
+meson setup build
+meson compile -C build
+```
 
 ## Description
 PC-hosted BMP run on the PC and compiles as "blackmagic". When started,
@@ -72,12 +74,14 @@ in windows. Make sure to use the `mingw64` shell from msys2, otherwise,
 you may get compilation errors. You will need to install the libusb
 and libftdi libraries, and have the correct mingw compiler.
 You can use these commands to install dependencies, and build PC-hosted BMP
-from a mingw64 shell, from within the `src` directory:
+from a mingw64 shell, from within the `blackmagic` directory:
 ```
 pacman -S mingw-w64-x86_64-libusb --needed
 pacman -S mingw-w64-x86_64-libftdi --needed
 pacman -S mingw-w64-x86_64-gcc --needed
-PROBE_HOST=hosted make
+meson setup build
+cd build
+meson compile
 ```
 
 For support of other probes beside BMP, libusb access is needed. To prepare
