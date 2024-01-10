@@ -10,24 +10,22 @@ By participating in this project you agree to abide by its terms.
 
 ## Development and Testing
 
-When developing this project, the following tools are necessary:
+When developing this project some tools are necessary, take a look at the **Requirements** section of the
+[README](README.md#requirements).
 
-* Git
-* One of either:
-  * GCC or Clang (Clang is not strictly officially supported)
-  * [`arm-none-eabi-gcc`](https://developer.arm.com/tools-and-software/open-source-software/developer-tools/gnu-toolchain/downloads) (from ARM, self-built and distro-supplied is currently broken)
-* GNU Make or compatible `make` tool
+For instructions on how to build the project, please follow the **Building** section of the
+[README](README.md#building).
 
-Which of the compilers you pick depends on if you're going to work on the firwmare or Black Magic Debug App (BMDA) respectively.
-If you wish to use the older [gnu-rm](https://developer.arm.com/downloads/-/gnu-rm) ARM toolchain, this is fine and works well.
+## Reporting issues
 
-## Common tasks
+### Before reporting issues
 
-These are to be run at the root of your clone of Black Magic Probe.
+ 1. Check against the latest version (`main` branch).
+ 2. If possible, and applicable, test against another target and/or debug probe.
+ 3. Consider broken USB cables and connectors.
+ 4. Try to reproduce with BMDA with at least output verbosity bit 1 (INFO) set (`blackmagic -v 1 ...`), as debug messages will be dumped to the starting console.
 
-* Building the firmware: `make PROBE_HOST=native` (or whichever probe you want to build for)
-* Building BMDA: `make PROBE_HOST=hosted`
-* Build testing all platforms: `make all_platforms`
+When reporting issues, be as specific as possible!
 
 ## Submitting a pull request
 
