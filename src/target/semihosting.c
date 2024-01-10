@@ -479,37 +479,13 @@ int32_t semihosting_write(target_s *const target, const semihosting_s *const req
 int32_t semihosting_writec(target_s *const target, const semihosting_s *const request)
 {
 	const target_addr_t ch_taddr = request->r1;
-#if PC_HOSTED == 1
-	if (ch_taddr == TARGET_NULL)
-		return -1;
-	const uint8_t ch = target_mem_read8(target, ch_taddr);
-	if (target_check_error(target))
-		return -1;
-	fputc(ch, stderr);
-	target->tc->gdb_errno = semihosting_errno();
-	return 0;
-#else
 	(void)semihosting_remote_write(target, STDOUT_FILENO, ch_taddr, 1);
 	return 0;
-#endif
 }
 
 int32_t semihosting_write0(target_s *const target, const semihosting_s *const request)
 {
 	const target_addr_t str_begin_taddr = request->r1;
-#if PC_HOSTED == 1
-	if (str_begin_taddr == TARGET_NULL)
-		return -1;
-	for (target_addr_t char_taddr = str_begin_taddr; !target_check_error(target); ++char_taddr) {
-		const uint8_t chr = target_mem_read8(target, char_taddr);
-		if (chr == 0U)
-			break;
-		if (fputc(chr, stderr) == EOF) {
-			target->tc->gdb_errno = semihosting_errno();
-			break;
-		}
-	}
-#else
 	target_addr_t str_end_taddr;
 	for (str_end_taddr = str_begin_taddr; target_mem_read8(target, str_end_taddr) != 0; ++str_end_taddr) {
 		if (target_check_error(target))
@@ -521,7 +497,6 @@ int32_t semihosting_write0(target_s *const target, const semihosting_s *const re
 		if (result != len)
 			return -1;
 	}
-#endif
 	return 0;
 }
 
