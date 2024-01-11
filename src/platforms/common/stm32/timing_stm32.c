@@ -35,6 +35,7 @@ uint32_t target_clk_divider = 0;
 static size_t morse_tick = 0;
 #if defined(PLATFORM_HAS_POWER_SWITCH) && defined(STM32F1)
 static uint8_t monitor_ticks = 0;
+static uint8_t monitor_error_count = 0;
 
 /* Derived from calculating (1.2V / 3.0V) * 4096 */
 #define ADC_VREFINT_MAX 1638U
@@ -119,7 +120,12 @@ void sys_tick_handler(void)
 
 			/* Now compare the reference against the known good range */
 			if (ref > ADC_VREFINT_MAX || ref < ADC_VREFINT_MIN) {
-				/* Something's wrong, so turn tpwr off and set the morse blink pattern */
+				monitor_error_count++;
+			} else if (monitor_error_count)
+				monitor_error_count--;
+
+			/* Something's wrong, and it is not a glitch, so turn tpwr off and set the morse blink pattern */
+			if (monitor_error_count > 3) {
 				platform_target_set_power(false);
 				morse("TPWR ERROR", true);
 			}
