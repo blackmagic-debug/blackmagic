@@ -87,6 +87,23 @@ if is_firmware_build
 	if probe in ['bluepill', 'native', 'stlink', 'swlink'] and enabled_targets.length() == target_names.keys().length()
 		warning('Disabling some targets as your build will not fit the target probe otherwise')
 		enabled_targets = ['cortexm', 'efm', 'hc32', 'lpc', 'nrf', 'nxp', 'renesas', 'rp', 'sam', 'stm', 'ti']
+	elif probe in ['f072'] and enabled_targets.length() == target_names.keys().length()
+		warning('Disabling some targets as your build will not fit the target probe otherwise')
+		enabled_targets = [
+			'cortexm',
+			'riscv32',
+			'riscv64',
+			'efm',
+			'hc32',
+			'lpc',
+			'nrf',
+			'nxp',
+			'renesas',
+			'rp',
+			'sam',
+			'stm',
+			'ti'
+		]
 	endif
 endif
 
