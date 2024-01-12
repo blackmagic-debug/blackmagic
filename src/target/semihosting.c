@@ -710,11 +710,6 @@ int32_t semihosting_time(target_s *const target)
 
 int32_t semihosting_readc(target_s *const target)
 {
-#if PC_HOSTED == 1
-	const int32_t ch = getchar();
-	target->tc->gdb_errno = semihosting_errno();
-	return ch;
-#else
 	/* Define space for a character */
 	uint8_t ch = '?';
 
@@ -730,7 +725,6 @@ int32_t semihosting_readc(target_s *const target)
 		return -1;
 	/* Extract the character read from the buffer */
 	return ch;
-#endif
 }
 
 int32_t semihosting_exit(target_s *const target, const semihosting_exit_reason_e reason, const uint32_t status_code)
