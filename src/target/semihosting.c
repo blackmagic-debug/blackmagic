@@ -578,19 +578,9 @@ int32_t semihosting_remove(target_s *const target, const semihosting_s *const re
 
 int32_t semihosting_system(target_s *const target, const semihosting_s *const request)
 {
-#if PC_HOSTED == 1
-	const char *cmd = semihosting_read_string(target, request->params[0], request->params[1]);
-	if (cmd == NULL)
-		return -1;
-	const int32_t result = system(cmd);
-	target->tc->gdb_errno = semihosting_errno();
-	free((void *)cmd);
-	return result;
-#else
 	/* NB: Before use first enable system calls with the following gdb command: 'set remote system-call-allowed 1' */
 	gdb_putpacket_f("Fsystem,%08" PRIX32 "/%08" PRIX32, request->params[0], request->params[1] + 1U);
 	return semihosting_get_gdb_response(target->tc);
-#endif
 }
 
 int32_t semihosting_file_length(target_s *const target, const semihosting_s *const request)
