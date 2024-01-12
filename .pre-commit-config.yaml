@@ -5,11 +5,11 @@ repos:
   rev: v16.0.2
   hooks:
   - id: clang-format
-    args: [-Werror]  # change formatting warnings to errors, hook includes -i (Inplace edit) by default
+    args: [-Werror]  # change formatting warnings to errors, hook includes -i (in-place edit) by default
     types_or: [c++, c]  # override default file types to only C and CPP files
 
 - repo: https://github.com/perigoso/pre-commit-hooks
-  rev: v0.2
+  rev: v0.3
   hooks:
   - id: check-hex-case
     args: [--lower-digits] # edit-in-place, hex number digits to lower case (defaults to upper case), i.e. 0x55aa
