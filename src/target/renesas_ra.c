@@ -342,7 +342,7 @@ static void renesas_add_flash(target_s *const target, const target_addr_t addr, 
 	case PNR_SERIES_RA2A1:
 	case PNR_SERIES_RA4M1:
 	case PNR_SERIES_RA4W1:
-		renesas_add_flash();
+		renesas_add_mf_flash(target, addr, length);
 		return;
 
 	case PNR_SERIES_RA4M2:
