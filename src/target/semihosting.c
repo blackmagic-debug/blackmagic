@@ -393,8 +393,9 @@ int32_t semihosting_open(target_s *const target, const semihosting_s *const requ
 		O_WRONLY | O_CREAT | O_APPEND, /* a, ab */
 		O_RDWR | O_CREAT | O_APPEND,   /* a+, a+b */
 	};
-	const int32_t native_open_mode =
-		native_open_mode_flags[request->params[1] >> 1U] | ((request->params[1] & 1U) ? O_BINARY : 0U);
+	int32_t native_open_mode = native_open_mode_flags[request->params[1] >> 1U];
+	if (request->params[1] & 1U)
+		native_open_mode |= O_BINARY;
 
 	const int32_t result = open(file_name, native_open_mode | O_NOCTTY, 0644);
 	target->tc->gdb_errno = semihosting_errno();
