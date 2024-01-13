@@ -76,6 +76,11 @@ static void dap_dispatch_status(adiv5_debug_port_s *const dp, const dap_transfer
 	case DAP_TRANSFER_NO_RESPONSE:
 		DEBUG_ERROR("Access resulted in no response\n");
 		dp->fault = status;
+		/* If we got no-response, handle the case where the adaptor fails to issue the data phase */
+		if (dap_mode == DAP_CAP_SWD && (dap_quirks & DAP_QUIRK_BAD_SWD_NO_RESP_DATA_PHASE)) {
+			uint32_t response;
+			swd_proc.seq_in_parity(&response, 32);
+		}
 		break;
 	default:
 		DEBUG_ERROR("Access has invalid ack %x\n", status);
