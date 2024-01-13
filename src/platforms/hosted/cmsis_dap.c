@@ -316,6 +316,11 @@ bool dap_init(void)
 		dap_version_compare_le(adaptor_version, (dap_version_s){1, 2, UINT16_MAX}))
 		dap_quirks |= DAP_QUIRK_NO_JTAG_MUTLI_TAP;
 
+	/* Handle SWD no-response turnarounds on older (pre-v1.3.2) ORBTrace gateware being broken */
+	if (strcmp(bmda_probe_info.product, "Orbtrace") == 0 &&
+		dap_version_compare_le(adaptor_version, (dap_version_s){1, 3, 1}))
+		dap_quirks |= DAP_QUIRK_BAD_SWD_NO_RESP_DATA_PHASE;
+
 	return true;
 }
 

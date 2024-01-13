@@ -64,7 +64,8 @@ typedef enum dap_led_type {
 	DAP_LED_RUNNING = 1U,
 } dap_led_type_e;
 
-#define DAP_QUIRK_NO_JTAG_MUTLI_TAP (1U << 0U)
+#define DAP_QUIRK_NO_JTAG_MUTLI_TAP          (1U << 0U)
+#define DAP_QUIRK_BAD_SWD_NO_RESP_DATA_PHASE (1U << 1U)
 
 extern uint8_t dap_caps;
 extern dap_cap_e dap_mode;
