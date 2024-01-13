@@ -302,35 +302,6 @@ bool dap_write_block(
 	return result;
 }
 
-void dap_reset_link(adiv5_debug_port_s *const target_dp)
-{
-	uint8_t sequence[18U];
-	size_t bytes = 8U;
-	memset(sequence, 0xffU, bytes);
-
-	if (dap_mode == DAP_CAP_JTAG) {
-		sequence[bytes + 0] = 0x3cU;
-		sequence[bytes + 1] = 0xe7U;
-		sequence[bytes + 2] = 0x1fU;
-		bytes += 3U;
-	} else {
-		sequence[bytes + 0] = 0x9e;
-		sequence[bytes + 1] = 0xe7;
-		bytes += 2;
-		memset(sequence + bytes, 0xffU, 7U);
-		bytes += 7U;
-		sequence[bytes++] = 0x00U;
-	}
-	const size_t cycles = (bytes * 8U) - (dap_mode == DAP_CAP_JTAG ? 2U : 0U);
-	perform_dap_swj_sequence(cycles, sequence);
-
-	if (dap_mode == DAP_CAP_SWD) {
-		const dap_transfer_request_s request = {.request = SWD_DP_R_IDCODE | DAP_TRANSFER_RnW};
-		uint32_t response = 0;
-		perform_dap_transfer(target_dp, &request, 1, &response, 1);
-	}
-}
-
 static void mem_access_setup(const adiv5_access_port_s *const target_ap,
 	dap_transfer_request_s *const transfer_requests, const uint32_t addr, const align_e align)
 {

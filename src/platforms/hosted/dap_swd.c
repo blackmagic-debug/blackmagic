@@ -69,7 +69,6 @@ bool dap_swd_init(adiv5_debug_port_s *target_dp)
 	dap_mode = DAP_CAP_SWD;
 	dap_swd_configure(DAP_SWD_TURNAROUND_1_CYCLE, DAP_SWD_FAULT_NO_DATA_PHASE);
 	dap_connect();
-	dap_reset_link(target_dp);
 
 	/* Set up the underlying SWD functions using the implementation below */
 	swd_proc.seq_in = dap_swd_seq_in;
