@@ -127,6 +127,30 @@ static size_t mbslen(const char *str)
 	return result;
 }
 
+static inline bool dap_version_compare_ge(const dap_version_s lhs, const dap_version_s rhs)
+{
+	/*
+	 * Try to first check if the major on the left is more than the one on the right.
+	 * If it is not, check that they're equal and that the minor on the left is more than the right.
+	 * If that is still not true, check that the majors are equal, the minors are equal and that the
+	 * revision on the left is more than or equal the one on the right.
+	 */
+	return lhs.major > rhs.major || (lhs.major == rhs.major && lhs.minor > rhs.minor) ||
+		(lhs.major == rhs.major && lhs.minor == rhs.minor && lhs.revision >= rhs.revision);
+}
+
+static inline bool dap_version_compare_le(const dap_version_s lhs, const dap_version_s rhs)
+{
+	/*
+	 * Try to first check if the major on the left is less than the one on the right.
+	 * If it is not, check that they're equal and that the minor on the left is less than the right.
+	 * If that is still not true, check that the majors are equal, the minors are equal and that the
+	 * revision on the left is less than or equal the one on the right.
+	 */
+	return lhs.major < rhs.major || (lhs.major == rhs.major && lhs.minor < rhs.minor) ||
+		(lhs.major == rhs.major && lhs.minor == rhs.minor && lhs.revision <= rhs.revision);
+}
+
 // Return maximum length in bytes that can be sent in the 'data' payload of a
 // DAP transfer, given the interface type and (provided) DAP command header
 // size.
@@ -256,7 +280,7 @@ bool dap_init(void)
 		(cmsis_version.major == 2 && cmsis_version.minor >= 1) || cmsis_version.major > 2)
 		adaptor_version = dap_adaptor_version(DAP_INFO_ADAPTOR_VERSION);
 	/* Look for CMSIS-DAP v1.2+ */
-	dap_has_swd_sequence = cmsis_version.major > 1 || (cmsis_version.major == 1 && cmsis_version.minor > 1);
+	dap_has_swd_sequence = dap_version_compare_ge(cmsis_version, (dap_version_s){1, 2, 0});
 
 	/* Try to get the device's capabilities */
 	const size_t size = dap_info(DAP_INFO_CAPABILITIES, &dap_caps, sizeof(dap_caps));
@@ -287,11 +311,10 @@ bool dap_init(void)
 	DEBUG_INFO("Adaptor %s DAP SWD sequences\n", dap_has_swd_sequence ? "supports" : "does not support");
 
 	dap_quirks = 0;
-	/* Handle multi-TAP JTAG on older ORBTrace gateware being broken */
+	/* Handle multi-TAP JTAG on older (pre-v1.3) ORBTrace gateware being broken */
 	if (strcmp(bmda_probe_info.product, "Orbtrace") == 0 &&
-		(adaptor_version.major < 1 || (adaptor_version.major == 1 && adaptor_version.minor <= 2))) {
+		dap_version_compare_le(adaptor_version, (dap_version_s){1, 2, UINT16_MAX}))
 		dap_quirks |= DAP_QUIRK_NO_JTAG_MUTLI_TAP;
-	}
 
 	return true;
 }
