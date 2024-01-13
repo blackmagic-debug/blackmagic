@@ -77,7 +77,6 @@ bool dap_disconnect(void);
 bool dap_led(dap_led_type_e type, bool state);
 size_t dap_info(dap_info_e requested_info, void *buffer, size_t buffer_length);
 void dap_reset_target(void);
-void dap_nrst_set_val(bool assert);
 void dap_reset_target_hw(int state);
 bool dap_set_reset_state(bool nrst_state);
 uint32_t dap_read_reg(adiv5_debug_port_s *target_dp, uint8_t reg);
