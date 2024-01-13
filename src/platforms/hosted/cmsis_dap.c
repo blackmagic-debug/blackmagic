@@ -246,8 +246,15 @@ bool dap_init(void)
 	/* Ensure the adaptor is idle and not prepared for any protocol in particular */
 	dap_disconnect();
 	/* Get the adaptor version information so we can set quirks as-needed */
-	const dap_version_s adaptor_version = dap_adaptor_version(DAP_INFO_ADAPTOR_VERSION);
 	const dap_version_s cmsis_version = dap_adaptor_version(DAP_INFO_CMSIS_DAP_VERSION);
+	dap_version_s adaptor_version = {UINT16_MAX, UINT16_MAX, UINT16_MAX};
+	/*
+	 * If the adaptor implements CMSIS-DAP < 1.3.0 (in the 1.x series) or
+	 * CMSIS-DAP < 2.1.0 (in the 2.x series) it won't have this command
+	 */
+	if ((cmsis_version.major == 1 && cmsis_version.minor >= 3) ||
+		(cmsis_version.major == 2 && cmsis_version.minor >= 1) || cmsis_version.major > 2)
+		adaptor_version = dap_adaptor_version(DAP_INFO_ADAPTOR_VERSION);
 	/* Look for CMSIS-DAP v1.2+ */
 	dap_has_swd_sequence = cmsis_version.major > 1 || (cmsis_version.major == 1 && cmsis_version.minor > 1);
 
@@ -299,9 +306,9 @@ dap_version_s dap_adaptor_version(const dap_info_e version_kind)
 
 	/* Display the version string */
 	if (version_kind == DAP_INFO_ADAPTOR_VERSION)
-		DEBUG_INFO("Adaptor version %s, ", version_str);
+		DEBUG_INFO("Adaptor version %s\n", version_str);
 	else if (version_kind == DAP_INFO_CMSIS_DAP_VERSION)
-		DEBUG_INFO("CMSIS-DAP v%s\n", version_str);
+		DEBUG_INFO("CMSIS-DAP v%s, ", version_str);
 	const char *begin = version_str;
 	char *end = NULL;
 	dap_version_s version = {0};
