@@ -90,7 +90,7 @@ bool dap_run_cmd(const void *request_data, size_t request_length, void *response
 bool dap_jtag_configure(void);
 
 void dap_dp_abort(adiv5_debug_port_s *target_dp, uint32_t abort);
-uint32_t dap_dp_low_access(adiv5_debug_port_s *target_dp, uint8_t rnw, uint16_t addr, uint32_t value);
+uint32_t dap_dp_raw_access(adiv5_debug_port_s *target_dp, uint8_t rnw, uint16_t addr, uint32_t value);
 uint32_t dap_dp_read_reg(adiv5_debug_port_s *target_dp, uint16_t addr);
 
 #endif /* PLATFORMS_HOSTED_DAP_H */

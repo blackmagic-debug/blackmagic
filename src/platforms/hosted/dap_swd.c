@@ -84,7 +84,7 @@ bool dap_swd_init(adiv5_debug_port_s *target_dp)
 	/* Set up the accelerated SWD functions for basic target operations */
 	target_dp->read_no_check = dap_read_reg_no_check;
 	target_dp->dp_read = dap_dp_read_reg;
-	target_dp->low_access = dap_dp_low_access;
+	target_dp->low_access = dap_dp_raw_access;
 	target_dp->abort = dap_dp_abort;
 	return true;
 }

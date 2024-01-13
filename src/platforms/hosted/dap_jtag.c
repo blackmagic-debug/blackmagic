@@ -80,7 +80,7 @@ void dap_jtag_dp_init(adiv5_debug_port_s *target_dp)
 	if (!dap_jtag_configure())
 		return;
 	target_dp->dp_read = dap_dp_read_reg;
-	target_dp->low_access = dap_dp_low_access;
+	target_dp->low_access = dap_dp_raw_access;
 	target_dp->abort = dap_dp_abort;
 }
 

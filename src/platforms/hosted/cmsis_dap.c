@@ -386,7 +386,7 @@ void dap_dp_abort(adiv5_debug_port_s *const target_dp, const uint32_t abort)
 	dap_write_reg(target_dp, ADIV5_DP_ABORT, abort);
 }
 
-uint32_t dap_dp_low_access(
+uint32_t dap_dp_raw_access(
 	adiv5_debug_port_s *const target_dp, const uint8_t rnw, const uint16_t addr, const uint32_t value)
 {
 	const bool APnDP = addr & ADIV5_APnDP;
@@ -401,11 +401,11 @@ uint32_t dap_dp_low_access(
 
 uint32_t dap_dp_read_reg(adiv5_debug_port_s *const target_dp, const uint16_t addr)
 {
-	uint32_t result = dap_dp_low_access(target_dp, ADIV5_LOW_READ, addr, 0);
+	uint32_t result = dap_dp_raw_access(target_dp, ADIV5_LOW_READ, addr, 0);
 	if (target_dp->fault == DAP_TRANSFER_NO_RESPONSE) {
 		DEBUG_WARN("Recovering and re-trying access\n");
 		target_dp->error(target_dp, true);
-		result = dap_dp_low_access(target_dp, ADIV5_LOW_READ, addr, 0);
+		result = dap_dp_raw_access(target_dp, ADIV5_LOW_READ, addr, 0);
 	}
 	DEBUG_PROBE("dp_read %04x %08" PRIx32 "\n", addr, result);
 	return result;
