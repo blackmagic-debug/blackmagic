@@ -25,6 +25,7 @@
 #include "usb.h"
 #include "aux_serial.h"
 
+#include <libopencm3/cm3/vector.h>
 #include <libopencm3/stm32/rcc.h>
 #include <libopencm3/cm3/scb.h>
 #include <libopencm3/cm3/scs.h>
@@ -77,7 +78,6 @@ void platform_init(void)
 	gpio_set_mode(LED_PORT, GPIO_MODE_OUTPUT_2_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, led_idle_run);
 
 	/* Relocate interrupt vector table here */
-	extern uint32_t vector_table;
 	SCB_VTOR = (uintptr_t)&vector_table;
 
 	platform_timing_init();
