@@ -110,7 +110,7 @@ static uint8_t buffer[1025U];
  * Start by defaulting this to the typical size of `DAP_PACKET_SIZE` for FS USB. This value is pulled from here:
  * https://www.keil.com/pack/doc/CMSIS/DAP/html/group__DAP__Config__Debug__gr.html#gaa28bb1da2661291634c4a8fb3e227404
  */
-static size_t report_size = 64U;
+static size_t packet_size = 64U;
 bool dap_has_swd_sequence = false;
 
 dap_version_s dap_adaptor_version(dap_info_e version_kind);
@@ -162,7 +162,7 @@ static inline bool dap_version_compare_le(const dap_version_s lhs, const dap_ver
  */
 static inline size_t dap_max_transfer_data(size_t command_header_len)
 {
-	const size_t result = report_size - command_header_len;
+	const size_t result = packet_size - command_header_len;
 
 	/* Allow for an additional byte of payload overhead when sending data in HID Report payloads */
 	if (type == CMSIS_TYPE_HID)
@@ -228,11 +228,11 @@ static bool dap_init_hid(void)
 	 * Base the report length information for the device on the max packet length from its descriptors.
 	 * Add 1 to account for HIDAPI's need to prefix with a report type byte.
 	 */
-	report_size = bmda_probe_info.max_packet_length + 1U;
+	packet_size = bmda_probe_info.max_packet_length + 1U;
 
 	/* Handle the NXP LPC11U3x CMSIS-DAP v1.0.7 implementation needing a 64 byte report length */
 	if (bmda_probe_info.vid == 0x1fc9U && bmda_probe_info.pid == 0x0132U)
-		report_size = 64U + 1U;
+		packet_size = 64U + 1U;
 
 	/* Now open the device with HIDAPI so we can talk with it */
 	handle = hid_open(bmda_probe_info.vid, bmda_probe_info.pid, serial[0] ? serial : NULL);
@@ -441,17 +441,17 @@ ssize_t dbg_dap_cmd_hid(const uint8_t *const request_data, const size_t request_
 	const size_t response_length)
 {
 	// Need room to prepend HID Report ID byte
-	if (request_length + 1U > report_size) {
+	if (request_length + 1U > packet_size) {
 		DEBUG_ERROR(
-			"Attempted to make over-long request of %zu bytes, max length is %zu\n", request_length + 1U, report_size);
+			"Attempted to make over-long request of %zu bytes, max length is %zu\n", request_length + 1U, packet_size);
 		exit(-1);
 	}
 
-	memset(buffer + request_length + 1U, 0xff, report_size - (request_length + 1U));
+	memset(buffer + request_length + 1U, 0xff, packet_size - (request_length + 1U));
 	buffer[0] = 0x00; // Report ID
 	memcpy(buffer + 1, request_data, request_length);
 
-	const int result = hid_write(handle, buffer, report_size);
+	const int result = hid_write(handle, buffer, packet_size);
 	if (result < 0) {
 		DEBUG_ERROR("CMSIS-DAP write error: %ls\n", hid_error(handle));
 		exit(-1);
@@ -506,9 +506,9 @@ static ssize_t dap_run_cmd_raw(const uint8_t *const request_data, const size_t r
 
 	ssize_t response = -1;
 	if (type == CMSIS_TYPE_HID)
-		response = dbg_dap_cmd_hid(request_data, request_length, data, report_size);
+		response = dbg_dap_cmd_hid(request_data, request_length, data, packet_size);
 	else if (type == CMSIS_TYPE_BULK)
-		response = dbg_dap_cmd_bulk(request_data, request_length, data, report_size);
+		response = dbg_dap_cmd_bulk(request_data, request_length, data, packet_size);
 	if (response < 0)
 		return response;
 	const size_t result = (size_t)response;
