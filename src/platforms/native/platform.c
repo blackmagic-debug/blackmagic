@@ -26,6 +26,7 @@
 #include "aux_serial.h"
 #include "morse.h"
 
+#include <libopencm3/cm3/vector.h>
 #include <libopencm3/stm32/rcc.h>
 #include <libopencm3/cm3/scb.h>
 #include <libopencm3/cm3/scs.h>
@@ -41,9 +42,6 @@
 
 static void adc_init(void);
 static void setup_vbus_irq(void);
-
-/* This is defined by the linker script */
-extern char vector_table;
 
 #define TPWR_SOFT_START_STEPS 64U
 
