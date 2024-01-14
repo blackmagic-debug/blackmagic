@@ -104,8 +104,13 @@ static libusb_device_handle *usb_handle = NULL;
 static uint8_t in_ep;
 static uint8_t out_ep;
 static hid_device *handle = NULL;
-static uint8_t buffer[1024U];
-static size_t report_size = 64U + 1U; // TODO: read actual report size
+/* Provide enough space for up to a HS USB HID payload + the HID report ID byte */
+static uint8_t buffer[1025U];
+/*
+ * Start by defaulting this to the typical size of `DAP_PACKET_SIZE` for FS USB. This value is pulled from here:
+ * https://www.keil.com/pack/doc/CMSIS/DAP/html/group__DAP__Config__Debug__gr.html#gaa28bb1da2661291634c4a8fb3e227404
+ */
+static size_t report_size = 64U;
 bool dap_has_swd_sequence = false;
 
 dap_version_s dap_adaptor_version(dap_info_e version_kind);
