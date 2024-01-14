@@ -88,6 +88,7 @@ typedef struct bmda_probe {
 	uint8_t interface_num;
 	uint8_t in_ep;
 	uint8_t out_ep;
+	uint16_t max_packet_length;
 #endif
 } bmda_probe_s;
 

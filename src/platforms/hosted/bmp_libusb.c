@@ -406,6 +406,11 @@ static void check_cmsis_interface_type(libusb_device *const device, bmda_probe_s
 			if (strstr(interface_string, "CMSIS") == NULL)
 				continue;
 
+			/* Scan through the endpoints finding the one with the narrowest max transfer length */
+			info->max_packet_length = UINT16_MAX;
+			for (uint8_t index = 0; index < descriptor->bNumEndpoints; ++index)
+				info->max_packet_length = MIN(descriptor->endpoint[index].wMaxPacketSize, info->max_packet_length);
+
 			/* Check if it's a CMSIS-DAP v2 interface */
 			if (descriptor->bInterfaceClass == 0xffU && descriptor->bNumEndpoints == 2U) {
 				info->interface_num = descriptor->bInterfaceNumber;
@@ -417,6 +422,8 @@ static void check_cmsis_interface_type(libusb_device *const device, bmda_probe_s
 					else
 						info->out_ep = ep;
 				}
+				/* If we've found a CMSIS-DAP v2 interface, look no further - we want to prefer these to v1. */
+				break;
 			}
 		}
 	}
