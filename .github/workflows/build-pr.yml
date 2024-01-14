@@ -297,7 +297,7 @@ jobs:
       # Build the firmware for all platform variants (currently available)
       - name: Build
         run: |
-          meson setup build --cross-file cross-file/${{ matrix.probe }}.ini
+          meson setup build --cross-file cross-file/${{ matrix.probe }}.ini --werror
           meson compile -C build
 
   size-diff:
