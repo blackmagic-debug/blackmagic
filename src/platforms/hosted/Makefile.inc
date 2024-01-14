@@ -29,7 +29,7 @@ ifneq (,$(findstring linux, $(SYS)))
 else
     HOSTED_BMP_ONLY ?= 1
 endif
-CFLAGS += -DHOSTED_BMP_ONLY=$(HOSTED_BMP_ONLY)
+CFLAGS += -DHOSTED_BMP_ONLY=$(HOSTED_BMP_ONLY) -D_FILE_OFFSET_BITS=64
 
 ifeq ($(ASAN), 1)
     CFLAGS += -fsanitize=address
