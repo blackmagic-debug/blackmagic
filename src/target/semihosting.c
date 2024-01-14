@@ -124,7 +124,7 @@ const char *const semihosting_names[] = {
 #endif
 
 #if PC_HOSTED == 1
-static target_errno_e semihosting_errno(void);
+static semihosting_errno_e semihosting_errno(void);
 #endif
 
 int semihosting_reply(target_controller_s *const tc, char *const pbuf, const int len)
@@ -262,7 +262,7 @@ static int32_t semihosting_remote_write(
  * NB: Must be called immediately after the syscall that might generate a value.
  * No functions or actions may be performed between these two points.
  */
-static target_errno_e semihosting_errno(void)
+static semihosting_errno_e semihosting_errno(void)
 {
 	const int32_t error = errno;
 	switch (error) {
@@ -744,7 +744,7 @@ int32_t semihosting_get_command_line(target_s *const target, const semihosting_s
 	return target_check_error(target) ? -1 : 0;
 }
 
-int32_t semihosting_is_error(const target_errno_e code)
+int32_t semihosting_is_error(const semihosting_errno_e code)
 {
 	/* Convert a FileIO-domain errno into whether it indicates an error has occured or not */
 	const bool is_error = code == TARGET_EPERM || code == TARGET_ENOENT || code == TARGET_EINTR || code == TARGET_EIO ||

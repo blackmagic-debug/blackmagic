@@ -120,8 +120,8 @@ int target_breakwatch_clear(target_s *target, target_breakwatch_e, target_addr_t
 void target_command_help(target_s *target);
 int target_command(target_s *target, int argc, const char *argv[]);
 
-/* keep target_errno in sync with errno values in gdb/include/gdb/fileio.h */
-typedef enum target_errno {
+/* Defined per GDB's File I/O errno values from gdbsupport/fileio.h */
+typedef enum semihosting_errno {
 	TARGET_SUCCESS = 0,
 	TARGET_EPERM = 1,
 	TARGET_ENOENT = 2,
@@ -145,7 +145,7 @@ typedef enum target_errno {
 	TARGET_ENOSYS = 88,
 	TARGET_ENAMETOOLONG = 91,
 	TARGET_EUNKNOWN = 9999,
-} target_errno_e;
+} semihosting_errno_e;
 
 struct target_controller {
 	void (*destroy_callback)(target_controller_s *, target_s *target);
@@ -153,7 +153,7 @@ struct target_controller {
 
 	void *semihosting_buffer_ptr;
 	size_t semihosting_buffer_len;
-	target_errno_e gdb_errno;
+	semihosting_errno_e gdb_errno;
 	bool interrupted;
 };
 
