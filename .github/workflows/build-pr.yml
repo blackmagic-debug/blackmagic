@@ -226,7 +226,7 @@ jobs:
   # This workflow tests the experimental Meson build system
   build-linux-meson:
     # Name the job more appropriately so we can tell which windows and which MinGW ABI is in use
-    name: 'build-linux (${{ matrix.os.name }}, ${{ matrix.probe }}'
+    name: 'build-linux (${{ matrix.os.name }}, ${{ matrix.probe }})'
     # The type of runner that the job will run on
     runs-on: ${{ matrix.os.id }}
 
