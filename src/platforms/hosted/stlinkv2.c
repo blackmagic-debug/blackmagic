@@ -385,7 +385,7 @@ const char *stlink_target_voltage(void)
 	if (adc[0])
 		result = 2.0F * (float)adc[1] * 1.2F / (float)adc[0];
 	static char res[6];
-	const int written = snprintf(res, sizeof(res), "%4.2fV", result);
+	const int written = snprintf(res, sizeof(res), "%4.2fV", (double)result);
 	if (written < 0 || written >= (int)sizeof(res))
 		return "ERROR!";
 	return res;
