@@ -295,9 +295,17 @@ bool dap_init(void)
 	/* Look for CMSIS-DAP v1.2+ */
 	dap_has_swd_sequence = dap_version_compare_ge(cmsis_version, (dap_version_s){1, 2, 0});
 
+	/* Try to get the actual packet size information from the adaptor */
+	uint16_t dap_packet_size;
+	if (dap_info(DAP_INFO_PACKET_SIZE, &dap_packet_size, sizeof(dap_packet_size)) != sizeof(dap_packet_size))
+		/* Report the failure */
+		DEBUG_WARN("Failed to get adaptor packet size, assuming descriptor provided size\n");
+	else
+		packet_size = dap_packet_size + (type == CMSIS_TYPE_HID ? 1U : 0U);
+
 	/* Try to get the device's capabilities */
 	const size_t size = dap_info(DAP_INFO_CAPABILITIES, &dap_caps, sizeof(dap_caps));
-	if (size != 1U) {
+	if (size != sizeof(dap_caps)) {
 		/* Report the failure */
 		DEBUG_ERROR("Failed to get adaptor capabilities, aborting\n");
 		/* Close any open connections and return failure so we don't go further */
