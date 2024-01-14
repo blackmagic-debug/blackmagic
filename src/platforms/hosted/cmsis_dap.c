@@ -156,15 +156,15 @@ static inline bool dap_version_compare_le(const dap_version_s lhs, const dap_ver
 		(lhs.major == rhs.major && lhs.minor == rhs.minor && lhs.revision <= rhs.revision);
 }
 
-// Return maximum length in bytes that can be sent in the 'data' payload of a
-// DAP transfer, given the interface type and (provided) DAP command header
-// size.
+/*
+ * Return maximum length in bytes that can be sent in the 'data' payload of a
+ * DAP transfer, given the interface type and (provided) DAP command header size.
+ */
 static inline size_t dap_max_transfer_data(size_t command_header_len)
 {
 	const size_t result = report_size - command_header_len;
 
-	// Allow for an additional byte of payload overhead
-	// when sending data in HID Report payloads
+	/* Allow for an additional byte of payload overhead when sending data in HID Report payloads */
 	if (type == CMSIS_TYPE_HID)
 		return result - 1U;
 
@@ -204,10 +204,12 @@ static void dap_hid_print_permissions(const uint16_t vid, const uint16_t pid, co
 
 static bool dap_init_hid(void)
 {
+	/* Initialise HIDAPI */
 	DEBUG_INFO("Using hid transfer\n");
 	if (hid_init())
 		return false;
 
+	/* Extract the serial number information */
 	const size_t size = mbslen(bmda_probe_info.serial);
 	if (size > 64U) {
 		DEBUG_ERROR("Serial number invalid, aborting\n");
@@ -221,14 +223,18 @@ static bool dap_init_hid(void)
 		return false;
 	}
 	serial[size] = 0;
+
 	/*
-	 * Special-case devices that do not work with 513 byte report length
-	 * FIXME: Find a solution to decipher from the device.
+	 * Base the report length information for the device on the max packet length from its descriptors.
+	 * Add 1 to account for HIDAPI's need to prefix with a report type byte.
 	 */
-	if (bmda_probe_info.vid == 0x1fc9U && bmda_probe_info.pid == 0x0132U) {
-		DEBUG_WARN("Device does not work with the normal report length, activating quirk\n");
+	report_size = bmda_probe_info.max_packet_length + 1U;
+
+	/* Handle the NXP LPC11U3x CMSIS-DAP v1.0.7 implementation needing a 64 byte report length */
+	if (bmda_probe_info.vid == 0x1fc9U && bmda_probe_info.pid == 0x0132U)
 		report_size = 64U + 1U;
-	}
+
+	/* Now open the device with HIDAPI so we can talk with it */
 	handle = hid_open(bmda_probe_info.vid, bmda_probe_info.pid, serial[0] ? serial : NULL);
 	if (!handle) {
 		DEBUG_ERROR("hid_open failed: %ls\n", hid_error(NULL));
