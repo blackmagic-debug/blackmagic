@@ -259,6 +259,8 @@ static bool dap_init_bulk(void)
 		DEBUG_ERROR("libusb_claim_interface() failed\n");
 		return false;
 	}
+	/* Base the packet size on the one retrieved from the device descriptors */
+	packet_size = bmda_probe_info.max_packet_length;
 	in_ep = bmda_probe_info.in_ep;
 	out_ep = bmda_probe_info.out_ep;
 	return true;
