@@ -73,6 +73,12 @@ typedef enum semihosting_open_flags {
 	OPEN_MODE_TRUNC = 0x400,
 } semihosting_open_flags_e;
 
+typedef enum semihosting_seek_flag {
+	SEEK_MODE_SET = 0,
+	SEEK_MODE_CUR = 1,
+	SEEK_MODE_END = 2,
+} semihosting_seek_flag_e;
+
 typedef enum semihosting_exit_reason {
 	/* Hardware exceptions */
 	EXIT_REASON_BRANCH_THROUGH_ZERO = 0x20000U,

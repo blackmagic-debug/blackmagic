@@ -147,12 +147,6 @@ typedef enum target_errno {
 	TARGET_EUNKNOWN = 9999,
 } target_errno_e;
 
-typedef enum target_seek_flag {
-	TARGET_SEEK_SET = 0,
-	TARGET_SEEK_CUR = 1,
-	TARGET_SEEK_END = 2,
-} target_seek_flag_e;
-
 struct target_controller {
 	void (*destroy_callback)(target_controller_s *, target_s *target);
 	void (*printf)(target_controller_s *, const char *fmt, va_list);

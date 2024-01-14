@@ -534,7 +534,7 @@ int32_t semihosting_seek(target_s *const target, const semihosting_s *const requ
 		return result;
 	}
 #endif
-	gdb_putpacket_f("Flseek,%08X,%08lX,%08X", (unsigned)fd, (unsigned long)offset, TARGET_SEEK_SET);
+	gdb_putpacket_f("Flseek,%08X,%08lX,%08X", (unsigned)fd, (unsigned long)offset, SEEK_MODE_SET);
 	return semihosting_get_gdb_response(target->tc) == offset ? 0 : -1;
 }
 
