@@ -21,14 +21,14 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* This file deduplicates codes used in several pc-hosted platforms
- */
+/* This file defines various utility routines for BMDA */
+
+#include "general.h"
 
 #include <string.h>
 #include <unistd.h>
 #include <sys/time.h>
 
-#include "general.h"
 #include "timing.h"
 #include "bmp_hosted.h"
 
@@ -52,9 +52,6 @@ void platform_delay(uint32_t ms)
 #if defined(_WIN32) && !defined(__MINGW32__)
 	Sleep(ms);
 #else
-#if !defined(usleep)
-	int usleep(unsigned int);
-#endif
 	usleep(ms * 1000U);
 #endif
 }
