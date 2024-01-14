@@ -69,13 +69,13 @@ static void bmp_poll_loop(void)
 	gdb_main(pbuf, GDB_PACKET_BUFFER_SIZE, size);
 }
 
+#if PC_HOSTED == 1
 int main(int argc, char **argv)
 {
-#if PC_HOSTED == 1
 	platform_init(argc, argv);
 #else
-	(void)argc;
-	(void)argv;
+int main(void)
+{
 	platform_init();
 #endif
 
