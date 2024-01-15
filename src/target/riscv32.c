@@ -79,9 +79,7 @@ static int riscv32_breakwatch_clear(target_s *target, breakwatch_s *breakwatch);
 bool riscv32_probe(target_s *const target)
 {
 	/* Finish setting up the target structure with generic rv32 functions */
-	target->core = "rv32";
-	/* Provide the length of a suitable registers structure */
-	target->regs_size = sizeof(riscv32_regs_s);
+	target->regs_size = sizeof(riscv32_regs_s); /* Provide the length of a suitable registers structure */
 	target->regs_read = riscv32_regs_read;
 	target->regs_write = riscv32_regs_write;
 	target->reg_write = riscv32_reg_write;
