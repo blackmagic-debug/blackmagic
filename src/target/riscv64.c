@@ -114,7 +114,7 @@ static void riscv64_mem_read(target_s *const target, void *const dest, const tar
 	if (!len)
 		return;
 	riscv_hart_s *const hart = riscv_hart_struct(target);
-	/* Figure out the maxmial width of access to perform, up to the bitness of the target */
+	/* Figure out the maximal width of access to perform, up to the bitness of the target */
 	const uint8_t access_width = riscv_mem_access_width(hart, src, len);
 	const uint8_t access_length = 1U << access_width;
 	/* Build the access command */
