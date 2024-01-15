@@ -49,9 +49,7 @@ static void riscv64_mem_read(target_s *target, void *dest, target_addr64_t src, 
 bool riscv64_probe(target_s *const target)
 {
 	/* Finish setting up the target structure with generic rv64 functions */
-	target->core = "rv64";
-	/* Provide the length of a suitable registers structure */
-	target->regs_size = sizeof(riscv64_regs_s);
+	target->regs_size = sizeof(riscv64_regs_s); /* Provide the length of a suitable registers structure */
 	target->regs_read = riscv64_regs_read;
 	target->regs_write = riscv64_regs_write;
 	target->mem_read = riscv64_mem_read;
