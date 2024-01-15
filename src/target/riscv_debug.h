@@ -171,6 +171,10 @@ typedef struct riscv_hart {
 #define RV_DM_DATA3             0x07U
 #define RV_DM_ABST_CTRLSTATUS   0x16U
 #define RV_DM_ABST_COMMAND      0x17U
+#define RV_DM_ABST_AUTO         0x18U
+#define RV_DM_PROGBUF0          0x20U
+#define RV_DM_PROGBUF1          0x21U
+#define RV_DM_PROGBUF2          0x22U
 #define RV_DM_SYSBUS_CTRLSTATUS 0x38U
 #define RV_DM_SYSBUS_ADDR0      0x39U
 #define RV_DM_SYSBUS_ADDR1      0x3aU
@@ -301,8 +305,5 @@ void riscv_detach(target_s *target);
 uint8_t riscv_mem_access_width(const riscv_hart_s *hart, target_addr_t address, size_t length);
 void riscv32_unpack_data(void *dest, uint32_t data, uint8_t access_width);
 uint32_t riscv32_pack_data(const void *src, uint8_t access_width);
-
-void riscv32_mem_read(target_s *target, void *dest, target_addr64_t src, size_t len);
-void riscv32_mem_write(target_s *target, target_addr64_t dest, const void *src, size_t len);
 
 #endif /*TARGET_RISCV_DEBUG_H*/
