@@ -499,6 +499,7 @@ static bool riscv_hart_init(riscv_hart_s *const hart)
 
 	/* Build the ISA subset string from the Hart */
 	riscv_snprint_isa_subset(hart->isa_name, sizeof(hart->isa_name), hart->access_width, hart->extensions);
+	target->core = hart->isa_name;
 
 	DEBUG_INFO("Hart %" PRIx32 ": %u-bit RISC-V (arch = %08" PRIx32 "), %s ISA (exts = %08" PRIx32
 			   "), vendor = %" PRIx32 ", impl = %" PRIx32 "\n",
@@ -506,7 +507,6 @@ static bool riscv_hart_init(riscv_hart_s *const hart)
 
 	/* We don't support rv128, so tell the user and fast-quit on this target. */
 	if (hart->access_width == 128U) {
-		target->core = "(unsup) rv128";
 		DEBUG_WARN("rv128 is unsupported, ignoring this hart\n");
 		return true;
 	}

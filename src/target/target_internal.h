@@ -173,7 +173,7 @@ struct target {
 	/* Other stuff */
 	const char *driver;
 	uint32_t cpuid;
-	char *core;
+	const char *core;
 	char cmdline[MAX_CMDLINE];
 	target_addr_t heapinfo[4];
 	target_command_s *commands;
