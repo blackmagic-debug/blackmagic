@@ -780,17 +780,23 @@ static void riscv_hart_discover_triggers(riscv_hart_s *const hart)
 
 static void riscv_hart_memory_access_type(riscv_hart_s *const hart)
 {
-	uint32_t sysbus_status;
-	hart->flags &= (uint8_t)~RV_HART_FLAG_MEMORY_SYSBUS;
+	hart->flags &= (uint8_t)~RV_HART_FLAG_MEMORY_MASK;
 	/*
 	 * Try reading the system bus access control and status register.
 	 * Check if the value read back is non-zero for the sbasize field
 	 */
-	if (!riscv_dm_read(hart->dbg_module, RV_DM_SYSBUS_CTRLSTATUS, &sysbus_status) ||
-		!(sysbus_status & RV_DM_SYSBUS_STATUS_ADDR_WIDTH_MASK))
-		return;
-	/* If all the checks passed, we now have a valid system bus so can proceed with using it for memory access */
-	hart->flags = RV_HART_FLAG_MEMORY_SYSBUS | (sysbus_status & RV_HART_FLAG_ACCESS_WIDTH_MASK);
+	uint32_t sysbus_status;
+	if (riscv_dm_read(hart->dbg_module, RV_DM_SYSBUS_CTRLSTATUS, &sysbus_status) &&
+		sysbus_status & RV_DM_SYSBUS_STATUS_ADDR_WIDTH_MASK) {
+		/* If all the checks passed, we now have a valid system bus so can proceed with using it for memory access */
+		hart->flags = RV_HART_FLAG_MEMORY_SYSBUS | (sysbus_status & RV_HART_FLAG_ACCESS_WIDTH_MASK);
+	} else {
+		/* 
+		 * If the system bus is not valid, we need to fall back to using abstract commands
+		 * Later, if the memory access fails, we'll clear the flag and fall back to use the prog buffer
+		 */
+		hart->flags = RV_HART_FLAG_MEMORY_ABSTRACT;
+	}
 	/* Make sure the system bus is not in any kind of error state */
 	(void)riscv_dm_write(hart->dbg_module, RV_DM_SYSBUS_CTRLSTATUS, 0x00407000U);
 }
