@@ -481,7 +481,7 @@ static bool riscv_hart_init(riscv_hart_s *const hart)
 	if (!target)
 		return false;
 
-	/* Grab a reference to the DMI and DM structurues and do preliminary setup of the target structure */
+	/* Grab a reference to the DMI and DM structures and do preliminary setup of the target structure */
 	riscv_dm_ref(hart->dbg_module);
 	target->driver = "RISC-V";
 	target->priv = hart;
