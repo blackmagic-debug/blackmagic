@@ -246,16 +246,16 @@ typedef struct riscv_hart {
  * The CSR number when requested by GDB is shifted by RV_CSR_GDB_OFFSET so they cannot collide with
  * the GPRs. As a result, we have to subtract RV_CSR_GDB_OFFSET from the value received from GDB.
  */
-#define RV_CSR_GDB_OFFSET 128
-#define RV_CSR_STATUS     0x300
-#define RV_CSR_MISA       0x301
-#define RV_CSR_MIE        0x304
-#define RV_CSR_MTVEC      0x305
-#define RV_CSR_MSCRATCH   0x340
-#define RV_CSR_MEPC       0x341
-#define RV_CSR_MCAUSE     0x342
-#define RV_CSR_MTVAL      0x343
-#define RV_CSR_MIP        0x344
+#define RV_CSR_GDB_OFFSET 128U
+#define RV_CSR_STATUS     0x300U
+#define RV_CSR_MISA       0x301U
+#define RV_CSR_MIE        0x304U
+#define RV_CSR_MTVEC      0x305U
+#define RV_CSR_MSCRATCH   0x340U
+#define RV_CSR_MEPC       0x341U
+#define RV_CSR_MCAUSE     0x342U
+#define RV_CSR_MTVAL      0x343U
+#define RV_CSR_MIP        0x344U
 
 /*
  * These two lines are about allowing GDB to access FPU registers through fake registers offset by
