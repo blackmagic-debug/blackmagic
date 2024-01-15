@@ -300,3 +300,12 @@ Dependencies:
 	libusb: @2@
 '''.format(libftdi.found(), hidapi.found(), libusb.found()))
 endif
+
+summary(
+	{
+		'Building Firmware': is_firmware_build,
+		'Building BMDA': is_variable('bmda'),
+	},
+	bool_yn: true,
+	section: 'Black Magic Debug',
+)
