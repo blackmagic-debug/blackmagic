@@ -221,11 +221,19 @@ bool serial_open(const bmda_cli_options_s *const cl_opts, const char *const seri
 	}
 
 	COMMTIMEOUTS timeouts = {0};
-	timeouts.ReadIntervalTimeout = 10;
-	timeouts.ReadTotalTimeoutConstant = 10;
-	timeouts.ReadTotalTimeoutMultiplier = 10;
-	timeouts.WriteTotalTimeoutConstant = 10;
-	timeouts.WriteTotalTimeoutMultiplier = 10;
+	/*
+	 * Turn off read timeouts so that ReadFill() instantly returns even if there's no data waiting
+	 * (we implement our own mechanism below for that case as we only want to wait if we get no data)
+	 */
+	timeouts.ReadIntervalTimeout = MAXDWORD;
+	timeouts.ReadTotalTimeoutConstant = 0;
+	timeouts.ReadTotalTimeoutMultiplier = 0;
+	/*
+	 * Configure an exactly 100ms write timeout - we want this triggering to be fatal as something
+	 * has gone very wrong if we ever hit this.
+	 */
+	timeouts.WriteTotalTimeoutConstant = 100;
+	timeouts.WriteTotalTimeoutMultiplier = 0;
 	if (!SetCommTimeouts(port_handle, &timeouts)) {
 		handle_dev_error(port_handle, "setting communication timeouts for device");
 		return false;
