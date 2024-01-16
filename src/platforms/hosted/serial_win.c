@@ -266,6 +266,11 @@ bool platform_buffer_write(const void *const data, const size_t length)
 
 static ssize_t bmda_read_more_data(const uint32_t end_time)
 {
+	// Try to wait for up to 100ms for data to become available
+	if (WaitForSingleObject(port_handle, 100) != WAIT_OBJECT_0) {
+		DEBUG_ERROR("Timeout while waiting for BMP response: %lu\n", GetLastError());
+		return -4;
+	}
 	DWORD bytes_received = 0;
 	/* Try to fill the read buffer, and if that fails, bail */
 	if (!ReadFile(port_handle, read_buffer, READ_BUFFER_LENGTH, &bytes_received, NULL)) {
@@ -291,7 +296,7 @@ int platform_buffer_read(void *const data, const size_t length)
 	const uint32_t end_time = start_time + cortexm_wait_timeout;
 	/* Drain the buffer for the remote till we see a start-of-response byte */
 	for (char response = 0; response != REMOTE_RESP;) {
-		if (read_buffer_offset == read_buffer_fullness) {
+		while (read_buffer_offset == read_buffer_fullness) {
 			const ssize_t result = bmda_read_more_data(end_time);
 			if (result < 0)
 				return result;
