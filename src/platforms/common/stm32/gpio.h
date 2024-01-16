@@ -46,10 +46,10 @@ static inline void bmp_gpio_clear(const uint32_t gpioport, const uint16_t gpios)
 #else
 #if defined(STM32F4) || defined(STM32F7)
 	/* NOLINTNEXTLINE(clang-diagnostic-int-to-pointer-cast) */
-	GPIO_BSRR(gpioport) = gpios << 16U;
+	GPIO_BSRR(gpioport) = (uint32_t)gpios << 16U;
 #endif
 	/* NOLINTNEXTLINE(clang-diagnostic-int-to-pointer-cast) */
-	GPIO_BSRR(gpioport) = gpios << 16U;
+	GPIO_BSRR(gpioport) = (uint32_t)gpios << 16U;
 #endif
 }
 
