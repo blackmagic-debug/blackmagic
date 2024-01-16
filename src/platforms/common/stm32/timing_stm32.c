@@ -30,7 +30,7 @@
 
 bool running_status = false;
 static volatile uint32_t time_ms = 0;
-uint32_t target_clk_divider = 0;
+uint32_t target_clk_divider = UINT32_MAX;
 
 static size_t morse_tick = 0;
 #if defined(PLATFORM_HAS_POWER_SWITCH) && defined(STM32F1)
@@ -146,9 +146,23 @@ uint32_t platform_time_ms(void)
  * per delay loop count with 2 delay loops per clock
  */
 
+#if defined(STM32F4)
+/* Values for STM32F411 at 96 MHz */
+#define USED_SWD_CYCLES 12
+#define CYCLES_PER_CNT  4
+#elif defined(STM32F1)
 /* Values for STM32F103 at 72 MHz */
+#define USED_SWD_CYCLES 18
+#define CYCLES_PER_CNT  4
+#elif defined(STM32F0)
+/* Values for STM32F072 at 48 MHz */
+#define USED_SWD_CYCLES 16
+#define CYCLES_PER_CNT  6
+#else
+/* Inherit defaults for other platforms (F3, F7) */
 #define USED_SWD_CYCLES 22
 #define CYCLES_PER_CNT  10
+#endif
 
 void platform_max_frequency_set(const uint32_t frequency)
 {
@@ -178,6 +192,11 @@ void platform_max_frequency_set(const uint32_t frequency)
 		target_clk_divider = UINT32_MAX;
 		return;
 	}
+	/* A zero loops delay will underflow and hang in platform_delay_busy() */
+	if (divisor == 0U) {
+		target_clk_divider = UINT32_MAX;
+		return;
+	}
 	divisor /= 2U;
 	target_clk_divider = divisor / (CYCLES_PER_CNT * frequency);
 	if (target_clk_divider * (CYCLES_PER_CNT * frequency) < divisor)
@@ -200,8 +219,36 @@ uint32_t platform_max_frequency_get(void)
 	const uint32_t ratio = (target_clk_divider * BITBANG_DIVIDER_FACTOR) + BITBANG_DIVIDER_OFFSET;
 	return rcc_ahb_frequency / ratio;
 #else
+	if (target_clk_divider == UINT32_MAX)
+		return rcc_ahb_frequency / USED_SWD_CYCLES;
 	uint32_t result = rcc_ahb_frequency;
-	result /= USED_SWD_CYCLES + CYCLES_PER_CNT * target_clk_divider;
+	result /= USED_SWD_CYCLES + CYCLES_PER_CNT * target_clk_divider * 2U;
 	return result;
+#endif
+}
+
+/* Busy-looping delay for GPIO bitbanging operations. SUBS+BNE.N take 4 cycles. */
+void platform_delay_busy(const uint32_t loops)
+{
+	/* Avoid using `volatile` variables which incur stack accesses */
+#if 0
+	register uint32_t i = loops;
+	do {
+		/*
+		 * A "tactical" single NOP takes 0-1 cycles on Cortex-M0/M3/M4/M7
+		 * and avoids DCE, but consumes 2 bytes of flash, amplified by static/inline.
+		 * A normal `continue` in for/while/do-loops with no side-effects
+		 * makes the whole loop disappear to DCE at higher than -O1.
+		 */
+		__asm__("nop");
+	} while (--i > 0U);
+#else
+	/*
+	 * Another version which still assembles to SUBS+BNE.N; the NOP can be eliminated
+	 * in favor of an empty inline asm/volatile block if it's enough to suppress DCE.
+	 * Note that the predecrement has to be merged into the condition expression.
+	 */
+	for (register uint32_t i = loops; --i > 0U;)
+		__asm__("");
 #endif
 }
