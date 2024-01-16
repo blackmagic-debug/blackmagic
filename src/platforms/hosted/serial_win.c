@@ -173,12 +173,14 @@ static char *find_bmp_device(const bmda_cli_options_s *const cl_opts, const char
 
 bool serial_open(const bmda_cli_options_s *const cl_opts, const char *const serial)
 {
+	/* Figure out what the device node is for the requested device */
 	char *const device = find_bmp_device(cl_opts, serial);
 	if (!device) {
 		DEBUG_ERROR("Unexpected problems finding the device!\n");
 		return false;
 	}
 
+	/* Try and open the node so we can start communications with the the device */
 	port_handle = CreateFile(device,                    /* NT path to the device */
 		GENERIC_READ | GENERIC_WRITE,                   /* Read + Write */
 		0,                                              /* No Sharing */
@@ -188,11 +190,13 @@ bool serial_open(const bmda_cli_options_s *const cl_opts, const char *const seri
 		NULL);                                          /* Do not use a template file */
 	free(device);
 
+	/* If opening the device node failed for any reason, error out early */
 	if (port_handle == INVALID_HANDLE_VALUE) {
 		handle_dev_error(port_handle, "opening device");
 		return false;
 	}
 
+	/* Get the current device state from the device */
 	DCB serial_params = {0};
 	serial_params.DCBlength = sizeof(serial_params);
 	if (!GetCommState(port_handle, &serial_params)) {
@@ -200,6 +204,7 @@ bool serial_open(const bmda_cli_options_s *const cl_opts, const char *const seri
 		return false;
 	}
 
+	/* Adjust the device state to enable communications to work and be in the right mode */
 	serial_params.fParity = FALSE;
 	serial_params.fOutxCtsFlow = FALSE;
 	serial_params.fOutxDsrFlow = FALSE;
@@ -268,7 +273,6 @@ static ssize_t bmda_read_more_data(const uint32_t end_time)
 }
 
 /* XXX: We should either return size_t or bool */
-/* XXX: This needs documenting that it can abort the program with exit(), or the error handling fixed */
 int platform_buffer_read(void *const data, const size_t length)
 {
 	char *const buffer = (char *)data;
