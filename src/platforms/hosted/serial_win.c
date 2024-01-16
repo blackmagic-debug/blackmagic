@@ -230,6 +230,9 @@ bool serial_open(const bmda_cli_options_s *const cl_opts, const char *const seri
 		handle_dev_error(port_handle, "setting communication timeouts for device");
 		return false;
 	}
+
+	/* Having adjusted the line state, discard anything sat in the receive buffer */
+	PurgeComm(port_handle, PURGE_RXCLEAR);
 	return true;
 }
 
