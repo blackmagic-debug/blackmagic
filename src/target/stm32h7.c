@@ -125,6 +125,9 @@
 #define D1DBGCKEN   (1U << 21U)
 #define D3DBGCKEN   (1U << 22U)
 
+#define STM32H7_DBGMCU_IDCODE_DEV_MASK  0x00000fffU
+#define STM32H7_DBGMCU_IDCODE_REV_SHIFT 16U
+
 #define STM32H7_FLASH_BANK1_BASE    0x08000000U
 #define STM32H7_FLASH_BANK2_BASE    0x08100000U
 #define STM32H7_FLASH_BANK_SIZE     0x00100000U
@@ -569,6 +572,7 @@ static const struct {
 	{0x1000U, 'A'},
 	{0x1001U, 'Z'},
 	{0x1003U, 'Y'},
+	{0x1007U, 'X'}, /* RM0455 */
 	{0x2001U, 'X'},
 	{0x2003U, 'V'},
 };
@@ -579,8 +583,8 @@ static bool stm32h7_cmd_rev(target_s *target, int argc, const char **argv)
 	(void)argv;
 	/* DBGMCU identity code register */
 	const uint32_t dbgmcu_idc = target_mem_read32(target, DBGMCU_IDC);
-	const uint16_t rev_id = (dbgmcu_idc >> 16U) & 0xffffU;
-	const uint16_t dev_id = (dbgmcu_idc & 0xfffU) << 4U;
+	const uint16_t rev_id = dbgmcu_idc >> STM32H7_DBGMCU_IDCODE_REV_SHIFT;
+	const uint16_t dev_id = dbgmcu_idc & STM32H7_DBGMCU_IDCODE_DEV_MASK;
 
 	/* Print device */
 	switch (dev_id) {
