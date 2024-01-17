@@ -48,6 +48,7 @@ void platform_buffer_flush(void);
 	do {                 \
 	} while (0)
 #define PLATFORM_HAS_POWER_SWITCH
+#define PLATFORM_HAS_RVSWD
 
 #define PRODUCT_ID_ANY 0xffffU
 
