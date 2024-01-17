@@ -133,9 +133,9 @@
 #define NUM_SECTOR_PER_BANK         8U
 #define FLASH_SECTOR_SIZE           0x20000U
 
-#define ID_STM32H74x 0x4500U /* RM0433, RM0399 */
-#define ID_STM32H7Bx 0x4800U /* RM0455 */
-#define ID_STM32H72x 0x4830U /* RM0468 */
+#define ID_STM32H74x 0x450U /* RM0433, RM0399 */
+#define ID_STM32H7Bx 0x480U /* RM0455 */
+#define ID_STM32H72x 0x483U /* RM0468 */
 
 typedef struct stm32h7_flash {
 	target_flash_s target_flash;
@@ -194,8 +194,11 @@ static void stm32h7_add_flash(target_s *target, uint32_t addr, size_t length, si
 
 bool stm32h7_probe(target_s *target)
 {
-	if (target->part_id != ID_STM32H74x && target->part_id != ID_STM32H7Bx && target->part_id != ID_STM32H72x)
+	const uint16_t part_id = target->part_id >> 4U;
+	if (part_id != ID_STM32H74x && part_id != ID_STM32H7Bx && part_id != ID_STM32H72x)
 		return false;
+	/* Update part_id on match */
+	target->part_id = part_id;
 
 	target->driver = "STM32H7";
 	target->attach = stm32h7_attach;
