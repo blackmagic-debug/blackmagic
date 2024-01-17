@@ -340,7 +340,7 @@ bool cmd_rvswd_scan(target_s *target, int argc, const char **argv)
 #if CONFIG_BMDA == 1
 		scan_result = bmda_rvswd_scan();
 #else
-		scan_result = false;
+		scan_result = rvswd_scan();
 #endif
 	}
 	CATCH () {
@@ -400,7 +400,7 @@ bool cmd_auto_scan(target_s *target, int argc, const char **argv)
 #if CONFIG_BMDA == 1
 				scan_result = bmda_rvswd_scan();
 #else
-				scan_result = false;
+				scan_result = rvswd_scan();
 #endif
 				if (!scan_result)
 					gdb_out("RVSWD scan found no devices.\n");

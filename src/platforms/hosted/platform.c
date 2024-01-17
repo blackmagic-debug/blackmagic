@@ -31,6 +31,7 @@
 #include "platform.h"
 #include "jtagtap.h"
 #include "swd.h"
+#include "rvswd.h"
 #include "target.h"
 #include "target_internal.h"
 #include "adiv5.h"
@@ -64,6 +65,7 @@ bmda_probe_s bmda_probe_info;
 #ifndef ENABLE_GPIOD
 jtag_proc_s jtag_proc;
 swd_proc_s swd_proc;
+rvswd_proc_s rvswd_proc;
 #endif
 
 static uint32_t max_frequency = 4000000U;
