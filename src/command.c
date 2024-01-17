@@ -360,9 +360,9 @@ bool cmd_frequency(target_s *t, int argc, const char **argv)
 	}
 	const uint32_t freq = platform_max_frequency_get();
 	if (freq == FREQ_FIXED)
-		gdb_outf("SWJ freq fixed\n");
+		gdb_outf("Debug iface frequency is fixed.\n");
 	else
-		gdb_outf("Current SWJ freq %" PRIu32 "Hz\n", freq);
+		gdb_outf("Debug iface frequency set to %" PRIu32 "Hz\n", freq);
 	return true;
 }
 
