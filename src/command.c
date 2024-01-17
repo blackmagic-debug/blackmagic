@@ -308,7 +308,7 @@ bool cmd_rvswd_scan(target_s *target, int argc, const char **argv)
 #if PC_HOSTED == 1
 		scan_result = bmda_rvswd_scan();
 #else
-		scan_result = false;
+		scan_result = rvswd_scan();
 #endif
 	}
 	switch (e.type) {
