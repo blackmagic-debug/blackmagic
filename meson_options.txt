@@ -149,3 +149,8 @@ option(
 	value: false,
 	description: 'Enable firmware-side protocol acceleration of RISC-V Debug'
 )
+option(
+	'rvswd_support',
+	type: 'boolean',
+	value: false
+)
