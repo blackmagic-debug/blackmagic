@@ -79,6 +79,13 @@ if rtt_support
 	endif
 endif
 
+# RVSWD support handling
+rvswd_support = get_option('rvswd_support')
+if rvswd_support
+	libbmd_core_args += ['-DCONFIG_RVSWD=1']
+	bmd_core_args += ['-DCONFIG_RVSWD=1']
+endif
+
 # Advertise QStartNoAckMode
 advertise_noackmode = get_option('advertise_noackmode')
 if advertise_noackmode
@@ -117,6 +124,7 @@ summary(
 	{
 		'Debug output': debug_output,
 		'RTT support': rtt_support,
+		'RVSWD support': rvswd_support,
 		'Advertise QStartNoAckMode': advertise_noackmode,
 	},
 	bool_yn: true,
