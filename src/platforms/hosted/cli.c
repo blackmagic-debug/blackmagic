@@ -177,10 +177,10 @@ static void cl_help(char **argv)
 			   "\t                   can be repeated for as many commands you wish to run.\n"
 			   "\t                   If the command contains spaces, use quotes around the\n"
 			   "\t                   complete command\n"
+			   "\t-f, --freq       Set an operating frequency for the debug interface\n"
 			   "\n"
 			   "SWD-specific configuration options [-f FREQUENCY | -m TARGET]:\n"
-			   "\t-f, --freq       Set an operating frequency for SWD\n"
-			   "\t-m, --mult-drop  Use the given target ID for selection in SWD multi-drop\n"
+			   "\t-m, --multi-drop  Use the given target ID for selection in SWD multi-drop\n"
 			   "\n"
 			   "Flash operation selection options [-E | -w | -V | -r]:\n"
 			   "\t-E, --erase      Erase the target device Flash\n"
@@ -237,7 +237,7 @@ void cl_init(bmda_cli_options_s *opt, int argc, char **argv)
 	opt->opt_target_dev = 1;
 	opt->opt_flash_size = 0xffffffff;
 	opt->opt_flash_start = 0xffffffff;
-	opt->opt_max_swj_frequency = 4000000;
+	opt->opt_max_frequency = 0;
 	opt->opt_scanmode = BMP_SCAN_SWD;
 	opt->opt_mode = BMP_MODE_DEBUG;
 	while (true) {
@@ -310,7 +310,7 @@ void cl_init(bmda_cli_options_s *opt, int argc, char **argv)
 					frequency *= 1000U * 1000U;
 					break;
 				}
-				opt->opt_max_swj_frequency = frequency;
+				opt->opt_max_frequency = frequency;
 			}
 			break;
 		case 's':
