@@ -35,10 +35,12 @@
 #include "buffer_utils.h"
 
 #include <assert.h>
+#ifndef _MSC_VER
 #include <unistd.h>
+#include <sys/time.h>
+#endif
 #include <signal.h>
 #include <ctype.h>
-#include <sys/time.h>
 #include <libusb.h>
 
 #include "cli.h"

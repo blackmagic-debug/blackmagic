@@ -34,7 +34,7 @@
 #endif
 
 /* This has to be aligned so the remote protocol can re-use it without causing Problems */
-static char pbuf[GDB_PACKET_BUFFER_SIZE + 1U] __attribute__((aligned(8)));
+static char BMD_ALIGN_DEF(8) pbuf[GDB_PACKET_BUFFER_SIZE + 1U];
 
 char *gdb_packet_buffer()
 {

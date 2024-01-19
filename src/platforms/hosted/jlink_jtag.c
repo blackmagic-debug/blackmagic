@@ -24,7 +24,9 @@
  */
 
 #include "general.h"
+#ifndef _MSC_VER
 #include <unistd.h>
+#endif
 #include <assert.h>
 #include <memory.h>
 #include <stdlib.h>

@@ -75,6 +75,15 @@ bool ftdi_swd_possible(void)
 	return true;
 }
 
+#if defined(_MSC_VER) && !defined(__clang__)
+static inline uint32_t __builtin_ctz(uint32_t value)
+{
+	uint32_t result = 0U;
+	_BitScanForward(&result, value);
+	return result;
+}
+#endif
+
 bool ftdi_swd_init(void)
 {
 	if (!ftdi_swd_possible()) {

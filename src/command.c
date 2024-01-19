@@ -76,6 +76,10 @@ static bool cmd_debug_bmp(target_s *t, int argc, const char **argv);
 static bool cmd_shutdown_bmda(target_s *t, int argc, const char **argv);
 #endif
 
+#ifdef _MSC_VER
+#define strtok_r strtok_s
+#endif
+
 const command_s cmd_list[] = {
 	{"version", cmd_version, "Display firmware version info"},
 	{"help", cmd_help, "Display help for monitor commands"},

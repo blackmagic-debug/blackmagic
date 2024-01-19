@@ -45,23 +45,22 @@
 #include "target_internal.h"
 #include "gdb_main.h"
 #include "gdb_packet.h"
-#include "cortexm.h"
 #include "semihosting.h"
 #include "semihosting_internal.h"
 #include "buffer_utils.h"
+#include "timeofday.h"
 
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
 
 #if PC_HOSTED == 1
 #include <errno.h>
 #include <time.h>
-#include <sys/time.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #ifdef _WIN32
+#include <io.h>
 #define O_BINARY _O_BINARY
 #define O_NOCTTY 0
 #else

@@ -31,7 +31,7 @@
 #define NT_DEV_SUFFIX     "\\\\.\\"
 #define NT_DEV_SUFFIX_LEN ARRAY_LENGTH(NT_DEV_SUFFIX)
 
-static char *format_string(const char *format, ...) __attribute__((format(printf, 1, 2)));
+static char *format_string(const char *format, ...) DEBUG_FORMAT_ATTR;
 
 static char *format_string(const char *format, ...)
 {

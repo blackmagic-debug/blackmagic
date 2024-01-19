@@ -24,7 +24,9 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <termios.h>
+#ifndef _MSC_VER
 #include <unistd.h>
+#endif
 
 #include "general.h"
 #include "remote.h"

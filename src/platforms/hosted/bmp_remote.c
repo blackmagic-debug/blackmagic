@@ -35,8 +35,10 @@
 #include "remote/protocol_v3.h"
 
 #include <assert.h>
-#include <sys/time.h>
 #include <errno.h>
+#ifndef _MSC_VER
+#include <sys/time.h>
+#endif
 
 #include "adiv5.h"
 
