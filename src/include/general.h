@@ -21,6 +21,10 @@
 #ifndef INCLUDE_GENERAL_H
 #define INCLUDE_GENERAL_H
 
+#if !defined(__cplusplus) && __STDC__ != 1
+#error "Black Magic Debug must be built in a standards compliant C mode"
+#endif
+
 #ifndef _GNU_SOURCE
 // NOLINTNEXTLINE(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp)
 #define _GNU_SOURCE
