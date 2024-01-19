@@ -62,15 +62,6 @@
 
 #if PC_HOSTED == 0
 /*
- * XXX: This entire system needs replacing with something better thought out
- *
- * When built as firmware, if the target supports debugging, DEBUG_ERROR, DEBUG_WARN and
- * DEBUG_INFO get defined to a macro that turns them into printf() calls. The rest of the
- * levels turn into no-ops.
- *
- * When built as BMDA, the debug macros all turn into various kinds of console-printing
- * function, w/ gating for diagnostics other than warnings and info.
- *
  * XXX: This is not really the proper place for all this as this is too intrusive into
  * the rest of the code base. The correct way to do this would be to define a debug
  * logging layer and allow BMDA to override the default logging subsystem via
