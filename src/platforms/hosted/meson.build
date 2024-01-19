@@ -72,7 +72,12 @@ cc = is_cross_build ? cc_native : cc_host
 # Determine if we're on a MSYS2 environment of some kind
 # If the compiler is MSYS2 GCC or Clang (but not Clang-cl)
 if build_machine.system() == 'windows' and cc.get_define('__MINGW32__') == '1'
+	# It needs custom location for some MinGWs
+	# See https://github.com/msys2/MINGW-packages/issues/10275
 	ucrt_check = '''
+		#ifdef __MINGW32__
+		#include <_mingw.h>
+		#endif
 		#include <stddef.h>
 		#ifndef _UCRT
 		#error "_UCRT not defined"
@@ -80,7 +85,7 @@ if build_machine.system() == 'windows' and cc.get_define('__MINGW32__') == '1'
 	'''
 
 	# Check if we're in a UCRT based environment or not
-	if cc.compiles(ucrt_check)
+	if cc.compiles(ucrt_check, name: 'the compiler links against the UCRT')
 		# Force linking against the correct C runtime DLL
 		if cc.get_id() != 'clang'
 			bmda_args += ['-mcrtdll=ucrt']
