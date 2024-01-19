@@ -195,7 +195,7 @@ int gdb_main_loop(target_controller_s *tc, char *pbuf, size_t pbuf_size, size_t 
 	}
 	case 's': /* 's [addr]': Single step [start at addr] */
 		single_step = true;
-		/* fall through */
+		BMD_FALLTHROUGH
 	case 'c': /* 'c [addr]': Continue [at addr] */
 	case 'C': /* 'C sig[;addr]': Continue with signal [at addr] */
 		if (!cur_target) {
@@ -205,7 +205,7 @@ int gdb_main_loop(target_controller_s *tc, char *pbuf, size_t pbuf_size, size_t 
 
 		target_halt_resume(cur_target, single_step);
 		SET_RUN_STATE(true);
-		/* fall through */
+		BMD_FALLTHROUGH
 	case '?': { /* '?': Request reason for target halt */
 		/*
 		 * This packet isn't documented as being mandatory,
@@ -714,7 +714,7 @@ static void handle_v_packet(char *packet, const size_t plen)
 		switch (packet[6]) {
 		case 's': /* 's': Single step */
 			single_step = true;
-			/* fall through */
+			BMD_FALLTHROUGH
 		case 'c': /* 'c': Continue */
 		case 'C': /* 'C sig': Continue with signal */
 			if (!cur_target) {
