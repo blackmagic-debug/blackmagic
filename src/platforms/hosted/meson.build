@@ -110,9 +110,9 @@ endif
 
 # Pick the appropriate HIDAPI depending on platform
 if build_machine.system() == 'linux'
-	hidapi = dependency('hidapi-hidraw', required: false, method: 'pkg-config', native: is_cross_build)
+	hidapi = dependency('hidapi-hidraw', method: 'pkg-config', fallback: 'hidapi', native: is_cross_build)
 else
-	hidapi = dependency('hidapi', required: false, method: 'pkg-config', native: is_cross_build)
+	hidapi = dependency('hidapi', method: 'pkg-config', fallback: 'hidapi', native: is_cross_build)
 endif
 
 libusb = dependency(
