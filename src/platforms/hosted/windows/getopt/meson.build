@@ -1,7 +1,7 @@
 # This file is part of the Black Magic Debug project.
 #
 # Copyright (C) 2023 1BitSquared <info@1bitsquared.com>
-# Written by Rachel Mant <git@dragonmux.network>
+# Written by L. E. Segovia <amy@amyspark.me>
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -28,29 +28,9 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-ftdi_sources = files('ftdi.c')
-
-ftdi_includes = [
-	include_directories('..' / '..' / '..' / '..' / '3rdparty' / 'ftdi'),
-	include_directories('.')
-]
-
-processor = build_machine.cpu_family()
-if processor == 'x86_64'
-	processor = 'amd64'
-elif processor == 'x86'
-	processor = 'i386'
-endif
-
-ftdi_dep = cc.find_library(
-	'ftd2xx',
-	dirs: [meson.project_source_root() / '3rdparty' / 'ftdi' / processor]
+libgetopt = declare_dependency(
+	sources: files(
+		'getopt_long.c',
+	),
+	include_directories: include_directories('.', is_system: true)
 )
-
-libftdi = declare_dependency(
-	sources: ftdi_sources,
-	include_directories: ftdi_includes,
-	dependencies: ftdi_dep
-)
-
-subdir('getopt')
