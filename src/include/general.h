@@ -121,6 +121,25 @@ void debug_serial_send_stdout(const uint8_t *data, size_t len);
 #undef MAX
 #define MAX(x, y) (((x) > (y)) ? (x) : (y))
 
+/* Define this macro helper if the compiler doesn't for us */
+#ifndef __has_c_attribute
+#define __has_c_attribute(x) 0
+#endif
+
+/* If we're in C23 mode or newer, we can use the proper fallthrough attribute */
+#if __STDC_VERSION__ >= 202311L && __has_c_attribute(fallthrough)
+#define BMD_FALLTHROUGH [[fallthrough]];
+/* If we're on Clang, we can use the old style attribute on Clang 10 and newer */
+#elif defined(__clang__) && __clang_major__ >= 10
+#define BMD_FALLTHROUGH __attribute__((fallthrough));
+/* If we're on GCC then we have to be on at least GCC 7 for the attribute */
+#elif defined(__GNUC__) && __GNUC__ >= 7
+#define BMD_FALLTHROUGH __attribute__((fallthrough));
+/* If none of the above is true, make the annotation a no-op */
+#else
+#define BMD_FALLTHROUGH
+#endif
+
 #if defined(_MSC_VER) && !defined(__clang__)
 #define BMD_UNUSED
 #else
