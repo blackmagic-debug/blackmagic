@@ -73,14 +73,6 @@ static bool debug_serial_send_complete = true;
 #endif
 
 #if ENABLE_DEBUG == 1 && defined(PLATFORM_HAS_DEBUG)
-/*
- * This call initialises "SemiHosting", only we then do our own SVC interrupt things to
- * route all output through to the debug USB serial interface if debug_bmp is true.
- *
- * https://github.com/mirror/newlib-cygwin/blob/master/newlib/libc/sys/arm/syscalls.c#L115
- */
-void initialise_monitor_handles(void);
-
 static char debug_serial_debug_buffer[AUX_UART_BUFFER_SIZE];
 static uint16_t debug_serial_debug_write_index;
 static uint16_t debug_serial_debug_read_index;
@@ -225,10 +217,6 @@ void usb_serial_set_config(usbd_device *dev, uint16_t value)
 	 */
 	usb_serial_set_state(dev, GDB_IF_NO, CDCACM_GDB_NOTIF_ENDPOINT);
 	usb_serial_set_state(dev, UART_IF_NO, CDCACM_UART_NOTIF_ENDPOINT);
-
-#if ENABLE_DEBUG == 1 && defined(PLATFORM_HAS_DEBUG)
-	initialise_monitor_handles();
-#endif
 }
 
 void debug_serial_send_stdout(const uint8_t *const data, const size_t len)

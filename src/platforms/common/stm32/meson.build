@@ -67,7 +67,7 @@ platform_stm32_link_args = [
 	'-lc',
 	'-nostartfiles',
 	'--specs=nano.specs',
-	get_option('debug_output') ? '--specs=rdimon.specs' : '--specs=nosys.specs',
+	'--specs=nosys.specs',
 	'-Wl,-gc-sections',
 ]
 
