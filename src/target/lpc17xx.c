@@ -22,7 +22,6 @@
 #include "target_internal.h"
 #include "cortex.h"
 #include "lpc_common.h"
-#include "adiv5.h"
 
 /*
  * For detailed documentation on how this code works and the IAP variant used here, see:

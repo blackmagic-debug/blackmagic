@@ -27,7 +27,6 @@
 #ifndef _MSC_VER
 #include <unistd.h>
 #endif
-#include <assert.h>
 #include <memory.h>
 #include <stdlib.h>
 
@@ -35,7 +34,6 @@
 #include "jtagtap.h"
 #include "jlink.h"
 #include "jlink_protocol.h"
-#include "cli.h"
 
 static void jlink_jtag_reset(void);
 static void jlink_jtag_tms_seq(uint32_t tms_states, size_t clock_cycles);

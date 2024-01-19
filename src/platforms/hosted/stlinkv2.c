@@ -27,7 +27,6 @@
  */
 
 #include "general.h"
-#include "gdb_if.h"
 #include "adiv5.h"
 #include "bmp_hosted.h"
 #include "stlinkv2.h"
@@ -36,12 +35,6 @@
 #include "cortexm.h"
 #include "buffer_utils.h"
 #include "maths_utils.h"
-
-#include <assert.h>
-#include <signal.h>
-#include <ctype.h>
-
-#include "cli.h"
 
 #ifdef _MSC_VER
 #include <intrin.h>

@@ -26,7 +26,6 @@
 #ifndef _MSC_VER
 #include <unistd.h>
 #endif
-#include <assert.h>
 #include <ftdi.h>
 #include "ftdi_bmp.h"
 

@@ -22,17 +22,13 @@
  * binary file from the command line.
  */
 
+#include "general.h"
+
+#include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <getopt.h>
-#include "version.h"
-#include "general.h"
-#include "target_internal.h"
-#include "cortexm.h"
-#include "command.h"
-#include "cli.h"
-#include "bmp_hosted.h"
 
 #if defined(_WIN32) || defined(__CYGWIN__)
 #include <io.h>
@@ -46,6 +42,13 @@
 #define O_BINARY         0
 #define BMDA_NORMAL_MODE S_IRUSR | S_IWUSR
 #endif
+
+#include "version.h"
+#include "target_internal.h"
+#include "cortexm.h"
+#include "command.h"
+#include "cli.h"
+#include "bmp_hosted.h"
 
 typedef struct option getopt_option_s;
 
