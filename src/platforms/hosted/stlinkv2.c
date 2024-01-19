@@ -38,15 +38,16 @@
 #include "maths_utils.h"
 
 #include <assert.h>
-#include <unistd.h>
 #include <signal.h>
 #include <ctype.h>
-#include <sys/time.h>
 
 #include "cli.h"
 
 #ifdef _MSC_VER
 #include <intrin.h>
+#else
+#include <unistd.h>
+#include <sys/time.h>
 #endif
 
 typedef enum transport_mode {

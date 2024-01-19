@@ -39,6 +39,7 @@
 #elif !defined(__FreeBSD__)
 #include <alloca.h>
 #endif
+// IWYU pragma: begin_keep
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -51,6 +52,7 @@
 #include "timing.h"
 #include "platform_support.h"
 #include "align.h"
+// IWYU pragma: end_keep
 
 #ifndef ARRAY_LENGTH
 #define ARRAY_LENGTH(arr) (sizeof(arr) / sizeof((arr)[0]))
@@ -127,5 +129,17 @@ void debug_serial_send_stdout(const uint8_t *data, size_t len);
 #define MIN(x, y) (((x) < (y)) ? (x) : (y))
 #undef MAX
 #define MAX(x, y) (((x) > (y)) ? (x) : (y))
+
+#if defined(_MSC_VER) && !defined(__clang__)
+#define BMD_UNUSED
+#else
+#define BMD_UNUSED __attribute__((unused))
+#endif
+
+#ifdef _MSC_VER
+#define strcasecmp  _stricmp
+#define strncasecmp _strnicmp
+
+#endif
 
 #endif /* INCLUDE_GENERAL_H */

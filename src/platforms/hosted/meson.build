@@ -137,7 +137,7 @@ else
 	bmda_platform = declare_dependency(
 		include_directories: bmda_includes,
 		sources: bmda_sources,
-		compile_args: bmda_args,
+		compile_args: cc.get_supported_arguments(bmda_args),
 		link_args: bmda_link_args,
 		dependencies: [libbmd_core, bmda_deps, libftdi, hidapi, libusb],
 	)

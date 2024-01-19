@@ -58,11 +58,13 @@
 
 #include <assert.h>
 #include <string.h>
+#ifndef _MSC_VER
 #include <unistd.h>
+#include <sys/time.h>
+#endif
 #include <stdlib.h>
 #include <signal.h>
 #include <ctype.h>
-#include <sys/time.h>
 #include <hidapi.h>
 #include <wchar.h>
 #include <sys/stat.h>

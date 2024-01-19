@@ -34,17 +34,25 @@
 #define GDB_PACKET_NOTIFICATION_START '%'
 #define GDB_PACKET_ESCAPE_XOR         (0x20U)
 
+#if defined(__MINGW32__) || defined(__MINGW64__) || defined(__CYGWIN__)
+#define GDB_FORMAT_ATTR __attribute__((format(__MINGW_PRINTF_FORMAT, 1, 2)))
+#elif defined(__GNUC__) || defined(__clang__)
+#define GDB_FORMAT_ATTR __attribute__((format(printf, 1, 2)))
+#else
+#define GDB_FORMAT_ATTR
+#endif
+
 void gdb_set_noackmode(bool enable);
 size_t gdb_getpacket(char *packet, size_t size);
 void gdb_putpacket(const char *packet, size_t size);
 void gdb_putpacket2(const char *packet1, size_t size1, const char *packet2, size_t size2);
 #define gdb_putpacketz(packet) gdb_putpacket((packet), strlen(packet))
-void gdb_putpacket_f(const char *packet, ...) __attribute__((format(printf, 1, 2)));
+void gdb_putpacket_f(const char *packet, ...) GDB_FORMAT_ATTR;
 void gdb_put_notification(const char *packet, size_t size);
 #define gdb_put_notificationz(packet) gdb_put_notification((packet), strlen(packet))
 
 void gdb_out(const char *buf);
 void gdb_voutf(const char *fmt, va_list);
-void gdb_outf(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
+void gdb_outf(const char *fmt, ...) GDB_FORMAT_ATTR;
 
 #endif /* INCLUDE_GDB_PACKET_H */
