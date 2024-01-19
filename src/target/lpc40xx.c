@@ -24,7 +24,6 @@
 #include "cortex.h"
 #include "cortexm.h"
 #include "lpc_common.h"
-#include "adiv5.h"
 
 /*
  * For detailed documentation on how this code works and the IAP variant used here, see:

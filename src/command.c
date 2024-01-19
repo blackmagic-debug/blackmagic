@@ -34,15 +34,18 @@
 #include "target_internal.h"
 #include "morse.h"
 #include "version.h"
-#include "serialno.h"
 #include "jtagtap.h"
+
+#if PC_HOSTED == 0
 #include "jtag_scan.h"
+#endif
 
 #ifdef ENABLE_RTT
 #include "rtt.h"
 #endif
 
 #ifdef PLATFORM_HAS_TRACESWO
+#include "serialno.h"
 #include "traceswo.h"
 #endif
 

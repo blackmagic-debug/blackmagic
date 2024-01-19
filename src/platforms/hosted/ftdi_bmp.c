@@ -21,8 +21,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include "general.h"
-#include "gdb_if.h"
-#include "target.h"
 #include "buffer_utils.h"
 
 #include <assert.h>

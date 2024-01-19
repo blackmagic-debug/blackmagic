@@ -53,18 +53,14 @@
 */
 
 #include "general.h"
-#include "gdb_if.h"
 #include "adiv5.h"
 
-#include <assert.h>
 #include <string.h>
 #ifndef _MSC_VER
 #include <unistd.h>
 #include <sys/time.h>
 #endif
 #include <stdlib.h>
-#include <signal.h>
-#include <ctype.h>
 #include <hidapi.h>
 #include <wchar.h>
 #include <sys/stat.h>
@@ -73,11 +69,8 @@
 #include "dap.h"
 #include "dap_command.h"
 #include "cmsis_dap.h"
-#include "buffer_utils.h"
 
-#include "cli.h"
 #include "target.h"
-#include "target_internal.h"
 
 #define TRANSFER_TIMEOUT_MS (100)
 
