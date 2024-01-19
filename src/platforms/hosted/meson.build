@@ -103,6 +103,12 @@ if build_machine.system() in ['windows', 'cygwin']
 		cc.find_library('setupapi'),
 	]
 	bmda_sources += files('serial_win.c')
+
+	if not cc.has_function('getopt_long', prefix: '#include <getopt.h>')
+		bmda_deps += [
+			libgetopt
+		]
+	endif
 else
 	libftdi = dependency('libftdi1', required: false, method: 'pkg-config', native: is_cross_build)
 	bmda_sources += files('serial_unix.c')
