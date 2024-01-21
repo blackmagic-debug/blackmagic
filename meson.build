@@ -90,6 +90,7 @@ endif
 # Project wide flags
 extended_warnings = [
 	'-Warith-conversion',
+	'-w24244', # 'conversion' conversion from 'type1' to 'type2', possible loss of data (integer version)
 	'-Wbad-function-cast',
 	# '-Wcast-align=strict',
 	'-Wcast-function-type',
@@ -98,13 +99,18 @@ extended_warnings = [
 	'-Wdangling-else',
 	'-Wdouble-promotion',
 	'-Wduplicated-branches',
+	'-w24754', # Conversion rules for arithmetic operations in a comparison mean that one branch cannot be executed.
 	'-Wfloat-conversion',
 	# '-Wformat-overflow=2',
 	# '-Wformat-signedness',
 	'-Wformat-truncation',
 	'-Wformat=2',
+	'-w24774', # ‘<function>’ : format string expected in argument <position> is not a string literal
+	'-w24777', #‘<function>’ : format string ‘<format-string>’ requires an argument of type ‘<type>’, but variadic argument <position> has type ‘<type>’ 
 	'-Wimplicit-fallthrough',
 	'-Wmaybe-uninitialized',
+	'-w24701', # Potentially uninitialized local variable 'name' used
+	'-w24703', # Potentially uninitialized local pointer variable 'name' used
 	'-Wmissing-attributes',
 	'-Wmissing-braces',
 	'-Wno-char-subscripts',
@@ -112,20 +118,25 @@ extended_warnings = [
 	# '-Wpacked',
 	'-Wredundant-decls',
 	'-Wreturn-type',
+	'-w24013', # 'function' undefined; assuming extern returning int
 	'-Wsequence-point',
 	'-Wshadow=local',
+	'-w24456', # declaration of 'identifier' hides previous local declaration
+	'-w24457', # declaration of 'identifier' hides function parameter
 	# '-Wsign-conversion',
 	# '-Wstack-protector',
 	'-Wstrict-aliasing',
 	'-Wstrict-overflow=3',
 	'-Wstring-compare',
 	'-Wstringop-overflow',
-	'-Wunknown-pragmas',
+	'-Wunknown-pragmas', # MSVC's C4081 and it's a level 1 warning
 	'-Wunsafe-loop-optimizations',
 	'-Wunsuffixed-float-constant',
 	'-Wunused-const-variable=2',
+	'-w24189', # 'identifier' : local variable is initialized but not referenced
 	'-Wunused-local-typedefs',
 	'-Wunused',
+	'-w24101', # 'identifier' : unreferenced local variable
 	'-Wvla-parameter',
 	'-Wvla',
 ]
