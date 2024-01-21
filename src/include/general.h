@@ -140,6 +140,21 @@ void debug_serial_send_stdout(const uint8_t *data, size_t len);
 #define strcasecmp  _stricmp
 #define strncasecmp _strnicmp
 
-#endif
+// FIXME: BMDA still uses this function in gdb_packet.c
+// It's defined here as an export from utils.c would pollute the ABI of libbmd
+static inline int vasprintf(char **strp, const char *const fmt, va_list ap)
+{
+	const int actual_size = vsnprintf(NULL, 0, fmt, ap);
+	if (actual_size < 0)
+		return -1;
+
+	*strp = malloc(actual_size + 1);
+	if (!*strp)
+		return -1;
+
+	return vsnprintf(*strp, actual_size + 1, fmt, ap);
+}
+
+#endif /* _MSC_VER */
 
 #endif /* INCLUDE_GENERAL_H */
