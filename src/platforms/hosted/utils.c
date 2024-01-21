@@ -31,21 +31,6 @@
 #include "timing.h"
 #include "bmp_hosted.h"
 
-#if defined(_WIN32) && !defined(__MINGW32__)
-int vasprintf(char **strp, const char *const fmt, va_list ap)
-{
-	const int actual_size = vsnprintf(NULL, 0, fmt, ap);
-	if (actual_size < 0)
-		return -1;
-
-	*strp = malloc(actual_size + 1);
-	if (!*strp)
-		return -1;
-
-	return vsnprintf(*strp, actual_size + 1, fmt, ap);
-}
-#endif
-
 void platform_delay(uint32_t ms)
 {
 #if defined(_WIN32) && !defined(__MINGW32__)
