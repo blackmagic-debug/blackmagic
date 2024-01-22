@@ -357,7 +357,14 @@ target_at32f4 = declare_dependency(
 	dependencies: [target_cortexm, target_stm_common]
 )
 
-target_ti = declare_dependency(
+target_ti_icepick = declare_dependency(
+	sources: files(
+		'icepick.c'
+	),
+	compile_args: ['-DCONFIG_TI_ICEPICK=1'],
+)
+
+target_ti_cortexm = declare_dependency(
 	sources: files(
 		'lmi.c',
 		'msp432e4.c',
@@ -367,6 +374,15 @@ target_ti = declare_dependency(
 	compile_args: ['-DCONFIG_TI=1'],
 	dependencies: target_cortexm,
 )
+
+# NB: the ICEPick support doesn't /yet/ do anything here, and is intended as a dependency
+# to be pulled in for parts that need it like the AM335x. At such a time, remove it from
+# `target_ti`. This target logic exists as an easy expansion point for supporting TI's
+# Cortex-A/R based parts in the future.
+target_ti = [
+	target_ti_cortexm,
+	target_ti_icepick,
+]
 
 target_xilinx = declare_dependency(
 	sources: files(
@@ -433,7 +449,8 @@ libbmd_target_deps = [
 	target_rp,
 	target_sam,
 	target_stm,
-	target_ti,
+	target_ti_cortexm,
+	target_ti_icepick,
 	target_xilinx,
 ]
 
