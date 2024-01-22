@@ -101,11 +101,6 @@ const jtag_dev_descr_s dev_descr[] = {
 		.descr = "NPX: LPC11C24.",
 	},
 	{
-		.idcode = 0x4ba00477U,
-		.idmask = 0xffffffffU,
-		.descr = "NXP: LPC17xx family.",
-	},
-	{
 		.idcode = 0x1396d093U,
 		.idmask = 0xffffffffU,
 		.descr = "Xilinx XCVU440.",
@@ -384,11 +379,6 @@ const jtag_dev_descr_s dev_descr[] = {
 		.idcode = 0x07b7617fU,
 		.idmask = 0xffffffffU,
 		.descr = "BCM2835.",
-	},
-	{
-		.idcode = 0x4ba00477U,
-		.idmask = 0xffffffffU,
-		.descr = "BCM2836.",
 	},
 #endif
 	{
