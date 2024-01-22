@@ -353,6 +353,15 @@ const jtag_dev_descr_s dev_descr[] = {
 		.handler = riscv_jtag_dtm_handler,
 	},
 #endif
+#if defined(ENABLE_CORTEXAR) // && defined(ENABLE_SITARA)
+	{
+		.idcode = 0x0b90002fU,
+		.idmask = 0x0ff00fffU,
+#if ENABLE_DEBUG == 1
+		.descr = "TI ICEPick.",
+#endif
+	},
+#endif
 #if ENABLE_DEBUG == 1
 	{
 		.idcode = 0x000007a3U,
