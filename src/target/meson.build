@@ -323,7 +323,7 @@ target_at32f4 = declare_dependency(
 	dependencies: [target_cortexm, target_stm_common]
 )
 
-target_ti = declare_dependency(
+target_ti_cortexm = declare_dependency(
 	sources: files(
 		'lmi.c',
 		'msp432e4.c',
@@ -332,6 +332,23 @@ target_ti = declare_dependency(
 	) + lmi_stub,
 	dependencies: target_cortexm,
 )
+
+target_ti_cortexa = declare_dependency(
+	sources: files(
+		'icepick.c'
+	),
+	dependencies: target_cortexar,
+	compile_args: ['-DENABLE_TI_SITARA=1'],
+)
+# If the Cortex-A/R target is not enabled, don't enable TI AM335x part support
+if enabled_targets.contains('cortexar')
+	target_ti = [
+		target_ti_cortexm,
+		target_ti_cortexa,
+	]
+else
+	target_ti = target_ti_cortexm
+endif
 
 target_xilinx = declare_dependency(
 	sources: files(
@@ -396,7 +413,8 @@ libbmd_target_deps = [
 	target_rp,
 	target_sam,
 	target_stm,
-	target_ti,
+	target_ti_cortexm,
+	target_ti_cortexa,
 	target_xilinx,
 ]
 
