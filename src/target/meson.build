@@ -257,6 +257,7 @@ target_xilinx = declare_dependency(
 		'zynq7000.c',
 	),
 	dependencies: target_cortexar,
+	compile_args: ['-DENABLE_XILINX=1'],
 )
 
 if is_firmware_build
