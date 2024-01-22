@@ -9,7 +9,7 @@ repos:
     types_or: [c++, c]  # override default file types to only C and CPP files
 
 - repo: https://github.com/perigoso/pre-commit-hooks
-  rev: v0.3
+  rev: v0.3.1
   hooks:
   - id: check-hex-case
     args: [--lower-digits] # edit-in-place, hex number digits to lower case (defaults to upper case), i.e. 0x55aa
