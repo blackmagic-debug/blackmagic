@@ -47,6 +47,7 @@
 #include "icepick.h"
 
 #define IR_ROUTER      0x02U
+#define IR_IDCODE      0x04U
 #define IR_ICEPICKCODE 0x05U
 #define IR_CONNECT     0x07U
 
@@ -63,8 +64,29 @@
 #define ICEPICK_MINOR_SHIFT 24U
 #define ICEPICK_MINOR_MASK  0xfU
 
+#define ICEPICK_ROUTING_REG_MASK  0x7fU
+#define ICEPICK_ROUTING_REG_SHIFT 24U
+#define ICEPICK_ROUTING_DATA_MASK 0x00ffffffU
+#define ICEPICK_ROUTING_RNW_MASK  0x80000000U
+#define ICEPICK_ROUTING_RNW_WRITE 0x80000000U
+#define ICEPICK_ROUTING_FAIL      0x80000000U
+
+#define ICEPICK_ROUTING_SYSCTRL         0x01U
+#define ICEPICK_ROUTING_DEBUG_TAP_BASE  0x20U
+#define ICEPICK_ROUTING_DEBUG_TAP_COUNT 16U
+
+/*
+ * The connect register is 8 bits long and has the following format:
+ * [0:3] - Connect key (9 to connect, anything else to disconnect)
+ * [4:6] - Reserved, RAZ/WI
+ *   [7] - Write Enable, 1 to enable writing this register
+ */
+#define ICEPICK_CONNECT    0x89U
+#define ICEPICK_DISCONNECT 0x80U
+
 void icepick_write_ir(jtag_dev_s *device, uint8_t ir);
 uint32_t icepick_shift_dr(const jtag_dev_s *device, uint32_t data_in, size_t clock_cycles);
+static void icepick_configure(const jtag_dev_s *device);
 
 void icepick_router_handler(const uint8_t dev_index)
 {
@@ -83,6 +105,46 @@ void icepick_router_handler(const uint8_t dev_index)
 	DEBUG_INFO("ICEPick type-D controller v%u.%u (%08" PRIx32 ")\n",
 		(icepick_idcode >> ICEPICK_MAJOR_SHIFT) & ICEPICK_MAJOR_MASK,
 		(icepick_idcode >> ICEPICK_MINOR_SHIFT) & ICEPICK_MINOR_MASK, icepick_idcode);
+
+	/* Connect to the controller so we can modify the scan chain */
+	icepick_write_ir(device, IR_CONNECT);
+	icepick_shift_dr(device, ICEPICK_CONNECT, 8U);
+
+	/* Now we're connected, go into the routing inspection/modification mode */
+	icepick_write_ir(device, IR_ROUTER);
+	/* Configure the router to put the Cortex TAP(s) on chain */
+	icepick_configure(device);
+	/* Go to an idle state instruction and then run 10 idle cycles to complete reconfiguration */
+	icepick_write_ir(device, IR_IDCODE);
+	jtag_proc.jtagtap_cycle(false, false, 10U);
+}
+
+/* Read an ICEPick routing register */
+static bool icepick_read_reg(const jtag_dev_s *const device, const uint8_t reg, uint32_t *const result)
+{
+	/* Start by building a read request and sending it to the controller */
+	icepick_shift_dr(device, (uint32_t)(reg & ICEPICK_ROUTING_REG_MASK) << ICEPICK_ROUTING_REG_SHIFT, 32U);
+	/* Having completed this, now do a dummy request to reg 0 to find out what the response is */
+	const uint32_t value = icepick_shift_dr(device, 0U, 32U);
+	/* Now check if the request failed */
+	if (value & ICEPICK_ROUTING_FAIL)
+		return false;
+	/* It did not, so now extract the data portion of the result */
+	*result = value & ICEPICK_ROUTING_DATA_MASK;
+	return true;
+}
+
+static void icepick_configure(const jtag_dev_s *const device)
+{
+	/* Try to read out the system control register */
+	uint32_t sysctrl = 0U;
+	if (!icepick_read_reg(device, ICEPICK_ROUTING_SYSCTRL, &sysctrl)) {
+		DEBUG_ERROR("Failed to read ICEPick System Control register\n");
+		return;
+	}
+
+	/* Decode the register to determine what we've got */
+	DEBUG_INFO("ICEPick sysctrl = %08" PRIx32 "\n", sysctrl);
 }
 
 void icepick_write_ir(jtag_dev_s *const device, const uint8_t ir)
