@@ -76,12 +76,6 @@ void jtag_add_device(const uint32_t dev_index, const jtag_dev_s *jtag_dev)
  */
 bool jtag_scan(void)
 {
-	/* Free the device list if any, and clean state ready */
-	target_list_free();
-
-	jtag_dev_count = 0;
-	memset(&jtag_devs, 0, sizeof(jtag_devs));
-
 	/*
 	 * Initialise the JTAG backend if it's not already
 	 * This will automatically do the SWD-to-JTAG sequence just in case we've got
@@ -99,6 +93,17 @@ bool jtag_scan(void)
 
 	/* Reset the chain ready */
 	jtag_proc.jtagtap_reset();
+	return jtag_discover();
+}
+
+bool jtag_discover(void)
+{
+	/* Free the device list if any, and clean state ready */
+	target_list_free();
+
+	jtag_dev_count = 0;
+	memset(jtag_devs, 0, sizeof(jtag_devs));
+
 	/* Start by reading out the ID Codes for all the devices on the chain */
 	if (!jtag_read_idcodes() ||
 		/* Otherwise, try and learn the chain IR lengths */
