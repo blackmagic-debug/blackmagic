@@ -38,7 +38,8 @@
 #include "target_internal.h"
 #include "cortexm.h"
 #include "adiv5.h"
-
+#include "renesas_ra.h"
+#include "renesas_mf4_flash.h"
 #define RENESAS_PARTID_RA2A1 0x01b0U
 #define RENESAS_PARTID_RA4M2 0x0340U
 #define RENESAS_PARTID_RA4M3 0x0310U
@@ -65,32 +66,9 @@
  * the part number, the code is stored ascii encoded, starting from the lowest memory address
  * except for pnrs stored in 'FIXED_PNR1', where the code is stored in reverse order (but the last 3 bytes are still 0x20 aka ' ')
  */
-
 /* family + series + group no */
 #define PNR_FAMILY_INDEX                   3U
 #define PNR_SERIES(pnr3, pnr4, pnr5, pnr6) (((pnr3) << 24U) | ((pnr4) << 16U) | ((pnr5) << 8U) | (pnr6))
-
-typedef enum {
-	PNR_SERIES_RA2L1 = PNR_SERIES('A', '2', 'L', '1'),
-	PNR_SERIES_RA2E1 = PNR_SERIES('A', '2', 'E', '1'),
-	PNR_SERIES_RA2E2 = PNR_SERIES('A', '2', 'E', '2'),
-	PNR_SERIES_RA2A1 = PNR_SERIES('A', '2', 'A', '1'),
-	PNR_SERIES_RA4M1 = PNR_SERIES('A', '4', 'M', '1'),
-	PNR_SERIES_RA4M2 = PNR_SERIES('A', '4', 'M', '2'),
-	PNR_SERIES_RA4M3 = PNR_SERIES('A', '4', 'M', '3'),
-	PNR_SERIES_RA4E1 = PNR_SERIES('A', '4', 'E', '1'),
-	PNR_SERIES_RA4E2 = PNR_SERIES('A', '4', 'E', '2'),
-	PNR_SERIES_RA4W1 = PNR_SERIES('A', '4', 'W', '1'),
-	PNR_SERIES_RA6M1 = PNR_SERIES('A', '6', 'M', '1'),
-	PNR_SERIES_RA6M2 = PNR_SERIES('A', '6', 'M', '2'),
-	PNR_SERIES_RA6M3 = PNR_SERIES('A', '6', 'M', '3'),
-	PNR_SERIES_RA6M4 = PNR_SERIES('A', '6', 'M', '4'),
-	PNR_SERIES_RA6M5 = PNR_SERIES('A', '6', 'M', '5'),
-	PNR_SERIES_RA6E1 = PNR_SERIES('A', '6', 'E', '1'),
-	PNR_SERIES_RA6E2 = PNR_SERIES('A', '6', 'E', '2'),
-	PNR_SERIES_RA6T1 = PNR_SERIES('A', '6', 'T', '1'),
-	PNR_SERIES_RA6T2 = PNR_SERIES('A', '6', 'T', '2'),
-} renesas_pnr_series_e;
 
 /* Code flash memory size */
 #define PNR_MEMSIZE_INDEX 8U
@@ -288,12 +266,6 @@ const command_s renesas_cmd_list[] = {
 	{NULL, NULL, NULL},
 };
 
-typedef struct renesas_priv {
-	uint8_t pnr[17]; /* 16-byte PNR + 1-byte null termination */
-	renesas_pnr_series_e series;
-	target_addr_t flash_root_table; /* if applicable */
-} renesas_priv_s;
-
 static target_addr_t renesas_fmifrt_read(target_s *target);
 static bool renesas_pnr_read(target_s *target, target_addr_t base, uint8_t *pnr);
 static renesas_pnr_series_e renesas_series(const uint8_t *pnr);
@@ -370,7 +342,7 @@ static void renesas_add_flash(target_s *const target, const target_addr_t addr, 
 	case PNR_SERIES_RA2A1:
 	case PNR_SERIES_RA4M1:
 	case PNR_SERIES_RA4W1:
-		/* FIXME: implement MF3/4 flash */
+		renesas_add_mf_flash(target, addr, length);
 		return;
 
 	case PNR_SERIES_RA4M2:

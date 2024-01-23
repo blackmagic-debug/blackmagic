@@ -4,6 +4,7 @@ VPATH += $(PLATFORM_DIR) target
 ENABLE_DEBUG ?= 0
 ENABLE_CORTEXAR ?= 0
 ENABLE_RISCV ?= 0
+ENABLE_RENESAS ?= 0
 
 SYS = $(shell $(CC) -dumpmachine)
 
@@ -87,7 +88,6 @@ SRC =              \
 	stm32l0.c      \
 	stm32l4.c      \
 	stm32g0.c      \
-	renesas_ra.c   \
 	target.c       \
 	target_flash.c \
 	target_probe.c \
@@ -111,6 +111,13 @@ SRC +=               \
 	riscv64.c        \
 	riscv_debug.c    \
 	riscv_jtag_dtm.c
+endif
+
+ifeq ($(ENABLE_RENESAS), 1)
+CFLAGS += -DENABLE_RENESAS
+SRC +=                  \
+	renesas_ra.c        \
+	renesas_mf4_flash.c
 endif
 
 ifneq ($(PC_HOSTED),1)
