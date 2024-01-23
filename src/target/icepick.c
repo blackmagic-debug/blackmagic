@@ -64,6 +64,7 @@
 #define ICEPICK_MINOR_MASK  0xfU
 
 void icepick_write_ir(jtag_dev_s *device, uint8_t ir);
+uint32_t icepick_shift_dr(const jtag_dev_s *device, uint32_t data_in, size_t clock_cycles);
 
 void icepick_router_handler(const uint8_t dev_index)
 {
@@ -72,8 +73,7 @@ void icepick_router_handler(const uint8_t dev_index)
 	/* Switch the ICEPick TAP into its controller identification mode */
 	icepick_write_ir(device, IR_ICEPICKCODE);
 	/* Then read out the 32-bit controller ID code */
-	uint32_t icepick_idcode = 0U;
-	jtag_dev_shift_dr(dev_index, (uint8_t *)&icepick_idcode, NULL, 32U);
+	const uint32_t icepick_idcode = icepick_shift_dr(device, 0U, 32U);
 
 	/* Check it's a suitable ICEPick controller, and abort if not */
 	if ((icepick_idcode & ICEPICK_TYPE_MASK) != ICEPICK_TYPE_D) {
@@ -103,4 +103,23 @@ void icepick_write_ir(jtag_dev_s *const device, const uint8_t ir)
 	jtag_proc.jtagtap_tdi_seq(true, ones, device->ir_postscan);
 	/* Now go to Update-IR but do not go back to Idle */
 	jtagtap_return_idle(0);
+}
+
+uint32_t icepick_shift_dr(const jtag_dev_s *const device, const uint32_t data_in, const size_t clock_cycles)
+{
+	/* Prepare the data to send */
+	uint8_t data[4];
+	write_le4(data, 0, data_in);
+	/* Switch into Shift-DR */
+	jtagtap_shift_dr();
+	/* Now we're in Shift-DR, clock out 1's till we hit the right device in the chain */
+	jtag_proc.jtagtap_tdi_seq(false, ones, device->dr_prescan);
+	/* Now clock out the new DR value and get the response */
+	jtag_proc.jtagtap_tdi_tdo_seq(data, !device->dr_postscan, data, clock_cycles);
+	/* Make sure we're in Exit1-DR having clocked out 1's for any more devices on the chain */
+	jtag_proc.jtagtap_tdi_seq(true, ones, device->dr_postscan);
+	/* Now go to Update-DR but do not go back to Idle */
+	jtagtap_return_idle(0);
+	/* Extract the resulting data */
+	return read_le4(data, 0);
 }
