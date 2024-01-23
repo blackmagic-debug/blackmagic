@@ -339,16 +339,21 @@ void jtag_dev_write_ir(const uint8_t dev_index, const uint32_t ir)
 	jtagtap_return_idle(1);
 }
 
-void jtag_dev_shift_dr(const uint8_t dev_index, uint8_t *data_out, const uint8_t *data_in, const size_t clock_cycles)
+void jtag_dev_shift_dr(
+	const uint8_t dev_index, uint8_t *const data_out, const uint8_t *const data_in, const size_t clock_cycles)
 {
-	jtag_dev_s *device = &jtag_devs[dev_index];
+	const jtag_dev_s *const device = &jtag_devs[dev_index];
+	/* Switch into Shift-DR */
 	jtagtap_shift_dr();
+	/* Now we're in Shift-DR, clock out 1's till we hit the right device in the chain */
 	jtag_proc.jtagtap_tdi_seq(false, ones, device->dr_prescan);
+	/* Now clock out the new DR value and get the response */
 	if (data_out)
-		jtag_proc.jtagtap_tdi_tdo_seq(
-			(uint8_t *)data_out, !device->dr_postscan, (const uint8_t *)data_in, clock_cycles);
+		jtag_proc.jtagtap_tdi_tdo_seq(data_out, !device->dr_postscan, data_in, clock_cycles);
 	else
-		jtag_proc.jtagtap_tdi_seq(!device->dr_postscan, (const uint8_t *)data_in, clock_cycles);
+		jtag_proc.jtagtap_tdi_seq(!device->dr_postscan, data_in, clock_cycles);
+	/* Make sure we're in Exit1-DR having clocked out 1's for any more devices on the chain */
 	jtag_proc.jtagtap_tdi_seq(true, ones, device->dr_postscan);
+	/* Now go through Update-DR and back to Idle */
 	jtagtap_return_idle(1);
 }
