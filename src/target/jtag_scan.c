@@ -3,7 +3,7 @@
  *
  * Copyright (C) 2011  Black Sphere Technologies Ltd.
  * Written by Gareth McMullin <gareth@blacksphere.co.nz>
- * Copyright (C) 2022-2023 1BitSquared <info@1bitsquared.com>
+ * Copyright (C) 2022-2024 1BitSquared <info@1bitsquared.com>
  * Modified by Rachel Mant <git@dragonmux.network>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -20,7 +20,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* This file implements JTAG protocol support.  Provides functionality
+/*
+ * This file implements JTAG protocol support.  Provides functionality
  * to detect devices on the scan chain and read their IDCODEs.
  * It depends on the low-level function provided by the platform's jtagtap.c.
  */
@@ -315,7 +316,7 @@ static bool jtag_sanity_check(void)
 
 void jtag_dev_write_ir(const uint8_t dev_index, const uint32_t ir)
 {
-	jtag_dev_s *device = &jtag_devs[dev_index];
+	jtag_dev_s *const device = &jtag_devs[dev_index];
 	/* If the request would duplicate work already done, do nothing */
 	if (ir == device->current_ir)
 		return;
@@ -323,13 +324,18 @@ void jtag_dev_write_ir(const uint8_t dev_index, const uint32_t ir)
 	/* Set all the other devices IR's to being in bypass */
 	for (size_t device_index = 0; device_index < jtag_dev_count; device_index++)
 		jtag_devs[device_index].current_ir = UINT32_MAX;
+	/* Put the current device IR into the requested state */
 	device->current_ir = ir;
 
 	/* Do the work to make the scanchain match the jtag_devs state */
 	jtagtap_shift_ir();
+	/* Once in Shift-IR, clock out 1's till we hit the right device in the chain */
 	jtag_proc.jtagtap_tdi_seq(false, ones, device->ir_prescan);
+	/* Then clock out the new IR value and drop into Exit1-IR on the last cycle if we're the last device */
 	jtag_proc.jtagtap_tdi_seq(!device->ir_postscan, (const uint8_t *)&ir, device->ir_len);
+	/* Make sure we're in Exit1-IR having clocked out 1's for any more devices on the chain */
 	jtag_proc.jtagtap_tdi_seq(true, ones, device->ir_postscan);
+	/* Now go through Update-IR and back to Idle */
 	jtagtap_return_idle(1);
 }
 
