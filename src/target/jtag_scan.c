@@ -148,7 +148,8 @@ bool jtag_discover(void)
 #endif
 
 	/* Check for known devices and handle accordingly */
-	for (size_t device = 0; device < jtag_dev_count; device++) {
+	const size_t devices = jtag_dev_count;
+	for (size_t device = 0; device < devices; device++) {
 		for (size_t descr = 0; dev_descr[descr].idcode; descr++) {
 			if ((jtag_devs[device].jd_idcode & dev_descr[descr].idmask) == dev_descr[descr].idcode) {
 				/* Call handler to initialise/probe device further */
@@ -159,7 +160,7 @@ bool jtag_discover(void)
 		}
 	}
 
-	return jtag_dev_count > 0;
+	return devices > 0;
 }
 
 static bool jtag_read_idcodes(void)
