@@ -105,6 +105,8 @@ static void icepick_configure(const jtag_dev_s *device);
 
 void icepick_router_handler(const uint8_t dev_index)
 {
+	if (dev_index >= 2U)
+		return;
 	jtag_dev_s *const device = &jtag_devs[dev_index];
 
 	/* Switch the ICEPick TAP into its controller identification mode */
@@ -132,6 +134,8 @@ void icepick_router_handler(const uint8_t dev_index)
 	/* Go to an idle state instruction and then run 10 idle cycles to complete reconfiguration */
 	icepick_write_ir(device, IR_IDCODE);
 	jtag_proc.jtagtap_cycle(false, false, 10U);
+	/* Now re-scan the bus to pick up all the new TAPs */
+	jtag_discover();
 }
 
 /* Read an ICEPick routing register */
