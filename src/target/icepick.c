@@ -74,6 +74,8 @@
 #define ICEPICK_ROUTING_SYSCTRL         0x01U
 #define ICEPICK_ROUTING_DEBUG_TAP_BASE  0x20U
 #define ICEPICK_ROUTING_DEBUG_TAP_COUNT 16U
+#define ICEPICK_ROUTING_CORE_BASE       0x60U
+#define ICEPICK_ROUTING_CORE_COUNT      16U
 
 #define ICEPICK_ROUTING_SYSCTRL_FREE_RUNNING_TCK 0x00001000U
 #define ICEPICK_ROUTING_SYSCTRL_KEEP_POWERED     0x00000080U
@@ -194,6 +196,16 @@ static void icepick_configure(const jtag_dev_s *const device)
 				DEBUG_ERROR("ICEPick TAP %u write failed\n", tap);
 		} else
 			DEBUG_PROBE("ICEPick TAP %u read failed\n", tap);
+	}
+
+	for (uint8_t core = 0; core < ICEPICK_ROUTING_CORE_COUNT; ++core) {
+		uint32_t core_config = 0U;
+		if (icepick_read_reg(device, ICEPICK_ROUTING_CORE_BASE + core, &core_config)) {
+			DEBUG_INFO("ICEPick core %u: %06" PRIx32 "\n", core, core_config);
+			if (!icepick_write_reg(device, ICEPICK_ROUTING_CORE_BASE + core, 0x00002008U))
+				DEBUG_ERROR("ICEPick core %u write failed\n", core);
+		} else
+			DEBUG_PROBE("ICEPick core %u read failed\n", core);
 	}
 }
 
