@@ -41,6 +41,7 @@
  */
 
 #include "general.h"
+#include "buffer_utils.h"
 #include "jtag_scan.h"
 #include "jtagtap.h"
 #include "icepick.h"
@@ -62,10 +63,14 @@
 #define ICEPICK_MINOR_SHIFT 24U
 #define ICEPICK_MINOR_MASK  0xfU
 
+void icepick_write_ir(jtag_dev_s *device, uint8_t ir);
+
 void icepick_router_handler(const uint8_t dev_index)
 {
+	jtag_dev_s *const device = &jtag_devs[dev_index];
+
 	/* Switch the ICEPick TAP into its controller identification mode */
-	jtag_dev_write_ir(dev_index, IR_ICEPICKCODE);
+	icepick_write_ir(device, IR_ICEPICKCODE);
 	/* Then read out the 32-bit controller ID code */
 	uint32_t icepick_idcode = 0U;
 	jtag_dev_shift_dr(dev_index, (uint8_t *)&icepick_idcode, NULL, 32U);
@@ -78,4 +83,24 @@ void icepick_router_handler(const uint8_t dev_index)
 	DEBUG_INFO("ICEPick type-D controller v%u.%u (%08" PRIx32 ")\n",
 		(icepick_idcode >> ICEPICK_MAJOR_SHIFT) & ICEPICK_MAJOR_MASK,
 		(icepick_idcode >> ICEPICK_MINOR_SHIFT) & ICEPICK_MINOR_MASK, icepick_idcode);
+}
+
+void icepick_write_ir(jtag_dev_s *const device, const uint8_t ir)
+{
+	/* Set all the other devices IR's to being in bypass */
+	for (size_t device_index = 0; device_index < jtag_dev_count; device_index++)
+		jtag_devs[device_index].current_ir = UINT32_MAX;
+	/* Put the current device IR into the requested state */
+	device->current_ir = ir;
+
+	/* Do the work to make the scanchain match the jtag_devs state */
+	jtagtap_shift_ir();
+	/* Once in Shift-IR, clock out 1's till we hit the right device in the chain */
+	jtag_proc.jtagtap_tdi_seq(false, ones, device->ir_prescan);
+	/* Then clock out the new IR value and drop into Exit1-IR on the last cycle if we're the last device */
+	jtag_proc.jtagtap_tdi_seq(!device->ir_postscan, &ir, device->ir_len);
+	/* Make sure we're in Exit1-IR having clocked out 1's for any more devices on the chain */
+	jtag_proc.jtagtap_tdi_seq(true, ones, device->ir_postscan);
+	/* Now go to Update-IR but do not go back to Idle */
+	jtagtap_return_idle(0);
 }
