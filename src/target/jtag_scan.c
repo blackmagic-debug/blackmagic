@@ -97,6 +97,8 @@ bool jtag_scan(void)
 	jtagtap_init();
 #endif
 
+	/* Reset the chain ready */
+	jtag_proc.jtagtap_reset();
 	/* Start by reading out the ID Codes for all the devices on the chain */
 	if (!jtag_read_idcodes() ||
 		/* Otherwise, try and learn the chain IR lengths */
@@ -157,8 +159,7 @@ bool jtag_scan(void)
 
 static bool jtag_read_idcodes(void)
 {
-	/* Reset the chain ready and transition to Shift-DR */
-	jtag_proc.jtagtap_reset();
+	/* Transition to Shift-DR */
 	DEBUG_INFO("Change state to Shift-DR\n");
 	jtagtap_shift_dr();
 
