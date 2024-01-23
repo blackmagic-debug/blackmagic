@@ -75,6 +75,12 @@
 #define ICEPICK_ROUTING_DEBUG_TAP_BASE  0x20U
 #define ICEPICK_ROUTING_DEBUG_TAP_COUNT 16U
 
+#define ICEPICK_ROUTING_SYSCTRL_FREE_RUNNING_TCK 0x00001000U
+#define ICEPICK_ROUTING_SYSCTRL_KEEP_POWERED     0x00000080U
+#define ICEPICK_ROUTING_SYSCTRL_TDO_ALWAYS_OUT   0x00000020U
+#define ICEPICK_ROUTING_SYSCTRL_DEVICE_TYPE_MASK 0x0000000eU
+#define ICEPICK_ROUTING_SYSCTRL_SYSTEM_RESET     0x00000001U
+
 /*
  * The connect register is 8 bits long and has the following format:
  * [0:3] - Connect key (9 to connect, anything else to disconnect)
@@ -134,6 +140,20 @@ static bool icepick_read_reg(const jtag_dev_s *const device, const uint8_t reg, 
 	return true;
 }
 
+/* Write an ICEPick routing register */
+static bool icepick_write_reg(const jtag_dev_s *const device, const uint8_t reg, const uint32_t value)
+{
+	/* Build a write a request and send it to the controller */
+	icepick_shift_dr(device,
+		ICEPICK_ROUTING_RNW_WRITE | ((uint32_t)(reg & ICEPICK_ROUTING_REG_MASK) << ICEPICK_ROUTING_REG_SHIFT) |
+			(value & ICEPICK_ROUTING_DATA_MASK),
+		32U);
+	/* Having completed this, now do a dummy request to reg 0 to find out what the response is */
+	const uint32_t result = icepick_shift_dr(device, 0U, 32U);
+	/* Now check if the request failed */
+	return !(result & ICEPICK_ROUTING_FAIL);
+}
+
 static void icepick_configure(const jtag_dev_s *const device)
 {
 	/* Try to read out the system control register */
@@ -145,6 +165,16 @@ static void icepick_configure(const jtag_dev_s *const device)
 
 	/* Decode the register to determine what we've got */
 	DEBUG_INFO("ICEPick sysctrl = %08" PRIx32 "\n", sysctrl);
+	/*
+	 * Make sure the controller is set up for non-free-running TCK, that will be reset
+	 * when doing a test logic reset, and that TDO is always an output
+	 */
+	sysctrl &= ~(ICEPICK_ROUTING_SYSCTRL_FREE_RUNNING_TCK | ICEPICK_ROUTING_SYSCTRL_KEEP_POWERED |
+		ICEPICK_ROUTING_SYSCTRL_TDO_ALWAYS_OUT);
+	if (!icepick_write_reg(device, ICEPICK_ROUTING_SYSCTRL, sysctrl)) {
+		DEBUG_ERROR("Failed to configure ICEPick\n");
+		return;
+	}
 }
 
 void icepick_write_ir(jtag_dev_s *const device, const uint8_t ir)
