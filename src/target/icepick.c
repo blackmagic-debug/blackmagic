@@ -81,6 +81,13 @@
 #define ICEPICK_ROUTING_SYSCTRL_DEVICE_TYPE_MASK 0x0000000eU
 #define ICEPICK_ROUTING_SYSCTRL_SYSTEM_RESET     0x00000001U
 
+#define ICEPICK_ROUTING_DEBUG_TAP_POWER_LOST    0x00200000U
+#define ICEPICK_ROUTING_DEBUG_TAP_INHIBIT_SLEEP 0x00100000U
+#define ICEPICK_ROUTING_DEBUG_TAP_RELEASE_WIR   0x00020000U
+#define ICEPICK_ROUTING_DEBUG_TAP_DEBUG_ENABLE  0x00002000U
+#define ICEPICK_ROUTING_DEBUG_TAP_SELECT        0x00000100U
+#define ICEPICK_ROUTING_DEBUG_TAP_FORCE_ACTIVE  0x00000008U
+
 /*
  * The connect register is 8 bits long and has the following format:
  * [0:3] - Connect key (9 to connect, anything else to disconnect)
@@ -174,6 +181,19 @@ static void icepick_configure(const jtag_dev_s *const device)
 	if (!icepick_write_reg(device, ICEPICK_ROUTING_SYSCTRL, sysctrl)) {
 		DEBUG_ERROR("Failed to configure ICEPick\n");
 		return;
+	}
+
+	for (uint8_t tap = 0U; tap < ICEPICK_ROUTING_DEBUG_TAP_COUNT; ++tap) {
+		uint32_t tap_config = 0U;
+		if (icepick_read_reg(device, ICEPICK_ROUTING_DEBUG_TAP_BASE + tap, &tap_config)) {
+			DEBUG_INFO("ICEPick TAP %u: %06" PRIx32 "\n", tap, tap_config);
+			if (!icepick_write_reg(device, ICEPICK_ROUTING_DEBUG_TAP_BASE + tap,
+					ICEPICK_ROUTING_DEBUG_TAP_POWER_LOST | ICEPICK_ROUTING_DEBUG_TAP_INHIBIT_SLEEP |
+						ICEPICK_ROUTING_DEBUG_TAP_RELEASE_WIR | ICEPICK_ROUTING_DEBUG_TAP_DEBUG_ENABLE |
+						ICEPICK_ROUTING_DEBUG_TAP_SELECT | ICEPICK_ROUTING_DEBUG_TAP_FORCE_ACTIVE))
+				DEBUG_ERROR("ICEPick TAP %u write failed\n", tap);
+		} else
+			DEBUG_PROBE("ICEPick TAP %u read failed\n", tap);
 	}
 }
 
