@@ -82,19 +82,20 @@ extern bool debug_bmp;
 #define SWD_CR      GPIO_CRH(SWDIO_PORT)
 #define SWD_CR_MULT (1U << ((14U - 8U) << 2U))
 
-#define SWDIODIR_ODR GPIO_ODR(GPIOA)
+#define SWDIODIR_BSRR GPIO_BSRR(GPIOA)
+#define SWDIODIR_BRR  GPIO_BRR(GPIOA)
 
 #define TMS_SET_MODE() gpio_set_mode(TMS_PORT, GPIO_MODE_OUTPUT_2_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, TMS_PIN);
 
 #ifdef STLINK_V2_ISOL
 /* The ISOL variant floats SWDIO with GPIO A1 */
-#define SWDIO_MODE_FLOAT()       \
-	do {                         \
-		SWDIODIR_ODR |= (GPIO1); \
+#define SWDIO_MODE_FLOAT()     \
+	do {                       \
+		SWDIODIR_BSRR = GPIO1; \
 	} while (0)
-#define SWDIO_MODE_DRIVE()        \
-	do {                          \
-		SWDIODIR_ODR &= ~(GPIO1); \
+#define SWDIO_MODE_DRIVE()    \
+	do {                      \
+		SWDIODIR_BRR = GPIO1; \
 	} while (0)
 #else
 /* All other variants just set SWDIO_PIN to floating */
