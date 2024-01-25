@@ -120,6 +120,25 @@ static bool stm32mp15_ident(target_s *const target, const bool cortexm)
 	return true;
 }
 
+static void stm32mp15_cm4_setup_apbd_ap(target_s *const target)
+{
+	adiv5_access_port_s *ap_apbd = calloc(1, sizeof(*ap_apbd));
+	if (!ap_apbd) { /* calloc failed: heap exhaustion */
+		DEBUG_ERROR("calloc: failed in %s\n", __func__);
+		return;
+	}
+	adiv5_access_port_s *const ap = cortex_ap(target);
+	memcpy(ap_apbd, ap, sizeof(*ap_apbd));
+
+	ap_apbd->apsel = 1; // Set to APB-D AP
+	ap_apbd->idr = adiv5_ap_read(ap_apbd, ADIV5_AP_IDR);
+	ap_apbd->base = adiv5_ap_read(ap_apbd, ADIV5_AP_BASE_LOW);
+	ap_apbd->csw = adiv5_ap_read(ap_apbd, ADIV5_AP_CSW);
+
+	adiv5_ap_ref(ap_apbd);
+	target->target_storage = ap_apbd;
+}
+
 static bool stm32mp15_cm4_configure_dbgmcu(target_s *const target)
 {
 	/* If we're in the probe phase */
@@ -206,9 +225,9 @@ static void stm32mp15_ca7_setup_axi_ap(target_s *const target)
 
 static void stm32mp15_ca7_detach(target_s *target)
 {
-	/* Deallocate the fast AXI-AP */
-	adiv5_access_port_s *ap_axi = (adiv5_access_port_s *)target->target_storage;
-	adiv5_ap_unref(ap_axi);
+	/* Deallocate any extra AP */
+	adiv5_access_port_s *ap = (adiv5_access_port_s *)target->target_storage;
+	adiv5_ap_unref(ap);
 	cortexar_detach(target);
 }
 
@@ -245,7 +264,13 @@ static bool stm32mp15_cm4_attach(target_s *const target)
 	 * Try to attach to the part, and then ensure that the WDTs + WFI and WFE
 	 * instructions can't cause problems (this is duplicated as it's undone by detach.)
 	 */
-	return cortexm_attach(target) && stm32mp15_cm4_configure_dbgmcu(target);
+	if (!cortexm_attach(target))
+		return false;
+	if (!stm32mp15_cm4_configure_dbgmcu(target))
+		return false;
+	/* Reference the APB-D in target storage for 0xe0000000 region manipulations */
+	stm32mp15_cm4_setup_apbd_ap(target);
+	return true;
 }
 
 static void stm32mp15_cm4_detach(target_s *const target)
@@ -253,6 +278,11 @@ static void stm32mp15_cm4_detach(target_s *const target)
 	stm32mp15_priv_s *priv = (stm32mp15_priv_s *)target->target_storage;
 	/* Reverse all changes to the DBGMCU config register */
 	target_mem32_write32(target, STM32MP15_DBGMCU_CONFIG, priv->dbgmcu_config);
+
+	/* Deallocate any extra AP */
+	adiv5_access_port_s *ap = (adiv5_access_port_s *)target->target_storage;
+	adiv5_ap_unref(ap);
+
 	/* Now defer to the normal Cortex-M detach routine to complete the detach */
 	cortexm_detach(target);
 }
