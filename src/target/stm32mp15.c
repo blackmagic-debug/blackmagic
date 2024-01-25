@@ -99,6 +99,25 @@ static bool stm32mp15_ident(target_s *const target, const bool cortexm)
 	return true;
 }
 
+static void stm32mp15_setup_apbd_ap(target_s *const target)
+{
+	adiv5_access_port_s *ap_apbd = calloc(1, sizeof(*ap_apbd));
+	if (!ap_apbd) { /* calloc failed: heap exhaustion */
+		DEBUG_ERROR("calloc: failed in %s\n", __func__);
+		return;
+	}
+	adiv5_access_port_s *const ap = cortex_ap(target);
+	memcpy(ap_apbd, ap, sizeof(*ap_apbd));
+
+	ap_apbd->apsel = 1; // Set to APB-D AP
+	ap_apbd->idr = adiv5_ap_read(ap_apbd, ADIV5_AP_IDR);
+	ap_apbd->base = adiv5_ap_read(ap_apbd, ADIV5_AP_BASE);
+	ap_apbd->csw = adiv5_ap_read(ap_apbd, ADIV5_AP_CSW);
+
+	adiv5_ap_ref(ap_apbd);
+	target->target_storage = ap_apbd;
+}
+
 bool stm32mp15_cm4_probe(target_s *const target)
 {
 	if (!stm32mp15_ident(target, true))
@@ -164,9 +183,9 @@ static void stm32mp15_ca7_setup_axi_ap(target_s *const target)
 
 static void stm32mp15_ca7_detach(target_s *target)
 {
-	/* Deallocate the fast AXI-AP */
-	adiv5_access_port_s *ap_axi = (adiv5_access_port_s *)target->target_storage;
-	adiv5_ap_unref(ap_axi);
+	/* Deallocate any extra AP */
+	adiv5_access_port_s *ap = (adiv5_access_port_s *)target->target_storage;
+	adiv5_ap_unref(ap);
 	cortexar_detach(target);
 }
 
@@ -209,6 +228,8 @@ static bool stm32mp15_attach(target_s *const target)
 	/* Disable C-Sleep, C-Stop, C-Standby for debugging */
 	target_mem_write32(target, DBGMCU_CTRL, DBGMCU_CTRL_DBGSLEEP | DBGMCU_CTRL_DBGSTOP | DBGMCU_CTRL_DBGSTBY);
 
+	/* Reference the APB-D in target storage for 0xe0000000 region manipulations */
+	stm32mp15_setup_apbd_ap(target);
 	return true;
 }
 
@@ -216,6 +237,11 @@ static void stm32mp15_detach(target_s *const target)
 {
 	stm32mp15_priv_s *priv = (stm32mp15_priv_s *)target->target_storage;
 	target_mem_write32(target, DBGMCU_CTRL, priv->dbgmcu_ctrl);
+
+	/* Deallocate any extra AP */
+	adiv5_access_port_s *ap = (adiv5_access_port_s *)target->target_storage;
+	adiv5_ap_unref(ap);
+
 	cortexm_detach(target);
 }
 
