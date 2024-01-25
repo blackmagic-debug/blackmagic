@@ -987,18 +987,18 @@ void adiv5_dp_init(adiv5_debug_port_s *const dp)
 				if (target_ap == ap)
 					target_halt_resume(target, false);
 			}
-
-			/*
-			 * Due to the Tiva TM4C1294KCDT repeating the single AP ad-nauseum, this check is needed
-			 * so that we bail rather than repeating the same AP ~256 times.
-			 */
-			if (target->priv_free == cortex_priv_free && cortex_ap(target) == ap &&
-				strstr(target->driver, "Tiva") != NULL) {
-				adiv5_ap_unref(ap);
-				adiv5_dp_unref(dp);
-				return;
-			}
 		}
+
+		/*
+		 * Due to the Tiva TM4C1294KCDT (among others) repeating the single AP ad-nauseum,
+		 * this check is needed so that we bail rather than repeating the same AP ~256 times.
+		 */
+		if (ap->dp->quirks & ADIV5_DP_QUIRK_DUPED_AP) {
+			adiv5_ap_unref(ap);
+			adiv5_dp_unref(dp);
+			return;
+		}
+
 		adiv5_ap_unref(ap);
 	}
 	adiv5_dp_unref(dp);

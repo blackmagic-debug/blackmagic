@@ -180,6 +180,7 @@ bool tm4c_probe(target_s *const t, const uint16_t did1)
 		return false;
 	}
 	t->mass_erase = lmi_mass_erase;
+	cortex_ap(t)->dp->quirks |= ADIV5_DP_QUIRK_DUPED_AP;
 	return true;
 }
 
