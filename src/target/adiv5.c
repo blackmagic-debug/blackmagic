@@ -411,7 +411,7 @@ static uint32_t cortexm_initial_halt(adiv5_access_port_s *ap)
 		uint32_t dhcsr;
 
 		/* If we're not on a minimal DP implementation, use TRNCNT to help */
-		if (!ap->dp->mindp) {
+		if (!(ap->dp->quirks & ADIV5_DP_QUIRK_MINDP)) {
 			/* Ask the AP to repeatedly retry the write to DHCSR */
 			adiv5_dp_low_access(
 				ap->dp, ADIV5_LOW_WRITE, ADIV5_DP_CTRLSTAT, ctrlstat | ADIV5_DP_CTRLSTAT_TRNCNT(0xfffU));
@@ -427,7 +427,7 @@ static uint32_t cortexm_initial_halt(adiv5_access_port_s *ap)
 		 * data we want to read will be returned in the first raw access, and on others the read
 		 * will do nothing (return 0) and instead need RDBUFF read to get the data.
 		 */
-		if (ap->dp->mindp
+		if ((ap->dp->quirks & ADIV5_DP_QUIRK_MINDP)
 #if PC_HOSTED == 1
 			&& bmda_probe_info.type != PROBE_TYPE_CMSIS_DAP
 #endif
@@ -852,7 +852,7 @@ void adiv5_dp_init(adiv5_debug_port_s *const dp)
 		dp->partno = (dpidr & ADIV5_DP_DPIDR_PARTNO_MASK) >> ADIV5_DP_DPIDR_PARTNO_OFFSET;
 
 		/* Minimal Debug Port (MINDP) functions implemented */
-		dp->mindp = !!(dpidr & ADIV5_DP_DPIDR_MINDP);
+		dp->quirks = (dpidr >> ADIV5_DP_DPIDR_MINDP_OFFSET) & ADIV5_DP_QUIRK_MINDP;
 
 		/*
 		 * Check DPIDR validity
@@ -860,17 +860,17 @@ void adiv5_dp_init(adiv5_debug_port_s *const dp)
 		 * Version 0 is reserved for DPv0 which does not implement DPIDR
 		 * Bit 0 of DPIDR is read as 1
 		 */
-		if (dp->designer_code != 0 && dp->version > 0 && (dpidr & 1U)) {
+		if (dp->designer_code != 0U && dp->version > 0U && (dpidr & 1U)) {
 			DEBUG_INFO("DP DPIDR 0x%08" PRIx32 " (v%x %srev%" PRIu32 ") designer 0x%x partno 0x%x\n", dpidr,
-				dp->version, dp->mindp ? "MINDP " : "",
+				dp->version, (dp->quirks & ADIV5_DP_QUIRK_MINDP) ? "MINDP " : "",
 				(dpidr & ADIV5_DP_DPIDR_REVISION_MASK) >> ADIV5_DP_DPIDR_REVISION_OFFSET, dp->designer_code,
 				dp->partno);
 		} else {
 			DEBUG_WARN("Invalid DPIDR %08" PRIx32 " assuming DPv0\n", dpidr);
-			dp->version = 0;
-			dp->designer_code = 0;
-			dp->partno = 0;
-			dp->mindp = false;
+			dp->version = 0U;
+			dp->designer_code = 0U;
+			dp->partno = 0U;
+			dp->quirks = 0U;
 		}
 	} else if (dp->version == 0)
 		/* DP v0 */

@@ -224,6 +224,9 @@
 #define SWDP_ACK_FAULT       0x04U
 #define SWDP_ACK_NO_RESPONSE 0x07U
 
+/* Constants for the DP's quirks field */
+#define ADIV5_DP_QUIRK_MINDP    (1U << 0U) /* DP is a minimal DP implementation */
+
 typedef struct adiv5_access_port adiv5_access_port_s;
 typedef struct adiv5_debug_port adiv5_debug_port_s;
 
@@ -253,13 +256,13 @@ struct adiv5_debug_port {
 	uint8_t dev_index;
 	uint8_t fault;
 
+	uint8_t quirks;
+
 	/* targetsel DPv2 */
 	uint8_t instance;
 	uint32_t targetsel;
 
 	uint8_t version;
-
-	bool mindp;
 
 	/* DP designer (not implementer!) and partno */
 	uint16_t designer_code;
