@@ -1,8 +1,10 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
- * Copyright (C) 2011  Black Sphere Technologies Ltd.
+ * Copyright (C) 2011 Black Sphere Technologies Ltd.
  * Written by Gareth McMullin <gareth@blacksphere.co.nz>
+ * Copyright (C) 2022-2024 1BitSquared <info@1bitsquared.com>
+ * Modified by Rachel Mant <git@dragonmux.network>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -102,8 +104,6 @@ static bool lmi_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
 static bool lmi_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
 static bool lmi_mass_erase(target_s *t);
 
-static const char lmi_driver_str[] = "TI Stellaris/Tiva";
-
 static const uint16_t lmi_flash_write_stub[] = {
 #include "flashstub/lmi.stub"
 };
@@ -127,8 +127,6 @@ static void lmi_add_flash(target_s *t, size_t length)
 
 bool lm3s_probe(target_s *const t, const uint16_t did1)
 {
-	const char *driver = t->driver;
-	t->driver = lmi_driver_str;
 	switch (did1) {
 	case DID1_LM3S3748:
 	case DID1_LM3S5732:
@@ -140,17 +138,15 @@ bool lm3s_probe(target_s *const t, const uint16_t did1)
 		lmi_add_flash(t, 0x40000U);
 		break;
 	default:
-		t->driver = driver;
 		return false;
 	}
+	t->driver = "Stellaris";
 	t->mass_erase = lmi_mass_erase;
 	return true;
 }
 
 bool tm4c_probe(target_s *const t, const uint16_t did1)
 {
-	const char *driver = t->driver;
-	t->driver = lmi_driver_str;
 	switch (did1) {
 	case DID1_TM4C123GH6PM:
 		target_add_ram(t, 0x20000000, 0x10000);
@@ -176,9 +172,9 @@ bool tm4c_probe(target_s *const t, const uint16_t did1)
 		t->target_options |= TOPT_INHIBIT_NRST;
 		break;
 	default:
-		t->driver = driver;
 		return false;
 	}
+	t->driver = "Tiva-C";
 	t->mass_erase = lmi_mass_erase;
 	cortex_ap(t)->dp->quirks |= ADIV5_DP_QUIRK_DUPED_AP;
 	return true;
