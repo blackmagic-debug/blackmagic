@@ -120,6 +120,26 @@ static bool stm32mp15_ident(target_s *const target, const bool cortexm)
 	return true;
 }
 
+static void stm32mp15_cm4_setup_apbd_ap(target_s *const target)
+{
+	adiv5_access_port_s *ap1 = calloc(1, sizeof(*ap1));
+	if (!ap1) { /* calloc failed: heap exhaustion */
+		DEBUG_ERROR("calloc: failed in %s\n", __func__);
+		return;
+	}
+	adiv5_access_port_s *const ap2 = cortex_ap(target);
+	memcpy(ap1, ap2, sizeof(*ap1));
+	ap1->refcnt = 0;
+
+	ap1->apsel = 1; // Set to APB-D AP
+	ap1->idr = adiv5_ap_read(ap1, ADIV5_AP_IDR);
+	ap1->base = adiv5_ap_read(ap1, ADIV5_AP_BASE_LOW);
+	ap1->csw = adiv5_ap_read(ap1, ADIV5_AP_CSW);
+
+	adiv5_ap_ref(ap1);
+	target->target_storage = ap1;
+}
+
 static bool stm32mp15_cm4_configure_dbgmcu(target_s *const target)
 {
 	/* If we're in the probe phase */
@@ -246,7 +266,13 @@ static bool stm32mp15_cm4_attach(target_s *const target)
 	 * Try to attach to the part, and then ensure that the WDTs + WFI and WFE
 	 * instructions can't cause problems (this is duplicated as it's undone by detach.)
 	 */
-	return cortexm_attach(target) && stm32mp15_cm4_configure_dbgmcu(target);
+	if (!cortexm_attach(target))
+		return false;
+	if (!stm32mp15_cm4_configure_dbgmcu(target))
+		return false;
+	/* Reference the APB-D in target storage for External PPB (0xe0000000) manipulations */
+	stm32mp15_cm4_setup_apbd_ap(target);
+	return true;
 }
 
 static void stm32mp15_cm4_detach(target_s *const target)
@@ -254,6 +280,11 @@ static void stm32mp15_cm4_detach(target_s *const target)
 	stm32mp15_priv_s *priv = (stm32mp15_priv_s *)target->target_storage;
 	/* Reverse all changes to the DBGMCU config register */
 	target_mem32_write32(target, STM32MP15_DBGMCU_CONFIG, priv->dbgmcu_config);
+
+	/* Deallocate any extra AP */
+	adiv5_access_port_s *ap1 = (adiv5_access_port_s *)target->target_storage;
+	adiv5_ap_unref(ap1);
+
 	/* Now defer to the normal Cortex-M detach routine to complete the detach */
 	cortexm_detach(target);
 }
