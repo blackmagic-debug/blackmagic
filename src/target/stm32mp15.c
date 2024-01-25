@@ -76,16 +76,22 @@
 /* Taken from CM4ROM_PIDRx in 2.3.21 of ES0438 rev 7, pg18 */
 #define ID_STM32MP15x_ERRATA 0x450U
 
+#define SWO_BASE 0xe0083000
+#define SWO_ACPR (SWO_BASE + 0x00010)
+#define SWO_SPPR (SWO_BASE + 0x000f0)
+
 typedef struct stm32mp15_priv {
 	uint32_t dbgmcu_config;
 } stm32mp15_priv_s;
 
 static bool stm32mp15_uid(target_s *target, int argc, const char **argv);
 static bool stm32mp15_cmd_rev(target_s *target, int argc, const char **argv);
+static bool stm32mp15_cmd_swo(target_s *target, int argc, const char **argv);
 
 const command_s stm32mp15_cmd_list[] = {
 	{"uid", stm32mp15_uid, "Print unique device ID"},
 	{"revision", stm32mp15_cmd_rev, "Returns the Device ID and Revision"},
+	{"conf_swo", stm32mp15_cmd_swo, "Set up SWO mode <1/2> and divisor <0x42>"},
 	{NULL, NULL, NULL},
 };
 
@@ -117,6 +123,32 @@ static bool stm32mp15_ident(target_s *const target, const bool cortexm)
 	 * JTAG and SWD as ST has a different ID in the DP TARGETID register vs the ROM tables, which needs ignoring.
 	 */
 	target->part_id = ap->partno;
+	return true;
+}
+
+static bool stm32mp15_cmd_swo(target_s *target, int argc, const char **argv)
+{
+	(void)argc;
+	(void)argv;
+	/* TODO: argv parsing for mode and baudrate */
+	adiv5_access_port_s *const ap_apbd = (adiv5_access_port_s *)target->target_storage;
+	/* Pin Protocol: change Manchester to UART */
+	uint32_t sppr = 0;
+	adiv5_mem_read(ap_apbd, &sppr, SWO_SPPR, 4);
+	sppr &= ~(0x3U);
+	sppr |= 0x2U;
+	adiv5_mem_write(ap_apbd, SWO_SPPR, &sppr, 4);
+
+	/*
+	 * Prescaler: set to fixed 66; trace clk freq of 133/(66+1) gives ~2Mbaud (+-0.7%)
+	 * assuming AXI clk of 266 and default divisor of 2
+	 * Or, if you are not restricted by swlink 2.25M, set to fixed 32; 133/(32+1) is ~4Mbaud (+-0.7%)
+	 */
+	uint32_t acpr = 0;
+	adiv5_mem_read(ap_apbd, &acpr, SWO_ACPR, 4);
+	acpr = 32;
+	adiv5_mem_write(ap_apbd, SWO_ACPR, &acpr, 4);
+
 	return true;
 }
 
