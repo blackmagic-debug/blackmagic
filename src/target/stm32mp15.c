@@ -189,8 +189,8 @@ static bool stm32mp15_uid(target_s *const target, const int argc, const char **c
 	for (size_t i = 0; i < 12U; i += 4U) {
 		const uint32_t value = target_mem_read32(target, STM32MP15_UID_BASE + i);
 		/* XXX: use utoa_upper? */
-		snprintf(uid_hex + i * 2U, 9, "%02X%02X%02X%02X", (value >> 24U) & 0xffU, (value >> 16U) & 0xffU,
-			(value >> 8U) & 0xffU, value & 0xffU);
+		snprintf(uid_hex + i * 2U, 9, "%02" PRIX32 "%02" PRIX32 "%02" PRIX32 "%02" PRIX32, (value >> 24U) & 0xffU,
+			(value >> 16U) & 0xffU, (value >> 8U) & 0xffU, value & 0xffU);
 		values[i / 4U] = value;
 	}
 
