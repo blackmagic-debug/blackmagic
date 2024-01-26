@@ -870,7 +870,7 @@ int32_t semihosting_request(target_s *const target, const uint32_t syscall, cons
 	target->tc->interrupted = false;
 
 	/* Set up the request block appropriately */
-	semihosting_s request = {r1, {}};
+	semihosting_s request = {r1, {0U}};
 	if (syscall != SEMIHOSTING_SYS_EXIT)
 		target_mem_read(target, request.params, r1, sizeof(request.params));
 
