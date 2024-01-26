@@ -21,7 +21,20 @@
 #ifndef INCLUDE_GENERAL_H
 #define INCLUDE_GENERAL_H
 
-#if !defined(__cplusplus) && __STDC__ != 1
+#if !defined(__cplusplus) && defined(__STDC__)
+#if __STDC__ == 1
+#define BMD_IS_STDC 1
+#endif // __STDC__
+#endif
+
+// MSVC 2022 >= 17.2 can do __STDC__
+#if defined(_MSC_VER)
+#if _MSC_VER <= 1932
+#define BMD_MSVC_PRE_172
+#endif // _MSC_VER <= 1932
+#endif
+
+#if !defined(BMD_IS_STDC) && !defined(BMD_MSVC_PRE_172)
 #error "Black Magic Debug must be built in a standards compliant C mode"
 #endif
 
