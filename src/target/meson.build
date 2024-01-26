@@ -370,6 +370,7 @@ target_ti_cortexm = declare_dependency(
 
 target_ti_cortexa = declare_dependency(
 	sources: files(
+		'am335x.c',
 		'icepick.c'
 	),
 	dependencies: target_cortexar,
