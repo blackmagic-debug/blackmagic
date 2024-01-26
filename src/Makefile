@@ -131,6 +131,7 @@ SRC +=           \
 ifeq ($(ENABLE_TI_SITARA), 1)
 CFLAGS += -DENABLE_TI_SITARA
 SRC +=        \
+	am335x.c  \
 	icepick.c
 endif
 

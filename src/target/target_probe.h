@@ -51,6 +51,7 @@ bool lpc55_dmap_probe(adiv5_access_port_s *ap);
 bool nrf51_mdm_probe(adiv5_access_port_s *ap);
 bool rp_rescue_probe(adiv5_access_port_s *ap);
 
+bool am335x_cm3_probe(target_s *target);
 bool at32f40x_probe(target_s *target); // STM32 clones from Artery
 bool at32f43x_probe(target_s *target);
 bool ch32f1_probe(target_s *target); // will catch all the clones
