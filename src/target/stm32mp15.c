@@ -167,7 +167,7 @@ static void stm32mp15_detach(target_s *const target)
 	cortexm_detach(target);
 }
 
-__attribute__((packed)) struct stm32mp15x_uid {
+struct __attribute__((packed)) stm32mp15x_uid {
 	uint16_t wafer_xcoord;
 	uint16_t wafer_ycoord;
 	uint8_t wafer_number;

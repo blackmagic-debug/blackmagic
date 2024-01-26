@@ -462,7 +462,7 @@ static bool stm32h7_mass_erase(target_s *target)
  * Unique device ID register
  * Other ref.manuals omit the decoding details.
  */
-__attribute__((packed)) struct stm32h7_uid {
+struct __attribute__((packed)) stm32h7_uid {
 	uint16_t wafer_xcoord;
 	uint16_t wafer_ycoord;
 	uint8_t wafer_number;
