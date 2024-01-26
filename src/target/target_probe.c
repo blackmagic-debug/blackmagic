@@ -19,7 +19,7 @@
 
 #include "target_probe.h"
 
-#ifndef __WIN32 // PE-COFF does not allow aliases
+#ifndef _WIN32 // PE-COFF does not allow aliases
 #ifdef __APPLE__
 // __attribute__((alias)) is not supported in AppleClang, we need to define a
 // __attribute__((weak)) placeholder body that'll get pivoted by the linker.
