@@ -590,17 +590,7 @@ static bool stm32h7_cmd_rev(target_s *target, int argc, const char **argv)
 	switch (dev_id) {
 	case ID_STM32H74x:
 		tc_printf(target, "STM32H74x/75x\n");
-
-		/* Print revision */
-		char rev = '?';
-		for (size_t i = 0; i < ARRAY_LENGTH(stm32h7xx_revisions); i++) {
-			/* Check for matching revision */
-			if (stm32h7xx_revisions[i].rev_id == rev_id)
-				rev = stm32h7xx_revisions[i].revision;
-		}
-		tc_printf(target, "Revision %c\n", rev);
 		break;
-
 	case ID_STM32H7Bx:
 		tc_printf(target, "STM32H7B3/7A3/7B0\n");
 		break;
@@ -609,7 +599,16 @@ static bool stm32h7_cmd_rev(target_s *target, int argc, const char **argv)
 		break;
 	default:
 		tc_printf(target, "Unknown %s. BMP may not correctly support it!\n", target->driver);
+		return false;
 	}
+	/* Print revision */
+	char rev = '?';
+	for (size_t i = 0; i < ARRAY_LENGTH(stm32h7xx_revisions); i++) {
+		/* Check for matching revision */
+		if (stm32h7xx_revisions[i].rev_id == rev_id)
+			rev = stm32h7xx_revisions[i].revision;
+	}
+	tc_printf(target, "Revision %c\n", rev);
 
 	return true;
 }
