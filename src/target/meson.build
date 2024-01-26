@@ -354,7 +354,7 @@ target_at32f4 = declare_dependency(
 		'at32f43x.c',
 	),
 	compile_args: ['-DCONFIG_AT32=1'],
-	dependencies: [target_cortexm, target_stm_common]
+	dependencies: [target_cortexm, target_stm_common],
 )
 
 target_ti_icepick = declare_dependency(
@@ -375,14 +375,23 @@ target_ti_cortexm = declare_dependency(
 	dependencies: target_cortexm,
 )
 
-# NB: the ICEPick support doesn't /yet/ do anything here, and is intended as a dependency
-# to be pulled in for parts that need it like the AM335x. At such a time, remove it from
-# `target_ti`. This target logic exists as an easy expansion point for supporting TI's
-# Cortex-A/R based parts in the future.
-target_ti = [
-	target_ti_cortexm,
-	target_ti_icepick,
-]
+target_ti_cortexa = declare_dependency(
+	sources: files(
+		'am335x.c',
+	),
+	compile_args: ['-DCONFIG_TI_SITARA=1'],
+	dependencies: [target_cortexar, target_ti_icepick],
+)
+
+# If the Cortex-A/R target is not enabled, don't enable TI AM335x part support
+if enabled_targets.contains('cortexar')
+	target_ti = [
+		target_ti_cortexm,
+		target_ti_cortexa,
+	]
+else
+	target_ti = target_ti_cortexm
+endif
 
 target_xilinx = declare_dependency(
 	sources: files(
@@ -450,7 +459,7 @@ libbmd_target_deps = [
 	target_sam,
 	target_stm,
 	target_ti_cortexm,
-	target_ti_icepick,
+	target_ti_cortexa,
 	target_xilinx,
 ]
 
