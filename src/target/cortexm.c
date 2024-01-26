@@ -498,6 +498,7 @@ bool cortexm_probe(adiv5_access_port_s *ap)
 		PROBE(ke04_probe);
 		PROBE(lpc17xx_probe);
 		PROBE(lpc11xx_probe); /* LPC1343 */
+		PROBE(am335x_cm3_probe);
 		break;
 	}
 #if CONFIG_BMDA == 0
