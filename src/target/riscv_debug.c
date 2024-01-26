@@ -523,7 +523,7 @@ static uint32_t riscv_hart_discover_isa(riscv_hart_s *const hart)
 	do {
 		DEBUG_INFO("Attempting %u-bit read on misa\n", hart->access_width);
 		/* Try reading the register on the guessed width */
-		uint32_t isa_data[4] = {};
+		uint32_t isa_data[4] = {0U};
 		bool result = riscv_csr_read(hart, RV_ISA, isa_data);
 		if (result) {
 			if (hart->access_width == 128U)
