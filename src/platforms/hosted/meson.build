@@ -69,6 +69,16 @@ bmda_deps = []
 
 cc = is_cross_build ? cc_native : cc_host
 
+# Ensure that MSVC is switched to standards compliant mode
+if cc.get_define('_MSC_VER') != ''
+	standards_flags = [
+		'/Zc:__STDC__',
+		'/D_CRT_DECLARE_NONSTDC_NAMES=1'
+	]
+
+	bmda_args += cc.get_supported_arguments(standards_flags)
+endif
+
 # Determine if we're on a MSYS2 environment of some kind
 # If the compiler is MSYS2 GCC or Clang (but not Clang-cl)
 if build_machine.system() == 'windows' and cc.get_define('__MINGW32__') == '1'
