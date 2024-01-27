@@ -37,6 +37,7 @@ target_common_sources = files(
 	'gdb_reg.c',
 	'jtag_devs.c',
 	'jtag_scan.c',
+	'rvswd_scan.c',
 	'semihosting.c',
 	'sfdp.c',
 	'spi.c',
@@ -231,6 +232,7 @@ target_stm = declare_dependency(
 	sources: files(
 		'at32f43x.c',
 		'ch32f1.c',
+		'ch32vx.c',
 		'stm32f1.c',
 		'stm32f4.c',
 		'stm32g0.c',
