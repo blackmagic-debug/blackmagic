@@ -417,23 +417,28 @@ static bool cortexar_run_insn(target_s *const target, const uint32_t insn)
 
 static bool cortexar_run_read_insn(target_s *const target, const uint32_t insn, uint32_t *const result)
 {
+	cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
+	/* Configure the AP to put {DBGDTR{TX,RX},DBGITR,DBGDCSR} in banked data registers window */
+	ap_mem_access_setup(priv->base.ap, priv->base.base_addr + CORTEXAR_DBG_DTRTX, ALIGN_32BIT);
+	/* Configure the bank selection to the appropriate AP register bank */
+	adiv5_dp_write(priv->base.ap->dp, ADIV5_DP_SELECT, ((uint32_t)priv->base.ap->apsel << 24U) | 0x10U);
+
 	/* Issue the requested instruction to the core */
-	cortex_dbg_write32(target, CORTEXAR_DBG_ITR, insn);
+	adiv5_dp_write(priv->base.ap->dp, ADIV5_AP_DB(CORTEXAR_BANKED_ITR), insn);
 	/* Poll for the instruction to complete and the data to become ready in the DTR */
 	uint32_t status = 0;
 	while ((status & (CORTEXAR_DBG_DSCR_INSN_COMPLETE | CORTEXAR_DBG_DSCR_DTR_READ_READY)) !=
 		(CORTEXAR_DBG_DSCR_INSN_COMPLETE | CORTEXAR_DBG_DSCR_DTR_READ_READY)) {
-		status = cortex_dbg_read32(target, CORTEXAR_DBG_DSCR);
+		status = adiv5_dp_read(priv->base.ap->dp, ADIV5_AP_DB(CORTEXAR_BANKED_DCSR));
 		/* If the instruction triggered a synchronous data abort, signal failure having cleared it */
 		if (status & CORTEXAR_DBG_DSCR_SYNC_DATA_ABORT) {
-			cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
 			priv->core_status |= CORTEXAR_STATUS_DATA_FAULT;
 			cortex_dbg_write32(target, CORTEXAR_DBG_DRCR, CORTEXAR_DBG_DRCR_CLR_STICKY_EXC);
 			return false;
 		}
 	}
 	/* Read back the DTR to complete the read and signal success */
-	*result = cortex_dbg_read32(target, CORTEXAR_DBG_DTRRX);
+	*result = adiv5_dp_read(priv->base.ap->dp, ADIV5_AP_DB(CORTEXAR_BANKED_DTRRX));
 	return true;
 }
 
