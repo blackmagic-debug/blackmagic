@@ -190,6 +190,14 @@ typedef struct cortexar_priv {
 #define CORTEXAR_CPSR_MODE_SYS  0x0000001fU
 #define CORTEXAR_CPSR_THUMB     (1U << 5U)
 
+/* Banked register offsets for when using using the DB{0,3} interface */
+enum {
+	CORTEXAR_BANKED_DTRTX,
+	CORTEXAR_BANKED_ITR,
+	CORTEXAR_BANKED_DCSR,
+	CORTEXAR_BANKED_DTRRX
+};
+
 /*
  * Table of encodings for the banked SPSRs - These are encoded in the following format:
  * Bits[0]: SYSm[0]
@@ -387,15 +395,20 @@ static const char *cortexar_target_description(target_s *target);
 
 static bool cortexar_run_insn(target_s *const target, const uint32_t insn)
 {
+	cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
+	/* Configure the AP to put {DBGDTR{TX,RX},DBGITR,DBGDCSR} in banked data registers window */
+	ap_mem_access_setup(priv->base.ap, priv->base.base_addr + CORTEXAR_DBG_DTRTX, ALIGN_32BIT);
+	/* Configure the bank selection to the appropriate AP register bank */
+	adiv5_dp_write(priv->base.ap->dp, ADIV5_DP_SELECT, ((uint32_t)priv->base.ap->apsel << 24U) | 0x10U);
+
 	/* Issue the requested instruction to the core */
-	cortex_dbg_write32(target, CORTEXAR_DBG_ITR, insn);
+	adiv5_dp_write(priv->base.ap->dp, ADIV5_AP_DB(CORTEXAR_BANKED_ITR), insn);
 	/* Poll for the instruction to complete */
 	uint32_t status = 0;
 	while (!(status & CORTEXAR_DBG_DSCR_INSN_COMPLETE))
-		status = cortex_dbg_read32(target, CORTEXAR_DBG_DSCR);
+		status = adiv5_dp_read(priv->base.ap->dp, ADIV5_AP_DB(CORTEXAR_BANKED_DCSR));
 	/* If the instruction triggered a synchronous data abort, signal failure having cleared it */
 	if (status & CORTEXAR_DBG_DSCR_SYNC_DATA_ABORT) {
-		cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
 		priv->core_status |= CORTEXAR_STATUS_DATA_FAULT;
 		cortex_dbg_write32(target, CORTEXAR_DBG_DRCR, CORTEXAR_DBG_DRCR_CLR_STICKY_EXC);
 	}
