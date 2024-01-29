@@ -186,7 +186,6 @@ static void rp_spi_restore(target_s *target);
 static bool rp_flash_prepare(target_s *target);
 static bool rp_flash_resume(target_s *target);
 static void rp_spi_read(target_s *target, uint16_t command, target_addr_t address, void *buffer, size_t length);
-static void rp_spi_write(target_s *target, uint16_t command, target_addr_t address, const void *buffer, size_t length);
 static void rp_spi_write_stub(
 	target_s *target, uint16_t command, target_addr_t address, const void *buffer, size_t length);
 static void rp_spi_run_command(target_s *target, uint16_t command, target_addr_t address);
@@ -405,23 +404,12 @@ static void rp_spi_write_stub(target_s *const target, const uint16_t command, co
 	cortexm_run_stub(target, RP_SRAM_BASE, command, address, RP_STUB_BUFFER_BASE, length);
 }
 
-static void rp_spi_write(target_s *const target, const uint16_t command, const target_addr_t address,
-	const void *const buffer, const size_t length)
-{
-	/* Setup the transaction */
-	rp_spi_setup_xfer(target, command, address, length);
-	/* Now write out back the data requested */
-	uint8_t *const data = (uint8_t *const)buffer;
-	for (size_t i = 0; i < length; ++i)
-		/* Do a write to read */
-		rp_spi_xfer_data(target, data[i]);
-	/* Deselect the Flash */
-	rp_spi_chip_select(target, RP_GPIO_QSPI_CS_DRIVE_HIGH);
-}
-
 static void rp_spi_run_command(target_s *const target, const uint16_t command, const target_addr_t address)
 {
-	rp_spi_write(target, command, address, NULL, 0);
+	/* Setup the transaction */
+	rp_spi_setup_xfer(target, command, address, 0U);
+	/* Deselect the Flash to execute the transaction */
+	rp_spi_chip_select(target, RP_GPIO_QSPI_CS_DRIVE_HIGH);
 }
 
 /* Checks if the QSPI and XIP controllers are in their POR state */
