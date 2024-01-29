@@ -974,7 +974,7 @@ static bool cortexar_check_error(target_s *const target)
 }
 
 /* Fast path for cortexar_mem_read(). Assumes the address to read data from is already loaded in r0. */
-static inline bool cortexr_mem_read_fast(target_s *const target, uint32_t *const dest, const size_t count)
+static inline bool cortexar_mem_read_fast(target_s *const target, uint32_t *const dest, const size_t count)
 {
 	/* Read each of the uint32_t's checking for failure */
 	for (size_t offset = 0; offset < count; ++offset) {
@@ -985,7 +985,7 @@ static inline bool cortexr_mem_read_fast(target_s *const target, uint32_t *const
 }
 
 /* Slow path for cortexar_mem_read(). Trashes r0 and r1. */
-static bool cortexr_mem_read_slow(target_s *const target, uint8_t *const data, target_addr_t addr, const size_t length)
+static bool cortexar_mem_read_slow(target_s *const target, uint8_t *const data, target_addr_t addr, const size_t length)
 {
 	size_t offset = 0;
 	/* If the address is odd, read a byte to get onto an even address */
@@ -1003,7 +1003,7 @@ static bool cortexr_mem_read_slow(target_s *const target, uint8_t *const data, t
 		offset += 2U;
 	}
 	/* Use the fast path to read as much as possible before doing a slow path fixup at the end */
-	if (!cortexr_mem_read_fast(target, (uint32_t *)(data + offset), (length - offset) >> 2U))
+	if (!cortexar_mem_read_fast(target, (uint32_t *)(data + offset), (length - offset) >> 2U))
 		return false;
 	const uint8_t remainder = (length - offset) & 3U;
 	/* If the remainder needs at least 2 more bytes read, do this first */
@@ -1022,7 +1022,7 @@ static bool cortexr_mem_read_slow(target_s *const target, uint8_t *const data, t
 	return true; /* Signal success */
 }
 
-static void cortexr_mem_handle_fault(target_s *const target, const char *const func)
+static void cortexar_mem_handle_fault(target_s *const target, const char *const func)
 {
 	const cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
 	/* If we suffered a fault of some kind, grab the reason and restore DFSR/DFAR */
@@ -1061,11 +1061,11 @@ static void cortexar_mem_read(target_s *const target, void *const dest, const ta
 
 	/* If the address is 32-bit aligned and we're reading 32 bits at a time, use the fast path */
 	if ((src & 3U) == 0U && (len & 3U) == 0U)
-		cortexr_mem_read_fast(target, (uint32_t *)dest, len >> 2U);
+		cortexar_mem_read_fast(target, (uint32_t *)dest, len >> 2U);
 	else
-		cortexr_mem_read_slow(target, (uint8_t *)dest, src, len);
+		cortexar_mem_read_slow(target, (uint8_t *)dest, src, len);
 	/* Deal with any data faults that occurred */
-	cortexr_mem_handle_fault(target, __func__);
+	cortexar_mem_handle_fault(target, __func__);
 
 	DEBUG_PROTO("%s: Reading %zu bytes @0x%" PRIx32 ":", __func__, len, src);
 #ifndef DEBUG_PROTO_IS_NOOP
@@ -1082,7 +1082,7 @@ static void cortexar_mem_read(target_s *const target, void *const dest, const ta
 }
 
 /* Fast path for cortexar_mem_write(). Assumes the address to read data from is already loaded in r0. */
-static inline bool cortexr_mem_write_fast(target_s *const target, const uint32_t *const src, const size_t count)
+static inline bool cortexar_mem_write_fast(target_s *const target, const uint32_t *const src, const size_t count)
 {
 	/* Read each of the uint32_t's checking for failure */
 	for (size_t offset = 0; offset < count; ++offset) {
@@ -1093,7 +1093,7 @@ static inline bool cortexr_mem_write_fast(target_s *const target, const uint32_t
 }
 
 /* Slow path for cortexar_mem_write(). Trashes r0 and r1. */
-static bool cortexr_mem_write_slow(
+static bool cortexar_mem_write_slow(
 	target_s *const target, target_addr_t addr, const uint8_t *const data, const size_t length)
 {
 	size_t offset = 0;
@@ -1112,7 +1112,7 @@ static bool cortexr_mem_write_slow(
 		offset += 2U;
 	}
 	/* Use the fast path to write as much as possible before doing a slow path fixup at the end */
-	if (!cortexr_mem_write_fast(target, (uint32_t *)(data + offset), (length - offset) >> 2U))
+	if (!cortexar_mem_write_fast(target, (uint32_t *)(data + offset), (length - offset) >> 2U))
 		return false;
 	const uint8_t remainder = (length - offset) & 3U;
 	/* If the remainder needs at least 2 more bytes write, do this first */
@@ -1167,11 +1167,11 @@ static void cortexar_mem_write(
 
 	/* If the address is 32-bit aligned and we're writing 32 bits at a time, use the fast path */
 	if ((dest & 3U) == 0U && (len & 3U) == 0U)
-		cortexr_mem_write_fast(target, (const uint32_t *)src, len >> 2U);
+		cortexar_mem_write_fast(target, (const uint32_t *)src, len >> 2U);
 	else
-		cortexr_mem_write_slow(target, dest, (const uint8_t *)src, len);
+		cortexar_mem_write_slow(target, dest, (const uint8_t *)src, len);
 	/* Deal with any data faults that occurred */
-	cortexr_mem_handle_fault(target, __func__);
+	cortexar_mem_handle_fault(target, __func__);
 }
 
 static void cortexar_regs_read(target_s *const target, void *const data)
