@@ -1573,31 +1573,36 @@ static void cortexar_config_watchpoint(target_s *const target, const size_t slot
 		target, CORTEXAR_DBG_WCR + (slot << 2U), CORTEXAR_DBG_WCR_ENABLE | CORTEXAR_DBG_WCR_ALL_MODES | mode);
 }
 
+static int cortexar_set_hard_breakpoint(target_s *const target, breakwatch_s *const breakwatch)
+{
+	cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
+	/* First try and find a unused breakpoint slot */
+	size_t breakpoint = 0;
+	for (; breakpoint < priv->base.breakpoints_available; ++breakpoint) {
+		/* Check if the slot is presently in use, breaking if it is not */
+		if (!(priv->base.breakpoints_mask & (1U << breakpoint)))
+			break;
+	}
+	/* If none was available, return an error */
+	if (breakpoint == priv->base.breakpoints_available)
+		return -1;
+
+	/* Set the breakpoint slot up and mark it used */
+	cortexar_config_breakpoint(
+		target, breakpoint, CORTEXAR_DBG_BCR_TYPE_UNLINKED_INSN_MATCH | (breakwatch->size & 7U), breakwatch->addr);
+	priv->base.breakpoints_mask |= 1U << breakpoint;
+	breakwatch->reserved[0] = breakpoint;
+	/* Tell the debugger that it was successfully able to set the breakpoint */
+	return 0;
+}
+
 static int cortexar_breakwatch_set(target_s *const target, breakwatch_s *const breakwatch)
 {
 	cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
 
 	switch (breakwatch->type) {
-	case TARGET_BREAK_HARD: {
-		/* First try and find a unused breakpoint slot */
-		size_t breakpoint = 0;
-		for (; breakpoint < priv->base.breakpoints_available; ++breakpoint) {
-			/* Check if the slot is presently in use, breaking if it is not */
-			if (!(priv->base.breakpoints_mask & (1U << breakpoint)))
-				break;
-		}
-		/* If none was available, return an error */
-		if (breakpoint == priv->base.breakpoints_available)
-			return -1;
-
-		/* Set the breakpoint slot up and mark it used */
-		cortexar_config_breakpoint(
-			target, breakpoint, CORTEXAR_DBG_BCR_TYPE_UNLINKED_INSN_MATCH | (breakwatch->size & 7U), breakwatch->addr);
-		priv->base.breakpoints_mask |= 1U << breakpoint;
-		breakwatch->reserved[0] = breakpoint;
-		/* Tell the debugger that it was successfully able to set the breakpoint */
-		return 0;
-	}
+	case TARGET_BREAK_HARD: /* Hardware breakpoints have to be used for Flash breakpoints and can be used for RAM */
+		return cortexar_set_hard_breakpoint(target, breakwatch);
 	case TARGET_WATCH_READ:
 	case TARGET_WATCH_WRITE:
 	case TARGET_WATCH_ACCESS: {
