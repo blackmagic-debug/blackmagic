@@ -38,7 +38,16 @@
 #include "adiv5.h"
 #include "target.h"
 
+/*
+ * Instruction encodings for breakpoints
+ * BKPT -> Software breakpoint (DDI0406C §A8.8.24, pg344)
+ * Both encodings are for an unconditional breakpoint with immediate 0
+ * ARM breakpoints support a 16-bit immediate split up as:
+ * * [3:0] -> The 4LSb of the immediate
+ * * [19:8] -> The 12MSb of the immediate
+ */
 #define CORTEX_THUMB_BREAKPOINT 0xbe00U
+#define CORTEX_ARM_BREAKPOINT   0xe1200070U
 
 /* Cortex-M CPU IDs */
 #define CORTEX_M0  0xc200U
