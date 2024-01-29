@@ -1596,6 +1596,30 @@ static int cortexar_set_hard_breakpoint(target_s *const target, breakwatch_s *co
 	return 0;
 }
 
+static int cortexar_set_soft_breakpoint(target_s *const target, breakwatch_s *const breakwatch)
+{
+	/* Determine if we're setting up a Thumb or ARM mode breakpoint */
+	switch (breakwatch->size) {
+		/* Thumb mode breakpoints */
+	case 2U:
+		/* Read out the instruction we're replacing and replace it with a breakpoint instruction */
+		breakwatch->reserved[0] = target_mem_read16(target, breakwatch->addr);
+		target_mem_write16(target, breakwatch->addr, CORTEX_THUMB_BREAKPOINT);
+		break;
+		/* ARM mode breakpoints */
+	case 4U:
+		/* Read out the instruction we're replacing and replace it with a breakpoint instruction */
+		breakwatch->reserved[0] = target_mem_read32(target, breakwatch->addr);
+		target_mem_write32(target, breakwatch->addr, CORTEX_ARM_BREAKPOINT);
+		break;
+	default:
+		/* If it's not a valid mode, tell the debugger we don't support it */
+		return -1;
+	}
+	/* Tell the debugger if we were able to successfully set the breakpoint */
+	return target_check_error(target);
+}
+
 static int cortexar_breakwatch_set(target_s *const target, breakwatch_s *const breakwatch)
 {
 	cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
@@ -1603,6 +1627,8 @@ static int cortexar_breakwatch_set(target_s *const target, breakwatch_s *const b
 	switch (breakwatch->type) {
 	case TARGET_BREAK_HARD: /* Hardware breakpoints have to be used for Flash breakpoints and can be used for RAM */
 		return cortexar_set_hard_breakpoint(target, breakwatch);
+	case TARGET_BREAK_SOFT: /* Software breakpoints however can only be used for RAM */
+		return cortexar_set_soft_breakpoint(target, breakwatch);
 	case TARGET_WATCH_READ:
 	case TARGET_WATCH_WRITE:
 	case TARGET_WATCH_ACCESS: {
