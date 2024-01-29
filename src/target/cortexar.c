@@ -398,11 +398,9 @@ static bool cortexar_run_insn(target_s *const target, const uint32_t insn)
 	cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
 	/* Configure the AP to put {DBGDTR{TX,RX},DBGITR,DBGDCSR} in banked data registers window */
 	ap_mem_access_setup(priv->base.ap, priv->base.base_addr + CORTEXAR_DBG_DTRTX, ALIGN_32BIT);
-	/* Configure the bank selection to the appropriate AP register bank */
-	adiv5_dp_write(priv->base.ap->dp, ADIV5_DP_SELECT, ((uint32_t)priv->base.ap->apsel << 24U) | 0x10U);
 
-	/* Issue the requested instruction to the core */
-	adiv5_dp_write(priv->base.ap->dp, ADIV5_AP_DB(CORTEXAR_BANKED_ITR), insn);
+	/* Issue the requested instruction to the core (selecting AP bank 1 in the process) */
+	adiv5_ap_write(priv->base.ap, ADIV5_AP_DB(CORTEXAR_BANKED_ITR), insn);
 	/* Poll for the instruction to complete */
 	uint32_t status = 0;
 	while (!(status & CORTEXAR_DBG_DSCR_INSN_COMPLETE))
@@ -420,11 +418,9 @@ static bool cortexar_run_read_insn(target_s *const target, const uint32_t insn, 
 	cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
 	/* Configure the AP to put {DBGDTR{TX,RX},DBGITR,DBGDCSR} in banked data registers window */
 	ap_mem_access_setup(priv->base.ap, priv->base.base_addr + CORTEXAR_DBG_DTRTX, ALIGN_32BIT);
-	/* Configure the bank selection to the appropriate AP register bank */
-	adiv5_dp_write(priv->base.ap->dp, ADIV5_DP_SELECT, ((uint32_t)priv->base.ap->apsel << 24U) | 0x10U);
 
-	/* Issue the requested instruction to the core */
-	adiv5_dp_write(priv->base.ap->dp, ADIV5_AP_DB(CORTEXAR_BANKED_ITR), insn);
+	/* Issue the requested instruction to the core (selecting AP bank 1 in the process) */
+	adiv5_ap_write(priv->base.ap, ADIV5_AP_DB(CORTEXAR_BANKED_ITR), insn);
 	/* Poll for the instruction to complete and the data to become ready in the DTR */
 	uint32_t status = 0;
 	while ((status & (CORTEXAR_DBG_DSCR_INSN_COMPLETE | CORTEXAR_DBG_DSCR_DTR_READ_READY)) !=
@@ -447,11 +443,9 @@ static bool cortexar_run_write_insn(target_s *const target, const uint32_t insn,
 	cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
 	/* Configure the AP to put {DBGDTR{TX,RX},DBGITR,DBGDCSR} in banked data registers window */
 	ap_mem_access_setup(priv->base.ap, priv->base.base_addr + CORTEXAR_DBG_DTRTX, ALIGN_32BIT);
-	/* Configure the bank selection to the appropriate AP register bank */
-	adiv5_dp_write(priv->base.ap->dp, ADIV5_DP_SELECT, ((uint32_t)priv->base.ap->apsel << 24U) | 0x10U);
 
-	/* Set up the data in the DTR for the transaction */
-	adiv5_dp_write(priv->base.ap->dp, ADIV5_AP_DB(CORTEXAR_BANKED_DTRTX), data);
+	/* Set up the data in the DTR for the transaction (selecting AP bank 1 in the process) */
+	adiv5_ap_write(priv->base.ap, ADIV5_AP_DB(CORTEXAR_BANKED_DTRTX), data);
 	/* Poll for the data to become ready in the DTR */
 	while (!(adiv5_dp_read(priv->base.ap->dp, ADIV5_AP_DB(CORTEXAR_BANKED_DCSR)) & CORTEXAR_DBG_DSCR_DTR_WRITE_DONE))
 		continue;
