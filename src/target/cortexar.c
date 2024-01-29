@@ -1670,6 +1670,17 @@ static int cortexar_set_watchpoint(target_s *const target, breakwatch_s *const b
 	return 0;
 }
 
+static int cortexar_clear_watchpoint(target_s *const target, breakwatch_s *const breakwatch)
+{
+	cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
+	/* Clear the watchpoint slot this used */
+	const size_t watchpoint = breakwatch->reserved[0];
+	cortex_dbg_write32(target, CORTEXAR_DBG_WCR + (watchpoint << 2U), 0);
+	priv->base.watchpoints_mask &= ~(1U << watchpoint);
+	/* Tell the debugger that it was successfully able to clear the watchpoint */
+	return 0;
+}
+
 static int cortexar_breakwatch_set(target_s *const target, breakwatch_s *const breakwatch)
 {
 	switch (breakwatch->type) {
@@ -1689,8 +1700,6 @@ static int cortexar_breakwatch_set(target_s *const target, breakwatch_s *const b
 
 static int cortexar_breakwatch_clear(target_s *const target, breakwatch_s *const breakwatch)
 {
-	cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
-
 	switch (breakwatch->type) {
 	case TARGET_BREAK_HARD:
 		return cortexar_clear_hard_breakpoint(target, breakwatch);
@@ -1698,14 +1707,8 @@ static int cortexar_breakwatch_clear(target_s *const target, breakwatch_s *const
 		return cortexar_clear_soft_breakpoint(target, breakwatch);
 	case TARGET_WATCH_READ:
 	case TARGET_WATCH_WRITE:
-	case TARGET_WATCH_ACCESS: {
-		/* Clear the watchpoint slot this used */
-		const size_t watchpoint = breakwatch->reserved[0];
-		cortex_dbg_write32(target, CORTEXAR_DBG_WCR + (watchpoint << 2U), 0);
-		priv->base.watchpoints_mask &= ~(1U << watchpoint);
-		/* Tell the debugger that it was successfully able to clear the watchpoint */
-		return 0;
-	}
+	case TARGET_WATCH_ACCESS:
+		return cortexar_clear_watchpoint(target, breakwatch);
 	default:
 		/* If the breakwatch type is not one of the above, tell the debugger we don't support it */
 		return 1;
