@@ -1021,8 +1021,10 @@ void ap_mem_access_setup(adiv5_access_port_s *ap, uint32_t addr, align_e align)
 		csw |= ADIV5_AP_CSW_SIZE_WORD;
 		break;
 	}
+	/* Select AP bank 0 and write CSW */
 	adiv5_ap_write(ap, ADIV5_AP_CSW, csw);
-	adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_TAR, addr);
+	/* Then write TAR which is in the same AP bank */
+	adiv5_dp_write(ap->dp, ADIV5_AP_TAR, addr);
 }
 
 /* Unpack data from the source uint32_t value based on data alignment and source address */
