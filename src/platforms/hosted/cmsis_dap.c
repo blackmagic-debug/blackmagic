@@ -542,7 +542,7 @@ static void dap_mem_read(adiv5_access_port_s *ap, void *dest, uint32_t src, size
 	if (len == 0)
 		return;
 	const align_e align = MIN_ALIGN(src, len);
-	DEBUG_WIRE("dap_mem_read @ %" PRIx32 " len %zu, align %d\n", src, len, align);
+	DEBUG_PROBE("dap_mem_read @ %" PRIx32 " len %zu, align %d\n", src, len, align);
 	/* If the read can be done in a single transaction, use the dap_read_single() fast-path */
 	if ((1U << align) == len) {
 		dap_read_single(ap, dest, src, align);
@@ -566,7 +566,7 @@ static void dap_mem_read(adiv5_access_port_s *ap, void *dest, uint32_t src, size
 			/* blocks - i gives how many blocks are left to transfer in this 1024 byte chunk */
 			const size_t transfer_length = MIN(blocks - i, blocks_per_transfer) << align;
 			if (!dap_read_block(ap, data + offset, src + offset, transfer_length, align)) {
-				DEBUG_WIRE("mem_read failed: %u\n", ap->dp->fault);
+				DEBUG_WIRE("dap_mem_read failed: %u\n", ap->dp->fault);
 				return;
 			}
 			offset += transfer_length;
@@ -579,7 +579,7 @@ static void dap_mem_write(adiv5_access_port_s *ap, uint32_t dest, const void *sr
 {
 	if (len == 0)
 		return;
-	DEBUG_WIRE("memwrite @ %" PRIx32 " len %zu, align %d\n", dest, len, align);
+	DEBUG_PROBE("dap_mem_write @ %" PRIx32 " len %zu, align %d\n", dest, len, align);
 	/* If the write can be done in a single transaction, use the dap_write_single() fast-path */
 	if ((1U << align) == len) {
 		dap_write_single(ap, dest, src, align);
@@ -603,13 +603,13 @@ static void dap_mem_write(adiv5_access_port_s *ap, uint32_t dest, const void *sr
 			/* blocks - i gives how many blocks are left to transfer in this 1024 byte chunk */
 			const size_t transfer_length = MIN(blocks - i, blocks_per_transfer) << align;
 			if (!dap_write_block(ap, dest + offset, data + offset, transfer_length, align)) {
-				DEBUG_WIRE("mem_write failed: %u\n", ap->dp->fault);
+				DEBUG_WIRE("dap_mem_write failed: %u\n", ap->dp->fault);
 				return;
 			}
 			offset += transfer_length;
 		}
 	}
-	DEBUG_WIRE("dap_mem_write_sized transferred %zu blocks\n", len >> align);
+	DEBUG_WIRE("dap_dap_mem_write transferred %zu blocks\n", len >> align);
 
 	/* Make sure this write is complete by doing a dummy read */
 	adiv5_dp_read(ap->dp, ADIV5_DP_RDBUFF);
