@@ -1596,6 +1596,17 @@ static int cortexar_set_hard_breakpoint(target_s *const target, breakwatch_s *co
 	return 0;
 }
 
+static int cortexar_clear_hard_breakpoint(target_s *const target, const breakwatch_s *const breakwatch)
+{
+	cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
+	/* Clear the breakpoint slot this used */
+	const size_t breakpoint = breakwatch->reserved[0];
+	cortex_dbg_write32(target, CORTEXAR_DBG_BCR + (breakpoint << 2U), 0);
+	priv->base.breakpoints_mask &= ~(1U << breakpoint);
+	/* Tell the debugger that it was successfully able to clear the breakpoint */
+	return 0;
+}
+
 static int cortexar_set_soft_breakpoint(target_s *const target, breakwatch_s *const breakwatch)
 {
 	/* Determine if we're setting up a Thumb or ARM mode breakpoint */
@@ -1664,13 +1675,8 @@ static int cortexar_breakwatch_clear(target_s *const target, breakwatch_s *const
 	cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
 
 	switch (breakwatch->type) {
-	case TARGET_BREAK_HARD: {
-		/* Clear the breakpoint slot this used */
-		const size_t breakpoint = breakwatch->reserved[0];
-		cortex_dbg_write32(target, CORTEXAR_DBG_BCR + (breakpoint << 2U), 0);
-		priv->base.breakpoints_mask &= ~(1U << breakpoint);
-		/* Tell the debugger that it was successfully able to clear the breakpoint */
-		return 0;
+	case TARGET_BREAK_HARD:
+		return cortexar_clear_hard_breakpoint(target, breakwatch);
 	}
 	case TARGET_WATCH_READ:
 	case TARGET_WATCH_WRITE:
@@ -1683,7 +1689,7 @@ static int cortexar_breakwatch_clear(target_s *const target, breakwatch_s *const
 		return 0;
 	}
 	default:
-		/* If the breakwatch type is not one of the above, tell the debugger wed on't support it */
+		/* If the breakwatch type is not one of the above, tell the debugger we don't support it */
 		return 1;
 	}
 }
