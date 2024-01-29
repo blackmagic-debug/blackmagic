@@ -1631,6 +1631,23 @@ static int cortexar_set_soft_breakpoint(target_s *const target, breakwatch_s *co
 	return target_check_error(target);
 }
 
+static int cortexar_clear_soft_breakpoint(target_s *const target, const breakwatch_s *const breakwatch)
+{
+	/* Put the original instruction back to clear the breakpoint */
+	switch (breakwatch->size) {
+	case 2U:
+		target_mem_write16(target, breakwatch->addr, breakwatch->reserved[0]);
+		break;
+	case 4:
+		target_mem_write32(target, breakwatch->addr, breakwatch->reserved[0]);
+		break;
+	default:
+		/* If it's not a valid mode, tell the debugger we don't support it */
+		return -1;
+	}
+	return target_check_error(target);
+}
+
 static int cortexar_set_watchpoint(target_s *const target, breakwatch_s *const breakwatch)
 {
 	cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
@@ -1677,7 +1694,8 @@ static int cortexar_breakwatch_clear(target_s *const target, breakwatch_s *const
 	switch (breakwatch->type) {
 	case TARGET_BREAK_HARD:
 		return cortexar_clear_hard_breakpoint(target, breakwatch);
-	}
+	case TARGET_BREAK_SOFT:
+		return cortexar_clear_soft_breakpoint(target, breakwatch);
 	case TARGET_WATCH_READ:
 	case TARGET_WATCH_WRITE:
 	case TARGET_WATCH_ACCESS: {
