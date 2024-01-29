@@ -59,6 +59,7 @@
 #define RP_XIP_FLASH_BASE     0x10000000U
 #define RP_SRAM_BASE          0x20000000U
 #define RP_SRAM_SIZE          0x42000U
+#define RP_STUB_BUFFER_BASE   (RP_SRAM_BASE + 0x1000)
 
 #define RP_REG_ACCESS_NORMAL              0x0000U
 #define RP_REG_ACCESS_WRITE_XOR           0x1000U
@@ -186,6 +187,8 @@ static bool rp_flash_prepare(target_s *target);
 static bool rp_flash_resume(target_s *target);
 static void rp_spi_read(target_s *target, uint16_t command, target_addr_t address, void *buffer, size_t length);
 static void rp_spi_write(target_s *target, uint16_t command, target_addr_t address, const void *buffer, size_t length);
+static void rp_spi_write_stub(
+	target_s *target, uint16_t command, target_addr_t address, const void *buffer, size_t length);
 static void rp_spi_run_command(target_s *target, uint16_t command, target_addr_t address);
 static uint32_t rp_get_flash_length(target_s *target);
 
@@ -206,7 +209,7 @@ static void rp_add_flash(target_s *target)
 	rp_spi_config(target);
 
 	bmp_spi_add_flash(
-		target, RP_XIP_FLASH_BASE, rp_get_flash_length(target), rp_spi_read, rp_spi_write, rp_spi_run_command);
+		target, RP_XIP_FLASH_BASE, rp_get_flash_length(target), rp_spi_read, rp_spi_write_stub, rp_spi_run_command);
 
 	rp_spi_restore(target);
 	if (por_state)
@@ -384,6 +387,22 @@ static void rp_spi_read(target_s *const target, const uint16_t command, const ta
 		data[i] = rp_spi_xfer_data(target, 0);
 	/* Deselect the Flash */
 	rp_spi_chip_select(target, RP_GPIO_QSPI_CS_DRIVE_HIGH);
+}
+
+static const uint16_t rp_flash_write_stub[] = {
+#include "flashstub/rp.stub"
+};
+
+static void rp_spi_write_stub(target_s *const target, const uint16_t command, const target_addr_t address,
+	const void *const buffer, const size_t length)
+{
+	target_check_error(target);
+	target_mem_write(target, RP_SRAM_BASE, rp_flash_write_stub, sizeof(rp_flash_write_stub));
+	target_mem_write(target, RP_STUB_BUFFER_BASE, buffer, length);
+	if (target_check_error(target))
+		return;
+
+	cortexm_run_stub(target, RP_SRAM_BASE, command, address, RP_STUB_BUFFER_BASE, length);
 }
 
 static void rp_spi_write(target_s *const target, const uint16_t command, const target_addr_t address,
