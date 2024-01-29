@@ -227,6 +227,8 @@
 /* Constants for the DP's quirks field */
 #define ADIV5_DP_QUIRK_MINDP    (1U << 0U) /* DP is a minimal DP implementation */
 #define ADIV5_DP_QUIRK_DUPED_AP (1U << 1U) /* DP has only 1 AP but the address decoding is bugged */
+/* This one is not a quirk, but the field's a convinient place to store this */
+#define ADIV5_AP_ACCESS_BANKED (1U << 7U) /* Last AP access was done using the banked interface */
 
 typedef struct adiv5_access_port adiv5_access_port_s;
 typedef struct adiv5_debug_port adiv5_debug_port_s;
