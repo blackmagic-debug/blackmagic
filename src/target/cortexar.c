@@ -1620,10 +1620,30 @@ static int cortexar_set_soft_breakpoint(target_s *const target, breakwatch_s *co
 	return target_check_error(target);
 }
 
-static int cortexar_breakwatch_set(target_s *const target, breakwatch_s *const breakwatch)
+static int cortexar_set_watchpoint(target_s *const target, breakwatch_s *const breakwatch)
 {
 	cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
+	/* First try and find an unused watchpoint slot */
+	size_t watchpoint = 0;
+	for (; watchpoint < priv->base.watchpoints_available; ++watchpoint) {
+		/* Check if the slot is presently in use, breaking if it is not */
+		if (!(priv->base.watchpoints_mask & (1U << watchpoint)))
+			break;
+	}
+	/* If none was available, return an error */
+	if (watchpoint == priv->base.watchpoints_available)
+		return -1;
 
+	/* Set the watchpoint slot up and mark it used */
+	cortexar_config_watchpoint(target, watchpoint, breakwatch);
+	priv->base.watchpoints_mask |= 1U << watchpoint;
+	breakwatch->reserved[0] = watchpoint;
+	/* Tell the debugger that it was successfully able to set the watchpoint */
+	return 0;
+}
+
+static int cortexar_breakwatch_set(target_s *const target, breakwatch_s *const breakwatch)
+{
 	switch (breakwatch->type) {
 	case TARGET_BREAK_HARD: /* Hardware breakpoints have to be used for Flash breakpoints and can be used for RAM */
 		return cortexar_set_hard_breakpoint(target, breakwatch);
@@ -1631,25 +1651,8 @@ static int cortexar_breakwatch_set(target_s *const target, breakwatch_s *const b
 		return cortexar_set_soft_breakpoint(target, breakwatch);
 	case TARGET_WATCH_READ:
 	case TARGET_WATCH_WRITE:
-	case TARGET_WATCH_ACCESS: {
-		/* First try and find an unused watchpoint slot */
-		size_t watchpoint = 0;
-		for (; watchpoint < priv->base.watchpoints_available; ++watchpoint) {
-			/* Check if the slot is presently in use, breaking if it is not */
-			if (!(priv->base.watchpoints_mask & (1U << watchpoint)))
-				break;
-		}
-		/* If none was available, return an error */
-		if (watchpoint == priv->base.watchpoints_available)
-			return -1;
-
-		/* Set the watchpoint slot up and mark it used */
-		cortexar_config_watchpoint(target, watchpoint, breakwatch);
-		priv->base.watchpoints_mask |= 1U << watchpoint;
-		breakwatch->reserved[0] = watchpoint;
-		/* Tell the debugger that it was successfully able to set the watchpoint */
-		return 0;
-	}
+	case TARGET_WATCH_ACCESS:
+		return cortexar_set_watchpoint(target, breakwatch);
 	default:
 		/* If the breakwatch type is not one of the above, tell the debugger we don't support it */
 		return 1;
