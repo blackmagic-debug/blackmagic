@@ -1115,10 +1115,36 @@ static void cortexar_mem_read(target_s *const target, void *const dest, const ta
 /* Fast path for cortexar_mem_write(). Assumes the address to read data from is already loaded in r0. */
 static inline bool cortexar_mem_write_fast(target_s *const target, const uint32_t *const src, const size_t count)
 {
-	/* Read each of the uint32_t's checking for failure */
-	for (size_t offset = 0; offset < count; ++offset) {
-		if (!cortexar_run_write_insn(target, ARM_STC_DTRRX_R0_POSTINC4_INSN, src[offset]))
-			return false; /* Propagate failure if it happens */
+	/* If we need to write more than a couple of uint32_t's, DCC Fast mode makes more sense, so use it. */
+	if (count > 2U) {
+		cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
+		/* Make sure we're banked mode */
+		cortexar_banked_dcc_mode(target);
+		/* Switch into DCC Fast mode */
+		const uint32_t dbg_dcsr =
+			adiv5_dp_read(priv->base.ap->dp, ADIV5_AP_DB(CORTEXAR_BANKED_DCSR)) & ~CORTEXAR_DBG_DCSR_DCC_MASK;
+		adiv5_dp_write(priv->base.ap->dp, ADIV5_AP_DB(CORTEXAR_BANKED_DCSR), dbg_dcsr | CORTEXAR_DBG_DCSR_DCC_FAST);
+		/* Set up continual store so we can hammer the DTR */
+		adiv5_dp_write(priv->base.ap->dp, ADIV5_AP_DB(CORTEXAR_BANKED_ITR), ARM_STC_DTRRX_R0_POSTINC4_INSN);
+		/* Run the transfer, hammering the DTR */
+		for (size_t offset = 0; offset < count; ++offset)
+			adiv5_dp_write(priv->base.ap->dp, ADIV5_AP_DB(CORTEXAR_BANKED_DTRTX), src[offset]);
+		/* Now read out the status from the DCSR in case anything went wrong */
+		const uint32_t status = adiv5_dp_read(priv->base.ap->dp, ADIV5_AP_DB(CORTEXAR_BANKED_DCSR));
+		/* Go back into DCC Normal (Non-blocking) mode */
+		adiv5_dp_write(priv->base.ap->dp, ADIV5_AP_DB(CORTEXAR_BANKED_DCSR), dbg_dcsr | CORTEXAR_DBG_DCSR_DCC_NORMAL);
+		/* If the instruction triggered a synchronous data abort, signal failure having cleared it */
+		if (status & CORTEXAR_DBG_DSCR_SYNC_DATA_ABORT) {
+			priv->core_status |= CORTEXAR_STATUS_DATA_FAULT;
+			cortex_dbg_write32(target, CORTEXAR_DBG_DRCR, CORTEXAR_DBG_DRCR_CLR_STICKY_EXC);
+			return false;
+		}
+	} else {
+		/* Write each of the uint32_t's checking for failure */
+		for (size_t offset = 0; offset < count; ++offset) {
+			if (!cortexar_run_write_insn(target, ARM_STC_DTRRX_R0_POSTINC4_INSN, src[offset]))
+				return false; /* Propagate failure if it happens */
+		}
 	}
 	return true; /* Signal success */
 }
