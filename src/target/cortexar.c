@@ -409,9 +409,20 @@ static void cortexar_banked_dcc_mode(target_s *const target)
 	}
 }
 
+static bool cortexar_check_data_abort(target_s *const target, const uint32_t status)
+{
+	/* If the instruction triggered a synchronous data abort, signal failure having cleared it */
+	if (status & CORTEXAR_DBG_DSCR_SYNC_DATA_ABORT) {
+		cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
+		priv->core_status |= CORTEXAR_STATUS_DATA_FAULT;
+		cortex_dbg_write32(target, CORTEXAR_DBG_DRCR, CORTEXAR_DBG_DRCR_CLR_STICKY_EXC);
+	}
+	return !(status & CORTEXAR_DBG_DSCR_SYNC_DATA_ABORT);
+}
+
 static bool cortexar_run_insn(target_s *const target, const uint32_t insn)
 {
-	cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
+	const cortexar_priv_s *const priv = (const cortexar_priv_s *)target->priv;
 	/* Make sure we're in banked mode */
 	cortexar_banked_dcc_mode(target);
 	/* Issue the requested instruction to the core */
@@ -420,17 +431,13 @@ static bool cortexar_run_insn(target_s *const target, const uint32_t insn)
 	uint32_t status = 0;
 	while (!(status & CORTEXAR_DBG_DSCR_INSN_COMPLETE))
 		status = adiv5_dp_read(priv->base.ap->dp, ADIV5_AP_DB(CORTEXAR_BANKED_DCSR));
-	/* If the instruction triggered a synchronous data abort, signal failure having cleared it */
-	if (status & CORTEXAR_DBG_DSCR_SYNC_DATA_ABORT) {
-		priv->core_status |= CORTEXAR_STATUS_DATA_FAULT;
-		cortex_dbg_write32(target, CORTEXAR_DBG_DRCR, CORTEXAR_DBG_DRCR_CLR_STICKY_EXC);
-	}
-	return !(status & CORTEXAR_DBG_DSCR_SYNC_DATA_ABORT);
+	/* Check if the instruction triggered a synchronous data abort */
+	return cortexar_check_data_abort(target, status);
 }
 
 static bool cortexar_run_read_insn(target_s *const target, const uint32_t insn, uint32_t *const result)
 {
-	cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
+	const cortexar_priv_s *const priv = (const cortexar_priv_s *)target->priv;
 	/* Make sure we're in banked mode */
 	cortexar_banked_dcc_mode(target);
 	/* Issue the requested instruction to the core */
@@ -440,12 +447,9 @@ static bool cortexar_run_read_insn(target_s *const target, const uint32_t insn, 
 	while ((status & (CORTEXAR_DBG_DSCR_INSN_COMPLETE | CORTEXAR_DBG_DSCR_DTR_READ_READY)) !=
 		(CORTEXAR_DBG_DSCR_INSN_COMPLETE | CORTEXAR_DBG_DSCR_DTR_READ_READY)) {
 		status = adiv5_dp_read(priv->base.ap->dp, ADIV5_AP_DB(CORTEXAR_BANKED_DCSR));
-		/* If the instruction triggered a synchronous data abort, signal failure having cleared it */
-		if (status & CORTEXAR_DBG_DSCR_SYNC_DATA_ABORT) {
-			priv->core_status |= CORTEXAR_STATUS_DATA_FAULT;
-			cortex_dbg_write32(target, CORTEXAR_DBG_DRCR, CORTEXAR_DBG_DRCR_CLR_STICKY_EXC);
+		/* Check if the instruction triggered a synchronous data abort */
+		if (!cortexar_check_data_abort(target, status))
 			return false;
-		}
 	}
 	/* Read back the DTR to complete the read and signal success */
 	*result = adiv5_dp_read(priv->base.ap->dp, ADIV5_AP_DB(CORTEXAR_BANKED_DTRRX));
@@ -454,7 +458,7 @@ static bool cortexar_run_read_insn(target_s *const target, const uint32_t insn, 
 
 static bool cortexar_run_write_insn(target_s *const target, const uint32_t insn, const uint32_t data)
 {
-	cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
+	const cortexar_priv_s *const priv = (const cortexar_priv_s *)target->priv;
 	/* Make sure we're in banked mode */
 	cortexar_banked_dcc_mode(target);
 	/* Set up the data in the DTR for the transaction */
@@ -469,12 +473,9 @@ static bool cortexar_run_write_insn(target_s *const target, const uint32_t insn,
 	while ((status & (CORTEXAR_DBG_DSCR_INSN_COMPLETE | CORTEXAR_DBG_DSCR_DTR_WRITE_DONE)) !=
 		CORTEXAR_DBG_DSCR_INSN_COMPLETE) {
 		status = adiv5_dp_read(priv->base.ap->dp, ADIV5_AP_DB(CORTEXAR_BANKED_DCSR));
-		/* If the instruction triggered a synchronous data abort, signal failure having cleared it */
-		if (status & CORTEXAR_DBG_DSCR_SYNC_DATA_ABORT) {
-			priv->core_status |= CORTEXAR_STATUS_DATA_FAULT;
-			cortex_dbg_write32(target, CORTEXAR_DBG_DRCR, CORTEXAR_DBG_DRCR_CLR_STICKY_EXC);
+		/* Check if the instruction triggered a synchronous data abort */
+		if (!cortexar_check_data_abort(target, status))
 			return false;
-		}
 	}
 	return true;
 }
@@ -999,18 +1000,14 @@ static inline bool cortexar_mem_read_fast(target_s *const target, uint32_t *cons
 		adiv5_dp_write(priv->base.ap->dp, ADIV5_AP_DB(CORTEXAR_BANKED_DCSR), dbg_dcsr | CORTEXAR_DBG_DCSR_DCC_NORMAL);
 		/* Grab the value of the last instruction run now it won't run again */
 		dest[count - 1U] = adiv5_dp_read(priv->base.ap->dp, ADIV5_AP_DB(CORTEXAR_BANKED_DTRRX));
-		/* If the instruction triggered a synchronous data abort, signal failure having cleared it */
-		if (status & CORTEXAR_DBG_DSCR_SYNC_DATA_ABORT) {
-			priv->core_status |= CORTEXAR_STATUS_DATA_FAULT;
-			cortex_dbg_write32(target, CORTEXAR_DBG_DRCR, CORTEXAR_DBG_DRCR_CLR_STICKY_EXC);
-			return false;
-		}
-	} else {
-		/* Read each of the uint32_t's checking for failure */
-		for (size_t offset = 0; offset < count; ++offset) {
-			if (!cortexar_run_read_insn(target, ARM_LDC_R0_POSTINC4_DTRTX_INSN, dest + offset))
-				return false; /* Propagate failure if it happens */
-		}
+		/* Check if the instruction triggered a synchronous data abort */
+		return cortexar_check_data_abort(target, status);
+	}
+
+	/* Read each of the uint32_t's checking for failure */
+	for (size_t offset = 0; offset < count; ++offset) {
+		if (!cortexar_run_read_insn(target, ARM_LDC_R0_POSTINC4_DTRTX_INSN, dest + offset))
+			return false; /* Propagate failure if it happens */
 	}
 	return true; /* Signal success */
 }
@@ -1133,18 +1130,14 @@ static inline bool cortexar_mem_write_fast(target_s *const target, const uint32_
 		const uint32_t status = adiv5_dp_read(priv->base.ap->dp, ADIV5_AP_DB(CORTEXAR_BANKED_DCSR));
 		/* Go back into DCC Normal (Non-blocking) mode */
 		adiv5_dp_write(priv->base.ap->dp, ADIV5_AP_DB(CORTEXAR_BANKED_DCSR), dbg_dcsr | CORTEXAR_DBG_DCSR_DCC_NORMAL);
-		/* If the instruction triggered a synchronous data abort, signal failure having cleared it */
-		if (status & CORTEXAR_DBG_DSCR_SYNC_DATA_ABORT) {
-			priv->core_status |= CORTEXAR_STATUS_DATA_FAULT;
-			cortex_dbg_write32(target, CORTEXAR_DBG_DRCR, CORTEXAR_DBG_DRCR_CLR_STICKY_EXC);
-			return false;
-		}
-	} else {
-		/* Write each of the uint32_t's checking for failure */
-		for (size_t offset = 0; offset < count; ++offset) {
-			if (!cortexar_run_write_insn(target, ARM_STC_DTRRX_R0_POSTINC4_INSN, src[offset]))
-				return false; /* Propagate failure if it happens */
-		}
+		/* Check if the instruction triggered a synchronous data abort */
+		return cortexar_check_data_abort(target, status);
+	}
+
+	/* Write each of the uint32_t's checking for failure */
+	for (size_t offset = 0; offset < count; ++offset) {
+		if (!cortexar_run_write_insn(target, ARM_STC_DTRRX_R0_POSTINC4_INSN, src[offset]))
+			return false; /* Propagate failure if it happens */
 	}
 	return true; /* Signal success */
 }
