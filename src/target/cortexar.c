@@ -123,6 +123,10 @@ typedef struct cortexar_priv {
 #define CORTEXAR_DBG_DSCR_INTERRUPT_DISABLE  (1U << 11U)
 #define CORTEXAR_DBG_DSCR_ITR_ENABLE         (1U << 13U)
 #define CORTEXAR_DBG_DSCR_HALTING_DBG_ENABLE (1U << 14U)
+#define CORTEXAR_DBG_DCSR_DCC_MASK           0x00300000U
+#define CORTEXAR_DBG_DCSR_DCC_NORMAL         0x00000000U
+#define CORTEXAR_DBG_DCSR_DCC_STALL          0x00100000U
+#define CORTEXAR_DBG_DCSR_DCC_FAST           0x00200000U
 #define CORTEXAR_DBG_DSCR_INSN_COMPLETE      (1U << 24U)
 #define CORTEXAR_DBG_DSCR_DTR_READ_READY     (1U << 29U)
 #define CORTEXAR_DBG_DSCR_DTR_WRITE_DONE     (1U << 30U)
@@ -970,10 +974,43 @@ static bool cortexar_check_error(target_s *const target)
 /* Fast path for cortexar_mem_read(). Assumes the address to read data from is already loaded in r0. */
 static inline bool cortexar_mem_read_fast(target_s *const target, uint32_t *const dest, const size_t count)
 {
-	/* Read each of the uint32_t's checking for failure */
-	for (size_t offset = 0; offset < count; ++offset) {
-		if (!cortexar_run_read_insn(target, ARM_LDC_R0_POSTINC4_DTRTX_INSN, dest + offset))
-			return false; /* Propagate failure if it happens */
+	/* If we need to read more than a couple of uint32_t's, DCC Fast mode makes more sense, so use it. */
+	if (count > 2U) {
+		cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
+		/* Make sure we're banked mode */
+		cortexar_banked_dcc_mode(target);
+		/* Switch into DCC Fast mode */
+		const uint32_t dbg_dcsr =
+			adiv5_dp_read(priv->base.ap->dp, ADIV5_AP_DB(CORTEXAR_BANKED_DCSR)) & ~CORTEXAR_DBG_DCSR_DCC_MASK;
+		adiv5_dp_write(priv->base.ap->dp, ADIV5_AP_DB(CORTEXAR_BANKED_DCSR), dbg_dcsr | CORTEXAR_DBG_DCSR_DCC_FAST);
+		/* Set up continual load so we can hammer the DTR */
+		adiv5_dp_write(priv->base.ap->dp, ADIV5_AP_DB(CORTEXAR_BANKED_ITR), ARM_LDC_R0_POSTINC4_DTRTX_INSN);
+		/* Run the transfer, hammering the DTR */
+		for (size_t offset = 0; offset < count; ++offset) {
+			/* Read the next value, which is the value for the last instruction run */
+			const uint32_t value = adiv5_dp_read(priv->base.ap->dp, ADIV5_AP_DB(CORTEXAR_BANKED_DTRRX));
+			/* If we've run the instruction at least once, store it */
+			if (offset)
+				dest[offset - 1U] = value;
+		}
+		/* Now read out the status from the DCSR in case anything went wrong */
+		const uint32_t status = adiv5_dp_read(priv->base.ap->dp, ADIV5_AP_DB(CORTEXAR_BANKED_DCSR));
+		/* Go back into DCC Normal (Non-blocking) mode */
+		adiv5_dp_write(priv->base.ap->dp, ADIV5_AP_DB(CORTEXAR_BANKED_DCSR), dbg_dcsr | CORTEXAR_DBG_DCSR_DCC_NORMAL);
+		/* Grab the value of the last instruction run now it won't run again */
+		dest[count - 1U] = adiv5_dp_read(priv->base.ap->dp, ADIV5_AP_DB(CORTEXAR_BANKED_DTRRX));
+		/* If the instruction triggered a synchronous data abort, signal failure having cleared it */
+		if (status & CORTEXAR_DBG_DSCR_SYNC_DATA_ABORT) {
+			priv->core_status |= CORTEXAR_STATUS_DATA_FAULT;
+			cortex_dbg_write32(target, CORTEXAR_DBG_DRCR, CORTEXAR_DBG_DRCR_CLR_STICKY_EXC);
+			return false;
+		}
+	} else {
+		/* Read each of the uint32_t's checking for failure */
+		for (size_t offset = 0; offset < count; ++offset) {
+			if (!cortexar_run_read_insn(target, ARM_LDC_R0_POSTINC4_DTRTX_INSN, dest + offset))
+				return false; /* Propagate failure if it happens */
+		}
 	}
 	return true; /* Signal success */
 }
