@@ -51,8 +51,9 @@ typedef struct gpio_qspi {
 } gpio_qspi_s;
 
 /* SSI peripheral base address and register bit definitions */
-#define RP_SSI_BASE_ADDR            0x18000000U
-#define RP_SSI_STATUS_FX_FIFO_EMPTY (1U << 2U)
+#define RP_SSI_BASE_ADDR                0x18000000U
+#define RP_SSI_STATUS_TX_FIFO_EMPTY     (1U << 2U)
+#define RP_SSI_STATUS_RX_FIFO_NOT_EMPTY (1U << 3U)
 
 /* QSPI GPIO peripheral base address and register bit definitions */
 #define RP_GPIO_QSPI_BASE_ADDR     0x40018000U
@@ -83,7 +84,7 @@ static uint8_t rp_spi_xfer_data(const uint8_t data)
 	/* Initiate the 8-bit transfer */
 	ssi->data = data;
 	/* Wait for it to complete */
-	while (!(ssi->status & RP_SSI_STATUS_FX_FIFO_EMPTY))
+	while (!(ssi->status & RP_SSI_STATUS_RX_FIFO_NOT_EMPTY))
 		continue;
 	/* Then read the result so the FIFO doesn't wind up filled */
 	return ssi->data & 0xffU;
