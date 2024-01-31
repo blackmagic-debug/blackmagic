@@ -367,11 +367,9 @@ static uint8_t rp_spi_xfer_data(target_s *const target, const uint8_t data)
 	return target_mem_read32(target, RP_SSI_DR0) & 0xffU;
 }
 
-static void rp_spi_setup_xfer(
-	target_s *const target, const uint16_t command, const target_addr_t address, const size_t length)
+static void rp_spi_setup_xfer(target_s *const target, const uint16_t command, const target_addr_t address)
 {
-	/* Configure the controller, and select the Flash */
-	target_mem_write32(target, RP_SSI_CTRL1, length);
+	/* Select the Flash */
 	rp_spi_chip_select(target, RP_GPIO_QSPI_CS_DRIVE_LOW);
 
 	/* Set up the instruction */
@@ -395,7 +393,7 @@ static void rp_spi_read(target_s *const target, const uint16_t command, const ta
 	const size_t length)
 {
 	/* Setup the transaction */
-	rp_spi_setup_xfer(target, command, address, length);
+	rp_spi_setup_xfer(target, command, address);
 	/* Now read back the data that elicited */
 	uint8_t *const data = (uint8_t *const)buffer;
 	for (size_t i = 0; i < length; ++i)
@@ -408,7 +406,7 @@ static void rp_spi_read(target_s *const target, const uint16_t command, const ta
 static void rp_spi_run_command(target_s *const target, const uint16_t command, const target_addr_t address)
 {
 	/* Setup the transaction */
-	rp_spi_setup_xfer(target, command, address, 0U);
+	rp_spi_setup_xfer(target, command, address);
 	/* Deselect the Flash to execute the transaction */
 	rp_spi_chip_select(target, RP_GPIO_QSPI_CS_DRIVE_HIGH);
 }
