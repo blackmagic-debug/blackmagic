@@ -20,7 +20,6 @@
  */
 #include <stdint.h>
 #include <stddef.h>
-#include "stub.h"
 
 // spi.h
 #define SPI_FLASH_OPCODE_MASK      0x00ffU
@@ -75,7 +74,8 @@ rp_flash_write_stub(const uint16_t command, const uint32_t dest, const uint8_t *
 	/* Create a stack for our own sanity */
 	__asm__("ldr r4, =#0x20042000\n"
 			"mov sp, r4\n"
-			"b rp_flash_write\n");
+			"bl rp_flash_write\n"
+			"bkpt #1\n");
 }
 
 static uint8_t rp_spi_xfer_data(const uint8_t data)
@@ -117,5 +117,4 @@ static __attribute__((used, section(".entry"))) void rp_flash_write(
 
 	/* Deselect the Flash to complete the transaction */
 	SPI_CHIP_SELECT(RP_GPIO_QSPI_CS_DRIVE_HIGH);
-	stub_exit(1);
 }
