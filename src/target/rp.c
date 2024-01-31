@@ -395,10 +395,8 @@ static const uint16_t rp_flash_write_stub[] = {
 static void rp_spi_write_stub(target_s *const target, const uint16_t command, const target_addr_t address,
 	const void *const buffer, const size_t length)
 {
-	target_check_error(target);
-	target_mem_write(target, RP_SRAM_BASE, rp_flash_write_stub, sizeof(rp_flash_write_stub));
-	target_mem_write(target, RP_STUB_BUFFER_BASE, buffer, length);
-	if (target_check_error(target))
+	if (target_mem_write(target, RP_SRAM_BASE, rp_flash_write_stub, sizeof(rp_flash_write_stub)) ||
+		target_mem_write(target, RP_STUB_BUFFER_BASE, buffer, length))
 		return;
 
 	cortexm_run_stub(target, RP_SRAM_BASE, command, address, RP_STUB_BUFFER_BASE, length);
