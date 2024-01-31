@@ -179,15 +179,18 @@ const command_s rp_cmd_list[] = {
 	{NULL, NULL, NULL},
 };
 
+static const uint16_t rp_flash_write_stub[] = {
+#include "flashstub/rp.stub"
+};
+
 static bool rp_read_rom_func_table(target_s *target);
 static bool rp_attach(target_s *target);
 static void rp_spi_config(target_s *target);
 static void rp_spi_restore(target_s *target);
 static bool rp_flash_prepare(target_s *target);
 static bool rp_flash_resume(target_s *target);
+static bool rp_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t length);
 static void rp_spi_read(target_s *target, uint16_t command, target_addr_t address, void *buffer, size_t length);
-static void rp_spi_write_stub(
-	target_s *target, uint16_t command, target_addr_t address, const void *buffer, size_t length);
 static void rp_spi_run_command(target_s *target, uint16_t command, target_addr_t address);
 static uint32_t rp_get_flash_length(target_s *target);
 
@@ -207,8 +210,9 @@ static void rp_add_flash(target_s *target)
 	rp_flash_exit_xip(target);
 	rp_spi_config(target);
 
-	bmp_spi_add_flash(
-		target, RP_XIP_FLASH_BASE, rp_get_flash_length(target), rp_spi_read, rp_spi_write_stub, rp_spi_run_command);
+	spi_flash_s *flash = bmp_spi_add_flash(
+		target, RP_XIP_FLASH_BASE, rp_get_flash_length(target), rp_spi_read, NULL, rp_spi_run_command);
+	flash->flash.write = rp_flash_write;
 
 	rp_spi_restore(target);
 	if (por_state)
@@ -323,7 +327,8 @@ static bool rp_flash_prepare(target_s *const target)
 	rp_flash_exit_xip(target);
 	/* Configure the SPI controller for our use */
 	rp_spi_config(target);
-	return true;
+	/* Preload the SPI Flash write stub */
+	return target_mem_write(target, RP_SRAM_BASE, rp_flash_write_stub, sizeof(rp_flash_write_stub)) == 0;
 }
 
 static bool rp_flash_resume(target_s *const target)
@@ -336,6 +341,18 @@ static bool rp_flash_resume(target_s *const target)
 	rp_flash_enter_xip(target);
 	target_mem_write32(target, CORTEXM_AIRCR, CORTEXM_AIRCR_VECTKEY | CORTEXM_AIRCR_SYSRESETREQ);
 	return true;
+}
+
+static bool rp_flash_write(
+	target_flash_s *const flash, const target_addr_t dest, const void *const src, const size_t length)
+{
+	target_s *const target = flash->t;
+	const spi_flash_s *const spi_flash = (spi_flash_s *)flash;
+	/* Load the next block of data and run the stub */
+	if (target_mem_write(target, RP_STUB_BUFFER_BASE, src, length))
+		return false;
+	return cortexm_run_stub(
+		target, RP_SRAM_BASE, dest - flash->start, RP_STUB_BUFFER_BASE, length, spi_flash->page_size);
 }
 
 static void rp_spi_chip_select(target_s *const target, const uint32_t state)
@@ -386,20 +403,6 @@ static void rp_spi_read(target_s *const target, const uint16_t command, const ta
 		data[i] = rp_spi_xfer_data(target, 0);
 	/* Deselect the Flash */
 	rp_spi_chip_select(target, RP_GPIO_QSPI_CS_DRIVE_HIGH);
-}
-
-static const uint16_t rp_flash_write_stub[] = {
-#include "flashstub/rp.stub"
-};
-
-static void rp_spi_write_stub(target_s *const target, const uint16_t command, const target_addr_t address,
-	const void *const buffer, const size_t length)
-{
-	if (target_mem_write(target, RP_SRAM_BASE, rp_flash_write_stub, sizeof(rp_flash_write_stub)) ||
-		target_mem_write(target, RP_STUB_BUFFER_BASE, buffer, length))
-		return;
-
-	cortexm_run_stub(target, RP_SRAM_BASE, command, address, RP_STUB_BUFFER_BASE, length);
 }
 
 static void rp_spi_run_command(target_s *const target, const uint16_t command, const target_addr_t address)

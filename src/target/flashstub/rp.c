@@ -21,12 +21,14 @@
 #include <stdint.h>
 #include <stddef.h>
 
-// spi.h
-#define SPI_FLASH_OPCODE_MASK      0x00ffU
-#define SPI_FLASH_DUMMY_MASK       0x0700U
-#define SPI_FLASH_DUMMY_SHIFT      8U
-#define SPI_FLASH_OPCODE_MODE_MASK 0x0800U
-#define SPI_FLASH_OPCODE_3B_ADDR   (1U << 11U)
+/* SPI Flash opcodes used */
+#define SPI_FLASH_CMD_PAGE_PROGRAM 0x02U
+#define SPI_FLASH_CMD_READ_STATUS  0x05U
+#define SPI_FLASH_CMD_WRITE_ENABLE 0x06U
+
+/* SPI Flash status register bit definitions */
+#define SPI_FLASH_STATUS_BUSY          0x01U
+#define SPI_FLASH_STATUS_WRITE_ENABLED 0x02U
 
 /* SSI peripheral registers */
 typedef struct ssi {
@@ -67,7 +69,7 @@ static gpio_qspi_s *const gpio_qspi = (gpio_qspi_s *)RP_GPIO_QSPI_BASE_ADDR;
 
 #define SPI_CHIP_SELECT(state) gpio_qspi->cs_ctrl = (gpio_qspi->cs_ctrl & ~RP_GPIO_QSPI_CS_DRIVE_MASK) | state
 
-static uint8_t rp_spi_xfer_data(const uint8_t data);
+#define MIN(x, y) (((x) < (y)) ? (x) : (y))
 
 void __attribute__((naked, used, section(".entry")))
 rp_flash_write_stub(const uint16_t command, const uint32_t dest, const uint8_t *const src, const uint32_t length)
@@ -77,6 +79,16 @@ rp_flash_write_stub(const uint16_t command, const uint32_t dest, const uint8_t *
 			"mov sp, r4\n"
 			"bl rp_flash_write\n"
 			"bkpt #1\n");
+}
+
+static void rp_spi_flash_select(void)
+{
+	SPI_CHIP_SELECT(RP_GPIO_QSPI_CS_DRIVE_LOW);
+}
+
+static void rp_spi_flash_deselect(void)
+{
+	SPI_CHIP_SELECT(RP_GPIO_QSPI_CS_DRIVE_HIGH);
 }
 
 static uint8_t rp_spi_xfer_data(const uint8_t data)
@@ -90,26 +102,44 @@ static uint8_t rp_spi_xfer_data(const uint8_t data)
 	return ssi->data & 0xffU;
 }
 
-static __attribute__((used, section(".entry"))) void rp_flash_write(
-	const uint16_t command, const uint32_t address, const uint8_t *const src, const uint32_t length)
+static void rp_spi_write_enable(void)
 {
-	/* Configure the controller, and select the Flash */
-	ssi->ctrl1 = length;
-	SPI_CHIP_SELECT(RP_GPIO_QSPI_CS_DRIVE_LOW);
+	/* Select the Flash */
+	rp_spi_flash_select();
+	/* Set up that we want to write enable the Flash */
+	rp_spi_xfer_data(SPI_FLASH_CMD_WRITE_ENABLE);
+	/* Deselect the Flash to complete the transaction */
+	rp_spi_flash_deselect();
+}
 
-	rp_spi_xfer_data((uint8_t)(command & SPI_FLASH_OPCODE_MASK));
+static uint8_t rp_spi_read_status(void)
+{
+	/* Select the Flash */
+	rp_spi_flash_select();
 
-	if ((command & SPI_FLASH_OPCODE_MODE_MASK) == SPI_FLASH_OPCODE_3B_ADDR) {
-		/* For each byte sent here, we have to manually clean up from the controller with a read */
-		rp_spi_xfer_data((address >> 16U) & 0xffU);
-		rp_spi_xfer_data((address >> 8U) & 0xffU);
-		rp_spi_xfer_data(address & 0xffU);
-	}
+	/* Set up that we want to read the status of the Flash */
+	rp_spi_xfer_data(SPI_FLASH_CMD_READ_STATUS);
+	/* Read the status byte back */
+	const uint8_t status = rp_spi_xfer_data(0U);
 
-	const size_t inter_length = (command & SPI_FLASH_DUMMY_MASK) >> SPI_FLASH_DUMMY_SHIFT;
-	for (size_t i = 0; i < inter_length; ++i)
-		/* For each byte sent here, we have to manually clean up from the controller with a read */
-		rp_spi_xfer_data(0);
+	/* Deselect the Flash to complete the transaction */
+	rp_spi_flash_deselect();
+	return status;
+}
+
+static void rp_spi_write(const uint32_t address, const uint8_t *const src, const uint32_t length)
+{
+	/* Select the Flash */
+	rp_spi_flash_select();
+
+	/* Set up that we want to do a page programming operation */
+	rp_spi_xfer_data(SPI_FLASH_CMD_PAGE_PROGRAM);
+
+	/* For each byte sent here, we have to manually clean up from the controller with a read */
+	/* Set up the address we want to do it to */
+	rp_spi_xfer_data((address >> 16U) & 0xffU);
+	rp_spi_xfer_data((address >> 8U) & 0xffU);
+	rp_spi_xfer_data(address & 0xffU);
 
 	/* Now write out the data requested */
 	for (size_t i = 0; i < length; ++i)
@@ -117,5 +147,21 @@ static __attribute__((used, section(".entry"))) void rp_flash_write(
 		rp_spi_xfer_data(src[i]);
 
 	/* Deselect the Flash to complete the transaction */
-	SPI_CHIP_SELECT(RP_GPIO_QSPI_CS_DRIVE_HIGH);
+	rp_spi_flash_deselect();
+}
+
+static void __attribute__((used, section(".entry")))
+rp_flash_write(const uint32_t dest, const uint8_t *const src, const size_t length, const uint32_t page_size)
+{
+	for (size_t offset = 0; offset < length; offset += page_size) {
+		/* Try to write-enable the Flash */
+		rp_spi_write_enable();
+		if (!(rp_spi_read_status() & SPI_FLASH_STATUS_WRITE_ENABLED))
+			__asm__("bkpt #0"); /* Fail if that didn't work */
+
+		const size_t amount = MIN(length - offset, page_size);
+		rp_spi_write(dest + offset, src + offset, amount);
+		while (rp_spi_read_status() & SPI_FLASH_STATUS_BUSY)
+			continue;
+	}
 }
