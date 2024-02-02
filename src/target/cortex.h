@@ -89,6 +89,10 @@
 #define CORTEXM_GENERAL_REG_COUNT  20U
 #define CORTEXAR_GENERAL_REG_COUNT 17U
 
+#define CORTEXAR_GENERAL_REGS_GDB_END 16U
+#define CORTEXAR_FLOAT_REGS_GDB_BEGIN 26U
+#define CORTEXAR_FLOAT_REGS_GDB_END   42U
+
 adiv5_access_port_s *cortex_ap(target_s *target);
 
 #endif /* TARGET_CORTEX_H */
