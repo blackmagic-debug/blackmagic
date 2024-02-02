@@ -1293,6 +1293,9 @@ static void *cortexar_reg_ptr(target_s *const target, const size_t reg)
 	/* r0-r15 */
 	if (reg < 16U)
 		return &priv->core_regs.r[reg];
+	/* FPA regs, which don't exist for us */
+	if (reg < CORTEXAR_CPSR_GDB_REMAP_POS)
+		return NULL;
 	/* cpsr */
 	if (reg == CORTEXAR_CPSR_GDB_REMAP_POS)
 		return &priv->core_regs.cpsr;
@@ -1300,10 +1303,10 @@ static void *cortexar_reg_ptr(target_s *const target, const size_t reg)
 	if (!(target->target_options & TOPT_FLAVOUR_FLOAT))
 		return NULL;
 	/* d0-d15 */
-	if (reg < 33U)
-		return &priv->core_regs.d[reg - CORTEXAR_GENERAL_REG_COUNT];
+	if (reg < CORTEXAR_FLOAT_REGS_GDB_END)
+		return &priv->core_regs.d[reg - CORTEXAR_FLOAT_REGS_GDB_BEGIN];
 	/* fpcsr */
-	if (reg == 33U)
+	if (reg == 42U)
 		return &priv->core_regs.fpcsr;
 	return NULL;
 }
@@ -1311,7 +1314,7 @@ static void *cortexar_reg_ptr(target_s *const target, const size_t reg)
 static size_t cortexar_reg_width(const size_t reg)
 {
 	/* r0-r15, cpsr, fpcsr */
-	if (reg < CORTEXAR_GENERAL_REG_COUNT || reg == CORTEXAR_CPSR_GDB_REMAP_POS || reg == 33U)
+	if (reg < CORTEXAR_GENERAL_REGS_GDB_END || reg == CORTEXAR_CPSR_GDB_REMAP_POS || reg == 42U)
 		return 4U;
 	/* d0-d15 */
 	return 8U;
@@ -1541,7 +1544,7 @@ static void cortexar_halt_resume(target_s *const target, const bool step)
 }
 
 /*
- * Halt the core and await halted status. This function should only return true when 
+ * Halt the core and await halted status. This function should only return true when
  * it is, itself, responsible for having halted the target. This allows storing of the
  * returned value to later determine whether the target should be resumed.
  */
