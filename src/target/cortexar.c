@@ -733,6 +733,26 @@ static bool cortexar_ensure_core_powered(target_s *const target)
 	return true;
 }
 
+static void cortexr_display_regs(const target_s *const target)
+{
+#ifndef DEBUG_TARGET_IS_NOOP
+	const cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
+	for (size_t i = 0U; i < 16U; ++i)
+		DEBUG_TARGET("  r%-2zu: %08" PRIx32 "%c", i, priv->core_regs.r[i], (i & 3U) == 3U ? '\n' : ' ');
+	if (target->target_options & TOPT_FLAVOUR_FLOAT) {
+		for (size_t i = 0; i < 16U; ++i)
+			DEBUG_TARGET("  d%-2zu: %016" PRIx64 "%c", i, priv->core_regs.d[i], i & 1U ? '\n' : ' ');
+	}
+	for (size_t i = 0; i < 5U; ++i)
+		DEBUG_TARGET("spsr%zu: %08" PRIx32 "%c", i, priv->core_regs.spsr[i], (i & 3U) == 3U ? '\n' : ' ');
+	if (target->target_options & TOPT_FLAVOUR_FLOAT)
+		DEBUG_TARGET("fpsr: %08" PRIx32 " ", priv->core_regs.fpcsr);
+	DEBUG_TARGET(" cpsr: %08" PRIx32 "\n", priv->core_regs.cpsr);
+#else
+	(void)target;
+#endif
+}
+
 static target_s *cortexar_probe(
 	adiv5_access_port_s *const ap, const target_addr_t base_address, const char *const core_type)
 {
@@ -1395,8 +1415,9 @@ static target_halt_reason_e cortexar_halt_poll(target_s *const target, target_ad
 	cortex_dbg_write32(
 		target, CORTEXAR_DBG_DSCR, dscr | CORTEXAR_DBG_DSCR_ITR_ENABLE | CORTEXAR_DBG_DSCR_HALTING_DBG_ENABLE);
 
-	/* Save the target core's registers as debugging operations clobber them */
+	/* Save and display the target core's registers as debugging operations clobber them */
 	cortexar_regs_save(target);
+	cortexr_display_regs(target);
 
 	target_halt_reason_e reason = TARGET_HALT_FAULT;
 	/* Determine why we halted exactly from the Method Of Entry bits */
@@ -1469,6 +1490,7 @@ static void cortexar_halt_resume(target_s *const target, const bool step)
 	}
 
 	priv->base.ap->dp->quirks &= ~ADIV5_AP_ACCESS_BANKED;
+	cortexr_display_regs(target);
 	/* Restore the core's registers so the running program doesn't know we've been in there */
 	cortexar_regs_restore(target);
 
