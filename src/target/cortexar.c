@@ -391,6 +391,8 @@ static void cortexar_halt_resume(target_s *target, bool step);
 
 static int cortexar_breakwatch_set(target_s *target, breakwatch_s *breakwatch);
 static int cortexar_breakwatch_clear(target_s *target, breakwatch_s *breakwatch);
+static int cortexar_set_soft_breakpoint(target_s *target, breakwatch_s *breakwatch);
+static int cortexar_clear_soft_breakpoint(target_s *target, const breakwatch_s *breakwatch);
 static void cortexar_config_breakpoint(target_s *target, size_t slot, uint32_t mode, target_addr_t addr);
 
 bool cortexar_attach(target_s *target);
@@ -1438,6 +1440,31 @@ static target_halt_reason_e cortexar_halt_poll(target_s *const target, target_ad
 static void cortexar_halt_resume(target_s *const target, const bool step)
 {
 	cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
+	/*
+	 * If we halted because of a breakpoint instruction and it's one of the breakwatch ones,
+	 * we need to restore the instruction we hit so execution continues unpeturbed.
+	 */
+	if (priv->core_status & CORTEXAR_STATUS_ON_BKPT_INSN) {
+		for (breakwatch_s *breakwatch = target->bw_list; breakwatch; breakwatch = breakwatch->next) {
+			if (breakwatch->type == TARGET_BREAK_SOFT && breakwatch->addr == priv->core_regs.r[CORTEX_REG_PC]) {
+				/*
+				 * Restore the instruction and clear halt-on-breakpoint state, single stepping if we're not
+				 * already going to be single stepping for this resumption
+				 */
+				cortexar_clear_soft_breakpoint(target, breakwatch);
+				priv->core_status &= ~CORTEXAR_STATUS_ON_BKPT_INSN;
+				if (!step) {
+					cortexar_halt_resume(target, true);
+					target_addr_t watch = 0U;
+					while (cortexar_halt_poll(target, &watch) == TARGET_HALT_RUNNING)
+						continue;
+					cortexar_set_soft_breakpoint(target, breakwatch);
+				}
+				break;
+			}
+		}
+	}
+
 	priv->base.ap->dp->quirks &= ~ADIV5_AP_ACCESS_BANKED;
 	/* Restore the core's registers so the running program doesn't know we've been in there */
 	cortexar_regs_restore(target);
