@@ -343,6 +343,7 @@ static const uint16_t cortexar_spsr_encodings[5] = {
 #define CORTEXAR_STATUS_DATA_FAULT        (1U << 0U)
 #define CORTEXAR_STATUS_MMU_FAULT         (1U << 1U)
 #define CORTEXAR_STATUS_FAULT_CACHE_VALID (1U << 2U)
+#define CORTEXAR_STATUS_ON_BKPT_INSN      (1U << 3U)
 
 /*
  * Fields for Cortex-R special-purpose registers, used in the generation of GDB's target description XML.
@@ -1407,6 +1408,7 @@ static target_halt_reason_e cortexar_halt_poll(target_s *const target, target_ad
 	case CORTEXAR_DBG_DSCR_MOE_SYNC_WATCH:
 	case CORTEXAR_DBG_DSCR_MOE_ASYNC_WATCH: {
 		const cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
+		/* Try to detemine which watchpoint we entered debug because of */
 		if (priv->base.watchpoints_mask == 1U) {
 			for (const breakwatch_s *breakwatch = target->bw_list; breakwatch; breakwatch = breakwatch->next) {
 				if (breakwatch->type != TARGET_WATCH_READ && breakwatch->type != TARGET_WATCH_WRITE &&
@@ -1421,7 +1423,15 @@ static target_halt_reason_e cortexar_halt_poll(target_s *const target, target_ad
 		break;
 	}
 	}
-	/* Check if we halted because we were actually single-stepping */
+
+	cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
+	/* Set or clear if we halted because of a breakpoint instruction appropriately */
+	if ((dscr & CORTEXAR_DBG_DSCR_MOE_MASK) == CORTEXAR_DBG_DSCR_MOE_BKPT_INSN) {
+		priv->core_status |= CORTEXAR_STATUS_ON_BKPT_INSN;
+		/* XXX: Deal with semihosting here! We'll have to determine execution mode and compare accordingly */
+	} else
+		priv->core_status &= ~CORTEXAR_STATUS_ON_BKPT_INSN;
+
 	return reason;
 }
 
