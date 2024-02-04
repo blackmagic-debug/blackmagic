@@ -131,7 +131,7 @@ extended_warnings = [
 	'-Wstringop-overflow',
 	'-Wunknown-pragmas', # MSVC's C4081 and it's a level 1 warning
 	'-Wunsafe-loop-optimizations',
-	'-Wunsuffixed-float-constant',
+	'-Wunsuffixed-float-constants',
 	'-Wunused-const-variable=2',
 	'-w24189', # 'identifier' : local variable is initialized but not referenced
 	'-Wunused-local-typedefs',
