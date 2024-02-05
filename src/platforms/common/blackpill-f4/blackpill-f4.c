@@ -61,7 +61,7 @@ void platform_init(void)
 		magic[1] = 0;
 		/* Assert blue LED as indicator we are in the bootloader */
 		gpio_mode_setup(LED_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, LED_BOOTLOADER);
-		gpio_set(LED_PORT, LED_BOOTLOADER);
+		gpio_set_val(LED_PORT, LED_BOOTLOADER, true);
 		/*
 		 * Jump to the built in bootloader by mapping System flash.
 		 * As we just come out of reset, no other deinit is needed!
@@ -89,11 +89,15 @@ void platform_init(void)
 	gpio_set_output_options(TMS_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_25MHZ, TMS_PIN);
 
 	/* Set up LED pins */
-	gpio_mode_setup(LED_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, LED_IDLE_RUN | LED_ERROR | LED_BOOTLOADER);
+	gpio_mode_setup(LED_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, LED_IDLE_RUN | LED_ERROR);
+	/* Set up LED_BOOTLOADER if it hasn't been set up yet in the bootloader section above */
+#ifdef BMP_BOOTLOADER
+	gpio_mode_setup(LED_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, LED_BOOTLOADER);
+#endif
 	gpio_mode_setup(LED_PORT_UART, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, LED_UART);
 
 #ifdef PLATFORM_HAS_POWER_SWITCH
-	gpio_clear(PWR_BR_PORT, PWR_BR_PIN); // Set the pin of the given GPIO port to 0.
+	gpio_set_val(PWR_BR_PORT, PWR_BR_PIN, false); // Set the pin of the given GPIO port to 0.
 	gpio_mode_setup(PWR_BR_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, PWR_BR_PIN);
 #endif
 
@@ -118,10 +122,10 @@ void platform_nrst_set_val(bool assert)
 	if (assert) {
 		gpio_mode_setup(NRST_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, NRST_PIN);
 		gpio_set_output_options(NRST_PORT, GPIO_OTYPE_OD, GPIO_OSPEED_2MHZ, NRST_PIN);
-		gpio_clear(NRST_PORT, NRST_PIN);
+		gpio_set_val(NRST_PORT, NRST_PIN, false);
 	} else {
 		gpio_mode_setup(NRST_PORT, GPIO_MODE_INPUT, GPIO_PUPD_NONE, NRST_PIN);
-		gpio_set(NRST_PORT, NRST_PIN);
+		gpio_set_val(NRST_PORT, NRST_PIN, true);
 	}
 }
 
@@ -187,7 +191,7 @@ bool platform_spi_init(const spi_bus_e bus)
 			OB_SPI_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_50MHZ, OB_SPI_SCLK | OB_SPI_MISO | OB_SPI_MOSI | OB_SPI_CS);
 		gpio_set_af(OB_SPI_PORT, GPIO_AF5, OB_SPI_SCLK | OB_SPI_MISO | OB_SPI_MOSI);
 		/* Deselect the targeted peripheral chip */
-		gpio_set(OB_SPI_PORT, OB_SPI_CS);
+		gpio_set_val(OB_SPI_PORT, OB_SPI_CS, true);
 
 		rcc_periph_clock_enable(RCC_SPI1);
 		rcc_periph_reset_pulse(RST_SPI1);
@@ -200,7 +204,7 @@ bool platform_spi_init(const spi_bus_e bus)
 			EXT_SPI_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_50MHZ, EXT_SPI_SCLK | EXT_SPI_MISO | EXT_SPI_MOSI | EXT_SPI_CS);
 		gpio_set_af(EXT_SPI_PORT, GPIO_AF5, EXT_SPI_SCLK | EXT_SPI_MISO | EXT_SPI_MOSI);
 		/* Deselect the targeted peripheral chip */
-		gpio_set(EXT_SPI_PORT, EXT_SPI_CS);
+		gpio_set_val(EXT_SPI_PORT, EXT_SPI_CS, true);
 
 		rcc_periph_clock_enable(RCC_SPI2);
 		rcc_periph_reset_pulse(RST_SPI2);
