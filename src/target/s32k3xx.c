@@ -221,7 +221,7 @@ static bool s32k3xx_flash_trigger_mcr(target_flash_s *const flash, uint32_t mcr_
 	}
 
 	if ((mcrs & 0xffff0000U) > 0U) {
-		DEBUG_ERROR("Operation failed, MCRS: %x\n", mcrs);
+		DEBUG_ERROR("Operation failed, MCRS: %" PRIx32 "\n", mcrs);
 		return false;
 	}
 	return true;
