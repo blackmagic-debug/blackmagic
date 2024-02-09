@@ -273,6 +273,12 @@ bool stm32h7_probe(target_s *target)
 		}
 		break;
 	}
+	case ID_STM32H7Bx: {
+		/* STM32H7B0nB: 128 KiB in 16 sectors of 8 KiB */
+		stm32h7_add_flash(target, STM32H7_FLASH_BANK1_BASE, 0x20000U, 0x2000U);
+		break;
+	}
+	case ID_STM32H72x:
 	default:
 		stm32h7_add_flash(target, STM32H7_FLASH_BANK1_BASE, STM32H7_FLASH_BANK_SIZE, FLASH_SECTOR_SIZE);
 		stm32h7_add_flash(target, STM32H7_FLASH_BANK2_BASE, STM32H7_FLASH_BANK_SIZE, FLASH_SECTOR_SIZE);
