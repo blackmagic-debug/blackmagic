@@ -141,24 +141,66 @@ static const char *const riscv_gpr_names[RV_GPRS_COUNT] = {
 	"t3", "t4", "t5", "t6",
 };
 
-typedef struct riscv_csr_descriptor  {
+// clang-format on
+typedef struct riscv_csr_descriptor {
 	const char *name;
 	const uint32_t csr_number; // fits in 16 bits actually (?)
 } riscv_csr_descriptor_s;
 
-static const riscv_csr_descriptor_s riscv_csrs[]={
-	{"mstatus",RV_CSR_STATUS},
-	{"misa",RV_CSR_MISA},
-	{"mie",	RV_CSR_MIE},
-	{"mtvec",	RV_CSR_MTVEC},
-	{"tscratch",RV_CSR_MSCRATCH},
-	{"mepc",	RV_CSR_MEPC},
-	{"mcause",RV_CSR_MCAUSE},
-	{"mtval",	RV_CSR_MTVAL},
-	{"mip",	RV_CSR_MIP},
+static const riscv_csr_descriptor_s riscv_csrs[] = {
+	{"mstatus", RV_CSR_STATUS},
+	{"misa", RV_CSR_MISA},
+	{"mie", RV_CSR_MIE},
+	{"mtvec", RV_CSR_MTVEC},
+	{"tscratch", RV_CSR_MSCRATCH},
+	{"mepc", RV_CSR_MEPC},
+	{"mcause", RV_CSR_MCAUSE},
+	{"mtval", RV_CSR_MTVAL},
+	{"mip", RV_CSR_MIP},
 };
-
-// clang-format on
+// fpu registers straight from gdb https://patchwork.kernel.org/project/qemu-devel/patch/20181228220731.4753-1-jimw@sifive.com/
+// actual order from gdb 13.2
+// csr registers declared in the "normal" registers section, they may also need to be in the csr section
+static const char *riscv_fpu_ctrl_regs[] = {
+	"flags",
+	"rm",
+	"csr",
+};
+// Regular  FPU register suffixes
+static const char *riscv_fpu_regs[] = {
+	"t0",
+	"t1",
+	"t2",
+	"t3",
+	"t4",
+	"t5",
+	"t6",
+	"t7",
+	"s0",
+	"s1",
+	"a0",
+	"a1",
+	"a2",
+	"a3",
+	"a4",
+	"a5",
+	"a6",
+	"a7",
+	"s2",
+	"s3",
+	"s4",
+	"s5",
+	"s6",
+	"s7",
+	"s8",
+	"s9",
+	"s10",
+	"s11",
+	"t8",
+	"t9",
+	"t10",
+	"t11",
+};
 
 /* General-purpose register types */
 static const gdb_reg_type_e riscv_gpr_types[RV_GPRS_COUNT] = {
@@ -919,6 +961,74 @@ static const char *riscv_fpu_ext_string(const uint32_t extensions)
 }
 
 /*
+ * Generate the fpu section of the description
+ * fpu_size =32 single precision float
+ * fpu_size =64 double precision float
+ * The following are only generated for an F core (single precision HW float support):
+ * <feature name="org.gnu.gdb.riscv.fpu">
+ *			<reg name="ft0" bitsize="32"  regnum="33" />
+ *			<reg name="ft1" bitsize="32"  regnum="34" />
+ *			<reg name="ft2" bitsize="32"  regnum="35" />
+ *			<reg name="ft3" bitsize="32"  regnum="36" />
+ *			<reg name="ft4" bitsize="32"  regnum="37" />
+ *			<reg name="ft5" bitsize="32"  regnum="38" />
+ *			<reg name="ft6" bitsize="32"  regnum="39" />
+ *			<reg name="ft7" bitsize="32"  regnum="40" />
+ *			<reg name="fs0" bitsize="32"  regnum="41" />
+ *			<reg name="fs1" bitsize="32"  regnum="42" />
+ *			<reg name="fa0" bitsize="32"  regnum="43" />
+ *			<reg name="fa1" bitsize="32"  regnum="44" />
+ *			<reg name="fa2" bitsize="32"  regnum="45" />
+ *			<reg name="fa3" bitsize="32"  regnum="46" />
+ *			<reg name="fa4" bitsize="32"  regnum="47" />
+ *			<reg name="fa5" bitsize="32"  regnum="48" />
+ *			<reg name="fa6" bitsize="32"  regnum="49" />
+ *			<reg name="fa7" bitsize="32"  regnum="50" />
+ *			<reg name="fs2" bitsize="32"  regnum="51" />
+ *			<reg name="fs3" bitsize="32"  regnum="52" />
+ *			<reg name="fs4" bitsize="32"  regnum="53" />
+ *			<reg name="fs5" bitsize="32"  regnum="54" />
+ *			<reg name="fs6" bitsize="32"  regnum="55" />
+ *			<reg name="fs7" bitsize="32"  regnum="56" />
+ *			<reg name="fs8" bitsize="32"  regnum="57" />
+ *			<reg name="fs9" bitsize="32"  regnum="58" />
+ *			<reg name="fs10" bitsize="32"  regnum="59" />
+ *			<reg name="fs11" bitsize="32"  regnum="60" />
+ *			<reg name="ft8" bitsize="32"  regnum="61" />
+ *			<reg name="ft9" bitsize="32"  regnum="62" />
+ *			<reg name="ft10" bitsize="32"  regnum="63" />
+ *			<reg name="ft11" bitsize="32"  regnum="64" />
+ *			<reg name="fflags" bitsize="32" regnum="66"  save-restore="no"/>
+ *			<reg name="frm" bitsize="32" regnum="67"  save-restore="no"/>
+ *			<reg name="fcsr" bitsize="32" regnum="68"  save-restore="no"/>
+ *</feature>
+ */
+static size_t riscv_build_target_fpu_description(char *const buffer, size_t max_length, size_t fpu_size)
+{
+	const size_t first_fpu_register = RV_FPU_GDB_OFFSET;             // see riscv_debug.h
+	const size_t first_fpu_control_register = RV_FPU_GDB_CSR_OFFSET; // see riscv_debug.h
+	size_t offset = 0;
+	size_t print_size = max_length;
+	offset += snprintf(buffer + offset, print_size, "</feature><feature name=\"org.gnu.gdb.riscv.fpu\">");
+
+	for (size_t i = 0; i < ARRAY_LENGTH(riscv_fpu_regs); i++) {
+		if (max_length != 0)
+			print_size = max_length - (size_t)offset;
+		offset +=
+			snprintf(buffer + offset, print_size, "<reg name=\"f%s\" bitsize=\"%" PRIu32 "\"  regnum=\"%" PRIu32 "\"/>",
+				riscv_fpu_regs[i], (uint32_t)fpu_size, (uint32_t)(i + first_fpu_register));
+	}
+	for (size_t i = 0; i < ARRAY_LENGTH(riscv_fpu_ctrl_regs); i++) {
+		if (max_length != 0)
+			print_size = max_length - (size_t)offset;
+		offset += snprintf(buffer + offset, print_size,
+			"<reg name=\"f%s\" bitsize=\"%" PRIu32 "\" regnum=\"%" PRIu32 "\" save-restore=\"no\"/>",
+			riscv_fpu_ctrl_regs[i], (uint32_t)fpu_size, (uint32_t)(i + first_fpu_control_register));
+	}
+	return offset;
+}
+
+/*
  * This function creates the target description XML string for a RISC-V part.
  * This is done this way to decrease string duplication and thus code size, making it
  * unfortunately much less readable than the string literal it is equivalent to.
@@ -999,7 +1109,14 @@ static size_t riscv_build_target_description(
 	offset += snprintf(buffer + offset, print_size, "<reg name=\"pc\" bitsize=\"%u\"%s/>", address_width,
 		gdb_reg_type_strings[GDB_TYPE_CODE_PTR]);
 
-	/* XXX: TODO - implement generation of the FPU feature and registers */
+	/* Basic single precision support */
+	if (extensions & RV_ISA_EXT_SINGLE_FLOAT) {
+		if (max_length != 0)
+			print_size = max_length - (size_t)offset;
+		offset += riscv_build_target_fpu_description(buffer + offset, print_size, 32);
+	}
+
+	/* XXX: TODO - implement generation of the FPU feature and registers, double precision */
 
 	/* Add main CSR registers*/
 	if (max_length != 0)

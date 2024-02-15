@@ -153,6 +153,8 @@ static ssize_t riscv32_reg_read(target_s *target, const uint32_t reg, void *data
 		return riscv32_bool_to_4(riscv_csr_read(hart, RV_DPC, data));
 	if (reg >= RV_CSR_GDB_OFFSET)
 		return riscv32_bool_to_4(riscv_csr_read(hart, reg - RV_CSR_GDB_OFFSET, data));
+	if (reg >= RV_FPU_GDB_OFFSET)
+		return riscv32_bool_to_4(riscv_csr_read(hart, RV_FP_BASE + reg - RV_FPU_GDB_OFFSET, data));
 	return -1;
 }
 
@@ -168,6 +170,8 @@ static ssize_t riscv32_reg_write(target_s *const target, const uint32_t reg, con
 		return riscv32_bool_to_4(riscv_csr_write(hart, RV_DPC, data));
 	if (reg >= RV_CSR_GDB_OFFSET)
 		return riscv32_bool_to_4(riscv_csr_write(hart, reg - RV_CSR_GDB_OFFSET, data));
+	if (reg >= RV_FPU_GDB_OFFSET)
+		return riscv32_bool_to_4(riscv_csr_write(hart, RV_FP_BASE + reg - RV_FPU_GDB_OFFSET, data));
 	return -1;
 }
 
