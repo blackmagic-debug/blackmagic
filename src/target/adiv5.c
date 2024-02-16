@@ -728,8 +728,10 @@ adiv5_access_port_s *adiv5_new_ap(adiv5_debug_port_s *dp, uint8_t apsel)
 		/* This reads the lower half of BASE */
 		tmpap.base = adiv5_ap_read(&tmpap, ADIV5_AP_BASE_LOW);
 		/* If this is a 64-bit CPU, grab the upper */
-		if (cfg & ADIV5_AP_CFG_LARGE_ADDRESS)
+		if (cfg & ADIV5_AP_CFG_LARGE_ADDRESS) {
+			tmpap.flags |= ADIV5_AP_FLAGS_64BIT;
 			tmpap.base |= (uint64_t)adiv5_ap_read(&tmpap, ADIV5_AP_BASE_HIGH) << 32U;
+		}
 		/*
 		 * Check the Debug Base Address register. See ADIv5
 		 * Specification C2.6.1

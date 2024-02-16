@@ -201,6 +201,8 @@
 
 #define ADIV5_AP_CFG_LARGE_ADDRESS (1U << 1U)
 
+#define ADIV5_AP_FLAGS_64BIT (1U << 0U)
+
 /* ADIv5 Class 0x1 ROM Table Registers */
 #define ADIV5_ROM_MEMTYPE          0xfccU
 #define ADIV5_ROM_MEMTYPE_SYSMEM   (1U << 0U)
@@ -288,6 +290,7 @@ struct adiv5_access_port {
 
 	adiv5_debug_port_s *dp;
 	uint8_t apsel;
+	uint8_t flags;
 
 	uint32_t idr;
 	target_addr64_t base;
