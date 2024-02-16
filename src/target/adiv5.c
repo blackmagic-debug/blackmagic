@@ -281,13 +281,13 @@ static const char *adiv5_arm_ap_type_string(const uint8_t ap_type, const uint8_t
 	 */
 
 	/* All types except 0 are only valid for ap_class == 0x8 */
-	if (ap_class == 0x8U || ap_type == 0U) {
+	if (ap_class == ADIV5_AP_IDR_CLASS_MEM || ap_type == 0U) {
 		switch (ap_type) {
 		case 0U:
 			/* Type 0 APs are determined by the class code */
-			if (ap_class == 0U)
+			if (ap_class == ADIV5_AP_IDR_CLASS_JTAG)
 				return "JTAG-AP";
-			if (ap_class == 1U)
+			if (ap_class == ADIV5_AP_IDR_CLASS_COM)
 				return "COM-AP";
 			break;
 		case 0x1U:

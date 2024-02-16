@@ -194,6 +194,10 @@
 #define ADIV5_AP_IDR_TYPE_MASK       0x0000000fU
 #define ADIV5_AP_IDR_TYPE(idr)       ((idr)&ADIV5_AP_IDR_TYPE_MASK)
 
+#define ADIV5_AP_IDR_CLASS_JTAG 0U
+#define ADIV5_AP_IDR_CLASS_COM  1U
+#define ADIV5_AP_IDR_CLASS_MEM  8U
+
 /* ADIv5 Class 0x1 ROM Table Registers */
 #define ADIV5_ROM_MEMTYPE          0xfccU
 #define ADIV5_ROM_MEMTYPE_SYSMEM   (1U << 0U)
