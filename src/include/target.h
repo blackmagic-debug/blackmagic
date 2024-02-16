@@ -38,6 +38,7 @@ typedef int32_t mode_t;
 
 typedef struct target target_s;
 typedef uint32_t target_addr_t;
+typedef uint64_t target_addr64_t;
 typedef struct target_controller target_controller_s;
 
 #if PC_HOSTED == 1

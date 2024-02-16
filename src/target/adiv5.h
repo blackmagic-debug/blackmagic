@@ -144,10 +144,11 @@
 /* 0x08 - Reserved */
 #define ADIV5_AP_DRW   ADIV5_AP_REG(0x0cU)
 #define ADIV5_AP_DB(x) ADIV5_AP_REG(0x10U + (4U * (x)))
-/* 0x20:0xf0 - Reserved */
-#define ADIV5_AP_CFG  ADIV5_AP_REG(0xf4U)
-#define ADIV5_AP_BASE ADIV5_AP_REG(0xf8U)
-#define ADIV5_AP_IDR  ADIV5_AP_REG(0xfcU)
+/* 0x20:0xec - Reserved */
+#define ADIV5_AP_BASE_HIGH ADIV5_AP_REG(0xf0U)
+#define ADIV5_AP_CFG       ADIV5_AP_REG(0xf4U)
+#define ADIV5_AP_BASE_LOW  ADIV5_AP_REG(0xf8U)
+#define ADIV5_AP_IDR       ADIV5_AP_REG(0xfcU)
 
 /* AP Control and Status Word (CSW) */
 #define ADIV5_AP_CSW_DBGSWENABLE (1U << 31U)
@@ -197,6 +198,8 @@
 #define ADIV5_AP_IDR_CLASS_JTAG 0U
 #define ADIV5_AP_IDR_CLASS_COM  1U
 #define ADIV5_AP_IDR_CLASS_MEM  8U
+
+#define ADIV5_AP_CFG_LARGE_ADDRESS (1U << 1U)
 
 /* ADIv5 Class 0x1 ROM Table Registers */
 #define ADIV5_ROM_MEMTYPE          0xfccU
@@ -287,7 +290,7 @@ struct adiv5_access_port {
 	uint8_t apsel;
 
 	uint32_t idr;
-	target_addr_t base;
+	target_addr64_t base;
 	uint32_t csw;
 	uint32_t ap_cortexm_demcr; /* Copy of demcr when starting */
 

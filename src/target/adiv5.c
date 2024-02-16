@@ -713,24 +713,55 @@ adiv5_access_port_s *adiv5_new_ap(adiv5_debug_port_s *dp, uint8_t apsel)
 	/* Assume valid and try to read IDR */
 	tmpap.dp = dp;
 	tmpap.apsel = apsel;
+	/* Grab the ID register and make sure the value is sane (non-zero) */
 	tmpap.idr = adiv5_ap_read(&tmpap, ADIV5_AP_IDR);
-	tmpap.base = adiv5_ap_read(&tmpap, ADIV5_AP_BASE);
-	/*
-	 * Check the Debug Base Address register. See ADIv5
-	 * Specification C2.6.1
-	 */
-	if (tmpap.base == 0xffffffffU) {
-		/*
-		 * Debug Base Address not present in this MEM-AP
-		 * No debug entries... useless AP
-		 * AP0 on STM32MP157C reads 0x00000002
-		 */
+	if (!tmpap.idr)
 		return NULL;
+	const uint8_t ap_type = ADIV5_AP_IDR_TYPE(tmpap.idr);
+	const uint8_t ap_class = ADIV5_AP_IDR_CLASS(tmpap.idr);
+	DEBUG_INFO("AP %3u: IDR=%08" PRIx32, apsel, tmpap.idr);
+	/* If this is a MEM-AP */
+	if (ap_class == ADIV5_AP_IDR_CLASS_MEM && ap_type >= 1U && ap_type <= 8U) {
+		/* Grab the config, base and CSW registers */
+		const uint32_t cfg = adiv5_ap_read(&tmpap, ADIV5_AP_CFG);
+		tmpap.csw = adiv5_ap_read(&tmpap, ADIV5_AP_CSW);
+		/* This reads the lower half of BASE */
+		tmpap.base = adiv5_ap_read(&tmpap, ADIV5_AP_BASE_LOW);
+		/* If this is a 64-bit CPU, grab the upper */
+		if (cfg & ADIV5_AP_CFG_LARGE_ADDRESS)
+			tmpap.base |= (uint64_t)adiv5_ap_read(&tmpap, ADIV5_AP_BASE_HIGH) << 32U;
+		/*
+		 * Check the Debug Base Address register. See ADIv5
+		 * Specification C2.6.1
+		 */
+		if (tmpap.base == 0xffffffffU) {
+			/*
+			 * Debug Base Address not present in this MEM-AP
+			 * No debug entries... useless AP
+			 * AP0 on STM32MP157C reads 0x00000002
+			 */
+			DEBUG_INFO(" (bad)\n");
+			return NULL;
+		}
+		if (cfg & ADIV5_AP_CFG_LARGE_ADDRESS)
+			DEBUG_INFO(" CFG=%08" PRIx32 " BASE=%08" PRIx32 "%08" PRIx32 " CSW=%08" PRIx32, cfg,
+				(uint32_t)(tmpap.base >> 32U), (uint32_t)tmpap.base, tmpap.csw);
+		else
+			DEBUG_INFO(" CFG=%08" PRIx32 " BASE=%08" PRIx32 " CSW=%08" PRIx32, cfg, (uint32_t)tmpap.base, tmpap.csw);
 	}
 
-	if (!tmpap.idr) /* IDR Invalid */
-		return NULL;
-	tmpap.csw = adiv5_ap_read(&tmpap, ADIV5_AP_CSW);
+#if ENABLE_DEBUG == 1
+	/* Decode the AP designer code */
+	uint16_t designer = ADIV5_AP_IDR_DESIGNER(tmpap.idr);
+	designer = (designer & ADIV5_DP_DESIGNER_JEP106_CONT_MASK) << 1U | (designer & ADIV5_DP_DESIGNER_JEP106_CODE_MASK);
+	/* If this is an ARM-designed AP, map the AP type. Otherwise display "Unknown" */
+	const char *const ap_type_name =
+		designer == JEP106_MANUFACTURER_ARM ? adiv5_arm_ap_type_string(ap_type, ap_class) : "Unknown";
+	/* Display the AP's type, variant and revision information */
+	DEBUG_INFO(" (%s var%" PRIx32 " rev%" PRIx32 ")\n", ap_type_name, ADIV5_AP_IDR_VARIANT(tmpap.idr),
+		ADIV5_AP_IDR_REVISION(tmpap.idr));
+#endif
+
 	// XXX: We might be able to use the type field in ap->idr to determine if the AP supports TrustZone
 	tmpap.csw &= ~(ADIV5_AP_CSW_SIZE_MASK | ADIV5_AP_CSW_ADDRINC_MASK | ADIV5_AP_CSW_MTE | ADIV5_AP_CSW_HNOSEC);
 	tmpap.csw |= ADIV5_AP_CSW_DBGSWENABLE;
@@ -748,23 +779,6 @@ adiv5_access_port_s *adiv5_new_ap(adiv5_debug_port_s *dp, uint8_t apsel)
 	}
 
 	memcpy(ap, &tmpap, sizeof(*ap));
-
-#if ENABLE_DEBUG == 1
-	/* Grab the config register to get a complete set */
-	uint32_t cfg = adiv5_ap_read(ap, ADIV5_AP_CFG);
-	DEBUG_INFO("AP %3u: IDR=%08" PRIx32 " CFG=%08" PRIx32 " BASE=%08" PRIx32 " CSW=%08" PRIx32, apsel, ap->idr, cfg,
-		ap->base, ap->csw);
-	/* Decode the AP designer code */
-	uint16_t designer = ADIV5_AP_IDR_DESIGNER(ap->idr);
-	designer = (designer & ADIV5_DP_DESIGNER_JEP106_CONT_MASK) << 1U | (designer & ADIV5_DP_DESIGNER_JEP106_CODE_MASK);
-	/* If this is an ARM-designed AP, map the AP type. Otherwise display "Unknown" */
-	const char *const ap_type = designer == JEP106_MANUFACTURER_ARM ?
-		adiv5_arm_ap_type_string(ADIV5_AP_IDR_TYPE(ap->idr), ADIV5_AP_IDR_CLASS(ap->idr)) :
-		"Unknown";
-	/* Display the AP's type, variant and revision information */
-	DEBUG_INFO(" (%s var%" PRIx32 " rev%" PRIx32 ")\n", ap_type, ADIV5_AP_IDR_VARIANT(ap->idr),
-		ADIV5_AP_IDR_REVISION(ap->idr));
-#endif
 	adiv5_ap_ref(ap);
 	return ap;
 }
