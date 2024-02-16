@@ -283,10 +283,9 @@ struct adiv5_access_port {
 	uint8_t apsel;
 
 	uint32_t idr;
-	uint32_t base;
+	target_addr_t base;
 	uint32_t csw;
 	uint32_t ap_cortexm_demcr; /* Copy of demcr when starting */
-	uint32_t ap_storage;       /* E.g to hold STM32F7 initial DBGMCU_CR value.*/
 
 	/* AP designer and partno */
 	uint16_t designer_code;
