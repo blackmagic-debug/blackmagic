@@ -529,9 +529,11 @@ static cid_class_e adiv5_class_from_cid(const uint16_t part_number, const uint16
  * NOLINTNEXTLINE(misc-no-recursion)
  */
 static void adiv5_component_probe(
-	adiv5_access_port_s *ap, uint32_t addr, const size_t recursion, const uint32_t num_entry)
+	adiv5_access_port_s *ap, target_addr_t addr, const size_t recursion, const uint32_t num_entry)
 {
+#ifdef DEBUG_WARN_IS_NOOP
 	(void)num_entry;
+#endif
 
 	addr &= 0xfffff000U; /* Mask out base address */
 	if (addr == 0)       /* No rom table on this AP */
