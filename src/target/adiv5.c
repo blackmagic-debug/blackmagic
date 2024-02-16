@@ -727,19 +727,27 @@ adiv5_access_port_s *adiv5_new_ap(adiv5_debug_port_s *dp, uint8_t apsel)
 		ap.csw = adiv5_ap_read(&ap, ADIV5_AP_CSW);
 		/* This reads the lower half of BASE */
 		ap.base = adiv5_ap_read(&ap, ADIV5_AP_BASE_LOW);
-		/* If this is a 64-bit CPU, grab the upper */
+		const uint8_t base_flags = (uint8_t)ap.base & (ADIV5_AP_BASE_FORMAT | ADIV5_AP_BASE_PRESENT);
+		/* Check if this is a 64-bit AP */
 		if (cfg & ADIV5_AP_CFG_LARGE_ADDRESS) {
+			/* If this base value is invalid for a LPAE MEM-AP, bomb out here */
+			if (base_flags == (ADIV5_AP_BASE_FORMAT_LEGACY | ADIV5_AP_BASE_PRESENT_NO_ENTRY)) {
+				DEBUG_INFO(" -> Invalid\n");
+				return NULL;
+			}
+			/* Otherwise note this is a 64-bit AP and read the high part */
 			ap.flags |= ADIV5_AP_FLAGS_64BIT;
 			ap.base |= (uint64_t)adiv5_ap_read(&ap, ADIV5_AP_BASE_HIGH) << 32U;
 		}
-		/* Check the Debug Base Address register for legacy not-present. See ADIv5 Specification C2.6.1 */
-		if (ap.base == 0xffffffffU) {
+		/* Check the Debug Base Address register for not-present. See ADIv5 Specification C2.6.1 */
+		if (base_flags == (ADIV5_AP_BASE_FORMAT_ADIV5 | ADIV5_AP_BASE_PRESENT_NO_ENTRY) ||
+			(!(ap.flags & ADIV5_AP_FLAGS_64BIT) && (uint32_t)ap.base == ADIV5_AP_BASE_NOT_PRESENT)) {
 			/*
 			 * Debug Base Address not present in this MEM-AP
 			 * No debug entries... useless AP
 			 * AP0 on STM32MP157C reads 0x00000002
 			 */
-			DEBUG_INFO(" (bad)\n");
+			DEBUG_INFO(" -> Not Present\n");
 			return NULL;
 		}
 		if (cfg & ADIV5_AP_CFG_LARGE_ADDRESS)

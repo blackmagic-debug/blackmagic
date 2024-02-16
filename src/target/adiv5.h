@@ -177,6 +177,12 @@
 /* AP Debug Base Address Register (BASE) */
 #define ADIV5_AP_BASE_BASEADDR UINT32_C(0xfffff000)
 #define ADIV5_AP_BASE_PRESENT  (1U << 0U)
+#define ADIV5_AP_BASE_FORMAT   (1U << 1U)
+
+#define ADIV5_AP_BASE_PRESENT_NO_ENTRY (0U << 0U)
+#define ADIV5_AP_BASE_FORMAT_LEGACY    (0U << 1U)
+#define ADIV5_AP_BASE_FORMAT_ADIV5     (1U << 1U)
+#define ADIV5_AP_BASE_NOT_PRESENT      0xffffffffU
 
 /* AP Identification Register (IDR) */
 #define ADIV5_AP_IDR_REVISION_OFFSET 28U
