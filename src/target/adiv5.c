@@ -709,34 +709,31 @@ static void adiv5_component_probe(
 
 adiv5_access_port_s *adiv5_new_ap(adiv5_debug_port_s *dp, uint8_t apsel)
 {
-	adiv5_access_port_s tmpap = {0};
+	adiv5_access_port_s ap = {0};
 	/* Assume valid and try to read IDR */
-	tmpap.dp = dp;
-	tmpap.apsel = apsel;
+	ap.dp = dp;
+	ap.apsel = apsel;
 	/* Grab the ID register and make sure the value is sane (non-zero) */
-	tmpap.idr = adiv5_ap_read(&tmpap, ADIV5_AP_IDR);
-	if (!tmpap.idr)
+	ap.idr = adiv5_ap_read(&ap, ADIV5_AP_IDR);
+	if (!ap.idr)
 		return NULL;
-	const uint8_t ap_type = ADIV5_AP_IDR_TYPE(tmpap.idr);
-	const uint8_t ap_class = ADIV5_AP_IDR_CLASS(tmpap.idr);
-	DEBUG_INFO("AP %3u: IDR=%08" PRIx32, apsel, tmpap.idr);
+	const uint8_t ap_type = ADIV5_AP_IDR_TYPE(ap.idr);
+	const uint8_t ap_class = ADIV5_AP_IDR_CLASS(ap.idr);
+	DEBUG_INFO("AP %3u: IDR=%08" PRIx32, apsel, ap.idr);
 	/* If this is a MEM-AP */
 	if (ap_class == ADIV5_AP_IDR_CLASS_MEM && ap_type >= 1U && ap_type <= 8U) {
 		/* Grab the config, base and CSW registers */
-		const uint32_t cfg = adiv5_ap_read(&tmpap, ADIV5_AP_CFG);
-		tmpap.csw = adiv5_ap_read(&tmpap, ADIV5_AP_CSW);
+		const uint32_t cfg = adiv5_ap_read(&ap, ADIV5_AP_CFG);
+		ap.csw = adiv5_ap_read(&ap, ADIV5_AP_CSW);
 		/* This reads the lower half of BASE */
-		tmpap.base = adiv5_ap_read(&tmpap, ADIV5_AP_BASE_LOW);
+		ap.base = adiv5_ap_read(&ap, ADIV5_AP_BASE_LOW);
 		/* If this is a 64-bit CPU, grab the upper */
 		if (cfg & ADIV5_AP_CFG_LARGE_ADDRESS) {
-			tmpap.flags |= ADIV5_AP_FLAGS_64BIT;
-			tmpap.base |= (uint64_t)adiv5_ap_read(&tmpap, ADIV5_AP_BASE_HIGH) << 32U;
+			ap.flags |= ADIV5_AP_FLAGS_64BIT;
+			ap.base |= (uint64_t)adiv5_ap_read(&ap, ADIV5_AP_BASE_HIGH) << 32U;
 		}
-		/*
-		 * Check the Debug Base Address register. See ADIv5
-		 * Specification C2.6.1
-		 */
-		if (tmpap.base == 0xffffffffU) {
+		/* Check the Debug Base Address register for legacy not-present. See ADIv5 Specification C2.6.1 */
+		if (ap.base == 0xffffffffU) {
 			/*
 			 * Debug Base Address not present in this MEM-AP
 			 * No debug entries... useless AP
@@ -747,42 +744,42 @@ adiv5_access_port_s *adiv5_new_ap(adiv5_debug_port_s *dp, uint8_t apsel)
 		}
 		if (cfg & ADIV5_AP_CFG_LARGE_ADDRESS)
 			DEBUG_INFO(" CFG=%08" PRIx32 " BASE=%08" PRIx32 "%08" PRIx32 " CSW=%08" PRIx32, cfg,
-				(uint32_t)(tmpap.base >> 32U), (uint32_t)tmpap.base, tmpap.csw);
+				(uint32_t)(ap.base >> 32U), (uint32_t)ap.base, ap.csw);
 		else
-			DEBUG_INFO(" CFG=%08" PRIx32 " BASE=%08" PRIx32 " CSW=%08" PRIx32, cfg, (uint32_t)tmpap.base, tmpap.csw);
+			DEBUG_INFO(" CFG=%08" PRIx32 " BASE=%08" PRIx32 " CSW=%08" PRIx32, cfg, (uint32_t)ap.base, ap.csw);
 	}
 
 #if ENABLE_DEBUG == 1
 	/* Decode the AP designer code */
-	uint16_t designer = ADIV5_AP_IDR_DESIGNER(tmpap.idr);
+	uint16_t designer = ADIV5_AP_IDR_DESIGNER(ap.idr);
 	designer = (designer & ADIV5_DP_DESIGNER_JEP106_CONT_MASK) << 1U | (designer & ADIV5_DP_DESIGNER_JEP106_CODE_MASK);
 	/* If this is an ARM-designed AP, map the AP type. Otherwise display "Unknown" */
 	const char *const ap_type_name =
 		designer == JEP106_MANUFACTURER_ARM ? adiv5_arm_ap_type_string(ap_type, ap_class) : "Unknown";
 	/* Display the AP's type, variant and revision information */
-	DEBUG_INFO(" (%s var%" PRIx32 " rev%" PRIx32 ")\n", ap_type_name, ADIV5_AP_IDR_VARIANT(tmpap.idr),
-		ADIV5_AP_IDR_REVISION(tmpap.idr));
+	DEBUG_INFO(" (%s var%" PRIx32 " rev%" PRIx32 ")\n", ap_type_name, ADIV5_AP_IDR_VARIANT(ap.idr),
+		ADIV5_AP_IDR_REVISION(ap.idr));
 #endif
 
 	// XXX: We might be able to use the type field in ap->idr to determine if the AP supports TrustZone
-	tmpap.csw &= ~(ADIV5_AP_CSW_SIZE_MASK | ADIV5_AP_CSW_ADDRINC_MASK | ADIV5_AP_CSW_MTE | ADIV5_AP_CSW_HNOSEC);
-	tmpap.csw |= ADIV5_AP_CSW_DBGSWENABLE;
+	ap.csw &= ~(ADIV5_AP_CSW_SIZE_MASK | ADIV5_AP_CSW_ADDRINC_MASK | ADIV5_AP_CSW_MTE | ADIV5_AP_CSW_HNOSEC);
+	ap.csw |= ADIV5_AP_CSW_DBGSWENABLE;
 
-	if (tmpap.csw & ADIV5_AP_CSW_TRINPROG) {
+	if (ap.csw & ADIV5_AP_CSW_TRINPROG) {
 		DEBUG_ERROR("AP %3u: Transaction in progress. AP is not usable!\n", apsel);
 		return NULL;
 	}
 
 	/* It's valid to so create a heap copy */
-	adiv5_access_port_s *ap = malloc(sizeof(*ap));
-	if (!ap) { /* malloc failed: heap exhaustion */
+	adiv5_access_port_s *result = malloc(sizeof(*result));
+	if (!result) { /* malloc failed: heap exhaustion */
 		DEBUG_ERROR("malloc: failed in %s\n", __func__);
 		return NULL;
 	}
-
-	memcpy(ap, &tmpap, sizeof(*ap));
-	adiv5_ap_ref(ap);
-	return ap;
+	/* Copy the new AP into place and ref it */
+	memcpy(result, &ap, sizeof(*result));
+	adiv5_ap_ref(result);
+	return result;
 }
 
 /* No real AP on RP2040. Special setup.*/
