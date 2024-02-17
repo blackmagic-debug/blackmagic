@@ -191,7 +191,7 @@ bool ke04_probe(target_s *t)
 	case SRSID_PIN_80: {
 		/* We have either a KE04Z64 or 128 */
 		/* Try to read a flash address not available in a Z64 */
-		volatile uint32_t __attribute__((unused)) dummy = target_mem_read32(t, 0x00010000U);
+		volatile uint32_t BMD_UNUSED dummy = target_mem_read32(t, 0x00010000U);
 		if (target_check_error(t)) {
 			/* Read failed: we have a 64 */
 			t->driver = "Kinetis KE04Z64Vxxxx";

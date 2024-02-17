@@ -604,7 +604,7 @@ static bool optcr_mask(target_s *const t, uint32_t *const val)
 		break;
 	case ID_STM32F72X:
 		val[2] &= ~0x800000ffU;
-		/* Fall through*/
+		BMD_FALLTHROUGH
 	case ID_STM32F74X:
 		val[0] &= ~0x3f000000U;
 		break;

@@ -58,7 +58,9 @@ typedef int32_t socket_t;
 #include <string.h>
 #include <assert.h>
 #include <errno.h>
+#ifndef _MSC_VER
 #include <unistd.h>
+#endif
 
 #include "gdb_if.h"
 #include "bmp_hosted.h"

@@ -107,9 +107,10 @@
 #define RV_VENDOR_JEP106_CONT_MASK 0x7fffff80U
 #define RV_VENDOR_JEP106_CODE_MASK 0x7fU
 
-#define RV_DCSR_STEP       0x00000004U
-#define RV_DCSR_CAUSE_MASK 0x000001c0U
-#define RV_DCSR_STEPIE     0x00000800U
+#define RV_DCSR_STEP           0x00000004U
+#define RV_DCSR_CAUSE_MASK     0x000001c0U
+#define RV_DCSR_STEPIE         0x00000800U
+#define RV_DCSR_EBREAK_MACHINE 0x00008000U
 
 #define RV_GPRS_COUNT 32U
 
@@ -523,7 +524,7 @@ static uint32_t riscv_hart_discover_isa(riscv_hart_s *const hart)
 	do {
 		DEBUG_INFO("Attempting %u-bit read on misa\n", hart->access_width);
 		/* Try reading the register on the guessed width */
-		uint32_t isa_data[4] = {};
+		uint32_t isa_data[4] = {0U};
 		bool result = riscv_csr_read(hart, RV_ISA, isa_data);
 		if (result) {
 			if (hart->access_width == 128U)
@@ -832,8 +833,10 @@ static void riscv_halt_resume(target_s *target, const bool step)
 		return;
 	if (step)
 		stepping_config |= RV_DCSR_STEP | RV_DCSR_STEPIE;
-	else
+	else {
 		stepping_config &= ~(RV_DCSR_STEP | RV_DCSR_STEPIE);
+		stepping_config |= RV_DCSR_EBREAK_MACHINE;
+	}
 	if (!riscv_csr_write(hart, RV_DCSR | RV_CSR_FORCE_32_BIT, &stepping_config))
 		return;
 	/* Request the hart to resume */

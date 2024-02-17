@@ -58,6 +58,8 @@ bmda_probe_s bmda_probe_info;
 jtag_proc_s jtag_proc;
 swd_proc_s swd_proc;
 
+static uint32_t max_frequency = 4000000U;
+
 static bmda_cli_options_s cl_opts;
 
 void gdb_ident(char *p, int count)
@@ -154,6 +156,9 @@ void platform_init(int argc, char **argv)
 		exit(1);
 	}
 
+	if (cl_opts.opt_max_frequency)
+		max_frequency = cl_opts.opt_max_frequency;
+
 	if (cl_opts.opt_mode != BMP_MODE_DEBUG)
 		exit(cl_execute(&cl_opts));
 	else {
@@ -168,7 +173,7 @@ void platform_init(int argc, char **argv)
 bool bmda_swd_scan(const uint32_t targetid)
 {
 	bmda_probe_info.is_jtag = false;
-	platform_max_frequency_set(cl_opts.opt_max_swj_frequency);
+	platform_max_frequency_set(max_frequency);
 
 	switch (bmda_probe_info.type) {
 	case PROBE_TYPE_BMP:
@@ -224,8 +229,7 @@ void bmda_add_jtag_dev(const uint32_t dev_index, const jtag_dev_s *const jtag_de
 bool bmda_jtag_scan(void)
 {
 	bmda_probe_info.is_jtag = true;
-
-	platform_max_frequency_set(cl_opts.opt_max_swj_frequency);
+	platform_max_frequency_set(max_frequency);
 
 	switch (bmda_probe_info.type) {
 	case PROBE_TYPE_BMP:
@@ -413,10 +417,14 @@ bool platform_nrst_get_val(void)
 	}
 }
 
-void platform_max_frequency_set(uint32_t freq)
+void platform_max_frequency_set(const uint32_t freq)
 {
 	if (!freq)
 		return;
+
+	// Remember the frequency we were asked to set,
+	// this will be re-set every time a scan is issued.
+	max_frequency = freq;
 
 	switch (bmda_probe_info.type) {
 	case PROBE_TYPE_BMP:
@@ -442,14 +450,14 @@ void platform_max_frequency_set(uint32_t freq)
 #endif
 
 	default:
-		DEBUG_WARN("Setting max SWD/JTAG frequency not yet implemented\n");
+		DEBUG_WARN("Setting max debug interface frequency not available or not yet implemented\n");
 		break;
 	}
 
 	const uint32_t actual_freq = platform_max_frequency_get();
 	if (actual_freq == FREQ_FIXED)
 		DEBUG_INFO("Device has fixed frequency for %s\n", bmda_probe_info.is_jtag ? "JTAG" : "SWD");
-	else {
+	else if (actual_freq != 0) {
 		const uint16_t freq_mhz = actual_freq / 1000000U;
 		const uint16_t freq_khz = (actual_freq / 1000U) - (freq_mhz * 1000U);
 		DEBUG_INFO("Speed set to %u.%03uMHz for %s\n", freq_mhz, freq_khz, bmda_probe_info.is_jtag ? "JTAG" : "SWD");
@@ -477,7 +485,7 @@ uint32_t platform_max_frequency_get(void)
 #endif
 
 	default:
-		DEBUG_WARN("Reading max SWJ frequency not yet implemented\n");
+		DEBUG_WARN("Reading max debug interface frequency not available or not yet implemented\n");
 		return 0;
 	}
 }

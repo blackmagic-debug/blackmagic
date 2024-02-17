@@ -31,7 +31,7 @@
 #define NT_DEV_SUFFIX     "\\\\.\\"
 #define NT_DEV_SUFFIX_LEN ARRAY_LENGTH(NT_DEV_SUFFIX)
 
-static char *format_string(const char *format, ...) __attribute__((format(printf, 1, 2)));
+static char *format_string(const char *format, ...) DEBUG_FORMAT_ATTR;
 
 static char *format_string(const char *format, ...)
 {
@@ -173,12 +173,14 @@ static char *find_bmp_device(const bmda_cli_options_s *const cl_opts, const char
 
 bool serial_open(const bmda_cli_options_s *const cl_opts, const char *const serial)
 {
+	/* Figure out what the device node is for the requested device */
 	char *const device = find_bmp_device(cl_opts, serial);
 	if (!device) {
 		DEBUG_ERROR("Unexpected problems finding the device!\n");
 		return false;
 	}
 
+	/* Try and open the node so we can start communications with the the device */
 	port_handle = CreateFile(device,                    /* NT path to the device */
 		GENERIC_READ | GENERIC_WRITE,                   /* Read + Write */
 		0,                                              /* No Sharing */
@@ -188,11 +190,13 @@ bool serial_open(const bmda_cli_options_s *const cl_opts, const char *const seri
 		NULL);                                          /* Do not use a template file */
 	free(device);
 
+	/* If opening the device node failed for any reason, error out early */
 	if (port_handle == INVALID_HANDLE_VALUE) {
 		handle_dev_error(port_handle, "opening device");
 		return false;
 	}
 
+	/* Get the current device state from the device */
 	DCB serial_params = {0};
 	serial_params.DCBlength = sizeof(serial_params);
 	if (!GetCommState(port_handle, &serial_params)) {
@@ -200,6 +204,7 @@ bool serial_open(const bmda_cli_options_s *const cl_opts, const char *const seri
 		return false;
 	}
 
+	/* Adjust the device state to enable communications to work and be in the right mode */
 	serial_params.fParity = FALSE;
 	serial_params.fOutxCtsFlow = FALSE;
 	serial_params.fOutxDsrFlow = FALSE;
@@ -216,15 +221,26 @@ bool serial_open(const bmda_cli_options_s *const cl_opts, const char *const seri
 	}
 
 	COMMTIMEOUTS timeouts = {0};
-	timeouts.ReadIntervalTimeout = 10;
-	timeouts.ReadTotalTimeoutConstant = 10;
-	timeouts.ReadTotalTimeoutMultiplier = 10;
-	timeouts.WriteTotalTimeoutConstant = 10;
-	timeouts.WriteTotalTimeoutMultiplier = 10;
+	/*
+	 * Turn off read timeouts so that ReadFill() instantly returns even if there's no data waiting
+	 * (we implement our own mechanism below for that case as we only want to wait if we get no data)
+	 */
+	timeouts.ReadIntervalTimeout = MAXDWORD;
+	timeouts.ReadTotalTimeoutConstant = 0;
+	timeouts.ReadTotalTimeoutMultiplier = 0;
+	/*
+	 * Configure an exactly 100ms write timeout - we want this triggering to be fatal as something
+	 * has gone very wrong if we ever hit this.
+	 */
+	timeouts.WriteTotalTimeoutConstant = 100;
+	timeouts.WriteTotalTimeoutMultiplier = 0;
 	if (!SetCommTimeouts(port_handle, &timeouts)) {
 		handle_dev_error(port_handle, "setting communication timeouts for device");
 		return false;
 	}
+
+	/* Having adjusted the line state, discard anything sat in the receive buffer */
+	PurgeComm(port_handle, PURGE_RXCLEAR);
 	return true;
 }
 
@@ -250,6 +266,11 @@ bool platform_buffer_write(const void *const data, const size_t length)
 
 static ssize_t bmda_read_more_data(const uint32_t end_time)
 {
+	// Try to wait for up to 100ms for data to become available
+	if (WaitForSingleObject(port_handle, 100) != WAIT_OBJECT_0) {
+		DEBUG_ERROR("Timeout while waiting for BMP response: %lu\n", GetLastError());
+		return -4;
+	}
 	DWORD bytes_received = 0;
 	/* Try to fill the read buffer, and if that fails, bail */
 	if (!ReadFile(port_handle, read_buffer, READ_BUFFER_LENGTH, &bytes_received, NULL)) {
@@ -268,7 +289,6 @@ static ssize_t bmda_read_more_data(const uint32_t end_time)
 }
 
 /* XXX: We should either return size_t or bool */
-/* XXX: This needs documenting that it can abort the program with exit(), or the error handling fixed */
 int platform_buffer_read(void *const data, const size_t length)
 {
 	char *const buffer = (char *)data;
@@ -276,7 +296,7 @@ int platform_buffer_read(void *const data, const size_t length)
 	const uint32_t end_time = start_time + cortexm_wait_timeout;
 	/* Drain the buffer for the remote till we see a start-of-response byte */
 	for (char response = 0; response != REMOTE_RESP;) {
-		if (read_buffer_offset == read_buffer_fullness) {
+		while (read_buffer_offset == read_buffer_fullness) {
 			const ssize_t result = bmda_read_more_data(end_time);
 			if (result < 0)
 				return result;

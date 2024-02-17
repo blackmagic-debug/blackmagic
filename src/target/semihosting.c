@@ -45,23 +45,22 @@
 #include "target_internal.h"
 #include "gdb_main.h"
 #include "gdb_packet.h"
-#include "cortexm.h"
 #include "semihosting.h"
 #include "semihosting_internal.h"
 #include "buffer_utils.h"
+#include "timeofday.h"
 
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
 
 #if PC_HOSTED == 1
 #include <errno.h>
 #include <time.h>
-#include <sys/time.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #ifdef _WIN32
+#include <io.h>
 #define O_BINARY _O_BINARY
 #define O_NOCTTY 0
 #else
@@ -124,7 +123,7 @@ const char *const semihosting_names[] = {
 #endif
 
 #if PC_HOSTED == 1
-static target_errno_e semihosting_errno(void);
+static semihosting_errno_e semihosting_errno(void);
 #endif
 
 int semihosting_reply(target_controller_s *const tc, char *const pbuf, const int len)
@@ -262,7 +261,7 @@ static int32_t semihosting_remote_write(
  * NB: Must be called immediately after the syscall that might generate a value.
  * No functions or actions may be performed between these two points.
  */
-static target_errno_e semihosting_errno(void)
+static semihosting_errno_e semihosting_errno(void)
 {
 	const int32_t error = errno;
 	switch (error) {
@@ -534,7 +533,7 @@ int32_t semihosting_seek(target_s *const target, const semihosting_s *const requ
 		return result;
 	}
 #endif
-	gdb_putpacket_f("Flseek,%08X,%08lX,%08X", (unsigned)fd, (unsigned long)offset, TARGET_SEEK_SET);
+	gdb_putpacket_f("Flseek,%08X,%08lX,%08X", (unsigned)fd, (unsigned long)offset, SEEK_MODE_SET);
 	return semihosting_get_gdb_response(target->tc) == offset ? 0 : -1;
 }
 
@@ -744,7 +743,7 @@ int32_t semihosting_get_command_line(target_s *const target, const semihosting_s
 	return target_check_error(target) ? -1 : 0;
 }
 
-int32_t semihosting_is_error(const target_errno_e code)
+int32_t semihosting_is_error(const semihosting_errno_e code)
 {
 	/* Convert a FileIO-domain errno into whether it indicates an error has occured or not */
 	const bool is_error = code == TARGET_EPERM || code == TARGET_ENOENT || code == TARGET_EINTR || code == TARGET_EIO ||
@@ -871,7 +870,7 @@ int32_t semihosting_request(target_s *const target, const uint32_t syscall, cons
 	target->tc->interrupted = false;
 
 	/* Set up the request block appropriately */
-	semihosting_s request = {r1, {}};
+	semihosting_s request = {r1, {0U}};
 	if (syscall != SEMIHOSTING_SYS_EXIT)
 		target_mem_read(target, request.params, r1, sizeof(request.params));
 

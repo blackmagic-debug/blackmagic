@@ -3,7 +3,7 @@
  *
  * Copyright (C) 2011  Black Sphere Technologies Ltd.
  * Written by Gareth McMullin <gareth@blacksphere.co.nz>
- * Copyright (C) 2022-2023 1BitSquared <info@1bitsquared.com>
+ * Copyright (C) 2022-2024 1BitSquared <info@1bitsquared.com>
  * Modified by Rachel Mant <git@dragonmux.network>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -20,7 +20,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* This file implements JTAG protocol support.  Provides functionality
+/*
+ * This file implements JTAG protocol support.  Provides functionality
  * to detect devices on the scan chain and read their IDCODEs.
  * It depends on the low-level function provided by the platform's jtagtap.c.
  */
@@ -96,6 +97,8 @@ bool jtag_scan(void)
 	jtagtap_init();
 #endif
 
+	/* Reset the chain ready */
+	jtag_proc.jtagtap_reset();
 	/* Start by reading out the ID Codes for all the devices on the chain */
 	if (!jtag_read_idcodes() ||
 		/* Otherwise, try and learn the chain IR lengths */
@@ -156,8 +159,7 @@ bool jtag_scan(void)
 
 static bool jtag_read_idcodes(void)
 {
-	/* Reset the chain ready and transition to Shift-DR */
-	jtag_proc.jtagtap_reset();
+	/* Transition to Shift-DR */
 	DEBUG_INFO("Change state to Shift-DR\n");
 	jtagtap_shift_dr();
 
@@ -315,7 +317,7 @@ static bool jtag_sanity_check(void)
 
 void jtag_dev_write_ir(const uint8_t dev_index, const uint32_t ir)
 {
-	jtag_dev_s *device = &jtag_devs[dev_index];
+	jtag_dev_s *const device = &jtag_devs[dev_index];
 	/* If the request would duplicate work already done, do nothing */
 	if (ir == device->current_ir)
 		return;
@@ -323,26 +325,36 @@ void jtag_dev_write_ir(const uint8_t dev_index, const uint32_t ir)
 	/* Set all the other devices IR's to being in bypass */
 	for (size_t device_index = 0; device_index < jtag_dev_count; device_index++)
 		jtag_devs[device_index].current_ir = UINT32_MAX;
+	/* Put the current device IR into the requested state */
 	device->current_ir = ir;
 
 	/* Do the work to make the scanchain match the jtag_devs state */
 	jtagtap_shift_ir();
+	/* Once in Shift-IR, clock out 1's till we hit the right device in the chain */
 	jtag_proc.jtagtap_tdi_seq(false, ones, device->ir_prescan);
+	/* Then clock out the new IR value and drop into Exit1-IR on the last cycle if we're the last device */
 	jtag_proc.jtagtap_tdi_seq(!device->ir_postscan, (const uint8_t *)&ir, device->ir_len);
+	/* Make sure we're in Exit1-IR having clocked out 1's for any more devices on the chain */
 	jtag_proc.jtagtap_tdi_seq(true, ones, device->ir_postscan);
+	/* Now go through Update-IR and back to Idle */
 	jtagtap_return_idle(1);
 }
 
-void jtag_dev_shift_dr(const uint8_t dev_index, uint8_t *data_out, const uint8_t *data_in, const size_t clock_cycles)
+void jtag_dev_shift_dr(
+	const uint8_t dev_index, uint8_t *const data_out, const uint8_t *const data_in, const size_t clock_cycles)
 {
-	jtag_dev_s *device = &jtag_devs[dev_index];
+	const jtag_dev_s *const device = &jtag_devs[dev_index];
+	/* Switch into Shift-DR */
 	jtagtap_shift_dr();
+	/* Now we're in Shift-DR, clock out 1's till we hit the right device in the chain */
 	jtag_proc.jtagtap_tdi_seq(false, ones, device->dr_prescan);
+	/* Now clock out the new DR value and get the response */
 	if (data_out)
-		jtag_proc.jtagtap_tdi_tdo_seq(
-			(uint8_t *)data_out, !device->dr_postscan, (const uint8_t *)data_in, clock_cycles);
+		jtag_proc.jtagtap_tdi_tdo_seq(data_out, !device->dr_postscan, data_in, clock_cycles);
 	else
-		jtag_proc.jtagtap_tdi_seq(!device->dr_postscan, (const uint8_t *)data_in, clock_cycles);
+		jtag_proc.jtagtap_tdi_seq(!device->dr_postscan, data_in, clock_cycles);
+	/* Make sure we're in Exit1-DR having clocked out 1's for any more devices on the chain */
 	jtag_proc.jtagtap_tdi_seq(true, ones, device->dr_postscan);
+	/* Now go through Update-DR and back to Idle */
 	jtagtap_return_idle(1);
 }

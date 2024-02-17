@@ -4,6 +4,7 @@ VPATH += $(PLATFORM_DIR) target
 ENABLE_DEBUG ?= 0
 ENABLE_CORTEXAR ?= 0
 ENABLE_RISCV ?= 0
+ENABLE_XILINX ?= 0
 
 SYS = $(shell $(CC) -dumpmachine)
 
@@ -79,6 +80,7 @@ SRC =              \
 	semihosting.c  \
 	sfdp.c         \
 	spi.c          \
+	s32k3xx.c      \
 	stm32f1.c      \
 	ch32f1.c       \
 	stm32f4.c      \
@@ -91,8 +93,7 @@ SRC =              \
 	renesas_ra.c   \
 	target.c       \
 	target_flash.c \
-	target_probe.c \
-	zynq7000.c
+	target_probe.c
 
 ifeq (,$(filter all_platforms,$(MAKECMDGOALS)))
 include $(PLATFORM_DIR)/Makefile.inc
@@ -103,6 +104,12 @@ CFLAGS += -DENABLE_CORTEXAR
 SRC +=           \
 	cortexar.c   \
 	renesas_rz.c
+
+ifeq ($(ENABLE_XILINX), 1)
+CFLAGS += -DENABLE_XILINX
+SRC +=         \
+	zynq7000.c
+endif
 endif
 
 ifeq ($(ENABLE_RISCV), 1)

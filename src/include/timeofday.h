@@ -1,8 +1,9 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
- * Copyright (C) 2023 1BitSquared <info@1bitsquared.com>
- * Written by Rafael Silva <perigoso@riseup.net>
+ * Copyright (C) 2024 1BitSquared <info@1bitsquared.com>
+ * Written by L. E. Segovia <amy@amyspark.me>
+ * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -30,29 +31,44 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef INCLUDE_ALIGN_H
-#define INCLUDE_ALIGN_H
+#ifndef INCLUDE_TIMEOFDAY_H
+#define INCLUDE_TIMEOFDAY_H
 
-#include <stdalign.h>
-
-typedef enum align {
-	ALIGN_8BIT = 0U,
-	ALIGN_16BIT = 1U,
-	ALIGN_32BIT = 2U,
-	ALIGN_64BIT = 3U,
-} align_e;
-
-#define ALIGN_OF(x)     (((x)&3U) == 0 ? ALIGN_32BIT : (((x)&1U) == 0 ? ALIGN_16BIT : ALIGN_8BIT))
-#define MIN_ALIGN(x, y) MIN(ALIGN_OF(x), ALIGN_OF(y))
-
-#define ALIGN(x, n) (((x) + (n)-1) & ~((n)-1))
-
-#define BMD_ALIGN_DEF(x) _Alignas(x)
-
-#ifdef _MSC_VER
-#define BMD_ALIGN_DECL(x) __declspec(align(x))
+#if !defined(_MSC_VER)
+#include <unistd.h>
+#include <sys/time.h>
 #else
-#define BMD_ALIGN_DECL(x) __attribute__((aligned(x)))
-#endif
+#define WIN32_LEAN_AND_MEAN
+#include <winsock.h>
 
-#endif /* INCLUDE_ALIGN_H */
+static inline int gettimeofday(PTIMEVAL current_time, void *ignoreme)
+{
+	(void)ignoreme;
+
+	if (current_time == NULL)
+		return -1;
+
+	LARGE_INTEGER frequency;
+	LARGE_INTEGER counter;
+
+	memset(&frequency, 0, sizeof(LARGE_INTEGER));
+	memset(&counter, 0, sizeof(LARGE_INTEGER));
+
+	if (QueryPerformanceFrequency(&frequency) == FALSE)
+		return -1;
+	if (QueryPerformanceCounter(&counter) == FALSE)
+		return -1;
+
+	current_time->tv_sec = counter.QuadPart / frequency.QuadPart;
+	current_time->tv_usec =
+		(((counter.QuadPart % frequency.QuadPart) * 1000000000 + (frequency.QuadPart >> 1)) / frequency.QuadPart) /
+		1000;
+	if (current_time->tv_usec >= 1000000) {
+		current_time->tv_sec++;
+		current_time->tv_usec -= 1000000;
+	}
+
+	return 0;
+}
+#endif // _MSC_VER
+#endif // INCLUDE_TIMEOFDAY_H

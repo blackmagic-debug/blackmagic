@@ -151,7 +151,7 @@ static void swdptap_seq_out_clk_delay(const uint32_t tms_states, const size_t cl
 {
 	for (size_t cycle = 0; cycle < clock_cycles; ++cycle) {
 		gpio_clear(SWCLK_PORT, SWCLK_PIN);
-		gpio_set_val(SWDIO_PORT, SWDIO_PIN, tms_states & (1 << cycle));
+		gpio_set_val(SWDIO_PORT, SWDIO_PIN, tms_states & (1U << cycle));
 		for (volatile uint32_t counter = target_clk_divider; counter > 0; --counter)
 			continue;
 		gpio_set(SWCLK_PORT, SWCLK_PIN);
@@ -167,7 +167,7 @@ static void swdptap_seq_out_no_delay(const uint32_t tms_states, const size_t clo
 {
 	for (size_t cycle = 0; cycle < clock_cycles; ++cycle) {
 		gpio_clear(SWCLK_PORT, SWCLK_PIN);
-		gpio_set_val(SWDIO_PORT, SWDIO_PIN, tms_states & (1 << cycle));
+		gpio_set_val(SWDIO_PORT, SWDIO_PIN, tms_states & (1U << cycle));
 		gpio_set(SWCLK_PORT, SWCLK_PIN);
 	}
 	gpio_clear(SWCLK_PORT, SWCLK_PIN);

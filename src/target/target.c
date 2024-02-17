@@ -24,8 +24,11 @@
 #include "command.h"
 
 #include <stdarg.h>
-#include <unistd.h>
 #include <assert.h>
+
+#ifndef _MSC_VER
+#include <unistd.h>
+#endif
 
 /* Fixup for when _FILE_OFFSET_BITS == 64 as unistd.h screws this up for us */
 #if defined(lseek)

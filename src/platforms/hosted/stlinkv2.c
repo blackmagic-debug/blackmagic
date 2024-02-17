@@ -27,7 +27,6 @@
  */
 
 #include "general.h"
-#include "gdb_if.h"
 #include "adiv5.h"
 #include "bmp_hosted.h"
 #include "stlinkv2.h"
@@ -37,16 +36,11 @@
 #include "buffer_utils.h"
 #include "maths_utils.h"
 
-#include <assert.h>
-#include <unistd.h>
-#include <signal.h>
-#include <ctype.h>
-#include <sys/time.h>
-
-#include "cli.h"
-
 #ifdef _MSC_VER
 #include <intrin.h>
+#else
+#include <unistd.h>
+#include <sys/time.h>
 #endif
 
 typedef enum transport_mode {
@@ -385,7 +379,7 @@ const char *stlink_target_voltage(void)
 	if (adc[0])
 		result = 2.0F * (float)adc[1] * 1.2F / (float)adc[0];
 	static char res[6];
-	const int written = snprintf(res, sizeof(res), "%4.2fV", result);
+	const int written = snprintf(res, sizeof(res), "%4.2fV", (double)result);
 	if (written < 0 || written >= (int)sizeof(res))
 		return "ERROR!";
 	return res;

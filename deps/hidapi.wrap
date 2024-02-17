@@ -1,0 +1,8 @@
+[wrap-git]
+url = https://github.com/libusb/hidapi
+revision = HEAD
+clone-recursive = false
+
+[provide]
+hidapi_raw = hidapi_dep
+hidapi = hidapi_dep

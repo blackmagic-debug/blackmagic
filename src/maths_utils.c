@@ -82,7 +82,7 @@ uint8_t calculate_odd_parity(const uint32_t value)
 	return __builtin_parity(value);
 #elif defined(_MSC_VER)
 	/* Ask for a CPU insn */
-	return __popcount(value) & 1U;
+	return __popcnt(value) & 1U;
 #else
 	/* Generic impl */
 	uint8_t result = 0;

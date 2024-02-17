@@ -34,15 +34,18 @@
 #include "target_internal.h"
 #include "morse.h"
 #include "version.h"
-#include "serialno.h"
 #include "jtagtap.h"
+
+#if PC_HOSTED == 0
 #include "jtag_scan.h"
+#endif
 
 #ifdef ENABLE_RTT
 #include "rtt.h"
 #endif
 
 #ifdef PLATFORM_HAS_TRACESWO
+#include "serialno.h"
 #include "traceswo.h"
 #endif
 
@@ -74,6 +77,10 @@ static bool cmd_debug_bmp(target_s *t, int argc, const char **argv);
 #endif
 #if PC_HOSTED == 1
 static bool cmd_shutdown_bmda(target_s *t, int argc, const char **argv);
+#endif
+
+#ifdef _MSC_VER
+#define strtok_r strtok_s
 #endif
 
 const command_s cmd_list[] = {
@@ -360,9 +367,9 @@ bool cmd_frequency(target_s *t, int argc, const char **argv)
 	}
 	const uint32_t freq = platform_max_frequency_get();
 	if (freq == FREQ_FIXED)
-		gdb_outf("SWJ freq fixed\n");
+		gdb_outf("Debug iface frequency is fixed.\n");
 	else
-		gdb_outf("Current SWJ freq %" PRIu32 "Hz\n", freq);
+		gdb_outf("Debug iface frequency set to %" PRIu32 "Hz\n", freq);
 	return true;
 }
 

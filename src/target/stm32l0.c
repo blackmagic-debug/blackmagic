@@ -56,6 +56,7 @@
 #include "target.h"
 #include "target_internal.h"
 #include "cortexm.h"
+#include "stm32_common.h"
 
 #define STM32Lx_NVM_PECR(p)    ((p) + 0x04U)
 #define STM32Lx_NVM_PEKEYR(p)  ((p) + 0x0cU)

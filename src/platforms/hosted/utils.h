@@ -35,7 +35,6 @@
 #define PLATFORMS_HOSTED_UTILS_H
 
 #include <stdbool.h>
-#include <stdint.h>
 #include <stddef.h>
 
 bool begins_with(const char *str, size_t str_length, const char *value);

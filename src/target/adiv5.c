@@ -411,7 +411,7 @@ static uint32_t cortexm_initial_halt(adiv5_access_port_s *ap)
 		uint32_t dhcsr;
 
 		/* If we're not on a minimal DP implementation, use TRNCNT to help */
-		if (!ap->dp->mindp) {
+		if (!(ap->dp->quirks & ADIV5_DP_QUIRK_MINDP)) {
 			/* Ask the AP to repeatedly retry the write to DHCSR */
 			adiv5_dp_low_access(
 				ap->dp, ADIV5_LOW_WRITE, ADIV5_DP_CTRLSTAT, ctrlstat | ADIV5_DP_CTRLSTAT_TRNCNT(0xfffU));
@@ -427,7 +427,7 @@ static uint32_t cortexm_initial_halt(adiv5_access_port_s *ap)
 		 * data we want to read will be returned in the first raw access, and on others the read
 		 * will do nothing (return 0) and instead need RDBUFF read to get the data.
 		 */
-		if (ap->dp->mindp
+		if ((ap->dp->quirks & ADIV5_DP_QUIRK_MINDP)
 #if PC_HOSTED == 1
 			&& bmda_probe_info.type != PROBE_TYPE_CMSIS_DAP
 #endif
@@ -807,6 +807,63 @@ uint32_t adiv5_dp_read_dpidr(adiv5_debug_port_s *const dp)
 	return dpidr;
 }
 
+#define S32K344_TARGET_PARTNO        0x995cU
+#define S32K3xx_APB_AP               1U
+#define S32K3xx_AHB_AP               4U
+#define S32K3xx_MDM_AP               6U
+#define S32K3xx_SDA_AP               7U
+#define S32K3xx_SDA_AP_DBGENCTR      ADIV5_AP_REG(0x80U)
+#define S32K3xx_SDA_AP_DBGENCTR_MASK 0x300000f0U
+
+static bool s32k3xx_dp_prepare(adiv5_debug_port_s *const dp)
+{
+	/* Is this an S32K344? */
+	if (dp->target_partno != S32K344_TARGET_PARTNO)
+		return false;
+
+	adiv5_dp_abort(dp, ADIV5_DP_ABORT_DAPABORT);
+
+	/* SDA_AP has various flags we must enable before we can have debug access, so
+	 * start with it and enable them */
+	adiv5_access_port_s *sda_ap = adiv5_new_ap(dp, S32K3xx_SDA_AP);
+	if (!sda_ap)
+		return false;
+	adiv5_ap_write(sda_ap, S32K3xx_SDA_AP_DBGENCTR, S32K3xx_SDA_AP_DBGENCTR_MASK);
+	adiv5_ap_unref(sda_ap);
+
+	/* If we try to access an invalid AP the S32K3 will hard fault, so we must
+	 * statically enumerate the APs we expect */
+	adiv5_access_port_s *apb_ap = adiv5_new_ap(dp, S32K3xx_APB_AP);
+	if (!apb_ap)
+		return false;
+	adiv5_component_probe(apb_ap, apb_ap->base, 0, 0);
+	adiv5_ap_unref(apb_ap);
+
+	adiv5_access_port_s *ahb_ap = adiv5_new_ap(dp, S32K3xx_AHB_AP);
+	if (!ahb_ap)
+		return false;
+	adiv5_component_probe(ahb_ap, ahb_ap->base, 0, 0);
+
+	cortexm_prepare(ahb_ap);
+	for (target_s *target = target_list; target; target = target->next) {
+		if (!connect_assert_nrst && target->priv_free == cortex_priv_free) {
+			adiv5_access_port_s *target_ap = cortex_ap(target);
+			if (target_ap == ahb_ap)
+				target_halt_resume(target, false);
+		}
+	}
+
+	adiv5_ap_unref(ahb_ap);
+
+	adiv5_access_port_s *mdm_ap = adiv5_new_ap(dp, S32K3xx_MDM_AP);
+	if (!mdm_ap)
+		return false;
+	adiv5_component_probe(mdm_ap, mdm_ap->base, 0, 0);
+	adiv5_ap_unref(mdm_ap);
+
+	return true;
+}
+
 void adiv5_dp_init(adiv5_debug_port_s *const dp)
 {
 	/*
@@ -852,7 +909,7 @@ void adiv5_dp_init(adiv5_debug_port_s *const dp)
 		dp->partno = (dpidr & ADIV5_DP_DPIDR_PARTNO_MASK) >> ADIV5_DP_DPIDR_PARTNO_OFFSET;
 
 		/* Minimal Debug Port (MINDP) functions implemented */
-		dp->mindp = !!(dpidr & ADIV5_DP_DPIDR_MINDP);
+		dp->quirks = (dpidr >> ADIV5_DP_DPIDR_MINDP_OFFSET) & ADIV5_DP_QUIRK_MINDP;
 
 		/*
 		 * Check DPIDR validity
@@ -860,17 +917,17 @@ void adiv5_dp_init(adiv5_debug_port_s *const dp)
 		 * Version 0 is reserved for DPv0 which does not implement DPIDR
 		 * Bit 0 of DPIDR is read as 1
 		 */
-		if (dp->designer_code != 0 && dp->version > 0 && (dpidr & 1U)) {
+		if (dp->designer_code != 0U && dp->version > 0U && (dpidr & 1U)) {
 			DEBUG_INFO("DP DPIDR 0x%08" PRIx32 " (v%x %srev%" PRIu32 ") designer 0x%x partno 0x%x\n", dpidr,
-				dp->version, dp->mindp ? "MINDP " : "",
+				dp->version, (dp->quirks & ADIV5_DP_QUIRK_MINDP) ? "MINDP " : "",
 				(dpidr & ADIV5_DP_DPIDR_REVISION_MASK) >> ADIV5_DP_DPIDR_REVISION_OFFSET, dp->designer_code,
 				dp->partno);
 		} else {
 			DEBUG_WARN("Invalid DPIDR %08" PRIx32 " assuming DPv0\n", dpidr);
-			dp->version = 0;
-			dp->designer_code = 0;
-			dp->partno = 0;
-			dp->mindp = false;
+			dp->version = 0U;
+			dp->designer_code = 0U;
+			dp->partno = 0U;
+			dp->quirks = 0U;
 		}
 	} else if (dp->version == 0)
 		/* DP v0 */
@@ -949,6 +1006,15 @@ void adiv5_dp_init(adiv5_debug_port_s *const dp)
 	/* Probe for APs on this DP */
 	size_t invalid_aps = 0;
 	dp->refcnt++;
+
+	if (dp->target_designer_code == JEP106_MANUFACTURER_FREESCALE) {
+		/* S32K3XX will requires special handling, do so and skip the AP enumeration */
+		if (s32k3xx_dp_prepare(dp)) {
+			adiv5_dp_unref(dp);
+			return;
+		}
+	}
+
 	for (size_t i = 0; i < 256U && invalid_aps < 8U; ++i) {
 		adiv5_access_port_s *ap = adiv5_new_ap(dp, i);
 		if (ap == NULL) {
@@ -987,18 +1053,18 @@ void adiv5_dp_init(adiv5_debug_port_s *const dp)
 				if (target_ap == ap)
 					target_halt_resume(target, false);
 			}
-
-			/*
-			 * Due to the Tiva TM4C1294KCDT repeating the single AP ad-nauseum, this check is needed
-			 * so that we bail rather than repeating the same AP ~256 times.
-			 */
-			if (target->priv_free == cortex_priv_free && cortex_ap(target) == ap &&
-				strstr(target->driver, "Tiva") != NULL) {
-				adiv5_ap_unref(ap);
-				adiv5_dp_unref(dp);
-				return;
-			}
 		}
+
+		/*
+		 * Due to the Tiva TM4C1294KCDT (among others) repeating the single AP ad-nauseum,
+		 * this check is needed so that we bail rather than repeating the same AP ~256 times.
+		 */
+		if (ap->dp->quirks & ADIV5_DP_QUIRK_DUPED_AP) {
+			adiv5_ap_unref(ap);
+			adiv5_dp_unref(dp);
+			return;
+		}
+
 		adiv5_ap_unref(ap);
 	}
 	adiv5_dp_unref(dp);
@@ -1021,8 +1087,10 @@ void ap_mem_access_setup(adiv5_access_port_s *ap, uint32_t addr, align_e align)
 		csw |= ADIV5_AP_CSW_SIZE_WORD;
 		break;
 	}
+	/* Select AP bank 0 and write CSW */
 	adiv5_ap_write(ap, ADIV5_AP_CSW, csw);
-	adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_TAR, addr);
+	/* Then write TAR which is in the same AP bank */
+	adiv5_dp_write(ap->dp, ADIV5_AP_TAR, addr);
 }
 
 /* Unpack data from the source uint32_t value based on data alignment and source address */

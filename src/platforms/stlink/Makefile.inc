@@ -39,6 +39,10 @@ ifeq ($(STLINK_FORCE_CLONE), 1)
 CFLAGS += -DSTLINK_FORCE_CLONE=1
 endif
 
+ifeq ($(STLINK_V2_ISOL), 1)
+CFLAGS += -DSTLINK_V2_ISOL=1
+endif
+
 VPATH += platforms/common/stm32
 
 SRC +=          \

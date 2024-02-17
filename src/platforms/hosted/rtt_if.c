@@ -25,9 +25,14 @@
  */
 
 #include <general.h>
-#include <unistd.h>
 #include <fcntl.h>
 #include <rtt_if.h>
+
+#ifdef _MSC_VER
+#include <io.h>
+#else
+#include <unistd.h>
+#endif
 
 /* maybe rewrite this as tcp server */
 

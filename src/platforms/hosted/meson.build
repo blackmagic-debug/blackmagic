@@ -69,10 +69,25 @@ bmda_deps = []
 
 cc = is_cross_build ? cc_native : cc_host
 
+# Ensure that MSVC is switched to standards compliant mode
+if cc.get_define('_MSC_VER') != ''
+	standards_flags = [
+		'/Zc:__STDC__',
+		'/D_CRT_DECLARE_NONSTDC_NAMES=1'
+	]
+
+	bmda_args += cc.get_supported_arguments(standards_flags)
+endif
+
 # Determine if we're on a MSYS2 environment of some kind
 # If the compiler is MSYS2 GCC or Clang (but not Clang-cl)
 if build_machine.system() == 'windows' and cc.get_define('__MINGW32__') == '1'
+	# It needs custom location for some MinGWs
+	# See https://github.com/msys2/MINGW-packages/issues/10275
 	ucrt_check = '''
+		#ifdef __MINGW32__
+		#include <_mingw.h>
+		#endif
 		#include <stddef.h>
 		#ifndef _UCRT
 		#error "_UCRT not defined"
@@ -80,7 +95,7 @@ if build_machine.system() == 'windows' and cc.get_define('__MINGW32__') == '1'
 	'''
 
 	# Check if we're in a UCRT based environment or not
-	if cc.compiles(ucrt_check)
+	if cc.compiles(ucrt_check, name: 'the compiler links against the UCRT')
 		# Force linking against the correct C runtime DLL
 		if cc.get_id() != 'clang'
 			bmda_args += ['-mcrtdll=ucrt']
@@ -103,6 +118,12 @@ if build_machine.system() in ['windows', 'cygwin']
 		cc.find_library('setupapi'),
 	]
 	bmda_sources += files('serial_win.c')
+
+	if not cc.has_function('getopt_long', prefix: '#include <getopt.h>')
+		bmda_deps += [
+			libgetopt
+		]
+	endif
 else
 	libftdi = dependency('libftdi1', required: false, method: 'pkg-config', native: is_cross_build)
 	bmda_sources += files('serial_unix.c')
@@ -110,9 +131,9 @@ endif
 
 # Pick the appropriate HIDAPI depending on platform
 if build_machine.system() == 'linux'
-	hidapi = dependency('hidapi-hidraw', required: false, method: 'pkg-config', native: is_cross_build)
+	hidapi = dependency('hidapi-hidraw', method: 'pkg-config', fallback: 'hidapi', native: is_cross_build)
 else
-	hidapi = dependency('hidapi', required: false, method: 'pkg-config', native: is_cross_build)
+	hidapi = dependency('hidapi', method: 'pkg-config', fallback: 'hidapi', native: is_cross_build)
 endif
 
 libusb = dependency(
@@ -131,7 +152,7 @@ else
 	bmda_platform = declare_dependency(
 		include_directories: bmda_includes,
 		sources: bmda_sources,
-		compile_args: bmda_args,
+		compile_args: cc.get_supported_arguments(bmda_args),
 		link_args: bmda_link_args,
 		dependencies: [libbmd_core, bmda_deps, libftdi, hidapi, libusb],
 	)

@@ -23,7 +23,6 @@
 
 #include <stdint.h>
 
-uint8_t detect_rev();
-void platform_request_boot(void);
+uint8_t detect_rev(void);
 
 #endif /*PLATFORMS_SWLINK_PLATFORM_COMMON_H*/

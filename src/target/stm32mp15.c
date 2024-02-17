@@ -56,6 +56,9 @@
 #define DBGMCU_CTRL_DBGSTOP  (1U << 1U)
 #define DBGMCU_CTRL_DBGSTBY  (1U << 2U)
 
+#define STM32MP15_DBGMCU_IDCODE_DEV_MASK  0x00000fffU
+#define STM32MP15_DBGMCU_IDCODE_REV_SHIFT 16U
+
 /* Taken from DP_TARGETID.TPARTNO = 0x5000 in §66.8.3 of RM0436 rev 6, pg3669 */
 /* Taken from DBGMCU_IDC.DEV_ID = 0x500 in §66.10.9 of RM0436 rev 6, pg3825 */
 #define ID_STM32MP15x 0x500U
@@ -200,8 +203,8 @@ static bool stm32mp15_cmd_rev(target_s *const target, const int argc, const char
 	(void)argv;
 	/* DBGMCU identity code register */
 	const uint32_t dbgmcu_idcode = target_mem_read32(target, DBGMCU_IDCODE);
-	const uint16_t rev_id = (dbgmcu_idcode >> 16U) & 0xffffU;
-	const uint16_t dev_id = (dbgmcu_idcode & 0xfffU) << 4U;
+	const uint16_t rev_id = dbgmcu_idcode >> STM32MP15_DBGMCU_IDCODE_REV_SHIFT;
+	const uint16_t dev_id = dbgmcu_idcode & STM32MP15_DBGMCU_IDCODE_DEV_MASK;
 
 	/* Print device */
 	switch (dev_id) {

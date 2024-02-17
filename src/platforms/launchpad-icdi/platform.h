@@ -68,7 +68,6 @@ extern uint8_t running_status;
 		gpio_set_output_config(SWDIO_PORT, GPIO_OTYPE_PP, GPIO_DRIVE_2MA, SWDIO_PIN); \
 	}
 
-extern const usbd_driver lm4f_usb_driver;
 #define USB_DRIVER lm4f_usb_driver
 #define USB_IRQ    NVIC_USB0_IRQ
 #define USB_ISR    usb0_isr

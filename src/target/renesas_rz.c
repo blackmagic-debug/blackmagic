@@ -136,7 +136,7 @@
 #define RENESAS_ARM_PL310_CACHE_ASSOCIATIVITY 8U
 
 /* This is the part number from the ROM table of a R7S721030 and is a guess */
-#define ID_RZ_A1LU 0x012U
+#define ID_RZ_A1 0x012U
 
 static const char *renesas_rz_part_name(uint32_t part_id);
 static bool renesas_rz_flash_prepare(target_s *target);
@@ -164,7 +164,7 @@ static void renesas_rz_add_flash(target_s *const target)
 bool renesas_rz_probe(target_s *const target)
 {
 	/* Determine that it's *probably* a RZ part */
-	if (target->part_id != ID_RZ_A1LU)
+	if (target->part_id != ID_RZ_A1)
 		return false;
 
 	/* Read out the BSID register to confirm that */
@@ -193,7 +193,8 @@ static const char *renesas_rz_part_name(const uint32_t part_id)
 	case RENESAS_BSCAN_BSID_RZ_A1LC:
 		return "RZ/A1LC";
 	case RENESAS_BSCAN_BSID_RZ_A1LU:
-		return "RZ/A1LU";
+		/* This is common to A1LU and A1H at least */
+		return "RZ/A1";
 	}
 	return "Unknown";
 }

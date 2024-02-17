@@ -22,7 +22,6 @@
 #include "target_internal.h"
 #include "cortex.h"
 #include "lpc_common.h"
-#include "adiv5.h"
 
 /*
  * For detailed documentation on how this code works and the IAP variant used here, see:
@@ -50,7 +49,7 @@ typedef struct iap_config {
 	uint32_t params[4];
 } iap_config_s;
 
-typedef struct __attribute__((aligned(4))) iap_frame {
+typedef struct BMD_ALIGN_DECL(4) iap_frame {
 	/* The start of an IAP stack frame is the opcode we set as the return point. */
 	uint16_t opcode;
 	/* There's then a hidden alignment field here, followed by the IAP call setup */

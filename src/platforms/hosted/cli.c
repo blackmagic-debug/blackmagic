@@ -23,28 +23,32 @@
  */
 
 #include "general.h"
-#include <unistd.h>
+
 #include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <getopt.h>
+
+#if defined(_WIN32) || defined(__CYGWIN__)
+#include <io.h>
+#include <windows.h>
+#define BMDA_NORMAL_MODE _S_IWRITE | _S_IREAD
+#ifndef _MSC_VER
+#include <unistd.h>
+#endif
+#else
+#include <sys/mman.h>
+#define O_BINARY         0
+#define BMDA_NORMAL_MODE S_IRUSR | S_IWUSR
+#endif
+
 #include "version.h"
 #include "target_internal.h"
 #include "cortexm.h"
 #include "command.h"
-
 #include "cli.h"
 #include "bmp_hosted.h"
-
-#ifndef O_BINARY
-#define O_BINARY 0
-#endif
-#if defined(_WIN32) || defined(__CYGWIN__)
-#include <windows.h>
-#else
-#include <sys/mman.h>
-#endif
 
 typedef struct option getopt_option_s;
 
@@ -173,10 +177,10 @@ static void cl_help(char **argv)
 			   "\t                   can be repeated for as many commands you wish to run.\n"
 			   "\t                   If the command contains spaces, use quotes around the\n"
 			   "\t                   complete command\n"
+			   "\t-f, --freq       Set an operating frequency for the debug interface\n"
 			   "\n"
 			   "SWD-specific configuration options [-f FREQUENCY | -m TARGET]:\n"
-			   "\t-f, --freq       Set an operating frequency for SWD\n"
-			   "\t-m, --mult-drop  Use the given target ID for selection in SWD multi-drop\n"
+			   "\t-m, --multi-drop  Use the given target ID for selection in SWD multi-drop\n"
 			   "\n"
 			   "Flash operation selection options [-E | -w | -V | -r]:\n"
 			   "\t-E, --erase      Erase the target device Flash\n"
@@ -233,7 +237,7 @@ void cl_init(bmda_cli_options_s *opt, int argc, char **argv)
 	opt->opt_target_dev = 1;
 	opt->opt_flash_size = 0xffffffff;
 	opt->opt_flash_start = 0xffffffff;
-	opt->opt_max_swj_frequency = 4000000;
+	opt->opt_max_frequency = 0;
 	opt->opt_scanmode = BMP_SCAN_SWD;
 	opt->opt_mode = BMP_MODE_DEBUG;
 	while (true) {
@@ -306,7 +310,7 @@ void cl_init(bmda_cli_options_s *opt, int argc, char **argv)
 					frequency *= 1000U * 1000U;
 					break;
 				}
-				opt->opt_max_swj_frequency = frequency;
+				opt->opt_max_frequency = frequency;
 			}
 			break;
 		case 's':
@@ -543,7 +547,7 @@ int cl_execute(bmda_cli_options_s *opt)
 		}
 	} else if (opt->opt_mode == BMP_MODE_FLASH_READ) {
 		/* Open as binary */
-		read_file = open(opt->opt_flash_file, O_TRUNC | O_CREAT | O_RDWR | O_BINARY, S_IRUSR | S_IWUSR);
+		read_file = open(opt->opt_flash_file, O_TRUNC | O_CREAT | O_RDWR | O_BINARY, BMDA_NORMAL_MODE);
 		if (read_file == -1) {
 			DEBUG_ERROR("Error opening flashfile %s for read: %s\n", opt->opt_flash_file, strerror(errno));
 			res = -1;

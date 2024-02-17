@@ -125,6 +125,9 @@
 #define D1DBGCKEN   (1U << 21U)
 #define D3DBGCKEN   (1U << 22U)
 
+#define STM32H7_DBGMCU_IDCODE_DEV_MASK  0x00000fffU
+#define STM32H7_DBGMCU_IDCODE_REV_SHIFT 16U
+
 #define STM32H7_FLASH_BANK1_BASE    0x08000000U
 #define STM32H7_FLASH_BANK2_BASE    0x08100000U
 #define STM32H7_FLASH_BANK_SIZE     0x00100000U
@@ -133,9 +136,9 @@
 #define NUM_SECTOR_PER_BANK         8U
 #define FLASH_SECTOR_SIZE           0x20000U
 
-#define ID_STM32H74x 0x4500U /* RM0433, RM0399 */
-#define ID_STM32H7Bx 0x4800U /* RM0455 */
-#define ID_STM32H72x 0x4830U /* RM0468 */
+#define ID_STM32H74x 0x450U /* RM0433, RM0399 */
+#define ID_STM32H7Bx 0x480U /* RM0455 */
+#define ID_STM32H72x 0x483U /* RM0468 */
 
 typedef struct stm32h7_flash {
 	target_flash_s target_flash;
@@ -194,8 +197,11 @@ static void stm32h7_add_flash(target_s *target, uint32_t addr, size_t length, si
 
 bool stm32h7_probe(target_s *target)
 {
-	if (target->part_id != ID_STM32H74x && target->part_id != ID_STM32H7Bx && target->part_id != ID_STM32H72x)
+	const uint16_t part_id = target->part_id >> 4U;
+	if (part_id != ID_STM32H74x && part_id != ID_STM32H7Bx && part_id != ID_STM32H72x)
 		return false;
+	/* Update part_id on match */
+	target->part_id = part_id;
 
 	target->driver = "STM32H7";
 	target->attach = stm32h7_attach;
@@ -566,6 +572,7 @@ static const struct {
 	{0x1000U, 'A'},
 	{0x1001U, 'Z'},
 	{0x1003U, 'Y'},
+	{0x1007U, 'X'}, /* RM0455 */
 	{0x2001U, 'X'},
 	{0x2003U, 'V'},
 };
@@ -576,24 +583,14 @@ static bool stm32h7_cmd_rev(target_s *target, int argc, const char **argv)
 	(void)argv;
 	/* DBGMCU identity code register */
 	const uint32_t dbgmcu_idc = target_mem_read32(target, DBGMCU_IDC);
-	const uint16_t rev_id = (dbgmcu_idc >> 16U) & 0xffffU;
-	const uint16_t dev_id = (dbgmcu_idc & 0xfffU) << 4U;
+	const uint16_t rev_id = dbgmcu_idc >> STM32H7_DBGMCU_IDCODE_REV_SHIFT;
+	const uint16_t dev_id = dbgmcu_idc & STM32H7_DBGMCU_IDCODE_DEV_MASK;
 
 	/* Print device */
 	switch (dev_id) {
 	case ID_STM32H74x:
 		tc_printf(target, "STM32H74x/75x\n");
-
-		/* Print revision */
-		char rev = '?';
-		for (size_t i = 0; i < ARRAY_LENGTH(stm32h7xx_revisions); i++) {
-			/* Check for matching revision */
-			if (stm32h7xx_revisions[i].rev_id == rev_id)
-				rev = stm32h7xx_revisions[i].revision;
-		}
-		tc_printf(target, "Revision %c\n", rev);
 		break;
-
 	case ID_STM32H7Bx:
 		tc_printf(target, "STM32H7B3/7A3/7B0\n");
 		break;
@@ -602,7 +599,16 @@ static bool stm32h7_cmd_rev(target_s *target, int argc, const char **argv)
 		break;
 	default:
 		tc_printf(target, "Unknown %s. BMP may not correctly support it!\n", target->driver);
+		return false;
 	}
+	/* Print revision */
+	char rev = '?';
+	for (size_t i = 0; i < ARRAY_LENGTH(stm32h7xx_revisions); i++) {
+		/* Check for matching revision */
+		if (stm32h7xx_revisions[i].rev_id == rev_id)
+			rev = stm32h7xx_revisions[i].revision;
+	}
+	tc_printf(target, "Revision %c\n", rev);
 
 	return true;
 }

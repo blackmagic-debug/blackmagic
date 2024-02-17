@@ -26,7 +26,6 @@
  */
 
 #include "general.h"
-#include <assert.h>
 #include <stdlib.h>
 
 #include <ftdi.h>
@@ -74,6 +73,15 @@ bool ftdi_swd_possible(void)
 	direct_bb_swd = true;
 	return true;
 }
+
+#if defined(_MSC_VER) && !defined(__clang__)
+static inline uint32_t __builtin_ctz(uint32_t value)
+{
+	uint32_t result = 0U;
+	_BitScanForward(&result, value);
+	return result;
+}
+#endif
 
 bool ftdi_swd_init(void)
 {

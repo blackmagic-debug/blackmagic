@@ -702,6 +702,7 @@ static bool renesas_rv40_pe_mode(target_s *const target, const pe_mode_e pe_mode
 	case PNR_SERIES_RA6E2:
 	case PNR_SERIES_RA6T2:
 		has_fmeprot = true;
+		BMD_FALLTHROUGH
 	default:
 		break;
 	}
