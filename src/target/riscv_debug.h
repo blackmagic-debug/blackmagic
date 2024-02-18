@@ -250,14 +250,14 @@ void riscv32_mem_read(target_s *target, void *dest, target_addr_t src, size_t le
 void riscv32_mem_write(target_s *target, target_addr_t dest, const void *src, size_t len);
 
 /*
-    Execute code on the target with the signature void stub_function(a,b,c,d)
-        - codexec is the address the code to run is located at
-        - param1/2/3/4 will end up as the 4 parameters of the stub function
-        
-    The flashstub must not use the stack at all.
-    The flashstub must return 0 on success, not 0 on error
-    There is a built-in timeout of 10 seconds
-*/
+ *   Execute code on the target with the signature void stub_function(a,b,c,d)
+ *       - codexec is the address the code to run is located at
+ *       - param1/2/3/4 will end up as the 4 parameters of the stub function
+ *       
+ *   The flashstub must not use the stack at all.
+ *   The flashstub must return 0 on success, not 0 on error
+ *   There is a built-in timeout of 10 seconds
+ */
 bool riscv32_run_stub(target_s *target, uint32_t loadaddr, uint32_t a0, uint32_t a1, uint32_t a2, uint32_t a3);
 
 #endif /*TARGET_RISCV_DEBUG_H*/
