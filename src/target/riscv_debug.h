@@ -221,6 +221,14 @@ typedef struct riscv_hart {
 #define RV_FPU_GDB_OFFSET     33
 #define RV_FPU_GDB_CSR_OFFSET 66
 
+// General purpose registers
+#define RISCV_REG_A0 10
+#define RISCV_REG_A1 11
+#define RISCV_REG_A2 12
+#define RISCV_REG_A3 13
+#define RISCV_REG_PC 32
+#define RISCV_REG_SP 2
+
 void riscv_jtag_dtm_handler(uint8_t dev_index);
 void riscv_dmi_init(riscv_dmi_s *dmi);
 riscv_hart_s *riscv_hart_struct(target_s *target);
