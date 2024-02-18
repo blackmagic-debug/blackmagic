@@ -716,26 +716,25 @@ bool riscv32_run_stub(
 	target->reg_write(target, RISCV_REG_A3, &param4, 4);
 	target->reg_write(target, RISCV_REG_PC, &loadaddr, 4);
 
-	target_halt_reason_e reason = TARGET_HALT_RUNNING;
 	target->halt_resume(target, false); // go!
 	platform_timeout_s timeout;
 	platform_timeout_set(&timeout, 10000);
+	target_halt_reason_e reason = TARGET_HALT_RUNNING;
 	while (reason == TARGET_HALT_RUNNING) {
 		if (platform_timeout_is_expired(&timeout)) {
-			goto the_end;
+			reason = TARGET_HALT_ERROR;
+			break;
 		}
 		reason = target->halt_poll(target, NULL);
 	}
-
-	if (reason == TARGET_HALT_ERROR) {
-		goto the_end;
+	switch (reason) {
+	case TARGET_HALT_REQUEST:
+		ret = true;
+		break;
+	case TARGET_HALT_ERROR: // room left here for more detailed handling
+	default:
+		break;
 	}
-
-	if (reason != TARGET_HALT_REQUEST) {
-		goto the_end;
-	}
-	ret = true;
-the_end:
 	target->halt_request(target);
 	if (ret) {
 		uint32_t a0;
