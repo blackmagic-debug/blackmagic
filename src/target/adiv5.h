@@ -152,15 +152,32 @@
 
 /* AP Control and Status Word (CSW) */
 #define ADIV5_AP_CSW_DBGSWENABLE (1U << 31U)
-/* Bits 30:24 - Prot, Implementation defined, for Cortex-M: */
-#define ADIV5_AP_CSW_HNOSEC           (1U << 30U)
-#define ADIV5_AP_CSW_MASTERTYPE_DEBUG (1U << 29U)
-#define ADIV5_AP_CSW_HPROT1           (1U << 25U)
-#define ADIV5_AP_CSW_SPIDEN           (1U << 23U)
+/* Bits 30:24 - Prot, Implementation defined and bus dependant */
+/* For AXI3, AXI4: */
+#define ADIV5_AP_CSW_AXI3_4_PROT_MASK 0x7f000000U
+/* For APB4, APB5, AXI5: */
+#define ADIV5_AP_CSW_AXI5_PROT_MASK 0x70000000U
+/* For all AXI and APB4 + APB5: */
+#define ADIV5_AP_CSW_AXI_PROT_NS   (1U << 29U) /* Set if the request should be non-secure */
+#define ADIV5_AP_CSW_AXI_PROT_PRIV (1U << 28U) /* Request is privileged */
+/* Bit 15 - MTE (Memory Tagging Enable) for AXI busses */
+#define ADIV5_AP_CSW_AXI_MTE (1U << 15U)
+/* For AHB3, AHB5: */
+#define ADIV5_AP_CSW_AHB_HNONSEC    (1U << 30U) /* Must be set for ABH3 to operate correctly */
+#define ADIV5_AP_CSW_AHB_MASTERTYPE (1U << 29U) /* AHB-AP as requester if set, secondary ID if not */
+#define ADIV5_AP_CSW_AHB_HPROT_MASK 0x1f000000U
+#define ADIV5_AP_CSW_AHB_HPROT_PRIV (1U << 25U) /* Request is privileged */
+#define ADIV5_AP_CSW_AHB_HPROT_DATA (1U << 24U) /* Request is a data access */
+/* For APB2 and APB3, bits 23 thorugh 30 are reserved */
+/* For APB4 and APB5: */
+#define ADIV5_AP_CSW_APB_PPROT_MASK 0x70000000U
+#define ADIV5_AP_CSW_APB_PPROT_PRIV (1U << 28U) /* Request is privileged */
+#define ADIV5_AP_CSW_APB_PPROT_NS   (1U << 29U) /* Set if the request should be non-secure */
+/* Bit 23 - SPIDEN on most bus types */
+#define ADIV5_AP_CSW_SPIDEN (1U << 23U) /* Secure Invasive Debugging Enable */
 /* Bits 22:16 - Reserved */
-/* Bit 15 - MTE (Memory Tagging Enable) for AXI buses */
-#define ADIV5_AP_CSW_MTE (1U << 15U)
-/* Bits 14:12 - Reserved */
+/* Bits 15:12 - Type, must be zero */
+/* Bit 15 on AHB5 w/ enhanced HPROT control - Request is sharable */
 /* Bits 11:8 - Mode, must be zero */
 #define ADIV5_AP_CSW_TRINPROG       (1U << 7U)
 #define ADIV5_AP_CSW_DEVICEEN       (1U << 6U)
@@ -204,6 +221,14 @@
 #define ADIV5_AP_IDR_CLASS_JTAG 0U
 #define ADIV5_AP_IDR_CLASS_COM  1U
 #define ADIV5_AP_IDR_CLASS_MEM  8U
+
+#define ADIV5_AP_IDR_TYPE_AHB3       1U
+#define ADIV5_AP_IDR_TYPE_APB2_3     2U
+#define ADIV5_AP_IDR_TYPE_AXI3_4     4U
+#define ADIV5_AP_IDR_TYPE_AHB5       5U
+#define ADIV5_AP_IDR_TYPE_APB4_5     6U
+#define ADIV5_AP_IDR_TYPE_AXI5       7U
+#define ADIV5_AP_IDR_TYPE_AHB5_HPROT 8U
 
 #define ADIV5_AP_CFG_LARGE_ADDRESS (1U << 1U)
 

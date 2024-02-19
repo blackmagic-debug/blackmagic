@@ -750,11 +750,72 @@ adiv5_access_port_s *adiv5_new_ap(adiv5_debug_port_s *dp, uint8_t apsel)
 			DEBUG_INFO(" -> Not Present\n");
 			return NULL;
 		}
+
+		/* Apply bus-common fixups to the CSW value */
+		ap.csw &= ~(ADIV5_AP_CSW_SIZE_MASK | ADIV5_AP_CSW_ADDRINC_MASK);
+		ap.csw |= ADIV5_AP_CSW_DBGSWENABLE;
+
+		switch (ap_type) {
+		case ADIV5_AP_IDR_TYPE_AXI3_4:
+			/* XXX: Handle AXI4 w/ ACE-Lite which makes Mode and Type do ~things~™ (§E1.3.1, pg237) */
+			/* Clear any existing prot modes and disable memory tagging */
+			ap.csw &= ~(ADIV5_AP_CSW_AXI3_4_PROT_MASK | ADIV5_AP_CSW_AXI_MTE);
+			/* Check if secure access is allowed and enable it if so */
+			if (ap.csw & ADIV5_AP_CSW_SPIDEN)
+				ap.csw &= ~ADIV5_AP_CSW_AXI_PROT_NS;
+			else
+				ap.csw |= ADIV5_AP_CSW_AXI_PROT_NS;
+			/* Always privileged accesses */
+			ap.csw |= ADIV5_AP_CSW_AXI_PROT_PRIV;
+			break;
+		case ADIV5_AP_IDR_TYPE_AXI5:
+			/* Clear any existing prot modes and disable memory tagging */
+			ap.csw &= ~(ADIV5_AP_CSW_AXI5_PROT_MASK | ADIV5_AP_CSW_AXI_MTE);
+			/* Check if secure access is allowed and enable it if so */
+			if (ap.csw & ADIV5_AP_CSW_SPIDEN)
+				ap.csw &= ~ADIV5_AP_CSW_AXI_PROT_NS;
+			else
+				ap.csw |= ADIV5_AP_CSW_AXI_PROT_NS;
+			/* Always privileged accesses */
+			ap.csw |= ADIV5_AP_CSW_AXI_PROT_PRIV;
+			break;
+		case ADIV5_AP_IDR_TYPE_AHB3:
+		case ADIV5_AP_IDR_TYPE_AHB5:
+			/* Clear any existing HPROT modes */
+			ap.csw &= ~ADIV5_AP_CSW_AHB_HPROT_MASK;
+			/*
+			 * Ensure that MasterType is set to generate transactions as requested from the AHB-AP,
+			 * and that we generate privileged data requests via the HPROT bits
+			 */
+			ap.csw |= ADIV5_AP_CSW_AHB_MASTERTYPE | ADIV5_AP_CSW_AHB_HPROT_DATA | ADIV5_AP_CSW_AHB_HPROT_PRIV;
+			/* Check to see if secure access is supported and allowed */
+			if (ap.csw & ADIV5_AP_CSW_SPIDEN)
+				ap.csw &= ~ADIV5_AP_CSW_AHB_HNONSEC;
+			else
+				ap.csw |= ADIV5_AP_CSW_AHB_HNONSEC;
+			break;
+		case ADIV5_AP_IDR_TYPE_APB4_5:
+			/* Clear any existing prot modes and disable memory tagging */
+			ap.csw &= ~ADIV5_AP_CSW_APB_PPROT_MASK;
+			/* Check if secure access is allowed and enable it if so */
+			if (ap.csw & ADIV5_AP_CSW_SPIDEN)
+				ap.csw &= ~ADIV5_AP_CSW_APB_PPROT_NS;
+			else
+				ap.csw |= ADIV5_AP_CSW_APB_PPROT_NS;
+			ap.csw |= ADIV5_AP_CSW_APB_PPROT_PRIV;
+			break;
+		}
+
 		if (cfg & ADIV5_AP_CFG_LARGE_ADDRESS)
 			DEBUG_INFO(" CFG=%08" PRIx32 " BASE=%08" PRIx32 "%08" PRIx32 " CSW=%08" PRIx32, cfg,
 				(uint32_t)(ap.base >> 32U), (uint32_t)ap.base, ap.csw);
 		else
 			DEBUG_INFO(" CFG=%08" PRIx32 " BASE=%08" PRIx32 " CSW=%08" PRIx32, cfg, (uint32_t)ap.base, ap.csw);
+
+		if (ap.csw & ADIV5_AP_CSW_TRINPROG) {
+			DEBUG_ERROR("AP %3u: Transaction in progress. AP is not usable!\n", apsel);
+			return NULL;
+		}
 	}
 
 #if ENABLE_DEBUG == 1
@@ -768,15 +829,6 @@ adiv5_access_port_s *adiv5_new_ap(adiv5_debug_port_s *dp, uint8_t apsel)
 	DEBUG_INFO(" (%s var%" PRIx32 " rev%" PRIx32 ")\n", ap_type_name, ADIV5_AP_IDR_VARIANT(ap.idr),
 		ADIV5_AP_IDR_REVISION(ap.idr));
 #endif
-
-	// XXX: We might be able to use the type field in ap->idr to determine if the AP supports TrustZone
-	ap.csw &= ~(ADIV5_AP_CSW_SIZE_MASK | ADIV5_AP_CSW_ADDRINC_MASK | ADIV5_AP_CSW_MTE | ADIV5_AP_CSW_HNOSEC);
-	ap.csw |= ADIV5_AP_CSW_DBGSWENABLE;
-
-	if (ap.csw & ADIV5_AP_CSW_TRINPROG) {
-		DEBUG_ERROR("AP %3u: Transaction in progress. AP is not usable!\n", apsel);
-		return NULL;
-	}
 
 	/* It's valid to so create a heap copy */
 	adiv5_access_port_s *result = malloc(sizeof(*result));
