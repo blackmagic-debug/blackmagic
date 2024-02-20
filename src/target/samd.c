@@ -115,8 +115,6 @@ const command_s samd_cmd_list[] = {
 #define SAMD_DSU_ADDRESS    (SAMD_DSU_EXT_ACCESS + 0x4U)
 #define SAMD_DSU_LENGTH     (SAMD_DSU_EXT_ACCESS + 0x8U)
 #define SAMD_DSU_DID        (SAMD_DSU_EXT_ACCESS + 0x018U)
-#define SAMD_DSU_PID        (SAMD_DSU + 0x1000U)
-#define SAMD_DSU_CID        (SAMD_DSU + 0x1010U)
 
 /* Control and Status Register (CTRLSTAT) */
 #define SAMD_CTRL_CHIP_ERASE (1U << 4U)
@@ -141,12 +139,7 @@ const command_s samd_cmd_list[] = {
 #define SAMD_DID_FAMILY_MASK   0x1fU
 #define SAMD_DID_FAMILY_POS    23U
 
-/* Peripheral ID */
-#define SAMD_PID_MASK        0x00f7ffffU
-#define SAMD_PID_CONST_VALUE 0x0001fcd0U
-
-/* Component ID */
-#define SAMD_CID_VALUE 0xb105100dU
+#define ID_SAMD 0xcd0U
 
 /* Family parts */
 typedef struct samd_part {
@@ -516,12 +509,8 @@ typedef struct samd_priv {
 
 bool samd_probe(target_s *t)
 {
-	adiv5_access_port_s *ap = cortex_ap(t);
-	const uint32_t cid = adiv5_ap_read_pidr(ap, SAMD_DSU_CID);
-	const uint32_t pid = adiv5_ap_read_pidr(ap, SAMD_DSU_PID);
-
-	/* Check the ARM Coresight Component and Peripheral IDs */
-	if (cid != SAMD_CID_VALUE || (pid & SAMD_PID_MASK) != SAMD_PID_CONST_VALUE)
+	/* Check the part number is the SAMD part number */
+	if (t->part_id != ID_SAMD)
 		return false;
 
 	/* Read the Device ID */
