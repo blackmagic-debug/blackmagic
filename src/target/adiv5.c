@@ -377,7 +377,7 @@ static uint32_t adiv5_ap_read_id(adiv5_access_port_s *ap, uint32_t addr)
 	return res;
 }
 
-uint64_t adiv5_ap_read_pidr(adiv5_access_port_s *ap, uint32_t addr)
+static uint64_t adiv5_ap_read_pidr(adiv5_access_port_s *ap, uint32_t addr)
 {
 	uint64_t pidr = adiv5_ap_read_id(ap, addr + PIDR4_OFFSET);
 	pidr = pidr << 32U | adiv5_ap_read_id(ap, addr + PIDR0_OFFSET);
