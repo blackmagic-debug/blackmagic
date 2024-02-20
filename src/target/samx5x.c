@@ -141,8 +141,6 @@ const command_s samx5x_cmd_list[] = {
 #define SAMX5X_DSU_LENGTH     (SAMX5X_DSU_EXT_ACCESS + 0x08U)
 #define SAMX5X_DSU_DATA       (SAMX5X_DSU_EXT_ACCESS + 0x0cU)
 #define SAMX5X_DSU_DID        (SAMX5X_DSU_EXT_ACCESS + 0x18U)
-#define SAMX5X_DSU_PID        (SAMX5X_DSU + 0x1000U)
-#define SAMX5X_DSU_CID        (SAMX5X_DSU + 0x1010U)
 
 /* Control and Status Register (CTRLSTAT) */
 #define SAMX5X_CTRL_CHIP_ERASE (1U << 4U)
@@ -180,12 +178,7 @@ const command_s samx5x_cmd_list[] = {
 #define SAMX5X_DID_SERIES_MASK   0x3fU
 #define SAMX5X_DID_SERIES_POS    16U
 
-/* Peripheral ID */
-#define SAMX5X_PID_MASK        0x00f7ffffU
-#define SAMX5X_PID_CONST_VALUE 0x0001fcd0U
-
-/* Component ID */
-#define SAMX5X_CID_VALUE 0xb105100dU
+#define ID_SAMX5X 0xcd0U
 
 /*
  * Overloads the default cortexm reset function with a version that
@@ -318,12 +311,8 @@ typedef struct samx5x_priv {
 
 bool samx5x_probe(target_s *t)
 {
-	adiv5_access_port_s *ap = cortex_ap(t);
-	const uint32_t cid = adiv5_ap_read_pidr(ap, SAMX5X_DSU_CID);
-	const uint32_t pid = adiv5_ap_read_pidr(ap, SAMX5X_DSU_PID);
-
-	/* Check the ARM Coresight Component and Peripheral IDs */
-	if (cid != SAMX5X_CID_VALUE || (pid & SAMX5X_PID_MASK) != SAMX5X_PID_CONST_VALUE)
+	/* Check the part number is the SAMx5x part number */
+	if (t->part_id != ID_SAMX5X)
 		return false;
 
 	/* Read the Device ID */
