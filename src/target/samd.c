@@ -111,9 +111,9 @@ const command_s samd_cmd_list[] = {
 
 #define SAMD_DSU            0x41002000U
 #define SAMD_DSU_EXT_ACCESS (SAMD_DSU + 0x100U)
-#define SAMD_DSU_CTRLSTAT   (SAMD_DSU_EXT_ACCESS + 0x0U)
-#define SAMD_DSU_ADDRESS    (SAMD_DSU_EXT_ACCESS + 0x4U)
-#define SAMD_DSU_LENGTH     (SAMD_DSU_EXT_ACCESS + 0x8U)
+#define SAMD_DSU_CTRLSTAT   (SAMD_DSU_EXT_ACCESS + 0x000U)
+#define SAMD_DSU_ADDRESS    (SAMD_DSU_EXT_ACCESS + 0x004U)
+#define SAMD_DSU_LENGTH     (SAMD_DSU_EXT_ACCESS + 0x008U)
 #define SAMD_DSU_DID        (SAMD_DSU_EXT_ACCESS + 0x018U)
 
 /* Control and Status Register (CTRLSTAT) */
