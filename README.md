@@ -269,6 +269,22 @@ When changing options after configuration, you may omit the argument `build` if 
 
 You can have multiple build directories! So if you are regularly building firmware for multiple probes we would recommend keeping an individual build directory configured for each one.
 
+If you are working with PowerShell you may have some issue while trying to configure some options like the enabled target list `-Dtargets=cortexm,stm`:
+
+``` console
+PS C:\...\blackmagic\build> meson configure build -Dtargets=cortexm,stm
+ParserError:
+Line | 1 | meson configure build -Dtargets=cortexm,stm
+     | ~ | Missing argument in parameter list.
+PS D:\...\blackmagic\build>
+```
+
+To get around this you may wrap the options with double quotes `"`, in this example:
+
+```sh
+meson configure build "-Dtargets=cortexm,stm"
+```
+
 ### Working with an existing clone (used before the new meson build system was introduced)
 
 If you are working with an existing clone of the project where you used the old `make` build system,
