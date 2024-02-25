@@ -51,9 +51,25 @@ struct gpiod_line *bmda_gpiod_swclk_pin;
 
 uint32_t target_clk_divider = UINT32_MAX;
 
+static void bmda_gpiod_debug_pin(struct gpiod_line *line, const char *op, bool print, bool val)
+{
+#ifdef DEBUG
+	DEBUG_WIRE("GPIO %s %s", gpiod_line_consumer(line), op);
+	if (print)
+		DEBUG_WIRE("=%d", val);
+	DEBUG_WIRE("\n");
+#else
+	(void)line;
+	(void)op;
+	(void)print;
+	(void)val;
+#endif
+}
+
 void bmda_gpiod_set_pin(struct gpiod_line *pin, bool val)
 {
 	if (pin) {
+		bmda_gpiod_debug_pin(pin, "set", true, val);
 		if (gpiod_line_set_value(pin, val ? 1 : 0)) {
 			DEBUG_ERROR("Failed to set pin to value %d errno: %d", val, errno);
 			exit(1);
@@ -70,6 +86,7 @@ bool bmda_gpiod_get_pin(struct gpiod_line *pin)
 			DEBUG_ERROR("Failed to get pin value errno: %d", errno);
 			exit(1);
 		}
+		bmda_gpiod_debug_pin(pin, "read", true, ret);
 		return ret;
 	} else {
 		DEBUG_ERROR("BUG! attempt to read uninit GPIO");
@@ -80,6 +97,7 @@ bool bmda_gpiod_get_pin(struct gpiod_line *pin)
 void bmda_gpiod_mode_input(struct gpiod_line *pin)
 {
 	if (pin) {
+		bmda_gpiod_debug_pin(pin, "input", false, false);
 		if (gpiod_line_set_direction_input(pin)) {
 			DEBUG_ERROR("Failed to set pin to input errno: %d", errno);
 			exit(1);
@@ -91,6 +109,7 @@ void bmda_gpiod_mode_input(struct gpiod_line *pin)
 void bmda_gpiod_mode_output(struct gpiod_line *pin)
 {
 	if (pin) {
+		bmda_gpiod_debug_pin(pin, "output", false, false);
 		if (gpiod_line_set_direction_output(pin, 0)) {
 			DEBUG_ERROR("Failed to set pin to output errno: %d", errno);
 			exit(1);
