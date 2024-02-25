@@ -237,3 +237,13 @@ bool bmda_gpiod_init(bmda_cli_options_s *const cl_opts)
 
 	return bmda_gpiod_jtag_ok || bmda_gpiod_swd_ok;
 }
+
+bool bmda_gpiod_swd_init(void)
+{
+	if (!bmda_gpiod_swd_ok)
+		return false;
+
+	swdptap_init();
+
+	return true;
+}
