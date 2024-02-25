@@ -153,6 +153,7 @@ if build_machine.system() == 'linux'
 	)
 
 	if libgpiod.found()
+		bmda_sources += files('bmda_gpiod.c')
 		bmda_args += ['-DENABLE_GPIOD=1']
 	endif
 else

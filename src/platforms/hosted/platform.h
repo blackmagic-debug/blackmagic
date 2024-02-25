@@ -83,7 +83,8 @@ typedef enum probe_type {
 	PROBE_TYPE_STLINK_V2,
 	PROBE_TYPE_FTDI,
 	PROBE_TYPE_CMSIS_DAP,
-	PROBE_TYPE_JLINK
+	PROBE_TYPE_JLINK,
+	PROBE_TYPE_GPIOD,
 } probe_type_e;
 
 void gdb_ident(char *p, int count);

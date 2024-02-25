@@ -338,6 +338,9 @@ char *bmda_adaptor_ident(void)
 	case PROBE_TYPE_JLINK:
 		return "J-Link";
 
+	case PROBE_TYPE_GPIOD:
+		return "GPIOD";
+
 	default:
 		return NULL;
 	}
