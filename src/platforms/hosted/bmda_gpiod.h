@@ -38,6 +38,7 @@
 
 bool bmda_gpiod_init(bmda_cli_options_s *const cl_opts);
 
+bool bmda_gpiod_jtag_init(void);
 bool bmda_gpiod_swd_init(void);
 
 #endif

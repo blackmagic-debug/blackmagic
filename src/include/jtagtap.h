@@ -75,8 +75,7 @@ extern jtag_proc_s jtag_proc;
 
 #if PC_HOSTED == 1
 bool bmda_jtag_init(void);
-#else
-void jtagtap_init(void);
 #endif
+void jtagtap_init(void);
 
 #endif /* INCLUDE_JTAGTAP_H */
