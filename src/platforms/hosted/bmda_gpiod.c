@@ -33,9 +33,12 @@
 
 /* Implement libgpiod based GPIO backend */
 
+#define _POSIX_C_SOURCE 200809L
+
 #include <gpiod.h>
 #include "general.h"
 #include <errno.h>
+#include <string.h>
 #include <limits.h>
 #include <stdbool.h>
 
@@ -46,8 +49,12 @@ struct gpiod_line *bmda_gpiod_tms_pin;
 struct gpiod_line *bmda_gpiod_tdi_pin;
 struct gpiod_line *bmda_gpiod_tdo_pin;
 
+bool bmda_gpiod_jtag_ok = false;
+
 struct gpiod_line *bmda_gpiod_swdio_pin;
 struct gpiod_line *bmda_gpiod_swclk_pin;
+
+bool bmda_gpiod_swd_ok = false;
 
 uint32_t target_clk_divider = UINT32_MAX;
 
@@ -118,10 +125,115 @@ void bmda_gpiod_mode_output(struct gpiod_line *pin)
 		DEBUG_ERROR("BUG! attempt to set uninit GPIO to output");
 }
 
+static bool bmda_gpiod_parse_gpio(const char *name, char *gpio)
+{
+	DEBUG_INFO("GPIO set %s: %s\n", name, gpio);
+	char *offset = strstr(gpio, ":");
+	if (!offset)
+		return false;
+	*offset = '\0';
+	offset++;
+	char *end = offset + strlen(offset);
+	char *valid = NULL;
+
+	unsigned long offset_val = strtoul(offset, &valid, 10);
+
+	if (valid != end || offset_val > UINT_MAX)
+		return false;
+
+	/* This is an unsigned int because that is what gpiod_line_get consumes. */
+	unsigned int gpio_off = (unsigned int)offset_val;
+
+	DEBUG_INFO("gpiochip: %s offset: %u\n", gpio, gpio_off);
+	struct gpiod_line *line = gpiod_line_get(gpio, gpio_off);
+	if (!line) {
+		DEBUG_ERROR("Couldn't get GPIO: %s:%u errno: %d\n", gpio, gpio_off, errno);
+		return false;
+	}
+
+	if (!strcmp("tck", name)) {
+		if (gpiod_line_request_output_flags(line, "bmda-tck", GPIOD_LINE_REQUEST_FLAG_BIAS_DISABLE, 0))
+			goto out_fail_close;
+		bmda_gpiod_tck_pin = line;
+	} else if (!strcmp("tms", name)) {
+		if (gpiod_line_request_output_flags(line, "bmda-tms", GPIOD_LINE_REQUEST_FLAG_BIAS_DISABLE, 0))
+			goto out_fail_close;
+		bmda_gpiod_tms_pin = line;
+	} else if (!strcmp("tdi", name)) {
+		if (gpiod_line_request_output_flags(line, "bmda-tdi", GPIOD_LINE_REQUEST_FLAG_BIAS_DISABLE, 0))
+			goto out_fail_close;
+		bmda_gpiod_tdi_pin = line;
+	} else if (!strcmp("tdo", name)) {
+		if (gpiod_line_request_input_flags(line, "bmda-tdo", GPIOD_LINE_REQUEST_FLAG_BIAS_DISABLE))
+			goto out_fail_close;
+		bmda_gpiod_tdo_pin = line;
+	} else if (!strcmp("swdio", name)) {
+		if (gpiod_line_request_input_flags(line, "bmda-swdio", GPIOD_LINE_REQUEST_FLAG_BIAS_DISABLE))
+			goto out_fail_close;
+		bmda_gpiod_swdio_pin = line;
+	} else if (!strcmp("swclk", name)) {
+		if (gpiod_line_request_output_flags(line, "bmda-swclk", GPIOD_LINE_REQUEST_FLAG_BIAS_DISABLE, 0))
+			goto out_fail_close;
+		bmda_gpiod_swclk_pin = line;
+	} else {
+		DEBUG_ERROR("Unrecognised signal name: %s\n", name);
+		gpiod_chip_close(gpiod_line_get_chip(line));
+		return false;
+	}
+
+	DEBUG_INFO("Line consumer: %s\n", gpiod_line_consumer(line));
+
+	return true;
+
+out_fail_close:
+	DEBUG_ERROR("Requesting gpio failed errno: %d", errno);
+	gpiod_chip_close(gpiod_line_get_chip(line));
+	return false;
+}
+
+static bool bmda_gpiod_parse_gpiomap(const char *gpio_map)
+{
+	bool ret = true;
+
+	char *gpio_map_copy = strdup(gpio_map);
+	DEBUG_INFO("GPIO mapping: %s\n", gpio_map);
+
+	char *saveptr = NULL;
+	char *token = strtok_r(gpio_map_copy, ",", &saveptr);
+	while (token) {
+		DEBUG_INFO("GPIO: %s\n", token);
+		char *val = strstr(token, "=");
+		if (!val) {
+			ret = false;
+			break;
+		}
+		*val = '\0';
+		val++;
+		if (!bmda_gpiod_parse_gpio(token, val)) {
+			ret = false;
+			break;
+		}
+
+		token = strtok_r(NULL, ",", &saveptr);
+	}
+
+	free(gpio_map_copy);
+	return ret;
+}
+
 bool bmda_gpiod_init(bmda_cli_options_s *const cl_opts)
 {
 	if (!cl_opts->opt_gpio_map)
 		return false;
 
-	return false;
+	if (!bmda_gpiod_parse_gpiomap(cl_opts->opt_gpio_map))
+		return false;
+
+	if (bmda_gpiod_swclk_pin && bmda_gpiod_swdio_pin)
+		bmda_gpiod_swd_ok = true;
+
+	if (bmda_gpiod_tck_pin && bmda_gpiod_tdi_pin && bmda_gpiod_tdo_pin && bmda_gpiod_tms_pin)
+		bmda_gpiod_jtag_ok = true;
+
+	return bmda_gpiod_jtag_ok || bmda_gpiod_swd_ok;
 }
