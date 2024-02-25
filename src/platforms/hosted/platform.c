@@ -195,6 +195,9 @@ bool bmda_swd_scan(const uint32_t targetid)
 	case PROBE_TYPE_FTDI:
 	case PROBE_TYPE_CMSIS_DAP:
 	case PROBE_TYPE_JLINK:
+#ifdef ENABLE_GPIOD
+	case PROBE_TYPE_GPIOD:
+#endif
 		return adiv5_swd_scan(targetid);
 
 #if HOSTED_BMP_ONLY == 0
@@ -228,6 +231,11 @@ bool bmda_swd_dp_init(adiv5_debug_port_s *dp)
 
 	case PROBE_TYPE_FTDI:
 		return ftdi_swd_init();
+#endif
+
+#ifdef ENABLE_GPIOD
+	case PROBE_TYPE_GPIOD:
+		return bmda_gpiod_swd_init();
 #endif
 
 	default:
