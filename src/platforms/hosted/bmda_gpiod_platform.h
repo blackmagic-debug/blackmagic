@@ -31,70 +31,43 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/* Implement libgpiod based GPIO backend */
+#ifndef BMDA_GPIOD_PLATFORM_H
+#define BMDA_GPIOD_PLATFORM_H
 
-#include <gpiod.h>
-#include "general.h"
-#include <errno.h>
-#include <limits.h>
 #include <stdbool.h>
 
-#include "bmda_gpiod.h"
+typedef struct gpiod_line gpiod_line_s;
 
-struct gpiod_line *bmda_gpiod_tck_pin;
-struct gpiod_line *bmda_gpiod_tms_pin;
-struct gpiod_line *bmda_gpiod_tdi_pin;
-struct gpiod_line *bmda_gpiod_tdo_pin;
+void bmda_gpiod_set_pin(gpiod_line_s *pin, bool val);
+bool bmda_gpiod_get_pin(gpiod_line_s *pin);
 
-struct gpiod_line *bmda_gpiod_swdio_pin;
-struct gpiod_line *bmda_gpiod_swclk_pin;
+void bmda_gpiod_mode_input(gpiod_line_s *pin);
+void bmda_gpiod_mode_output(gpiod_line_s *pin);
 
-uint32_t target_clk_divider = UINT32_MAX;
+#define TMS_SET_MODE() \
+	do {               \
+	} while (false)
 
-void bmda_gpiod_set_pin(struct gpiod_line *pin, bool val)
-{
-	if (pin) {
-		if (gpiod_line_set_value(pin, val ? 1 : 0)) {
-			DEBUG_ERROR("Failed to set pin to value %d errno: %d", val, errno);
-			exit(1);
-		}
-	} else
-		DEBUG_ERROR("BUG! attempt to write uninit GPIO");
-}
+#define gpio_set(port, pin)          bmda_gpiod_set_pin(pin, true)
+#define gpio_clear(port, pin)        bmda_gpiod_set_pin(pin, false)
+#define gpio_get(port, pin)          bmda_gpiod_get_pin(pin)
+#define gpio_set_val(port, pin, val) bmda_gpiod_set_pin(pin, val)
 
-bool bmda_gpiod_get_pin(struct gpiod_line *pin)
-{
-	if (pin) {
-		int ret = gpiod_line_get_value(pin);
-		if (ret < 0) {
-			DEBUG_ERROR("Failed to get pin value errno: %d", errno);
-			exit(1);
-		}
-		return ret;
-	} else {
-		DEBUG_ERROR("BUG! attempt to read uninit GPIO");
-		exit(1);
-	}
-}
+extern gpiod_line_s *bmda_gpiod_tck_pin;
+#define TCK_PIN bmda_gpiod_tck_pin
+extern gpiod_line_s *bmda_gpiod_tms_pin;
+#define TMS_PIN bmda_gpiod_tms_pin
+extern gpiod_line_s *bmda_gpiod_tdi_pin;
+#define TDI_PIN bmda_gpiod_tdi_pin
+extern gpiod_line_s *bmda_gpiod_tdo_pin;
+#define TDO_PIN bmda_gpiod_tdo_pin
 
-void bmda_gpiod_mode_input(struct gpiod_line *pin)
-{
-	if (pin) {
-		if (gpiod_line_set_direction_input(pin)) {
-			DEBUG_ERROR("Failed to set pin to input errno: %d", errno);
-			exit(1);
-		}
-	} else
-		DEBUG_ERROR("BUG! attempt to set uninit GPIO to input");
-}
+extern gpiod_line_s *bmda_gpiod_swdio_pin;
+#define SWDIO_PIN bmda_gpiod_swdio_pin
+extern gpiod_line_s *bmda_gpiod_swclk_pin;
+#define SWCLK_PIN bmda_gpiod_swclk_pin
 
-void bmda_gpiod_mode_output(struct gpiod_line *pin)
-{
-	if (pin) {
-		if (gpiod_line_set_direction_output(pin, 0)) {
-			DEBUG_ERROR("Failed to set pin to output errno: %d", errno);
-			exit(1);
-		}
-	} else
-		DEBUG_ERROR("BUG! attempt to set uninit GPIO to output");
-}
+#define SWDIO_MODE_DRIVE() bmda_gpiod_mode_output(SWDIO_PIN)
+#define SWDIO_MODE_FLOAT() bmda_gpiod_mode_input(SWDIO_PIN)
+
+#endif
