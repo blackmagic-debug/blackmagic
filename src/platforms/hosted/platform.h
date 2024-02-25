@@ -89,4 +89,8 @@ typedef enum probe_type {
 
 void gdb_ident(char *p, int count);
 
+#ifdef ENABLE_GPIOD
+#include "bmda_gpiod_platform.h"
+#endif
+
 #endif /* PLATFORMS_HOSTED_PLATFORM_H */
