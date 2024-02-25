@@ -117,3 +117,11 @@ void bmda_gpiod_mode_output(struct gpiod_line *pin)
 	} else
 		DEBUG_ERROR("BUG! attempt to set uninit GPIO to output");
 }
+
+bool bmda_gpiod_init(bmda_cli_options_s *const cl_opts)
+{
+	if (!cl_opts->opt_gpio_map)
+		return false;
+
+	return false;
+}

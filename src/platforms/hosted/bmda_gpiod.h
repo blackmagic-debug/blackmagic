@@ -34,4 +34,8 @@
 #ifndef BMDA_GPIOD_H
 #define BMDA_GPIOD_H
 
+#include "cli.h"
+
+bool bmda_gpiod_init(bmda_cli_options_s *const cl_opts);
+
 #endif

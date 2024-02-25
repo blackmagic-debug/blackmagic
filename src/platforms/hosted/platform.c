@@ -53,6 +53,10 @@
 #include "cmsis_dap.h"
 #endif
 
+#ifdef ENABLE_GPIOD
+#include "bmda_gpiod.h"
+#endif
+
 bmda_probe_s bmda_probe_info;
 
 jtag_proc_s jtag_proc;
@@ -116,6 +120,8 @@ void platform_init(int argc, char **argv)
 
 	if (cl_opts.opt_device)
 		bmda_probe_info.type = PROBE_TYPE_BMP;
+	else if (cl_opts.opt_gpio_map)
+		bmda_probe_info.type = PROBE_TYPE_GPIOD;
 	else if (find_debuggers(&cl_opts, &bmda_probe_info))
 		exit(1);
 
@@ -148,6 +154,13 @@ void platform_init(int argc, char **argv)
 
 	case PROBE_TYPE_JLINK:
 		if (!jlink_init())
+			exit(1);
+		break;
+#endif
+
+#ifdef ENABLE_GPIOD
+	case PROBE_TYPE_GPIOD:
+		if (!bmda_gpiod_init(&cl_opts))
 			exit(1);
 		break;
 #endif

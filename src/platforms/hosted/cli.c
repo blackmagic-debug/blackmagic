@@ -129,9 +129,20 @@ static void bmp_munmap(mmap_data_s *map)
 #endif
 }
 
+#ifdef ENABLE_GPIOD
+#define GPIOD_PROBE_SELECTION " | -g GPIO_MAPPING"
+#define GPIOD_PROBE_SELECTION_HELP                                          \
+	"\t-g, --gpiod      Use gpiod backend using given gpios specified as\n" \
+	"\t                   <signal>=<gpiochip>:<offset> separated by commas\n"
+#else
+#define GPIOD_PROBE_SELECTION
+#define GPIOD_PROBE_SELECTION_HELP
+#endif
+
 static void cl_help(char **argv)
 {
 	bmp_ident(NULL);
+	/* clang-format off */
 	DEBUG_INFO("\n"
 			   "Usage: %s [-h | -l | [-v BITMASK] [-O] [-d PATH | -P NUMBER | -s SERIAL | -c TYPE]\n"
 			   "\t[-n NUMBER] [-j | -A] [-C] [-t | -T] [-e] [-p] [-R[h]] [-H] [-M STRING ...]\n"
@@ -146,13 +157,14 @@ static void cl_help(char **argv)
 			   "\t-O, --no-stdout  Don't use stdout for debugging output, making it available\n"
 			   "\t                   for use by RTT, Semihosting, or other target output\n"
 			   "\n"
-			   "Probe selection arguments [-d PATH | -P NUMBER | -s SERIAL | -c TYPE]:\n"
+			   "Probe selection arguments [-d PATH | -P NUMBER | -s SERIAL | -c TYPE" GPIOD_PROBE_SELECTION "]:\n"
 			   "\t-d, --device     Use a serial device at the given path\n"
 			   "\t-P, --probe      Use the <number>th debug probe found while scanning the\n"
 			   "\t                   system, see the output from list for the order\n"
 			   "\t-s, --serial     Select the debug probe with the given serial number\n"
 			   "\t-c, --ftdi-type  Select the FTDI-based debug probe with of the given\n"
 			   "\t                   type (cable)\n"
+			   GPIOD_PROBE_SELECTION_HELP
 			   "\n"
 			   "General configuration options: [-n NUMBER] [-j] [-C] [-t | -T] [-e] [-p] [-R[h]]\n"
 			   "\t\t[-H] [-M STRING ...]\n"
@@ -197,6 +209,7 @@ static void cl_help(char **argv)
 			   "\t                   is till the operation fails or is complete)\n"
 			   "\t<file>           Binary file to use in Flash operations\n",
 		argv[0]);
+	/* clang-format on */
 	exit(0);
 }
 
@@ -229,8 +242,17 @@ static const getopt_option_s long_options[] = {
 	{"read", no_argument, NULL, 'r'},
 	{"addr", required_argument, NULL, 'a'},
 	{"byte-count", required_argument, NULL, 'S'},
+#ifdef ENABLE_GPIOD
+	{"gpiod", required_argument, NULL, 'g'},
+#endif
 	{NULL, 0, NULL, 0},
 };
+
+#ifdef ENABLE_GPIOD
+#define GPIOD_ARG_STR "g:"
+#else
+#define GPIOD_ARG_STR
+#endif
 
 void cl_init(bmda_cli_options_s *opt, int argc, char **argv)
 {
@@ -241,7 +263,8 @@ void cl_init(bmda_cli_options_s *opt, int argc, char **argv)
 	opt->opt_scanmode = BMP_SCAN_SWD;
 	opt->opt_mode = BMP_MODE_DEBUG;
 	while (true) {
-		const int option = getopt_long(argc, argv, "eEFhHv:Od:f:s:I:c:Cln:m:M:wVtTa:S:jApP:rR::", long_options, NULL);
+		const int option =
+			getopt_long(argc, argv, "eEFhHv:Od:f:s:I:c:Cln:m:M:wVtTa:S:jApP:rR::" GPIOD_ARG_STR, long_options, NULL);
 		if (option == -1)
 			break;
 
@@ -392,6 +415,12 @@ void cl_init(bmda_cli_options_s *opt, int argc, char **argv)
 					}
 				}
 			}
+			break;
+#ifdef ENABLE_GPIOD
+		case 'g':
+			if (optarg)
+				opt->opt_gpio_map = optarg;
+#endif
 		}
 	}
 	if (optind && argv[optind]) {
