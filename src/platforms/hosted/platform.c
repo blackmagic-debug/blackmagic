@@ -59,8 +59,10 @@
 
 bmda_probe_s bmda_probe_info;
 
+#ifndef ENABLE_GPIOD
 jtag_proc_s jtag_proc;
 swd_proc_s swd_proc;
+#endif
 
 static uint32_t max_frequency = 4000000U;
 
