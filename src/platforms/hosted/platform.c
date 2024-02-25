@@ -259,6 +259,9 @@ bool bmda_jtag_scan(void)
 	case PROBE_TYPE_FTDI:
 	case PROBE_TYPE_JLINK:
 	case PROBE_TYPE_CMSIS_DAP:
+#ifdef ENABLE_GPIOD
+	case PROBE_TYPE_GPIOD:
+#endif
 		return jtag_scan();
 
 #if HOSTED_BMP_ONLY == 0
@@ -289,6 +292,11 @@ bool bmda_jtag_init(void)
 
 	case PROBE_TYPE_CMSIS_DAP:
 		return dap_jtag_init();
+#endif
+
+#ifdef ENABLE_GPIOD
+	case PROBE_TYPE_GPIOD:
+		return bmda_gpiod_jtag_init();
 #endif
 
 	default:
