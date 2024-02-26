@@ -535,10 +535,6 @@ static void adiv5_component_probe(
 	(void)num_entry;
 #endif
 
-	addr &= 0xfffff000U; /* Mask out base address */
-	if (addr == 0)       /* No rom table on this AP */
-		return;
-
 	const volatile uint32_t cidr = adiv5_ap_read_id(ap, addr + CIDR0_OFFSET);
 	if (ap->dp->fault) {
 		DEBUG_ERROR("Error reading CIDR on AP%u: %u\n", ap->apsel, ap->dp->fault);
@@ -728,6 +724,8 @@ adiv5_access_port_s *adiv5_new_ap(adiv5_debug_port_s *dp, uint8_t apsel)
 		/* This reads the lower half of BASE */
 		ap.base = adiv5_ap_read(&ap, ADIV5_AP_BASE_LOW);
 		const uint8_t base_flags = (uint8_t)ap.base & (ADIV5_AP_BASE_FORMAT | ADIV5_AP_BASE_PRESENT);
+		/* Make sure we only pay attention to the base address, not the presence and format bits */
+		ap.base &= ADIV5_AP_BASE_BASEADDR;
 		/* Check if this is a 64-bit AP */
 		if (cfg & ADIV5_AP_CFG_LARGE_ADDRESS) {
 			/* If this base value is invalid for a LPAE MEM-AP, bomb out here */
