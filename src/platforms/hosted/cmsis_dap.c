@@ -507,7 +507,13 @@ static ssize_t dap_run_cmd_raw(const uint8_t *const request_data, const size_t r
 		DEBUG_WIRE("%02x ", request_data[i]);
 	DEBUG_WIRE("\n");
 
-	uint8_t data[65];
+	/* Provide enough space for up to a HS USB HID payload */
+	uint8_t data[1024];
+	/* Make sure that we're not about to blow this buffer when we request data back */
+	if (sizeof(data) < packet_size) {
+		DEBUG_ERROR("CMSIS-DAP request would exceed response buffer\n");
+		return -1;
+	}
 
 	ssize_t response = -1;
 	if (type == CMSIS_TYPE_HID)
@@ -534,6 +540,8 @@ bool dap_run_cmd(const void *const request_data, const size_t request_length, vo
 	/* This subtracts one off the result to account for the command byte that gets stripped above */
 	const ssize_t result =
 		dap_run_cmd_raw((const uint8_t *)request_data, request_length, (uint8_t *)response_data, response_length) - 1U;
+	if (result < 0)
+		return false;
 	return (size_t)result >= response_length;
 }
 
