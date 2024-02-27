@@ -319,7 +319,7 @@ void adiv5_swd_multidrop_scan(adiv5_debug_port_s *const dp, const uint32_t targe
 
 		/* Populate the target DP from the initial one */
 		memcpy(target_dp, dp, sizeof(*dp));
-		target_dp->instance = instance;
+		target_dp->dev_index = instance;
 
 		/* Yield the target DP to adiv5_dp_init */
 		adiv5_dp_abort(target_dp, ADIV5_DP_ABORT_STKERRCLR);

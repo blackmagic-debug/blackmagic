@@ -639,8 +639,8 @@ static void adiv5_component_probe(
 
 	} else {
 		if (designer_code != JEP106_MANUFACTURER_ARM && designer_code != JEP106_MANUFACTURER_ARM_CHINA) {
-			/* non arm components not supported currently */
-			DEBUG_WARN("%s%" PRIu32 " 0x%" PRIx32 ": 0x%08" PRIx32 "%08" PRIx32 " Non ARM component ignored\n",
+			/* non-ARM components are not supported currently */
+			DEBUG_WARN("%s%" PRIu32 " 0x%" PRIx32 ": 0x%08" PRIx32 "%08" PRIx32 " Non-ARM component ignored\n",
 				indent + 1, num_entry, addr, (uint32_t)(pidr >> 32U), (uint32_t)pidr);
 			DEBUG_TARGET("%s -> designer: %x, part no: %x\n", indent, designer_code, part_number);
 			return;
@@ -1030,7 +1030,7 @@ void adiv5_dp_init(adiv5_debug_port_s *const dp)
 		DEBUG_INFO("TARGETID 0x%08" PRIx32 " designer 0x%x partno 0x%x\n", targetid, dp->target_designer_code,
 			dp->target_partno);
 
-		dp->targetsel = dp->instance << ADIV5_DP_TARGETSEL_TINSTANCE_OFFSET |
+		dp->targetsel = dp->dev_index << ADIV5_DP_TARGETSEL_TINSTANCE_OFFSET |
 			(targetid & (ADIV5_DP_TARGETID_TDESIGNER_MASK | ADIV5_DP_TARGETID_TPARTNO_MASK)) | 1U;
 	}
 

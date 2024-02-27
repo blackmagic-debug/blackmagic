@@ -297,16 +297,17 @@ struct adiv5_debug_port {
 
 	void (*mem_read)(adiv5_access_port_s *ap, void *dest, uint32_t src, size_t len);
 	void (*mem_write)(adiv5_access_port_s *ap, uint32_t dest, const void *src, size_t len, align_e align);
+	/* The index of the device on the JTAG scan chain or DP index on SWD */
 	uint8_t dev_index;
+	/* Whether a fault has occured, and which one */
 	uint8_t fault;
-
+	/* Bitfield of the DP's quirks such as if it is a minimal DP or has the duped APs bug */
 	uint8_t quirks;
-
-	/* targetsel DPv2 */
-	uint8_t instance;
-	uint32_t targetsel;
-
+	/* DP version */
 	uint8_t version;
+
+	/* DPv2 specific target selection value */
+	uint32_t targetsel;
 
 	/* DP designer (not implementer!) and partno */
 	uint16_t designer_code;
