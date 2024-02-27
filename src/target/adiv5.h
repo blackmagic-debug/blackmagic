@@ -232,7 +232,8 @@
 
 #define ADIV5_AP_CFG_LARGE_ADDRESS (1U << 1U)
 
-#define ADIV5_AP_FLAGS_64BIT (1U << 0U)
+#define ADIV5_AP_FLAGS_64BIT   (1U << 0U)
+#define ADIV5_AP_FLAGS_HAS_MEM (1U << 1U)
 
 /* ADIv5 Class 0x1 ROM Table Registers */
 #define ADIV5_ROM_MEMTYPE          0xfccU
