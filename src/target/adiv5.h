@@ -181,7 +181,7 @@
 /* Bit 15 on AHB5 w/ enhanced HPROT control - Request is sharable */
 /* Bits 11:8 - Mode, must be zero */
 #define ADIV5_AP_CSW_TRINPROG       (1U << 7U)
-#define ADIV5_AP_CSW_DEVICEEN       (1U << 6U)
+#define ADIV5_AP_CSW_AP_ENABLED     (1U << 6U)
 #define ADIV5_AP_CSW_ADDRINC_NONE   (0U << 4U)
 #define ADIV5_AP_CSW_ADDRINC_SINGLE (1U << 4U)
 #define ADIV5_AP_CSW_ADDRINC_PACKED (2U << 4U)

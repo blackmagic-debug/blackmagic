@@ -748,6 +748,11 @@ adiv5_access_port_s *adiv5_new_ap(adiv5_debug_port_s *dp, uint8_t apsel)
 			DEBUG_INFO(" -> Not Present\n");
 			return NULL;
 		}
+		/* Check if the AP is disabled, skipping it if that is the case */
+		if ((ap.csw & ADIV5_AP_CSW_AP_ENABLED) == 0U) {
+			DEBUG_INFO(" -> Disabled\n");
+			return NULL;
+		}
 
 		/* Apply bus-common fixups to the CSW value */
 		ap.csw &= ~(ADIV5_AP_CSW_SIZE_MASK | ADIV5_AP_CSW_ADDRINC_MASK);
