@@ -289,8 +289,6 @@ struct adiv5_debug_port {
 	void (*ap_regs_read)(adiv5_access_port_s *ap, void *data);
 	uint32_t (*ap_reg_read)(adiv5_access_port_s *ap, uint8_t reg_num);
 	void (*ap_reg_write)(adiv5_access_port_s *ap, uint8_t num, uint32_t value);
-	void (*read_block)(uint32_t addr, uint8_t *data, int size);
-	void (*dap_write_block_sized)(uint32_t addr, uint8_t *data, int size, align_e align);
 #endif
 	uint32_t (*ap_read)(adiv5_access_port_s *ap, uint16_t addr);
 	void (*ap_write)(adiv5_access_port_s *ap, uint16_t addr, uint32_t value);
