@@ -294,8 +294,8 @@ struct adiv5_debug_port {
 	uint32_t (*ap_read)(adiv5_access_port_s *ap, uint16_t addr);
 	void (*ap_write)(adiv5_access_port_s *ap, uint16_t addr, uint32_t value);
 
-	void (*mem_read)(adiv5_access_port_s *ap, void *dest, target_addr_t src, size_t len);
-	void (*mem_write)(adiv5_access_port_s *ap, target_addr_t dest, const void *src, size_t len, align_e align);
+	void (*mem_read)(adiv5_access_port_s *ap, void *dest, target_addr64_t src, size_t len);
+	void (*mem_write)(adiv5_access_port_s *ap, target_addr64_t dest, const void *src, size_t len, align_e align);
 	/* The index of the device on the JTAG scan chain or DP index on SWD */
 	uint8_t dev_index;
 	/* Whether a fault has occured, and which one */
@@ -436,12 +436,12 @@ bool bmda_swd_dp_init(adiv5_debug_port_s *dp);
 #endif
 
 void adiv5_mem_write(adiv5_access_port_s *ap, target_addr_t dest, const void *src, size_t len);
-void *adiv5_unpack_data(void *dest, target_addr_t src, uint32_t val, align_e align);
-const void *adiv5_pack_data(target_addr_t dest, const void *src, uint32_t *data, align_e align);
+void *adiv5_unpack_data(void *dest, target_addr32_t src, uint32_t val, align_e align);
+const void *adiv5_pack_data(target_addr32_t dest, const void *src, uint32_t *data, align_e align);
 
-void adiv5_mem_access_setup(adiv5_access_port_s *ap, target_addr_t addr, align_e align);
-void adiv5_mem_write_bytes(adiv5_access_port_s *ap, target_addr_t dest, const void *src, size_t len, align_e align);
-void advi5_mem_read_bytes(adiv5_access_port_s *ap, void *dest, target_addr_t src, size_t len);
+void adiv5_mem_access_setup(adiv5_access_port_s *ap, target_addr64_t addr, align_e align);
+void adiv5_mem_write_bytes(adiv5_access_port_s *ap, target_addr64_t dest, const void *src, size_t len, align_e align);
+void advi5_mem_read_bytes(adiv5_access_port_s *ap, void *dest, target_addr64_t src, size_t len);
 void firmware_ap_write(adiv5_access_port_s *ap, uint16_t addr, uint32_t value);
 uint32_t firmware_ap_read(adiv5_access_port_s *ap, uint16_t addr);
 uint32_t firmware_swdp_low_access(adiv5_debug_port_s *dp, uint8_t RnW, uint16_t addr, uint32_t value);

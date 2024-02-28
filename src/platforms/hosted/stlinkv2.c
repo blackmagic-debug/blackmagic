@@ -87,7 +87,7 @@ static bool stlink_ap_setup(uint8_t ap);
 static bool stlink_ap_cleanup(void);
 
 static stlink_mem_command_s stlink_memory_access(
-	const uint8_t operation, const uint32_t address, const uint16_t length, const uint8_t apsel)
+	const uint8_t operation, const target_addr64_t address, const uint16_t length, const uint8_t apsel)
 {
 	stlink_mem_command_s command = {
 		.command = STLINK_DEBUG_COMMAND,
@@ -616,7 +616,7 @@ uint32_t stlink_raw_access(adiv5_debug_port_s *dp, uint8_t rnw, uint16_t addr, u
 	const uint16_t apsel = (addr & ADIV5_APnDP) ? stlink.apsel : STLINK_DEBUG_PORT;
 	DEBUG_PROBE("%s: Attempting access to addr %04x via apsel %u\n", __func__, addr, apsel);
 	const int result = rnw ? stlink_read_dp_register(dp, apsel, addr, &result_value) :
-				 stlink_write_dp_register(apsel, addr, request_value);
+							 stlink_write_dp_register(apsel, addr, request_value);
 
 	if (result == STLINK_ERROR_WAIT) {
 		DEBUG_ERROR("SWD access resulted in wait, aborting\n");
@@ -677,7 +677,7 @@ static int stlink_usb_get_rw_status(bool verbose)
 	return stlink_usb_error_check(data, verbose);
 }
 
-static void stlink_mem_read(adiv5_access_port_s *ap, void *dest, uint32_t src, size_t len)
+static void stlink_mem_read(adiv5_access_port_s *ap, void *dest, target_addr64_t src, size_t len)
 {
 	if (len == 0)
 		return;
@@ -697,7 +697,8 @@ static void stlink_mem_read(adiv5_access_port_s *ap, void *dest, uint32_t src, s
 		block_size = STLINK_READMEM_32BIT_MAX_SIZE;
 	}
 	if (len > block_size) {
-		DEBUG_ERROR("%s(AP %u @0x%08" PRIx32 "+%zu): Too large! Must be <%u\n", __func__, ap->apsel, src, len, block_size);
+		DEBUG_ERROR(
+			"%s(AP %u @0x%016" PRIx64 "+%zu): Too large! Must be <%u\n", __func__, ap->apsel, src, len, block_size);
 		return;
 	}
 
@@ -723,21 +724,21 @@ static void stlink_mem_read(adiv5_access_port_s *ap, void *dest, uint32_t src, s
 		 * Approach taken:
 		 * Fill the memory with some fixed pattern so hopefully
 		 * the caller notices the error*/
-		DEBUG_ERROR("stlink_mem_read from  %" PRIx32 " to %p, len %zu failed\n", src, dest, len);
-		memset(dest, 0xff, len);
+		DEBUG_ERROR("stlink_mem_read from  %08" PRIx64 " to %p, len %zu failed\n", src, dest, len);
+		memset(dest, 0xffU, len);
 	}
-	DEBUG_PROBE("stlink_mem_read from %" PRIx32 " to %p, len %zu\n", src, dest, len);
+	DEBUG_PROBE("stlink_mem_read from %08" PRIx64 " to %p, len %zu\n", src, dest, len);
 }
 
-static void stlink_mem_write(
-	adiv5_access_port_s *const ap, const uint32_t dest, const void *const src, const size_t len, const align_e align)
+static void stlink_mem_write(adiv5_access_port_s *const ap, const target_addr64_t dest, const void *const src,
+	const size_t len, const align_e align)
 {
 	if (len == 0)
 		return;
 	if (!stlink_ensure_ap(ap->apsel))
 		raise_exception(EXCEPTION_ERROR, "ST-Link AP selection error");
 
-	DEBUG_PROBE("%s: @0x%08" PRIx32 "+%zu\n", __func__, dest, len);
+	DEBUG_PROBE("%s: @0x%016" PRIx64 "+%zu\n", __func__, dest, len);
 
 	const uint8_t *const data = (const uint8_t *)src;
 	const uint16_t block_size = (align == ALIGN_8BIT) ? stlink.block_size : STLINK_READMEM_32BIT_MAX_SIZE;

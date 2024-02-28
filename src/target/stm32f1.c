@@ -353,7 +353,7 @@ bool at32f40x_probe(target_s *target)
  * On MM32 cortex-m0, 16-bit writes always use bits 0:15.
  * Set both halfwords to the same value, works on both STM32 and MM32.
  */
-void mm32l0_mem_write_sized(adiv5_access_port_s *ap, uint32_t dest, const void *src, size_t len, align_e align)
+void mm32l0_mem_write_sized(adiv5_access_port_s *ap, target_addr64_t dest, const void *src, size_t len, align_e align)
 {
 	uint32_t odest = dest;
 

@@ -545,12 +545,12 @@ bool dap_run_cmd(const void *const request_data, const size_t request_length, vo
 	return (size_t)result >= response_length;
 }
 
-static void dap_mem_read(adiv5_access_port_s *ap, void *dest, uint32_t src, size_t len)
+static void dap_mem_read(adiv5_access_port_s *ap, void *dest, target_addr64_t src, size_t len)
 {
 	if (len == 0)
 		return;
 	const align_e align = MIN_ALIGN(src, len);
-	DEBUG_PROBE("dap_mem_read @ %" PRIx32 " len %zu, align %d\n", src, len, align);
+	DEBUG_PROBE("dap_mem_read @ %" PRIx64 " len %zu, align %d\n", src, len, align);
 	/* If the read can be done in a single transaction, use the dap_read_single() fast-path */
 	if ((1U << align) == len) {
 		dap_read_single(ap, dest, src, align);
@@ -583,11 +583,11 @@ static void dap_mem_read(adiv5_access_port_s *ap, void *dest, uint32_t src, size
 	DEBUG_WIRE("dap_mem_read transferred %zu blocks\n", len >> align);
 }
 
-static void dap_mem_write(adiv5_access_port_s *ap, uint32_t dest, const void *src, size_t len, align_e align)
+static void dap_mem_write(adiv5_access_port_s *ap, target_addr64_t dest, const void *src, size_t len, align_e align)
 {
 	if (len == 0)
 		return;
-	DEBUG_PROBE("dap_mem_write @ %" PRIx32 " len %zu, align %d\n", dest, len, align);
+	DEBUG_PROBE("dap_mem_write @ %" PRIx64 " len %zu, align %d\n", dest, len, align);
 	/* If the write can be done in a single transaction, use the dap_write_single() fast-path */
 	if ((1U << align) == len) {
 		dap_write_single(ap, dest, src, align);

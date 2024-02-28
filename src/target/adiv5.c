@@ -1144,7 +1144,7 @@ void adiv5_dp_init(adiv5_debug_port_s *const dp)
 }
 
 /* Program the CSW and TAR for sequential access at a given width */
-void adiv5_mem_access_setup(adiv5_access_port_s *const ap, const target_addr_t addr, const align_e align)
+void adiv5_mem_access_setup(adiv5_access_port_s *const ap, const target_addr64_t addr, const align_e align)
 {
 	uint32_t csw = ap->csw | ADIV5_AP_CSW_ADDRINC_SINGLE;
 
@@ -1163,11 +1163,13 @@ void adiv5_mem_access_setup(adiv5_access_port_s *const ap, const target_addr_t a
 	/* Select AP bank 0 and write CSW */
 	adiv5_ap_write(ap, ADIV5_AP_CSW, csw);
 	/* Then write TAR which is in the same AP bank */
+	if (ap->flags & ADIV5_AP_FLAGS_64BIT)
+		adiv5_dp_write(ap->dp, ADIV5_AP_TAR_HIGH, (uint32_t)(addr >> 32));
 	adiv5_dp_write(ap->dp, ADIV5_AP_TAR_LOW, (uint32_t)addr);
 }
 
 /* Unpack data from the source uint32_t value based on data alignment and source address */
-void *adiv5_unpack_data(void *const dest, const target_addr_t src, const uint32_t data, const align_e align)
+void *adiv5_unpack_data(void *const dest, const target_addr32_t src, const uint32_t data, const align_e align)
 {
 	switch (align) {
 	case ALIGN_8BIT: {
@@ -1199,11 +1201,12 @@ void *adiv5_unpack_data(void *const dest, const target_addr_t src, const uint32_
 		memcpy(dest, &data, sizeof(data));
 		break;
 	}
-	return (uint8_t *)dest + (1 << align);
+	return (uint8_t *)dest + (1U << align);
 }
 
 /* Pack data from the source value into a uint32_t based on data alignment and source address */
-const void *adiv5_pack_data(const target_addr_t dest, const void *const src, uint32_t *const data, const align_e align)
+const void *adiv5_pack_data(
+	const target_addr32_t dest, const void *const src, uint32_t *const data, const align_e align)
 {
 	switch (align) {
 	case ALIGN_8BIT: {
@@ -1230,21 +1233,21 @@ const void *adiv5_pack_data(const target_addr_t dest, const void *const src, uin
 		memcpy(data, src, sizeof(*data));
 		break;
 	}
-	return (const uint8_t *)src + (1 << align);
+	return (const uint8_t *)src + (1U << align);
 }
 
-void advi5_mem_read_bytes(adiv5_access_port_s *const ap, void *dest, const target_addr32_t src, const size_t len)
+void advi5_mem_read_bytes(adiv5_access_port_s *const ap, void *dest, const target_addr64_t src, const size_t len)
 {
 	/* Do nothing and return if there's nothing to read */
 	if (len == 0U)
 		return;
 	/* Calculate the extent of the transfer */
-	target_addr32_t begin = src;
-	const target_addr32_t end = begin + len;
+	target_addr64_t begin = src;
+	const target_addr64_t end = begin + len;
 	/* Calculate the alignment of the transfer */
 	const align_e align = MIN_ALIGN(src, len);
 	/* Calculate how much each loop will increment the destination address by */
-	const uint8_t stride = 1 << align;
+	const uint8_t stride = 1U << align;
 	/* Set up the transfer */
 	adiv5_mem_access_setup(ap, src, align);
 	/* Now loop through the data and move it 1 stride at a time to the target */
@@ -1255,6 +1258,8 @@ void advi5_mem_read_bytes(adiv5_access_port_s *const ap, void *dest, const targe
 		 */
 		if (begin != src && (begin & 0x00000effU) == 0U) {
 			/* Update TAR to adjust the upper bits */
+			if (ap->flags & ADIV5_AP_FLAGS_64BIT)
+				adiv5_dp_write(ap->dp, ADIV5_AP_TAR_HIGH, (uint32_t)(begin >> 32));
 			adiv5_dp_write(ap->dp, ADIV5_AP_TAR_LOW, (uint32_t)begin);
 		}
 		/* Grab the next chunk of data from the target */
@@ -1265,16 +1270,16 @@ void advi5_mem_read_bytes(adiv5_access_port_s *const ap, void *dest, const targe
 }
 
 void adiv5_mem_write_bytes(
-	adiv5_access_port_s *const ap, const target_addr32_t dest, const void *src, const size_t len, const align_e align)
+	adiv5_access_port_s *const ap, const target_addr64_t dest, const void *src, const size_t len, const align_e align)
 {
 	/* Do nothing and return if there's nothing to write */
 	if (len == 0U)
 		return;
 	/* Calculate the extent of the transfer */
-	target_addr32_t begin = dest;
-	const target_addr32_t end = begin + len;
+	target_addr64_t begin = dest;
+	const target_addr64_t end = begin + len;
 	/* Calculate how much each loop will increment the destination address by */
-	const uint8_t stride = 1 << align;
+	const uint8_t stride = 1U << align;
 	/* Set up the transfer */
 	adiv5_mem_access_setup(ap, dest, align);
 	/* Now loop through the data and move it 1 stride at a time to the target */
@@ -1285,6 +1290,8 @@ void adiv5_mem_write_bytes(
 		 */
 		if (begin != dest && (begin & 0x00000effU) == 0U) {
 			/* Update TAR to adjust the upper bits */
+			if (ap->flags & ADIV5_AP_FLAGS_64BIT)
+				adiv5_dp_write(ap->dp, ADIV5_AP_TAR_HIGH, (uint32_t)(begin >> 32));
 			adiv5_dp_write(ap->dp, ADIV5_AP_TAR_LOW, (uint32_t)begin);
 		}
 		/* Pack the data for transfer */

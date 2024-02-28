@@ -303,7 +303,7 @@ bool dap_write_block(
 }
 
 static void mem_access_setup(const adiv5_access_port_s *const target_ap,
-	dap_transfer_request_s *const transfer_requests, const uint32_t addr, const align_e align)
+	dap_transfer_request_s *const transfer_requests, const target_addr64_t addr, const align_e align)
 {
 	uint32_t csw = target_ap->csw | ADIV5_AP_CSW_ADDRINC_SINGLE;
 	switch (align) {
@@ -329,7 +329,7 @@ static void mem_access_setup(const adiv5_access_port_s *const target_ap,
 	transfer_requests[2].data = addr;
 }
 
-void dap_ap_mem_access_setup(adiv5_access_port_s *const target_ap, const uint32_t addr, const align_e align)
+void dap_ap_mem_access_setup(adiv5_access_port_s *const target_ap, const target_addr64_t addr, const align_e align)
 {
 	/* Start by setting up the transfer and attempting it */
 	dap_transfer_request_s requests[3];
