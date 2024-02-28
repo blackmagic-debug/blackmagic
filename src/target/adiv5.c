@@ -1233,50 +1233,65 @@ const void *adiv5_pack_data(const target_addr_t dest, const void *const src, uin
 	return (const uint8_t *)src + (1 << align);
 }
 
-void advi5_mem_read_bytes(adiv5_access_port_s *const ap, void *dest, target_addr_t src, size_t len)
+void advi5_mem_read_bytes(adiv5_access_port_s *const ap, void *dest, const target_addr32_t src, const size_t len)
 {
-	uint32_t osrc = src;
-	const align_e align = MIN_ALIGN(src, len);
-
-	if (len == 0)
+	/* Do nothing and return if there's nothing to read */
+	if (len == 0U)
 		return;
-
-	len >>= align;
+	/* Calculate the extent of the transfer */
+	target_addr32_t begin = src;
+	const target_addr32_t end = begin + len;
+	/* Calculate the alignment of the transfer */
+	const align_e align = MIN_ALIGN(src, len);
+	/* Calculate how much each loop will increment the destination address by */
+	const uint8_t stride = 1 << align;
+	/* Set up the transfer */
 	ap_mem_access_setup(ap, src, align);
-	adiv5_dp_low_access(ap->dp, ADIV5_LOW_READ, ADIV5_AP_DRW, 0);
-	while (--len) {
-		const uint32_t value = adiv5_dp_low_access(ap->dp, ADIV5_LOW_READ, ADIV5_AP_DRW, 0);
-		dest = adiv5_unpack_data(dest, src, value, align);
-
-		src += 1U << align;
-		/* Check for 10 bit address overflow */
-		if ((src ^ osrc) & 0xfffffc00U) {
-			osrc = src;
-			adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_TAR, src);
-			adiv5_dp_low_access(ap->dp, ADIV5_LOW_READ, ADIV5_AP_DRW, 0);
+	/* Now loop through the data and move it 1 stride at a time to the target */
+	for (; begin < end; begin += stride) {
+		/*
+		 * Check if the address doesn't overflow the 10-bit auto increment bound for TAR,
+		 * if it's not the first transfer (offset == 0)
+		 */
+		if (begin != src && (begin & 0x00000effU) == 0U) {
+			/* Update TAR to adjust the upper bits */
+			adiv5_dp_write(ap->dp, ADIV5_AP_TAR, (uint32_t)begin);
 		}
+		/* Grab the next chunk of data from the target */
+		const uint32_t value = adiv5_dp_read(ap->dp, ADIV5_AP_DRW);
+		/* Unpack the data from the chunk */
+		dest = adiv5_unpack_data(dest, begin, value, align);
 	}
-	const uint32_t value = adiv5_dp_low_access(ap->dp, ADIV5_LOW_READ, ADIV5_DP_RDBUFF, 0);
-	adiv5_unpack_data(dest, src, value, align);
 }
 
-void adiv5_mem_write_bytes(adiv5_access_port_s *ap, target_addr_t dest, const void *src, size_t len, align_e align)
+void adiv5_mem_write_bytes(
+	adiv5_access_port_s *const ap, const target_addr32_t dest, const void *src, const size_t len, const align_e align)
 {
-	uint32_t odest = dest;
-
-	len >>= align;
+	/* Do nothing and return if there's nothing to write */
+	if (len == 0U)
+		return;
+	/* Calculate the extent of the transfer */
+	target_addr32_t begin = dest;
+	const target_addr32_t end = begin + len;
+	/* Calculate how much each loop will increment the destination address by */
+	const uint8_t stride = 1 << align;
+	/* Set up the transfer */
 	ap_mem_access_setup(ap, dest, align);
-	while (len--) {
-		uint32_t value = 0;
-		src = adiv5_pack_data(dest, src, &value, align);
-		adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_DRW, value);
-
-		dest += 1U << align;
-		/* Check for 10 bit address overflow */
-		if ((dest ^ odest) & 0xfffffc00U) {
-			odest = dest;
-			adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_TAR, dest);
+	/* Now loop through the data and move it 1 stride at a time to the target */
+	for (; begin < end; begin += stride) {
+		/*
+		 * Check if the address doesn't overflow the 10-bit auto increment bound for TAR,
+		 * if it's not the first transfer (offset == 0)
+		 */
+		if (begin != dest && (begin & 0x00000effU) == 0U) {
+			/* Update TAR to adjust the upper bits */
+			adiv5_dp_write(ap->dp, ADIV5_AP_TAR, (uint32_t)begin);
 		}
+		/* Pack the data for transfer */
+		uint32_t value = 0;
+		src = adiv5_pack_data(begin, src, &value, align);
+		/* And copy the result to the target */
+		adiv5_dp_write(ap->dp, ADIV5_AP_DRW, value);
 	}
 	/* Make sure this write is complete by doing a dummy read */
 	adiv5_dp_read(ap->dp, ADIV5_DP_RDBUFF);
