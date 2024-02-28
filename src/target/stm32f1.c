@@ -392,7 +392,7 @@ void mm32l0_mem_write_sized(adiv5_access_port_s *ap, uint32_t dest, const void *
 		/* Check for 10 bit address overflow */
 		if ((dest ^ odest) & 0xfffffc00U) {
 			odest = dest;
-			adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_TAR, dest);
+			adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_TAR_LOW, dest);
 		}
 	}
 	/* Make sure this write is complete by doing a dummy read */

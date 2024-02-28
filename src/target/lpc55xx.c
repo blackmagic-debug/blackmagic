@@ -642,7 +642,7 @@ static bool lpc55_dmap_cmd(adiv5_access_port_s *const ap, const uint32_t cmd)
 			return false;
 	}
 
-	adiv5_ap_write(ap, ADIV5_AP_TAR, cmd);
+	adiv5_ap_write(ap, ADIV5_AP_TAR_LOW, cmd);
 
 	platform_timeout_set(&timeout, 20);
 	while (true) {

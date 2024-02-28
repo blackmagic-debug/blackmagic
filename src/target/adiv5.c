@@ -401,7 +401,7 @@ static uint32_t cortexm_initial_halt(adiv5_access_port_s *ap)
 	/* Setup to read/write DHCSR */
 	/* adiv5_mem_access_setup() uses ADIV5_AP_CSW_ADDRINC_SINGLE which is undesirable for our use here */
 	adiv5_ap_write(ap, ADIV5_AP_CSW, ap->csw | ADIV5_AP_CSW_SIZE_WORD);
-	adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_TAR, CORTEXM_DHCSR);
+	adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_TAR_LOW, CORTEXM_DHCSR);
 	/* Write (and do a dummy read of) DHCSR to ensure debug is enabled */
 	adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_DRW, CORTEXM_DHCSR_DBGKEY | CORTEXM_DHCSR_C_DEBUGEN);
 	adiv5_dp_read(ap->dp, ADIV5_DP_RDBUFF);
@@ -1163,7 +1163,7 @@ void adiv5_mem_access_setup(adiv5_access_port_s *const ap, const target_addr_t a
 	/* Select AP bank 0 and write CSW */
 	adiv5_ap_write(ap, ADIV5_AP_CSW, csw);
 	/* Then write TAR which is in the same AP bank */
-	adiv5_dp_write(ap->dp, ADIV5_AP_TAR, addr);
+	adiv5_dp_write(ap->dp, ADIV5_AP_TAR_LOW, (uint32_t)addr);
 }
 
 /* Unpack data from the source uint32_t value based on data alignment and source address */
@@ -1255,7 +1255,7 @@ void advi5_mem_read_bytes(adiv5_access_port_s *const ap, void *dest, const targe
 		 */
 		if (begin != src && (begin & 0x00000effU) == 0U) {
 			/* Update TAR to adjust the upper bits */
-			adiv5_dp_write(ap->dp, ADIV5_AP_TAR, (uint32_t)begin);
+			adiv5_dp_write(ap->dp, ADIV5_AP_TAR_LOW, (uint32_t)begin);
 		}
 		/* Grab the next chunk of data from the target */
 		const uint32_t value = adiv5_dp_read(ap->dp, ADIV5_AP_DRW);
@@ -1285,7 +1285,7 @@ void adiv5_mem_write_bytes(
 		 */
 		if (begin != dest && (begin & 0x00000effU) == 0U) {
 			/* Update TAR to adjust the upper bits */
-			adiv5_dp_write(ap->dp, ADIV5_AP_TAR, (uint32_t)begin);
+			adiv5_dp_write(ap->dp, ADIV5_AP_TAR_LOW, (uint32_t)begin);
 		}
 		/* Pack the data for transfer */
 		uint32_t value = 0;
