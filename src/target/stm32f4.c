@@ -526,7 +526,7 @@ static bool stm32f4_flash_write(target_flash_s *f, target_addr_t dest, const voi
 
 	align_e psize = ((stm32f4_flash_s *)f)->psize;
 	target_mem_write32(t, FLASH_CR, (psize * FLASH_CR_PSIZE16) | FLASH_CR_PG);
-	cortexm_mem_write_sized(t, dest, src, len, psize);
+	cortexm_mem_write_aligned(t, dest, src, len, psize);
 
 	/* Wait for completion or an error */
 	return stm32f4_flash_busy_wait(t, NULL);

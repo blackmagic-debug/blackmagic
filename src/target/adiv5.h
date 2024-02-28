@@ -293,8 +293,8 @@ struct adiv5_debug_port {
 	uint32_t (*ap_read)(adiv5_access_port_s *ap, uint16_t addr);
 	void (*ap_write)(adiv5_access_port_s *ap, uint16_t addr, uint32_t value);
 
-	void (*mem_read)(adiv5_access_port_s *ap, void *dest, uint32_t src, size_t len);
-	void (*mem_write)(adiv5_access_port_s *ap, uint32_t dest, const void *src, size_t len, align_e align);
+	void (*mem_read)(adiv5_access_port_s *ap, void *dest, target_addr_t src, size_t len);
+	void (*mem_write)(adiv5_access_port_s *ap, target_addr_t dest, const void *src, size_t len, align_e align);
 	/* The index of the device on the JTAG scan chain or DP index on SWD */
 	uint8_t dev_index;
 	/* Whether a fault has occured, and which one */
@@ -376,13 +376,13 @@ static inline void adiv5_ap_write(adiv5_access_port_s *ap, uint16_t addr, uint32
 	ap->dp->ap_write(ap, addr, value);
 }
 
-static inline void adiv5_mem_read(adiv5_access_port_s *ap, void *dest, uint32_t src, size_t len)
+static inline void adiv5_mem_read(adiv5_access_port_s *ap, void *dest, target_addr_t src, size_t len)
 {
 	ap->dp->mem_read(ap, dest, src, len);
 }
 
-static inline void adiv5_mem_write_sized(
-	adiv5_access_port_s *ap, uint32_t dest, const void *src, size_t len, align_e align)
+static inline void adiv5_mem_write_aligned(
+	adiv5_access_port_s *ap, target_addr_t dest, const void *src, size_t len, align_e align)
 {
 	ap->dp->mem_write(ap, dest, src, len, align);
 }
@@ -391,7 +391,6 @@ static inline void adiv5_dp_write(adiv5_debug_port_s *dp, uint16_t addr, uint32_
 {
 	dp->low_access(dp, ADIV5_LOW_WRITE, addr, value);
 }
-
 #else
 bool adiv5_write_no_check(adiv5_debug_port_s *dp, uint16_t addr, uint32_t value);
 uint32_t adiv5_read_no_check(adiv5_debug_port_s *dp, uint16_t addr);
@@ -401,8 +400,8 @@ uint32_t adiv5_dp_low_access(adiv5_debug_port_s *dp, uint8_t RnW, uint16_t addr,
 void adiv5_dp_abort(adiv5_debug_port_s *dp, uint32_t abort);
 uint32_t adiv5_ap_read(adiv5_access_port_s *ap, uint16_t addr);
 void adiv5_ap_write(adiv5_access_port_s *ap, uint16_t addr, uint32_t value);
-void adiv5_mem_read(adiv5_access_port_s *ap, void *dest, uint32_t src, size_t len);
-void adiv5_mem_write_sized(adiv5_access_port_s *ap, uint32_t dest, const void *src, size_t len, align_e align);
+void adiv5_mem_read(adiv5_access_port_s *ap, void *dest, target_addr_t src, size_t len);
+void adiv5_mem_write_aligned(adiv5_access_port_s *ap, target_addr_t dest, const void *src, size_t len, align_e align);
 void adiv5_dp_write(adiv5_debug_port_s *dp, uint16_t addr, uint32_t value);
 #endif
 
@@ -435,13 +434,13 @@ void bmda_jtag_dp_init(adiv5_debug_port_s *dp);
 bool bmda_swd_dp_init(adiv5_debug_port_s *dp);
 #endif
 
-void adiv5_mem_write(adiv5_access_port_s *ap, uint32_t dest, const void *src, size_t len);
-void *adiv5_unpack_data(void *dest, uint32_t src, uint32_t val, align_e align);
-const void *adiv5_pack_data(uint32_t dest, const void *src, uint32_t *data, align_e align);
+void adiv5_mem_write(adiv5_access_port_s *ap, target_addr_t dest, const void *src, size_t len);
+void *adiv5_unpack_data(void *dest, target_addr_t src, uint32_t val, align_e align);
+const void *adiv5_pack_data(target_addr_t dest, const void *src, uint32_t *data, align_e align);
 
-void ap_mem_access_setup(adiv5_access_port_s *ap, uint32_t addr, align_e align);
-void adiv5_mem_write_bytes(adiv5_access_port_s *ap, uint32_t dest, const void *src, size_t len, align_e align);
-void advi5_mem_read_bytes(adiv5_access_port_s *ap, void *dest, uint32_t src, size_t len);
+void ap_mem_access_setup(adiv5_access_port_s *ap, target_addr_t addr, align_e align);
+void adiv5_mem_write_bytes(adiv5_access_port_s *ap, target_addr_t dest, const void *src, size_t len, align_e align);
+void advi5_mem_read_bytes(adiv5_access_port_s *ap, void *dest, target_addr_t src, size_t len);
 void firmware_ap_write(adiv5_access_port_s *ap, uint16_t addr, uint32_t value);
 uint32_t firmware_ap_read(adiv5_access_port_s *ap, uint16_t addr);
 uint32_t firmware_swdp_low_access(adiv5_debug_port_s *dp, uint8_t RnW, uint16_t addr, uint32_t value);

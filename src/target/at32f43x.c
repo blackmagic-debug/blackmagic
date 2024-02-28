@@ -327,7 +327,7 @@ static bool at32f43_flash_write(target_flash_s *target_flash, target_addr_t dest
 
 	/* Write to bank corresponding to flash region */
 	target_mem_write32(target, AT32F43x_FLASH_CTRL + bank_reg_offset, AT32F43x_FLASH_CTRL_FPRGM);
-	cortexm_mem_write_sized(target, dest, src, len, psize);
+	cortexm_mem_write_aligned(target, dest, src, len, psize);
 
 	/* Datasheet: flash programming takes 50us (typ), 200us (max) */
 	return at32f43_flash_busy_wait(target, bank_reg_offset, NULL);

@@ -702,7 +702,7 @@ static bool stm32f1_flash_write(target_flash_s *flash, target_addr_t dest, const
 		if (target->designer_code == JEP106_MANUFACTURER_RV_GIGADEVICE && target->cpuid == 0x80000022U)
 			target_mem_write(target, dest, src, offset);
 		else
-			cortexm_mem_write_sized(target, dest, src, offset, psize);
+			cortexm_mem_write_aligned(target, dest, src, offset, psize);
 
 		/* Wait for completion or an error */
 		if (!stm32f1_flash_busy_wait(target, FLASH_BANK1_OFFSET, NULL))
@@ -720,7 +720,7 @@ static bool stm32f1_flash_write(target_flash_s *flash, target_addr_t dest, const
 		if (target->designer_code == JEP106_MANUFACTURER_RV_GIGADEVICE && target->cpuid == 0x80000022U)
 			target_mem_write(target, dest + offset, data + offset, remainder);
 		else
-			cortexm_mem_write_sized(target, dest + offset, data + offset, remainder, psize);
+			cortexm_mem_write_aligned(target, dest + offset, data + offset, remainder, psize);
 
 		/* Wait for completion or an error */
 		if (!stm32f1_flash_busy_wait(target, FLASH_BANK2_OFFSET, NULL))

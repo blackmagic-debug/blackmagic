@@ -864,10 +864,10 @@ static void cortexm_regs_write(target_s *const target, const void *const data)
 #endif
 }
 
-int cortexm_mem_write_sized(target_s *target, target_addr_t dest, const void *src, size_t len, align_e align)
+int cortexm_mem_write_aligned(target_s *target, target_addr_t dest, const void *src, size_t len, align_e align)
 {
 	cortexm_cache_clean(target, dest, len, true);
-	adiv5_mem_write_sized(cortex_ap(target), dest, src, len, align);
+	adiv5_mem_write_aligned(cortex_ap(target), dest, src, len, align);
 	return target_check_error(target);
 }
 

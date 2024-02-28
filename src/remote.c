@@ -456,7 +456,7 @@ static void remote_packet_process_adiv5(const char *const packet, const size_t p
 		/* And decode the data from the packet into it */
 		unhexify(data, packet + 32U, length);
 		/* Perform the write and report success/failures */
-		adiv5_mem_write_sized(&remote_ap, dest, data, length, align);
+		adiv5_mem_write_aligned(&remote_ap, dest, data, length, align);
 		remote_adiv5_respond(NULL, 0);
 		break;
 	}

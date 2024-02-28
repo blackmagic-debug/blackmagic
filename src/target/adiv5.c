@@ -1144,7 +1144,7 @@ void adiv5_dp_init(adiv5_debug_port_s *const dp)
 }
 
 /* Program the CSW and TAR for sequential access at a given width */
-void ap_mem_access_setup(adiv5_access_port_s *ap, uint32_t addr, align_e align)
+void ap_mem_access_setup(adiv5_access_port_s *ap, target_addr_t addr, align_e align)
 {
 	uint32_t csw = ap->csw | ADIV5_AP_CSW_ADDRINC_SINGLE;
 
@@ -1167,7 +1167,7 @@ void ap_mem_access_setup(adiv5_access_port_s *ap, uint32_t addr, align_e align)
 }
 
 /* Unpack data from the source uint32_t value based on data alignment and source address */
-void *adiv5_unpack_data(void *const dest, const uint32_t src, const uint32_t data, const align_e align)
+void *adiv5_unpack_data(void *const dest, const target_addr_t src, const uint32_t data, const align_e align)
 {
 	switch (align) {
 	case ALIGN_8BIT: {
@@ -1203,7 +1203,7 @@ void *adiv5_unpack_data(void *const dest, const uint32_t src, const uint32_t dat
 }
 
 /* Pack data from the source value into a uint32_t based on data alignment and source address */
-const void *adiv5_pack_data(const uint32_t dest, const void *const src, uint32_t *const data, const align_e align)
+const void *adiv5_pack_data(const target_addr_t dest, const void *const src, uint32_t *const data, const align_e align)
 {
 	switch (align) {
 	case ALIGN_8BIT: {
@@ -1233,7 +1233,7 @@ const void *adiv5_pack_data(const uint32_t dest, const void *const src, uint32_t
 	return (const uint8_t *)src + (1 << align);
 }
 
-void advi5_mem_read_bytes(adiv5_access_port_s *const ap, void *dest, uint32_t src, size_t len)
+void advi5_mem_read_bytes(adiv5_access_port_s *const ap, void *dest, target_addr_t src, size_t len)
 {
 	uint32_t osrc = src;
 	const align_e align = MIN_ALIGN(src, len);
@@ -1260,7 +1260,7 @@ void advi5_mem_read_bytes(adiv5_access_port_s *const ap, void *dest, uint32_t sr
 	adiv5_unpack_data(dest, src, value, align);
 }
 
-void adiv5_mem_write_bytes(adiv5_access_port_s *ap, uint32_t dest, const void *src, size_t len, align_e align)
+void adiv5_mem_write_bytes(adiv5_access_port_s *ap, target_addr_t dest, const void *src, size_t len, align_e align)
 {
 	uint32_t odest = dest;
 
@@ -1298,8 +1298,8 @@ uint32_t firmware_ap_read(adiv5_access_port_s *ap, uint16_t addr)
 	return ret;
 }
 
-void adiv5_mem_write(adiv5_access_port_s *const ap, const uint32_t dest, const void *const src, const size_t len)
+void adiv5_mem_write(adiv5_access_port_s *const ap, const target_addr_t dest, const void *const src, const size_t len)
 {
 	const align_e align = MIN_ALIGN(dest, len);
-	adiv5_mem_write_sized(ap, dest, src, len, align);
+	adiv5_mem_write_aligned(ap, dest, src, len, align);
 }
