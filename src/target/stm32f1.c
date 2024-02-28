@@ -358,7 +358,7 @@ void mm32l0_mem_write_sized(adiv5_access_port_s *ap, uint32_t dest, const void *
 	uint32_t odest = dest;
 
 	len >>= align;
-	ap_mem_access_setup(ap, dest, align);
+	adiv5_mem_access_setup(ap, dest, align);
 	while (len--) {
 		uint32_t tmp = 0;
 		/* Pack data into correct data lane */

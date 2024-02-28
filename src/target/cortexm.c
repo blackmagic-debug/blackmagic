@@ -800,7 +800,7 @@ static void cortexm_regs_read(target_s *const target, void *const data)
 		 * debug registers DHCSR, DCRSR, DCRDR and DEMCR respectively
 		 * and do so for 32-bit access
 		 */
-		ap_mem_access_setup(ap, CORTEXM_DHCSR, ALIGN_32BIT);
+		adiv5_mem_access_setup(ap, CORTEXM_DHCSR, ALIGN_32BIT);
 		/* Configure the bank selection to the appropriate AP register bank */
 		adiv5_dp_write(ap->dp, ADIV5_DP_SELECT, ((uint32_t)ap->apsel << 24U) | 0x10U);
 
@@ -843,7 +843,7 @@ static void cortexm_regs_write(target_s *const target, const void *const data)
 		 * debug registers DHCSR, DCRSR, DCRDR and DEMCR respectively
 		 * and do so for 32-bit access
 		 */
-		ap_mem_access_setup(ap, CORTEXM_DHCSR, ALIGN_32BIT);
+		adiv5_mem_access_setup(ap, CORTEXM_DHCSR, ALIGN_32BIT);
 		/* Configure the bank selection to the appropriate AP register bank */
 		adiv5_dp_write(ap->dp, ADIV5_DP_SELECT, ((uint32_t)ap->apsel << 24U) | 0x10U);
 
