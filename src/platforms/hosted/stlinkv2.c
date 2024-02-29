@@ -679,6 +679,11 @@ static int stlink_usb_get_rw_status(bool verbose)
 
 static void stlink_mem_read(adiv5_access_port_s *ap, void *dest, target_addr64_t src, size_t len)
 {
+	/* Check if this is supposed to be a 64-bit access and bail gracefully if it is */
+	if (ap->flags & ADIV5_AP_FLAGS_64BIT) {
+		DEBUG_ERROR("%s unable to do 64-bit memory access\n", __func__);
+		return;
+	}
 	if (len == 0)
 		return;
 	if (!stlink_ensure_ap(ap->apsel))
@@ -733,6 +738,11 @@ static void stlink_mem_read(adiv5_access_port_s *ap, void *dest, target_addr64_t
 static void stlink_mem_write(adiv5_access_port_s *const ap, const target_addr64_t dest, const void *const src,
 	const size_t len, const align_e align)
 {
+	/* Check if this is supposed to be a 64-bit access and bail gracefully if it is */
+	if (ap->flags & ADIV5_AP_FLAGS_64BIT) {
+		DEBUG_ERROR("%s unable to do 64-bit memory access\n", __func__);
+		return;
+	}
 	if (len == 0)
 		return;
 	if (!stlink_ensure_ap(ap->apsel))
