@@ -948,8 +948,8 @@ void adiv5_dp_init(adiv5_debug_port_s *const dp)
 	 * We have to initialise the DP routines up front before any adiv5_* functions are called or
 	 * bad things happen under BMDA (particularly CMSIS-DAP)
 	 */
-	dp->ap_write = firmware_ap_write;
-	dp->ap_read = firmware_ap_read;
+	dp->ap_write = adiv5_ap_reg_write;
+	dp->ap_read = adiv5_ap_reg_read;
 	dp->mem_read = advi5_mem_read_bytes;
 	dp->mem_write = adiv5_mem_write_bytes;
 #if PC_HOSTED == 1
@@ -1309,20 +1309,18 @@ void adiv5_mem_write_bytes(
 	adiv5_dp_read(ap->dp, ADIV5_DP_RDBUFF);
 }
 
-void firmware_ap_write(adiv5_access_port_s *ap, uint16_t addr, uint32_t value)
+void adiv5_ap_reg_write(adiv5_access_port_s *ap, uint16_t addr, uint32_t value)
 {
 	adiv5_dp_recoverable_access(
 		ap->dp, ADIV5_LOW_WRITE, ADIV5_DP_SELECT, ((uint32_t)ap->apsel << 24U) | (addr & 0xf0U));
 	adiv5_dp_write(ap->dp, addr, value);
 }
 
-uint32_t firmware_ap_read(adiv5_access_port_s *ap, uint16_t addr)
+uint32_t adiv5_ap_reg_read(adiv5_access_port_s *ap, uint16_t addr)
 {
-	uint32_t ret;
 	adiv5_dp_recoverable_access(
 		ap->dp, ADIV5_LOW_WRITE, ADIV5_DP_SELECT, ((uint32_t)ap->apsel << 24U) | (addr & 0xf0U));
-	ret = adiv5_dp_read(ap->dp, addr);
-	return ret;
+	return adiv5_dp_read(ap->dp, addr);
 }
 
 void adiv5_mem_write(adiv5_access_port_s *const ap, const target_addr_t dest, const void *const src, const size_t len)

@@ -116,8 +116,8 @@ static void remote_respond_string(const char response_code, const char *const st
  * pointers to reconfigure this structure appropriately.
  */
 static adiv5_debug_port_s remote_dp = {
-	.ap_read = firmware_ap_read,
-	.ap_write = firmware_ap_write,
+	.ap_read = adiv5_ap_reg_read,
+	.ap_write = adiv5_ap_reg_write,
 	.mem_read = advi5_mem_read_bytes,
 	.mem_write = adiv5_mem_write_bytes,
 };

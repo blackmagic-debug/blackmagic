@@ -457,8 +457,8 @@ void adiv5_mem_access_setup(adiv5_access_port_s *ap, target_addr64_t addr, align
 void adiv5_mem_write_bytes(adiv5_access_port_s *ap, target_addr64_t dest, const void *src, size_t len, align_e align);
 void advi5_mem_read_bytes(adiv5_access_port_s *ap, void *dest, target_addr64_t src, size_t len);
 /* ADIv5 logical operation functions for AP register I/O */
-void firmware_ap_write(adiv5_access_port_s *ap, uint16_t addr, uint32_t value);
-uint32_t firmware_ap_read(adiv5_access_port_s *ap, uint16_t addr);
+void adiv5_ap_reg_write(adiv5_access_port_s *ap, uint16_t addr, uint32_t value);
+uint32_t adiv5_ap_reg_read(adiv5_access_port_s *ap, uint16_t addr);
 
 /* ADIv5 DP logical operation function for reading DPIDR safely */
 uint32_t adiv5_dp_read_dpidr(adiv5_debug_port_s *dp);
