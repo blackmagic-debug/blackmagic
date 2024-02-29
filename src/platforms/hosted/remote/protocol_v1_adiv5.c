@@ -134,6 +134,11 @@ void remote_v1_adiv5_ap_write(adiv5_access_port_s *const ap, const uint16_t addr
 void remote_v1_adiv5_mem_read_bytes(
 	adiv5_access_port_s *const ap, void *const dest, const target_addr64_t src, const size_t read_length)
 {
+	/* Check if this is supposed to be a 64-bit access and bail gracefully if it is */
+	if (ap->flags & ADIV5_AP_FLAGS_64BIT) {
+		DEBUG_ERROR("%s unable to do 64-bit memory access\n", __func__);
+		return;
+	}
 	/* Check if we have anything to do */
 	if (!read_length)
 		return;
@@ -168,6 +173,11 @@ void remote_v1_adiv5_mem_read_bytes(
 void remote_v1_adiv5_mem_write_bytes(adiv5_access_port_s *const ap, const target_addr64_t dest, const void *const src,
 	const size_t write_length, const align_e align)
 {
+	/* Check if this is supposed to be a 64-bit access and bail gracefully if it is */
+	if (ap->flags & ADIV5_AP_FLAGS_64BIT) {
+		DEBUG_ERROR("%s unable to do 64-bit memory access\n", __func__);
+		return;
+	}
 	/* Check if we have anything to do */
 	if (!write_length)
 		return;
