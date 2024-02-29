@@ -84,3 +84,8 @@ option(
 	value: '0',
 	description: 'Alternative pinout for probe (only applicable to blackpill-f4*)'
 )
+option(
+	'enable_gpiod',
+	type: 'feature',
+	value: 'auto'
+)
