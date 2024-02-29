@@ -144,6 +144,21 @@ libusb = dependency(
 	native: is_cross_build,
 )
 
+if build_machine.system() == 'linux'
+	libgpiod = dependency(
+		'libgpiod',
+		version: ['>=1.0.0', '<2.0.0'],
+		required: get_option('enable_gpiod'),
+		native: is_cross_build,
+	)
+
+	if libgpiod.found()
+		bmda_args += ['-DENABLE_GPIOD=1']
+	endif
+else
+	libgpiod = declare_dependency()
+endif
+
 # If we did not find all the dependencies we need, turn this into a disabler, otherwise
 # build a dependency object that describes the sources needed to build BMDA for the build platform
 if not libftdi.found() or not hidapi.found() or not libusb.found()
@@ -154,6 +169,6 @@ else
 		sources: bmda_sources,
 		compile_args: cc.get_supported_arguments(bmda_args),
 		link_args: bmda_link_args,
-		dependencies: [libbmd_core, bmda_deps, libftdi, hidapi, libusb],
+		dependencies: [libbmd_core, bmda_deps, libftdi, hidapi, libusb, libgpiod],
 	)
 endif
