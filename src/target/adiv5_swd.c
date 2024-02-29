@@ -159,9 +159,9 @@ bool adiv5_swd_scan(const uint32_t targetid)
 
 	dp->write_no_check = adiv5_swd_write_no_check;
 	dp->read_no_check = adiv5_swd_read_no_check;
-	dp->error = adiv5_swd_clear_error;
 	dp->dp_read = adiv5_swd_read;
 	dp->low_access = adiv5_swd_raw_access;
+	dp->error = adiv5_swd_clear_error;
 	dp->abort = adiv5_swd_abort;
 
 #if PC_HOSTED == 0

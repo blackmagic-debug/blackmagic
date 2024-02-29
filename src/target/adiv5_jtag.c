@@ -49,8 +49,8 @@ void adiv5_jtag_dp_handler(const uint8_t dev_index)
 	dp->dev_index = dev_index;
 
 	dp->dp_read = adiv5_jtag_read;
-	dp->error = adiv5_jtag_clear_error;
 	dp->low_access = adiv5_jtag_raw_access;
+	dp->error = adiv5_jtag_clear_error;
 	dp->abort = adiv5_jtag_abort;
 #if PC_HOSTED == 1
 	bmda_jtag_dp_init(dp);

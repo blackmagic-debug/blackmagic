@@ -421,44 +421,60 @@ static inline uint32_t adiv5_dp_recoverable_access(adiv5_debug_port_s *dp, uint8
 	return result;
 }
 
+/* JTAG DP discovery handler */
+void adiv5_jtag_dp_handler(uint8_t dev_index);
+
+/* SWD multi-drop DP discovery handler */
+void adiv5_swd_multidrop_scan(adiv5_debug_port_s *dp, uint32_t targetid);
+
+/* DP and AP discovery functions */
 void adiv5_dp_init(adiv5_debug_port_s *dp);
-void bmda_adiv5_dp_init(adiv5_debug_port_s *dp);
 adiv5_access_port_s *adiv5_new_ap(adiv5_debug_port_s *dp, uint8_t apsel);
-void remote_jtag_dev(const jtag_dev_s *jtag_dev);
+
+/* AP lifetime management functions */
 void adiv5_ap_ref(adiv5_access_port_s *ap);
 void adiv5_ap_unref(adiv5_access_port_s *ap);
-void bmda_add_jtag_dev(uint32_t dev_index, const jtag_dev_s *jtag_dev);
 
-void adiv5_jtag_dp_handler(uint8_t jd_index);
 #if PC_HOSTED == 1
+/* BMDA interposition functions for DP setup */
+void bmda_adiv5_dp_init(adiv5_debug_port_s *dp);
 void bmda_jtag_dp_init(adiv5_debug_port_s *dp);
 bool bmda_swd_dp_init(adiv5_debug_port_s *dp);
+
+/* BMDA interposition function for JTAG device setup */
+void bmda_add_jtag_dev(uint32_t dev_index, const jtag_dev_s *jtag_dev);
 #endif
 
-void adiv5_mem_write(adiv5_access_port_s *ap, target_addr_t dest, const void *src, size_t len);
+/* Data transfer value packing/unpacking helper functions */
 void *adiv5_unpack_data(void *dest, target_addr32_t src, uint32_t val, align_e align);
 const void *adiv5_pack_data(target_addr32_t dest, const void *src, uint32_t *data, align_e align);
 
+/* ADIv5 high-level memory write function */
+void adiv5_mem_write(adiv5_access_port_s *ap, target_addr_t dest, const void *src, size_t len);
+
+/* ADIv5 low-level logical operation functions for memory access */
 void adiv5_mem_access_setup(adiv5_access_port_s *ap, target_addr64_t addr, align_e align);
 void adiv5_mem_write_bytes(adiv5_access_port_s *ap, target_addr64_t dest, const void *src, size_t len, align_e align);
 void advi5_mem_read_bytes(adiv5_access_port_s *ap, void *dest, target_addr64_t src, size_t len);
+/* ADIv5 logical operation functions for AP register I/O */
 void firmware_ap_write(adiv5_access_port_s *ap, uint16_t addr, uint32_t value);
 uint32_t firmware_ap_read(adiv5_access_port_s *ap, uint16_t addr);
-uint32_t adiv5_swd_raw_access(adiv5_debug_port_s *dp, uint8_t RnW, uint16_t addr, uint32_t value);
-uint32_t adiv5_jtag_raw_access(adiv5_debug_port_s *dp, uint8_t RnW, uint16_t addr, uint32_t value);
-uint32_t adiv5_swd_read(adiv5_debug_port_s *dp, uint16_t addr);
-uint32_t adiv5_jtag_read(adiv5_debug_port_s *dp, uint16_t addr);
 
+/* ADIv5 DP logical operation function for reading DPIDR safely */
+uint32_t adiv5_dp_read_dpidr(adiv5_debug_port_s *dp);
+
+/* SWD low-level ADIv5 routines */
 bool adiv5_swd_write_no_check(uint16_t addr, uint32_t data);
 uint32_t adiv5_swd_read_no_check(uint16_t addr);
+uint32_t adiv5_swd_read(adiv5_debug_port_s *dp, uint16_t addr);
+uint32_t adiv5_swd_raw_access(adiv5_debug_port_s *dp, uint8_t rnw, uint16_t addr, uint32_t value);
 uint32_t adiv5_swd_clear_error(adiv5_debug_port_s *dp, bool protocol_recovery);
-uint32_t adiv5_jtag_clear_error(adiv5_debug_port_s *dp, bool protocol_recovery);
-
 void adiv5_swd_abort(adiv5_debug_port_s *dp, uint32_t abort);
+
+/* JTAG low-level ADIv5 routines */
+uint32_t adiv5_jtag_read(adiv5_debug_port_s *dp, uint16_t addr);
+uint32_t adiv5_jtag_raw_access(adiv5_debug_port_s *dp, uint8_t rnw, uint16_t addr, uint32_t value);
+uint32_t adiv5_jtag_clear_error(adiv5_debug_port_s *dp, bool protocol_recovery);
 void adiv5_jtag_abort(adiv5_debug_port_s *dp, uint32_t abort);
-
-void adiv5_swd_multidrop_scan(adiv5_debug_port_s *dp, uint32_t targetid);
-
-uint32_t adiv5_dp_read_dpidr(adiv5_debug_port_s *dp);
 
 #endif /* TARGET_ADIV5_H */
