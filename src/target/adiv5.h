@@ -444,9 +444,9 @@ void adiv5_mem_write_bytes(adiv5_access_port_s *ap, target_addr64_t dest, const 
 void advi5_mem_read_bytes(adiv5_access_port_s *ap, void *dest, target_addr64_t src, size_t len);
 void firmware_ap_write(adiv5_access_port_s *ap, uint16_t addr, uint32_t value);
 uint32_t firmware_ap_read(adiv5_access_port_s *ap, uint16_t addr);
-uint32_t firmware_swdp_low_access(adiv5_debug_port_s *dp, uint8_t RnW, uint16_t addr, uint32_t value);
+uint32_t adiv5_swd_raw_access(adiv5_debug_port_s *dp, uint8_t RnW, uint16_t addr, uint32_t value);
 uint32_t adiv5_jtag_raw_access(adiv5_debug_port_s *dp, uint8_t RnW, uint16_t addr, uint32_t value);
-uint32_t firmware_swdp_read(adiv5_debug_port_s *dp, uint16_t addr);
+uint32_t adiv5_swd_read(adiv5_debug_port_s *dp, uint16_t addr);
 uint32_t adiv5_jtag_read(adiv5_debug_port_s *dp, uint16_t addr);
 
 bool adiv5_swd_write_no_check(uint16_t addr, uint32_t data);
@@ -454,7 +454,7 @@ uint32_t adiv5_swd_read_no_check(uint16_t addr);
 uint32_t adiv5_swd_clear_error(adiv5_debug_port_s *dp, bool protocol_recovery);
 uint32_t adiv5_jtag_clear_error(adiv5_debug_port_s *dp, bool protocol_recovery);
 
-void firmware_swdp_abort(adiv5_debug_port_s *dp, uint32_t abort);
+void adiv5_swd_abort(adiv5_debug_port_s *dp, uint32_t abort);
 void adiv5_jtag_abort(adiv5_debug_port_s *dp, uint32_t abort);
 
 void adiv5_swd_multidrop_scan(adiv5_debug_port_s *dp, uint32_t targetid);

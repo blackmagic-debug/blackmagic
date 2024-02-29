@@ -129,10 +129,10 @@ static void remote_packet_process_swd(const char *const packet, const size_t pac
 		if (packet_len == 2) {
 			remote_dp.write_no_check = adiv5_swd_write_no_check;
 			remote_dp.read_no_check = adiv5_swd_read_no_check;
-			remote_dp.dp_read = firmware_swdp_read;
+			remote_dp.dp_read = adiv5_swd_read;
 			remote_dp.error = adiv5_swd_clear_error;
-			remote_dp.low_access = firmware_swdp_low_access;
-			remote_dp.abort = firmware_swdp_abort;
+			remote_dp.low_access = adiv5_swd_raw_access;
+			remote_dp.abort = adiv5_swd_abort;
 			swdptap_init();
 			remote_respond(REMOTE_RESP_OK, 0);
 		} else

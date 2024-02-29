@@ -160,9 +160,9 @@ bool adiv5_swd_scan(const uint32_t targetid)
 	dp->write_no_check = adiv5_swd_write_no_check;
 	dp->read_no_check = adiv5_swd_read_no_check;
 	dp->error = adiv5_swd_clear_error;
-	dp->dp_read = firmware_swdp_read;
-	dp->low_access = firmware_swdp_low_access;
-	dp->abort = firmware_swdp_abort;
+	dp->dp_read = adiv5_swd_read;
+	dp->low_access = adiv5_swd_raw_access;
+	dp->abort = adiv5_swd_abort;
 
 #if PC_HOSTED == 0
 	swdptap_init();
@@ -330,7 +330,7 @@ void adiv5_swd_multidrop_scan(adiv5_debug_port_s *const dp, const uint32_t targe
 	free(dp);
 }
 
-uint32_t firmware_swdp_read(adiv5_debug_port_s *dp, uint16_t addr)
+uint32_t adiv5_swd_read(adiv5_debug_port_s *dp, uint16_t addr)
 {
 	if (addr & ADIV5_APnDP) {
 		adiv5_dp_recoverable_access(dp, ADIV5_LOW_READ, addr, 0);
@@ -375,7 +375,7 @@ uint32_t adiv5_swd_clear_error(adiv5_debug_port_s *const dp, const bool protocol
 	return err;
 }
 
-uint32_t firmware_swdp_low_access(adiv5_debug_port_s *dp, const uint8_t RnW, const uint16_t addr, const uint32_t value)
+uint32_t adiv5_swd_raw_access(adiv5_debug_port_s *dp, const uint8_t RnW, const uint16_t addr, const uint32_t value)
 {
 	if ((addr & ADIV5_APnDP) && dp->fault)
 		return 0;
@@ -445,7 +445,7 @@ uint32_t firmware_swdp_low_access(adiv5_debug_port_s *dp, const uint8_t RnW, con
 	return response;
 }
 
-void firmware_swdp_abort(adiv5_debug_port_s *dp, uint32_t abort)
+void adiv5_swd_abort(adiv5_debug_port_s *dp, uint32_t abort)
 {
 	adiv5_dp_write(dp, ADIV5_DP_ABORT, abort);
 }
