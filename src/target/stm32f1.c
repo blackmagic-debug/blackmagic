@@ -348,52 +348,69 @@ bool at32f40x_probe(target_s *target)
 	return false;
 }
 
+/* Pack data from the source value into a uint32_t based on data alignment */
+const void *mm32l0_pack_data(const void *const src, uint32_t *const data, const align_e align)
+{
+	switch (align) {
+	case ALIGN_8BIT: {
+		uint8_t value;
+		/* Copy the data to pack in from the source buffer */
+		memcpy(&value, src, sizeof(value));
+		/* Then broadcast it to all 4 bytes of the uint32_t */
+		*data = (uint32_t)value | ((uint32_t)value << 8U) | ((uint32_t)value << 16U) | ((uint32_t)value << 24U);
+		break;
+	}
+	case ALIGN_16BIT: {
+		uint16_t value;
+		/* Copy the data to pack in from the source buffer (avoids unaligned read issues) */
+		memcpy(&value, src, sizeof(value));
+		/* Then broadcast it to both halfs of the uint32_t */
+		*data = (uint32_t)value | ((uint32_t)value << 16U);
+		break;
+	}
+	default:
+		/*
+		 * 32- and 64-bit aligned reads don't need to do anything special beyond using memcpy()
+		 * to avoid doing  an unaligned read of src, or any UB casts.
+		 */
+		memcpy(data, src, sizeof(*data));
+		break;
+	}
+	return (const uint8_t *)src + (1U << align);
+}
+
 /*
- * On STM32, 16-bit writes use bits 0:15 for even halfwords; bits 16:31 for odd halfwords.
- * On MM32 cortex-m0, 16-bit writes always use bits 0:15.
- * Set both halfwords to the same value, works on both STM32 and MM32.
+ * Perform a memory write. Unlike with fully compliant ADIv5 devices, MM32 ones, like the
+ * Cortex-M0 based MM32L0 parts always use the lowest lane (0:7, 0:15, etc) for the data.
+ * Broadcasting the value to write to all lanes is harmless though and works for both
+ * MM32 devices and STM32 devices which comply properly with ADIv5.
  */
 void mm32l0_mem_write_sized(adiv5_access_port_s *ap, target_addr64_t dest, const void *src, size_t len, align_e align)
 {
-	uint32_t odest = dest;
-
-	len >>= align;
+	/* Do nothing and return if there's nothing to write */
+	if (len == 0U)
+		return;
+	/* Calculate the extent of the transfer (NB: no MM32 parts are 64-bit, so truncate) */
+	target_addr32_t begin = (target_addr32_t)dest;
+	const target_addr32_t end = begin + len;
+	/* Calculate how much each loop will increment the destination address by */
+	const uint8_t stride = 1U << align;
+	/* Set up the transfer */
 	adiv5_mem_access_setup(ap, dest, align);
-	while (len--) {
-		uint32_t tmp = 0;
-		/* Pack data into correct data lane */
-		switch (align) {
-		case ALIGN_8BIT: {
-			uint8_t value;
-			memcpy(&value, src, sizeof(value));
-			/* copy byte to be written to all four bytes of the uint32_t */
-			tmp = (uint32_t)value;
-			tmp = tmp | tmp << 8U;
-			tmp = tmp | tmp << 16U;
-			break;
-		}
-		case ALIGN_16BIT: {
-			uint16_t value;
-			memcpy(&value, src, sizeof(value));
-			/* copy halfword to be written to both halfwords of the uint32_t */
-			tmp = (uint32_t)value;
-			tmp = tmp | tmp << 16U;
-			break;
-		}
-		case ALIGN_64BIT:
-		case ALIGN_32BIT:
-			memcpy(&tmp, src, sizeof(tmp));
-			break;
-		}
-		src = (uint8_t *)src + (1 << align);
-		dest += (1 << align);
-		adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_DRW, tmp);
-
-		/* Check for 10 bit address overflow */
-		if ((dest ^ odest) & 0xfffffc00U) {
-			odest = dest;
-			adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_TAR_LOW, dest);
-		}
+	/* Now loop through the data and move it 1 stride at a time to the target */
+	for (; begin < end; begin += stride) {
+		/*
+		 * Check if the address doesn't overflow the 10-bit auto increment bound for TAR,
+		 * if it's not the first transfer (offset == 0)
+		 */
+		if (begin != dest && (begin & 0x00000effU) == 0U)
+			/* Update TAR to adjust the upper bits */
+			adiv5_dp_write(ap->dp, ADIV5_AP_TAR_LOW, begin);
+		/* Pack the data for transfer */
+		uint32_t value = 0;
+		src = mm32l0_pack_data(src, &value, align);
+		/* And copy the result to the target */
+		adiv5_dp_write(ap->dp, ADIV5_AP_DRW, value);
 	}
 	/* Make sure this write is complete by doing a dummy read */
 	adiv5_dp_read(ap->dp, ADIV5_DP_RDBUFF);
