@@ -380,6 +380,7 @@ static void remote_packet_process_adiv5(const char *const packet, const size_t p
 
 	/* Set up the DP and a fake AP structure to perform the access with */
 	remote_dp.dev_index = hex_string_to_num(2, packet + 2);
+	remote_dp.fault = 0U;
 	adiv5_access_port_s remote_ap;
 	remote_ap.apsel = hex_string_to_num(2, packet + 4);
 	remote_ap.dp = &remote_dp;
