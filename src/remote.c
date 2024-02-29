@@ -182,10 +182,10 @@ static void remote_packet_process_jtag(const char *const packet, const size_t pa
 	case REMOTE_INIT: /* JS = initialise ============================= */
 		remote_dp.write_no_check = NULL;
 		remote_dp.read_no_check = NULL;
-		remote_dp.dp_read = fw_adiv5_jtagdp_read;
-		remote_dp.error = adiv5_jtagdp_error;
-		remote_dp.low_access = fw_adiv5_jtagdp_low_access;
-		remote_dp.abort = adiv5_jtagdp_abort;
+		remote_dp.dp_read = adiv5_jtag_read;
+		remote_dp.error = adiv5_jtag_clear_error;
+		remote_dp.low_access = adiv5_jtag_raw_access;
+		remote_dp.abort = adiv5_jtag_abort;
 		jtagtap_init();
 		remote_respond(REMOTE_RESP_OK, 0);
 		break;

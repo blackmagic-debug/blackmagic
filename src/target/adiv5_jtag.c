@@ -18,7 +18,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* This file implements the JTAG-DP specific functions of the
+/*
+ * This file implements the JTAG-DP specific functions of the
  * ARM Debug Interface v5 Architecture Specification, ARM doc IHI0031A.
  */
 
@@ -47,10 +48,10 @@ void adiv5_jtag_dp_handler(const uint8_t dev_index)
 
 	dp->dev_index = dev_index;
 
-	dp->dp_read = fw_adiv5_jtagdp_read;
-	dp->error = adiv5_jtagdp_error;
-	dp->low_access = fw_adiv5_jtagdp_low_access;
-	dp->abort = adiv5_jtagdp_abort;
+	dp->dp_read = adiv5_jtag_read;
+	dp->error = adiv5_jtag_clear_error;
+	dp->low_access = adiv5_jtag_raw_access;
+	dp->abort = adiv5_jtag_abort;
 #if PC_HOSTED == 1
 	bmda_jtag_dp_init(dp);
 #endif
@@ -81,13 +82,13 @@ void adiv5_jtag_dp_handler(const uint8_t dev_index)
 	adiv5_dp_init(dp);
 }
 
-uint32_t fw_adiv5_jtagdp_read(adiv5_debug_port_s *dp, uint16_t addr)
+uint32_t adiv5_jtag_read(adiv5_debug_port_s *dp, uint16_t addr)
 {
-	fw_adiv5_jtagdp_low_access(dp, ADIV5_LOW_READ, addr, 0);
-	return fw_adiv5_jtagdp_low_access(dp, ADIV5_LOW_READ, ADIV5_DP_RDBUFF, 0);
+	adiv5_jtag_raw_access(dp, ADIV5_LOW_READ, addr, 0);
+	return adiv5_jtag_raw_access(dp, ADIV5_LOW_READ, ADIV5_DP_RDBUFF, 0);
 }
 
-uint32_t adiv5_jtagdp_error(adiv5_debug_port_s *dp, const bool protocol_recovery)
+uint32_t adiv5_jtag_clear_error(adiv5_debug_port_s *dp, const bool protocol_recovery)
 {
 	(void)protocol_recovery;
 	const uint32_t status = adiv5_dp_read(dp, ADIV5_DP_CTRLSTAT) & ADIV5_DP_CTRLSTAT_ERRMASK;
@@ -95,7 +96,7 @@ uint32_t adiv5_jtagdp_error(adiv5_debug_port_s *dp, const bool protocol_recovery
 	return adiv5_dp_low_access(dp, ADIV5_LOW_WRITE, ADIV5_DP_CTRLSTAT, status) & 0x32U;
 }
 
-uint32_t fw_adiv5_jtagdp_low_access(adiv5_debug_port_s *dp, uint8_t RnW, uint16_t addr, uint32_t value)
+uint32_t adiv5_jtag_raw_access(adiv5_debug_port_s *dp, uint8_t RnW, uint16_t addr, uint32_t value)
 {
 	const bool APnDP = addr & ADIV5_APnDP;
 	addr &= 0xffU;
@@ -131,7 +132,7 @@ uint32_t fw_adiv5_jtagdp_low_access(adiv5_debug_port_s *dp, uint8_t RnW, uint16_
 	return result;
 }
 
-void adiv5_jtagdp_abort(adiv5_debug_port_s *dp, uint32_t abort)
+void adiv5_jtag_abort(adiv5_debug_port_s *dp, uint32_t abort)
 {
 	uint64_t request = (uint64_t)abort << 3U;
 	jtag_dev_write_ir(dp->dev_index, IR_ABORT);

@@ -868,7 +868,7 @@ static void adiv5_dp_clear_sticky_errors(adiv5_debug_port_s *dp)
 	if (dp->version)
 		adiv5_dp_abort(dp, ADIV5_DP_ABORT_STKERRCLR);
 	else
-		/* For JTAG-DPs (which all DPv0 DPs are), use the adiv5_jtagdp_error routine */
+		/* For JTAG-DPs (which all DPv0 DPs are), use the adiv5_jtag_clear_error routine */
 		adiv5_dp_error(dp);
 }
 
