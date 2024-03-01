@@ -27,6 +27,7 @@
 #include "jtag_scan.h"
 #include "swd.h"
 #include "adiv5_internal.h"
+#include "adiv5_interface.h"
 
 /* DP DPIDR */
 #define ADIV5_DP_DPIDR_REVISION_OFFSET 28U
@@ -209,91 +210,6 @@
 #define ADIV5_DP_QUIRK_DUPED_AP (1U << 1U) /* DP has only 1 AP but the address decoding is bugged */
 /* This one is not a quirk, but the field's a convinient place to store this */
 #define ADIV5_AP_ACCESS_BANKED (1U << 7U) /* Last AP access was done using the banked interface */
-
-#if PC_HOSTED == 0
-static inline bool adiv5_write_no_check(adiv5_debug_port_s *const dp, uint16_t addr, const uint32_t value)
-{
-	return dp->write_no_check(addr, value);
-}
-
-static inline uint32_t adiv5_read_no_check(adiv5_debug_port_s *const dp, uint16_t addr)
-{
-	return dp->read_no_check(addr);
-}
-
-static inline uint32_t adiv5_dp_read(adiv5_debug_port_s *dp, uint16_t addr)
-{
-	return dp->dp_read(dp, addr);
-}
-
-static inline uint32_t adiv5_dp_error(adiv5_debug_port_s *dp)
-{
-	return dp->error(dp, false);
-}
-
-static inline uint32_t adiv5_dp_low_access(adiv5_debug_port_s *dp, uint8_t RnW, uint16_t addr, uint32_t value)
-{
-	return dp->low_access(dp, RnW, addr, value);
-}
-
-static inline void adiv5_dp_abort(adiv5_debug_port_s *dp, uint32_t abort)
-{
-	dp->abort(dp, abort);
-}
-
-static inline uint32_t adiv5_ap_read(adiv5_access_port_s *ap, uint16_t addr)
-{
-	return ap->dp->ap_read(ap, addr);
-}
-
-static inline void adiv5_ap_write(adiv5_access_port_s *ap, uint16_t addr, uint32_t value)
-{
-	ap->dp->ap_write(ap, addr, value);
-}
-
-static inline void adiv5_mem_read(adiv5_access_port_s *ap, void *dest, target_addr64_t src, size_t len)
-{
-	ap->dp->mem_read(ap, dest, src, len);
-}
-
-static inline void adiv5_mem_write_aligned(
-	adiv5_access_port_s *ap, target_addr64_t dest, const void *src, size_t len, align_e align)
-{
-	ap->dp->mem_write(ap, dest, src, len, align);
-}
-
-static inline void adiv5_dp_write(adiv5_debug_port_s *dp, uint16_t addr, uint32_t value)
-{
-	dp->low_access(dp, ADIV5_LOW_WRITE, addr, value);
-}
-#else
-bool adiv5_write_no_check(adiv5_debug_port_s *dp, uint16_t addr, uint32_t value);
-uint32_t adiv5_read_no_check(adiv5_debug_port_s *dp, uint16_t addr);
-uint32_t adiv5_dp_read(adiv5_debug_port_s *dp, uint16_t addr);
-uint32_t adiv5_dp_error(adiv5_debug_port_s *dp);
-uint32_t adiv5_dp_low_access(adiv5_debug_port_s *dp, uint8_t RnW, uint16_t addr, uint32_t value);
-void adiv5_dp_abort(adiv5_debug_port_s *dp, uint32_t abort);
-uint32_t adiv5_ap_read(adiv5_access_port_s *ap, uint16_t addr);
-void adiv5_ap_write(adiv5_access_port_s *ap, uint16_t addr, uint32_t value);
-void adiv5_mem_read(adiv5_access_port_s *ap, void *dest, target_addr64_t src, size_t len);
-void adiv5_mem_write_aligned(adiv5_access_port_s *ap, target_addr64_t dest, const void *src, size_t len, align_e align);
-void adiv5_dp_write(adiv5_debug_port_s *dp, uint16_t addr, uint32_t value);
-#endif
-
-static inline uint32_t adiv5_dp_recoverable_access(adiv5_debug_port_s *dp, uint8_t rnw, uint16_t addr, uint32_t value)
-{
-	const uint32_t result = dp->low_access(dp, rnw, addr, value);
-	/* If the access results in the no-response response, retry after clearing the error state */
-	if (dp->fault == SWDP_ACK_NO_RESPONSE) {
-		uint32_t response;
-		/* Wait the response period, then clear the error */
-		swd_proc.seq_in_parity(&response, 32);
-		DEBUG_WARN("Recovering and re-trying access\n");
-		dp->error(dp, true);
-		return dp->low_access(dp, rnw, addr, value);
-	}
-	return result;
-}
 
 /* JTAG DP discovery handler */
 void adiv5_jtag_dp_handler(uint8_t dev_index);

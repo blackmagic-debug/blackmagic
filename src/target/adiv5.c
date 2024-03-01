@@ -1328,3 +1328,108 @@ void adiv5_mem_write(adiv5_access_port_s *const ap, const target_addr_t dest, co
 	const align_e align = MIN_ALIGN(dest, len);
 	adiv5_mem_write_aligned(ap, dest, src, len, align);
 }
+
+#ifndef DEBUG_PROTO_IS_NOOP
+static void decode_dp_access(const uint8_t addr, const uint8_t rnw, const uint32_t value)
+{
+	/* How a DP address should be decoded depends on the bank that's presently selected, so make a note of that */
+	static uint8_t dp_bank = 0;
+	const char *reg = NULL;
+
+	/* Try to decode the requested address */
+	switch (addr) {
+	case 0x00U:
+		reg = rnw ? "DPIDR" : "ABORT";
+		break;
+	case 0x04U:
+		switch (dp_bank) {
+		case 0:
+			reg = rnw ? "STATUS" : "CTRL";
+			break;
+		case 1:
+			reg = "DLCR";
+			break;
+		case 2:
+			reg = "TARGETID";
+			break;
+		case 3:
+			reg = "DLPIDR";
+			break;
+		case 4:
+			reg = "EVENTSTAT";
+			break;
+		}
+		break;
+	case 0x08U:
+		if (!rnw)
+			dp_bank = value & 15U;
+		reg = rnw ? "RESEND" : "SELECT";
+		break;
+	case 0x0cU:
+		reg = rnw ? "RDBUFF" : "TARGETSEL";
+		break;
+	}
+
+	if (reg)
+		DEBUG_PROTO("%s: ", reg);
+	else
+		DEBUG_PROTO("Unknown DP register %02x: ", addr);
+}
+
+static void decode_ap_access(const uint8_t ap, const uint8_t addr)
+{
+	DEBUG_PROTO("AP %u ", ap);
+
+	const char *reg = NULL;
+	switch (addr) {
+	case 0x00U:
+		reg = "CSW";
+		break;
+	case 0x04U:
+		reg = "TAR";
+		break;
+	case 0x0cU:
+		reg = "DRW";
+		break;
+	case 0x10U:
+		reg = "DB0";
+		break;
+	case 0x14U:
+		reg = "DB1";
+		break;
+	case 0x18U:
+		reg = "DB2";
+		break;
+	case 0x1cU:
+		reg = "DB3";
+		break;
+	case 0xf8U:
+		reg = "BASE";
+		break;
+	case 0xf4U:
+		reg = "CFG";
+		break;
+	case 0xfcU:
+		reg = "IDR";
+		break;
+	}
+
+	if (reg)
+		DEBUG_PROTO("%s: ", reg);
+	else
+		DEBUG_PROTO("Reserved(%02x): ", addr);
+}
+
+void decode_access(const uint16_t addr, const uint8_t rnw, const uint8_t apsel, const uint32_t value)
+{
+	if (rnw)
+		DEBUG_PROTO("Read ");
+	else
+		DEBUG_PROTO("Write ");
+
+	if (addr & ADIV5_APnDP)
+		decode_ap_access(apsel, addr & 0xffU);
+	else
+		decode_dp_access(addr & 0xffU, rnw, value);
+}
+#endif
