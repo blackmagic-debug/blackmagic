@@ -30,6 +30,10 @@
 #include <unistd.h>
 #endif
 
+#if PC_HOSTED == 1
+#include "platform.h"
+#endif
+
 /* Fixup for when _FILE_OFFSET_BITS == 64 as unistd.h screws this up for us */
 #if defined(lseek)
 #undef lseek
