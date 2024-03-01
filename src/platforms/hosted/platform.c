@@ -781,10 +781,10 @@ void adiv5_ap_write(adiv5_access_port_s *ap, uint16_t addr, uint32_t value)
 	ap->dp->ap_write(ap, addr, value);
 }
 
-void adiv5_mem_read(adiv5_access_port_s *ap, void *dest, target_addr_t src, size_t len)
+void adiv5_mem_read(adiv5_access_port_s *ap, void *dest, target_addr64_t src, size_t len)
 {
 	ap->dp->mem_read(ap, dest, src, len);
-	DEBUG_PROTO("ap_memread @ %" PRIx32 " len %zu:", src, len);
+	DEBUG_PROTO("%s @ %" PRIx64 " len %zu:", __func__, src, len);
 	const uint8_t *const data = (const uint8_t *)dest;
 	for (size_t offset = 0; offset < len; ++offset) {
 		if (offset == 16U)
@@ -796,9 +796,9 @@ void adiv5_mem_read(adiv5_access_port_s *ap, void *dest, target_addr_t src, size
 	DEBUG_PROTO("\n");
 }
 
-void adiv5_mem_write_aligned(adiv5_access_port_s *ap, target_addr_t dest, const void *src, size_t len, align_e align)
+void adiv5_mem_write_aligned(adiv5_access_port_s *ap, target_addr64_t dest, const void *src, size_t len, align_e align)
 {
-	DEBUG_PROTO("ap_mem_write_sized @ %" PRIx32 " len %zu, align %d:", dest, len, 1 << align);
+	DEBUG_PROTO("%s @ %" PRIx64 " len %zu, align %d:", "adiv5_mem_write", dest, len, 1 << align);
 	const uint8_t *const data = (const uint8_t *)src;
 	for (size_t offset = 0; offset < len; ++offset) {
 		if (offset == 16U)

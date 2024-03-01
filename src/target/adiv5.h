@@ -377,13 +377,13 @@ static inline void adiv5_ap_write(adiv5_access_port_s *ap, uint16_t addr, uint32
 	ap->dp->ap_write(ap, addr, value);
 }
 
-static inline void adiv5_mem_read(adiv5_access_port_s *ap, void *dest, target_addr_t src, size_t len)
+static inline void adiv5_mem_read(adiv5_access_port_s *ap, void *dest, target_addr64_t src, size_t len)
 {
 	ap->dp->mem_read(ap, dest, src, len);
 }
 
 static inline void adiv5_mem_write_aligned(
-	adiv5_access_port_s *ap, target_addr_t dest, const void *src, size_t len, align_e align)
+	adiv5_access_port_s *ap, target_addr64_t dest, const void *src, size_t len, align_e align)
 {
 	ap->dp->mem_write(ap, dest, src, len, align);
 }
@@ -401,8 +401,8 @@ uint32_t adiv5_dp_low_access(adiv5_debug_port_s *dp, uint8_t RnW, uint16_t addr,
 void adiv5_dp_abort(adiv5_debug_port_s *dp, uint32_t abort);
 uint32_t adiv5_ap_read(adiv5_access_port_s *ap, uint16_t addr);
 void adiv5_ap_write(adiv5_access_port_s *ap, uint16_t addr, uint32_t value);
-void adiv5_mem_read(adiv5_access_port_s *ap, void *dest, target_addr_t src, size_t len);
-void adiv5_mem_write_aligned(adiv5_access_port_s *ap, target_addr_t dest, const void *src, size_t len, align_e align);
+void adiv5_mem_read(adiv5_access_port_s *ap, void *dest, target_addr64_t src, size_t len);
+void adiv5_mem_write_aligned(adiv5_access_port_s *ap, target_addr64_t dest, const void *src, size_t len, align_e align);
 void adiv5_dp_write(adiv5_debug_port_s *dp, uint16_t addr, uint32_t value);
 #endif
 
