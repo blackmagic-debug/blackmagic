@@ -140,9 +140,16 @@ static sockaddr_storage_s sockaddr_prepare(const uint16_t port)
 		return (sockaddr_storage_s){AF_UNSPEC};
 	}
 
-	/* Pick the first result, copy it and free the list structure getaddrinfo() returns */
+	/* Try to find an IPv6 result but fall back to the first result if none can be found */
 	sockaddr_storage_s service;
 	memcpy(&service, results->ai_addr, family_to_size(results->ai_addr->sa_family));
+	for (addrinfo_s *curr = results; curr; curr = curr->ai_next) {
+		if (curr->ai_addr->sa_family == AF_INET6) {
+			memcpy(&service, curr->ai_addr, family_to_size(curr->ai_addr->sa_family));
+			break;
+		}
+	}
+	/* Free the getaddrinfo result list */
 	freeaddrinfo(results);
 
 	/* Copy in the port number as appropriate for the returned structure */
