@@ -147,7 +147,7 @@ static bool bmda_gpiod_parse_gpio(const char *name, char *gpio)
 	DEBUG_INFO("gpiochip: %s offset: %u\n", gpio, gpio_off);
 	struct gpiod_line *line = gpiod_line_get(gpio, gpio_off);
 	if (!line) {
-		DEBUG_ERROR("Couldn't get GPIO: %s:%u errno: %d\n", gpio, gpio_off, errno);
+		DEBUG_ERROR("Couldn't get GPIO %s:%u, error %d: %s\n", gpio, gpio_off, errno, strerror(errno));
 		return false;
 	}
 
@@ -186,7 +186,7 @@ static bool bmda_gpiod_parse_gpio(const char *name, char *gpio)
 	return true;
 
 out_fail_close:
-	DEBUG_ERROR("Requesting gpio failed errno: %d", errno);
+	DEBUG_ERROR("Requesting gpio failed, error %d: %s", errno, strerror(errno));
 	gpiod_chip_close(gpiod_line_get_chip(line));
 	return false;
 }
