@@ -93,7 +93,7 @@ jobs:
 
       # Checkout the repository and branch to build under the default location
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       # Build the firmware for all platform variants and BMDA in BMP-only mode
       - name: Build all platform variants firmware and BMP only BMDA
@@ -186,7 +186,7 @@ jobs:
 
       # Checkout the repository and branch to build under the default location
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       # Build the default BMDA configuration
       - name: Build full BMDA
@@ -264,7 +264,7 @@ jobs:
 
       # Checkout the repository and branch to build under the default location
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       # Build BMDA in BMP-only mode
       - name: Build BMP only BMDA
@@ -350,7 +350,7 @@ jobs:
 
       # Checkout the repository and branch to build under the default location
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           submodules: true
 
@@ -410,7 +410,7 @@ jobs:
 
       # Checkout the repository and branch to build under the default location
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       # Build the default BMDA configuration
       - name: Build full BMDA
@@ -469,7 +469,7 @@ jobs:
 
       # Install BMDA's deps since they cannot be compiled with GCC
       - name: Install BMDA dependencies
-        run: brew install libusb libftdi hidapi 
+        run: brew install libusb libftdi hidapi
 
       # Record the versions of all the tools used in the build
       - name: Version tools
@@ -482,7 +482,7 @@ jobs:
 
       # Checkout the repository and branch to build under the default location
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       # Build the default BMDA configuration
       - name: Build full BMDA
@@ -500,12 +500,12 @@ jobs:
         with:
           release: '12.2.Rel1'
 
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           ref: ${{ github.base_ref }}
           path: base
 
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           path: head
