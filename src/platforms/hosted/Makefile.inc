@@ -123,6 +123,17 @@ ifneq ($(HOSTED_BMP_ONLY), 1)
     LDFLAGS += $(shell pkg-config --libs $(HIDAPILIB))
 endif
 
+ifeq ($(ENABLE_GPIOD), 1)
+    SRC += bmda_gpiod.c
+    SRC += platforms/common/jtagtap.c platforms/common/swdptap.c
+    ifneq ($(shell pkg-config --exists libgpiod; echo $$?), 0)
+        $(error Please install libgpiod dependency or drop ENABLE_GPIOD=1)
+    endif
+    CFLAGS += $(shell pkg-config --cflags libgpiod)
+    LDFLAGS += $(shell pkg-config --libs libgpiod)
+    CFLAGS += -DENABLE_GPIOD=1
+endif
+
 VPATH += platforms/hosted/remote
 
 SRC += platform.c
