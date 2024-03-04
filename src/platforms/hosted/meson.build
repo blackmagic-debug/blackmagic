@@ -118,7 +118,9 @@ libusb = dependency(
 		'install_targets=false',
 		'docs=disabled',
 		'build_native=true',
-	]
+	],
+	required: not is_cross_build,
+	disabler: true,
 )
 
 if build_machine.system() in ['windows', 'cygwin']
@@ -153,7 +155,9 @@ else
 			'ftdi_eeprom=disabled',
 			#'python_bindings=disabled',
 			'build_native=true',
-		]
+		],
+		required: not is_cross_build,
+		disabler: true,
 	)
 	bmda_sources += files('serial_unix.c')
 endif
@@ -170,7 +174,9 @@ if build_machine.system() == 'linux'
 			'install_targets=false',
 			'with_libusb=false',
 			'build_native=true',
-		]
+		],
+		required: not is_cross_build,
+		disabler: true,
 	)
 else
 	hidapi = dependency(
@@ -182,7 +188,9 @@ else
 			'default_library=static',
 			'install_targets=false',
 			'build_native=true',
-		]
+		],
+		required: not is_cross_build,
+		disabler: true,
 	)
 endif
 
