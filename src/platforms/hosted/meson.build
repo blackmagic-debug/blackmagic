@@ -156,8 +156,10 @@ if build_machine.system() == 'linux'
 		bmda_sources += files('bmda_gpiod.c')
 		bmda_args += ['-DENABLE_GPIOD=1']
 
-		bmda_sources += files('../common/jtagtap.c',
-		                      '../common/swdptap.c')
+		bmda_sources += files(
+			'../common/jtagtap.c',
+			'../common/swdptap.c'
+		)
 	endif
 else
 	libgpiod = declare_dependency()
