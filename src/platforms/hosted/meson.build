@@ -125,7 +125,7 @@ if build_machine.system() in ['windows', 'cygwin']
 		]
 	endif
 else
-	libftdi = dependency('libftdi1', required: false, method: 'pkg-config', native: is_cross_build)
+	libftdi = dependency('libftdi1', method: 'pkg-config', fallback: 'libftdi', native: is_cross_build)
 	bmda_sources += files('serial_unix.c')
 endif
 
@@ -163,16 +163,11 @@ else
 	libgpiod = declare_dependency()
 endif
 
-# If we did not find all the dependencies we need, turn this into a disabler, otherwise
-# build a dependency object that describes the sources needed to build BMDA for the build platform
-if not libftdi.found() or not hidapi.found() or not libusb.found()
-	bmda_platform = disabler()
-else
-	bmda_platform = declare_dependency(
-		include_directories: bmda_includes,
-		sources: bmda_sources,
-		compile_args: cc.get_supported_arguments(bmda_args),
-		link_args: bmda_link_args,
-		dependencies: [libbmd_core, bmda_deps, libftdi, hidapi, libusb, libgpiod],
-	)
-endif
+# Build a dependency object that describes the sources needed to build BMDA for the build platform
+bmda_platform = declare_dependency(
+	include_directories: bmda_includes,
+	sources: bmda_sources,
+	compile_args: cc.get_supported_arguments(bmda_args),
+	link_args: bmda_link_args,
+	dependencies: [libbmd_core, bmda_deps, libftdi, hidapi, libusb, libgpiod],
+)
