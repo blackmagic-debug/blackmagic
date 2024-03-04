@@ -125,15 +125,51 @@ if build_machine.system() in ['windows', 'cygwin']
 		]
 	endif
 else
-	libftdi = dependency('libftdi1', method: 'pkg-config', fallback: 'libftdi', native: is_cross_build)
+	libftdi = dependency(
+		'libftdi1',
+		method: 'pkg-config',
+		fallback: 'libftdi',
+		native: is_cross_build,
+		default_options: [
+			'default_library=static',
+			'install_targets=false',
+			'tests=disabled',
+			'docs=disabled',
+			'examples=disabled',
+			'ftdi_eeprom=disabled',
+			#'python_bindings=disabled',
+			'build_native=true',
+		]
+	)
 	bmda_sources += files('serial_unix.c')
 endif
 
 # Pick the appropriate HIDAPI depending on platform
 if build_machine.system() == 'linux'
-	hidapi = dependency('hidapi-hidraw', method: 'pkg-config', fallback: 'hidapi', native: is_cross_build)
+	hidapi = dependency(
+		'hidapi-hidraw',
+		method: 'pkg-config',
+		fallback: 'hidapi',
+		native: is_cross_build,
+		default_options: [
+			'default_library=static',
+			'install_targets=false',
+			'with_libusb=false',
+			'build_native=true',
+		]
+	)
 else
-	hidapi = dependency('hidapi', method: 'pkg-config', fallback: 'hidapi', native: is_cross_build)
+	hidapi = dependency(
+		'hidapi',
+		method: 'pkg-config',
+		fallback: 'hidapi',
+		native: is_cross_build,
+		default_options: [
+			'default_library=static',
+			'install_targets=false',
+			'build_native=true',
+		]
+	)
 endif
 
 libusb = dependency(
@@ -142,6 +178,12 @@ libusb = dependency(
 	method: 'pkg-config',
 	fallback: 'libusb',
 	native: is_cross_build,
+	default_options: [
+		'default_library=static',
+		'install_targets=false',
+		'docs=disabled',
+		'build_native=true',
+	]
 )
 
 if build_machine.system() == 'linux'
