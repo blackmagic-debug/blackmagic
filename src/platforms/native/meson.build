@@ -52,7 +52,7 @@ probe_host = declare_dependency(
 	include_directories: probe_native_includes,
 	sources: probe_native_sources,
 	compile_args: probe_native_args,
-	link_args: [probe_native_common_link_args, probe_native_link_args],
+	link_args: probe_native_common_link_args + probe_native_link_args,
 	dependencies: [platform_common, platform_stm32f1, fixme_platform_stm32_traceswo],
 )
 

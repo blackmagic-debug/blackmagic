@@ -57,7 +57,7 @@ probe_host = declare_dependency(
 	include_directories: probe_swlink_includes,
 	sources: probe_swlink_sources,
 	compile_args: probe_swlink_args,
-	link_args: [probe_swlink_common_link_args, probe_swlink_link_args],
+	link_args: probe_swlink_common_link_args + probe_swlink_link_args,
 	dependencies: [platform_common, platform_stm32f1, fixme_platform_stm32_traceswoasync],
 )
 

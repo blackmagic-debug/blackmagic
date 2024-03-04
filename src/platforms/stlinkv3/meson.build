@@ -62,7 +62,7 @@ probe_host = declare_dependency(
 	include_directories: probe_stlinkv3_includes,
 	sources: probe_stlinkv3_sources,
 	compile_args: probe_stlinkv3_args,
-	link_args: [probe_stlinkv3_common_link_args, probe_stlinkv3_link_args],
+	link_args: probe_stlinkv3_common_link_args + probe_stlinkv3_link_args,
 	dependencies: [platform_common, platform_stm32f7, fixme_platform_stm32f7_traceswoasync],
 )
 

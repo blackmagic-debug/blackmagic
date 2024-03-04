@@ -79,7 +79,7 @@ probe_host = declare_dependency(
 	include_directories: probe_stlink_includes,
 	sources: probe_stlink_sources,
 	compile_args: probe_stlink_args,
-	link_args: [probe_stlink_common_link_args, probe_stlink_link_args],
+	link_args: probe_stlink_common_link_args + probe_stlink_link_args,
 	dependencies: probe_stlink_dependencies,
 )
 
