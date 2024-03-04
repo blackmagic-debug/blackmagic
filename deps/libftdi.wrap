@@ -1,0 +1,7 @@
+[wrap-git]
+url = https://github.com/blackmagic-debug/libftdi
+revision = v1.5-meson
+clone-recursive = false
+
+[provide]
+libftdi1 = ftdi1_dep
