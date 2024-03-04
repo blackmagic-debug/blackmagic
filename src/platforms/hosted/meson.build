@@ -107,6 +107,20 @@ if build_machine.system() == 'windows' and cc.get_define('__MINGW32__') == '1'
 	endif
 endif
 
+libusb = dependency(
+	'libusb-1.0',
+	version: '>=1.0.13',
+	method: 'pkg-config',
+	fallback: 'libusb',
+	native: is_cross_build,
+	default_options: [
+		'default_library=static',
+		'install_targets=false',
+		'docs=disabled',
+		'build_native=true',
+	]
+)
+
 if build_machine.system() in ['windows', 'cygwin']
 	subdir('windows')
 
@@ -171,20 +185,6 @@ else
 		]
 	)
 endif
-
-libusb = dependency(
-	'libusb-1.0',
-	version: '>=1.0.13',
-	method: 'pkg-config',
-	fallback: 'libusb',
-	native: is_cross_build,
-	default_options: [
-		'default_library=static',
-		'install_targets=false',
-		'docs=disabled',
-		'build_native=true',
-	]
-)
 
 if build_machine.system() == 'linux'
 	libgpiod = dependency(
