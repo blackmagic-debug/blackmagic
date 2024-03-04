@@ -163,7 +163,7 @@ if build_machine.system() == 'linux'
 	hidapi = dependency(
 		'hidapi-hidraw',
 		method: 'pkg-config',
-		fallback: 'hidapi',
+		fallback: ['hidapi', 'hidapi_hidraw_dep'],
 		native: is_cross_build,
 		default_options: [
 			'default_library=static',
