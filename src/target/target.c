@@ -286,6 +286,11 @@ bool target_attached(target_s *target)
 /* Memory access functions */
 bool target_mem_read(target_s *const target, void *const dest, const target_addr_t src, const size_t len)
 {
+	return target_mem64_read(target, dest, src, len);
+}
+
+bool target_mem64_read(target_s *const target, void *const dest, const target_addr64_t src, const size_t len)
+{
 	/* If we're processing a semihosting syscall and it needs IO redirected, handle that instead */
 	if (target->target_options & TOPT_IN_SEMIHOSTING_SYSCALL) {
 		/* Make sure we can't go over the bounds of the buffer */
@@ -301,6 +306,11 @@ bool target_mem_read(target_s *const target, void *const dest, const target_addr
 }
 
 bool target_mem_write(target_s *const target, const target_addr_t dest, const void *const src, const size_t len)
+{
+	return target_mem64_write(target, dest, src, len);
+}
+
+bool target_mem64_write(target_s *const target, const target_addr64_t dest, const void *const src, const size_t len)
 {
 	/* If we're processing a semihosting syscall and it needs IO redirected, handle that instead */
 	if (target->target_options & TOPT_IN_SEMIHOSTING_SYSCALL) {
