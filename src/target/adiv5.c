@@ -1323,7 +1323,7 @@ uint32_t adiv5_ap_reg_read(adiv5_access_port_s *ap, uint16_t addr)
 	return adiv5_dp_read(ap->dp, addr);
 }
 
-void adiv5_mem_write(adiv5_access_port_s *const ap, const target_addr_t dest, const void *const src, const size_t len)
+void adiv5_mem_write(adiv5_access_port_s *const ap, const target_addr64_t dest, const void *const src, const size_t len)
 {
 	const align_e align = MIN_ALIGN(dest, len);
 	adiv5_mem_write_aligned(ap, dest, src, len, align);

@@ -240,7 +240,7 @@ void *adiv5_unpack_data(void *dest, target_addr32_t src, uint32_t val, align_e a
 const void *adiv5_pack_data(target_addr32_t dest, const void *src, uint32_t *data, align_e align);
 
 /* ADIv5 high-level memory write function */
-void adiv5_mem_write(adiv5_access_port_s *ap, target_addr_t dest, const void *src, size_t len);
+void adiv5_mem_write(adiv5_access_port_s *ap, target_addr64_t dest, const void *src, size_t len);
 
 /* ADIv5 low-level logical operation functions for memory access */
 void adiv5_mem_access_setup(adiv5_access_port_s *ap, target_addr64_t addr, align_e align);
