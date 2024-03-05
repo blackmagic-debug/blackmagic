@@ -552,43 +552,43 @@ unsigned int target_part_id(target_s *t)
 	return t->part_id;
 }
 
-uint32_t target_mem32_read32(target_s *t, target_addr32_t addr)
+uint32_t target_mem32_read32(target_s *target, target_addr32_t addr)
 {
 	uint32_t result = 0;
-	target_mem32_read(t, &result, addr, sizeof(result));
+	target_mem32_read(target, &result, addr, sizeof(result));
 	return result;
 }
 
-void target_mem_write32(target_s *t, target_addr_t addr, uint32_t value)
+void target_mem_write32(target_s *target, target_addr_t addr, uint32_t value)
 {
-	if (t->mem_write)
-		t->mem_write(t, addr, &value, sizeof(value));
+	if (target->mem_write)
+		target->mem_write(target, addr, &value, sizeof(value));
 }
 
-uint16_t target_mem32_read16(target_s *t, target_addr32_t addr)
+uint16_t target_mem32_read16(target_s *target, target_addr32_t addr)
 {
 	uint16_t result = 0;
-	target_mem32_read(t, &result, addr, sizeof(result));
+	target_mem32_read(target, &result, addr, sizeof(result));
 	return result;
 }
 
-void target_mem_write16(target_s *t, target_addr_t addr, uint16_t value)
+void target_mem_write16(target_s *target, target_addr_t addr, uint16_t value)
 {
-	if (t->mem_write)
-		t->mem_write(t, addr, &value, sizeof(value));
+	if (target->mem_write)
+		target->mem_write(target, addr, &value, sizeof(value));
 }
 
-uint8_t target_mem32_read8(target_s *t, target_addr32_t addr)
+uint8_t target_mem32_read8(target_s *target, target_addr32_t addr)
 {
 	uint8_t result = 0;
-	target_mem32_read(t, &result, addr, sizeof(result));
+	target_mem32_read(target, &result, addr, sizeof(result));
 	return result;
 }
 
-void target_mem_write8(target_s *t, target_addr_t addr, uint8_t value)
+void target_mem_write8(target_s *target, target_addr_t addr, uint8_t value)
 {
-	if (t->mem_write)
-		t->mem_write(t, addr, &value, sizeof(value));
+	if (target->mem_write)
+		target->mem_write(target, addr, &value, sizeof(value));
 }
 
 void target_command_help(target_s *t)
