@@ -58,7 +58,7 @@ static bool nrf91_flash_write(target_flash_s *flash, target_addr_t dest, const v
 	if (!nrf91_wait_ready(target, NULL))
 		return false;
 	/* Write the data */
-	target_mem_write(target, dest, src, len);
+	target_mem32_write(target, dest, src, len);
 	if (!nrf91_wait_ready(target, NULL))
 		return false;
 	/* Return to read-only */

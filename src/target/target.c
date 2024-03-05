@@ -305,7 +305,7 @@ bool target_mem64_read(target_s *const target, void *const dest, const target_ad
 	return target_check_error(target);
 }
 
-bool target_mem_write(target_s *const target, const target_addr_t dest, const void *const src, const size_t len)
+bool target_mem32_write(target_s *const target, const target_addr_t dest, const void *const src, const size_t len)
 {
 	return target_mem64_write(target, dest, src, len);
 }

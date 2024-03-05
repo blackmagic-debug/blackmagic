@@ -464,7 +464,7 @@ static bool stm32h7_flash_write(
 	/* does H7 stall?*/
 
 	/* Write the data to the Flash */
-	target_mem_write(target, dest, src, len);
+	target_mem32_write(target, dest, src, len);
 
 	/* Wait for the operation to complete and report errors */
 	if (!stm32h7_flash_busy_wait(target, flash->regbase))

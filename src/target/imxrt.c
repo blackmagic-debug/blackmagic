@@ -426,7 +426,7 @@ static bool imxrt_exit_flash_mode(target_s *const target)
 {
 	const imxrt_priv_s *const priv = (imxrt_priv_s *)target->target_storage;
 	/* To leave Flash mode, we do things in the opposite order to entering. */
-	target_mem_write(
+	target_mem32_write(
 		target, IMXRT_FLEXSPI1_LUT_BASE(priv), priv->flexspi_prg_seq_state, sizeof(priv->flexspi_prg_seq_state));
 	if (priv->flexspi_lut_state != IMXRT_FLEXSPI1_LUT_CTRL_UNLOCK) {
 		target_mem_write32(target, IMXRT_FLEXSPI1_LUT_KEY(priv), IMXRT_FLEXSPI1_LUT_KEY_VALUE);
@@ -489,7 +489,7 @@ static uint8_t imxrt_spi_build_insn_sequence(target_s *const target, const uint1
 		DEBUG_TARGET("%zu: %02x %02x\n", idx, sequence[idx].opcode_mode, sequence[idx].value);
 
 	/* Write the new sequence to the programmable sequence LUT */
-	target_mem_write(
+	target_mem32_write(
 		target, IMXRT_FLEXSPI1_LUT_BASE(priv) + IMXRT_FLEXSI_SLOT_OFFSET(slot), sequence, sizeof(sequence));
 	/* Update the cache information */
 	priv->flexspi_cached_commands[slot] = command;
@@ -566,7 +566,7 @@ static void imxrt_spi_write(target_s *const target, const uint16_t command, cons
 		const uint16_t amount = MIN(128U, (uint16_t)(length - offset));
 		uint32_t data[32] = {0};
 		memcpy(data, (const char *)buffer + offset, amount);
-		target_mem_write(target, IMXRT_FLEXSPI1_PRG_WRITE_FIFO(priv), data, (amount + 3U) & ~3U);
+		target_mem32_write(target, IMXRT_FLEXSPI1_PRG_WRITE_FIFO(priv), data, (amount + 3U) & ~3U);
 		/* Tell the controller we've filled the write FIFO */
 		target_mem_write32(target, IMXRT_FLEXSPI1_INT(priv), IMXRT_FLEXSPI1_INT_WRITE_FIFO_EMPTY);
 	}

@@ -516,7 +516,7 @@ static bool samx5x_flash_write(target_flash_s *f, target_addr_t dest, const void
 	samx5x_unlock_current_address(t);
 
 	/* Write within a single page. This may be part or all of the page */
-	target_mem_write(t, dest, src, len);
+	target_mem32_write(t, dest, src, len);
 
 	/* Issue the write page command */
 	target_mem_write32(t, SAMX5X_NVMC_CTRLB, SAMX5X_CTRLB_CMD_KEY | SAMX5X_CTRLB_CMD_WRITEPAGE);
@@ -564,7 +564,7 @@ static int samx5x_write_user_page(target_s *t, uint8_t *buffer)
 
 	/* Write back */
 	for (uint32_t offset = 0; offset < SAMX5X_PAGE_SIZE; offset += 16U) {
-		target_mem_write(t, SAMX5X_NVM_USER_PAGE + offset, buffer + offset, 16);
+		target_mem32_write(t, SAMX5X_NVM_USER_PAGE + offset, buffer + offset, 16);
 
 		/* Issue the write page command */
 		target_mem_write32(t, SAMX5X_NVMC_CTRLB, SAMX5X_CTRLB_CMD_KEY | SAMX5X_CTRLB_CMD_WRITEQUADWORD);

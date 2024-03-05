@@ -277,7 +277,7 @@ static bool msp432_flash_write(target_flash_s *f, target_addr_t dest, const void
 	target_s *t = f->t;
 
 	/* Prepare RAM buffer in target */
-	target_mem_write(t, SRAM_WRITE_BUFFER, src, len);
+	target_mem32_write(t, SRAM_WRITE_BUFFER, src, len);
 
 	/* Unprotect sector, len is always < SECTOR_SIZE */
 	uint32_t old_prot = msp432_sector_unprotect(mf, dest);

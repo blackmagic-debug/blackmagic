@@ -221,7 +221,7 @@ static bool nrf51_flash_write(target_flash_s *f, target_addr_t dest, const void 
 {
 	/* nrf51_flash_prepare() and nrf51_flash_done() top-and-tail this, just write the data to the target. */
 	target_s *t = f->t;
-	target_mem_write(t, dest, src, len);
+	target_mem32_write(t, dest, src, len);
 	return nrf51_wait_ready(t, NULL);
 }
 

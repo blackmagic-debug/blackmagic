@@ -125,7 +125,7 @@ void lpc_save_state(target_s *const target, const uint32_t iap_ram, iap_frame_s 
 void lpc_restore_state(
 	target_s *const target, const uint32_t iap_ram, const iap_frame_s *const frame, const uint32_t *const regs)
 {
-	target_mem_write(target, iap_ram, frame, sizeof(iap_frame_s));
+	target_mem32_write(target, iap_ram, frame, sizeof(iap_frame_s));
 	target_regs_write(target, regs);
 }
 
@@ -186,7 +186,7 @@ iap_status_e lpc_iap_call(lpc_flash_s *const flash, iap_result_s *const result, 
 		frame.config.params[0], frame.config.params[1], frame.config.params[2], frame.config.params[3]);
 
 	/* Copy the structure to RAM */
-	target_mem_write(target, flash->iap_ram, &frame, sizeof(iap_frame_s));
+	target_mem32_write(target, flash->iap_ram, &frame, sizeof(iap_frame_s));
 	const uint32_t iap_results_addr = flash->iap_ram + offsetof(iap_frame_s, result);
 
 	/* Set up for the call to the IAP ROM */
@@ -326,7 +326,7 @@ static bool lpc_flash_write(target_flash_s *tf, target_addr_t dest, const void *
 		return false;
 	}
 	const uint32_t bufaddr = ALIGN(f->iap_ram + sizeof(iap_frame_s), 4U);
-	target_mem_write(f->f.t, bufaddr, src, len);
+	target_mem32_write(f->f.t, bufaddr, src, len);
 	/* Only LPC80x has reserved pages!*/
 	if (!f->reserved_pages || dest + len <= tf->length - len) {
 		/*

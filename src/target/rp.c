@@ -328,7 +328,7 @@ static bool rp_flash_prepare(target_s *const target)
 	/* Configure the SPI controller for our use */
 	rp_spi_config(target);
 	/* Preload the SPI Flash write stub */
-	return target_mem_write(target, RP_SRAM_BASE, rp_flash_write_stub, sizeof(rp_flash_write_stub)) == 0;
+	return target_mem32_write(target, RP_SRAM_BASE, rp_flash_write_stub, sizeof(rp_flash_write_stub)) == 0;
 }
 
 static bool rp_flash_resume(target_s *const target)
@@ -349,7 +349,7 @@ static bool rp_flash_write(
 	target_s *const target = flash->t;
 	const spi_flash_s *const spi_flash = (spi_flash_s *)flash;
 	/* Load the next block of data and run the stub */
-	if (target_mem_write(target, RP_STUB_BUFFER_BASE, src, length))
+	if (target_mem32_write(target, RP_STUB_BUFFER_BASE, src, length))
 		return false;
 	return cortexm_run_stub(
 		target, RP_SRAM_BASE, dest - flash->start, RP_STUB_BUFFER_BASE, length, spi_flash->page_size);

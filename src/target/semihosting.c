@@ -201,7 +201,7 @@ static int32_t semihosting_remote_read(
 			return -1;
 		const ssize_t result = read(fd, buf, count);
 		target->tc->gdb_errno = semihosting_errno();
-		target_mem_write(target, buf_taddr, buf, count);
+		target_mem32_write(target, buf_taddr, buf, count);
 		free(buf);
 		if (target_check_error(target))
 			return -1;
@@ -444,7 +444,7 @@ int32_t semihosting_read(target_s *const target, const semihosting_s *const requ
 		/* Clamp the requested amount to the amount we actually have left */
 		const uint32_t amount = MIN(buf_len, SEMIHOSTING_FEATURES_LENGTH - semihosting_features_offset);
 		/* Copy the chunk requested to the target, updating our internal offset */
-		target_mem_write(target, buf_taddr, semihosting_features + semihosting_features_offset, amount);
+		target_mem32_write(target, buf_taddr, semihosting_features + semihosting_features_offset, amount);
 		semihosting_features_offset += amount;
 		/* Return how much was left from what we transferred */
 		return buf_len - amount;
@@ -738,7 +738,7 @@ int32_t semihosting_get_command_line(target_s *const target, const semihosting_s
 	/* Check that we won't exceed the target buffer with the write */
 	if (command_line_length > buffer_length ||
 		/* Try to write the data to the target along with the actual length value */
-		target_mem_write(target, buffer_taddr, target->cmdline, command_line_length))
+		target_mem32_write(target, buffer_taddr, target->cmdline, command_line_length))
 		return -1;
 	target_mem_write32(target, request->r1 + 4U, command_line_length);
 	return target_check_error(target) ? -1 : 0;
@@ -766,7 +766,7 @@ int32_t semihosting_heap_info(target_s *const target, const semihosting_s *const
 	 * See https://github.com/ARM-software/abi-aa/blob/main/semihosting/semihosting.rst#69sys_heapinfo-0x16
 	 * for more information on the layout of is block and the significance of how this is structured
 	 */
-	return target_mem_write(target, block_taddr, target->heapinfo, sizeof(target->heapinfo)) ? -1 : 0;
+	return target_mem32_write(target, block_taddr, target->heapinfo, sizeof(target->heapinfo)) ? -1 : 0;
 }
 
 int32_t semihosting_temp_name(target_s *const target, const semihosting_s *const request)
@@ -784,7 +784,7 @@ int32_t semihosting_temp_name(target_s *const target, const semihosting_s *const
 	if (buffer_length < sizeof(file_name))
 		return -1;
 	/* If we have enough space, attempt the write back */
-	return target_mem_write(target, buffer_taddr, file_name, SEMIHOSTING_TEMPNAME_LENGTH) ? -1 : 0;
+	return target_mem32_write(target, buffer_taddr, file_name, SEMIHOSTING_TEMPNAME_LENGTH) ? -1 : 0;
 }
 
 int32_t semihosting_handle_request(target_s *const target, const semihosting_s *const request, const uint32_t syscall)

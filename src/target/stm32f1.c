@@ -717,7 +717,7 @@ static bool stm32f1_flash_write(target_flash_s *flash, target_addr_t dest, const
 		target_mem_write32(target, FLASH_CR, FLASH_CR_PG);
 		/* Use the target API instead of a direct Cortex-M call for GD32VF103 parts */
 		if (target->designer_code == JEP106_MANUFACTURER_RV_GIGADEVICE && target->cpuid == 0x80000022U)
-			target_mem_write(target, dest, src, offset);
+			target_mem32_write(target, dest, src, offset);
 		else
 			cortexm_mem_write_aligned(target, dest, src, offset, psize);
 
@@ -735,7 +735,7 @@ static bool stm32f1_flash_write(target_flash_s *flash, target_addr_t dest, const
 		target_mem_write32(target, FLASH_CR + FLASH_BANK2_OFFSET, FLASH_CR_PG);
 		/* Use the target API instead of a direct Cortex-M call for GD32VF103 parts */
 		if (target->designer_code == JEP106_MANUFACTURER_RV_GIGADEVICE && target->cpuid == 0x80000022U)
-			target_mem_write(target, dest + offset, data + offset, remainder);
+			target_mem32_write(target, dest + offset, data + offset, remainder);
 		else
 			cortexm_mem_write_aligned(target, dest + offset, data + offset, remainder, psize);
 

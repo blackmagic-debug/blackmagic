@@ -454,7 +454,7 @@ static bool stm32g0_flash_write(target_flash_s *f, target_addr_t dest, const voi
 	stm32g0_flash_unlock(t);
 	/* Write data to Flash */
 	target_mem_write32(t, FLASH_CR, FLASH_CR_PG);
-	target_mem_write(t, dest, src, len);
+	target_mem32_write(t, dest, src, len);
 	/* Wait for completion or an error */
 	if (!stm32g0_wait_busy(t, NULL)) {
 		DEBUG_ERROR("stm32g0 flash write: comm error\n");

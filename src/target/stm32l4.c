@@ -762,7 +762,7 @@ static bool stm32l4_flash_write(target_flash_s *f, target_addr_t dest, const voi
 {
 	target_s *t = f->t;
 	stm32l4_flash_write32(t, FLASH_CR, FLASH_CR_PG);
-	target_mem_write(t, dest, src, len);
+	target_mem32_write(t, dest, src, len);
 
 	/* Wait for completion or an error */
 	return stm32l4_flash_busy_wait(t, NULL);

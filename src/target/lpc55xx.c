@@ -324,7 +324,7 @@ static void lpc55xx_prepare_flash_config(target_s *target, target_addr_t address
 		.sys_freq_mhz = LPC55xx_IAP_FREQ_IN_MHZ,
 	};
 
-	target_mem_write(target, address, &config, sizeof(config));
+	target_mem32_write(target, address, &config, sizeof(config));
 }
 
 static bool lpc55xx_flash_init(target_s *target, lpc55xx_flash_config_s *config)
@@ -350,7 +350,7 @@ static bool lpc55xx_flash_init(target_s *target, lpc55xx_flash_config_s *config)
 	success = true;
 
 exit:
-	target_mem_write(target, LPC55xx_FLASH_CONFIG_ADDRESS, backup_memory, sizeof(backup_memory));
+	target_mem32_write(target, LPC55xx_FLASH_CONFIG_ADDRESS, backup_memory, sizeof(backup_memory));
 	target_regs_write(target, regs);
 
 	return success;
@@ -391,7 +391,7 @@ static bool lpc55xx_get_uuid(target_s *target, uint8_t *uuid)
 	success = true;
 
 exit:
-	target_mem_write(target, LPC55xx_FLASH_CONFIG_ADDRESS, backup_memory, sizeof(backup_memory));
+	target_mem32_write(target, LPC55xx_FLASH_CONFIG_ADDRESS, backup_memory, sizeof(backup_memory));
 	target_regs_write(target, regs);
 
 	return success;
@@ -445,7 +445,7 @@ static bool lpc55xx_flash_erase(target_flash_s *flash, target_addr_t addr, size_
 
 static bool lpc55xx_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t len)
 {
-	target_mem_write(flash->t, LPC55xx_WRITE_BUFFER_ADDRESS, src, len);
+	target_mem32_write(flash->t, LPC55xx_WRITE_BUFFER_ADDRESS, src, len);
 
 	const lpc55xx_iap_status_e status =
 		iap_call_raw(flash->t, IAP_CMD_FLASH_PROGRAM, dest, LPC55xx_WRITE_BUFFER_ADDRESS, (uint32_t)len);

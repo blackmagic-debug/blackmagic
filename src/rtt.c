@@ -240,7 +240,7 @@ static rtt_retval_e read_rtt(target_s *const cur_target, const uint32_t i)
 		const int ch = rtt_getchar();
 		if (ch == -1)
 			break;
-		if (target_mem_write(cur_target, rtt_channel[i].buf_addr + rtt_channel[i].head, &ch, 1))
+		if (target_mem32_write(cur_target, rtt_channel[i].buf_addr + rtt_channel[i].head, &ch, 1))
 			return RTT_ERR;
 		/* advance head pointer */
 		rtt_channel[i].head = next_head;
@@ -248,7 +248,7 @@ static rtt_retval_e read_rtt(target_s *const cur_target, const uint32_t i)
 
 	/* update head of target 'down' buffer */
 	const uint32_t head_addr = rtt_cbaddr + 24U + i * 24U + 12U;
-	if (target_mem_write(cur_target, head_addr, &rtt_channel[i].head, sizeof(rtt_channel[i].head)))
+	if (target_mem32_write(cur_target, head_addr, &rtt_channel[i].head, sizeof(rtt_channel[i].head)))
 		return RTT_ERR;
 	return RTT_OK;
 }
@@ -316,7 +316,7 @@ static rtt_retval_e print_rtt(target_s *const cur_target, const uint32_t i)
 
 	/* update tail of target 'up' buffer */
 	const uint32_t tail_addr = rtt_cbaddr + 24U + i * 24U + 16U;
-	if (target_mem_write(cur_target, tail_addr, &rtt_channel[i].tail, sizeof(rtt_channel[i].tail)))
+	if (target_mem32_write(cur_target, tail_addr, &rtt_channel[i].tail, sizeof(rtt_channel[i].tail)))
 		return RTT_ERR;
 
 	/* write buffer to usb */

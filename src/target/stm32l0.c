@@ -378,7 +378,7 @@ static bool stm32lx_nvm_prog_write(
 		return false;
 
 	target_mem_write32(target, STM32Lx_NVM_PECR(nvm), STM32Lx_NVM_PECR_PROG | STM32Lx_NVM_PECR_FPRG);
-	target_mem_write(target, dest, src, length);
+	target_mem32_write(target, dest, src, length);
 
 	/* Disable further programming by locking PECR */
 	stm32lx_nvm_lock(target, nvm);

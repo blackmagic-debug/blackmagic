@@ -551,7 +551,7 @@ static bool sam_flash_write(target_flash_s *f, target_addr_t dest, const void *s
 	const uint32_t base = sf->eefc_base;
 	const uint32_t chunk = (dest - f->start) / f->writesize;
 
-	target_mem_write(t, dest, src, len);
+	target_mem32_write(t, dest, src, len);
 	return sam_flash_cmd(t, base, sf->write_cmd, chunk);
 }
 

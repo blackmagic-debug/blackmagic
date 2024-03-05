@@ -319,7 +319,7 @@ static bool sam4l_flash_write(
 	/* Now fill page buffer with our 512 bytes of data */
 
 	const uint32_t *const data = src;
-	/* I did try to use target_mem_write however that resulted in the
+	/* I did try to use target_mem32_write however that resulted in the
 	 * last 64 bits (8 bytes) to be incorrect on even pages (0, 2, 4, ...)
 	 * since it works this way I've not investigated further.
 	 */

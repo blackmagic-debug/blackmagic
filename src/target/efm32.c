@@ -650,9 +650,9 @@ static bool efm32_flash_write(target_flash_s *f, target_addr_t dest, const void 
 		return false;
 
 	/* Write flashloader */
-	target_mem_write(t, SRAM_BASE, efm32_flash_write_stub, sizeof(efm32_flash_write_stub));
+	target_mem32_write(t, SRAM_BASE, efm32_flash_write_stub, sizeof(efm32_flash_write_stub));
 	/* Write Buffer */
-	target_mem_write(t, STUB_BUFFER_BASE, src, len);
+	target_mem32_write(t, STUB_BUFFER_BASE, src, len);
 	/* Run flashloader */
 	const bool ret = cortexm_run_stub(t, SRAM_BASE, dest, STUB_BUFFER_BASE, len, priv_storage->device->msc_addr) == 0;
 

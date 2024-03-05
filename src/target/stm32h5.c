@@ -273,7 +273,7 @@ static bool stm32h5_flash_write(
 	/* Enable programming operations */
 	target_mem_write32(target, STM32H5_FLASH_CTRL, STM32H5_FLASH_CTRL_PROGRAM);
 	/* Write the data to the Flash */
-	target_mem_write(target, dest, src, len);
+	target_mem32_write(target, dest, src, len);
 	/* Wait for the operation to complete and report errors */
 	if (!stm32h5_flash_wait_complete(target, NULL))
 		return false;

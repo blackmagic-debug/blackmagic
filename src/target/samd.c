@@ -652,7 +652,7 @@ static bool samd_flash_write(target_flash_s *f, target_addr_t dest, const void *
 	target_s *t = f->t;
 
 	/* Write within a single page. This may be part or all of the page */
-	target_mem_write(t, dest, src, len);
+	target_mem32_write(t, dest, src, len);
 
 	/* Unlock */
 	samd_unlock_current_address(t);

@@ -252,7 +252,7 @@ static bool lpc546xx_cmd_reset(target_s *t, int argc, const char **argv)
 	static const uint32_t reset_val = 0x05fa0004U;
 
 	/* System reset on target */
-	target_mem_write(t, AIRCR, &reset_val, sizeof(reset_val));
+	target_mem32_write(t, AIRCR, &reset_val, sizeof(reset_val));
 	return true;
 }
 

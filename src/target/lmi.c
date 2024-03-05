@@ -229,8 +229,8 @@ static bool lmi_flash_write(target_flash_s *flash, target_addr_t dest, const voi
 {
 	target_s *target = flash->t;
 	target_check_error(target);
-	target_mem_write(target, SRAM_BASE, lmi_flash_write_stub, sizeof(lmi_flash_write_stub));
-	target_mem_write(target, STUB_BUFFER_BASE, src, len);
+	target_mem32_write(target, SRAM_BASE, lmi_flash_write_stub, sizeof(lmi_flash_write_stub));
+	target_mem32_write(target, STUB_BUFFER_BASE, src, len);
 	if (target_check_error(target))
 		return false;
 

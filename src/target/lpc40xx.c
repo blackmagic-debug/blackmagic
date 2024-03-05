@@ -235,7 +235,7 @@ iap_status_e lpc40xx_iap_call(target_s *target, iap_result_s *result, iap_cmd_e 
 		frame.config.params[i] = 0U;
 
 	/* Copy the structure to RAM */
-	target_mem_write(target, IAP_RAM_BASE, &frame, sizeof(iap_frame_s));
+	target_mem32_write(target, IAP_RAM_BASE, &frame, sizeof(iap_frame_s));
 	const uint32_t iap_params_addr = IAP_RAM_BASE + offsetof(iap_frame_s, config);
 
 	/* Set up for the call to the IAP ROM */
