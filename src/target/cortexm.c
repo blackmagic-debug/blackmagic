@@ -421,13 +421,13 @@ static void cortexm_cache_clean(target_s *target, target_addr_t addr, size_t len
 	}
 }
 
-static void cortexm_mem_read(target_s *target, void *dest, target_addr_t src, size_t len)
+static void cortexm_mem_read(target_s *target, void *dest, target_addr64_t src, size_t len)
 {
 	cortexm_cache_clean(target, src, len, false);
 	adiv5_mem_read(cortex_ap(target), dest, src, len);
 }
 
-static void cortexm_mem_write(target_s *target, target_addr_t dest, const void *src, size_t len)
+static void cortexm_mem_write(target_s *target, target_addr64_t dest, const void *src, size_t len)
 {
 	cortexm_cache_clean(target, dest, len, true);
 	adiv5_mem_write(cortex_ap(target), dest, src, len);

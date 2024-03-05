@@ -375,8 +375,8 @@ static_assert(ARRAY_LENGTH(cortexr_spr_types) == ARRAY_LENGTH(cortexr_spr_names)
 /* clang-format on */
 
 static bool cortexar_check_error(target_s *target);
-static void cortexar_mem_read(target_s *target, void *dest, target_addr_t src, size_t len);
-static void cortexar_mem_write(target_s *target, target_addr_t dest, const void *src, size_t len);
+static void cortexar_mem_read(target_s *target, void *dest, target_addr64_t src, size_t len);
+static void cortexar_mem_write(target_s *target, target_addr64_t dest, const void *src, size_t len);
 
 static void cortexar_regs_read(target_s *target, void *data);
 static void cortexar_regs_write(target_s *target, const void *data);
@@ -1072,7 +1072,7 @@ static void cortexar_mem_handle_fault(target_s *const target, const char *const 
  * NB: This requires the core to be halted! Uses instruction launches on
  * the core and requires we're in debug mode to work. Trashes r0.
  */
-static void cortexar_mem_read(target_s *const target, void *const dest, const target_addr_t src, const size_t len)
+static void cortexar_mem_read(target_s *const target, void *const dest, const target_addr64_t src, const size_t len)
 {
 	cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
 	/* Cache DFSR and DFAR in case we wind up triggering a data fault */
@@ -1095,7 +1095,7 @@ static void cortexar_mem_read(target_s *const target, void *const dest, const ta
 	/* Deal with any data faults that occurred */
 	cortexar_mem_handle_fault(target, __func__);
 
-	DEBUG_PROTO("%s: Reading %zu bytes @0x%" PRIx32 ":", __func__, len, src);
+	DEBUG_PROTO("%s: Reading %zu bytes @0x%" PRIx64 ":", __func__, len, src);
 #ifndef DEBUG_PROTO_IS_NOOP
 	const uint8_t *const data = (const uint8_t *)dest;
 #endif
@@ -1187,10 +1187,10 @@ static bool cortexar_mem_write_slow(
  * the core and requires we're in debug mode to work. Trashes r0.
  */
 static void cortexar_mem_write(
-	target_s *const target, const target_addr_t dest, const void *const src, const size_t len)
+	target_s *const target, const target_addr64_t dest, const void *const src, const size_t len)
 {
 	cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
-	DEBUG_PROTO("%s: Writing %zu bytes @0x%" PRIx32 ":", __func__, len, dest);
+	DEBUG_PROTO("%s: Writing %zu bytes @0x%" PRIx64 ":", __func__, len, dest);
 #ifndef DEBUG_PROTO_IS_NOOP
 	const uint8_t *const data = (const uint8_t *)src;
 #endif

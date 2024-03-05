@@ -110,8 +110,8 @@ struct target {
 	bool (*check_error)(target_s *target);
 
 	/* Memory access functions */
-	void (*mem_read)(target_s *target, void *dest, target_addr_t src, size_t len);
-	void (*mem_write)(target_s *target, target_addr_t dest, const void *src, size_t len);
+	void (*mem_read)(target_s *target, void *dest, target_addr64_t src, size_t len);
+	void (*mem_write)(target_s *target, target_addr64_t dest, const void *src, size_t len);
 
 	/* Register access functions */
 	size_t regs_size;
