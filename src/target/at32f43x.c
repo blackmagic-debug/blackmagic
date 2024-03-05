@@ -210,7 +210,7 @@ bool at32f43x_probe(target_s *target)
 		return false;
 
 	// Artery chips use the complete idcode word for identification
-	const uint32_t idcode = target_mem_read32(target, DBGMCU_IDCODE);
+	const uint32_t idcode = target_mem32_read32(target, DBGMCU_IDCODE);
 	const uint32_t series = idcode & AT32F4x_IDCODE_SERIES_MASK;
 	const uint16_t part_id = idcode & AT32F4x_IDCODE_PART_MASK;
 
@@ -221,12 +221,12 @@ bool at32f43x_probe(target_s *target)
 
 static bool at32f43_flash_unlock(target_s *const target, const uint32_t bank_reg_offset)
 {
-	if (target_mem_read32(target, AT32F43x_FLASH_CTRL + bank_reg_offset) & AT32F43x_FLASH_CTRL_OPLK) {
+	if (target_mem32_read32(target, AT32F43x_FLASH_CTRL + bank_reg_offset) & AT32F43x_FLASH_CTRL_OPLK) {
 		/* Enable FLASH operations in requested bank */
 		target_mem_write32(target, AT32F43x_FLASH_UNLOCK + bank_reg_offset, AT32F43x_FLASH_KEY1);
 		target_mem_write32(target, AT32F43x_FLASH_UNLOCK + bank_reg_offset, AT32F43x_FLASH_KEY2);
 	}
-	const uint32_t ctrlx = target_mem_read32(target, AT32F43x_FLASH_CTRL + bank_reg_offset);
+	const uint32_t ctrlx = target_mem32_read32(target, AT32F43x_FLASH_CTRL + bank_reg_offset);
 	if (ctrlx & AT32F43x_FLASH_CTRL_OPLK)
 		DEBUG_ERROR("%s failed, CTRLx: 0x%08" PRIx32 "\n", __func__, ctrlx);
 	return !(ctrlx & AT32F43x_FLASH_CTRL_OPLK);
@@ -234,13 +234,13 @@ static bool at32f43_flash_unlock(target_s *const target, const uint32_t bank_reg
 
 static bool at32f43_flash_lock(target_s *const target, const uint32_t bank_reg_offset)
 {
-	uint32_t ctrlx_temp = target_mem_read32(target, AT32F43x_FLASH_CTRL + bank_reg_offset);
+	uint32_t ctrlx_temp = target_mem32_read32(target, AT32F43x_FLASH_CTRL + bank_reg_offset);
 	if ((ctrlx_temp & AT32F43x_FLASH_CTRL_OPLK) == 0U) {
 		/* Disable FLASH operations in requested bank */
 		ctrlx_temp |= AT32F43x_FLASH_CTRL_OPLK;
 		target_mem_write32(target, AT32F43x_FLASH_CTRL + bank_reg_offset, ctrlx_temp);
 	}
-	const uint32_t ctrlx = target_mem_read32(target, AT32F43x_FLASH_CTRL + bank_reg_offset);
+	const uint32_t ctrlx = target_mem32_read32(target, AT32F43x_FLASH_CTRL + bank_reg_offset);
 	if ((ctrlx & AT32F43x_FLASH_CTRL_OPLK) == 0U)
 		DEBUG_ERROR("%s failed, CTRLx: 0x%08" PRIx32 "\n", __func__, ctrlx);
 	return (ctrlx & AT32F43x_FLASH_CTRL_OPLK);
@@ -248,7 +248,7 @@ static bool at32f43_flash_lock(target_s *const target, const uint32_t bank_reg_o
 
 static inline void at32f43_flash_clear_eop(target_s *const target, const uint32_t bank_reg_offset)
 {
-	const uint32_t status = target_mem_read32(target, AT32F43x_FLASH_STS + bank_reg_offset);
+	const uint32_t status = target_mem32_read32(target, AT32F43x_FLASH_STS + bank_reg_offset);
 	target_mem_write32(target, AT32F43x_FLASH_STS + bank_reg_offset, status | AT32F43x_FLASH_STS_ODF); /* ODF is W1C */
 }
 
@@ -259,7 +259,7 @@ static bool at32f43_flash_busy_wait(
 	uint32_t status = AT32F43x_FLASH_STS_OBF;
 	/* Checking for ODF/EOP requires methodically clearing the ODF */
 	while (!(status & AT32F43x_FLASH_STS_ODF) && (status & AT32F43x_FLASH_STS_OBF)) {
-		status = target_mem_read32(target, AT32F43x_FLASH_STS + bank_reg_offset);
+		status = target_mem32_read32(target, AT32F43x_FLASH_STS + bank_reg_offset);
 		if (target_check_error(target)) {
 			DEBUG_ERROR("Lost communications with target\n");
 			return false;

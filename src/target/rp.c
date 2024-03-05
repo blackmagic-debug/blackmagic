@@ -223,7 +223,7 @@ static void rp_add_flash(target_s *target)
 bool rp_probe(target_s *target)
 {
 	/* Check bootrom magic*/
-	uint32_t boot_magic = target_mem_read32(target, BOOTROM_MAGIC_ADDR);
+	uint32_t boot_magic = target_mem32_read32(target, BOOTROM_MAGIC_ADDR);
 	if ((boot_magic & BOOTROM_MAGIC_MASK) != BOOTROM_MAGIC) {
 		DEBUG_ERROR("Wrong Bootmagic %08" PRIx32 " found!\n", boot_magic);
 		return false;
@@ -274,7 +274,7 @@ static bool rp_read_rom_func_table(target_s *const target)
 {
 	rp_priv_s *const priv = (rp_priv_s *)target->target_storage;
 	/* We have to do a 32-bit read here but the pointer contained is only 16-bit. */
-	const uint16_t table_offset = target_mem_read32(target, BOOTROM_FUNC_TABLE_ADDR) & 0x0000ffffU;
+	const uint16_t table_offset = target_mem32_read32(target, BOOTROM_FUNC_TABLE_ADDR) & 0x0000ffffU;
 	uint16_t table[RP_MAX_TABLE_SIZE];
 	if (target_mem32_read(target, table, table_offset, RP_MAX_TABLE_SIZE))
 		return false;
@@ -294,11 +294,11 @@ static void rp_spi_config(target_s *const target)
 {
 	rp_priv_s *const priv = (rp_priv_s *)target->target_storage;
 	/* Ensure the controller is in the correct serial SPI mode */
-	priv->ssi_enabled = target_mem_read32(target, RP_SSI_ENABLE);
+	priv->ssi_enabled = target_mem32_read32(target, RP_SSI_ENABLE);
 	target_mem_write32(target, RP_SSI_ENABLE, 0);
-	priv->ctrl0 = target_mem_read32(target, RP_SSI_CTRL0);
-	priv->ctrl1 = target_mem_read32(target, RP_SSI_CTRL1);
-	priv->xpi_ctrl0 = target_mem_read32(target, RP_SSI_XIP_SPI_CTRL0);
+	priv->ctrl0 = target_mem32_read32(target, RP_SSI_CTRL0);
+	priv->ctrl1 = target_mem32_read32(target, RP_SSI_CTRL1);
+	priv->xpi_ctrl0 = target_mem32_read32(target, RP_SSI_XIP_SPI_CTRL0);
 	target_mem_write32(target, RP_SSI_CTRL0,
 		(priv->ctrl0 & RP_SSI_CTRL0_MASK) | RP_SSI_CTRL0_FRF_SERIAL | RP_SSI_CTRL0_TMOD_BIDI |
 			RP_SSI_CTRL0_DATA_BITS(8));
@@ -357,14 +357,14 @@ static bool rp_flash_write(
 
 static void rp_spi_chip_select(target_s *const target, const uint32_t state)
 {
-	const uint32_t value = target_mem_read32(target, RP_GPIO_QSPI_CS_CTRL);
+	const uint32_t value = target_mem32_read32(target, RP_GPIO_QSPI_CS_CTRL);
 	target_mem_write32(target, RP_GPIO_QSPI_CS_CTRL, (value & ~RP_GPIO_QSPI_CS_DRIVE_MASK) | state);
 }
 
 static uint8_t rp_spi_xfer_data(target_s *const target, const uint8_t data)
 {
 	target_mem_write32(target, RP_SSI_DR0, data);
-	return target_mem_read32(target, RP_SSI_DR0) & 0xffU;
+	return target_mem32_read32(target, RP_SSI_DR0) & 0xffU;
 }
 
 static void rp_spi_setup_xfer(target_s *const target, const uint16_t command, const target_addr_t address)
@@ -414,8 +414,8 @@ static void rp_spi_run_command(target_s *const target, const uint16_t command, c
 /* Checks if the QSPI and XIP controllers are in their POR state */
 static bool rp_flash_in_por_state(target_s *const target)
 {
-	const uint32_t clk_enables0 = target_mem_read32(target, RP_CLOCKS_WAKE_EN0);
-	const uint32_t clk_enables1 = target_mem_read32(target, RP_CLOCKS_WAKE_EN1);
+	const uint32_t clk_enables0 = target_mem32_read32(target, RP_CLOCKS_WAKE_EN0);
+	const uint32_t clk_enables1 = target_mem32_read32(target, RP_CLOCKS_WAKE_EN1);
 	if ((clk_enables0 & RP_CLOCKS_WAKE_EN0_MASK) != RP_CLOCKS_WAKE_EN0_MASK ||
 		(clk_enables1 & RP_CLOCKS_WAKE_EN1_MASK) != RP_CLOCKS_WAKE_EN1_MASK) {
 		/* If the right clocks aren't enabled, enable all of them just like the boot ROM does. */
@@ -423,13 +423,13 @@ static bool rp_flash_in_por_state(target_s *const target)
 		target_mem_write32(target, RP_CLOCKS_WAKE_EN1, 0xffffffffU);
 		return true;
 	}
-	const uint32_t pad_sclk_state = target_mem_read32(target, RP_PADS_QSPI_GPIO_SCLK);
+	const uint32_t pad_sclk_state = target_mem32_read32(target, RP_PADS_QSPI_GPIO_SCLK);
 	/* If input is enabled on the SPI clock pin, we're not configured. */
 	if (pad_sclk_state & RP_PADS_QSPI_GPIO_SCLK_IE)
 		return true;
-	const uint32_t xip_state = target_mem_read32(target, RP_XIP_STAT);
-	const uint32_t qspi_sclk_state = target_mem_read32(target, RP_GPIO_QSPI_SCLK_CTRL);
-	const uint32_t ssi_state = target_mem_read32(target, RP_SSI_ENABLE);
+	const uint32_t xip_state = target_mem32_read32(target, RP_XIP_STAT);
+	const uint32_t qspi_sclk_state = target_mem32_read32(target, RP_GPIO_QSPI_SCLK_CTRL);
+	const uint32_t ssi_state = target_mem32_read32(target, RP_SSI_ENABLE);
 	/* Check the XIP, QSPI and SSI controllers for their POR states, indicating we need to configure them */
 	return xip_state == RP_XIP_STAT_POR && qspi_sclk_state == RP_GPIO_QSPI_SCLK_POR && ssi_state == 0U;
 }
@@ -444,7 +444,7 @@ static void rp_flash_connect_internal(target_s *const target)
 	target_mem_write32(target, RP_RESETS_RESET | RP_REG_ACCESS_WRITE_ATOMIC_BITCLR, io_pads_bits); // Then deassert them
 	uint32_t reset_done = 0;
 	while ((reset_done & io_pads_bits) != io_pads_bits) // Wait until the reset done signals for both come good
-		reset_done = target_mem_read32(target, RP_RESETS_RESET_DONE);
+		reset_done = target_mem32_read32(target, RP_RESETS_RESET_DONE);
 
 	// Then mux XIP block onto internal QSPI flash pads
 	target_mem_write32(target, RP_GPIO_QSPI_SCLK_CTRL, 0);
@@ -464,8 +464,8 @@ static void rp_flash_init_spi(target_s *const target)
 	// Disable SSI for further config
 	target_mem_write32(target, RP_SSI_ENABLE, 0);
 	// Clear sticky errors (clear-on-read)
-	target_mem_read32(target, RP_SSI_SR);
-	target_mem_read32(target, RP_SSI_ICR);
+	target_mem32_read32(target, RP_SSI_SR);
+	target_mem32_read32(target, RP_SSI_ICR);
 	// Hopefully-conservative baud rate for boot and programming
 	target_mem_write32(target, RP_SSI_BAUD, 6);
 	target_mem_write32(target, RP_SSI_CTRL0,
@@ -483,7 +483,7 @@ static void rp_flash_init_spi(target_s *const target)
 // was asserted, and terminate early
 static bool rp_flash_was_aborted(target_s *const target)
 {
-	return target_mem_read32(target, RP_GPIO_QSPI_SD1_CTRL) & RP_GPIO_QSPI_SD1_CTRL_INOVER_BITS;
+	return target_mem32_read32(target, RP_GPIO_QSPI_SD1_CTRL) & RP_GPIO_QSPI_SD1_CTRL_INOVER_BITS;
 }
 
 // Put bytes from one buffer, and get bytes into another buffer.
@@ -505,8 +505,8 @@ static void rp_flash_put_get(
 	size_t rx_count = 0;
 	while (tx_count < count || rx_count < count || rx_skip) {
 		// NB order of reads, for pessimism rather than optimism
-		const uint32_t tx_level = target_mem_read32(target, RP_SSI_TXFLR);
-		const uint32_t rx_level = target_mem_read32(target, RP_SSI_RXFLR);
+		const uint32_t tx_level = target_mem32_read32(target, RP_SSI_TXFLR);
+		const uint32_t rx_level = target_mem32_read32(target, RP_SSI_RXFLR);
 		bool idle = true; // Expect this to be folded into control flow, not register
 		if (tx_count < count && tx_level + rx_level < max_in_flight) {
 			target_mem_write32(target, RP_SSI_DR0, (uint32_t)(tx ? tx[tx_count] : 0));
@@ -514,7 +514,7 @@ static void rp_flash_put_get(
 			idle = false;
 		}
 		if (rx_level) {
-			const uint8_t data = target_mem_read32(target, RP_SSI_DR0);
+			const uint8_t data = target_mem32_read32(target, RP_SSI_DR0);
 			if (rx_skip)
 				--rx_skip;
 			else {
@@ -546,7 +546,7 @@ static void rp_flash_exit_xip(target_s *const target)
 
 	rp_flash_init_spi(target);
 
-	uint32_t padctrl_save = target_mem_read32(target, RP_PADS_QSPI_GPIO_SD0);
+	uint32_t padctrl_save = target_mem32_read32(target, RP_PADS_QSPI_GPIO_SD0);
 	uint32_t padctrl_tmp =
 		(padctrl_save &
 			~(RP_PADS_QSPI_GPIO_SD0_OD_BITS | RP_PADS_QSPI_GPIO_SD0_PUE_BITS | RP_PADS_QSPI_GPIO_SD0_PDE_BITS)) |
@@ -597,7 +597,7 @@ static void rp_flash_flush_cache(target_s *const target)
 {
 	target_mem_write32(target, RP_XIP_FLUSH, 1);
 	// Read blocks until flush completion
-	target_mem_read32(target, RP_XIP_FLUSH);
+	target_mem32_read32(target, RP_XIP_FLUSH);
 	// Enable the cache
 	target_mem_write32(target, RP_XIP_CTRL | RP_REG_ACCESS_WRITE_ATOMIC_BITSET, RP_XIP_CTRL_ENABLE);
 	rp_spi_chip_select(target, RP_GPIO_QSPI_CS_DRIVE_NORMAL);

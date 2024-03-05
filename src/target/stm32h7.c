@@ -231,7 +231,7 @@ bool stm32h7_probe(target_s *target)
 		DEBUG_ERROR("calloc: failed in %s\n", __func__);
 		return false;
 	}
-	priv_storage->dbg_cr = target_mem_read32(target, DBGMCU_CR);
+	priv_storage->dbg_cr = target_mem32_read32(target, DBGMCU_CR);
 	target->target_storage = priv_storage;
 
 	/* Build the RAM map */
@@ -273,7 +273,7 @@ bool stm32h7_probe(target_s *target)
 	switch (target->part_id) {
 	case ID_STM32H74x: {
 		/* Read the Flash size from the device (expressed in KiB) and multiply it by 1024 */
-		const uint32_t flash_size = target_mem_read32(target, STM32H7_FLASH_SIZE) << 10U;
+		const uint32_t flash_size = target_mem32_read32(target, STM32H7_FLASH_SIZE) << 10U;
 		/* STM32H750nB: 128 KiB, single sector of first bank */
 		if (flash_size == FLASH_SECTOR_SIZE)
 			stm32h7_add_flash(target, STM32H7_FLASH_BANK1_BASE, flash_size, FLASH_SECTOR_SIZE);
@@ -291,7 +291,7 @@ bool stm32h7_probe(target_s *target)
 	}
 	case ID_STM32H7Bx: {
 		/* Read the Flash size from the device (expressed in KiB) and multiply it by 1024 */
-		const uint32_t flash_size = target_mem_read16(target, STM32H7Bx_FLASH_SIZE) << 10U;
+		const uint32_t flash_size = target_mem32_read16(target, STM32H7Bx_FLASH_SIZE) << 10U;
 		/* STM32H7B0nB: 128 KiB in 16 sectors of 8 KiB */
 		if (flash_size == 0x20000U)
 			stm32h7_add_flash(target, STM32H7_FLASH_BANK1_BASE, flash_size, 0x2000U);
@@ -307,7 +307,7 @@ bool stm32h7_probe(target_s *target)
 	}
 	case ID_STM32H72x: {
 		/* Read the Flash size from the device (expressed in KiB) and multiply it by 1024 */
-		const uint32_t flash_size = target_mem_read32(target, STM32H7_FLASH_SIZE) << 10U;
+		const uint32_t flash_size = target_mem32_read32(target, STM32H7_FLASH_SIZE) << 10U;
 		/*
 		 * STM32H723xE/H725xE: 512 KiB in 4 sectors of 128 KiB, single bank, no crypto
 		 * STM32H72xxG (H723xG/H733xG, H725xG/H735xG): 1024 KiB in 8 sectors of 128 KiB, single bank
@@ -334,7 +334,7 @@ static bool stm32h7_attach(target_s *target)
 	 * will be aborted by the Watchdog and erase fails!
 	 * Setting IWDG_KR to 0xaaaa does not seem to help!
 	 */
-	const uint32_t optsr = target_mem_read32(target, FPEC1_BASE + FLASH_OPTSR);
+	const uint32_t optsr = target_mem32_read32(target, FPEC1_BASE + FLASH_OPTSR);
 	if (!(optsr & FLASH_OPTSR_IWDG1_SW))
 		tc_printf(target, "Hardware IWDG running. Expect failure. Set IWDG1_SW!");
 	return true;
@@ -351,7 +351,7 @@ static bool stm32h7_flash_busy_wait(target_s *const target, const uint32_t regba
 {
 	uint32_t status = FLASH_SR_BSY | FLASH_SR_QW;
 	while (status & (FLASH_SR_BSY | FLASH_SR_QW)) {
-		status = target_mem_read32(target, regbase + FLASH_SR);
+		status = target_mem32_read32(target, regbase + FLASH_SR);
 		if ((status & FLASH_SR_ERROR_MASK) || target_check_error(target)) {
 			DEBUG_ERROR("%s: error status %08" PRIx32 "\n", __func__, status);
 			target_mem_write32(target, regbase + FLASH_CCR, status & FLASH_SR_ERROR_MASK);
@@ -375,13 +375,13 @@ static bool stm32h7_flash_unlock(target_s *const target, const uint32_t addr)
 	if (!stm32h7_flash_busy_wait(target, regbase))
 		return false;
 	/* Unlock the device Flash if not already unlocked (it's an error to re-key the controller if it is) */
-	if (target_mem_read32(target, regbase + FLASH_CR) & FLASH_CR_LOCK) {
+	if (target_mem32_read32(target, regbase + FLASH_CR) & FLASH_CR_LOCK) {
 		/* Enable Flash controller access */
 		target_mem_write32(target, regbase + FLASH_KEYR, STM32H7_FLASH_KEY1);
 		target_mem_write32(target, regbase + FLASH_KEYR, STM32H7_FLASH_KEY2);
 	}
 	/* Return whether we were able to put the device into unlocked mode */
-	return !(target_mem_read32(target, regbase + FLASH_CR) & FLASH_CR_LOCK);
+	return !(target_mem32_read32(target, regbase + FLASH_CR) & FLASH_CR_LOCK);
 }
 
 /* Helper for offsetting FLASH_CR bits correctly */
@@ -439,7 +439,7 @@ static bool stm32h7_flash_erase(target_flash_s *const target_flash, target_addr_
 
 		/* Wait for the operation to complete and report errors */
 		DEBUG_INFO("Erasing, ctrl = %08" PRIx32 " status = %08" PRIx32 "\n",
-			target_mem_read32(target, reg_base + FLASH_CR), target_mem_read32(target, reg_base + FLASH_SR));
+			target_mem32_read32(target, reg_base + FLASH_CR), target_mem32_read32(target, reg_base + FLASH_SR));
 
 		if (!stm32h7_flash_busy_wait(target, reg_base))
 			return false;
@@ -483,7 +483,8 @@ static bool stm32h7_erase_bank(
 		return false;
 	}
 	/* BER and start can be merged (§3.3.10). */
-	const uint32_t ctrl = stm32h7_flash_cr(target->flash->blocksize, (psize * FLASH_CR_PSIZE16) | FLASH_CR_BER | FLASH_CR_START, 0);
+	const uint32_t ctrl =
+		stm32h7_flash_cr(target->flash->blocksize, (psize * FLASH_CR_PSIZE16) | FLASH_CR_BER | FLASH_CR_START, 0);
 	target_mem_write32(target, reg_base + FLASH_CR, ctrl);
 	DEBUG_INFO("Mass erase of bank started\n");
 	return true;
@@ -491,7 +492,7 @@ static bool stm32h7_erase_bank(
 
 static bool stm32h7_wait_erase_bank(target_s *const target, platform_timeout_s *const timeout, const uint32_t reg_base)
 {
-	while (target_mem_read32(target, reg_base + FLASH_SR) & FLASH_SR_QW) {
+	while (target_mem32_read32(target, reg_base + FLASH_SR) & FLASH_SR_QW) {
 		if (target_check_error(target)) {
 			DEBUG_ERROR("mass erase bank: comm failed\n");
 			return false;
@@ -503,7 +504,7 @@ static bool stm32h7_wait_erase_bank(target_s *const target, platform_timeout_s *
 
 static bool stm32h7_check_bank(target_s *const target, const uint32_t reg_base)
 {
-	uint32_t status = target_mem_read32(target, reg_base + FLASH_SR);
+	uint32_t status = target_mem32_read32(target, reg_base + FLASH_SR);
 	if (status & FLASH_SR_ERROR_MASK)
 		DEBUG_ERROR("mass erase bank: error sr %" PRIx32 "\n", status);
 	return !(status & FLASH_SR_ERROR_MASK);
@@ -558,7 +559,7 @@ static bool stm32h7_uid(target_s *target, int argc, const char **argv)
 
 	tc_printf(target, "0x");
 	for (size_t i = 0; i < 12U; i += 4U) {
-		const uint32_t value = target_mem_read32(target, uid_addr + i);
+		const uint32_t value = target_mem32_read32(target, uid_addr + i);
 		tc_printf(target, "%02X%02X%02X%02X", (value >> 24U) & 0xffU, (value >> 16U) & 0xffU, (value >> 8U) & 0xffU,
 			value & 0xffU);
 	}
@@ -581,7 +582,7 @@ static bool stm32h7_crc_bank(target_s *target, uint32_t addr)
 	const uint8_t bank = reg_base == FPEC1_BASE ? 1 : 2;
 #endif
 	while (status & FLASH_SR_CRC_BUSY) {
-		status = target_mem_read32(target, reg_base + FLASH_SR);
+		status = target_mem32_read32(target, reg_base + FLASH_SR);
 		if (target_check_error(target)) {
 			DEBUG_ERROR("CRC bank %u: comm failed\n", bank);
 			return false;
@@ -600,10 +601,10 @@ static bool stm32h7_crc(target_s *target, int argc, const char **argv)
 	(void)argv;
 	if (!stm32h7_crc_bank(target, STM32H7_FLASH_BANK1_BASE))
 		return false;
-	uint32_t crc1 = target_mem_read32(target, FPEC1_BASE + FLASH_CRCDATA);
+	uint32_t crc1 = target_mem32_read32(target, FPEC1_BASE + FLASH_CRCDATA);
 	if (!stm32h7_crc_bank(target, STM32H7_FLASH_BANK2_BASE))
 		return false;
-	uint32_t crc2 = target_mem_read32(target, FPEC2_BASE + FLASH_CRCDATA);
+	uint32_t crc2 = target_mem32_read32(target, FPEC2_BASE + FLASH_CRCDATA);
 	tc_printf(target, "CRC: bank1 0x%08lx, bank2 0x%08lx\n", crc1, crc2);
 	return true;
 }
@@ -657,7 +658,7 @@ static bool stm32h7_cmd_rev(target_s *target, int argc, const char **argv)
 	(void)argc;
 	(void)argv;
 	/* DBGMCU identity code register */
-	const uint32_t dbgmcu_idc = target_mem_read32(target, DBGMCU_IDC);
+	const uint32_t dbgmcu_idc = target_mem32_read32(target, DBGMCU_IDC);
 	const uint16_t rev_id = dbgmcu_idc >> STM32H7_DBGMCU_IDCODE_REV_SHIFT;
 	const uint16_t dev_id = dbgmcu_idc & STM32H7_DBGMCU_IDCODE_DEV_MASK;
 

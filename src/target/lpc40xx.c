@@ -145,10 +145,10 @@ static bool lpc40xx_enter_flash_mode(target_s *const target)
 {
 	lpc40xx_priv_s *const priv = (lpc40xx_priv_s *)target->target_storage;
 	/* Disable the MPU, if enabled */
-	priv->mpu_ctrl_state = target_mem_read32(target, LPC40xx_MPU_CTRL);
+	priv->mpu_ctrl_state = target_mem32_read32(target, LPC40xx_MPU_CTRL);
 	target_mem_write32(target, LPC40xx_MPU_CTRL, 0);
 	/* And store the memory mapping state */
-	priv->memmap_state = target_mem_read32(target, LPC40xx_MEMMAP);
+	priv->memmap_state = target_mem32_read32(target, LPC40xx_MEMMAP);
 	return true;
 }
 

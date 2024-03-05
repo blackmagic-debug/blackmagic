@@ -592,7 +592,7 @@ bool renesas_ra_probe(target_s *const target)
 static target_addr_t renesas_fmifrt_read(target_s *const target)
 {
 	/* Read Flash Root Table base address  */
-	return target_mem_read32(target, RENESAS_FMIFRT);
+	return target_mem32_read32(target, RENESAS_FMIFRT);
 }
 
 static void renesas_uid_read(target_s *const target, const target_addr_t base, uint8_t *const uid)
@@ -600,7 +600,7 @@ static void renesas_uid_read(target_s *const target, const target_addr_t base, u
 	/* Register should be read in 32b units */
 	uint32_t uidr[4];
 	for (size_t i = 0U; i < 4U; i++)
-		uidr[i] = target_mem_read32(target, base + i * 4U);
+		uidr[i] = target_mem32_read32(target, base + i * 4U);
 
 	/* Write bytewise into provided container */
 	for (size_t i = 0U; i < 16U; i++)
@@ -612,7 +612,7 @@ static bool renesas_pnr_read(target_s *const target, const target_addr_t base, u
 	/* Register should be read in 32b units */
 	uint32_t pnrr[4];
 	for (size_t i = 0U; i < 4U; i++)
-		pnrr[i] = target_mem_read32(target, base + i * 4U);
+		pnrr[i] = target_mem32_read32(target, base + i * 4U);
 
 	/* Write bytewise into provided container */
 	if (base == RENESAS_FIXED1_PNR) {
@@ -728,8 +728,8 @@ static bool renesas_rv40_pe_mode(target_s *const target, const pe_mode_e pe_mode
 	platform_timeout_set(&timeout, 10);
 
 	/* Wait for the operation to complete or timeout, Read until FENTRYR and FRDY is set */
-	while (target_mem_read16(target, RV40_FENTRYR) != fentryr ||
-		!(target_mem_read32(target, RV40_FSTATR) & RV40_FSTATR_RDY)) {
+	while (target_mem32_read16(target, RV40_FENTRYR) != fentryr ||
+		!(target_mem32_read32(target, RV40_FSTATR) & RV40_FSTATR_RDY)) {
 		if (target_check_error(target) || platform_timeout_is_expired(&timeout))
 			return false;
 	}
@@ -744,13 +744,13 @@ static bool renesas_rv40_error_check(target_s *const target, const uint32_t erro
 {
 	bool error = false;
 
-	const uint8_t fstatr = target_mem_read32(target, RV40_FSTATR);
+	const uint8_t fstatr = target_mem32_read32(target, RV40_FSTATR);
 
 	/* See "Recovery from the Command-Locked State": Section 47.9.3.6 of the RA6M4 manual R01UH0890EJ0100.*/
-	if (target_mem_read8(target, RV40_FASTAT) & RV40_FASTAT_CMDLK) {
+	if (target_mem32_read8(target, RV40_FASTAT) & RV40_FASTAT_CMDLK) {
 		/* If an illegal error occurred read and clear CFAE and DFAE in FASTAT. */
 		if (fstatr & RV40_FSTATR_ILGLERR) {
-			target_mem_read8(target, RV40_FASTAT);
+			target_mem32_read8(target, RV40_FASTAT);
 			target_mem_write8(target, RV40_FASTAT, 0);
 		}
 		error = true;
@@ -769,12 +769,12 @@ static bool renesas_rv40_error_check(target_s *const target, const uint32_t erro
 
 		/* Wait until the operation has completed or timeout */
 		/* Read FRDY bit until it has been set to 1 indicating that the current  operation is complete.*/
-		while (!(target_mem_read32(target, RV40_FSTATR) & RV40_FSTATR_RDY)) {
+		while (!(target_mem32_read32(target, RV40_FSTATR) & RV40_FSTATR_RDY)) {
 			if (target_check_error(target) || platform_timeout_is_expired(&timeout))
 				return error;
 		}
 
-		if (target_mem_read8(target, RV40_FASTAT) & RV40_FASTAT_CMDLK)
+		if (target_mem32_read8(target, RV40_FASTAT) & RV40_FASTAT_CMDLK)
 			return error;
 	}
 
@@ -785,7 +785,8 @@ static bool renesas_rv40_prepare(target_flash_s *const flash)
 {
 	target_s *const target = flash->t;
 
-	if (!(target_mem_read32(target, RV40_FSTATR) & RV40_FSTATR_RDY) || target_mem_read16(target, RV40_FENTRYR) != 0) {
+	if (!(target_mem32_read32(target, RV40_FSTATR) & RV40_FSTATR_RDY) ||
+		target_mem32_read16(target, RV40_FENTRYR) != 0) {
 		DEBUG_WARN("flash is not ready, may be hanging mid unfinished command due to something going wrong, "
 				   "please power on reset the device\n");
 
@@ -844,7 +845,7 @@ static bool renesas_rv40_flash_erase(target_flash_s *const flash, target_addr_t 
 
 		/* Wait until the operation has completed or timeout */
 		/* Read FRDY bit until it has been set to 1 indicating that the current operation is complete.*/
-		while (!(target_mem_read32(target, RV40_FSTATR) & RV40_FSTATR_RDY)) {
+		while (!(target_mem32_read32(target, RV40_FSTATR) & RV40_FSTATR_RDY)) {
 			if (target_check_error(target) || platform_timeout_is_expired(&timeout))
 				return false;
 		}
@@ -899,7 +900,7 @@ static bool renesas_rv40_flash_write(target_flash_s *const flash, target_addr_t 
 
 		/* Wait until the operation has completed or timeout */
 		/* Read FRDY bit until it has been set to 1 indicating that the current operation is complete.*/
-		while (!(target_mem_read32(target, RV40_FSTATR) & RV40_FSTATR_RDY)) {
+		while (!(target_mem32_read32(target, RV40_FSTATR) & RV40_FSTATR_RDY)) {
 			if (target_check_error(target) || platform_timeout_is_expired(&timeout))
 				return false;
 		}

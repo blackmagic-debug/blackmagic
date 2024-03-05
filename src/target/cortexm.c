@@ -493,10 +493,10 @@ bool cortexm_probe(adiv5_access_port_s *ap)
 	target->detach = cortexm_detach;
 
 	/* Probe for FP extension. */
-	uint32_t cpacr = target_mem_read32(target, CORTEXM_CPACR);
+	uint32_t cpacr = target_mem32_read32(target, CORTEXM_CPACR);
 	cpacr |= 0x00f00000U; /* CP10 = 0b11, CP11 = 0b11 */
 	target_mem_write32(target, CORTEXM_CPACR, cpacr);
-	bool is_cortexmf = target_mem_read32(target, CORTEXM_CPACR) == cpacr;
+	bool is_cortexmf = target_mem32_read32(target, CORTEXM_CPACR) == cpacr;
 
 	target->regs_description = cortexm_regs_description;
 	target->regs_read = cortexm_regs_read;
@@ -543,7 +543,7 @@ bool cortexm_probe(adiv5_access_port_s *ap)
 		/* Poll for release from reset */
 		platform_timeout_s timeout;
 		platform_timeout_set(&timeout, 1000);
-		while (target_mem_read32(target, CORTEXM_DHCSR) & CORTEXM_DHCSR_S_RESET_ST) {
+		while (target_mem32_read32(target, CORTEXM_DHCSR) & CORTEXM_DHCSR_S_RESET_ST) {
 			if (platform_timeout_is_expired(&timeout)) {
 				DEBUG_ERROR("Error releasing from reset\n");
 				/* Go on and try to detect the target anyways */
@@ -554,7 +554,7 @@ bool cortexm_probe(adiv5_access_port_s *ap)
 	}
 
 	/* Check cache type */
-	const uint32_t cache_type = target_mem_read32(target, CORTEXM_CTR);
+	const uint32_t cache_type = target_mem32_read32(target, CORTEXM_CTR);
 	if (cache_type >> CORTEX_CTR_FORMAT_SHIFT == CORTEX_CTR_FORMAT_ARMv7) {
 		priv->base.icache_line_length = CORTEX_CTR_ICACHE_LINE(cache_type);
 		priv->base.dcache_line_length = CORTEX_CTR_DCACHE_LINE(cache_type);
@@ -707,14 +707,14 @@ bool cortexm_attach(target_s *target)
 
 	/* size the break/watchpoint units */
 	priv->base.breakpoints_available = CORTEX_MAX_BREAKPOINTS;
-	const uint32_t flash_break_cfg = target_mem_read32(target, CORTEXM_FPB_CTRL);
+	const uint32_t flash_break_cfg = target_mem32_read32(target, CORTEXM_FPB_CTRL);
 	const uint32_t breakpoints = ((flash_break_cfg >> 4U) & 0xfU);
 	if (breakpoints < priv->base.breakpoints_available) /* only look at NUM_COMP1 */
 		priv->base.breakpoints_available = breakpoints;
 	priv->flash_patch_revision = flash_break_cfg >> 28U;
 
 	priv->base.watchpoints_available = CORTEX_MAX_WATCHPOINTS;
-	const uint32_t watchpoints = target_mem_read32(target, CORTEXM_DWT_CTRL);
+	const uint32_t watchpoints = target_mem32_read32(target, CORTEXM_DWT_CTRL);
 	if ((watchpoints >> 28U) < priv->base.watchpoints_available)
 		priv->base.watchpoints_available = watchpoints >> 28U;
 
@@ -731,13 +731,13 @@ bool cortexm_attach(target_s *target)
 	/* Flash Patch Control Register: set ENABLE */
 	target_mem_write32(target, CORTEXM_FPB_CTRL, CORTEXM_FPB_CTRL_KEY | CORTEXM_FPB_CTRL_ENABLE);
 
-	(void)target_mem_read32(target, CORTEXM_DHCSR);
-	if (target_mem_read32(target, CORTEXM_DHCSR) & CORTEXM_DHCSR_S_RESET_ST) {
+	(void)target_mem32_read32(target, CORTEXM_DHCSR);
+	if (target_mem32_read32(target, CORTEXM_DHCSR) & CORTEXM_DHCSR_S_RESET_ST) {
 		platform_nrst_set_val(false);
 		platform_timeout_s timeout;
 		platform_timeout_set(&timeout, 1000);
 		while (1) {
-			const uint32_t reset_status = target_mem_read32(target, CORTEXM_DHCSR);
+			const uint32_t reset_status = target_mem32_read32(target, CORTEXM_DHCSR);
 			if (!(reset_status & CORTEXM_DHCSR_S_RESET_ST))
 				break;
 			if (platform_timeout_is_expired(&timeout)) {
@@ -887,7 +887,7 @@ static size_t cortexm_reg_read(target_s *target, uint32_t reg, void *data, size_
 		return 0;
 	uint32_t *r = data;
 	target_mem_write32(target, CORTEXM_DCRSR, dcrsr_regnum(target, reg));
-	*r = target_mem_read32(target, CORTEXM_DCRDR);
+	*r = target_mem32_read32(target, CORTEXM_DCRDR);
 	return 4U;
 }
 
@@ -904,7 +904,7 @@ static size_t cortexm_reg_write(target_s *target, uint32_t reg, const void *data
 static uint32_t cortexm_pc_read(target_s *target)
 {
 	target_mem_write32(target, CORTEXM_DCRSR, 0x0f);
-	return target_mem_read32(target, CORTEXM_DCRDR);
+	return target_mem32_read32(target, CORTEXM_DCRDR);
 }
 
 static void cortexm_pc_write(target_s *target, const uint32_t val)
@@ -920,7 +920,7 @@ static void cortexm_pc_write(target_s *target, const uint32_t val)
 static void cortexm_reset(target_s *const target)
 {
 	/* Read DHCSR here to clear S_RESET_ST bit before reset */
-	target_mem_read32(target, CORTEXM_DHCSR);
+	target_mem32_read32(target, CORTEXM_DHCSR);
 	/* If the physical reset pin is not inhibited, use it */
 	if (!(target->target_options & TOPT_INHIBIT_NRST)) {
 		platform_nrst_set_val(true);
@@ -930,7 +930,7 @@ static void cortexm_reset(target_s *const target)
 	}
 
 	/* Check if the reset succeeded */
-	const uint32_t status = target_mem_read32(target, CORTEXM_DHCSR);
+	const uint32_t status = target_mem32_read32(target, CORTEXM_DHCSR);
 	if (!(status & CORTEXM_DHCSR_S_RESET_ST)) {
 		/*
 		 * No reset seen yet, maybe as nRST is not connected, or device has TOPT_INHIBIT_NRST set.
@@ -946,7 +946,7 @@ static void cortexm_reset(target_s *const target)
 	/* Wait for CORTEXM_DHCSR_S_RESET_ST to read 0, meaning reset released.*/
 	platform_timeout_s reset_timeout;
 	platform_timeout_set(&reset_timeout, 1000);
-	while ((target_mem_read32(target, CORTEXM_DHCSR) & CORTEXM_DHCSR_S_RESET_ST) &&
+	while ((target_mem32_read32(target, CORTEXM_DHCSR) & CORTEXM_DHCSR_S_RESET_ST) &&
 		!platform_timeout_is_expired(&reset_timeout))
 		continue;
 
@@ -982,7 +982,7 @@ static target_halt_reason_e cortexm_halt_poll(target_s *target, target_addr_t *w
 	volatile exception_s e;
 	TRY_CATCH (e, EXCEPTION_ALL) {
 		/* If this times out because the target is in WFI then the target is still running. */
-		dhcsr = target_mem_read32(target, CORTEXM_DHCSR);
+		dhcsr = target_mem32_read32(target, CORTEXM_DHCSR);
 	}
 	switch (e.type) {
 	case EXCEPTION_ERROR:
@@ -999,7 +999,7 @@ static target_halt_reason_e cortexm_halt_poll(target_s *target, target_addr_t *w
 		return TARGET_HALT_RUNNING;
 
 	/* Read out the status register to determine why */
-	uint32_t dfsr = target_mem_read32(target, CORTEXM_DFSR);
+	uint32_t dfsr = target_mem32_read32(target, CORTEXM_DFSR);
 	target_mem_write32(target, CORTEXM_DFSR, dfsr); /* write back to reset */
 
 	if ((dfsr & CORTEXM_DFSR_VCATCH) && cortexm_fault_unwind(target))
@@ -1010,7 +1010,7 @@ static target_halt_reason_e cortexm_halt_poll(target_s *target, target_addr_t *w
 	if (priv->on_bkpt) {
 		/* If we've hit a programmed breakpoint, check for semihosting call. */
 		const uint32_t program_counter = cortexm_pc_read(target);
-		const uint16_t instruction = target_mem_read16(target, program_counter);
+		const uint16_t instruction = target_mem32_read16(target, program_counter);
 		/* 0xbeab encodes the breakpoint instruction used to indicate a semihosting call */
 		if (instruction == 0xbeabU) {
 			if (cortexm_hostio_request(target))
@@ -1058,7 +1058,7 @@ void cortexm_halt_resume(target_s *const target, const bool step)
 		/* Read the instruction to resume on */
 		uint32_t pc = cortexm_pc_read(target);
 		/* If it actually is a breakpoint instruction, update the program counter one past it. */
-		if ((target_mem_read16(target, pc) & 0xff00U) == 0xbe00U)
+		if ((target_mem32_read16(target, pc) & 0xff00U) == 0xbe00U)
 			cortexm_pc_write(target, pc + 2U);
 	}
 
@@ -1072,8 +1072,8 @@ void cortexm_halt_resume(target_s *const target, const bool step)
 static int cortexm_fault_unwind(target_s *target)
 {
 	/* Read the fault status registers */
-	uint32_t hfsr = target_mem_read32(target, CORTEXM_HFSR);
-	uint32_t cfsr = target_mem_read32(target, CORTEXM_CFSR);
+	uint32_t hfsr = target_mem32_read32(target, CORTEXM_HFSR);
+	uint32_t cfsr = target_mem32_read32(target, CORTEXM_CFSR);
 	/* Write them back to reset them */
 	target_mem_write32(target, CORTEXM_HFSR, hfsr);
 	target_mem_write32(target, CORTEXM_CFSR, cfsr);
@@ -1181,7 +1181,7 @@ bool cortexm_run_stub(target_s *target, uint32_t loadaddr, uint32_t r0, uint32_t
 	}
 
 	uint32_t pc = cortexm_pc_read(target);
-	uint16_t bkpt_instr = target_mem_read16(target, pc);
+	uint16_t bkpt_instr = target_mem32_read16(target, pc);
 	if (bkpt_instr >> 8U != 0xbeU)
 		return false;
 
@@ -1306,14 +1306,14 @@ static target_addr_t cortexm_check_watch(target_s *target)
 	for (i = 0; i < priv->base.watchpoints_available; i++) {
 		/* if SET and MATCHED then break */
 		if ((priv->base.watchpoints_mask & (1U << i)) &&
-			(target_mem_read32(target, CORTEXM_DWT_FUNC(i)) & CORTEXM_DWT_FUNC_MATCHED))
+			(target_mem32_read32(target, CORTEXM_DWT_FUNC(i)) & CORTEXM_DWT_FUNC_MATCHED))
 			break;
 	}
 
 	if (i == priv->base.watchpoints_available)
 		return 0;
 
-	return target_mem_read32(target, CORTEXM_DWT_COMP(i));
+	return target_mem32_read32(target, CORTEXM_DWT_COMP(i));
 }
 
 static bool cortexm_vector_catch(target_s *target, int argc, const char **argv)

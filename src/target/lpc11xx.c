@@ -88,7 +88,7 @@ static bool lpc11xx_detect(target_s *const target)
 	 *   2) the LPC11U3x series, see UM10462 Rev.5.5 §3.1
 	 * But see the comment for the LPC8xx series below.
 	 */
-	const uint32_t device_id = target_mem_read32(target, LPC11XX_DEVICE_ID);
+	const uint32_t device_id = target_mem32_read32(target, LPC11XX_DEVICE_ID);
 
 	switch (device_id) {
 	case 0x0a07102bU: /* LPC1110 - 4K Flash 1K SRAM */
@@ -183,7 +183,7 @@ static bool lpc8xx_detect(target_s *const target)
 	 * for the LPC8xx series is also valid for the LPC11xx "XL" and the
 	 * LPC11U3x variants.
 	 */
-	const uint32_t device_id = target_mem_read32(target, LPC8XX_DEVICE_ID);
+	const uint32_t device_id = target_mem32_read32(target, LPC8XX_DEVICE_ID);
 	target->enter_flash_mode = lpc8xx_flash_mode;
 	target->exit_flash_mode = lpc8xx_flash_mode;
 

@@ -256,7 +256,7 @@ void samd_reset(target_s *t)
 	 */
 
 	/* Read DHCSR here to clear S_RESET_ST bit before reset */
-	target_mem_read32(t, CORTEXM_DHCSR);
+	target_mem32_read32(t, CORTEXM_DHCSR);
 
 	/*
 	 * Request System Reset from NVIC: nRST doesn't work correctly
@@ -266,12 +266,12 @@ void samd_reset(target_s *t)
 	target_mem_write32(t, CORTEXM_AIRCR, CORTEXM_AIRCR_VECTKEY | CORTEXM_AIRCR_SYSRESETREQ);
 
 	/* Exit extended reset */
-	if (target_mem_read32(t, SAMD_DSU_CTRLSTAT) & SAMD_STATUSA_CRSTEXT)
+	if (target_mem32_read32(t, SAMD_DSU_CTRLSTAT) & SAMD_STATUSA_CRSTEXT)
 		/* Write bit to clear from extended reset */
 		target_mem_write32(t, SAMD_DSU_CTRLSTAT, SAMD_STATUSA_CRSTEXT);
 
 	/* Poll for release from reset */
-	while (target_mem_read32(t, CORTEXM_DHCSR) & CORTEXM_DHCSR_S_RESET_ST)
+	while (target_mem32_read32(t, CORTEXM_DHCSR) & CORTEXM_DHCSR_S_RESET_ST)
 		continue;
 
 	/* Reset DFSR flags */
@@ -292,7 +292,7 @@ static void samd20_revB_detach(target_s *t)
 	cortexm_detach(t);
 
 	/* Exit extended reset */
-	if (target_mem_read32(t, SAMD_DSU_CTRLSTAT) & SAMD_STATUSA_CRSTEXT)
+	if (target_mem32_read32(t, SAMD_DSU_CTRLSTAT) & SAMD_STATUSA_CRSTEXT)
 		/* Write bit to clear from extended reset */
 		target_mem_write32(t, SAMD_DSU_CTRLSTAT, SAMD_STATUSA_CRSTEXT);
 }
@@ -308,7 +308,7 @@ static void samd20_revB_halt_resume(target_s *t, bool step)
 	cortexm_halt_resume(t, step);
 
 	/* Exit extended reset */
-	if (target_mem_read32(t, SAMD_DSU_CTRLSTAT) & SAMD_STATUSA_CRSTEXT)
+	if (target_mem32_read32(t, SAMD_DSU_CTRLSTAT) & SAMD_STATUSA_CRSTEXT)
 		/* Write bit to clear from extended reset */
 		target_mem_write32(t, SAMD_DSU_CTRLSTAT, SAMD_STATUSA_CRSTEXT);
 }
@@ -322,7 +322,7 @@ static void samd20_revB_halt_resume(target_s *t, bool step)
 static bool samd11_attach(target_s *t)
 {
 	/* Exit extended reset */
-	if (target_mem_read32(t, SAMD_DSU_CTRLSTAT) & SAMD_STATUSA_CRSTEXT)
+	if (target_mem32_read32(t, SAMD_DSU_CTRLSTAT) & SAMD_STATUSA_CRSTEXT)
 		/* Write bit to clear from extended reset */
 		target_mem_write32(t, SAMD_DSU_CTRLSTAT, SAMD_STATUSA_CRSTEXT);
 
@@ -514,7 +514,7 @@ bool samd_probe(target_s *t)
 		return false;
 
 	/* Read the Device ID */
-	const uint32_t did = target_mem_read32(t, SAMD_DSU_DID);
+	const uint32_t did = target_mem32_read32(t, SAMD_DSU_DID);
 
 	/* If the Device ID matches */
 	if ((did & SAMD_DID_MASK) != SAMD_DID_CONST_VALUE)
@@ -523,7 +523,7 @@ bool samd_probe(target_s *t)
 	samd_priv_s *priv_storage = calloc(1, sizeof(*priv_storage));
 	t->target_storage = priv_storage;
 
-	const uint32_t ctrlstat = target_mem_read32(t, SAMD_DSU_CTRLSTAT);
+	const uint32_t ctrlstat = target_mem32_read32(t, SAMD_DSU_CTRLSTAT);
 	const samd_descr_s samd = samd_parse_device_id(did);
 
 	/* Protected? */
@@ -572,7 +572,7 @@ bool samd_probe(target_s *t)
 	if (!platform_nrst_get_val()) {
 		/* We'll have to release the target from
 		 * extended reset to make attach possible */
-		if (target_mem_read32(t, SAMD_DSU_CTRLSTAT) & SAMD_STATUSA_CRSTEXT)
+		if (target_mem32_read32(t, SAMD_DSU_CTRLSTAT) & SAMD_STATUSA_CRSTEXT)
 			/* Write bit to clear from extended reset */
 			target_mem_write32(t, SAMD_DSU_CTRLSTAT, SAMD_STATUSA_CRSTEXT);
 	}
@@ -597,7 +597,7 @@ static void samd_unlock_current_address(target_s *t)
 static bool samd_wait_nvm_ready(target_s *t)
 {
 	/* Poll for NVM Ready */
-	while ((target_mem_read32(t, SAMD_NVMC_INTFLAG) & SAMD_NVMC_READY) == 0) {
+	while ((target_mem32_read32(t, SAMD_NVMC_INTFLAG) & SAMD_NVMC_READY) == 0) {
 		if (target_check_error(t))
 			return false;
 	}
@@ -608,7 +608,7 @@ static bool samd_wait_dsu_ready(target_s *const t, uint32_t *const result, platf
 {
 	uint32_t status = 0;
 	while ((status & (SAMD_STATUSA_DONE | SAMD_STATUSA_PERR | SAMD_STATUSA_FAIL)) == 0) {
-		status = target_mem_read32(t, SAMD_DSU_CTRLSTAT);
+		status = target_mem32_read32(t, SAMD_DSU_CTRLSTAT);
 		if (target_check_error(t))
 			return false;
 		if (timeout)
@@ -703,8 +703,8 @@ bool samd_mass_erase(target_s *t)
 static bool samd_set_flashlock(target_s *t, uint16_t value, const char **argv)
 {
 	(void)argv;
-	uint32_t high = target_mem_read32(t, SAMD_NVM_USER_ROW_HIGH);
-	uint32_t low = target_mem_read32(t, SAMD_NVM_USER_ROW_LOW);
+	uint32_t high = target_mem32_read32(t, SAMD_NVM_USER_ROW_HIGH);
+	uint32_t low = target_mem32_read32(t, SAMD_NVM_USER_ROW_LOW);
 
 	/* Write address of a word in the row to erase it */
 	/* Must be shifted right for 16-bit address, see Datasheet §20.8.8 Address */
@@ -774,8 +774,8 @@ static bool samd_cmd_unlock_flash(target_s *t, int argc, const char **argv)
 static bool samd_set_bootprot(target_s *t, uint16_t value, const char **argv)
 {
 	(void)argv;
-	const uint32_t high = target_mem_read32(t, SAMD_NVM_USER_ROW_HIGH);
-	uint32_t low = target_mem_read32(t, SAMD_NVM_USER_ROW_LOW);
+	const uint32_t high = target_mem32_read32(t, SAMD_NVM_USER_ROW_HIGH);
+	uint32_t low = target_mem32_read32(t, SAMD_NVM_USER_ROW_LOW);
 
 	/*
 	 * Write address of a word in the row to erase it
@@ -835,8 +835,8 @@ static bool samd_cmd_read_userrow(target_s *t, int argc, const char **argv)
 {
 	(void)argc;
 	(void)argv;
-	tc_printf(t, "User Row: 0x%08" PRIx32 "%08" PRIx32 "\n", target_mem_read32(t, SAMD_NVM_USER_ROW_HIGH),
-		target_mem_read32(t, SAMD_NVM_USER_ROW_LOW));
+	tc_printf(t, "User Row: 0x%08" PRIx32 "%08" PRIx32 "\n", target_mem32_read32(t, SAMD_NVM_USER_ROW_HIGH),
+		target_mem32_read32(t, SAMD_NVM_USER_ROW_LOW));
 
 	return true;
 }
@@ -849,7 +849,7 @@ static bool samd_cmd_serial(target_s *t, int argc, const char **argv)
 	tc_printf(t, "Serial Number: 0x");
 
 	for (size_t i = 0; i < 4U; ++i)
-		tc_printf(t, "%08x", target_mem_read32(t, SAMD_NVM_SERIAL(i)));
+		tc_printf(t, "%08x", target_mem32_read32(t, SAMD_NVM_SERIAL(i)));
 	tc_printf(t, "\n");
 	return true;
 }
@@ -858,7 +858,7 @@ static bool samd_cmd_serial(target_s *t, int argc, const char **argv)
 static uint32_t samd_flash_size(target_s *t)
 {
 	/* Read the Device ID */
-	const uint32_t did = target_mem_read32(t, SAMD_DSU_DID);
+	const uint32_t did = target_mem32_read32(t, SAMD_DSU_DID);
 	/* Mask off the device select bits */
 	const uint8_t devsel = did & SAMD_DID_DEVSEL_MASK;
 	/* Shift the maximum flash size (256KB) down as appropriate */
@@ -892,7 +892,7 @@ static bool samd_cmd_mbist(target_s *t, int argc, const char **argv)
 
 	/* Test the fail bit in Status A */
 	if (status & SAMD_STATUSA_FAIL)
-		tc_printf(t, "MBIST Fail @ 0x%08" PRIx32 "\n", target_mem_read32(t, SAMD_DSU_ADDRESS));
+		tc_printf(t, "MBIST Fail @ 0x%08" PRIx32 "\n", target_mem32_read32(t, SAMD_DSU_ADDRESS));
 	else
 		tc_printf(t, "MBIST Passed!\n");
 	return true;

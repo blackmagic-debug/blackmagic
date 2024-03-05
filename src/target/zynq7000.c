@@ -80,7 +80,7 @@ bool zynq7_probe(target_s *const target)
 	target->reset = zynq7_reset;
 
 	/* Read back the OCM mapping status */
-	const uint8_t ocm_mapping = target_mem_read32(target, ZYNQ7_SLCR_OCM_CFG) & 0x0fU;
+	const uint8_t ocm_mapping = target_mem32_read32(target, ZYNQ7_SLCR_OCM_CFG) & 0x0fU;
 	/* For each of the 4 chunks, pull out if it's mapped low or high and define a mapping accordingly */
 	for (uint8_t chunk = 0U; chunk < 4U; ++chunk) {
 		const bool chunk_high = (ocm_mapping >> chunk) & 1U;

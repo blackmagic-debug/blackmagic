@@ -219,10 +219,10 @@ bool imxrt_probe(target_s *const target)
 	target->driver = priv->name;
 
 #if ENABLE_DEBUG == 1 && (PC_HOSTED == 1 || defined(ESP_LOGD))
-	const uint8_t boot_mode = (target_mem_read32(target, IMXRT_SRC_BOOT_MODE2) >> 24U) & 3U;
+	const uint8_t boot_mode = (target_mem32_read32(target, IMXRT_SRC_BOOT_MODE2) >> 24U) & 3U;
 #endif
 	DEBUG_TARGET("i.MXRT boot mode is %x\n", boot_mode);
-	const uint32_t boot_cfg = target_mem_read32(target, IMXRT_SRC_BOOT_MODE1);
+	const uint32_t boot_cfg = target_mem32_read32(target, IMXRT_SRC_BOOT_MODE1);
 	DEBUG_TARGET("i.MXRT boot config is %08" PRIx32 "\n", boot_cfg);
 	priv->boot_source = imxrt_boot_source(boot_cfg);
 	switch (priv->boot_source) {
@@ -296,7 +296,7 @@ static bool imxrt_ident_device(target_s *const target)
 		return false;
 	}
 
-	const uint32_t fingerprint = target_mem_read32(target, rom_location);
+	const uint32_t fingerprint = target_mem32_read32(target, rom_location);
 	switch (fingerprint) {
 	case IMXRT5xx_ROM_FINGERPRINT:
 		priv->chip_id = 500;
@@ -367,41 +367,41 @@ static bool imxrt_enter_flash_mode(target_s *const target)
 {
 	imxrt_priv_s *const priv = (imxrt_priv_s *)target->target_storage;
 	/* Store MPU state and disable it to guarantee Flash control works */
-	priv->mpu_state = target_mem_read32(target, IMXRT_MPU_CTRL);
+	priv->mpu_state = target_mem32_read32(target, IMXRT_MPU_CTRL);
 	target_mem_write32(target, IMXRT_MPU_CTRL, 0);
 	/* Start by stepping the clocks to ~50MHz and putting the controller in a known state */
 	target_mem_write32(target, IMXRT_FLEXSPI1_MOD_CTRL0(priv),
-		target_mem_read32(target, IMXRT_FLEXSPI1_MOD_CTRL0(priv)) | IMXRT_FLEXSPI1_MOD_CTRL0_SUSPEND);
+		target_mem32_read32(target, IMXRT_FLEXSPI1_MOD_CTRL0(priv)) | IMXRT_FLEXSPI1_MOD_CTRL0_SUSPEND);
 	if (1000 <= priv->chip_id && priv->chip_id < 1100) {
 		// Gate the clock to FLEXSPI while we change it.
 		target_mem_write32(target, IMXRT10xx_CCM_CCG6,
-			target_mem_read32(target, IMXRT10xx_CCM_CCG6) & IMXRT10xx_CCM_CCG6_FLEXSPI_CLK_MASK);
+			target_mem32_read32(target, IMXRT10xx_CCM_CCG6) & IMXRT10xx_CCM_CCG6_FLEXSPI_CLK_MASK);
 
 		target_mem_write32(target, IMXRT10xx_CCM_CSCM1,
-			(target_mem_read32(target, IMXRT10xx_CCM_CSCM1) & IMXRT10xx_CCM_CSCM1_FLEXSPI_CLK_SEL_MASK) |
+			(target_mem32_read32(target, IMXRT10xx_CCM_CSCM1) & IMXRT10xx_CCM_CSCM1_FLEXSPI_CLK_SEL_MASK) |
 				IMXRT10xx_CCM_CSCM1_FLEXSPI_CLK_SEL_PLL3_PFD0);
 		// PLL3 is 480 mhz and PFD0 is set to 0x16 which is 480 * (18 / 0x16) = 392 which is then divided by 2.
 		target_mem_write32(target, IMXRT10xx_CCM_ANALOG_PLL3_PFD,
-			(target_mem_read32(target, IMXRT10xx_CCM_ANALOG_PLL3_PFD) & IMXRT10xx_CCM_ANALOG_PLL_PFD0_FRAC_MASK) |
+			(target_mem32_read32(target, IMXRT10xx_CCM_ANALOG_PLL3_PFD) & IMXRT10xx_CCM_ANALOG_PLL_PFD0_FRAC_MASK) |
 				0x16U);
 
 		// Ungate the clock.
 		target_mem_write32(target, IMXRT10xx_CCM_CCG6,
-			target_mem_read32(target, IMXRT10xx_CCM_CCG6) | IMXRT10xx_CCM_CCG6_FLEXSPI_CLK_ENABLE);
+			target_mem32_read32(target, IMXRT10xx_CCM_CCG6) | IMXRT10xx_CCM_CCG6_FLEXSPI_CLK_ENABLE);
 	} else if (1100 <= priv->chip_id && priv->chip_id < 1200) {
 		// Gate the clock to FLEXSPI1 while we change it.
 		target_mem_write32(target, IMXRT11xx_CCM_LPCG28, 0);
 		// PLL3 480 Mhz / 4 -> 120 Mhz
-		target_mem_read32(target, IMXRT11xx_CCM_CLOCK_ROOT20_CONTROL);
+		target_mem32_read32(target, IMXRT11xx_CCM_CLOCK_ROOT20_CONTROL);
 		target_mem_write32(target, IMXRT11xx_CCM_CLOCK_ROOT20_CONTROL,
 			IMXRT11xx_CCM_CLOCK_ROOT20_CONTROL_PLL_480M | IMXRT11xx_CCM_CLOCK_ROOT20_CONTROL_DIV(4));
 		// Ungate the clock.
 		target_mem_write32(target, IMXRT11xx_CCM_LPCG28, 1);
 	}
 	target_mem_write32(target, IMXRT_FLEXSPI1_MOD_CTRL0(priv),
-		target_mem_read32(target, IMXRT_FLEXSPI1_MOD_CTRL0(priv)) & ~IMXRT_FLEXSPI1_MOD_CTRL0_SUSPEND);
+		target_mem32_read32(target, IMXRT_FLEXSPI1_MOD_CTRL0(priv)) & ~IMXRT_FLEXSPI1_MOD_CTRL0_SUSPEND);
 	/* Clear all outstanding interrupts so we can consume their status cleanly */
-	target_mem_write32(target, IMXRT_FLEXSPI1_INT(priv), target_mem_read32(target, IMXRT_FLEXSPI1_INT(priv)));
+	target_mem_write32(target, IMXRT_FLEXSPI1_INT(priv), target_mem32_read32(target, IMXRT_FLEXSPI1_INT(priv)));
 	/* Tell the controller we want to use the entire read FIFO */
 	target_mem_write32(target, IMXRT_FLEXSPI1_PRG_READ_FIFO_CTRL(priv),
 		IMXRT_FLEXSPI1_PRG_FIFO_CTRL_WATERMARK(128) | IMXRT_FLEXSPI1_PRG_FIFO_CTRL_CLR);
@@ -409,7 +409,7 @@ static bool imxrt_enter_flash_mode(target_s *const target)
 	target_mem_write32(target, IMXRT_FLEXSPI1_PRG_WRITE_FIFO_CTRL(priv),
 		IMXRT_FLEXSPI1_PRG_FIFO_CTRL_WATERMARK(128) | IMXRT_FLEXSPI1_PRG_FIFO_CTRL_CLR);
 	/* Then unlock the sequence LUT so we can use it to to run Flash commands */
-	priv->flexspi_lut_state = target_mem_read32(target, IMXRT_FLEXSPI1_LUT_CTRL(priv));
+	priv->flexspi_lut_state = target_mem32_read32(target, IMXRT_FLEXSPI1_LUT_CTRL(priv));
 	if (priv->flexspi_lut_state != IMXRT_FLEXSPI1_LUT_CTRL_UNLOCK) {
 		target_mem_write32(target, IMXRT_FLEXSPI1_LUT_KEY(priv), IMXRT_FLEXSPI1_LUT_KEY_VALUE);
 		target_mem_write32(target, IMXRT_FLEXSPI1_LUT_CTRL(priv), IMXRT_FLEXSPI1_LUT_CTRL_UNLOCK);
@@ -515,15 +515,15 @@ static void imxrt_spi_wait_complete(target_s *const target)
 {
 	const imxrt_priv_s *const priv = (imxrt_priv_s *)target->target_storage;
 	/* Wait till it finishes */
-	while (!(target_mem_read32(target, IMXRT_FLEXSPI1_INT(priv)) & IMXRT_FLEXSPI1_INT_PRG_CMD_DONE))
+	while (!(target_mem32_read32(target, IMXRT_FLEXSPI1_INT(priv)) & IMXRT_FLEXSPI1_INT_PRG_CMD_DONE))
 		continue;
 	/* Then clear the interrupt bit it sets. */
 	target_mem_write32(target, IMXRT_FLEXSPI1_INT(priv), IMXRT_FLEXSPI1_INT_PRG_CMD_DONE);
 	/* Check if any errors occurred */
-	if (target_mem_read32(target, IMXRT_FLEXSPI1_INT(priv)) & IMXRT_FLEXSPI1_INT_CMD_ERR) {
+	if (target_mem32_read32(target, IMXRT_FLEXSPI1_INT(priv)) & IMXRT_FLEXSPI1_INT_CMD_ERR) {
 #if ENABLE_DEBUG == 1 && PC_HOSTED == 1
 		/* Read out the status code and display it */
-		const uint32_t status = target_mem_read32(target, IMXRT_FLEXSPI1_STAT1(priv));
+		const uint32_t status = target_mem32_read32(target, IMXRT_FLEXSPI1_STAT1(priv));
 		DEBUG_TARGET("Error executing sequence, offset %u, error code %u\n", (uint8_t)(status >> 16U) & 0xfU,
 			(uint8_t)(status >> 24U) & 0xfU);
 #endif
@@ -560,7 +560,7 @@ static void imxrt_spi_write(target_s *const target, const uint16_t command, cons
 	imxrt_spi_exec_sequence(target, slot, address, length);
 	/* Transfer the data into the transmit FIFO in blocks */
 	for (uint16_t offset = 0; offset < length; offset += 128U) {
-		while (target_mem_read32(target, IMXRT_FLEXSPI1_PRG_WRITE_FIFO_STATUS(priv)) &
+		while (target_mem32_read32(target, IMXRT_FLEXSPI1_PRG_WRITE_FIFO_STATUS(priv)) &
 			IMXRT_FLEXSPI1_PRG_WRITE_FIFO_STATUS_FILL)
 			continue;
 		const uint16_t amount = MIN(128U, (uint16_t)(length - offset));

@@ -257,7 +257,7 @@ bool stm32l0_probe(target_s *const target)
 
 	const uint32_t nvm = stm32lx_nvm_phys(target);
 	const bool protected =
-		(target_mem_read32(target, STM32Lx_NVM_OPTR(nvm)) & STM32Lx_NVM_OPTR_RDPROT_M) != STM32Lx_NVM_OPTR_RDPROT_0;
+		(target_mem32_read32(target, STM32Lx_NVM_OPTR(nvm)) & STM32Lx_NVM_OPTR_RDPROT_M) != STM32Lx_NVM_OPTR_RDPROT_0;
 	sprintf(priv_storage->stm32l_variant, "%s%s", target->driver, protected ? " (protected)" : "");
 	target->driver = priv_storage->stm32l_variant;
 
@@ -289,7 +289,7 @@ static bool stm32lx_nvm_prog_data_unlock(target_s *const target, const uint32_t 
 	target_mem_write32(target, STM32Lx_NVM_PRGKEYR(nvm), STM32Lx_NVM_PRGKEY1);
 	target_mem_write32(target, STM32Lx_NVM_PRGKEYR(nvm), STM32Lx_NVM_PRGKEY2);
 
-	return !(target_mem_read32(target, STM32Lx_NVM_PECR(nvm)) & STM32Lx_NVM_PECR_PRGLOCK);
+	return !(target_mem32_read32(target, STM32Lx_NVM_PECR(nvm)) & STM32Lx_NVM_PECR_PRGLOCK);
 }
 
 /*
@@ -305,18 +305,18 @@ static bool stm32lx_nvm_opt_unlock(target_s *const target, const uint32_t nvm)
 	target_mem_write32(target, STM32Lx_NVM_OPTKEYR(nvm), STM32Lx_NVM_OPTKEY1);
 	target_mem_write32(target, STM32Lx_NVM_OPTKEYR(nvm), STM32Lx_NVM_OPTKEY2);
 
-	return !(target_mem_read32(target, STM32Lx_NVM_PECR(nvm)) & STM32Lx_NVM_PECR_OPTLOCK);
+	return !(target_mem32_read32(target, STM32Lx_NVM_PECR(nvm)) & STM32Lx_NVM_PECR_OPTLOCK);
 }
 
 static bool stm32lx_nvm_busy_wait(target_s *const target, const uint32_t nvm, platform_timeout_s *const timeout)
 {
-	while (target_mem_read32(target, STM32Lx_NVM_SR(nvm)) & STM32Lx_NVM_SR_BSY) {
+	while (target_mem32_read32(target, STM32Lx_NVM_SR(nvm)) & STM32Lx_NVM_SR_BSY) {
 		if (target_check_error(target))
 			return false;
 		if (timeout)
 			target_print_progress(timeout);
 	}
-	const uint32_t status = target_mem_read32(target, STM32Lx_NVM_SR(nvm));
+	const uint32_t status = target_mem32_read32(target, STM32Lx_NVM_SR(nvm));
 	return !target_check_error(target) && !(status & STM32Lx_NVM_SR_ERR_M);
 }
 
@@ -338,7 +338,7 @@ static bool stm32lx_nvm_prog_erase(target_flash_s *const flash, const target_add
 	target_mem_write32(target, STM32Lx_NVM_PECR(nvm), STM32Lx_NVM_PECR_ERASE | STM32Lx_NVM_PECR_PROG);
 
 	const uint32_t pecr =
-		target_mem_read32(target, STM32Lx_NVM_PECR(nvm)) & (STM32Lx_NVM_PECR_PROG | STM32Lx_NVM_PECR_ERASE);
+		target_mem32_read32(target, STM32Lx_NVM_PECR(nvm)) & (STM32Lx_NVM_PECR_PROG | STM32Lx_NVM_PECR_ERASE);
 	if (pecr != (STM32Lx_NVM_PECR_PROG | STM32Lx_NVM_PECR_ERASE))
 		return false;
 
@@ -403,7 +403,7 @@ static bool stm32lx_nvm_data_erase(target_flash_s *const flash, const target_add
 	target_mem_write32(target, STM32Lx_NVM_PECR(nvm), STM32Lx_NVM_PECR_ERASE | STM32Lx_NVM_PECR_DATA);
 
 	const uint32_t pecr =
-		target_mem_read32(target, STM32Lx_NVM_PECR(nvm)) & (STM32Lx_NVM_PECR_ERASE | STM32Lx_NVM_PECR_DATA);
+		target_mem32_read32(target, STM32Lx_NVM_PECR(nvm)) & (STM32Lx_NVM_PECR_ERASE | STM32Lx_NVM_PECR_DATA);
 	if (pecr != (STM32Lx_NVM_PECR_ERASE | STM32Lx_NVM_PECR_DATA))
 		return false;
 
@@ -472,7 +472,7 @@ static bool stm32lx_protected_mass_erase(target_s *const target)
 	platform_timeout_s timeout;
 	platform_timeout_set(&timeout, 500);
 
-	while (target_mem_read32(target, STM32Lx_NVM_SR(nvm)) & STM32Lx_NVM_SR_BSY)
+	while (target_mem32_read32(target, STM32Lx_NVM_SR(nvm)) & STM32Lx_NVM_SR_BSY)
 		target_print_progress(&timeout);
 
 	/* Disable further programming by locking PECR */
@@ -589,12 +589,12 @@ static bool stm32lx_cmd_option(target_s *const target, const int argc, const cha
 	/* Report the current option values */
 	for (size_t i = 0; i < opt_size; i += 4U) {
 		const uint32_t addr = STM32Lx_NVM_OPT_PHYS + i;
-		const uint32_t val = target_mem_read32(target, addr);
+		const uint32_t val = target_mem32_read32(target, addr);
 		tc_printf(target, "0x%08" PRIx32 ": 0x%04u 0x%04u %s\n", addr, val & 0xffffU, (val >> 16U) & 0xffffU,
 			(val & 0xffffU) == ((~val >> 16U) & 0xffffU) ? "OK" : "ERR");
 	}
 
-	const uint32_t options = target_mem_read32(target, STM32Lx_NVM_OPTR(nvm));
+	const uint32_t options = target_mem32_read32(target, STM32Lx_NVM_OPTR(nvm));
 	const size_t read_protection = stm32lx_prot_level(options);
 	if (stm32lx_is_stm32l1(target)) {
 		tc_printf(target,

@@ -184,8 +184,8 @@ bool tm4c_probe(target_s *const target, const uint16_t did1)
 
 bool lmi_probe(target_s *const target)
 {
-	const uint32_t did0 = target_mem_read32(target, LMI_SCB_DID0);
-	const uint16_t did1 = target_mem_read32(target, LMI_SCB_DID1) >> 16U;
+	const uint32_t did0 = target_mem32_read32(target, LMI_SCB_DID0);
+	const uint16_t did1 = target_mem32_read32(target, LMI_SCB_DID1) >> 16U;
 
 	switch (did0 & DID0_CLASS_MASK) {
 	case DID0_CLASS_STELLARIS_FURY:
@@ -212,7 +212,7 @@ static bool lmi_flash_erase(target_flash_s *flash, target_addr_t addr, const siz
 		target_mem_write32(target, LMI_FLASH_FMA, addr);
 		target_mem_write32(target, LMI_FLASH_FMC, LMI_FLASH_FMC_WRKEY | LMI_FLASH_FMC_ERASE);
 
-		while (target_mem_read32(target, LMI_FLASH_FMC) & LMI_FLASH_FMC_ERASE) {
+		while (target_mem32_read32(target, LMI_FLASH_FMC) & LMI_FLASH_FMC_ERASE) {
 			if (full_erase)
 				target_print_progress(&timeout);
 		}

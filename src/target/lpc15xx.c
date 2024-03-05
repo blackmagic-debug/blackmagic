@@ -71,7 +71,7 @@ static void lpc15xx_add_flash(target_s *target, uint32_t addr, size_t len, size_
 bool lpc15xx_probe(target_s *t)
 {
 	/* read the device ID register */
-	const uint32_t device_id = target_mem_read32(t, LPC15XX_DEVICE_ID);
+	const uint32_t device_id = target_mem32_read32(t, LPC15XX_DEVICE_ID);
 
 	uint32_t ram_size = 0;
 	switch (device_id) {

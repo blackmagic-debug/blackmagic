@@ -312,7 +312,7 @@ static void lpc43xx_add_iap_flash(target_s *target, uint32_t iap_entry, uint8_t 
 static void lpc43xx_detect(target_s *const t, const lpc43xx_partid_s part_id)
 {
 	lpc43xx_priv_s *const priv = (lpc43xx_priv_s *)t->target_storage;
-	const uint32_t iap_entry = target_mem_read32(t, IAP_ENTRYPOINT_LOCATION);
+	const uint32_t iap_entry = target_mem32_read32(t, IAP_ENTRYPOINT_LOCATION);
 	uint32_t sram_ahb_size = 0;
 
 	switch (part_id.part) {
@@ -465,7 +465,7 @@ static void lpc43x0_detect(target_s *const t, const lpc43xx_partid_s part_id)
 
 bool lpc43xx_probe(target_s *const t)
 {
-	const uint32_t chipid = target_mem_read32(t, LPC43xx_CHIPID);
+	const uint32_t chipid = target_mem32_read32(t, LPC43xx_CHIPID);
 	if ((chipid & LPC43xx_CHIPID_FAMILY_MASK) != LPC43xx_CHIPID_FAMILY_CODE)
 		return false;
 
@@ -524,24 +524,24 @@ static bool lpc43xx_enter_flash_mode(target_s *t)
 
 static uint8_t lpc43x0_read_boot_src(target_s *const t)
 {
-	const uint32_t port0_dir = target_mem_read32(t, LPC43xx_GPIO_PORT0_DIR);
+	const uint32_t port0_dir = target_mem32_read32(t, LPC43xx_GPIO_PORT0_DIR);
 	target_mem_write32(t, LPC43xx_GPIO_PORT0_DIR, port0_dir & 0xfffffcffU);
-	const uint32_t port1_dir = target_mem_read32(t, LPC43xx_GPIO_PORT1_DIR);
+	const uint32_t port1_dir = target_mem32_read32(t, LPC43xx_GPIO_PORT1_DIR);
 	target_mem_write32(t, LPC43xx_GPIO_PORT1_DIR, port1_dir & 0xfffffbffU);
-	const uint32_t port5_dir = target_mem_read32(t, LPC43xx_GPIO_PORT5_DIR);
+	const uint32_t port5_dir = target_mem32_read32(t, LPC43xx_GPIO_PORT5_DIR);
 	target_mem_write32(t, LPC43xx_GPIO_PORT5_DIR, port5_dir & 0xffffff7fU);
 
-	const uint32_t p1_1_config = target_mem_read32(t, LPC43xx_SCU_BANK1_PIN1);
+	const uint32_t p1_1_config = target_mem32_read32(t, LPC43xx_SCU_BANK1_PIN1);
 	target_mem_write32(t, LPC43xx_SCU_BANK1_PIN1, LPC43xx_SCU_PIN_GPIO_INPUT);
-	const uint32_t p1_2_config = target_mem_read32(t, LPC43xx_SCU_BANK1_PIN2);
+	const uint32_t p1_2_config = target_mem32_read32(t, LPC43xx_SCU_BANK1_PIN2);
 	target_mem_write32(t, LPC43xx_SCU_BANK1_PIN2, LPC43xx_SCU_PIN_GPIO_INPUT);
-	const uint32_t p2_8_config = target_mem_read32(t, LPC43xx_SCU_BANK2_PIN8);
+	const uint32_t p2_8_config = target_mem32_read32(t, LPC43xx_SCU_BANK2_PIN8);
 	/* P2_8 uses function 4 for GPIO, function 0 is SGPIO which is a different controller. */
 	target_mem_write32(t, LPC43xx_SCU_BANK2_PIN8, LPC43xx_SCU_PIN_GPIO_INPUT | 4U);
-	const uint32_t p2_9_config = target_mem_read32(t, LPC43xx_SCU_BANK2_PIN9);
+	const uint32_t p2_9_config = target_mem32_read32(t, LPC43xx_SCU_BANK2_PIN9);
 	target_mem_write32(t, LPC43xx_SCU_BANK2_PIN9, LPC43xx_SCU_PIN_GPIO_INPUT);
 
-	const uint8_t boot_src = target_mem_read32(t, LPC43xx_CREG_BOOT_CONFIG) & LPC43xx_CREG_BOOT_CONFIG_SRC_MASK;
+	const uint8_t boot_src = target_mem32_read32(t, LPC43xx_CREG_BOOT_CONFIG) & LPC43xx_CREG_BOOT_CONFIG_SRC_MASK;
 
 	target_mem_write32(t, LPC43xx_GPIO_PORT0_DIR, port0_dir);
 	target_mem_write32(t, LPC43xx_GPIO_PORT1_DIR, port1_dir);
@@ -562,16 +562,16 @@ static void lpc43x0_determine_flash_interface(target_s *const t)
 	 * If the device is not operating out of SRAM1 (meaning the boot ROM booted to a XIP mode)
 	 * then we can analyse the active configuration and take it at face value - that will work.
 	 */
-	const uint32_t boot_address = target_mem_read32(t, LPC43xx_CREG_M4MEMMAP);
+	const uint32_t boot_address = target_mem32_read32(t, LPC43xx_CREG_M4MEMMAP);
 	if (boot_address != LPC43xx_LOCAL_SRAM1_BASE && boot_address != LPC43xx_BOOT_ROM_BASE) {
-		const uint32_t clk_pin_mode = target_mem_read32(t, LPC43xx_SCU_BANK3_PIN3) & LPC43xx_SCU_PIN_MODE_MASK;
+		const uint32_t clk_pin_mode = target_mem32_read32(t, LPC43xx_SCU_BANK3_PIN3) & LPC43xx_SCU_PIN_MODE_MASK;
 		if (clk_pin_mode == LPC43xx_SCU_PIN_MODE_SPIFI) {
-			priv->spifi_memory_command = target_mem_read32(t, LPC43x0_SPIFI_MCMD);
+			priv->spifi_memory_command = target_mem32_read32(t, LPC43x0_SPIFI_MCMD);
 			priv->interface = FLASH_SPIFI;
-		} else if ((target_mem_read32(t, LPC43xx_SCU_CLK0) & LPC43xx_SCU_PIN_MODE_MASK) ==
+		} else if ((target_mem32_read32(t, LPC43xx_SCU_CLK0) & LPC43xx_SCU_PIN_MODE_MASK) ==
 			LPC43xx_SCU_PIN_MODE_EMC_CLK) {
 			const uint32_t emc_config =
-				target_mem_read32(t, LPC43xx_EMC_DYN_CONFIG0) & LPC43xx_EMC_DYN_CONFIG_MAPPING_MASK;
+				target_mem32_read32(t, LPC43xx_EMC_DYN_CONFIG0) & LPC43xx_EMC_DYN_CONFIG_MAPPING_MASK;
 			if (emc_config == LPC43xx_EMC_DYN_CONFIG_MAPPING_8)
 				priv->interface = FLASH_EMC8;
 			else if (emc_config == LPC43xx_EMC_DYN_CONFIG_MAPPING_16)
@@ -586,7 +586,7 @@ static void lpc43x0_determine_flash_interface(target_s *const t)
 	 * from the boot device, we need to determine what kind of device was used and how. We then
 	 * must reconfigure back onto that device to compensate for anything the firmware has done.
 	 */
-	const uint32_t otp_boot_src = target_mem_read32(t, LPC43xx_OTP_CONTROL_DATA) & LPC43xx_OTP_BOOT_SRC_MASK;
+	const uint32_t otp_boot_src = target_mem32_read32(t, LPC43xx_OTP_CONTROL_DATA) & LPC43xx_OTP_BOOT_SRC_MASK;
 	uint8_t boot_src = 0;
 
 	if (otp_boot_src == 0) {
@@ -597,7 +597,7 @@ static void lpc43x0_determine_flash_interface(target_s *const t)
 
 	switch (boot_src) {
 	case 2:
-		priv->spifi_memory_command = target_mem_read32(t, LPC43x0_SPIFI_MCMD);
+		priv->spifi_memory_command = target_mem32_read32(t, LPC43x0_SPIFI_MCMD);
 		priv->interface = FLASH_SPIFI;
 		break;
 	case 3:
@@ -693,18 +693,18 @@ static void lpc43x0_detach(target_s *const target)
 static bool lpc43x0_enter_flash_mode(target_s *const t)
 {
 	lpc43x0_priv_s *priv = (lpc43x0_priv_s *)t->target_storage;
-	priv->boot_address = target_mem_read32(t, LPC43xx_CREG_M4MEMMAP);
+	priv->boot_address = target_mem32_read32(t, LPC43xx_CREG_M4MEMMAP);
 	if (priv->boot_address != LPC43xx_LOCAL_SRAM1_BASE && priv->boot_address != LPC43xx_BOOT_ROM_BASE) {
 		lpc43x0_spi_abort(t);
 		return true;
 	}
 
-	priv->bank3_pin3_config = target_mem_read32(t, LPC43xx_SCU_BANK3_PIN3);
-	priv->bank3_pin4_config = target_mem_read32(t, LPC43xx_SCU_BANK3_PIN4);
-	priv->bank3_pin5_config = target_mem_read32(t, LPC43xx_SCU_BANK3_PIN5);
-	priv->bank3_pin6_config = target_mem_read32(t, LPC43xx_SCU_BANK3_PIN6);
-	priv->bank3_pin7_config = target_mem_read32(t, LPC43xx_SCU_BANK3_PIN7);
-	priv->bank3_pin8_config = target_mem_read32(t, LPC43xx_SCU_BANK3_PIN8);
+	priv->bank3_pin3_config = target_mem32_read32(t, LPC43xx_SCU_BANK3_PIN3);
+	priv->bank3_pin4_config = target_mem32_read32(t, LPC43xx_SCU_BANK3_PIN4);
+	priv->bank3_pin5_config = target_mem32_read32(t, LPC43xx_SCU_BANK3_PIN5);
+	priv->bank3_pin6_config = target_mem32_read32(t, LPC43xx_SCU_BANK3_PIN6);
+	priv->bank3_pin7_config = target_mem32_read32(t, LPC43xx_SCU_BANK3_PIN7);
+	priv->bank3_pin8_config = target_mem32_read32(t, LPC43xx_SCU_BANK3_PIN8);
 
 	switch (priv->interface) {
 	case FLASH_SPIFI:
@@ -792,7 +792,7 @@ static bool lpc43x0_exit_flash_mode(target_s *const t)
 static lpc43xx_partid_s lpc43x0_spi_read_partid(target_s *const t)
 {
 	lpc43xx_partid_s result;
-	result.part = target_mem_read32(t, LPC43xx_PARTID_LOW);
+	result.part = target_mem32_read32(t, LPC43xx_PARTID_LOW);
 	result.flash_config = LPC43xx_PARTID_FLASH_CONFIG_NONE;
 	return result;
 }
@@ -803,15 +803,15 @@ static void lpc43x0_spi_abort(target_s *const t)
 	if (priv->interface == FLASH_SPIFI) {
 		/* If in SPIFI mode, reset the controller to get to a known state */
 		target_mem_write32(t, LPC43x0_SPIFI_STAT, LPC43x0_SPIFI_STATUS_RESET);
-		while (target_mem_read32(t, LPC43x0_SPIFI_STAT) & LPC43x0_SPIFI_STATUS_RESET)
+		while (target_mem32_read32(t, LPC43x0_SPIFI_STAT) & LPC43x0_SPIFI_STATUS_RESET)
 			continue;
 	} else if (priv->interface == FLASH_SPI) {
 		/* If in SPI/SSP0 mode, first wait for the controller to finish transmitting all outstanding frames */
-		while (target_mem_read32(t, LPC43x0_SSP0_SR) & SPI43x0_SSP_SR_BSY)
+		while (target_mem32_read32(t, LPC43x0_SSP0_SR) & SPI43x0_SSP_SR_BSY)
 			continue;
 		/* And drain the response buffer too, giving our best effort at bringing to known state */
-		while (target_mem_read32(t, LPC43x0_SSP0_SR) & SPI43x0_SSP_SR_RNE)
-			target_mem_read32(t, LPC43x0_SSP0_DR);
+		while (target_mem32_read32(t, LPC43x0_SSP0_SR) & SPI43x0_SSP_SR_RNE)
+			target_mem32_read32(t, LPC43x0_SSP0_DR);
 		target_mem_write32(t, LPC43xx_GPIO_PORT0_CLR, 1U << 6U);
 	}
 	lpc43x0_spi_run_command(t, SPI_FLASH_CMD_WAKE_UP, 0U);
@@ -819,7 +819,7 @@ static void lpc43x0_spi_abort(target_s *const t)
 
 static inline void lpc43x0_spi_wait_complete(target_s *const t)
 {
-	while (target_mem_read32(t, LPC43x0_SPIFI_STAT) & LPC43x0_SPIFI_STATUS_CMD_ACTIVE)
+	while (target_mem32_read32(t, LPC43x0_SPIFI_STAT) & LPC43x0_SPIFI_STATUS_CMD_ACTIVE)
 		continue;
 	target_mem_write32(t, LPC43x0_SPIFI_STAT, LPC43x0_SPIFI_STATUS_INTRQ);
 }
@@ -827,9 +827,9 @@ static inline void lpc43x0_spi_wait_complete(target_s *const t)
 static uint8_t lpc43x0_ssp0_transfer(target_s *const t, const uint8_t value)
 {
 	target_mem_write32(t, LPC43x0_SSP0_DR, value);
-	while (target_mem_read32(t, LPC43x0_SSP0_SR) & SPI43x0_SSP_SR_BSY)
+	while (target_mem32_read32(t, LPC43x0_SSP0_SR) & SPI43x0_SSP_SR_BSY)
 		continue;
-	return target_mem_read32(t, LPC43x0_SSP0_DR) & 0xffU;
+	return target_mem32_read32(t, LPC43x0_SSP0_DR) & 0xffU;
 }
 
 static void lpc43x0_ssp0_setup_command(target_s *const t, const uint32_t command, const target_addr_t address)
@@ -877,7 +877,7 @@ static void lpc43x0_spi_read(target_s *const target, const uint16_t command, con
 		lpc43x0_spi_setup_xfer(target, command, address, length);
 		uint8_t *const data = (uint8_t *)buffer;
 		for (size_t i = 0; i < length; ++i)
-			data[i] = target_mem_read8(target, LPC43x0_SPIFI_DATA);
+			data[i] = target_mem32_read8(target, LPC43x0_SPIFI_DATA);
 		lpc43x0_spi_wait_complete(target);
 	} else if (priv->interface == FLASH_SPI) {
 		/* Select the Flash */
@@ -935,17 +935,17 @@ static bool lpc43xx_iap_init(target_flash_s *const target_flash)
 	lpc_flash_s *const flash = (lpc_flash_s *)target_flash;
 	/* If on the M4 core, check and set the shadow region mapping */
 	if ((target->cpuid & CORTEX_CPUID_PARTNO_MASK) == CORTEX_M4) {
-		priv->shadow_map = target_mem_read32(target, LPC43xx_M4MEMMAP);
+		priv->shadow_map = target_mem32_read32(target, LPC43xx_M4MEMMAP);
 		target_mem_write32(target, LPC43xx_M4MEMMAP, LPC43xx_M4MEMMAP_BOOT_ROM);
 	}
 
 	/* Check if the block we use (shared with the ETB) is in ETB mode, and reset that if it is */
-	const uint32_t etb_cfg = target_mem_read32(target, LPC43xx_ETB_CFG);
+	const uint32_t etb_cfg = target_mem32_read32(target, LPC43xx_ETB_CFG);
 	target_mem_write32(target, LPC43xx_ETB_CFG, 1U);
 	(void)etb_cfg;
 
 	/* Check MPU state and disable */
-	priv->mpu_ctrl = target_mem_read32(target, LPC43xx_MPU_CTRL);
+	priv->mpu_ctrl = target_mem32_read32(target, LPC43xx_MPU_CTRL);
 	target_mem_write32(target, LPC43xx_MPU_CTRL, 0);
 
 	/* Deal with WDT */
@@ -973,7 +973,7 @@ static lpc43xx_partid_s lpc43xx_iap_read_partid(target_s *const t)
 	lpc_flash_s flash;
 	flash.f.t = t;
 	flash.wdt_kick = lpc43xx_wdt_kick;
-	flash.iap_entry = target_mem_read32(t, IAP_ENTRYPOINT_LOCATION);
+	flash.iap_entry = target_mem32_read32(t, IAP_ENTRYPOINT_LOCATION);
 	flash.iap_ram = IAP_RAM_BASE;
 	flash.iap_msp = IAP_RAM_BASE + IAP_RAM_SIZE;
 
@@ -1065,7 +1065,7 @@ static bool lpc43xx_cmd_mkboot(target_s *t, int argc, const char **argv)
 static void lpc43xx_wdt_set_period(target_s *t)
 {
 	/* Check if WDT is on */
-	uint32_t wdt_mode = target_mem_read32(t, LPC43xx_WDT_MODE);
+	uint32_t wdt_mode = target_mem32_read32(t, LPC43xx_WDT_MODE);
 
 	/* If WDT on, we can't disable it, but we may be able to set a long period */
 	if (wdt_mode && !(wdt_mode & LPC43xx_WDT_PROTECT))
@@ -1075,7 +1075,7 @@ static void lpc43xx_wdt_set_period(target_s *t)
 static void lpc43xx_wdt_kick(target_s *t)
 {
 	/* Check if WDT is on */
-	uint32_t wdt_mode = target_mem_read32(t, LPC43xx_WDT_MODE);
+	uint32_t wdt_mode = target_mem32_read32(t, LPC43xx_WDT_MODE);
 
 	/* If WDT on, kick it so we don't get the target reset */
 	if (wdt_mode) {

@@ -134,7 +134,7 @@ static void lpc546xx_add_flash(
 
 bool lpc546xx_probe(target_s *t)
 {
-	const uint32_t chipid = target_mem_read32(t, LPC546XX_CHIPID);
+	const uint32_t chipid = target_mem32_read32(t, LPC546XX_CHIPID);
 	uint32_t flash_size = 0;
 	uint32_t sram123_size = 0;
 
@@ -312,7 +312,7 @@ static bool lpc546xx_flash_erase(target_flash_s *tf, target_addr_t addr, size_t 
 static void lpc546xx_wdt_set_period(target_s *t)
 {
 	/* Check if WDT is on */
-	uint32_t wdt_mode = target_mem_read32(t, LPC546XX_WDT_MODE);
+	uint32_t wdt_mode = target_mem32_read32(t, LPC546XX_WDT_MODE);
 
 	/* If WDT on, we can't disable it, but we may be able to set a long period */
 	if (wdt_mode && !(wdt_mode & LPC546XX_WDT_PROTECT))
@@ -322,7 +322,7 @@ static void lpc546xx_wdt_set_period(target_s *t)
 static void lpc546xx_wdt_kick(target_s *t)
 {
 	/* Check if WDT is on */
-	uint32_t wdt_mode = target_mem_read32(t, LPC546XX_WDT_MODE);
+	uint32_t wdt_mode = target_mem32_read32(t, LPC546XX_WDT_MODE);
 
 	/* If WDT on, poke it to reset it */
 	if (wdt_mode) {

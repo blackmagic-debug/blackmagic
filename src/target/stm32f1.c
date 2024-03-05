@@ -133,12 +133,12 @@ static uint16_t stm32f1_read_idcode(target_s *const target)
 {
 	if ((target->cpuid & CORTEX_CPUID_PARTNO_MASK) == CORTEX_M0 ||
 		(target->cpuid & CORTEX_CPUID_PARTNO_MASK) == CORTEX_M23)
-		return target_mem_read32(target, DBGMCU_IDCODE_F0) & 0xfffU;
+		return target_mem32_read32(target, DBGMCU_IDCODE_F0) & 0xfffU;
 	/* Is this a Cortex-M33 core with STM32F1-style peripherals? (GD32E50x) */
 	if ((target->cpuid & CORTEX_CPUID_PARTNO_MASK) == CORTEX_M33)
-		return target_mem_read32(target, DBGMCU_IDCODE_GD32E5) & 0xfffU;
+		return target_mem32_read32(target, DBGMCU_IDCODE_GD32E5) & 0xfffU;
 
-	return target_mem_read32(target, DBGMCU_IDCODE) & 0xfffU;
+	return target_mem32_read32(target, DBGMCU_IDCODE) & 0xfffU;
 }
 
 /* Identify GD32F1, GD32F2 and GD32F3 chips */
@@ -174,7 +174,7 @@ bool gd32f1_probe(target_s *target)
 		return false;
 	}
 
-	const uint32_t signature = target_mem_read32(target, GD32Fx_FLASHSIZE);
+	const uint32_t signature = target_mem32_read32(target, GD32Fx_FLASHSIZE);
 	const uint16_t flash_size = signature & 0xffffU;
 	const uint16_t ram_size = signature >> 16U;
 
@@ -210,7 +210,7 @@ bool gd32vf1_probe(target_s *const target)
 	if (target->cpuid != 0x80000022U)
 		return false;
 	/* Then read out the device ID */
-	const uint16_t device_id = target_mem_read32(target, DBGMCU_IDCODE) & 0xfffU;
+	const uint16_t device_id = target_mem32_read32(target, DBGMCU_IDCODE) & 0xfffU;
 	switch (device_id) {
 	case 0x410U: /* GD32VF103 */
 		target->driver = "GD32VF1";
@@ -219,7 +219,7 @@ bool gd32vf1_probe(target_s *const target)
 		return false;
 	}
 
-	const uint32_t signature = target_mem_read32(target, GD32Fx_FLASHSIZE);
+	const uint32_t signature = target_mem32_read32(target, GD32Fx_FLASHSIZE);
 	const uint16_t flash_size = signature & 0xffffU;
 	const uint16_t ram_size = signature >> 16U;
 
@@ -337,7 +337,7 @@ bool at32f40x_probe(target_s *target)
 		return false;
 
 	// Artery chips use the complete idcode word for identification
-	const uint32_t idcode = target_mem_read32(target, DBGMCU_IDCODE);
+	const uint32_t idcode = target_mem32_read32(target, DBGMCU_IDCODE);
 	const uint32_t series = idcode & AT32F4x_IDCODE_SERIES_MASK;
 	const uint16_t part_id = idcode & AT32F4x_IDCODE_PART_MASK;
 
@@ -425,7 +425,7 @@ bool mm32l0xx_probe(target_s *target)
 	size_t ram_kbyte = 0;
 	size_t block_size = 0x400U;
 
-	const uint32_t mm32_id = target_mem_read32(target, DBGMCU_IDCODE_MM32L0);
+	const uint32_t mm32_id = target_mem32_read32(target, DBGMCU_IDCODE_MM32L0);
 	if (target_check_error(target)) {
 		DEBUG_ERROR("%s: read error at 0x%" PRIx32 "\n", __func__, (uint32_t)DBGMCU_IDCODE_MM32L0);
 		return false;
@@ -472,7 +472,7 @@ bool mm32f3xx_probe(target_s *target)
 	size_t ram2_kbyte = 0; /* ram at 0x30000000 */
 	size_t block_size = 0x400U;
 
-	const uint32_t mm32_id = target_mem_read32(target, DBGMCU_IDCODE_MM32F3);
+	const uint32_t mm32_id = target_mem32_read32(target, DBGMCU_IDCODE_MM32F3);
 	if (target_check_error(target)) {
 		DEBUG_ERROR("%s: read error at 0x%" PRIx32 "\n", __func__, (uint32_t)DBGMCU_IDCODE_MM32F3);
 		return false;
@@ -612,7 +612,7 @@ static bool stm32f1_flash_unlock(target_s *target, uint32_t bank_offset)
 {
 	target_mem_write32(target, FLASH_KEYR + bank_offset, KEY1);
 	target_mem_write32(target, FLASH_KEYR + bank_offset, KEY2);
-	uint32_t ctrl = target_mem_read32(target, FLASH_CR + bank_offset);
+	uint32_t ctrl = target_mem32_read32(target, FLASH_CR + bank_offset);
 	if (ctrl & FLASH_CR_LOCK)
 		DEBUG_ERROR("unlock failed, cr: 0x%08" PRIx32 "\n", ctrl);
 	return !(ctrl & FLASH_CR_LOCK);
@@ -620,7 +620,7 @@ static bool stm32f1_flash_unlock(target_s *target, uint32_t bank_offset)
 
 static inline void stm32f1_flash_clear_eop(target_s *const target, const uint32_t bank_offset)
 {
-	const uint32_t status = target_mem_read32(target, FLASH_SR + bank_offset);
+	const uint32_t status = target_mem32_read32(target, FLASH_SR + bank_offset);
 	target_mem_write32(target, FLASH_SR + bank_offset, status | SR_EOP); /* EOP is W1C */
 }
 
@@ -637,7 +637,7 @@ static bool stm32f1_flash_busy_wait(
 	 * https://www.st.com/resource/en/programming_manual/pm0075-stm32f10xxx-flash-memory-microcontrollers-stmicroelectronics.pdf
 	 */
 	while (!(status & SR_EOP) && (status & FLASH_SR_BSY)) {
-		status = target_mem_read32(target, FLASH_SR + bank_offset);
+		status = target_mem32_read32(target, FLASH_SR + bank_offset);
 		if (target_check_error(target)) {
 			DEBUG_ERROR("Lost communications with target");
 			return false;
@@ -833,7 +833,7 @@ static bool stm32f1_option_write_erased(
 	 * check if we got a status of "Program Error" in FLASH_SR, indicating the target
 	 * refused to erase the read protection option bytes (and turn it into a truthy return).
 	 */
-	const uint8_t status = target_mem_read32(target, FLASH_SR) & SR_ERROR_MASK;
+	const uint8_t status = target_mem32_read32(target, FLASH_SR) & SR_ERROR_MASK;
 	return status == SR_PROG_ERROR;
 }
 
@@ -848,7 +848,7 @@ static bool stm32f1_option_write(target_s *const target, const uint32_t addr, co
 	/* Retrieve old values */
 	for (size_t i = 0U; i < 16U; i += 4U) {
 		const size_t offset = i >> 1U;
-		uint32_t val = target_mem_read32(target, FLASH_OBP_RDP + i);
+		uint32_t val = target_mem32_read32(target, FLASH_OBP_RDP + i);
 		opt_val[offset] = val & 0xffffU;
 		opt_val[offset + 1U] = val >> 16U;
 	}
@@ -876,7 +876,7 @@ static bool stm32f1_option_write(target_s *const target, const uint32_t addr, co
 
 static bool stm32f1_cmd_option(target_s *target, int argc, const char **argv)
 {
-	const uint32_t read_protected = target_mem_read32(target, FLASH_OBR) & FLASH_OBR_RDPRT;
+	const uint32_t read_protected = target_mem32_read32(target, FLASH_OBR) & FLASH_OBR_RDPRT;
 	const bool erase_requested = argc == 2 && strcmp(argv[1], "erase") == 0;
 	/* Fast-exit if the Flash is not readable and the user didn't ask us to erase the option bytes */
 	if (read_protected && !erase_requested) {
@@ -916,7 +916,7 @@ static bool stm32f1_cmd_option(target_s *target, int argc, const char **argv)
 	/* When all gets said and done, display the current option bytes values */
 	for (size_t i = 0U; i < 16U; i += 4U) {
 		const uint32_t addr = FLASH_OBP_RDP + i;
-		const uint32_t val = target_mem_read32(target, addr);
+		const uint32_t val = target_mem32_read32(target, addr);
 		tc_printf(target, "0x%08X: 0x%04X\n", addr, val & 0xffffU);
 		tc_printf(target, "0x%08X: 0x%04X\n", addr + 2U, val >> 16U);
 	}

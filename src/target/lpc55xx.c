@@ -132,7 +132,7 @@ typedef enum lpc55xx_iap_status {
 
 static target_addr_t lpc55xx_get_bootloader_tree_address(target_s *target)
 {
-	switch (target_mem_read32(target, LPC55xx_CHIPID_ADDRESS)) {
+	switch (target_mem32_read32(target, LPC55xx_CHIPID_ADDRESS)) {
 	//case LPC5512_CHIPID:
 	//case LPC5514_CHIPID:
 	//case LPC55S14_CHIPID:
@@ -190,12 +190,12 @@ static const char *lpc55xx_get_device_name(uint32_t chipid)
 
 static int lpc55xx_get_rom_api_version(target_s *target, target_addr_t bootloader_tree_address)
 {
-	return ((target_mem_read32(target, bootloader_tree_address + 0x4) >> 16) & 0xff) == 3 ? 1 : 0;
+	return ((target_mem32_read32(target, bootloader_tree_address + 0x4) >> 16) & 0xff) == 3 ? 1 : 0;
 }
 
 static target_addr_t lpc55xx_get_flash_table_address(target_s *target, target_addr_t bootloader_tree_address)
 {
-	return target_mem_read32(target, bootloader_tree_address + 0x10);
+	return target_mem32_read32(target, bootloader_tree_address + 0x10);
 }
 
 static target_addr_t lpc55xx_get_flash_init_address(target_s *target)
@@ -203,7 +203,7 @@ static target_addr_t lpc55xx_get_flash_init_address(target_s *target)
 	target_addr_t bootloader_tree_address = lpc55xx_get_bootloader_tree_address(target);
 
 	target_addr_t flash_table_address = lpc55xx_get_flash_table_address(target, bootloader_tree_address);
-	return target_mem_read32(target, flash_table_address + sizeof(uint32_t));
+	return target_mem32_read32(target, flash_table_address + sizeof(uint32_t));
 }
 
 static target_addr_t lpc55xx_get_flash_erase_address(target_s *target)
@@ -214,7 +214,7 @@ static target_addr_t lpc55xx_get_flash_erase_address(target_s *target)
 		return 0x1300413bU; // UNTESTED: found in SDK, not referenced in UM
 
 	target_addr_t flash_table_address = lpc55xx_get_flash_table_address(target, bootloader_tree_address);
-	return target_mem_read32(target, flash_table_address + 2 * sizeof(uint32_t));
+	return target_mem32_read32(target, flash_table_address + 2 * sizeof(uint32_t));
 }
 
 static target_addr_t lpc55xx_get_flash_program_address(target_s *target)
@@ -225,7 +225,7 @@ static target_addr_t lpc55xx_get_flash_program_address(target_s *target)
 		return 0x1300419dU; // UNTESTED: found in SDK, not referenced in UM
 
 	target_addr_t flash_table_address = lpc55xx_get_flash_table_address(target, bootloader_tree_address);
-	return target_mem_read32(target, flash_table_address + 3 * sizeof(uint32_t));
+	return target_mem32_read32(target, flash_table_address + 3 * sizeof(uint32_t));
 }
 
 static target_addr_t lpc55xx_get_ffr_init_address(target_s *target)
@@ -234,8 +234,8 @@ static target_addr_t lpc55xx_get_ffr_init_address(target_s *target)
 	target_addr_t flash_table_address = lpc55xx_get_flash_table_address(target, bootloader_tree_address);
 
 	if (lpc55xx_get_rom_api_version(target, bootloader_tree_address) == 0)
-		return target_mem_read32(target, flash_table_address + 7 * sizeof(uint32_t));
-	return target_mem_read32(target, flash_table_address + 10 * sizeof(uint32_t));
+		return target_mem32_read32(target, flash_table_address + 7 * sizeof(uint32_t));
+	return target_mem32_read32(target, flash_table_address + 10 * sizeof(uint32_t));
 }
 
 static target_addr_t lpc55xx_get_ffr_get_uuid_address(target_s *target)
@@ -244,8 +244,8 @@ static target_addr_t lpc55xx_get_ffr_get_uuid_address(target_s *target)
 	target_addr_t flash_table_address = lpc55xx_get_flash_table_address(target, bootloader_tree_address);
 
 	if (lpc55xx_get_rom_api_version(target, bootloader_tree_address) == 0)
-		return target_mem_read32(target, flash_table_address + 10 * sizeof(uint32_t));
-	return target_mem_read32(target, flash_table_address + 13 * sizeof(uint32_t));
+		return target_mem32_read32(target, flash_table_address + 10 * sizeof(uint32_t));
+	return target_mem32_read32(target, flash_table_address + 13 * sizeof(uint32_t));
 }
 
 static lpc55xx_iap_status_e iap_call_raw(target_s *target, lpc55xx_iap_cmd_e cmd, uint32_t r1, uint32_t r2, uint32_t r3)
@@ -558,7 +558,7 @@ bool lpc55xx_probe(target_s *const target)
 	if (ap->apsel == 1)
 		return false;
 
-	const uint32_t chipid = target_mem_read32(target, LPC55xx_CHIPID_ADDRESS);
+	const uint32_t chipid = target_mem32_read32(target, LPC55xx_CHIPID_ADDRESS);
 	DEBUG_WARN("Chip ID: %08" PRIx32 "\n", chipid);
 
 	target->target_options |= TOPT_INHIBIT_NRST;

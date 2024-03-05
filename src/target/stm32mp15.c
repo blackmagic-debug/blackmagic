@@ -155,7 +155,7 @@ static bool stm32mp15_attach(target_s *const target)
 
 	/* Save DBGMCU_CR to restore it when detaching */
 	stm32mp15_priv_s *const priv = (stm32mp15_priv_s *)target->target_storage;
-	priv->dbgmcu_ctrl = target_mem_read32(target, DBGMCU_CTRL);
+	priv->dbgmcu_ctrl = target_mem32_read32(target, DBGMCU_CTRL);
 
 	/* Disable C-Sleep, C-Stop, C-Standby for debugging */
 	target_mem_write32(target, DBGMCU_CTRL, DBGMCU_CTRL_DBGSLEEP | DBGMCU_CTRL_DBGSTOP | DBGMCU_CTRL_DBGSTBY);
@@ -181,7 +181,7 @@ static bool stm32mp15_uid(target_s *const target, const int argc, const char **c
 
 	tc_printf(target, "0x");
 	for (size_t i = 0; i < 12U; i += 4U) {
-		const uint32_t value = target_mem_read32(target, STM32MP15_UID_BASE + i);
+		const uint32_t value = target_mem32_read32(target, STM32MP15_UID_BASE + i);
 		tc_printf(target, "%02X%02X%02X%02X", (value >> 24U) & 0xffU, (value >> 16U) & 0xffU, (value >> 8U) & 0xffU,
 			value & 0xffU);
 	}
@@ -202,7 +202,7 @@ static bool stm32mp15_cmd_rev(target_s *const target, const int argc, const char
 	(void)argc;
 	(void)argv;
 	/* DBGMCU identity code register */
-	const uint32_t dbgmcu_idcode = target_mem_read32(target, DBGMCU_IDCODE);
+	const uint32_t dbgmcu_idcode = target_mem32_read32(target, DBGMCU_IDCODE);
 	const uint16_t rev_id = dbgmcu_idcode >> STM32MP15_DBGMCU_IDCODE_REV_SHIFT;
 	const uint16_t dev_id = dbgmcu_idcode & STM32MP15_DBGMCU_IDCODE_DEV_MASK;
 

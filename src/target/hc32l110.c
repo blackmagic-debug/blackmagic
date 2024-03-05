@@ -102,7 +102,7 @@ static void hc32l110_add_flash(target_s *target, const uint32_t flash_size)
 
 bool hc32l110_probe(target_s *target)
 {
-	const uint32_t flash_size = target_mem_read32(target, HC32L110_FLASH_SIZE);
+	const uint32_t flash_size = target_mem32_read32(target, HC32L110_FLASH_SIZE);
 
 	switch (flash_size) {
 	case 16384:
@@ -136,7 +136,7 @@ static bool hc32l110_check_flash_completion(target_s *const target, const uint32
 	platform_timeout_set(&timeout, timeout_ms);
 	uint32_t status = HC32L110_FLASH_CR_BUSY;
 	while (status & HC32L110_FLASH_CR_BUSY) {
-		status = target_mem_read32(target, HC32L110_FLASH_CR);
+		status = target_mem32_read32(target, HC32L110_FLASH_CR);
 		if (target_check_error(target) || platform_timeout_is_expired(&timeout))
 			return false;
 	}

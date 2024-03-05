@@ -18,7 +18,7 @@
 static bool nrf91_wait_ready(target_s *const target, platform_timeout_s *const timeout)
 {
 	/* Poll for NVMC_READY */
-	while (target_mem_read32(target, NRF91_NVMC_READY) == 0) {
+	while (target_mem32_read32(target, NRF91_NVMC_READY) == 0) {
 		if (target_check_error(target))
 			return false;
 		if (timeout)

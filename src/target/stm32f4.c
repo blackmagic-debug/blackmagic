@@ -206,7 +206,7 @@ static char *stm32f4_get_chip_name(const uint32_t device_id)
 
 static uint16_t stm32f4_read_idcode(target_s *const t)
 {
-	const uint16_t idcode = target_mem_read32(t, DBGMCU_IDCODE) & 0xfffU;
+	const uint16_t idcode = target_mem32_read32(t, DBGMCU_IDCODE) & 0xfffU;
 	/*
 	 * F405 revision A has the wrong IDCODE, use ARM_CPUID to make the
 	 * distinction with F205. Revision is also wrong (0x2000 instead
@@ -357,7 +357,7 @@ static bool stm32f4_attach(target_s *t)
 	t->target_storage = priv_storage;
 
 	/* Get the current value of the debug control register (and store it for later) */
-	priv_storage->dbgmcu_cr = target_mem_read32(t, DBGMCU_CR);
+	priv_storage->dbgmcu_cr = target_mem32_read32(t, DBGMCU_CR);
 	/* Enable debugging during all low power modes*/
 	target_mem_write32(
 		t, DBGMCU_CR, priv_storage->dbgmcu_cr | DBGMCU_CR_DBG_SLEEP | DBGMCU_CR_DBG_STANDBY | DBGMCU_CR_DBG_STOP);
@@ -371,7 +371,7 @@ static bool stm32f4_attach(target_s *t)
 		target_add_ram(t, 0x20000000, 0x20000); /* 128kiB DTCM RAM */
 		target_add_ram(t, 0x20020000, 0x60000); /* 384kiB RAM */
 		if (dual_bank) {
-			const uint32_t option_ctrl = target_mem_read32(t, FLASH_OPTCR);
+			const uint32_t option_ctrl = target_mem32_read32(t, FLASH_OPTCR);
 			use_dual_bank = !(option_ctrl & FLASH_OPTCR_nDBANK);
 		}
 	} else {
@@ -380,7 +380,7 @@ static bool stm32f4_attach(target_s *t)
 		target_add_ram(t, 0x20000000, 0x50000);     /* 320kiB RAM */
 		if (dual_bank && max_flashsize < 2048U) {
 			/* Check the dual-bank status on 1MiB Flash devices */
-			const uint32_t option_ctrl = target_mem_read32(t, FLASH_OPTCR);
+			const uint32_t option_ctrl = target_mem32_read32(t, FLASH_OPTCR);
 			use_dual_bank = !(option_ctrl & FLASH_OPTCR_DB1M);
 		}
 	}
@@ -455,7 +455,7 @@ static void stm32f4_detach(target_s *t)
 
 static void stm32f4_flash_unlock(target_s *t)
 {
-	if (target_mem_read32(t, FLASH_CR) & FLASH_CR_LOCK) {
+	if (target_mem32_read32(t, FLASH_CR) & FLASH_CR_LOCK) {
 		/* Enable FPEC controller access */
 		target_mem_write32(t, FLASH_KEYR, KEY1);
 		target_mem_write32(t, FLASH_KEYR, KEY2);
@@ -467,7 +467,7 @@ static bool stm32f4_flash_busy_wait(target_s *const t, platform_timeout_s *const
 	/* Read FLASH_SR to poll for BSY bit */
 	uint32_t status = FLASH_SR_BSY;
 	while (status & FLASH_SR_BSY) {
-		status = target_mem_read32(t, FLASH_SR);
+		status = target_mem32_read32(t, FLASH_SR);
 		if ((status & SR_ERROR_MASK) || target_check_error(t)) {
 			DEBUG_ERROR("stm32f4 flash error 0x%" PRIx32 "\n", status);
 			return false;
@@ -630,7 +630,7 @@ static size_t stm32f4_opt_bytes_for(const uint16_t part_id)
 static bool stm32f4_option_write(target_s *t, uint32_t *const val, size_t count)
 {
 	val[0] &= ~(FLASH_OPTCR_OPTSTRT | FLASH_OPTCR_OPTLOCK);
-	uint32_t optcr = target_mem_read32(t, FLASH_OPTCR);
+	uint32_t optcr = target_mem32_read32(t, FLASH_OPTCR);
 	/* Check if watchdog and read protection is active.
 	 * When both are active, watchdog will trigger when erasing
 	 * to get back to level 0 protection and operation aborts!
@@ -741,11 +741,11 @@ static bool stm32f4_cmd_option(target_s *t, int argc, const char **argv)
 			opt_bytes > 1U ? " <OPTCR1>" : "", opt_bytes == 3U ? " <OPTCR2>" : "");
 
 	uint32_t val[3] = {0};
-	val[0] = target_mem_read32(t, FLASH_OPTCR);
+	val[0] = target_mem32_read32(t, FLASH_OPTCR);
 	if (opt_bytes > 1U) {
-		val[1] = target_mem_read32(t, FLASH_OPTCR + 4U);
+		val[1] = target_mem32_read32(t, FLASH_OPTCR + 4U);
 		if (opt_bytes == 3U)
-			val[2] = target_mem_read32(t, FLASH_OPTCR + 8U);
+			val[2] = target_mem32_read32(t, FLASH_OPTCR + 8U);
 	}
 	optcr_mask(t, val);
 	tc_printf(t, "OPTCR: 0x%08" PRIx32, val[0]);

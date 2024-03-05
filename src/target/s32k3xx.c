@@ -118,7 +118,7 @@ static void s32k3xx_add_flash(
 
 bool s32k3xx_probe(target_s *const target)
 {
-	uint32_t midr1 = target_mem_read32(target, SIUL2_MIDR1);
+	uint32_t midr1 = target_mem32_read32(target, SIUL2_MIDR1);
 	char product_letter = (midr1 >> 26U) & 0x3fU;
 	uint32_t part_no = (midr1 >> 16U) & 0x3ffU;
 
@@ -161,7 +161,7 @@ static bool s32k3xx_unlock_address(target_flash_s *const flash, target_addr_t ad
 		uint8_t sector = (addr - start_of_single_sectors) / SECTOR_SIZE;
 		uint32_t spelock_reg = C40ASF_SPELOCK_REG(s32flash->block);
 
-		uint32_t spelock_val = target_mem_read32(flash->t, spelock_reg);
+		uint32_t spelock_val = target_mem32_read32(flash->t, spelock_reg);
 		spelock_val &= ~(1U << sector);
 		target_mem_write32(flash->t, spelock_reg, spelock_val);
 	} else {
@@ -169,7 +169,7 @@ static bool s32k3xx_unlock_address(target_flash_s *const flash, target_addr_t ad
 		uint8_t supersector = (addr - flash->start) / SUPER_SECTOR_SIZE;
 		uint32_t sspelock_reg = C40ASF_SSPELOCK_REG(s32flash->block);
 
-		uint32_t sspelock_val = target_mem_read32(flash->t, sspelock_reg);
+		uint32_t sspelock_val = target_mem32_read32(flash->t, sspelock_reg);
 		sspelock_val &= ~(1U << supersector);
 		target_mem_write32(flash->t, sspelock_reg, sspelock_val);
 	}
@@ -178,7 +178,7 @@ static bool s32k3xx_unlock_address(target_flash_s *const flash, target_addr_t ad
 
 static bool s32k3xx_flash_trigger_mcr(target_flash_s *const flash, uint32_t mcr_bits)
 {
-	uint32_t mcr = target_mem_read32(flash->t, C40ASF_MCR);
+	uint32_t mcr = target_mem32_read32(flash->t, C40ASF_MCR);
 	mcr |= mcr_bits;
 	target_mem_write32(flash->t, C40ASF_MCR, mcr);
 
@@ -188,7 +188,7 @@ static bool s32k3xx_flash_trigger_mcr(target_flash_s *const flash, uint32_t mcr_
 
 	/* Wait for DONE to be set.
 	 * According to section 9.1 of S32KXX DS, lifetime max times for:
-	 * Quad-page program: 450 uS 
+	 * Quad-page program: 450 uS
 	 * 8 KB sector erase: 30 ms (typ 8.5),
 	 * First wait 1 ms, then wait 10 ms at a time until we timeout
 	 */
@@ -196,20 +196,20 @@ static bool s32k3xx_flash_trigger_mcr(target_flash_s *const flash, uint32_t mcr_
 	platform_timeout_set(&wait_timeout, 60);
 	platform_delay(1);
 	while (
-		!(target_mem_read32(flash->t, C40ASF_MCRS) & C40ASF_MCRS_DONE) && !platform_timeout_is_expired(&wait_timeout))
+		!(target_mem32_read32(flash->t, C40ASF_MCRS) & C40ASF_MCRS_DONE) && !platform_timeout_is_expired(&wait_timeout))
 		platform_delay(10);
 
-	if (!(target_mem_read32(flash->t, C40ASF_MCRS) & C40ASF_MCRS_DONE)) {
+	if (!(target_mem32_read32(flash->t, C40ASF_MCRS) & C40ASF_MCRS_DONE)) {
 		DEBUG_ERROR("MCRS[DONE] not set after operation\n");
 		return false;
 	}
 
 	/* Clear the EVH bit first */
-	mcr = target_mem_read32(flash->t, C40ASF_MCR);
+	mcr = target_mem32_read32(flash->t, C40ASF_MCR);
 	mcr &= ~C40ASF_MCR_EHV;
 	target_mem_write32(flash->t, C40ASF_MCR, mcr);
 
-	uint32_t mcrs = target_mem_read32(flash->t, C40ASF_MCRS);
+	uint32_t mcrs = target_mem32_read32(flash->t, C40ASF_MCRS);
 
 	/* Then clear the operation bits */
 	mcr &= ~mcr_bits;
@@ -229,7 +229,7 @@ static bool s32k3xx_flash_trigger_mcr(target_flash_s *const flash, uint32_t mcr_
 
 static void s32k3xx_flash_prepare(target_flash_s *const flash)
 {
-	uint32_t mcrs = target_mem_read32(flash->t, C40ASF_MCRS);
+	uint32_t mcrs = target_mem32_read32(flash->t, C40ASF_MCRS);
 	mcrs |= C40ASF_MCRS_PEP | C40ASF_MCRS_PES;
 	target_mem_write32(flash->t, C40ASF_MCRS, mcrs);
 }

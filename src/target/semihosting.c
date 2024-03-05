@@ -488,7 +488,7 @@ int32_t semihosting_write0(target_s *const target, const semihosting_s *const re
 {
 	const target_addr_t str_begin_taddr = request->r1;
 	target_addr_t str_end_taddr;
-	for (str_end_taddr = str_begin_taddr; target_mem_read8(target, str_end_taddr) != 0; ++str_end_taddr) {
+	for (str_end_taddr = str_begin_taddr; target_mem32_read8(target, str_end_taddr) != 0; ++str_end_taddr) {
 		if (target_check_error(target))
 			break;
 	}

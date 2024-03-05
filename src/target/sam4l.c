@@ -212,7 +212,7 @@ static void sam4l_add_flash(target_s *t, uint32_t addr, size_t length)
  */
 bool sam4l_probe(target_s *t)
 {
-	const uint32_t cidr = target_mem_read32(t, SAM4L_CHIPID_CIDR);
+	const uint32_t cidr = target_mem32_read32(t, SAM4L_CHIPID_CIDR);
 	if (((cidr >> CHIPID_CIDR_ARCH_SHIFT) & CHIPID_CIDR_ARCH_MASK) != SAM4L_ARCH)
 		return false;
 
@@ -246,14 +246,14 @@ static void sam4l_extended_reset(target_s *t)
 
 	/* Enable SMAP in case we're dealing with a non-JTAG reset */
 	target_mem_write32(t, SMAP_CR, 0x1); /* enable SMAP */
-	uint32_t reg = target_mem_read32(t, SMAP_SR);
+	uint32_t reg = target_mem32_read32(t, SMAP_SR);
 	DEBUG_INFO("SMAP_SR has 0x%08" PRIx32 "\n", reg);
 	if ((reg & SMAP_SR_HCR) != 0) {
 		/* Write '1' bit to the status clear register */
 		target_mem_write32(t, SMAP_SCR, SMAP_SR_HCR);
 		/* Waiting 250 loops for it to reset is arbitrary, it should happen right away */
 		for (size_t i = 0; i < 250U; i++) {
-			reg = target_mem_read32(t, SMAP_SR);
+			reg = target_mem32_read32(t, SMAP_SR);
 			if (!(reg & SMAP_SR_HCR))
 				break;
 			/* Not sure what to do if we can't reset that bit */
@@ -281,7 +281,7 @@ static bool sam4l_flash_command(target_s *t, uint32_t page, uint32_t cmd)
 	/* Wait for Flash controller ready */
 	platform_timeout_s timeout;
 	platform_timeout_set(&timeout, FLASH_TIMEOUT);
-	while (!(target_mem_read32(t, FLASHCALW_FSR) & FLASHCALW_FSR_FRDY)) {
+	while (!(target_mem32_read32(t, FLASHCALW_FSR) & FLASHCALW_FSR_FRDY)) {
 		if (platform_timeout_is_expired(&timeout)) {
 			DEBUG_WARN("%s: Not ready!\n", __func__);
 			return false;

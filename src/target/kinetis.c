@@ -168,8 +168,8 @@ static void kl_s32k14_setup(
 
 bool kinetis_probe(target_s *const t)
 {
-	uint32_t sdid = target_mem_read32(t, SIM_SDID);
-	uint32_t fcfg1 = target_mem_read32(t, SIM_FCFG1);
+	uint32_t sdid = target_mem32_read32(t, SIM_SDID);
+	uint32_t fcfg1 = target_mem32_read32(t, SIM_FCFG1);
 
 	switch (sdid >> 20U) {
 	case 0x161U:
@@ -423,7 +423,7 @@ static bool kinetis_fccob_cmd(target_s *t, uint8_t cmd, uint32_t addr, const uin
 
 	/* Wait for CCIF to be high */
 	do {
-		fstat = target_mem_read8(t, FTFx_FSTAT);
+		fstat = target_mem32_read8(t, FTFx_FSTAT);
 	} while (!(fstat & FTFx_FSTAT_CCIF));
 
 	/* Write command to FCCOB */
@@ -443,7 +443,7 @@ static bool kinetis_fccob_cmd(target_s *t, uint8_t cmd, uint32_t addr, const uin
 
 	/* Wait for execution to complete */
 	do {
-		fstat = target_mem_read8(t, FTFx_FSTAT);
+		fstat = target_mem32_read8(t, FTFx_FSTAT);
 		/* Check ACCERR and FPVIOL are zero in FSTAT */
 		if (fstat & (FTFx_FSTAT_ACCERR | FTFx_FSTAT_FPVIOL))
 			return false;
@@ -506,7 +506,7 @@ static bool kinetis_flash_done(target_flash_s *const f)
 	if (f->t->unsafe_enabled)
 		return true;
 
-	if (target_mem_read8(f->t, FLASH_SECURITY_BYTE_ADDRESS) == FLASH_SECURITY_BYTE_UNSECURED)
+	if (target_mem32_read8(f->t, FLASH_SECURITY_BYTE_ADDRESS) == FLASH_SECURITY_BYTE_UNSECURED)
 		return true;
 
 	/*
@@ -514,12 +514,12 @@ static bool kinetis_flash_done(target_flash_s *const f)
 	 * vs 4 byte phrases).
 	 */
 	if (kf->write_len == K64_WRITE_LEN) {
-		uint32_t vals[2] = {target_mem_read32(f->t, FLASH_SECURITY_BYTE_ADDRESS - 4U),
-			target_mem_read32(f->t, FLASH_SECURITY_BYTE_ADDRESS)};
+		uint32_t vals[2] = {target_mem32_read32(f->t, FLASH_SECURITY_BYTE_ADDRESS - 4U),
+			target_mem32_read32(f->t, FLASH_SECURITY_BYTE_ADDRESS)};
 		vals[1] = (vals[1] & 0xffffff00U) | FLASH_SECURITY_BYTE_UNSECURED;
 		kinetis_fccob_cmd(f->t, FTFx_CMD_PROGRAM_PHRASE, FLASH_SECURITY_BYTE_ADDRESS - 4U, vals, 2);
 	} else {
-		uint32_t val = target_mem_read32(f->t, FLASH_SECURITY_BYTE_ADDRESS);
+		uint32_t val = target_mem32_read32(f->t, FLASH_SECURITY_BYTE_ADDRESS);
 		val = (val & 0xffffff00U) | FLASH_SECURITY_BYTE_UNSECURED;
 		kinetis_fccob_cmd(f->t, FTFx_CMD_PROGRAM_LONGWORD, FLASH_SECURITY_BYTE_ADDRESS, &val, 1);
 	}

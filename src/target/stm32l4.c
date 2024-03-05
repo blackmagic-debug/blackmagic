@@ -484,14 +484,14 @@ static inline uint32_t stm32l4_flash_read16(target_s *const t, const stm32l4_fla
 {
 	stm32l4_priv_s *ps = (stm32l4_priv_s *)t->target_storage;
 	const stm32l4_device_info_s *const device = ps->device;
-	return target_mem_read16(t, device->flash_regs_map[reg]);
+	return target_mem32_read16(t, device->flash_regs_map[reg]);
 }
 
 static inline uint32_t stm32l4_flash_read32(target_s *const t, const stm32l4_flash_reg_e reg)
 {
 	stm32l4_priv_s *ps = (stm32l4_priv_s *)t->target_storage;
 	const stm32l4_device_info_s *const device = ps->device;
-	return target_mem_read32(t, device->flash_regs_map[reg]);
+	return target_mem32_read32(t, device->flash_regs_map[reg]);
 }
 
 static inline void stm32l4_flash_write32(target_s *const t, const stm32l4_flash_reg_e reg, const uint32_t value)
@@ -526,7 +526,7 @@ static void stm32l4_add_flash(
 static void stm32l5_flash_enable(target_s *t)
 {
 	target_mem_write32(t, STM32L5_RCC_APB1ENR1, STM32L5_RCC_APB1ENR1_PWREN);
-	const uint32_t pwr_ctrl1 = target_mem_read32(t, STM32L5_PWR_CR1) & ~STM32L5_PWR_CR1_VOS;
+	const uint32_t pwr_ctrl1 = target_mem32_read32(t, STM32L5_PWR_CR1) & ~STM32L5_PWR_CR1_VOS;
 	target_mem_write32(t, STM32L5_PWR_CR1, pwr_ctrl1);
 }
 
@@ -557,7 +557,7 @@ bool stm32l4_probe(target_s *const t)
 	uint32_t device_id = ap->dp->version >= 2U ? ap->dp->target_partno : ap->partno;
 	/* If the part is DPv0 or DPv1, we must use the L4 ID register, except if we've already identified an L5 part */
 	if (ap->dp->version < 2U && device_id != ID_STM32L55)
-		device_id = target_mem_read32(t, STM32L4_DBGMCU_IDCODE_PHYS) & 0xfffU;
+		device_id = target_mem32_read32(t, STM32L4_DBGMCU_IDCODE_PHYS) & 0xfffU;
 	DEBUG_INFO("ID Code: %08" PRIx32 "\n", device_id);
 
 	const stm32l4_device_info_s *device = stm32l4_get_device_info(device_id);
@@ -585,7 +585,7 @@ bool stm32l4_probe(target_s *const t)
 			 * CPU2 does not boot after reset w/o C2BOOT set.
 			 * RM0453/RM0434, §6.6.4. PWR control register 4 (PWR_CR4)
 			 */
-			const uint32_t pwr_ctrl4 = target_mem_read32(t, PWR_CR4);
+			const uint32_t pwr_ctrl4 = target_mem32_read32(t, PWR_CR4);
 			target_mem_write32(t, PWR_CR4, pwr_ctrl4 | PWR_CR4_C2BOOT);
 		}
 		break;
@@ -614,7 +614,7 @@ static bool stm32l4_attach(target_s *const t)
 
 	/* Save DBGMCU_CR to restore it when detaching */
 	stm32l4_priv_s *const priv_storage = (stm32l4_priv_s *)t->target_storage;
-	priv_storage->dbgmcu_cr = target_mem_read32(t, DBGMCU_CR(idcode_addr));
+	priv_storage->dbgmcu_cr = target_mem32_read32(t, DBGMCU_CR(idcode_addr));
 
 	/* Enable debugging during all low power modes */
 	target_mem_write32(t, DBGMCU_CR(idcode_addr), DBGMCU_CR_DBG_SLEEP | DBGMCU_CR_DBG_STANDBY | DBGMCU_CR_DBG_STOP);
@@ -932,7 +932,7 @@ static bool stm32l4_cmd_option(target_s *t, int argc, const char **argv)
 			values[i] = strtoul(argv[i + 2U], NULL, 0);
 
 		for (size_t i = option_words; i < word_count; ++i)
-			values[i] = target_mem_read32(t, fpec_base + opt_reg_offsets[i]);
+			values[i] = target_mem32_read32(t, fpec_base + opt_reg_offsets[i]);
 
 		if ((values[0] & 0xffU) == 0xccU) {
 			++values[0];
@@ -951,7 +951,7 @@ static bool stm32l4_cmd_option(target_s *t, int argc, const char **argv)
 
 	for (size_t i = 0; i < word_count; ++i) {
 		const uint32_t addr = fpec_base + opt_reg_offsets[i];
-		const uint32_t val = target_mem_read32(t, fpec_base + opt_reg_offsets[i]);
+		const uint32_t val = target_mem32_read32(t, fpec_base + opt_reg_offsets[i]);
 		tc_printf(t, "0x%08X: 0x%08X\n", addr, val);
 	}
 	return true;

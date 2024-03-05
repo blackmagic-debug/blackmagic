@@ -374,10 +374,10 @@ samx7x_descr_s samx7x_parse_id(uint32_t cidr, uint32_t exid)
 
 bool samx7x_probe(target_s *t)
 {
-	const uint32_t cidr = target_mem_read32(t, SAM_CHIPID_CIDR);
+	const uint32_t cidr = target_mem32_read32(t, SAM_CHIPID_CIDR);
 	uint32_t exid = 0;
 	if (cidr & CHIPID_CIDR_EXT)
-		exid = target_mem_read32(t, SAM_CHIPID_EXID);
+		exid = target_mem32_read32(t, SAM_CHIPID_EXID);
 
 	switch (cidr & CHIPID_CIDR_ARCH_MASK) {
 	case CHIPID_CIDR_ARCH_SAME70:
@@ -417,7 +417,7 @@ bool samx7x_probe(target_s *t)
 
 bool sam3x_probe(target_s *t)
 {
-	uint32_t cidr = target_mem_read32(t, SAM_CHIPID_CIDR);
+	uint32_t cidr = target_mem32_read32(t, SAM_CHIPID_CIDR);
 	size_t size = sam_flash_size(cidr);
 	switch (cidr & (CHIPID_CIDR_ARCH_MASK | CHIPID_CIDR_EPROC_MASK)) {
 	case CHIPID_CIDR_ARCH_SAM3XxC | CHIPID_CIDR_EPROC_CM3:
@@ -433,7 +433,7 @@ bool sam3x_probe(target_s *t)
 		return true;
 	}
 
-	cidr = target_mem_read32(t, SAM34NSU_CHIPID_CIDR);
+	cidr = target_mem32_read32(t, SAM34NSU_CHIPID_CIDR);
 	size = sam_flash_size(cidr);
 	switch (cidr & (CHIPID_CIDR_ARCH_MASK | CHIPID_CIDR_EPROC_MASK)) {
 	case CHIPID_CIDR_ARCH_SAM3NxA | CHIPID_CIDR_EPROC_CM3:
@@ -492,7 +492,7 @@ static bool sam_flash_cmd(target_s *t, uint32_t base, uint8_t cmd, uint16_t arg)
 
 	uint32_t status = 0;
 	while (!(status & EEFC_FSR_FRDY)) {
-		status = target_mem_read32(t, EEFC_FSR(base));
+		status = target_mem32_read32(t, EEFC_FSR(base));
 		if (target_check_error(t))
 			return false;
 	}
@@ -560,7 +560,7 @@ static bool sam_gpnvm_get(target_s *t, uint32_t base, uint32_t *gpnvm)
 	if (!gpnvm || !sam_flash_cmd(t, base, EEFC_FCR_FCMD_GGPB, 0))
 		return false;
 
-	*gpnvm = target_mem_read32(t, EEFC_FRR(base));
+	*gpnvm = target_mem32_read32(t, EEFC_FRR(base));
 	return true;
 }
 

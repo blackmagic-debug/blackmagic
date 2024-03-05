@@ -204,7 +204,7 @@ static bool stm32h5_flash_wait_complete(target_s *const target, platform_timeout
 	uint32_t status = STM32H5_FLASH_STATUS_BUSY;
 	/* Read the status register and poll for busy and !EOP */
 	while (!(status & STM32H5_FLASH_STATUS_EOP) && (status & STM32H5_FLASH_STATUS_BUSY)) {
-		status = target_mem_read32(target, STM32H5_FLASH_STATUS);
+		status = target_mem32_read32(target, STM32H5_FLASH_STATUS);
 		if (target_check_error(target)) {
 			DEBUG_ERROR("%s: error reading status\n", __func__);
 			return false;
@@ -227,12 +227,12 @@ static bool stm32h5_enter_flash_mode(target_s *const target)
 	if (!stm32h5_flash_wait_complete(target, NULL))
 		return false;
 	/* Now, if the Flash controller's not already unlocked, unlock it */
-	if (target_mem_read32(target, STM32H5_FLASH_CTRL) & STM32H5_FLASH_CTRL_LOCK) {
+	if (target_mem32_read32(target, STM32H5_FLASH_CTRL) & STM32H5_FLASH_CTRL_LOCK) {
 		target_mem_write32(target, STM32H5_FLASH_KEY, STM32H5_FLASH_KEY1);
 		target_mem_write32(target, STM32H5_FLASH_KEY, STM32H5_FLASH_KEY2);
 	}
 	/* Success of entering Flash mode is predicated on successfully unlocking the controller */
-	return !(target_mem_read32(target, STM32H5_FLASH_CTRL) & STM32H5_FLASH_CTRL_LOCK);
+	return !(target_mem32_read32(target, STM32H5_FLASH_CTRL) & STM32H5_FLASH_CTRL_LOCK);
 }
 
 static bool stm32h5_exit_flash_mode(target_s *const target)
@@ -306,7 +306,7 @@ static bool stm32h5_cmd_uid(target_s *target, int argc, const char **argv)
 	(void)argv;
 	tc_printf(target, "0x");
 	for (size_t i = 0U; i < 12U; i += 4U) {
-		const uint32_t value = target_mem_read32(target, STM32H5_UID_BASE + i);
+		const uint32_t value = target_mem32_read32(target, STM32H5_UID_BASE + i);
 		tc_printf(target, "%02X%02X%02X%02X", (value >> 24U) & 0xffU, (value >> 16U) & 0xffU, (value >> 8U) & 0xffU,
 			value & 0xffU);
 	}
@@ -329,7 +329,7 @@ static bool stm32h5_cmd_rev(target_s *target, int argc, const char **argv)
 	(void)argc;
 	(void)argv;
 	/* Read the device identity register */
-	const uint32_t idcode = target_mem_read32(target, STM32H5_DBGMCU_IDCODE);
+	const uint32_t idcode = target_mem32_read32(target, STM32H5_DBGMCU_IDCODE);
 	const uint16_t rev_id = (idcode & STM32H5_DBGMCU_IDCODE_REV_MASK) >> STM32H5_DBGMCU_IDCODE_REV_SHIFT;
 	const uint16_t dev_id = idcode & STM32H5_DBGMCU_IDCODE_DEV_MASK;
 
