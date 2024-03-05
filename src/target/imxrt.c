@@ -415,7 +415,7 @@ static bool imxrt_enter_flash_mode(target_s *const target)
 		target_mem_write32(target, IMXRT_FLEXSPI1_LUT_CTRL(priv), IMXRT_FLEXSPI1_LUT_CTRL_UNLOCK);
 	}
 	/* Save the current state of the LUT the SPI Flash routines will use */
-	target_mem_read(
+	target_mem32_read(
 		target, priv->flexspi_prg_seq_state, IMXRT_FLEXSPI1_LUT_BASE(priv), sizeof(priv->flexspi_prg_seq_state));
 	/* Clear the sequence microcode cache state */
 	memset(priv->flexspi_cached_commands, 0, sizeof(priv->flexspi_cached_commands));
@@ -546,7 +546,7 @@ static void imxrt_spi_read(target_s *const target, const uint16_t command, const
 	imxrt_spi_wait_complete(target);
 	/* Transfer the resulting data into the target buffer */
 	uint32_t data[32];
-	target_mem_read(target, data, IMXRT_FLEXSPI1_PRG_READ_FIFO(priv), 128);
+	target_mem32_read(target, data, IMXRT_FLEXSPI1_PRG_READ_FIFO(priv), 128);
 	memcpy(buffer, data, length);
 	target_mem_write32(target, IMXRT_FLEXSPI1_INT(priv), IMXRT_FLEXSPI1_INT_READ_FIFO_FULL);
 }

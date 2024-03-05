@@ -144,7 +144,7 @@ int32_t gdb_main_loop(target_controller_s *tc, char *pbuf, size_t pbuf_size, siz
 			}
 			DEBUG_GDB("m packet: addr = %" PRIx32 ", len = %" PRIx32 "\n", addr, len);
 			uint8_t *mem = alloca(len);
-			if (target_mem_read(cur_target, mem, addr, len))
+			if (target_mem32_read(cur_target, mem, addr, len))
 				gdb_putpacketz("E01");
 			else
 				gdb_putpacket(hexify(pbuf, mem, len), len * 2U);

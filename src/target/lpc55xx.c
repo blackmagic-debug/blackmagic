@@ -333,7 +333,7 @@ static bool lpc55xx_flash_init(target_s *target, lpc55xx_flash_config_s *config)
 	uint32_t regs[CORTEXM_GENERAL_REG_COUNT + CORTEX_FLOAT_REG_COUNT];
 
 	target_regs_read(target, regs);
-	target_mem_read(target, backup_memory, LPC55xx_FLASH_CONFIG_ADDRESS, sizeof(backup_memory));
+	target_mem32_read(target, backup_memory, LPC55xx_FLASH_CONFIG_ADDRESS, sizeof(backup_memory));
 
 	bool success = false;
 
@@ -345,7 +345,7 @@ static bool lpc55xx_flash_init(target_s *target, lpc55xx_flash_config_s *config)
 		goto exit;
 	}
 
-	target_mem_read(target, config, LPC55xx_FLASH_CONFIG_ADDRESS, sizeof(*config));
+	target_mem32_read(target, config, LPC55xx_FLASH_CONFIG_ADDRESS, sizeof(*config));
 
 	success = true;
 
@@ -362,7 +362,7 @@ static bool lpc55xx_get_uuid(target_s *target, uint8_t *uuid)
 	uint32_t regs[CORTEXM_GENERAL_REG_COUNT + CORTEX_FLOAT_REG_COUNT];
 
 	target_regs_read(target, regs);
-	target_mem_read(target, backup_memory, LPC55xx_FLASH_CONFIG_ADDRESS, sizeof(backup_memory));
+	target_mem32_read(target, backup_memory, LPC55xx_FLASH_CONFIG_ADDRESS, sizeof(backup_memory));
 
 	bool success = false;
 
@@ -386,7 +386,7 @@ static bool lpc55xx_get_uuid(target_s *target, uint8_t *uuid)
 		goto exit;
 	}
 
-	target_mem_read(target, uuid, LPC55xx_UUID_ADDRESS, LPC55xx_UUID_LEN);
+	target_mem32_read(target, uuid, LPC55xx_UUID_ADDRESS, LPC55xx_UUID_LEN);
 
 	success = true;
 

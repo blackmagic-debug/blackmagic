@@ -276,7 +276,7 @@ static bool rp_read_rom_func_table(target_s *const target)
 	/* We have to do a 32-bit read here but the pointer contained is only 16-bit. */
 	const uint16_t table_offset = target_mem_read32(target, BOOTROM_FUNC_TABLE_ADDR) & 0x0000ffffU;
 	uint16_t table[RP_MAX_TABLE_SIZE];
-	if (target_mem_read(target, table, table_offset, RP_MAX_TABLE_SIZE))
+	if (target_mem32_read(target, table, table_offset, RP_MAX_TABLE_SIZE))
 		return false;
 
 	for (size_t i = 0; i < RP_MAX_TABLE_SIZE; i += 2U) {

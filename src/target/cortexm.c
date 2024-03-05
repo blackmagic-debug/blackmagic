@@ -1093,7 +1093,7 @@ static int cortexm_fault_unwind(target_s *target)
 		bool fpca = !(retcode & (1U << 4U));
 		/* Read stack for pre-exception registers */
 		uint32_t sp = spsel ? regs[CORTEX_REG_PSP] : regs[CORTEX_REG_MSP];
-		target_mem_read(target, stack, sp, sizeof(stack));
+		target_mem32_read(target, stack, sp, sizeof(stack));
 		if (target_check_error(target))
 			return 0;
 		/* Restore LR and PC to their pre-exception states */

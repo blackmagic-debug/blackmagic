@@ -596,7 +596,7 @@ static int samx5x_update_user_word(target_s *t, uint32_t addr, uint32_t value, u
 	uint8_t buffer[SAMX5X_PAGE_SIZE];
 	uint32_t current_word;
 
-	target_mem_read(t, buffer, SAMX5X_NVM_USER_PAGE, SAMX5X_PAGE_SIZE);
+	target_mem32_read(t, buffer, SAMX5X_NVM_USER_PAGE, SAMX5X_PAGE_SIZE);
 	memcpy(&current_word, buffer + addr, 4);
 
 	uint32_t factory_word = 0;
@@ -626,7 +626,7 @@ static int samx5x_update_user_word(target_s *t, uint32_t addr, uint32_t value, u
 static int samx5x_set_flashlock(target_s *t, uint32_t value)
 {
 	uint8_t buffer[SAMX5X_PAGE_SIZE];
-	target_mem_read(t, buffer, SAMX5X_NVM_USER_PAGE, SAMX5X_PAGE_SIZE);
+	target_mem32_read(t, buffer, SAMX5X_NVM_USER_PAGE, SAMX5X_PAGE_SIZE);
 
 	uint32_t current_value;
 	memcpy(&current_value, buffer + SAMX5X_USER_PAGE_OFFSET_LOCK, 4);
@@ -671,7 +671,7 @@ static bool samx5x_cmd_unlock_flash(target_s *t, int argc, const char **argv)
 static int samx5x_set_bootprot(target_s *t, uint8_t value)
 {
 	uint8_t buffer[SAMX5X_PAGE_SIZE];
-	target_mem_read(t, buffer, SAMX5X_NVM_USER_PAGE, SAMX5X_PAGE_SIZE);
+	target_mem32_read(t, buffer, SAMX5X_NVM_USER_PAGE, SAMX5X_PAGE_SIZE);
 
 	uint32_t current_value;
 	memcpy(&current_value, buffer + SAMX5X_USER_PAGE_OFFSET_BOOTPROT, 4);
@@ -714,7 +714,7 @@ static bool samx5x_cmd_read_userpage(target_s *t, int argc, const char **argv)
 	(void)argv;
 	uint8_t buffer[SAMX5X_PAGE_SIZE];
 
-	target_mem_read(t, buffer, SAMX5X_NVM_USER_PAGE, SAMX5X_PAGE_SIZE);
+	target_mem32_read(t, buffer, SAMX5X_NVM_USER_PAGE, SAMX5X_PAGE_SIZE);
 
 	tc_printf(t, "User Page:\n");
 	for (size_t i = 0; i < SAMX5X_PAGE_SIZE; ++i)

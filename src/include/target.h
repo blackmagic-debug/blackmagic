@@ -66,7 +66,7 @@ unsigned int target_part_id(target_s *target);
 
 /* Memory access functions */
 bool target_mem_map(target_s *target, char *buf, size_t len);
-bool target_mem_read(target_s *target, void *dest, target_addr_t src, size_t len);
+bool target_mem32_read(target_s *target, void *dest, target_addr_t src, size_t len);
 bool target_mem64_read(target_s *target, void *dest, target_addr64_t src, size_t len);
 bool target_mem32_write(target_s *target, target_addr_t dest, const void *src, size_t len);
 bool target_mem64_write(target_s *target, target_addr64_t dest, const void *src, size_t len);

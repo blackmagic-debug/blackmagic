@@ -221,7 +221,7 @@ static int32_t semihosting_remote_write(
 		uint8_t *const buf = malloc(count);
 		if (buf == NULL)
 			return -1;
-		target_mem_read(target, buf, buf_taddr, count);
+		target_mem32_read(target, buf, buf_taddr, count);
 		if (target_check_error(target)) {
 			free(buf);
 			return -1;
@@ -237,7 +237,7 @@ static int32_t semihosting_remote_write(
 		uint8_t buffer[STDOUT_READ_BUF_SIZE];
 		for (size_t offset = 0; offset < count; offset += STDOUT_READ_BUF_SIZE) {
 			const size_t amount = MIN(count - offset, STDOUT_READ_BUF_SIZE);
-			target_mem_read(target, buffer, buf_taddr, amount);
+			target_mem32_read(target, buffer, buf_taddr, amount);
 #if PC_HOSTED == 0
 			debug_serial_send_stdout(buffer, amount);
 #else
@@ -320,7 +320,7 @@ const char *semihosting_read_string(
 	char *string = malloc(string_length + 1U);
 	if (string == NULL)
 		return NULL;
-	target_mem_read(target, string, string_taddr, string_length + 1U);
+	target_mem32_read(target, string, string_taddr, string_length + 1U);
 	if (target_check_error(target)) {
 		free(string);
 		return NULL;
@@ -351,7 +351,7 @@ int32_t semihosting_open(target_s *const target, const semihosting_s *const requ
 
 	if (file_name_length <= 4U) {
 		char file_name[4U];
-		target_mem_read(target, file_name, file_name_taddr, file_name_length + 1U);
+		target_mem32_read(target, file_name, file_name_taddr, file_name_length + 1U);
 
 		/* Handle requests for console I/O */
 		if (!strncmp(file_name, ":tt", 4U)) {
@@ -366,7 +366,7 @@ int32_t semihosting_open(target_s *const target, const semihosting_s *const requ
 		}
 	} else if (file_name_length <= 22U) {
 		char file_name[22U];
-		target_mem_read(target, file_name, file_name_taddr, file_name_length + 1U);
+		target_mem32_read(target, file_name, file_name_taddr, file_name_length + 1U);
 
 		/* Handle a request for the features "file" */
 		if (!strncmp(file_name, ":semihosting-features", 22U)) {
@@ -873,7 +873,7 @@ int32_t semihosting_request(target_s *const target, const uint32_t syscall, cons
 	/* Set up the request block appropriately */
 	semihosting_s request = {r1, {0U}};
 	if (syscall != SEMIHOSTING_SYS_EXIT)
-		target_mem_read(target, request.params, r1, sizeof(request.params));
+		target_mem32_read(target, request.params, r1, sizeof(request.params));
 
 #if ENABLE_DEBUG == 1
 	const char *syscall_descr = NULL;

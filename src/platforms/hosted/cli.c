@@ -556,7 +556,7 @@ int cl_execute(bmda_cli_options_s *opt)
 			DEBUG_WARN("Continuous read/write-back DEMCR. Abort with ^C\n");
 			while (true) {
 				uint32_t demcr;
-				target_mem_read(target, &demcr, CORTEXM_DEMCR, 4);
+				target_mem32_read(target, &demcr, CORTEXM_DEMCR, 4);
 				target_mem_write32(target, CORTEXM_DEMCR, demcr);
 				platform_delay(1); /* To allow trigger */
 			}
@@ -639,7 +639,7 @@ int cl_execute(bmda_cli_options_s *opt)
 		const uint32_t start_time = platform_time_ms();
 		for (size_t offset = 0; offset < size; offset += WORKSIZE) {
 			const size_t worksize = MIN(size - offset, WORKSIZE);
-			int n_read = target_mem_read(target, data, flash_src + offset, worksize);
+			int n_read = target_mem32_read(target, data, flash_src + offset, worksize);
 			if (n_read) {
 				if (opt->opt_flash_size == 0) /* we reached end of flash */
 					DEBUG_INFO("Reached end of flash at size %" PRIu32 "\n", flash_src - opt->opt_flash_start);

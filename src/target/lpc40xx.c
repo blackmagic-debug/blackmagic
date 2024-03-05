@@ -267,6 +267,6 @@ iap_status_e lpc40xx_iap_call(target_s *target, iap_result_s *result, iap_cmd_e 
 	}
 
 	/* Copy back just the results */
-	target_mem_read(target, result, iap_params_addr, sizeof(iap_result_s));
+	target_mem32_read(target, result, iap_params_addr, sizeof(iap_result_s));
 	return result->return_code;
 }

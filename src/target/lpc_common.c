@@ -117,7 +117,7 @@ static inline bool lpc_is_full_erase(lpc_flash_s *f, const uint32_t begin, const
 void lpc_save_state(target_s *const target, const uint32_t iap_ram, iap_frame_s *const frame, uint32_t *const regs)
 {
 	/* Save IAP RAM to restore after IAP call */
-	target_mem_read(target, frame, iap_ram, sizeof(iap_frame_s));
+	target_mem32_read(target, frame, iap_ram, sizeof(iap_frame_s));
 	/* Save registers to restore after IAP call */
 	target_regs_read(target, regs);
 }
@@ -251,7 +251,7 @@ iap_status_e lpc_iap_call(lpc_flash_s *const flash, iap_result_s *const result, 
 
 	/* Copy back just the results */
 	iap_result_s results = {0};
-	target_mem_read(target, &results, iap_results_addr, sizeof(iap_result_s));
+	target_mem32_read(target, &results, iap_results_addr, sizeof(iap_result_s));
 
 	/* Restore the original data in RAM and registers */
 	lpc_restore_state(target, flash->iap_ram, &saved_frame, saved_regs);

@@ -284,7 +284,7 @@ bool target_attached(target_s *target)
 }
 
 /* Memory access functions */
-bool target_mem_read(target_s *const target, void *const dest, const target_addr_t src, const size_t len)
+bool target_mem32_read(target_s *const target, void *const dest, const target_addr_t src, const size_t len)
 {
 	return target_mem64_read(target, dest, src, len);
 }
