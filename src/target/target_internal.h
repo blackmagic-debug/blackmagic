@@ -190,12 +190,12 @@ void target_add_flash(target_s *target, target_flash_s *flash);
 target_flash_s *target_flash_for_addr(target_s *target, uint32_t addr);
 
 /* Convenience function for MMIO access */
-uint32_t target_mem_read32(target_s *target, uint32_t addr);
-uint16_t target_mem_read16(target_s *target, uint32_t addr);
-uint8_t target_mem_read8(target_s *target, uint32_t addr);
-void target_mem_write32(target_s *target, uint32_t addr, uint32_t value);
-void target_mem_write16(target_s *target, uint32_t addr, uint16_t value);
-void target_mem_write8(target_s *target, uint32_t addr, uint8_t value);
+uint32_t target_mem_read32(target_s *target, target_addr_t addr);
+uint16_t target_mem_read16(target_s *target, target_addr_t addr);
+uint8_t target_mem_read8(target_s *target, target_addr_t addr);
+void target_mem_write32(target_s *target, target_addr_t addr, uint32_t value);
+void target_mem_write16(target_s *target, target_addr_t addr, uint16_t value);
+void target_mem_write8(target_s *target, target_addr_t addr, uint8_t value);
 bool target_check_error(target_s *target);
 
 /* Access to host controller interface */
