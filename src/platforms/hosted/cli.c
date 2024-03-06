@@ -442,13 +442,13 @@ void cl_init(bmda_cli_options_s *opt, int argc, char **argv)
 static void display_target(size_t idx, target_s *target, void *context)
 {
 	(void)context;
-	const char *const core_name = target_core_name(target);
-	if (strcmp(target_driver_name(target), "ARM Cortex-M") == 0)
-		DEBUG_INFO("*** %2zu %c Unknown %s Designer %x Part ID %x %s\n", idx, target_attached(target) ? '*' : ' ',
-			target_driver_name(target), target_designer(target), target_part_id(target), core_name ? core_name : "");
+	const char attached = target->attached ? '*' : ' ';
+	const char *const core_name = target->core;
+	if (!strcmp(target->driver, "ARM Cortex-M"))
+		DEBUG_INFO("*** %2zu %c Unknown %s Designer 0x%x Part ID 0x%x %s\n", idx, attached, target->driver,
+			target->designer_code, target->part_id, core_name ? core_name : "");
 	else
-		DEBUG_INFO("*** %2zu %c %s %s\n", idx, target_attached(target) ? '*' : ' ', target_driver_name(target),
-			core_name ? core_name : "");
+		DEBUG_INFO("*** %2zu %c %s %s\n", idx, attached, target->driver, core_name ? core_name : "");
 }
 
 bool scan_for_targets(const bmda_cli_options_s *const opt)

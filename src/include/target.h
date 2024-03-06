@@ -58,11 +58,6 @@ target_s *target_new(void);
 target_s *target_attach(target_s *target, target_controller_s *controller);
 target_s *target_attach_n(size_t n, target_controller_s *controller);
 void target_detach(target_s *target);
-bool target_attached(target_s *target);
-const char *target_driver_name(target_s *target);
-const char *target_core_name(target_s *target);
-unsigned int target_designer(target_s *target);
-unsigned int target_part_id(target_s *target);
 
 /* Memory access functions */
 bool target_mem_map(target_s *target, char *buf, size_t len);

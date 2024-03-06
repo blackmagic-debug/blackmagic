@@ -278,11 +278,6 @@ bool target_check_error(target_s *target)
 	return false;
 }
 
-bool target_attached(target_s *target)
-{
-	return target->attached;
-}
-
 /* Memory access functions */
 bool target_mem32_read(target_s *const target, void *const dest, const target_addr_t src, const size_t len)
 {
@@ -530,26 +525,6 @@ const char *target_regs_description(target_s *t)
 	if (t->regs_description)
 		return t->regs_description(t);
 	return NULL;
-}
-
-const char *target_driver_name(target_s *t)
-{
-	return t->driver;
-}
-
-const char *target_core_name(target_s *t)
-{
-	return t->core;
-}
-
-unsigned int target_designer(target_s *t)
-{
-	return t->designer_code;
-}
-
-unsigned int target_part_id(target_s *t)
-{
-	return t->part_id;
 }
 
 uint32_t target_mem32_read32(target_s *target, target_addr32_t addr)
