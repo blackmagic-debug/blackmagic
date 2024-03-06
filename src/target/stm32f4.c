@@ -359,7 +359,7 @@ static bool stm32f4_attach(target_s *t)
 	/* Get the current value of the debug control register (and store it for later) */
 	priv_storage->dbgmcu_cr = target_mem32_read32(t, DBGMCU_CR);
 	/* Enable debugging during all low power modes*/
-	target_mem_write32(
+	target_mem32_write32(
 		t, DBGMCU_CR, priv_storage->dbgmcu_cr | DBGMCU_CR_DBG_SLEEP | DBGMCU_CR_DBG_STANDBY | DBGMCU_CR_DBG_STOP);
 
 	/* Free any previously built memory map */
@@ -449,7 +449,7 @@ static void stm32f4_detach(target_s *t)
 {
 	stm32f4_priv_s *ps = t->target_storage;
 	/*reverse all changes to DBGMCU_CR*/
-	target_mem_write32(t, DBGMCU_CR, ps->dbgmcu_cr);
+	target_mem32_write32(t, DBGMCU_CR, ps->dbgmcu_cr);
 	cortexm_detach(t);
 }
 
@@ -457,8 +457,8 @@ static void stm32f4_flash_unlock(target_s *t)
 {
 	if (target_mem32_read32(t, FLASH_CR) & FLASH_CR_LOCK) {
 		/* Enable FPEC controller access */
-		target_mem_write32(t, FLASH_KEYR, KEY1);
-		target_mem_write32(t, FLASH_KEYR, KEY2);
+		target_mem32_write32(t, FLASH_KEYR, KEY1);
+		target_mem32_write32(t, FLASH_KEYR, KEY2);
 	}
 }
 
@@ -502,9 +502,9 @@ static bool stm32f4_flash_erase(target_flash_s *f, target_addr_t addr, size_t le
 	for (size_t offset = 0; offset < len; offset += f->blocksize) {
 		uint32_t cr = FLASH_CR_EOPIE | FLASH_CR_ERRIE | FLASH_CR_SER | (psize * FLASH_CR_PSIZE16) | (sector << 3U);
 		/* Flash page erase instruction */
-		target_mem_write32(t, FLASH_CR, cr);
+		target_mem32_write32(t, FLASH_CR, cr);
 		/* write address to FMA */
-		target_mem_write32(t, FLASH_CR, cr | FLASH_CR_STRT);
+		target_mem32_write32(t, FLASH_CR, cr | FLASH_CR_STRT);
 
 		/* Wait for completion or an error */
 		if (!stm32f4_flash_busy_wait(t, NULL))
@@ -525,7 +525,7 @@ static bool stm32f4_flash_write(target_flash_s *f, target_addr_t dest, const voi
 	target_s *t = f->t;
 
 	align_e psize = ((stm32f4_flash_s *)f)->psize;
-	target_mem_write32(t, FLASH_CR, (psize * FLASH_CR_PSIZE16) | FLASH_CR_PG);
+	target_mem32_write32(t, FLASH_CR, (psize * FLASH_CR_PSIZE16) | FLASH_CR_PG);
 	cortexm_mem_write_aligned(t, dest, src, len, psize);
 
 	/* Wait for completion or an error */
@@ -540,8 +540,8 @@ static bool stm32f4_mass_erase(target_s *t)
 
 	/* Flash mass erase start instruction */
 	const uint32_t ctrl = FLASH_CR_MER | (sf->bank_split ? FLASH_CR_MER1 : 0);
-	target_mem_write32(t, FLASH_CR, ctrl);
-	target_mem_write32(t, FLASH_CR, ctrl | FLASH_CR_STRT);
+	target_mem32_write32(t, FLASH_CR, ctrl);
+	target_mem32_write32(t, FLASH_CR, ctrl | FLASH_CR_STRT);
 
 	platform_timeout_s timeout;
 	platform_timeout_set(&timeout, 500);
@@ -641,8 +641,8 @@ static bool stm32f4_option_write(target_s *t, uint32_t *const val, size_t count)
 		val[0] |= FLASH_OPTCR_PROT_L1;
 		tc_printf(t, "Keeping L1 protection while HW Watchdog fuse is set!\n");
 	}
-	target_mem_write32(t, FLASH_OPTKEYR, OPTKEY1);
-	target_mem_write32(t, FLASH_OPTKEYR, OPTKEY2);
+	target_mem32_write32(t, FLASH_OPTKEYR, OPTKEY1);
+	target_mem32_write32(t, FLASH_OPTKEYR, OPTKEY2);
 	if (!stm32f4_flash_busy_wait(t, NULL))
 		return false;
 
@@ -650,13 +650,13 @@ static bool stm32f4_option_write(target_s *t, uint32_t *const val, size_t count)
 	/* Write option bytes instruction */
 	if (stm32f4_opt_bytes_for(part_id) > 1U && count > 1U) {
 		/* XXX: Do we need to read old value and then set it? */
-		target_mem_write32(t, FLASH_OPTCR + 4U, val[1]);
+		target_mem32_write32(t, FLASH_OPTCR + 4U, val[1]);
 		if (part_id == ID_STM32F72X && count > 2U)
-			target_mem_write32(t, FLASH_OPTCR + 8U, val[2]);
+			target_mem32_write32(t, FLASH_OPTCR + 8U, val[2]);
 	}
 
-	target_mem_write32(t, FLASH_OPTCR, val[0]);
-	target_mem_write32(t, FLASH_OPTCR, val[0] | FLASH_OPTCR_OPTSTRT);
+	target_mem32_write32(t, FLASH_OPTCR, val[0]);
+	target_mem32_write32(t, FLASH_OPTCR, val[0] | FLASH_OPTCR_OPTSTRT);
 
 	tc_printf(t, "Erasing flash\nThis may take a few seconds...\n");
 
@@ -667,7 +667,7 @@ static bool stm32f4_option_write(target_s *t, uint32_t *const val, size_t count)
 		return false;
 	tc_printf(t, "\n");
 
-	target_mem_write32(t, FLASH_OPTCR, FLASH_OPTCR_OPTLOCK);
+	target_mem32_write32(t, FLASH_OPTCR, FLASH_OPTCR_OPTLOCK);
 	/* Reset target to reload option bits.*/
 	target_reset(t);
 	return true;

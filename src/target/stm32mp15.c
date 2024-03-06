@@ -158,7 +158,7 @@ static bool stm32mp15_attach(target_s *const target)
 	priv->dbgmcu_ctrl = target_mem32_read32(target, DBGMCU_CTRL);
 
 	/* Disable C-Sleep, C-Stop, C-Standby for debugging */
-	target_mem_write32(target, DBGMCU_CTRL, DBGMCU_CTRL_DBGSLEEP | DBGMCU_CTRL_DBGSTOP | DBGMCU_CTRL_DBGSTBY);
+	target_mem32_write32(target, DBGMCU_CTRL, DBGMCU_CTRL_DBGSLEEP | DBGMCU_CTRL_DBGSTOP | DBGMCU_CTRL_DBGSTBY);
 
 	return true;
 }
@@ -166,7 +166,7 @@ static bool stm32mp15_attach(target_s *const target)
 static void stm32mp15_detach(target_s *const target)
 {
 	stm32mp15_priv_s *priv = (stm32mp15_priv_s *)target->target_storage;
-	target_mem_write32(target, DBGMCU_CTRL, priv->dbgmcu_ctrl);
+	target_mem32_write32(target, DBGMCU_CTRL, priv->dbgmcu_ctrl);
 	cortexm_detach(target);
 }
 

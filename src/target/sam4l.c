@@ -245,12 +245,12 @@ static void sam4l_extended_reset(target_s *t)
 	DEBUG_INFO("SAM4L: Extended Reset\n");
 
 	/* Enable SMAP in case we're dealing with a non-JTAG reset */
-	target_mem_write32(t, SMAP_CR, 0x1); /* enable SMAP */
+	target_mem32_write32(t, SMAP_CR, 0x1); /* enable SMAP */
 	uint32_t reg = target_mem32_read32(t, SMAP_SR);
 	DEBUG_INFO("SMAP_SR has 0x%08" PRIx32 "\n", reg);
 	if ((reg & SMAP_SR_HCR) != 0) {
 		/* Write '1' bit to the status clear register */
-		target_mem_write32(t, SMAP_SCR, SMAP_SR_HCR);
+		target_mem32_write32(t, SMAP_SCR, SMAP_SR_HCR);
 		/* Waiting 250 loops for it to reset is arbitrary, it should happen right away */
 		for (size_t i = 0; i < 250U; i++) {
 			reg = target_mem32_read32(t, SMAP_SR);
@@ -294,7 +294,7 @@ static bool sam4l_flash_command(target_s *t, uint32_t page, uint32_t cmd)
 	DEBUG_INFO("%s: Writing command word 0x%08" PRIx32 "\n", __func__, cmd_reg);
 
 	/* And kick it off */
-	target_mem_write32(t, FLASHCALW_FCMD, cmd_reg);
+	target_mem32_write32(t, FLASHCALW_FCMD, cmd_reg);
 	/* Don't actually wait for it to finish, the next command will stall if it is not done */
 	return true;
 }
@@ -331,7 +331,7 @@ static bool sam4l_flash_write(
 		 * instead we just write 0 -> pagelen (512) and that fills our
 		 * buffer correctly.
 		 */
-		target_mem_write32(t, dest + offset, data[offset / 4U]);
+		target_mem32_write32(t, dest + offset, data[offset / 4U]);
 	}
 
 	/* write the page */

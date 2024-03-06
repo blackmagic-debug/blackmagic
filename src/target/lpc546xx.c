@@ -295,10 +295,10 @@ static bool lpc546xx_flash_init(target_s *t)
 	/* Deal with WDT */
 	lpc546xx_wdt_set_period(t);
 
-	target_mem_write32(t, LPC546XX_MAINCLKSELA, 0);  // 12MHz FRO
-	target_mem_write32(t, LPC546XX_MAINCLKSELB, 0);  // Use MAINCLKSELA
-	target_mem_write32(t, LPC546XX_AHBCLKDIV, 0);    // Divide by 1
-	target_mem_write32(t, LPC546XX_FLASHCFG, 0x1aU); // Recommended default
+	target_mem32_write32(t, LPC546XX_MAINCLKSELA, 0);  // 12MHz FRO
+	target_mem32_write32(t, LPC546XX_MAINCLKSELB, 0);  // Use MAINCLKSELA
+	target_mem32_write32(t, LPC546XX_AHBCLKDIV, 0);    // Divide by 1
+	target_mem32_write32(t, LPC546XX_FLASHCFG, 0x1aU); // Recommended default
 	return true;
 }
 
@@ -316,7 +316,7 @@ static void lpc546xx_wdt_set_period(target_s *t)
 
 	/* If WDT on, we can't disable it, but we may be able to set a long period */
 	if (wdt_mode && !(wdt_mode & LPC546XX_WDT_PROTECT))
-		target_mem_write32(t, LPC546XX_WDT_CNT, LPC546XX_WDT_PERIOD_MAX);
+		target_mem32_write32(t, LPC546XX_WDT_CNT, LPC546XX_WDT_PERIOD_MAX);
 }
 
 static void lpc546xx_wdt_kick(target_s *t)
@@ -326,7 +326,7 @@ static void lpc546xx_wdt_kick(target_s *t)
 
 	/* If WDT on, poke it to reset it */
 	if (wdt_mode) {
-		target_mem_write32(t, LPC546XX_WDT_FEED, 0xaa);
-		target_mem_write32(t, LPC546XX_WDT_FEED, 0xff);
+		target_mem32_write32(t, LPC546XX_WDT_FEED, 0xaa);
+		target_mem32_write32(t, LPC546XX_WDT_FEED, 0xff);
 	}
 }

@@ -32,20 +32,20 @@ static bool nrf91_flash_erase(target_flash_s *flash, target_addr_t addr, size_t 
 	target_s *target = flash->t;
 
 	/* Enable erase */
-	target_mem_write32(target, NRF91_NVMC_CONFIG, NRF91_NVMC_CONFIG_EEN);
+	target_mem32_write32(target, NRF91_NVMC_CONFIG, NRF91_NVMC_CONFIG_EEN);
 	if (!nrf91_wait_ready(target, NULL))
 		return false;
 
 	for (size_t offset = 0; offset < len; offset += flash->blocksize) {
 		/* Write all ones to first word in page to erase it */
-		target_mem_write32(target, addr + offset, 0xffffffffU);
+		target_mem32_write32(target, addr + offset, 0xffffffffU);
 
 		if (!nrf91_wait_ready(target, NULL))
 			return false;
 	}
 
 	/* Return to read-only */
-	target_mem_write32(target, NRF91_NVMC_CONFIG, NRF91_NVMC_CONFIG_REN);
+	target_mem32_write32(target, NRF91_NVMC_CONFIG, NRF91_NVMC_CONFIG_REN);
 	return nrf91_wait_ready(target, NULL);
 }
 
@@ -54,7 +54,7 @@ static bool nrf91_flash_write(target_flash_s *flash, target_addr_t dest, const v
 	target_s *target = flash->t;
 
 	/* Enable write */
-	target_mem_write32(target, NRF91_NVMC_CONFIG, NRF91_NVMC_CONFIG_WEN);
+	target_mem32_write32(target, NRF91_NVMC_CONFIG, NRF91_NVMC_CONFIG_WEN);
 	if (!nrf91_wait_ready(target, NULL))
 		return false;
 	/* Write the data */
@@ -62,7 +62,7 @@ static bool nrf91_flash_write(target_flash_s *flash, target_addr_t dest, const v
 	if (!nrf91_wait_ready(target, NULL))
 		return false;
 	/* Return to read-only */
-	target_mem_write32(target, NRF91_NVMC_CONFIG, NRF91_NVMC_CONFIG_REN);
+	target_mem32_write32(target, NRF91_NVMC_CONFIG, NRF91_NVMC_CONFIG_REN);
 	return true;
 }
 

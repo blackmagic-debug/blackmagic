@@ -495,7 +495,7 @@ bool cortexm_probe(adiv5_access_port_s *ap)
 	/* Probe for FP extension. */
 	uint32_t cpacr = target_mem32_read32(target, CORTEXM_CPACR);
 	cpacr |= 0x00f00000U; /* CP10 = 0b11, CP11 = 0b11 */
-	target_mem_write32(target, CORTEXM_CPACR, cpacr);
+	target_mem32_write32(target, CORTEXM_CPACR, cpacr);
 	bool is_cortexmf = target_mem32_read32(target, CORTEXM_CPACR) == cpacr;
 
 	target->regs_description = cortexm_regs_description;
@@ -535,7 +535,7 @@ bool cortexm_probe(adiv5_access_port_s *ap)
 		conn_reset = true;
 
 		/* Request halt when reset is de-asseted */
-		target_mem_write32(target, CORTEXM_DEMCR, priv->demcr);
+		target_mem32_write32(target, CORTEXM_DEMCR, priv->demcr);
 		/* Force a halt */
 		cortexm_halt_request(target);
 		/* Release reset */
@@ -563,7 +563,7 @@ bool cortexm_probe(adiv5_access_port_s *ap)
 
 	/* If we set the interrupt catch vector earlier, clear it. */
 	if (conn_reset)
-		target_mem_write32(target, CORTEXM_DEMCR, 0);
+		target_mem32_write32(target, CORTEXM_DEMCR, 0);
 
 	switch (target->designer_code) {
 	case JEP106_MANUFACTURER_FREESCALE:
@@ -700,10 +700,10 @@ bool cortexm_attach(target_s *target)
 
 	target_halt_request(target);
 	/* Request halt on reset */
-	target_mem_write32(target, CORTEXM_DEMCR, priv->demcr);
+	target_mem32_write32(target, CORTEXM_DEMCR, priv->demcr);
 
 	/* Reset DFSR flags */
-	target_mem_write32(target, CORTEXM_DFSR, CORTEXM_DFSR_RESETALL);
+	target_mem32_write32(target, CORTEXM_DFSR, CORTEXM_DFSR_RESETALL);
 
 	/* size the break/watchpoint units */
 	priv->base.breakpoints_available = CORTEX_MAX_BREAKPOINTS;
@@ -721,15 +721,15 @@ bool cortexm_attach(target_s *target)
 	/* Clear any stale breakpoints */
 	priv->base.breakpoints_mask = 0;
 	for (size_t i = 0; i < priv->base.breakpoints_available; i++)
-		target_mem_write32(target, CORTEXM_FPB_COMP(i), 0);
+		target_mem32_write32(target, CORTEXM_FPB_COMP(i), 0);
 
 	/* Clear any stale watchpoints */
 	priv->base.watchpoints_mask = 0;
 	for (size_t i = 0; i < priv->base.watchpoints_available; i++)
-		target_mem_write32(target, CORTEXM_DWT_FUNC(i), 0);
+		target_mem32_write32(target, CORTEXM_DWT_FUNC(i), 0);
 
 	/* Flash Patch Control Register: set ENABLE */
-	target_mem_write32(target, CORTEXM_FPB_CTRL, CORTEXM_FPB_CTRL_KEY | CORTEXM_FPB_CTRL_ENABLE);
+	target_mem32_write32(target, CORTEXM_FPB_CTRL, CORTEXM_FPB_CTRL_KEY | CORTEXM_FPB_CTRL_ENABLE);
 
 	(void)target_mem32_read32(target, CORTEXM_DHCSR);
 	if (target_mem32_read32(target, CORTEXM_DHCSR) & CORTEXM_DHCSR_S_RESET_ST) {
@@ -755,19 +755,19 @@ void cortexm_detach(target_s *target)
 
 	/* Clear any stale breakpoints */
 	for (size_t i = 0; i < priv->base.breakpoints_available; i++)
-		target_mem_write32(target, CORTEXM_FPB_COMP(i), 0);
+		target_mem32_write32(target, CORTEXM_FPB_COMP(i), 0);
 
 	/* Clear any stale watchpoints */
 	for (size_t i = 0; i < priv->base.watchpoints_available; i++)
-		target_mem_write32(target, CORTEXM_DWT_FUNC(i), 0);
+		target_mem32_write32(target, CORTEXM_DWT_FUNC(i), 0);
 
 	/* Restore DEMCR */
 	adiv5_access_port_s *ap = cortex_ap(target);
-	target_mem_write32(target, CORTEXM_DEMCR, ap->ap_cortexm_demcr);
+	target_mem32_write32(target, CORTEXM_DEMCR, ap->ap_cortexm_demcr);
 	/* Resume target and disable debug, re-enabling interrupts in the process */
-	target_mem_write32(target, CORTEXM_DHCSR, CORTEXM_DHCSR_DBGKEY | CORTEXM_DHCSR_C_DEBUGEN | CORTEXM_DHCSR_C_HALT);
-	target_mem_write32(target, CORTEXM_DHCSR, CORTEXM_DHCSR_DBGKEY | CORTEXM_DHCSR_C_DEBUGEN);
-	target_mem_write32(target, CORTEXM_DHCSR, CORTEXM_DHCSR_DBGKEY);
+	target_mem32_write32(target, CORTEXM_DHCSR, CORTEXM_DHCSR_DBGKEY | CORTEXM_DHCSR_C_DEBUGEN | CORTEXM_DHCSR_C_HALT);
+	target_mem32_write32(target, CORTEXM_DHCSR, CORTEXM_DHCSR_DBGKEY | CORTEXM_DHCSR_C_DEBUGEN);
+	target_mem32_write32(target, CORTEXM_DHCSR, CORTEXM_DHCSR_DBGKEY);
 }
 
 enum {
@@ -886,7 +886,7 @@ static size_t cortexm_reg_read(target_s *target, uint32_t reg, void *data, size_
 	if (max < 4U)
 		return 0;
 	uint32_t *r = data;
-	target_mem_write32(target, CORTEXM_DCRSR, dcrsr_regnum(target, reg));
+	target_mem32_write32(target, CORTEXM_DCRSR, dcrsr_regnum(target, reg));
 	*r = target_mem32_read32(target, CORTEXM_DCRDR);
 	return 4U;
 }
@@ -896,21 +896,21 @@ static size_t cortexm_reg_write(target_s *target, uint32_t reg, const void *data
 	if (max < 4U)
 		return 0;
 	const uint32_t *r = data;
-	target_mem_write32(target, CORTEXM_DCRDR, *r);
-	target_mem_write32(target, CORTEXM_DCRSR, CORTEXM_DCRSR_REGWnR | dcrsr_regnum(target, reg));
+	target_mem32_write32(target, CORTEXM_DCRDR, *r);
+	target_mem32_write32(target, CORTEXM_DCRSR, CORTEXM_DCRSR_REGWnR | dcrsr_regnum(target, reg));
 	return 4U;
 }
 
 static uint32_t cortexm_pc_read(target_s *target)
 {
-	target_mem_write32(target, CORTEXM_DCRSR, 0x0f);
+	target_mem32_write32(target, CORTEXM_DCRSR, 0x0f);
 	return target_mem32_read32(target, CORTEXM_DCRDR);
 }
 
 static void cortexm_pc_write(target_s *target, const uint32_t val)
 {
-	target_mem_write32(target, CORTEXM_DCRDR, val);
-	target_mem_write32(target, CORTEXM_DCRSR, CORTEXM_DCRSR_REGWnR | 0x0fU);
+	target_mem32_write32(target, CORTEXM_DCRDR, val);
+	target_mem32_write32(target, CORTEXM_DCRSR, CORTEXM_DCRSR_REGWnR | 0x0fU);
 }
 
 /*
@@ -936,7 +936,7 @@ static void cortexm_reset(target_s *const target)
 		 * No reset seen yet, maybe as nRST is not connected, or device has TOPT_INHIBIT_NRST set.
 		 * Trigger reset by AIRCR.
 		 */
-		target_mem_write32(target, CORTEXM_AIRCR, CORTEXM_AIRCR_VECTKEY | CORTEXM_AIRCR_SYSRESETREQ);
+		target_mem32_write32(target, CORTEXM_AIRCR, CORTEXM_AIRCR_VECTKEY | CORTEXM_AIRCR_SYSRESETREQ);
 	}
 
 	/* If target needs to do something extra (see Atmel SAM4L for example) */
@@ -957,17 +957,15 @@ static void cortexm_reset(target_s *const target)
 
 	/* 10 ms delay to ensure that things such as the STM32 HSI clock have started up fully. */
 	platform_delay(10);
-	/* Reset DFSR flags */
-	target_mem_write32(target, CORTEXM_DFSR, CORTEXM_DFSR_RESETALL);
-	/* Make sure we ignore any initial DAP error */
-	target_check_error(target);
+	/* Reset DFSR flags and ignore any initial DAP error */
+	target_mem32_write32(target, CORTEXM_DFSR, CORTEXM_DFSR_RESETALL);
 }
 
 static void cortexm_halt_request(target_s *target)
 {
 	volatile exception_s e;
 	TRY_CATCH (e, EXCEPTION_TIMEOUT) {
-		target_mem_write32(
+		target_mem32_write32(
 			target, CORTEXM_DHCSR, CORTEXM_DHCSR_DBGKEY | CORTEXM_DHCSR_C_HALT | CORTEXM_DHCSR_C_DEBUGEN);
 	}
 	if (e.type)
@@ -1000,7 +998,7 @@ static target_halt_reason_e cortexm_halt_poll(target_s *target, target_addr_t *w
 
 	/* Read out the status register to determine why */
 	uint32_t dfsr = target_mem32_read32(target, CORTEXM_DFSR);
-	target_mem_write32(target, CORTEXM_DFSR, dfsr); /* write back to reset */
+	target_mem32_write32(target, CORTEXM_DFSR, dfsr); /* write back to reset */
 
 	if ((dfsr & CORTEXM_DFSR_VCATCH) && cortexm_fault_unwind(target))
 		return TARGET_HALT_FAULT;
@@ -1050,7 +1048,7 @@ void cortexm_halt_resume(target_s *const target, const bool step)
 	 * (which requires C_HALT to be set or the write is unpredictable)
 	 */
 	if (step != priv->stepping) {
-		target_mem_write32(target, CORTEXM_DHCSR, dhcsr | CORTEXM_DHCSR_C_HALT);
+		target_mem32_write32(target, CORTEXM_DHCSR, dhcsr | CORTEXM_DHCSR_C_HALT);
 		priv->stepping = step;
 	}
 
@@ -1063,10 +1061,10 @@ void cortexm_halt_resume(target_s *const target, const bool step)
 	}
 
 	if (priv->base.icache_line_length)
-		target_mem_write32(target, CORTEXM_ICIALLU, 0);
+		target_mem32_write32(target, CORTEXM_ICIALLU, 0);
 
 	/* Release C_HALT to resume the core in whichever mode is selected */
-	target_mem_write32(target, CORTEXM_DHCSR, dhcsr);
+	target_mem32_write32(target, CORTEXM_DHCSR, dhcsr);
 }
 
 static int cortexm_fault_unwind(target_s *target)
@@ -1075,8 +1073,8 @@ static int cortexm_fault_unwind(target_s *target)
 	uint32_t hfsr = target_mem32_read32(target, CORTEXM_HFSR);
 	uint32_t cfsr = target_mem32_read32(target, CORTEXM_CFSR);
 	/* Write them back to reset them */
-	target_mem_write32(target, CORTEXM_HFSR, hfsr);
-	target_mem_write32(target, CORTEXM_CFSR, cfsr);
+	target_mem32_write32(target, CORTEXM_HFSR, hfsr);
+	target_mem32_write32(target, CORTEXM_CFSR, cfsr);
 	/*
 	 * We check for FORCED in the HardFault Status Register or
 	 * for a configurable fault to avoid catching core resets
@@ -1121,7 +1119,7 @@ static int cortexm_fault_unwind(target_s *target)
 		 */
 
 		/* Reset exception state to allow resuming from restored state. */
-		target_mem_write32(target, CORTEXM_AIRCR, CORTEXM_AIRCR_VECTKEY | CORTEXM_AIRCR_VECTCLRACTIVE);
+		target_mem32_write32(target, CORTEXM_AIRCR, CORTEXM_AIRCR_VECTKEY | CORTEXM_AIRCR_VECTCLRACTIVE);
 
 		/* Write pre-exception registers back to core */
 		target_regs_write(target, regs);
@@ -1249,7 +1247,7 @@ static int cortexm_breakwatch_set(target_s *target, breakwatch_s *breakwatch)
 			return -1;
 
 		priv->base.breakpoints_mask |= 1U << i;
-		target_mem_write32(target, CORTEXM_FPB_COMP(i), val);
+		target_mem32_write32(target, CORTEXM_FPB_COMP(i), val);
 		breakwatch->reserved[0] = i;
 		return 0;
 
@@ -1267,9 +1265,9 @@ static int cortexm_breakwatch_set(target_s *target, breakwatch_s *breakwatch)
 
 		priv->base.watchpoints_mask |= 1U << i;
 
-		target_mem_write32(target, CORTEXM_DWT_COMP(i), val);
-		target_mem_write32(target, CORTEXM_DWT_MASK(i), cortexm_dwt_mask(breakwatch->size));
-		target_mem_write32(target, CORTEXM_DWT_FUNC(i), cortexm_dwt_func(target, breakwatch->type));
+		target_mem32_write32(target, CORTEXM_DWT_COMP(i), val);
+		target_mem32_write32(target, CORTEXM_DWT_MASK(i), cortexm_dwt_mask(breakwatch->size));
+		target_mem32_write32(target, CORTEXM_DWT_FUNC(i), cortexm_dwt_func(target, breakwatch->type));
 
 		breakwatch->reserved[0] = i;
 		return 0;
@@ -1285,13 +1283,13 @@ static int cortexm_breakwatch_clear(target_s *target, breakwatch_s *breakwatch)
 	switch (breakwatch->type) {
 	case TARGET_BREAK_HARD:
 		priv->base.breakpoints_mask &= ~(1U << i);
-		target_mem_write32(target, CORTEXM_FPB_COMP(i), 0);
+		target_mem32_write32(target, CORTEXM_FPB_COMP(i), 0);
 		return 0;
 	case TARGET_WATCH_WRITE:
 	case TARGET_WATCH_READ:
 	case TARGET_WATCH_ACCESS:
 		priv->base.watchpoints_mask &= ~(1U << i);
-		target_mem_write32(target, CORTEXM_DWT_FUNC(i), 0);
+		target_mem32_write32(target, CORTEXM_DWT_FUNC(i), 0);
 		return 0;
 	default:
 		return 1;
@@ -1339,7 +1337,7 @@ static bool cortexm_vector_catch(target_s *target, int argc, const char **argv)
 			else
 				priv->demcr &= ~tmp;
 
-			target_mem_write32(target, CORTEXM_DEMCR, priv->demcr);
+			target_mem32_write32(target, CORTEXM_DEMCR, priv->demcr);
 		}
 	}
 

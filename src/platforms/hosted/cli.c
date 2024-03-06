@@ -557,7 +557,7 @@ int cl_execute(bmda_cli_options_s *opt)
 			while (true) {
 				uint32_t demcr;
 				target_mem32_read(target, &demcr, CORTEXM_DEMCR, 4);
-				target_mem_write32(target, CORTEXM_DEMCR, demcr);
+				target_mem32_write32(target, CORTEXM_DEMCR, demcr);
 				platform_delay(1); /* To allow trigger */
 			}
 		} else

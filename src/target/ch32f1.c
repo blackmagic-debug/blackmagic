@@ -102,18 +102,18 @@ static void ch32f1_add_flash(target_s *t, uint32_t addr, size_t length, size_t e
 		}                                                    \
 	} while (!(sr & FLASH_SR_EOP));
 
-#define CLEAR_EOP() target_mem_write32(t, FLASH_SR, FLASH_SR_EOP)
+#define CLEAR_EOP() target_mem32_write32(t, FLASH_SR, FLASH_SR_EOP)
 
 #define SET_CR(bit)                                                   \
 	do {                                                              \
 		const uint32_t cr = target_mem32_read32(t, FLASH_CR) | (bit); \
-		target_mem_write32(t, FLASH_CR, cr);                          \
+		target_mem32_write32(t, FLASH_CR, cr);                        \
 	} while (0)
 
 #define CLEAR_CR(bit)                                                    \
 	do {                                                                 \
 		const uint32_t cr = target_mem32_read32(t, FLASH_CR) & (~(bit)); \
-		target_mem_write32(t, FLASH_CR, cr);                             \
+		target_mem32_write32(t, FLASH_CR, cr);                           \
 	} while (0)
 
 // Which one is the right value?
@@ -122,7 +122,7 @@ static void ch32f1_add_flash(target_s *t, uint32_t addr, size_t length, size_t e
 #define MAGIC(addr)                                          \
 	do {                                                     \
 		magic = target_mem32_read32(t, (addr) ^ MAGIC_WORD); \
-		target_mem_write32(t, FLASH_MAGIC, magic);           \
+		target_mem32_write32(t, FLASH_MAGIC, magic);         \
 	} while (0)
 
 /* Attempt unlock ch32f103 in fast mode */
@@ -130,11 +130,11 @@ static bool ch32f1_flash_unlock(target_s *t)
 {
 	DEBUG_INFO("CH32: flash unlock \n");
 
-	target_mem_write32(t, FLASH_KEYR, KEY1);
-	target_mem_write32(t, FLASH_KEYR, KEY2);
+	target_mem32_write32(t, FLASH_KEYR, KEY1);
+	target_mem32_write32(t, FLASH_KEYR, KEY2);
 	// fast mode
-	target_mem_write32(t, FLASH_MODEKEYR_CH32, KEY1);
-	target_mem_write32(t, FLASH_MODEKEYR_CH32, KEY2);
+	target_mem32_write32(t, FLASH_MODEKEYR_CH32, KEY1);
+	target_mem32_write32(t, FLASH_MODEKEYR_CH32, KEY2);
 	uint32_t cr = target_mem32_read32(t, FLASH_CR);
 	if (cr & FLASH_CR_FLOCK_CH32)
 		DEBUG_ERROR("Fast unlock failed, cr: 0x%08" PRIx32 "\n", cr);
@@ -170,12 +170,12 @@ static bool ch32f1_has_fast_unlock(target_s *t)
 	if (!(target_mem32_read32(t, FLASH_CR) & FLASH_CR_FLOCK_CH32))
 		return false;
 	// send unlock sequence
-	target_mem_write32(t, FLASH_KEYR, KEY1);
-	target_mem_write32(t, FLASH_KEYR, KEY2);
+	target_mem32_write32(t, FLASH_KEYR, KEY1);
+	target_mem32_write32(t, FLASH_KEYR, KEY2);
 	platform_delay(1); // The flash controller is timing sensitive
 	// send fast unlock sequence
-	target_mem_write32(t, FLASH_MODEKEYR_CH32, KEY1);
-	target_mem_write32(t, FLASH_MODEKEYR_CH32, KEY2);
+	target_mem32_write32(t, FLASH_MODEKEYR_CH32, KEY1);
+	target_mem32_write32(t, FLASH_MODEKEYR_CH32, KEY2);
 	platform_delay(1); // The flash controller is timing sensitive
 	return !(target_mem32_read32(t, FLASH_CR) & FLASH_CR_FLOCK_CH32);
 }
@@ -237,7 +237,7 @@ bool ch32f1_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 	while (len) {
 		SET_CR(FLASH_CR_FTER_CH32); // CH32 PAGE_ER
 		/* Write address to FMA */
-		target_mem_write32(t, FLASH_AR, addr);
+		target_mem32_write32(t, FLASH_AR, addr);
 		/* Flash page erase start instruction */
 		SET_CR(FLASH_CR_STRT);
 		WAIT_EOP();
@@ -286,10 +286,10 @@ static int ch32f1_upload(target_s *t, uint32_t dest, const uint8_t *src, uint32_
 	uint32_t dd = dest + offset;
 
 	SET_CR(FLASH_CR_FTPG_CH32);
-	target_mem_write32(t, dd + 0, ss[0]);
-	target_mem_write32(t, dd + 4U, ss[1]);
-	target_mem_write32(t, dd + 8U, ss[2]);
-	target_mem_write32(t, dd + 12U, ss[3]);
+	target_mem32_write32(t, dd + 0, ss[0]);
+	target_mem32_write32(t, dd + 4U, ss[1]);
+	target_mem32_write32(t, dd + 8U, ss[2]);
+	target_mem32_write32(t, dd + 12U, ss[3]);
 	SET_CR(FLASH_CR_BUF_LOAD_CH32); /* BUF LOAD */
 	WAIT_EOP();
 	CLEAR_EOP();
@@ -344,9 +344,9 @@ static bool ch32f1_flash_write(target_flash_s *f, target_addr_t dest, const void
 		}
 		// write buffer
 		SET_CR(FLASH_CR_FTPG_CH32);
-		target_mem_write32(t, FLASH_AR, dest); // 10
-		SET_CR(FLASH_CR_STRT);                 // 11 Start
-		WAIT_EOP();                            // 12
+		target_mem32_write32(t, FLASH_AR, dest); // 10
+		SET_CR(FLASH_CR_STRT);                   // 11 Start
+		WAIT_EOP();                              // 12
 		CLEAR_EOP();
 		CLEAR_CR(FLASH_CR_FTPG_CH32);
 

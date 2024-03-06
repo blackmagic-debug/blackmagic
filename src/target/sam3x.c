@@ -488,7 +488,7 @@ static bool sam_flash_cmd(target_s *t, uint32_t base, uint8_t cmd, uint16_t arg)
 	if (base == 0)
 		return false;
 
-	target_mem_write32(t, EEFC_FCR(base), EEFC_FCR_FKEY | cmd | ((uint32_t)arg << 8U));
+	target_mem32_write32(t, EEFC_FCR(base), EEFC_FCR_FKEY | cmd | ((uint32_t)arg << 8U));
 
 	uint32_t status = 0;
 	while (!(status & EEFC_FSR_FRDY)) {

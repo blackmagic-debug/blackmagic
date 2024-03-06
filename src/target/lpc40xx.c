@@ -146,7 +146,7 @@ static bool lpc40xx_enter_flash_mode(target_s *const target)
 	lpc40xx_priv_s *const priv = (lpc40xx_priv_s *)target->target_storage;
 	/* Disable the MPU, if enabled */
 	priv->mpu_ctrl_state = target_mem32_read32(target, LPC40xx_MPU_CTRL);
-	target_mem_write32(target, LPC40xx_MPU_CTRL, 0);
+	target_mem32_write32(target, LPC40xx_MPU_CTRL, 0);
 	/* And store the memory mapping state */
 	priv->memmap_state = target_mem32_read32(target, LPC40xx_MEMMAP);
 	return true;
@@ -156,8 +156,8 @@ static bool lpc40xx_exit_flash_mode(target_s *const target)
 {
 	const lpc40xx_priv_s *const priv = (lpc40xx_priv_s *)target->target_storage;
 	/* Restore the memory mapping and MPU state (in that order!) */
-	target_mem_write32(target, LPC40xx_MEMMAP, priv->memmap_state);
-	target_mem_write32(target, LPC40xx_MPU_CTRL, priv->mpu_ctrl_state);
+	target_mem32_write32(target, LPC40xx_MEMMAP, priv->memmap_state);
+	target_mem32_write32(target, LPC40xx_MPU_CTRL, priv->mpu_ctrl_state);
 	return true;
 }
 
@@ -200,7 +200,7 @@ static void lpc40xx_extended_reset(target_s *target)
 	 * the correct environment is seen by the user
 	 * See §33.6 Debug memory re-mapping, pg655 of UM10360 for more details.
 	 */
-	target_mem_write32(target, LPC40xx_MEMMAP, 1);
+	target_mem32_write32(target, LPC40xx_MEMMAP, 1);
 }
 
 static size_t lpc40xx_iap_params(const iap_cmd_e cmd)

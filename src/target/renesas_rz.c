@@ -157,7 +157,7 @@ static void renesas_rz_add_flash(target_s *const target)
 	bmp_spi_add_flash(target, RENESAS_SPI_FLASH_BASE, RENESAS_SPI_FLASH_SIZE, renesas_rz_spi_read, renesas_rz_spi_write,
 		renesas_rz_spi_run_command);
 	/* Put the controller back into bus usage mode */
-	target_mem_write32(target, RENESAS_MULTI_IO_SPI_COMMON_CTRL,
+	target_mem32_write32(target, RENESAS_MULTI_IO_SPI_COMMON_CTRL,
 		target_mem32_read32(target, RENESAS_MULTI_IO_SPI_COMMON_CTRL) & ~RENESAS_MULTI_IO_SPI_COMMON_CTRL_MODE_SPI);
 
 	/* Register the SPI Flash mass erase implementation for mass erase */
@@ -205,14 +205,14 @@ static const char *renesas_rz_part_name(const uint32_t part_id)
 static bool renesas_rz_flash_prepare(target_s *const target)
 {
 	/* Halt any ongoing bust reads */
-	target_mem_write32(target, RENESAS_MULTI_IO_SPI_READ_CTRL,
+	target_mem32_write32(target, RENESAS_MULTI_IO_SPI_READ_CTRL,
 		target_mem32_read32(target, RENESAS_MULTI_IO_SPI_READ_CTRL) | RENESAS_MULTI_IO_SPI_READ_CTRL_CS_UNSELECT);
 	/* Wait for any existing operations to complete */
 	while (!(
 		target_mem32_read32(target, RENESAS_MULTI_IO_SPI_MODE_STATUS) & RENESAS_MULTI_IO_SPI_MODE_STATUS_XFER_COMPLETE))
 		continue;
 	/* Bring the controller out of bus usage mode */
-	target_mem_write32(target, RENESAS_MULTI_IO_SPI_COMMON_CTRL,
+	target_mem32_write32(target, RENESAS_MULTI_IO_SPI_COMMON_CTRL,
 		target_mem32_read32(target, RENESAS_MULTI_IO_SPI_COMMON_CTRL) | RENESAS_MULTI_IO_SPI_COMMON_CTRL_MODE_SPI);
 	return true;
 }
@@ -220,20 +220,20 @@ static bool renesas_rz_flash_prepare(target_s *const target)
 static bool renesas_rz_flash_resume(target_s *const target)
 {
 	/* Flush the controller's read cache */
-	target_mem_write32(target, RENESAS_MULTI_IO_SPI_READ_CTRL,
+	target_mem32_write32(target, RENESAS_MULTI_IO_SPI_READ_CTRL,
 		target_mem32_read32(target, RENESAS_MULTI_IO_SPI_READ_CTRL) | RENESAS_MULTI_IO_SPI_READ_CTRL_CACHE_FLUSH);
 	target_mem32_read32(target, RENESAS_MULTI_IO_SPI_READ_CTRL);
 	/* Put the controller back into bus usage mode */
-	target_mem_write32(target, RENESAS_MULTI_IO_SPI_COMMON_CTRL,
+	target_mem32_write32(target, RENESAS_MULTI_IO_SPI_COMMON_CTRL,
 		target_mem32_read32(target, RENESAS_MULTI_IO_SPI_COMMON_CTRL) & ~RENESAS_MULTI_IO_SPI_COMMON_CTRL_MODE_SPI);
 	/* Invalidate the L1 D-caches and I-caches */
 	cortexar_invalidate_all_caches(target);
 	/* Invalidate the L2 cache ways so we get a clean state */
 	const uint32_t l2_cache_ways_mask = (1U << RENESAS_ARM_PL310_CACHE_ASSOCIATIVITY) - 1U;
-	target_mem_write32(target, ARM_PL310_CLEAN_AND_INVALIDATE_BY_WAY, l2_cache_ways_mask);
+	target_mem32_write32(target, ARM_PL310_CLEAN_AND_INVALIDATE_BY_WAY, l2_cache_ways_mask);
 	while (target_mem32_read32(target, ARM_PL310_CLEAN_AND_INVALIDATE_BY_WAY) & l2_cache_ways_mask)
 		continue;
-	target_mem_write32(target, ARM_PL310_CACHE_SYNC, 0U);
+	target_mem32_write32(target, ARM_PL310_CACHE_SYNC, 0U);
 	return true;
 }
 
@@ -242,9 +242,9 @@ static uint32_t renesas_rz_spi_setup_xfer(
 {
 	/* Set up the command byte, dummy bytes and address for the transfer */
 	const uint8_t opcode = command & SPI_FLASH_OPCODE_MASK;
-	target_mem_write32(target, RENESAS_MULTI_IO_SPI_MODE_CMD, opcode << RENESAS_MULTI_IO_SPI_MODE_CMD_SHIFT);
-	target_mem_write32(target, RENESAS_MULTI_IO_SPI_MODE_ADDR, address);
-	target_mem_write32(target, RENESAS_MULTI_IO_SPI_MODE_DUMMY_DATA, 0U);
+	target_mem32_write32(target, RENESAS_MULTI_IO_SPI_MODE_CMD, opcode << RENESAS_MULTI_IO_SPI_MODE_CMD_SHIFT);
+	target_mem32_write32(target, RENESAS_MULTI_IO_SPI_MODE_ADDR, address);
+	target_mem32_write32(target, RENESAS_MULTI_IO_SPI_MODE_DUMMY_DATA, 0U);
 
 	/* Set up the phases that need to be enabled for the transfer */
 	uint32_t config = RENESAS_MULTI_IO_SPI_MODE_XFER_CONFIG_CMD;
@@ -267,7 +267,7 @@ static uint32_t renesas_rz_spi_setup_xfer(
 	const uint8_t initial_bytes = MIN(4U, length);
 	config |= (((1U << initial_bytes) - 1U) << (4U - initial_bytes))
 		<< RENESAS_MULTI_IO_SPI_MODE_XFER_CONFIG_DATA_XFER_SHIFT;
-	target_mem_write32(target, RENESAS_MULTI_IO_SPI_MODE_XFER_CONFIG, config);
+	target_mem32_write32(target, RENESAS_MULTI_IO_SPI_MODE_XFER_CONFIG, config);
 
 	/* If the transfer has no data associated with it, do not enable either transfer direction */
 	if (!length)
@@ -284,7 +284,7 @@ static uint32_t renesas_rz_spi_setup_xfer(
 static void renesas_rz_spi_run_xfer(target_s *const target, const uint32_t ctrl)
 {
 	/* Set the requested transfer running */
-	target_mem_write32(target, RENESAS_MULTI_IO_SPI_MODE_CTRL, ctrl | RENESAS_MULTI_IO_SPI_MODE_CTRL_RUN_XFER);
+	target_mem32_write32(target, RENESAS_MULTI_IO_SPI_MODE_CTRL, ctrl | RENESAS_MULTI_IO_SPI_MODE_CTRL_RUN_XFER);
 	/* Wait for it to complete */
 	while (!(
 		target_mem32_read32(target, RENESAS_MULTI_IO_SPI_MODE_STATUS) & RENESAS_MULTI_IO_SPI_MODE_STATUS_XFER_COMPLETE))
@@ -307,7 +307,7 @@ static void renesas_rz_spi_read(target_s *const target, const uint16_t command, 
 		/* Turn off all the optional phases and set up the next transfer chunk */
 		offset += 4U;
 		const uint8_t amount = MIN(4U, length - offset);
-		target_mem_write32(target, RENESAS_MULTI_IO_SPI_MODE_XFER_CONFIG,
+		target_mem32_write32(target, RENESAS_MULTI_IO_SPI_MODE_XFER_CONFIG,
 			(((1U << amount) - 1U) << (4U - amount)) << RENESAS_MULTI_IO_SPI_MODE_XFER_CONFIG_DATA_XFER_SHIFT);
 		/* Adjust the control value if we're going into the last read of the block */
 		if (length - offset <= 4U)
@@ -326,13 +326,13 @@ static void renesas_rz_spi_write(target_s *const target, const uint16_t command,
 		/* Prepare the data to send from the input buffer and write it to the target */
 		uint32_t value = 0U;
 		memcpy(&value, data + offset, MIN(length - offset, 4U));
-		target_mem_write32(target, RENESAS_MULTI_IO_SPI_MODE_WRITE_DATA, value);
+		target_mem32_write32(target, RENESAS_MULTI_IO_SPI_MODE_WRITE_DATA, value);
 		/* Run the transfer that's configured */
 		renesas_rz_spi_run_xfer(target, ctrl);
 		/* Turn off all the optional phases and set up the next transfer chunk */
 		offset += 4U;
 		const uint8_t amount = MIN(4U, length - offset);
-		target_mem_write32(target, RENESAS_MULTI_IO_SPI_MODE_XFER_CONFIG,
+		target_mem32_write32(target, RENESAS_MULTI_IO_SPI_MODE_XFER_CONFIG,
 			(((1U << amount) - 1U) << (4U - amount)) << RENESAS_MULTI_IO_SPI_MODE_XFER_CONFIG_DATA_XFER_SHIFT);
 		/* Adjust the control value if we're going into the last write of the block */
 		if (length - offset <= 4U)

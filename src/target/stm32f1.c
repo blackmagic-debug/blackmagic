@@ -610,8 +610,8 @@ bool stm32f1_probe(target_s *target)
 
 static bool stm32f1_flash_unlock(target_s *target, uint32_t bank_offset)
 {
-	target_mem_write32(target, FLASH_KEYR + bank_offset, KEY1);
-	target_mem_write32(target, FLASH_KEYR + bank_offset, KEY2);
+	target_mem32_write32(target, FLASH_KEYR + bank_offset, KEY1);
+	target_mem32_write32(target, FLASH_KEYR + bank_offset, KEY2);
 	uint32_t ctrl = target_mem32_read32(target, FLASH_CR + bank_offset);
 	if (ctrl & FLASH_CR_LOCK)
 		DEBUG_ERROR("unlock failed, cr: 0x%08" PRIx32 "\n", ctrl);
@@ -621,7 +621,7 @@ static bool stm32f1_flash_unlock(target_s *target, uint32_t bank_offset)
 static inline void stm32f1_flash_clear_eop(target_s *const target, const uint32_t bank_offset)
 {
 	const uint32_t status = target_mem32_read32(target, FLASH_SR + bank_offset);
-	target_mem_write32(target, FLASH_SR + bank_offset, status | SR_EOP); /* EOP is W1C */
+	target_mem32_write32(target, FLASH_SR + bank_offset, status | SR_EOP); /* EOP is W1C */
 }
 
 static bool stm32f1_flash_busy_wait(
@@ -682,11 +682,11 @@ static bool stm32f1_flash_erase(target_flash_s *flash, target_addr_t addr, size_
 	stm32f1_flash_clear_eop(target, bank_offset);
 
 	/* Flash page erase instruction */
-	target_mem_write32(target, FLASH_CR + bank_offset, FLASH_CR_PER);
+	target_mem32_write32(target, FLASH_CR + bank_offset, FLASH_CR_PER);
 	/* write address to FMA */
-	target_mem_write32(target, FLASH_AR + bank_offset, addr);
+	target_mem32_write32(target, FLASH_AR + bank_offset, addr);
 	/* Flash page erase start instruction */
-	target_mem_write32(target, FLASH_CR + bank_offset, FLASH_CR_STRT | FLASH_CR_PER);
+	target_mem32_write32(target, FLASH_CR + bank_offset, FLASH_CR_STRT | FLASH_CR_PER);
 
 	/* Wait for completion or an error */
 	return stm32f1_flash_busy_wait(target, bank_offset, NULL);
@@ -714,7 +714,7 @@ static bool stm32f1_flash_write(target_flash_s *flash, target_addr_t dest, const
 	if (offset) {
 		stm32f1_flash_clear_eop(target, FLASH_BANK1_OFFSET);
 
-		target_mem_write32(target, FLASH_CR, FLASH_CR_PG);
+		target_mem32_write32(target, FLASH_CR, FLASH_CR_PG);
 		/* Use the target API instead of a direct Cortex-M call for GD32VF103 parts */
 		if (target->designer_code == JEP106_MANUFACTURER_RV_GIGADEVICE && target->cpuid == 0x80000022U)
 			target_mem32_write(target, dest, src, offset);
@@ -732,7 +732,7 @@ static bool stm32f1_flash_write(target_flash_s *flash, target_addr_t dest, const
 		const uint8_t *data = src;
 		stm32f1_flash_clear_eop(target, FLASH_BANK2_OFFSET);
 
-		target_mem_write32(target, FLASH_CR + FLASH_BANK2_OFFSET, FLASH_CR_PG);
+		target_mem32_write32(target, FLASH_CR + FLASH_BANK2_OFFSET, FLASH_CR_PG);
 		/* Use the target API instead of a direct Cortex-M call for GD32VF103 parts */
 		if (target->designer_code == JEP106_MANUFACTURER_RV_GIGADEVICE && target->cpuid == 0x80000022U)
 			target_mem32_write(target, dest + offset, data + offset, remainder);
@@ -756,8 +756,8 @@ static bool stm32f1_mass_erase_bank(
 	stm32f1_flash_clear_eop(target, bank_offset);
 
 	/* Flash mass erase start instruction */
-	target_mem_write32(target, FLASH_CR + bank_offset, FLASH_CR_MER);
-	target_mem_write32(target, FLASH_CR + bank_offset, FLASH_CR_STRT | FLASH_CR_MER);
+	target_mem32_write32(target, FLASH_CR + bank_offset, FLASH_CR_MER);
+	target_mem32_write32(target, FLASH_CR + bank_offset, FLASH_CR_STRT | FLASH_CR_MER);
 
 	/* Wait for completion or an error */
 	return stm32f1_flash_busy_wait(target, bank_offset, timeout);
@@ -800,8 +800,8 @@ static bool stm32f1_option_erase(target_s *target)
 	stm32f1_flash_clear_eop(target, FLASH_BANK1_OFFSET);
 
 	/* Erase option bytes instruction */
-	target_mem_write32(target, FLASH_CR, FLASH_CR_OPTER | FLASH_CR_OPTWRE);
-	target_mem_write32(target, FLASH_CR, FLASH_CR_STRT | FLASH_CR_OPTER | FLASH_CR_OPTWRE);
+	target_mem32_write32(target, FLASH_CR, FLASH_CR_OPTER | FLASH_CR_OPTWRE);
+	target_mem32_write32(target, FLASH_CR, FLASH_CR_STRT | FLASH_CR_OPTER | FLASH_CR_OPTWRE);
 
 	/* Wait for completion or an error */
 	return stm32f1_flash_busy_wait(target, FLASH_BANK1_OFFSET, NULL);
@@ -816,13 +816,13 @@ static bool stm32f1_option_write_erased(
 	stm32f1_flash_clear_eop(target, FLASH_BANK1_OFFSET);
 
 	/* Erase option bytes instruction */
-	target_mem_write32(target, FLASH_CR, FLASH_CR_OPTPG | FLASH_CR_OPTWRE);
+	target_mem32_write32(target, FLASH_CR, FLASH_CR_OPTPG | FLASH_CR_OPTWRE);
 
 	const uint32_t addr = FLASH_OBP_RDP + (offset * 2U);
 	if (write16_broken)
-		target_mem_write32(target, addr, 0xffff0000U | value);
+		target_mem32_write32(target, addr, 0xffff0000U | value);
 	else
-		target_mem_write16(target, addr, value);
+		target_mem32_write16(target, addr, value);
 
 	/* Wait for completion or an error */
 	const bool result = stm32f1_flash_busy_wait(target, FLASH_BANK1_OFFSET, NULL);
@@ -863,7 +863,7 @@ static bool stm32f1_option_write(target_s *const target, const uint32_t addr, co
 
 	/*
 	 * Write changed values, taking into account if we can use 32- or have to use 16-bit writes.
-	 * GD32E230 is a special case as target_mem_write16 does not work
+	 * GD32E230 is a special case as target_mem32_write16 does not work
 	 */
 	const bool write16_broken = target->part_id == 0x410U && (target->cpuid & CORTEX_CPUID_PARTNO_MASK) == CORTEX_M23;
 	for (size_t i = 0U; i < 8U; ++i) {
@@ -887,8 +887,8 @@ static bool stm32f1_cmd_option(target_s *target, int argc, const char **argv)
 	/* Unprotect the option bytes so we can modify them */
 	if (!stm32f1_flash_unlock(target, FLASH_BANK1_OFFSET))
 		return false;
-	target_mem_write32(target, FLASH_OPTKEYR, KEY1);
-	target_mem_write32(target, FLASH_OPTKEYR, KEY2);
+	target_mem32_write32(target, FLASH_OPTKEYR, KEY1);
+	target_mem32_write32(target, FLASH_OPTKEYR, KEY2);
 
 	if (erase_requested) {
 		/* When the user asks us to erase the option bytes, kick of an erase */
@@ -897,7 +897,7 @@ static bool stm32f1_cmd_option(target_s *target, int argc, const char **argv)
 		/*
 		 * Write the option bytes Flash readable key, taking into account if we can
 		 * use 32- or have to use 16-bit writes.
-		 * GD32E230 is a special case as target_mem_write16 does not work
+		 * GD32E230 is a special case as target_mem32_write16 does not work
 		 */
 		const bool write16_broken =
 			target->part_id == 0x410U && (target->cpuid & CORTEX_CPUID_PARTNO_MASK) == CORTEX_M23;

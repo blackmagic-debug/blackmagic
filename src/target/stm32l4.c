@@ -498,7 +498,7 @@ static inline void stm32l4_flash_write32(target_s *const t, const stm32l4_flash_
 {
 	stm32l4_priv_s *ps = (stm32l4_priv_s *)t->target_storage;
 	const stm32l4_device_info_s *const device = ps->device;
-	target_mem_write32(t, device->flash_regs_map[reg], value);
+	target_mem32_write32(t, device->flash_regs_map[reg], value);
 }
 
 static void stm32l4_add_flash(
@@ -525,9 +525,9 @@ static void stm32l4_add_flash(
 /* For flash programming, L5 needs to be in VOS 0 or 1 while reset set 2 (or even 3?) */
 static void stm32l5_flash_enable(target_s *t)
 {
-	target_mem_write32(t, STM32L5_RCC_APB1ENR1, STM32L5_RCC_APB1ENR1_PWREN);
+	target_mem32_write32(t, STM32L5_RCC_APB1ENR1, STM32L5_RCC_APB1ENR1_PWREN);
 	const uint32_t pwr_ctrl1 = target_mem32_read32(t, STM32L5_PWR_CR1) & ~STM32L5_PWR_CR1_VOS;
-	target_mem_write32(t, STM32L5_PWR_CR1, pwr_ctrl1);
+	target_mem32_write32(t, STM32L5_PWR_CR1, pwr_ctrl1);
 }
 
 static uint32_t stm32l4_idcode_reg_address(target_s *const t)
@@ -586,7 +586,7 @@ bool stm32l4_probe(target_s *const t)
 			 * RM0453/RM0434, §6.6.4. PWR control register 4 (PWR_CR4)
 			 */
 			const uint32_t pwr_ctrl4 = target_mem32_read32(t, PWR_CR4);
-			target_mem_write32(t, PWR_CR4, pwr_ctrl4 | PWR_CR4_C2BOOT);
+			target_mem32_write32(t, PWR_CR4, pwr_ctrl4 | PWR_CR4_C2BOOT);
 		}
 		break;
 	case ID_STM32L55:
@@ -617,7 +617,7 @@ static bool stm32l4_attach(target_s *const t)
 	priv_storage->dbgmcu_cr = target_mem32_read32(t, DBGMCU_CR(idcode_addr));
 
 	/* Enable debugging during all low power modes */
-	target_mem_write32(t, DBGMCU_CR(idcode_addr), DBGMCU_CR_DBG_SLEEP | DBGMCU_CR_DBG_STANDBY | DBGMCU_CR_DBG_STOP);
+	target_mem32_write32(t, DBGMCU_CR(idcode_addr), DBGMCU_CR_DBG_SLEEP | DBGMCU_CR_DBG_STANDBY | DBGMCU_CR_DBG_STOP);
 
 	/* Free any previously built memory map */
 	target_mem_map_free(t);
@@ -699,7 +699,7 @@ static void stm32l4_detach(target_s *const t)
 	const stm32l4_priv_s *const ps = (stm32l4_priv_s *)t->target_storage;
 
 	/*reverse all changes to DBGMCU_CR*/
-	target_mem_write32(t, DBGMCU_CR(STM32L4_DBGMCU_IDCODE_PHYS), ps->dbgmcu_cr);
+	target_mem32_write32(t, DBGMCU_CR(STM32L4_DBGMCU_IDCODE_PHYS), ps->dbgmcu_cr);
 	cortexm_detach(t);
 }
 
@@ -820,7 +820,7 @@ static bool stm32l4_option_write(target_s *const t, const uint32_t *const values
 
 	/* Write the new option register values and begin the programming operation */
 	for (size_t i = 0; i < len; i++)
-		target_mem_write32(t, fpec_base + opt_reg_offsets[i], values[i]);
+		target_mem32_write32(t, fpec_base + opt_reg_offsets[i], values[i]);
 	stm32l4_flash_write32(t, FLASH_CR, FLASH_CR_OPTSTRT);
 	/* Wait for the operation to complete and report any errors */
 	if (!stm32l4_flash_busy_wait(t, NULL))

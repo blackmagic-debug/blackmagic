@@ -740,8 +740,7 @@ int32_t semihosting_get_command_line(target_s *const target, const semihosting_s
 		/* Try to write the data to the target along with the actual length value */
 		target_mem32_write(target, buffer_taddr, target->cmdline, command_line_length))
 		return -1;
-	target_mem_write32(target, request->r1 + 4U, command_line_length);
-	return target_check_error(target) ? -1 : 0;
+	return target_mem32_write32(target, request->r1 + 4U, command_line_length) ? -1 : 0;
 }
 
 int32_t semihosting_is_error(const semihosting_errno_e code)

@@ -95,8 +95,8 @@ bool zynq7_probe(target_s *const target)
 static void zynq7_reset(target_s *const target)
 {
 	/* Try to unlock the SLCR registers and issue the reset */
-	target_mem_write32(target, ZYNQ7_SLCR_UNLOCK, ZYNQ7_SLCR_UNLOCK_KEY);
-	target_mem_write32(target, ZYNQ7_SLCR_PSS_RST_CTRL, ZYNQ7_SLCR_PSS_RST_CTRL_SOFT_RESET);
+	target_mem32_write32(target, ZYNQ7_SLCR_UNLOCK, ZYNQ7_SLCR_UNLOCK_KEY);
+	target_mem32_write32(target, ZYNQ7_SLCR_PSS_RST_CTRL, ZYNQ7_SLCR_PSS_RST_CTRL_SOFT_RESET);
 
 	/* For good measure, also try pulsing the physical reset pin */
 	platform_nrst_set_val(true);

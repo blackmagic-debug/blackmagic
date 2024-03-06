@@ -124,7 +124,7 @@ static inline uint32_t msp432_sector_unprotect(msp432_flash_s *mf, target_addr_t
 	uint32_t sec_mask = ~(1U << ((addr - mf->f.start) / SECTOR_SIZE));
 	/* Clear the potection bit */
 	sec_mask &= old_mask;
-	target_mem_write32(mf->f.t, mf->flash_protect_register, sec_mask);
+	target_mem32_write32(mf->f.t, mf->flash_protect_register, sec_mask);
 	return old_mask;
 }
 
@@ -248,7 +248,7 @@ static bool msp432_sector_erase(target_flash_s *f, target_addr_t addr)
 	DEBUG_INFO("ROM return value: %" PRIu32 "\n", regs[0]);
 
 	/* Restore original protection */
-	target_mem_write32(t, mf->flash_protect_register, old_prot);
+	target_mem32_write32(t, mf->flash_protect_register, old_prot);
 	return regs[0] != 0;
 }
 
@@ -296,7 +296,7 @@ static bool msp432_flash_write(target_flash_s *f, target_addr_t dest, const void
 	msp432_call_rom(t, mf->flash_program_fn, regs);
 
 	/* Restore original protection */
-	target_mem_write32(t, mf->flash_protect_register, old_prot);
+	target_mem32_write32(t, mf->flash_protect_register, old_prot);
 
 	DEBUG_INFO("ROM return value: %" PRIu32 "\n", regs[0]);
 
@@ -348,10 +348,10 @@ static bool msp432_cmd_sector_erase(target_s *t, int argc, const char **argv)
 static void msp432_call_rom(target_s *t, uint32_t address, uint32_t *regs)
 {
 	/* Kill watchdog */
-	target_mem_write16(t, WDT_A_WTDCTL, WDT_A_HOLD);
+	target_mem32_write16(t, WDT_A_WTDCTL, WDT_A_HOLD);
 
 	/* Breakpoint at the beginning of CODE SRAM alias area */
-	target_mem_write16(t, SRAM_CODE_BASE, CORTEX_THUMB_BREAKPOINT);
+	target_mem32_write16(t, SRAM_CODE_BASE, CORTEX_THUMB_BREAKPOINT);
 
 	/* Prepare registers */
 	regs[CORTEX_REG_MSP] = SRAM_STACK_PTR;     /* Stack space */

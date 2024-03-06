@@ -609,18 +609,18 @@ static bool efm32_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 	uint32_t msc = priv_storage->device->msc_addr;
 
 	/* Unlock */
-	target_mem_write32(t, EFM32_MSC_LOCK(msc), EFM32_MSC_LOCK_LOCKKEY);
+	target_mem32_write32(t, EFM32_MSC_LOCK(msc), EFM32_MSC_LOCK_LOCKKEY);
 
 	/* Set WREN bit to enable MSC write and erase functionality */
-	target_mem_write32(t, EFM32_MSC_WRITECTRL(msc), 1);
+	target_mem32_write32(t, EFM32_MSC_WRITECTRL(msc), 1);
 
 	while (len) {
 		/* Write address of first word in row to erase it */
-		target_mem_write32(t, EFM32_MSC_ADDRB(msc), addr);
-		target_mem_write32(t, EFM32_MSC_WRITECMD(msc), EFM32_MSC_WRITECMD_LADDRIM);
+		target_mem32_write32(t, EFM32_MSC_ADDRB(msc), addr);
+		target_mem32_write32(t, EFM32_MSC_WRITECMD(msc), EFM32_MSC_WRITECMD_LADDRIM);
 
 		/* Issue the erase command */
-		target_mem_write32(t, EFM32_MSC_WRITECMD(msc), EFM32_MSC_WRITECMD_ERASEPAGE);
+		target_mem32_write32(t, EFM32_MSC_WRITECMD(msc), EFM32_MSC_WRITECMD_ERASEPAGE);
 
 		/* Poll MSC Busy */
 		while ((target_mem32_read32(t, EFM32_MSC_STATUS(msc)) & EFM32_MSC_STATUS_BUSY)) {
@@ -683,13 +683,13 @@ static bool efm32_mass_erase(target_s *t)
 	uint16_t flash_kib = efm32_read_flash_size(t, priv_storage->di_version);
 
 	/* Set WREN bit to enable MSC write and erase functionality */
-	target_mem_write32(t, EFM32_MSC_WRITECTRL(msc), 1);
+	target_mem32_write32(t, EFM32_MSC_WRITECTRL(msc), 1);
 
 	/* Unlock mass erase */
-	target_mem_write32(t, EFM32_MSC_MASSLOCK(msc), EFM32_MSC_MASSLOCK_LOCKKEY);
+	target_mem32_write32(t, EFM32_MSC_MASSLOCK(msc), EFM32_MSC_MASSLOCK_LOCKKEY);
 
 	/* Erase operation */
-	target_mem_write32(t, EFM32_MSC_WRITECMD(msc), EFM32_MSC_WRITECMD_ERASEMAIN0);
+	target_mem32_write32(t, EFM32_MSC_WRITECMD(msc), EFM32_MSC_WRITECMD_ERASEMAIN0);
 
 	platform_timeout_s timeout;
 	platform_timeout_set(&timeout, 500);
@@ -703,7 +703,7 @@ static bool efm32_mass_erase(target_s *t)
 	/* Parts with >= 512 kiB flash have 2 mass erase regions */
 	if (flash_kib >= 512) {
 		/* Erase operation */
-		target_mem_write32(t, EFM32_MSC_WRITECMD(msc), EFM32_MSC_WRITECMD_ERASEMAIN1);
+		target_mem32_write32(t, EFM32_MSC_WRITECMD(msc), EFM32_MSC_WRITECMD_ERASEMAIN1);
 
 		/* Poll MSC Busy */
 		while ((target_mem32_read32(t, EFM32_MSC_STATUS(msc)) & EFM32_MSC_STATUS_BUSY)) {
@@ -714,7 +714,7 @@ static bool efm32_mass_erase(target_s *t)
 	}
 
 	/* Relock mass erase */
-	target_mem_write32(t, EFM32_MSC_MASSLOCK(msc), 0);
+	target_mem32_write32(t, EFM32_MSC_MASSLOCK(msc), 0);
 
 	return true;
 }
@@ -862,18 +862,18 @@ static bool efm32_cmd_bootloader(target_s *t, int argc, const char **argv)
 		clw0 &= ~EFM32_CLW0_BOOTLOADER_ENABLE;
 
 	/* Unlock */
-	target_mem_write32(t, EFM32_MSC_LOCK(msc), EFM32_MSC_LOCK_LOCKKEY);
+	target_mem32_write32(t, EFM32_MSC_LOCK(msc), EFM32_MSC_LOCK_LOCKKEY);
 
 	/* Set WREN bit to enable MSC write and erase functionality */
-	target_mem_write32(t, EFM32_MSC_WRITECTRL(msc), 1);
+	target_mem32_write32(t, EFM32_MSC_WRITECTRL(msc), 1);
 
 	/* Write address of CLW0 */
-	target_mem_write32(t, EFM32_MSC_ADDRB(msc), EFM32_LOCK_BITS_CLW0);
-	target_mem_write32(t, EFM32_MSC_WRITECMD(msc), EFM32_MSC_WRITECMD_LADDRIM);
+	target_mem32_write32(t, EFM32_MSC_ADDRB(msc), EFM32_LOCK_BITS_CLW0);
+	target_mem32_write32(t, EFM32_MSC_WRITECMD(msc), EFM32_MSC_WRITECMD_LADDRIM);
 
 	/* Issue the write */
-	target_mem_write32(t, EFM32_MSC_WDATA(msc), clw0);
-	target_mem_write32(t, EFM32_MSC_WRITECMD(msc), EFM32_MSC_WRITECMD_WRITEONCE);
+	target_mem32_write32(t, EFM32_MSC_WDATA(msc), clw0);
+	target_mem32_write32(t, EFM32_MSC_WRITECMD(msc), EFM32_MSC_WRITECMD_WRITEONCE);
 
 	/* Poll MSC Busy */
 	while ((target_mem32_read32(t, EFM32_MSC_STATUS(msc)) & EFM32_MSC_STATUS_BUSY)) {

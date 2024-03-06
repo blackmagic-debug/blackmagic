@@ -419,7 +419,7 @@ static bool kinetis_fccob_cmd(target_s *t, uint8_t cmd, uint32_t addr, const uin
 	uint8_t fstat;
 
 	/* Clear errors unconditionally, so we can start a new operation */
-	target_mem_write8(t, FTFx_FSTAT, (FTFx_FSTAT_ACCERR | FTFx_FSTAT_FPVIOL));
+	target_mem32_write8(t, FTFx_FSTAT, (FTFx_FSTAT_ACCERR | FTFx_FSTAT_FPVIOL));
 
 	/* Wait for CCIF to be high */
 	do {
@@ -429,17 +429,17 @@ static bool kinetis_fccob_cmd(target_s *t, uint8_t cmd, uint32_t addr, const uin
 	/* Write command to FCCOB */
 	addr &= 0x00ffffffU;
 	addr |= cmd << 24U;
-	target_mem_write32(t, FTFx_FCCOB0, addr);
+	target_mem32_write32(t, FTFx_FCCOB0, addr);
 	if (data && n_items) {
-		target_mem_write32(t, FTFx_FCCOB4, data[0]);
+		target_mem32_write32(t, FTFx_FCCOB4, data[0]);
 		if (n_items > 1)
-			target_mem_write32(t, FTFx_FCCOB8, data[1]);
+			target_mem32_write32(t, FTFx_FCCOB8, data[1]);
 		else
-			target_mem_write32(t, FTFx_FCCOB8, 0);
+			target_mem32_write32(t, FTFx_FCCOB8, 0);
 	}
 
 	/* Enable execution by clearing CCIF */
-	target_mem_write8(t, FTFx_FSTAT, FTFx_FSTAT_CCIF);
+	target_mem32_write8(t, FTFx_FSTAT, FTFx_FSTAT_CCIF);
 
 	/* Wait for execution to complete */
 	do {

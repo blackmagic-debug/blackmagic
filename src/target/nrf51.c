@@ -182,10 +182,10 @@ static bool nrf51_flash_prepare(target_flash_s *f)
 	/* If there is a buffer allocated, we're in the Flash write phase, otherwise it's erase */
 	if (f->buf)
 		/* Enable write */
-		target_mem_write32(t, NRF51_NVMC_CONFIG, NRF51_NVMC_CONFIG_WEN);
+		target_mem32_write32(t, NRF51_NVMC_CONFIG, NRF51_NVMC_CONFIG_WEN);
 	else
 		/* Enable erase */
-		target_mem_write32(t, NRF51_NVMC_CONFIG, NRF51_NVMC_CONFIG_EEN);
+		target_mem32_write32(t, NRF51_NVMC_CONFIG, NRF51_NVMC_CONFIG_EEN);
 	return nrf51_wait_ready(t, NULL);
 }
 
@@ -193,7 +193,7 @@ static bool nrf51_flash_done(target_flash_s *f)
 {
 	target_s *t = f->t;
 	/* Return to read-only */
-	target_mem_write32(t, NRF51_NVMC_CONFIG, NRF51_NVMC_CONFIG_REN);
+	target_mem32_write32(t, NRF51_NVMC_CONFIG, NRF51_NVMC_CONFIG_REN);
 	return nrf51_wait_ready(t, NULL);
 }
 
@@ -205,10 +205,10 @@ static bool nrf51_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 		/* If the address to erase is the UICR, we have to handle that separately */
 		if (addr + offset == NRF51_UICR)
 			/* Write to the ERASE_UICR register to erase */
-			target_mem_write32(t, NRF51_NVMC_ERASEUICR, 0x1U);
+			target_mem32_write32(t, NRF51_NVMC_ERASEUICR, 0x1U);
 		else
 			/* Write address of first word in page to erase it */
-			target_mem_write32(t, NRF51_NVMC_ERASEPAGE, addr + offset);
+			target_mem32_write32(t, NRF51_NVMC_ERASEPAGE, addr + offset);
 
 		if (!nrf51_wait_ready(t, NULL))
 			return false;
@@ -230,14 +230,14 @@ static bool nrf51_mass_erase(target_s *t)
 	target_reset(t);
 
 	/* Enable erase */
-	target_mem_write32(t, NRF51_NVMC_CONFIG, NRF51_NVMC_CONFIG_EEN);
+	target_mem32_write32(t, NRF51_NVMC_CONFIG, NRF51_NVMC_CONFIG_EEN);
 	if (!nrf51_wait_ready(t, NULL))
 		return false;
 
 	platform_timeout_s timeout;
 	platform_timeout_set(&timeout, 500U);
 	/* Erase all */
-	target_mem_write32(t, NRF51_NVMC_ERASEALL, 1U);
+	target_mem32_write32(t, NRF51_NVMC_ERASEALL, 1U);
 	return nrf51_wait_ready(t, &timeout);
 }
 
@@ -248,12 +248,12 @@ static bool nrf51_cmd_erase_uicr(target_s *t, int argc, const char **argv)
 	tc_printf(t, "Erasing..\n");
 
 	/* Enable erase */
-	target_mem_write32(t, NRF51_NVMC_CONFIG, NRF51_NVMC_CONFIG_EEN);
+	target_mem32_write32(t, NRF51_NVMC_CONFIG, NRF51_NVMC_CONFIG_EEN);
 	if (!nrf51_wait_ready(t, NULL))
 		return false;
 
 	/* Erase UICR */
-	target_mem_write32(t, NRF51_NVMC_ERASEUICR, 1U);
+	target_mem32_write32(t, NRF51_NVMC_ERASEUICR, 1U);
 	return nrf51_wait_ready(t, NULL);
 }
 
@@ -264,11 +264,11 @@ static bool nrf51_cmd_protect_flash(target_s *t, int argc, const char **argv)
 	tc_printf(t, "Enabling Flash protection..\n");
 
 	/* Enable write */
-	target_mem_write32(t, NRF51_NVMC_CONFIG, NRF51_NVMC_CONFIG_WEN);
+	target_mem32_write32(t, NRF51_NVMC_CONFIG, NRF51_NVMC_CONFIG_WEN);
 	if (!nrf51_wait_ready(t, NULL))
 		return false;
 
-	target_mem_write32(t, NRF51_APPROTECT, 0xffffff00U);
+	target_mem32_write32(t, NRF51_APPROTECT, 0xffffff00U);
 	return nrf51_wait_ready(t, NULL);
 }
 

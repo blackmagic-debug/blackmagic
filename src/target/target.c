@@ -559,10 +559,9 @@ uint32_t target_mem32_read32(target_s *target, target_addr32_t addr)
 	return result;
 }
 
-void target_mem_write32(target_s *target, target_addr_t addr, uint32_t value)
+bool target_mem32_write32(target_s *target, target_addr32_t addr, uint32_t value)
 {
-	if (target->mem_write)
-		target->mem_write(target, addr, &value, sizeof(value));
+	return target_mem32_write(target, addr, &value, sizeof(value));
 }
 
 uint16_t target_mem32_read16(target_s *target, target_addr32_t addr)
@@ -572,10 +571,9 @@ uint16_t target_mem32_read16(target_s *target, target_addr32_t addr)
 	return result;
 }
 
-void target_mem_write16(target_s *target, target_addr_t addr, uint16_t value)
+bool target_mem32_write16(target_s *target, target_addr32_t addr, uint16_t value)
 {
-	if (target->mem_write)
-		target->mem_write(target, addr, &value, sizeof(value));
+	return target_mem32_write(target, addr, &value, sizeof(value));
 }
 
 uint8_t target_mem32_read8(target_s *target, target_addr32_t addr)
@@ -585,10 +583,9 @@ uint8_t target_mem32_read8(target_s *target, target_addr32_t addr)
 	return result;
 }
 
-void target_mem_write8(target_s *target, target_addr_t addr, uint8_t value)
+bool target_mem32_write8(target_s *target, target_addr32_t addr, uint8_t value)
 {
-	if (target->mem_write)
-		target->mem_write(target, addr, &value, sizeof(value));
+	return target_mem32_write(target, addr, &value, sizeof(value));
 }
 
 void target_command_help(target_s *t)

@@ -268,11 +268,11 @@ static bool ke04_command(target_s *t, uint8_t cmd, uint32_t addr, const void *co
 		if (!ke04_wait_complete(t))
 			return false;
 		/* Write correct value */
-		target_mem_write8(t, FTMRE_FCLKDIV, 0x17U);
+		target_mem32_write8(t, FTMRE_FCLKDIV, 0x17U);
 	}
 
 	/* clear errors unconditionally, so we can start a new operation */
-	target_mem_write8(t, FTMRE_FSTAT, FTMRE_FSTAT_ACCERR | FTMRE_FSTAT_FPVIOL);
+	target_mem32_write8(t, FTMRE_FSTAT, FTMRE_FSTAT_ACCERR | FTMRE_FSTAT_FPVIOL);
 	if (!ke04_wait_complete(t))
 		return false;
 
@@ -286,24 +286,24 @@ static bool ke04_command(target_s *t, uint8_t cmd, uint32_t addr, const void *co
 		cmd = CMD_PROGRAM_FLASH;
 	const uint16_t fccob_cmd = (cmd << 8U) | (addr >> 16U);
 	/* Write command to FCCOB array */
-	target_mem_write8(t, FTMRE_FCCOBIX, fccob_idx++);
-	target_mem_write16(t, FTMRE_FCCOB, fccob_cmd);
+	target_mem32_write8(t, FTMRE_FCCOBIX, fccob_idx++);
+	target_mem32_write16(t, FTMRE_FCCOB, fccob_cmd);
 
 	/* Write first argument (low partof address) */
 	if (cmd_len >= 1) {
-		target_mem_write8(t, FTMRE_FCCOBIX, fccob_idx++);
-		target_mem_write16(t, FTMRE_FCCOB, addr & 0xffffU);
+		target_mem32_write8(t, FTMRE_FCCOBIX, fccob_idx++);
+		target_mem32_write16(t, FTMRE_FCCOB, addr & 0xffffU);
 	}
 
 	/* Write one or two 32 bit words of data */
 	const uint16_t *const cmd_data = (const uint16_t *)data;
 	for (uint8_t offset = 0; fccob_idx < cmd_len; ++fccob_idx, ++offset) {
-		target_mem_write8(t, FTMRE_FCCOBIX, fccob_idx);
-		target_mem_write16(t, FTMRE_FCCOB, cmd_data[offset]);
+		target_mem32_write8(t, FTMRE_FCCOBIX, fccob_idx);
+		target_mem32_write16(t, FTMRE_FCCOB, cmd_data[offset]);
 	}
 
 	/* Enable execution by clearing CCIF */
-	target_mem_write8(t, FTMRE_FSTAT, FTMRE_FSTAT_CCIF);
+	target_mem32_write8(t, FTMRE_FSTAT, FTMRE_FSTAT_CCIF);
 
 	platform_timeout_s timeout;
 	platform_timeout_set(&timeout, 500);

@@ -273,7 +273,7 @@ bool stm32l0_probe(target_s *const target)
 /* Lock the NVM control registers preventing writes or erases. */
 static void stm32lx_nvm_lock(target_s *const target, const uint32_t nvm)
 {
-	target_mem_write32(target, STM32Lx_NVM_PECR(nvm), STM32Lx_NVM_PECR_PELOCK);
+	target_mem32_write32(target, STM32Lx_NVM_PECR(nvm), STM32Lx_NVM_PECR_PELOCK);
 }
 
 /*
@@ -283,11 +283,11 @@ static void stm32lx_nvm_lock(target_s *const target, const uint32_t nvm)
 static bool stm32lx_nvm_prog_data_unlock(target_s *const target, const uint32_t nvm)
 {
 	/* Always lock first because that's the only way to know that the unlock can succeed on the STM32L0's. */
-	target_mem_write32(target, STM32Lx_NVM_PECR(nvm), STM32Lx_NVM_PECR_PELOCK);
-	target_mem_write32(target, STM32Lx_NVM_PEKEYR(nvm), STM32Lx_NVM_PEKEY1);
-	target_mem_write32(target, STM32Lx_NVM_PEKEYR(nvm), STM32Lx_NVM_PEKEY2);
-	target_mem_write32(target, STM32Lx_NVM_PRGKEYR(nvm), STM32Lx_NVM_PRGKEY1);
-	target_mem_write32(target, STM32Lx_NVM_PRGKEYR(nvm), STM32Lx_NVM_PRGKEY2);
+	target_mem32_write32(target, STM32Lx_NVM_PECR(nvm), STM32Lx_NVM_PECR_PELOCK);
+	target_mem32_write32(target, STM32Lx_NVM_PEKEYR(nvm), STM32Lx_NVM_PEKEY1);
+	target_mem32_write32(target, STM32Lx_NVM_PEKEYR(nvm), STM32Lx_NVM_PEKEY2);
+	target_mem32_write32(target, STM32Lx_NVM_PRGKEYR(nvm), STM32Lx_NVM_PRGKEY1);
+	target_mem32_write32(target, STM32Lx_NVM_PRGKEYR(nvm), STM32Lx_NVM_PRGKEY2);
 
 	return !(target_mem32_read32(target, STM32Lx_NVM_PECR(nvm)) & STM32Lx_NVM_PECR_PRGLOCK);
 }
@@ -299,11 +299,11 @@ static bool stm32lx_nvm_prog_data_unlock(target_s *const target, const uint32_t 
 static bool stm32lx_nvm_opt_unlock(target_s *const target, const uint32_t nvm)
 {
 	/* Always lock first because that's the only way to know that the unlock can succeed on the STM32L0's. */
-	target_mem_write32(target, STM32Lx_NVM_PECR(nvm), STM32Lx_NVM_PECR_PELOCK);
-	target_mem_write32(target, STM32Lx_NVM_PEKEYR(nvm), STM32Lx_NVM_PEKEY1);
-	target_mem_write32(target, STM32Lx_NVM_PEKEYR(nvm), STM32Lx_NVM_PEKEY2);
-	target_mem_write32(target, STM32Lx_NVM_OPTKEYR(nvm), STM32Lx_NVM_OPTKEY1);
-	target_mem_write32(target, STM32Lx_NVM_OPTKEYR(nvm), STM32Lx_NVM_OPTKEY2);
+	target_mem32_write32(target, STM32Lx_NVM_PECR(nvm), STM32Lx_NVM_PECR_PELOCK);
+	target_mem32_write32(target, STM32Lx_NVM_PEKEYR(nvm), STM32Lx_NVM_PEKEY1);
+	target_mem32_write32(target, STM32Lx_NVM_PEKEYR(nvm), STM32Lx_NVM_PEKEY2);
+	target_mem32_write32(target, STM32Lx_NVM_OPTKEYR(nvm), STM32Lx_NVM_OPTKEY1);
+	target_mem32_write32(target, STM32Lx_NVM_OPTKEYR(nvm), STM32Lx_NVM_OPTKEY2);
 
 	return !(target_mem32_read32(target, STM32Lx_NVM_PECR(nvm)) & STM32Lx_NVM_PECR_OPTLOCK);
 }
@@ -335,7 +335,7 @@ static bool stm32lx_nvm_prog_erase(target_flash_s *const flash, const target_add
 		return false;
 
 	/* Flash page erase instruction */
-	target_mem_write32(target, STM32Lx_NVM_PECR(nvm), STM32Lx_NVM_PECR_ERASE | STM32Lx_NVM_PECR_PROG);
+	target_mem32_write32(target, STM32Lx_NVM_PECR(nvm), STM32Lx_NVM_PECR_ERASE | STM32Lx_NVM_PECR_PROG);
 
 	const uint32_t pecr =
 		target_mem32_read32(target, STM32Lx_NVM_PECR(nvm)) & (STM32Lx_NVM_PECR_PROG | STM32Lx_NVM_PECR_ERASE);
@@ -346,13 +346,13 @@ static bool stm32lx_nvm_prog_erase(target_flash_s *const flash, const target_add
 	 * Clear errors.
 	 * Note that this only works when we wait for the NVM block to complete the last operation.
 	 */
-	target_mem_write32(target, STM32Lx_NVM_SR(nvm), STM32Lx_NVM_SR_ERR_M);
+	target_mem32_write32(target, STM32Lx_NVM_SR(nvm), STM32Lx_NVM_SR_ERR_M);
 
 	platform_timeout_s timeout;
 	platform_timeout_set(&timeout, 500);
 	for (size_t offset = 0; offset < length; offset += flash->blocksize) {
 		/* Trigger the erase by writing the first uint32_t of the page to 0 */
-		target_mem_write32(target, addr + offset, 0U);
+		target_mem32_write32(target, addr + offset, 0U);
 		if (full_erase)
 			target_print_progress(&timeout);
 	}
@@ -377,7 +377,7 @@ static bool stm32lx_nvm_prog_write(
 	if (!stm32lx_nvm_busy_wait(target, nvm, NULL))
 		return false;
 
-	target_mem_write32(target, STM32Lx_NVM_PECR(nvm), STM32Lx_NVM_PECR_PROG | STM32Lx_NVM_PECR_FPRG);
+	target_mem32_write32(target, STM32Lx_NVM_PECR(nvm), STM32Lx_NVM_PECR_PROG | STM32Lx_NVM_PECR_FPRG);
 	target_mem32_write(target, dest, src, length);
 
 	/* Disable further programming by locking PECR */
@@ -400,7 +400,7 @@ static bool stm32lx_nvm_data_erase(target_flash_s *const flash, const target_add
 		return false;
 
 	/* Flash data erase instruction */
-	target_mem_write32(target, STM32Lx_NVM_PECR(nvm), STM32Lx_NVM_PECR_ERASE | STM32Lx_NVM_PECR_DATA);
+	target_mem32_write32(target, STM32Lx_NVM_PECR(nvm), STM32Lx_NVM_PECR_ERASE | STM32Lx_NVM_PECR_DATA);
 
 	const uint32_t pecr =
 		target_mem32_read32(target, STM32Lx_NVM_PECR(nvm)) & (STM32Lx_NVM_PECR_ERASE | STM32Lx_NVM_PECR_DATA);
@@ -410,7 +410,7 @@ static bool stm32lx_nvm_data_erase(target_flash_s *const flash, const target_add
 	const uint32_t aligned_addr = addr & ~3U;
 	for (size_t offset = 0; offset < length; offset += flash->blocksize)
 		/* Trigger the erase by writing the first uint32_t of the page to 0 */
-		target_mem_write32(target, aligned_addr + offset, 0U);
+		target_mem32_write32(target, aligned_addr + offset, 0U);
 
 	/* Disable further programming by locking PECR */
 	stm32lx_nvm_lock(target, nvm);
@@ -434,14 +434,13 @@ static bool stm32lx_nvm_data_write(
 	if (!stm32lx_nvm_prog_data_unlock(target, nvm))
 		return false;
 
-	target_mem_write32(target, STM32Lx_NVM_PECR(nvm), is_stm32l1 ? 0 : STM32Lx_NVM_PECR_DATA);
+	target_mem32_write32(target, STM32Lx_NVM_PECR(nvm), is_stm32l1 ? 0 : STM32Lx_NVM_PECR_DATA);
 
 	/* Sling data to the target one uint32_t at a time */
 	const uint32_t *const data = (const uint32_t *)src;
 	for (size_t offset = 0; offset < length; offset += 4U) {
 		/* XXX: Why is this not able to use target_mem_write()? */
-		target_mem_write32(target, dest + offset, data[offset]);
-		if (target_check_error(target))
+		if (target_mem32_write32(target, dest + offset, data[offset]))
 			return false;
 	}
 
@@ -464,10 +463,10 @@ static bool stm32lx_protected_mass_erase(target_s *const target)
 	if (!stm32lx_nvm_opt_unlock(target, nvm))
 		return false;
 
-	target_mem_write32(target, STM32Lx_NVM_OPT_PHYS, 0xffff0000U);
-	target_mem_write32(target, STM32Lx_NVM_PECR(nvm), STM32Lx_NVM_PECR_OBL_LAUNCH);
-	target_mem_write32(target, STM32Lx_NVM_OPT_PHYS, 0xff5500aaU);
-	target_mem_write32(target, STM32Lx_NVM_PECR(nvm), STM32Lx_NVM_PECR_OBL_LAUNCH);
+	target_mem32_write32(target, STM32Lx_NVM_OPT_PHYS, 0xffff0000U);
+	target_mem32_write32(target, STM32Lx_NVM_PECR(nvm), STM32Lx_NVM_PECR_OBL_LAUNCH);
+	target_mem32_write32(target, STM32Lx_NVM_OPT_PHYS, 0xff5500aaU);
+	target_mem32_write32(target, STM32Lx_NVM_PECR(nvm), STM32Lx_NVM_PECR_OBL_LAUNCH);
 
 	platform_timeout_s timeout;
 	platform_timeout_set(&timeout, 500);
@@ -503,8 +502,8 @@ static bool stm32lx_option_write(target_s *const target, const uint32_t address,
 	const uint32_t nvm = stm32lx_nvm_phys(target);
 
 	/* Erase and program option in one go. */
-	target_mem_write32(target, STM32Lx_NVM_PECR(nvm), STM32Lx_NVM_PECR_FIX);
-	target_mem_write32(target, address, value);
+	target_mem32_write32(target, STM32Lx_NVM_PECR(nvm), STM32Lx_NVM_PECR_FIX);
+	target_mem32_write32(target, address, value);
 
 	/* Wait for completion or an error */
 	return stm32lx_nvm_busy_wait(target, nvm, NULL);
@@ -525,16 +524,17 @@ static bool stm32lx_eeprom_write(
 	const bool is_stm32l1 = stm32lx_is_stm32l1(target);
 
 	/* Clear errors. */
-	target_mem_write32(target, STM32Lx_NVM_SR(nvm), STM32Lx_NVM_SR_ERR_M);
+	target_mem32_write32(target, STM32Lx_NVM_SR(nvm), STM32Lx_NVM_SR_ERR_M);
 
 	/* Erase and program option in one go. */
-	target_mem_write32(target, STM32Lx_NVM_PECR(nvm), (is_stm32l1 ? 0 : STM32Lx_NVM_PECR_DATA) | STM32Lx_NVM_PECR_FIX);
+	target_mem32_write32(
+		target, STM32Lx_NVM_PECR(nvm), (is_stm32l1 ? 0 : STM32Lx_NVM_PECR_DATA) | STM32Lx_NVM_PECR_FIX);
 	if (block_size == 4)
-		target_mem_write32(target, address, value);
+		target_mem32_write32(target, address, value);
 	else if (block_size == 2)
-		target_mem_write16(target, address, value);
+		target_mem32_write16(target, address, value);
 	else if (block_size == 1)
-		target_mem_write8(target, address, value);
+		target_mem32_write8(target, address, value);
 	else
 		return false;
 
@@ -567,7 +567,7 @@ static bool stm32lx_cmd_option(target_s *const target, const int argc, const cha
 	const size_t command_len = strlen(argv[1]);
 
 	if (argc == 2 && strncasecmp(argv[1], "obl_launch", command_len) == 0)
-		target_mem_write32(target, STM32Lx_NVM_PECR(nvm), STM32Lx_NVM_PECR_OBL_LAUNCH);
+		target_mem32_write32(target, STM32Lx_NVM_PECR(nvm), STM32Lx_NVM_PECR_OBL_LAUNCH);
 	else if (argc == 4) {
 		const bool raw_write = strncasecmp(argv[1], "raw", command_len) == 0;
 		if (!raw_write && strncasecmp(argv[1], "write", command_len) != 0)

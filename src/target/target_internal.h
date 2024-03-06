@@ -193,9 +193,9 @@ target_flash_s *target_flash_for_addr(target_s *target, uint32_t addr);
 uint32_t target_mem32_read32(target_s *target, target_addr32_t addr);
 uint16_t target_mem32_read16(target_s *target, target_addr32_t addr);
 uint8_t target_mem32_read8(target_s *target, target_addr32_t addr);
-void target_mem_write32(target_s *target, target_addr_t addr, uint32_t value);
-void target_mem_write16(target_s *target, target_addr_t addr, uint16_t value);
-void target_mem_write8(target_s *target, target_addr_t addr, uint8_t value);
+bool target_mem32_write32(target_s *target, target_addr32_t addr, uint32_t value);
+bool target_mem32_write16(target_s *target, target_addr32_t addr, uint16_t value);
+bool target_mem32_write8(target_s *target, target_addr32_t addr, uint8_t value);
 bool target_check_error(target_s *target);
 
 /* Access to host controller interface */

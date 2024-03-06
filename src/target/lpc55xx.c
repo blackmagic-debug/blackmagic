@@ -287,7 +287,7 @@ static lpc55xx_iap_status_e iap_call_raw(target_s *target, lpc55xx_iap_cmd_e cmd
 	 * hard-fault. Instead, set LR to a word known to contain the BKPT
 	 * instruction, so that we can safely halt on IAP function return.
 	 */
-	target_mem_write16(target, LPC55xx_CODE_PATCH_ADDRESS, CORTEX_THUMB_BREAKPOINT);
+	target_mem32_write16(target, LPC55xx_CODE_PATCH_ADDRESS, CORTEX_THUMB_BREAKPOINT);
 	regs[CORTEX_REG_LR] = LPC55xx_CODE_PATCH_ADDRESS | 1; // set the ARM thumb call bit
 
 	/* Write the registers to the target and perform the IAP call */
@@ -410,7 +410,7 @@ static bool lpc55xx_enter_flash_mode(target_s *target)
 	// consists of the instructions CPSID I; BKPT; in ARM Thumb encoding.
 	const uint32_t CODE_PATCH = 0xbe00b672U;
 
-	target_mem_write32(target, LPC55xx_CODE_PATCH_ADDRESS, CODE_PATCH);
+	target_mem32_write32(target, LPC55xx_CODE_PATCH_ADDRESS, CODE_PATCH);
 	target_reg_write(target, CORTEX_REG_PC, &reg_pc_value, sizeof(uint32_t));
 
 	target_halt_resume(target, false);

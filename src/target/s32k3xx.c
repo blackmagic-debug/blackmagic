@@ -163,7 +163,7 @@ static bool s32k3xx_unlock_address(target_flash_s *const flash, target_addr_t ad
 
 		uint32_t spelock_val = target_mem32_read32(flash->t, spelock_reg);
 		spelock_val &= ~(1U << sector);
-		target_mem_write32(flash->t, spelock_reg, spelock_val);
+		target_mem32_write32(flash->t, spelock_reg, spelock_val);
 	} else {
 		/* Use super sector unlock */
 		uint8_t supersector = (addr - flash->start) / SUPER_SECTOR_SIZE;
@@ -171,7 +171,7 @@ static bool s32k3xx_unlock_address(target_flash_s *const flash, target_addr_t ad
 
 		uint32_t sspelock_val = target_mem32_read32(flash->t, sspelock_reg);
 		sspelock_val &= ~(1U << supersector);
-		target_mem_write32(flash->t, sspelock_reg, sspelock_val);
+		target_mem32_write32(flash->t, sspelock_reg, sspelock_val);
 	}
 	return true;
 }
@@ -180,11 +180,11 @@ static bool s32k3xx_flash_trigger_mcr(target_flash_s *const flash, uint32_t mcr_
 {
 	uint32_t mcr = target_mem32_read32(flash->t, C40ASF_MCR);
 	mcr |= mcr_bits;
-	target_mem_write32(flash->t, C40ASF_MCR, mcr);
+	target_mem32_write32(flash->t, C40ASF_MCR, mcr);
 
 	/* Set EVH to trigger operation */
 	mcr |= C40ASF_MCR_EHV;
-	target_mem_write32(flash->t, C40ASF_MCR, mcr);
+	target_mem32_write32(flash->t, C40ASF_MCR, mcr);
 
 	/* Wait for DONE to be set.
 	 * According to section 9.1 of S32KXX DS, lifetime max times for:
@@ -207,13 +207,13 @@ static bool s32k3xx_flash_trigger_mcr(target_flash_s *const flash, uint32_t mcr_
 	/* Clear the EVH bit first */
 	mcr = target_mem32_read32(flash->t, C40ASF_MCR);
 	mcr &= ~C40ASF_MCR_EHV;
-	target_mem_write32(flash->t, C40ASF_MCR, mcr);
+	target_mem32_write32(flash->t, C40ASF_MCR, mcr);
 
 	uint32_t mcrs = target_mem32_read32(flash->t, C40ASF_MCRS);
 
 	/* Then clear the operation bits */
 	mcr &= ~mcr_bits;
-	target_mem_write32(flash->t, C40ASF_MCR, mcr);
+	target_mem32_write32(flash->t, C40ASF_MCR, mcr);
 
 	if ((mcrs & C40ASF_MCRS_PEG) == 0U) {
 		DEBUG_ERROR("MCRS[PEG] not set after operation\n");
@@ -231,7 +231,7 @@ static void s32k3xx_flash_prepare(target_flash_s *const flash)
 {
 	uint32_t mcrs = target_mem32_read32(flash->t, C40ASF_MCRS);
 	mcrs |= C40ASF_MCRS_PEP | C40ASF_MCRS_PES;
-	target_mem_write32(flash->t, C40ASF_MCRS, mcrs);
+	target_mem32_write32(flash->t, C40ASF_MCRS, mcrs);
 }
 
 static bool s32k3xx_flash_erase(target_flash_s *const flash, target_addr_t addr, size_t len)
@@ -240,8 +240,8 @@ static bool s32k3xx_flash_erase(target_flash_s *const flash, target_addr_t addr,
 	s32k3xx_flash_prepare(flash);
 	s32k3xx_unlock_address(flash, addr);
 
-	target_mem_write32(flash->t, PFCPGM_PEADR_L, addr);
-	target_mem_write32(flash->t, C40ASF_DATA0, 0U);
+	target_mem32_write32(flash->t, PFCPGM_PEADR_L, addr);
+	target_mem32_write32(flash->t, C40ASF_DATA0, 0U);
 	if (!s32k3xx_flash_trigger_mcr(flash, C40ASF_MCR_ERS))
 		return false;
 
@@ -254,10 +254,10 @@ static bool s32k3xx_flash_write(target_flash_s *flash, target_addr_t dest, const
 
 	const uint32_t *const s_data = src;
 	s32k3xx_flash_prepare(flash);
-	target_mem_write32(flash->t, PFCPGM_PEADR_L, dest);
+	target_mem32_write32(flash->t, PFCPGM_PEADR_L, dest);
 	for (size_t i = 0; i < len; i += 4) {
 		const size_t word = i / 4;
-		target_mem_write32(flash->t, C40ASF_DATA_REG(word), s_data[word]);
+		target_mem32_write32(flash->t, C40ASF_DATA_REG(word), s_data[word]);
 	}
 
 	if (!s32k3xx_flash_trigger_mcr(flash, C40ASF_MCR_PGM))
@@ -267,5 +267,5 @@ static bool s32k3xx_flash_write(target_flash_s *flash, target_addr_t dest, const
 
 static void s32k3xx_reset(target_s *target)
 {
-	target_mem_write32(target, CORTEXM_AIRCR, CORTEXM_AIRCR_VECTKEY | CORTEXM_AIRCR_VECTRESET);
+	target_mem32_write32(target, CORTEXM_AIRCR, CORTEXM_AIRCR_VECTKEY | CORTEXM_AIRCR_VECTRESET);
 }

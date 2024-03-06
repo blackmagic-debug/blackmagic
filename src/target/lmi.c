@@ -209,8 +209,8 @@ static bool lmi_flash_erase(target_flash_s *flash, target_addr_t addr, const siz
 	platform_timeout_set(&timeout, 500);
 
 	for (size_t erased = 0; erased < len; erased += BLOCK_SIZE) {
-		target_mem_write32(target, LMI_FLASH_FMA, addr);
-		target_mem_write32(target, LMI_FLASH_FMC, LMI_FLASH_FMC_WRKEY | LMI_FLASH_FMC_ERASE);
+		target_mem32_write32(target, LMI_FLASH_FMA, addr);
+		target_mem32_write32(target, LMI_FLASH_FMC, LMI_FLASH_FMC_WRKEY | LMI_FLASH_FMC_ERASE);
 
 		while (target_mem32_read32(target, LMI_FLASH_FMC) & LMI_FLASH_FMC_ERASE) {
 			if (full_erase)

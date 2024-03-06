@@ -215,7 +215,7 @@ static bool stm32h5_flash_wait_complete(target_s *const target, platform_timeout
 	if (status & STM32H5_FLASH_STATUS_ERROR_MASK)
 		DEBUG_ERROR("%s: Flash error: %08" PRIx32 "\n", __func__, status);
 	/* Clear all error and status bits */
-	target_mem_write32(
+	target_mem32_write32(
 		target, STM32H5_FLASH_CLEAR_CTRL, (status & (STM32H5_FLASH_STATUS_ERROR_MASK | STM32H5_FLASH_STATUS_EOP)));
 	return !(status & STM32H5_FLASH_STATUS_ERROR_MASK);
 }
@@ -228,8 +228,8 @@ static bool stm32h5_enter_flash_mode(target_s *const target)
 		return false;
 	/* Now, if the Flash controller's not already unlocked, unlock it */
 	if (target_mem32_read32(target, STM32H5_FLASH_CTRL) & STM32H5_FLASH_CTRL_LOCK) {
-		target_mem_write32(target, STM32H5_FLASH_KEY, STM32H5_FLASH_KEY1);
-		target_mem_write32(target, STM32H5_FLASH_KEY, STM32H5_FLASH_KEY2);
+		target_mem32_write32(target, STM32H5_FLASH_KEY, STM32H5_FLASH_KEY1);
+		target_mem32_write32(target, STM32H5_FLASH_KEY, STM32H5_FLASH_KEY2);
 	}
 	/* Success of entering Flash mode is predicated on successfully unlocking the controller */
 	return !(target_mem32_read32(target, STM32H5_FLASH_CTRL) & STM32H5_FLASH_CTRL_LOCK);
@@ -238,7 +238,7 @@ static bool stm32h5_enter_flash_mode(target_s *const target)
 static bool stm32h5_exit_flash_mode(target_s *const target)
 {
 	/* On leaving Flash mode, lock the controller again */
-	target_mem_write32(target, STM32H5_FLASH_CTRL, STM32H5_FLASH_CTRL_LOCK);
+	target_mem32_write32(target, STM32H5_FLASH_CTRL, STM32H5_FLASH_CTRL_LOCK);
 	target_reset(target);
 	return true;
 }
@@ -256,8 +256,8 @@ static bool stm32h5_flash_erase(target_flash_s *const target_flash, const target
 	for (size_t begin_sector = begin / STM32H5_FLASH_SECTOR_SIZE; begin_sector <= end_sector; ++begin_sector) {
 		/* Erase the current Flash sector */
 		const uint32_t ctrl = bank | STM32H5_FLASH_CTRL_SECTOR_ERASE | STM32H5_FLASH_CTRL_SECTOR(begin_sector);
-		target_mem_write32(target, STM32H5_FLASH_CTRL, ctrl);
-		target_mem_write32(target, STM32H5_FLASH_CTRL, ctrl | STM32H5_FLASH_CTRL_START);
+		target_mem32_write32(target, STM32H5_FLASH_CTRL, ctrl);
+		target_mem32_write32(target, STM32H5_FLASH_CTRL, ctrl | STM32H5_FLASH_CTRL_START);
 
 		/* Wait for the operation to complete, reporting errors */
 		if (!stm32h5_flash_wait_complete(target, NULL))
@@ -271,14 +271,14 @@ static bool stm32h5_flash_write(
 {
 	target_s *const target = flash->t;
 	/* Enable programming operations */
-	target_mem_write32(target, STM32H5_FLASH_CTRL, STM32H5_FLASH_CTRL_PROGRAM);
+	target_mem32_write32(target, STM32H5_FLASH_CTRL, STM32H5_FLASH_CTRL_PROGRAM);
 	/* Write the data to the Flash */
 	target_mem32_write(target, dest, src, len);
 	/* Wait for the operation to complete and report errors */
 	if (!stm32h5_flash_wait_complete(target, NULL))
 		return false;
 	/* Disable programming operations */
-	target_mem_write32(target, STM32H5_FLASH_CTRL, 0U);
+	target_mem32_write32(target, STM32H5_FLASH_CTRL, 0U);
 	return true;
 }
 
@@ -291,8 +291,8 @@ static bool stm32h5_mass_erase(target_s *const target)
 	platform_timeout_s timeout;
 	platform_timeout_set(&timeout, 500);
 	/* Trigger the mass erase */
-	target_mem_write32(target, STM32H5_FLASH_CTRL, STM32H5_FLASH_CTRL_MASS_ERASE);
-	target_mem_write32(target, STM32H5_FLASH_CTRL, STM32H5_FLASH_CTRL_MASS_ERASE | STM32H5_FLASH_CTRL_START);
+	target_mem32_write32(target, STM32H5_FLASH_CTRL, STM32H5_FLASH_CTRL_MASS_ERASE);
+	target_mem32_write32(target, STM32H5_FLASH_CTRL, STM32H5_FLASH_CTRL_MASS_ERASE | STM32H5_FLASH_CTRL_START);
 	/* And wait for it to complete, reporting errors along the way */
 	const bool result = stm32h5_flash_wait_complete(target, &timeout);
 

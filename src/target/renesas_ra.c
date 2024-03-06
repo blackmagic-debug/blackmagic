@@ -403,7 +403,7 @@ bool renesas_ra_probe(target_s *const target)
 	/* Enable debug */
 	/* a read back doesn't seem to show the change, tried 32-bit write too */
 	/* See "DBGEN": Section 2.13.1 of the RA6M4 manual R01UH0890EJ0100. */
-	target_mem_write8(target, SYSC_SYOCDCR, SYOCDCR_DBGEN);
+	target_mem32_write8(target, SYSC_SYOCDCR, SYOCDCR_DBGEN);
 
 	/* Read the PNR */
 	switch (target->part_id) {
@@ -674,7 +674,7 @@ static bool renesas_enter_flash_mode(target_s *const target)
 	target_reset(target);
 
 	/* Permit flash operations */
-	target_mem_write8(target, SYSC_FWEPROR, SYSC_FWEPROR_PERMIT);
+	target_mem32_write8(target, SYSC_FWEPROR, SYSC_FWEPROR_PERMIT);
 
 	return true;
 }
@@ -708,7 +708,7 @@ static bool renesas_rv40_pe_mode(target_s *const target, const pe_mode_e pe_mode
 	}
 
 	if (has_fmeprot)
-		target_mem_write16(target, RV40_FMEPROT, RV40_FMEPROT_UNLOCK);
+		target_mem32_write16(target, RV40_FMEPROT, RV40_FMEPROT_UNLOCK);
 
 	/* Set PE/READ mode */
 	uint16_t fentryr = 0;
@@ -722,7 +722,7 @@ static bool renesas_rv40_pe_mode(target_s *const target, const pe_mode_e pe_mode
 	default:
 		break;
 	}
-	target_mem_write16(target, RV40_FENTRYR, FENTRYR_KEY | fentryr);
+	target_mem32_write16(target, RV40_FENTRYR, FENTRYR_KEY | fentryr);
 
 	platform_timeout_s timeout;
 	platform_timeout_set(&timeout, 10);
@@ -735,7 +735,7 @@ static bool renesas_rv40_pe_mode(target_s *const target, const pe_mode_e pe_mode
 	}
 
 	if (has_fmeprot && pe_mode == PE_MODE_READ)
-		target_mem_write16(target, RV40_FMEPROT, RV40_FMEPROT_LOCK);
+		target_mem32_write16(target, RV40_FMEPROT, RV40_FMEPROT_LOCK);
 
 	return true;
 }
@@ -751,7 +751,7 @@ static bool renesas_rv40_error_check(target_s *const target, const uint32_t erro
 		/* If an illegal error occurred read and clear CFAE and DFAE in FASTAT. */
 		if (fstatr & RV40_FSTATR_ILGLERR) {
 			target_mem32_read8(target, RV40_FASTAT);
-			target_mem_write8(target, RV40_FASTAT, 0);
+			target_mem32_write8(target, RV40_FASTAT, 0);
 		}
 		error = true;
 	}
@@ -762,7 +762,7 @@ static bool renesas_rv40_error_check(target_s *const target, const uint32_t erro
 
 	if (error) {
 		/* Stop the flash */
-		target_mem_write8(target, RV40_CMD, RV40_CMD_FORCED_STOP);
+		target_mem32_write8(target, RV40_CMD, RV40_CMD_FORCED_STOP);
 
 		platform_timeout_s timeout;
 		platform_timeout_set(&timeout, 10);
@@ -819,11 +819,11 @@ static bool renesas_rv40_flash_erase(target_flash_s *const flash, target_addr_t 
 	const bool code_flash = addr < RENESAS_CF_END;
 
 	/* Set Erasure Priority Mode */
-	target_mem_write16(target, RV40_FCPSR, RV40_FCPSR_ESUSPMD);
+	target_mem32_write16(target, RV40_FCPSR, RV40_FCPSR_ESUSPMD);
 
 	while (len) {
 		/* Set block start address*/
-		target_mem_write32(target, RV40_FSADDR, addr);
+		target_mem32_write32(target, RV40_FSADDR, addr);
 
 		/* Increment block address */
 		uint16_t block_size;
@@ -836,8 +836,8 @@ static bool renesas_rv40_flash_erase(target_flash_s *const flash, target_addr_t 
 		len -= block_size;
 
 		/* Issue two part Block Erase commands */
-		target_mem_write8(target, RV40_CMD, RV40_CMD_BLOCK_ERASE);
-		target_mem_write8(target, RV40_CMD, RV40_CMD_FINAL);
+		target_mem32_write8(target, RV40_CMD, RV40_CMD_BLOCK_ERASE);
+		target_mem32_write8(target, RV40_CMD, RV40_CMD_FINAL);
 
 		/* According to reference manual the max erase time for a 32K block with a FCLK of 4MHz is around 1040ms */
 		platform_timeout_s timeout;
@@ -869,15 +869,15 @@ static bool renesas_rv40_flash_write(target_flash_s *const flash, target_addr_t 
 
 	while (len) {
 		/* set block start address */
-		target_mem_write32(target, RV40_FSADDR, dest);
+		target_mem32_write32(target, RV40_FSADDR, dest);
 
 		/* increment destination address */
 		dest += write_size;
 		len -= write_size;
 
 		/* issue two part Write commands */
-		target_mem_write8(target, RV40_CMD, RV40_CMD_PROGRAM);
-		target_mem_write8(target, RV40_CMD, (uint8_t)(write_size / 2U));
+		target_mem32_write8(target, RV40_CMD, RV40_CMD_PROGRAM);
+		target_mem32_write8(target, RV40_CMD, (uint8_t)(write_size / 2U));
 
 		/*
 		 * According to reference manual the data buffer full time for 2 bytes is 2 usec with a FCLK of 4MHz.
@@ -889,14 +889,14 @@ static bool renesas_rv40_flash_write(target_flash_s *const flash, target_addr_t 
 		/* Write one chunk */
 		for (size_t i = 0U; i < (write_size / 2U); i++) {
 			/* Copy data from source address to destination */
-			target_mem_write16(target, RV40_CMD, *(uint16_t *)src);
+			target_mem32_write16(target, RV40_CMD, *(uint16_t *)src);
 
 			/* 2 bytes of data */
 			src = (const uint8_t *)src + 2U;
 		}
 
 		/* Issue write end command */
-		target_mem_write8(target, RV40_CMD, RV40_CMD_FINAL);
+		target_mem32_write8(target, RV40_CMD, RV40_CMD_FINAL);
 
 		/* Wait until the operation has completed or timeout */
 		/* Read FRDY bit until it has been set to 1 indicating that the current operation is complete.*/

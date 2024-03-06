@@ -270,8 +270,8 @@ static bool msp432e4_flash_erase(target_flash_s *const target_flash, const targe
 	 * The target Flash layer guarantees we're called at the start of each target_flash->blocksize
 	 * so we only need to trigger the erase of the Flash sector pair and that logic will take care of the rest.
 	 */
-	target_mem_write32(target, MSP432E4_FLASH_ADDR, addr);
-	target_mem_write32(target, MSP432E4_FLASH_CTRL, (flash->flash_key << 16U) | MSP432E4_FLASH_CTRL_ERASE);
+	target_mem32_write32(target, MSP432E4_FLASH_ADDR, addr);
+	target_mem32_write32(target, MSP432E4_FLASH_CTRL, (flash->flash_key << 16U) | MSP432E4_FLASH_CTRL_ERASE);
 	while (target_mem32_read32(target, MSP432E4_FLASH_CTRL) & MSP432E4_FLASH_CTRL_ERASE)
 		continue;
 	return true;
@@ -290,9 +290,9 @@ static bool msp432e4_flash_write(
 	 * Flash. With the write size set to 4 to match how many bytes we can write in one go, that
 	 * allows this routine to go 32-bit block at a time efficiently, passing the complexity up a layer.
 	 */
-	target_mem_write32(target, MSP432E4_FLASH_ADDR, dest);
-	target_mem_write32(target, MSP432E4_FLASH_DATA, read_le4((const uint8_t *)src, 0));
-	target_mem_write32(target, MSP432E4_FLASH_CTRL, (flash->flash_key << 16U) | MSP432E4_FLASH_CTRL_WRITE);
+	target_mem32_write32(target, MSP432E4_FLASH_ADDR, dest);
+	target_mem32_write32(target, MSP432E4_FLASH_DATA, read_le4((const uint8_t *)src, 0));
+	target_mem32_write32(target, MSP432E4_FLASH_CTRL, (flash->flash_key << 16U) | MSP432E4_FLASH_CTRL_WRITE);
 	while (target_mem32_read32(target, MSP432E4_FLASH_CTRL) & MSP432E4_FLASH_CTRL_WRITE)
 		continue;
 	return true;
@@ -305,7 +305,7 @@ static bool msp432e4_mass_erase(target_s *const target)
 	platform_timeout_s timeout;
 	platform_timeout_set(&timeout, 500);
 	/* Kick off the mass erase */
-	target_mem_write32(target, MSP432E4_FLASH_CTRL, (flash->flash_key << 16U) | MSP432E4_FLASH_CTRL_MASS_ERASE);
+	target_mem32_write32(target, MSP432E4_FLASH_CTRL, (flash->flash_key << 16U) | MSP432E4_FLASH_CTRL_MASS_ERASE);
 	/* Wait for the erase to complete, printing a '.' every so often to keep GDB happy */
 	while (target_mem32_read32(target, MSP432E4_FLASH_CTRL) & MSP432E4_FLASH_CTRL_MASS_ERASE)
 		target_print_progress(&timeout);
