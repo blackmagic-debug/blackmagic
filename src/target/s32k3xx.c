@@ -128,9 +128,9 @@ bool s32k3xx_probe(target_s *const target)
 	switch (part_no) {
 	case 0x158U: /* S32K344 */
 		target->driver = "S32K344";
-		target_add_ram(target, 0x20400000U, 0x00050000U);
-		target_add_ram(target, 0x00000000U, 0x00010000U);
-		target_add_ram(target, 0x20000000U, 0x00020000U);
+		target_add_ram32(target, 0x20400000U, 0x00050000U);
+		target_add_ram32(target, 0x00000000U, 0x00010000U);
+		target_add_ram32(target, 0x20000000U, 0x00020000U);
 		s32k3xx_add_flash(target, 0x00400000U, 0x00100000U, 0x2000U, 0U);
 		s32k3xx_add_flash(target, 0x00500000U, 0x00100000U, 0x2000U, 1U);
 		s32k3xx_add_flash(target, 0x00600000U, 0x00100000U, 0x2000U, 2U);

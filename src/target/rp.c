@@ -259,7 +259,7 @@ static bool rp_attach(target_s *target)
 	/* Free previously loaded memory map */
 	target_mem_map_free(target);
 	rp_add_flash(target);
-	target_add_ram(target, RP_SRAM_BASE, RP_SRAM_SIZE);
+	target_add_ram32(target, RP_SRAM_BASE, RP_SRAM_SIZE);
 
 	return true;
 }

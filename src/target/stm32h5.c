@@ -170,9 +170,9 @@ bool stm32h5_probe(target_s *const target)
 		 * Build the RAM map.
 		 * This uses the addresses and sizes found in §2.3.2, Figure 2, pg113 of RM0481 Rev. 1
 		 */
-		target_add_ram(target, STM32H5_SRAM1_BASE, STM32H5_SRAM1_SIZE);
-		target_add_ram(target, STM32H5_SRAM2_BASE, STM32H5_SRAM2_SIZE);
-		target_add_ram(target, STM32H5_SRAM3_BASE, STM32H5_SRAM3_SIZE);
+		target_add_ram32(target, STM32H5_SRAM1_BASE, STM32H5_SRAM1_SIZE);
+		target_add_ram32(target, STM32H5_SRAM2_BASE, STM32H5_SRAM2_SIZE);
+		target_add_ram32(target, STM32H5_SRAM3_BASE, STM32H5_SRAM3_SIZE);
 
 		/* Build the Flash map */
 		stm32h5_add_flash(target, STM32H5_FLASH_BANK1_BASE, STM32H5_FLASH_BANK_SIZE,
@@ -185,8 +185,8 @@ bool stm32h5_probe(target_s *const target)
 		 * Build the RAM map.
 		 * This uses the addresses and sizes found in §2.2.2, Figure 2, pg70 of RM0492 Rev. 2
 		 */
-		target_add_ram(target, STM32H503_SRAM1_BASE, STM32H503_SRAM1_SIZE);
-		target_add_ram(target, STM32H503_SRAM2_BASE, STM32H503_SRAM2_SIZE);
+		target_add_ram32(target, STM32H503_SRAM1_BASE, STM32H503_SRAM1_SIZE);
+		target_add_ram32(target, STM32H503_SRAM2_BASE, STM32H503_SRAM2_SIZE);
 
 		/* Build the Flash map */
 		stm32h5_add_flash(target, STM32H503_FLASH_BANK1_BASE, STM32H503_FLASH_BANK_SIZE,

@@ -235,29 +235,29 @@ bool stm32h7_probe(target_s *target)
 	target->target_storage = priv_storage;
 
 	/* Build the RAM map */
-	target_add_ram(target, 0x00000000, 0x10000); /* ITCM RAM,   64 KiB */
-	target_add_ram(target, 0x20000000, 0x20000); /* DTCM RAM,  128 KiB */
+	target_add_ram32(target, 0x00000000, 0x10000); /* ITCM RAM,   64 KiB */
+	target_add_ram32(target, 0x20000000, 0x20000); /* DTCM RAM,  128 KiB */
 	switch (target->part_id) {
 	case ID_STM32H72x: {
 		/* Table 6. Memory map and default device memory area attributes RM0468, pg133 */
-		target_add_ram(target, 0x24000000, 0x20000); /* AXI RAM,    128 KiB */
-		target_add_ram(target, 0x24020000, 0x30000); /* AXI RAM,    192 KiB (TCM_AXI_SHARED) */
-		target_add_ram(target, 0x30000000, 0x8000);  /* AHB SRAM1+2, 32 KiB [16+16] contiguous */
-		target_add_ram(target, 0x38000000, 0x4000);  /* AHB SRAM4,   16 KiB, D3 domain */
+		target_add_ram32(target, 0x24000000, 0x20000); /* AXI RAM,    128 KiB */
+		target_add_ram32(target, 0x24020000, 0x30000); /* AXI RAM,    192 KiB (TCM_AXI_SHARED) */
+		target_add_ram32(target, 0x30000000, 0x8000);  /* AHB SRAM1+2, 32 KiB [16+16] contiguous */
+		target_add_ram32(target, 0x38000000, 0x4000);  /* AHB SRAM4,   16 KiB, D3 domain */
 		break;
 	}
 	case ID_STM32H74x: {
 		/* Table 7. Memory map and default device memory area attributes RM0433, pg130 */
-		target_add_ram(target, 0x24000000, 0x80000); /* AXI RAM,       512 KiB */
-		target_add_ram(target, 0x30000000, 0x48000); /* AHB SRAM1+2+3, 288 KiB [128+128+32] contiguous */
-		target_add_ram(target, 0x38000000, 0x10000); /* AHB SRAM4,      64 KiB, D3 domain */
+		target_add_ram32(target, 0x24000000, 0x80000); /* AXI RAM,       512 KiB */
+		target_add_ram32(target, 0x30000000, 0x48000); /* AHB SRAM1+2+3, 288 KiB [128+128+32] contiguous */
+		target_add_ram32(target, 0x38000000, 0x10000); /* AHB SRAM4,      64 KiB, D3 domain */
 		break;
 	}
 	case ID_STM32H7Bx: {
 		/* Table 6. Memory map and default device memory area attributes RM0455, pg131 */
-		target_add_ram(target, 0x24000000, 0x100000); /* AXI RAM1+2+3, 1024 KiB [256+384+384] contiguous, */
-		target_add_ram(target, 0x30000000, 0x10000);  /* AHB SRAM1+2,   128 KiB [64+64] contiguous, */
-		target_add_ram(target, 0x38000000, 0x8000);   /* SRD SRAM4,      32 KiB, Smart run domain */
+		target_add_ram32(target, 0x24000000, 0x100000); /* AXI RAM1+2+3, 1024 KiB [256+384+384] contiguous, */
+		target_add_ram32(target, 0x30000000, 0x10000);  /* AHB SRAM1+2,   128 KiB [64+64] contiguous, */
+		target_add_ram32(target, 0x38000000, 0x8000);   /* SRD SRAM4,      32 KiB, Smart run domain */
 		break;
 	}
 	default:

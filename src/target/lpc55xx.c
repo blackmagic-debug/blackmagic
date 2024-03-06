@@ -567,28 +567,28 @@ bool lpc55xx_probe(target_s *const target)
 	switch (chipid) {
 	case LPC5502_CHIPID:
 	case LPC5512_CHIPID:
-		target_add_ram(target, 0x04000000U, 0x4000U); // SRAM_X
-		target_add_ram(target, 0x20000000U, 0x8000U); // SRAM_0
+		target_add_ram32(target, 0x04000000U, 0x4000U); // SRAM_X
+		target_add_ram32(target, 0x20000000U, 0x8000U); // SRAM_0
 		break;
 	case LPC5504_CHIPID:
 	case LPC55S04_CHIPID:
 	case LPC5514_CHIPID:
 	case LPC55S14_CHIPID:
-		target_add_ram(target, 0x04000000U, 0x4000U); // SRAM_X
-		target_add_ram(target, 0x20000000U, 0x8000U); // SRAM_0
-		target_add_ram(target, 0x20008000U, 0x4000U); // SRAM_1
-		target_add_ram(target, 0x2000c000U, 0x4000U); // SRAM_2
+		target_add_ram32(target, 0x04000000U, 0x4000U); // SRAM_X
+		target_add_ram32(target, 0x20000000U, 0x8000U); // SRAM_0
+		target_add_ram32(target, 0x20008000U, 0x4000U); // SRAM_1
+		target_add_ram32(target, 0x2000c000U, 0x4000U); // SRAM_2
 		break;
 	case LPC5506_CHIPID:
 	case LPC55S06_CHIPID:
 	case LPC5516_CHIPID:
 	case LPC55S16_CHIPID:
 	case LPC55S69_CHIPID:
-		target_add_ram(target, 0x04000000U, 0x4000U); // SRAM_X
-		target_add_ram(target, 0x20000000U, 0x8000U); // SRAM_0
-		target_add_ram(target, 0x20008000U, 0x4000U); // SRAM_1
-		target_add_ram(target, 0x2000c000U, 0x4000U); // SRAM_2
-		target_add_ram(target, 0x20010000U, 0x4000U); // SRAM_3
+		target_add_ram32(target, 0x04000000U, 0x4000U); // SRAM_X
+		target_add_ram32(target, 0x20000000U, 0x8000U); // SRAM_0
+		target_add_ram32(target, 0x20008000U, 0x4000U); // SRAM_1
+		target_add_ram32(target, 0x2000c000U, 0x4000U); // SRAM_2
+		target_add_ram32(target, 0x20010000U, 0x4000U); // SRAM_3
 		break;
 	default:
 		// TODO: not enough testing to enable other devices

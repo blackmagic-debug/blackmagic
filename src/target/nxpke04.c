@@ -213,10 +213,10 @@ bool ke04_probe(target_s *t)
 
 	t->mass_erase = ke04_mass_erase;
 	/* Add low (1/4) and high (3/4) RAM */
-	ramsize /= 4U;                                       /* Amount before RAM_BASE_ADDR */
-	target_add_ram(t, RAM_BASE_ADDR - ramsize, ramsize); /* Lower RAM  */
-	ramsize *= 3U;                                       /* Amount after RAM_BASE_ADDR  */
-	target_add_ram(t, RAM_BASE_ADDR, ramsize);           /* Higher RAM */
+	ramsize /= 4U;                                         /* Amount before RAM_BASE_ADDR */
+	target_add_ram32(t, RAM_BASE_ADDR - ramsize, ramsize); /* Lower RAM  */
+	ramsize *= 3U;                                         /* Amount after RAM_BASE_ADDR  */
+	target_add_ram32(t, RAM_BASE_ADDR, ramsize);           /* Higher RAM */
 
 	/* Add flash, all KE04 have same write and erase size */
 	target_flash_s *f = calloc(1, sizeof(*f));

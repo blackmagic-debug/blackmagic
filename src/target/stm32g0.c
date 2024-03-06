@@ -269,7 +269,7 @@ bool stm32g0_probe(target_s *t)
 		return false;
 	}
 
-	target_add_ram(t, RAM_START, ram_size);
+	target_add_ram32(t, RAM_START, ram_size);
 	/* Even dual Flash bank devices have a contiguous Flash memory space */
 	stm32g0_add_flash(t, FLASH_START, flash_size, FLASH_PAGE_SIZE);
 

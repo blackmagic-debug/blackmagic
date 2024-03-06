@@ -106,10 +106,10 @@ bool hc32l110_probe(target_s *target)
 
 	switch (flash_size) {
 	case 16384:
-		target_add_ram(target, 0x2000000, 2048);
+		target_add_ram32(target, 0x2000000, 2048);
 		break;
 	case 32768:
-		target_add_ram(target, 0x2000000, 4096);
+		target_add_ram32(target, 0x2000000, 4096);
 		break;
 	default:
 		return false;

@@ -136,9 +136,9 @@ bool lpc17xx_probe(target_s *target)
 		target->mass_erase = lpc17xx_mass_erase;
 		target->enter_flash_mode = lpc17xx_enter_flash_mode;
 		target->exit_flash_mode = lpc17xx_exit_flash_mode;
-		target_add_ram(target, 0x10000000U, 0x8000U);
-		target_add_ram(target, 0x2007c000U, 0x4000U);
-		target_add_ram(target, 0x20080000U, 0x4000U);
+		target_add_ram32(target, 0x10000000U, 0x8000U);
+		target_add_ram32(target, 0x2007c000U, 0x4000U);
+		target_add_ram32(target, 0x20080000U, 0x4000U);
 		lpc17xx_add_flash(target, 0x00000000U, 0x10000U, 0x1000U, 0);
 		lpc17xx_add_flash(target, 0x00010000U, 0x70000U, 0x8000U, 16);
 		return true;

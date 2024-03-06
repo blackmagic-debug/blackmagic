@@ -238,7 +238,7 @@ bool msp432e4_probe(target_s *const target)
 
 	/* SRAM is banked but interleaved into one logical bank */
 	const uint32_t sram_size = ((target_mem32_read32(target, MSP432E4_FLASH_SRAM_SIZE) & 0xffffU) + 1U) * 256U;
-	target_add_ram(target, MSP432E4_SRAM_BASE, sram_size);
+	target_add_ram32(target, MSP432E4_SRAM_BASE, sram_size);
 
 	/* Flash is in four banks but two-way interleaved */
 	const uint32_t flash_props = target_mem32_read32(target, MSP432E4_FLASH_PERIPH_PROP);

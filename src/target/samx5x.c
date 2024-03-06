@@ -351,15 +351,15 @@ bool samx5x_probe(target_s *t)
 	switch (samx5x.mem) {
 	default:
 	case 18:
-		target_add_ram(t, 0x20000000, 0x20000);
+		target_add_ram32(t, 0x20000000, 0x20000);
 		samx5x_add_flash(t, 0x00000000, 0x40000, SAMX5X_BLOCK_SIZE, SAMX5X_PAGE_SIZE);
 		break;
 	case 19:
-		target_add_ram(t, 0x20000000, 0x30000);
+		target_add_ram32(t, 0x20000000, 0x30000);
 		samx5x_add_flash(t, 0x00000000, 0x80000, SAMX5X_BLOCK_SIZE, SAMX5X_PAGE_SIZE);
 		break;
 	case 20:
-		target_add_ram(t, 0x20000000, 0x40000);
+		target_add_ram32(t, 0x20000000, 0x40000);
 		samx5x_add_flash(t, 0x00000000, 0x100000, SAMX5X_BLOCK_SIZE, SAMX5X_PAGE_SIZE);
 		break;
 	}

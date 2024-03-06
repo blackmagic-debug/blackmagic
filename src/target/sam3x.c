@@ -249,13 +249,13 @@ static void samx7x_add_ram(target_s *t, uint32_t tcm_config, uint32_t ram_size)
 	}
 
 	if (dtcm_size > 0)
-		target_add_ram(t, 0x20000000, dtcm_size);
+		target_add_ram32(t, 0x20000000, dtcm_size);
 	if (itcm_size > 0)
-		target_add_ram(t, 0x00000000, itcm_size);
+		target_add_ram32(t, 0x00000000, itcm_size);
 
 	const uint32_t sram_size = ram_size - (itcm_size + dtcm_size);
 	if (sram_size > 0)
-		target_add_ram(t, 0x20400000, sram_size);
+		target_add_ram32(t, 0x20400000, sram_size);
 }
 
 static size_t sam_flash_size(uint32_t cidr)
@@ -425,7 +425,7 @@ bool sam3x_probe(target_s *t)
 	case CHIPID_CIDR_ARCH_SAM3XxG | CHIPID_CIDR_EPROC_CM3:
 		t->driver = "Atmel SAM3X";
 		t->target_options |= TOPT_INHIBIT_NRST;
-		target_add_ram(t, 0x20000000, 0x200000);
+		target_add_ram32(t, 0x20000000, 0x200000);
 		/* 2 Flash memories back-to-back starting at 0x80000 */
 		sam3_add_flash(t, SAM3X_EEFC_BASE(0), 0x80000, size / 2U);
 		sam3_add_flash(t, SAM3X_EEFC_BASE(1U), 0x80000 + size / 2U, size / 2U);
@@ -443,7 +443,7 @@ bool sam3x_probe(target_s *t)
 	case CHIPID_CIDR_ARCH_SAM3SxB | CHIPID_CIDR_EPROC_CM3:
 	case CHIPID_CIDR_ARCH_SAM3SxC | CHIPID_CIDR_EPROC_CM3:
 		t->driver = "Atmel SAM3N/S";
-		target_add_ram(t, 0x20000000, 0x200000);
+		target_add_ram32(t, 0x20000000, 0x200000);
 		/* These devices only have a single bank */
 		sam3_add_flash(t, SAM3N_EEFC_BASE, 0x400000, size);
 		target_add_commands(t, sam_cmd_list, "SAM3N/S");
@@ -451,7 +451,7 @@ bool sam3x_probe(target_s *t)
 	case CHIPID_CIDR_ARCH_SAM3UxC | CHIPID_CIDR_EPROC_CM3:
 	case CHIPID_CIDR_ARCH_SAM3UxE | CHIPID_CIDR_EPROC_CM3:
 		t->driver = "Atmel SAM3U";
-		target_add_ram(t, 0x20000000, 0x200000);
+		target_add_ram32(t, 0x20000000, 0x200000);
 		/* One flash up to 512K at 0x80000 */
 		sam3_add_flash(t, SAM3U_EEFC_BASE(0), 0x80000, MIN(size, 0x80000));
 		/* Larger devices have a second bank at 0x100000 */
@@ -466,7 +466,7 @@ bool sam3x_probe(target_s *t)
 	case CHIPID_CIDR_ARCH_SAM4SDB | CHIPID_CIDR_EPROC_CM4:
 	case CHIPID_CIDR_ARCH_SAM4SDC | CHIPID_CIDR_EPROC_CM4:
 		t->driver = "Atmel SAM4S";
-		target_add_ram(t, 0x20000000, 0x400000);
+		target_add_ram32(t, 0x20000000, 0x400000);
 		/* Smaller devices have a single bank */
 		if (size <= 0x80000U)
 			sam_add_flash(t, SAM4S_EEFC_BASE(0), 0x400000, size);

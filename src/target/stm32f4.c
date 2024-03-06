@@ -257,8 +257,8 @@ bool gd32f4_probe(target_s *t)
 	target_add_commands(t, stm32f4_cmd_list, t->driver);
 
 	target_mem_map_free(t);
-	target_add_ram(t, 0x10000000, 0x10000); /* 64 k CCM Ram*/
-	target_add_ram(t, 0x20000000, 0x50000); /* 320 k RAM */
+	target_add_ram32(t, 0x10000000, 0x10000); /* 64 k CCM Ram*/
+	target_add_ram32(t, 0x20000000, 0x50000); /* 320 k RAM */
 
 	/* TODO implement DBS mode */
 	const uint8_t split = 12;
@@ -367,17 +367,17 @@ static bool stm32f4_attach(target_s *t)
 	/* And rebuild the RAM map */
 	bool use_dual_bank = !is_f7 && dual_bank;
 	if (is_f7) {
-		target_add_ram(t, 0x00000000, 0x4000);  /* 16kiB ITCM RAM */
-		target_add_ram(t, 0x20000000, 0x20000); /* 128kiB DTCM RAM */
-		target_add_ram(t, 0x20020000, 0x60000); /* 384kiB RAM */
+		target_add_ram32(t, 0x00000000, 0x4000);  /* 16kiB ITCM RAM */
+		target_add_ram32(t, 0x20000000, 0x20000); /* 128kiB DTCM RAM */
+		target_add_ram32(t, 0x20020000, 0x60000); /* 384kiB RAM */
 		if (dual_bank) {
 			const uint32_t option_ctrl = target_mem32_read32(t, FLASH_OPTCR);
 			use_dual_bank = !(option_ctrl & FLASH_OPTCR_nDBANK);
 		}
 	} else {
 		if (has_ccm_ram)
-			target_add_ram(t, 0x10000000, 0x10000); /* 64kiB CCM RAM */
-		target_add_ram(t, 0x20000000, 0x50000);     /* 320kiB RAM */
+			target_add_ram32(t, 0x10000000, 0x10000); /* 64kiB CCM RAM */
+		target_add_ram32(t, 0x20000000, 0x50000);     /* 320kiB RAM */
 		if (dual_bank && max_flashsize < 2048U) {
 			/* Check the dual-bank status on 1MiB Flash devices */
 			const uint32_t option_ctrl = target_mem32_read32(t, FLASH_OPTCR);

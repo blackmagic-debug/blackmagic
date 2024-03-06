@@ -186,9 +186,9 @@ static bool at32f43_detect(target_s *target, const uint16_t part_id)
 		at32f43_add_flash(target, 0x08000000, flash_size_bank1, sector_size, 0, AT32F43x_FLASH_BANK1_REG_OFFSET);
 
 	// SRAM1 (64KB) can be remapped to 0x10000000.
-	target_add_ram(target, 0x20000000, 64U * 1024U);
+	target_add_ram32(target, 0x20000000, 64U * 1024U);
 	// SRAM2 (384-64=320 KB default).
-	target_add_ram(target, 0x20010000, 320U * 1024U);
+	target_add_ram32(target, 0x20010000, 320U * 1024U);
 	/*
 	 * SRAM total is adjustable between 128 KB and 512 KB (max).
 	 * Out of 640 KB SRAM present on silicon, at least 128 KB are always

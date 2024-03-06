@@ -561,7 +561,7 @@ bool samd_probe(target_s *t)
 		t->attach = samd_protected_attach;
 	}
 
-	target_add_ram(t, 0x20000000, samd.ram_size);
+	target_add_ram32(t, 0x20000000, samd.ram_size);
 	samd_add_flash(t, 0x00000000, samd.flash_size);
 	target_add_commands(t, samd_cmd_list, "SAMD");
 

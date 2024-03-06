@@ -85,7 +85,7 @@ bool zynq7_probe(target_s *const target)
 	for (uint8_t chunk = 0U; chunk < 4U; ++chunk) {
 		const bool chunk_high = (ocm_mapping >> chunk) & 1U;
 		const uint32_t chunk_offset = chunk * ZYNQ7_OCM_CHUNK_SIZE;
-		target_add_ram(
+		target_add_ram32(
 			target, (chunk_high ? ZYNQ7_OCM_HIGH_BASE : ZYNQ7_OCM_LOW_BASE) + chunk_offset, ZYNQ7_OCM_CHUNK_SIZE);
 	}
 

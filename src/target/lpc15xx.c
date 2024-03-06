@@ -92,7 +92,7 @@ bool lpc15xx_probe(target_s *t)
 	}
 
 	t->driver = "LPC15xx";
-	target_add_ram(t, 0x02000000, ram_size);
+	target_add_ram32(t, 0x02000000, ram_size);
 	lpc15xx_add_flash(t, 0x00000000, 0x40000, 0x1000);
 	target_add_commands(t, lpc15xx_cmd_list, "LPC15xx");
 	return true;

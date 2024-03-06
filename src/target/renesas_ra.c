@@ -500,84 +500,84 @@ bool renesas_ra_probe(target_s *const target)
 	case PNR_SERIES_RA2A1:
 	case PNR_SERIES_RA4M1:
 		renesas_add_flash(target, 0x40100000, 8U * 1024U); /* Data flash memory 8 KB 0x40100000 */
-		target_add_ram(target, 0x20000000, 32U * 1024U);   /* SRAM 32 KB 0x20000000 */
+		target_add_ram32(target, 0x20000000, 32U * 1024U); /* SRAM 32 KB 0x20000000 */
 		break;
 
 	case PNR_SERIES_RA2E1:
 		renesas_add_flash(target, 0x40100000, 4U * 1024U); /* Data flash memory 4 KB 0x40100000 */
-		target_add_ram(target, 0x20004000, 16U * 1024U);   /* SRAM 16 KB 0x20004000 */
+		target_add_ram32(target, 0x20004000, 16U * 1024U); /* SRAM 16 KB 0x20004000 */
 		break;
 
 	case PNR_SERIES_RA2E2:
 		renesas_add_flash(target, 0x40100000, 2U * 1024U); /* Data flash memory 2 KB 0x40100000 */
-		target_add_ram(target, 0x20004000, 8U * 1024U);    /* SRAM 8 KB 0x20004000 */
+		target_add_ram32(target, 0x20004000, 8U * 1024U);  /* SRAM 8 KB 0x20004000 */
 		break;
 
 	case PNR_SERIES_RA4M2:
 	case PNR_SERIES_RA4M3:
 	case PNR_SERIES_RA4E1:
-		renesas_add_flash(target, 0x08000000, 8U * 1024U); /* Data flash memory 8 KB 0x08000000 */
-		target_add_ram(target, 0x20000000, 128U * 1024U);  /* SRAM 128 KB 0x20000000 */
-		target_add_ram(target, 0x28000000, 1024U);         /* Standby SRAM 1 KB 0x28000000 */
+		renesas_add_flash(target, 0x08000000, 8U * 1024U);  /* Data flash memory 8 KB 0x08000000 */
+		target_add_ram32(target, 0x20000000, 128U * 1024U); /* SRAM 128 KB 0x20000000 */
+		target_add_ram32(target, 0x28000000, 1024U);        /* Standby SRAM 1 KB 0x28000000 */
 		break;
 
 	case PNR_SERIES_RA4E2:
 	case PNR_SERIES_RA6E2:
 		renesas_add_flash(target, 0x08000000, 4U * 1024U); /* Data flash memory 4 KB 0x08000000 */
-		target_add_ram(target, 0x20000000, 40U * 1024U);   /* SRAM 40 KB 0x20000000 */
-		target_add_ram(target, 0x28000000, 1024U);         /* Standby SRAM 1 KB 0x28000000 */
+		target_add_ram32(target, 0x20000000, 40U * 1024U); /* SRAM 40 KB 0x20000000 */
+		target_add_ram32(target, 0x28000000, 1024U);       /* Standby SRAM 1 KB 0x28000000 */
 		break;
 
 	case PNR_SERIES_RA4W1:
 		renesas_add_flash(target, 0x40100000, 8U * 1024U); /* Data flash memory 8 KB 0x40100000 */
-		target_add_ram(target, 0x20000000, 96U * 1024U);   /* SRAM 96 KB 0x20000000 */
+		target_add_ram32(target, 0x20000000, 96U * 1024U); /* SRAM 96 KB 0x20000000 */
 		break;
 
 	case PNR_SERIES_RA6M1:
 		/* conflicting information in the datasheet, here be dragons */
-		renesas_add_flash(target, 0x40100000, 8U * 1024U); /* Data flash memory 8 KB 0x40100000 */
-		target_add_ram(target, 0x20000000, 128U * 1024U);  /* SRAM 128 KB 0x20000000 */
-		target_add_ram(target, 0x1ffe0000, 128U * 1024U);  /* SRAMHS 128 KB 0x1ffe0000 */
-		target_add_ram(target, 0x200fe000, 8U * 1024U);    /* Standby SRAM 8 KB 0x200fe000 */
+		renesas_add_flash(target, 0x40100000, 8U * 1024U);  /* Data flash memory 8 KB 0x40100000 */
+		target_add_ram32(target, 0x20000000, 128U * 1024U); /* SRAM 128 KB 0x20000000 */
+		target_add_ram32(target, 0x1ffe0000, 128U * 1024U); /* SRAMHS 128 KB 0x1ffe0000 */
+		target_add_ram32(target, 0x200fe000, 8U * 1024U);   /* Standby SRAM 8 KB 0x200fe000 */
 		break;
 
 	case PNR_SERIES_RA6M2:
 		renesas_add_flash(target, 0x40100000, 32U * 1024U); /* Data flash memory 32 KB 0x40100000 */
-		target_add_ram(target, 0x20000000, 256U * 1024U);   /* SRAM 256 KB 0x20000000 */
-		target_add_ram(target, 0x1ffe0000, 128U * 1024U);   /* SRAMHS 128 KB 0x1ffe0000 */
-		target_add_ram(target, 0x200fe000, 8U * 1024U);     /* Standby SRAM 8 KB 0x200fe000 */
+		target_add_ram32(target, 0x20000000, 256U * 1024U); /* SRAM 256 KB 0x20000000 */
+		target_add_ram32(target, 0x1ffe0000, 128U * 1024U); /* SRAMHS 128 KB 0x1ffe0000 */
+		target_add_ram32(target, 0x200fe000, 8U * 1024U);   /* Standby SRAM 8 KB 0x200fe000 */
 		break;
 
 	case PNR_SERIES_RA6M3:
 		renesas_add_flash(target, 0x40100000, 64U * 1024U); /* Data flash memory 64 KB 0x40100000 */
-		target_add_ram(target, 0x20000000, 256U * 1024U);   /* SRAM0 256 KB 0x20000000 */
-		target_add_ram(target, 0x20040000, 256U * 1024U);   /* SRAM1 256 KB 0x20040000 */
-		target_add_ram(target, 0x1ffe0000, 128U * 1024U);   /* SRAMHS 128 KB 0x1ffe0000 */
-		target_add_ram(target, 0x200fe000, 8U * 1024U);     /* Standby SRAM 8 KB 0x200fe000 */
+		target_add_ram32(target, 0x20000000, 256U * 1024U); /* SRAM0 256 KB 0x20000000 */
+		target_add_ram32(target, 0x20040000, 256U * 1024U); /* SRAM1 256 KB 0x20040000 */
+		target_add_ram32(target, 0x1ffe0000, 128U * 1024U); /* SRAMHS 128 KB 0x1ffe0000 */
+		target_add_ram32(target, 0x200fe000, 8U * 1024U);   /* Standby SRAM 8 KB 0x200fe000 */
 		break;
 
 	case PNR_SERIES_RA6M4:
 	case PNR_SERIES_RA6E1:
-		renesas_add_flash(target, 0x08000000, 8U * 1024U); /* Data flash memory 8 KB 0x08000000 */
-		target_add_ram(target, 0x20000000, 256U * 1024U);  /* SRAM 256 KB 0x20000000 */
-		target_add_ram(target, 0x28000000, 1024U);         /* Standby SRAM 1 KB 0x28000000 */
+		renesas_add_flash(target, 0x08000000, 8U * 1024U);  /* Data flash memory 8 KB 0x08000000 */
+		target_add_ram32(target, 0x20000000, 256U * 1024U); /* SRAM 256 KB 0x20000000 */
+		target_add_ram32(target, 0x28000000, 1024U);        /* Standby SRAM 1 KB 0x28000000 */
 		break;
 
 	case PNR_SERIES_RA6M5:
-		renesas_add_flash(target, 0x08000000, 8U * 1024U); /* Data flash memory 8 KB 0x08000000 */
-		target_add_ram(target, 0x20000000, 512U * 1024U);  /* SRAM 512 KB 0x20000000 */
-		target_add_ram(target, 0x28000000, 1024U);         /* Standby SRAM 1 KB 0x28000000 */
+		renesas_add_flash(target, 0x08000000, 8U * 1024U);  /* Data flash memory 8 KB 0x08000000 */
+		target_add_ram32(target, 0x20000000, 512U * 1024U); /* SRAM 512 KB 0x20000000 */
+		target_add_ram32(target, 0x28000000, 1024U);        /* Standby SRAM 1 KB 0x28000000 */
 		break;
 
 	case PNR_SERIES_RA6T1:
 		renesas_add_flash(target, 0x40100000, 8U * 1024U); /* Data flash memory 8 KB 0x40100000 */
-		target_add_ram(target, 0x1ffe0000, 64U * 1024U);   /* SRAMHS 64 KB 0x1ffe0000 */
+		target_add_ram32(target, 0x1ffe0000, 64U * 1024U); /* SRAMHS 64 KB 0x1ffe0000 */
 		break;
 
 	case PNR_SERIES_RA6T2:
 		renesas_add_flash(target, 0x08000000, 16U * 1024U); /* Data flash memory 16 KB 0x08000000 */
-		target_add_ram(target, 0x20000000, 64U * 1024U);    /* SRAM 64 KB 0x20000000 */
-		target_add_ram(target, 0x28000000, 1024U);          /* Standby SRAM 1 KB 0x28000000 */
+		target_add_ram32(target, 0x20000000, 64U * 1024U);  /* SRAM 64 KB 0x20000000 */
+		target_add_ram32(target, 0x28000000, 1024U);        /* Standby SRAM 1 KB 0x28000000 */
 		break;
 
 	default:

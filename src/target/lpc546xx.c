@@ -160,9 +160,9 @@ bool lpc546xx_probe(target_s *t)
 	 * register bits, see LPC546xx User Manual: §7.5.19 AHB Clock Control register 0
 	 */
 	const uint32_t sram0_size = 64U * 1024U;
-	target_add_ram(t, 0x20000000, sram0_size);
-	target_add_ram(t, 0x20010000, sram123_size);
-	target_add_ram(t, 0x04000000, 0x8000U); /* SRAMX */
+	target_add_ram32(t, 0x20000000, sram0_size);
+	target_add_ram32(t, 0x20010000, sram123_size);
+	target_add_ram32(t, 0x04000000, 0x8000U); /* SRAMX */
 	target_add_commands(t, lpc546xx_cmd_list, "LPC546xx");
 	t->target_options |= TOPT_INHIBIT_NRST;
 	return true;

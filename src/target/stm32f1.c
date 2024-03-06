@@ -196,7 +196,7 @@ bool gd32f1_probe(target_s *target)
 	target->part_id = device_id;
 	target->target_options |= STM32F1_TOPT_32BIT_WRITES;
 	target->mass_erase = stm32f1_mass_erase;
-	target_add_ram(target, 0x20000000, ram_size * 1024U);
+	target_add_ram32(target, 0x20000000, ram_size * 1024U);
 	target_add_commands(target, stm32f1_cmd_list, target->driver);
 
 	return true;
@@ -225,7 +225,7 @@ bool gd32vf1_probe(target_s *const target)
 
 	target->part_id = device_id;
 	target->mass_erase = stm32f1_mass_erase;
-	target_add_ram(target, 0x20000000, ram_size * 1024U);
+	target_add_ram32(target, 0x20000000, ram_size * 1024U);
 	stm32f1_add_flash(target, 0x8000000, (size_t)flash_size * 1024U, 0x400U);
 	target_add_commands(target, stm32f1_cmd_list, target->driver);
 
@@ -283,7 +283,7 @@ static bool at32f40_detect(target_s *target, const uint16_t part_id)
 			return false;
 	}
 	// All parts have 96 KiB SRAM
-	target_add_ram(target, 0x20000000, 96U * 1024U);
+	target_add_ram32(target, 0x20000000, 96U * 1024U);
 	target->driver = "AT32F403A/407";
 	target->part_id = part_id;
 	target->target_options |= STM32F1_TOPT_32BIT_WRITES;
@@ -321,7 +321,7 @@ static bool at32f41_detect(target_s *target, const uint16_t part_id)
 		return false;
 	}
 	// All parts have 32 KiB SRAM
-	target_add_ram(target, 0x20000000, 32U * 1024U);
+	target_add_ram32(target, 0x20000000, 32U * 1024U);
 	target->driver = "AT32F415";
 	target->part_id = part_id;
 	target->target_options |= STM32F1_TOPT_32BIT_WRITES;
@@ -456,7 +456,7 @@ bool mm32l0xx_probe(target_s *target)
 	target->part_id = mm32_id & 0xfffU;
 	target->driver = name;
 	target->mass_erase = stm32f1_mass_erase;
-	target_add_ram(target, 0x20000000U, ram_kbyte * 1024U);
+	target_add_ram32(target, 0x20000000U, ram_kbyte * 1024U);
 	stm32f1_add_flash(target, 0x08000000U, flash_kbyte * 1024U, block_size);
 	target_add_commands(target, stm32f1_cmd_list, name);
 	cortex_ap(target)->dp->mem_write = mm32l0_mem_write_sized;
@@ -500,9 +500,9 @@ bool mm32f3xx_probe(target_s *target)
 	target->driver = name;
 	target->mass_erase = stm32f1_mass_erase;
 	if (ram1_kbyte != 0)
-		target_add_ram(target, 0x20000000U, ram1_kbyte * 1024U);
+		target_add_ram32(target, 0x20000000U, ram1_kbyte * 1024U);
 	if (ram2_kbyte != 0)
-		target_add_ram(target, 0x30000000U, ram2_kbyte * 1024U);
+		target_add_ram32(target, 0x30000000U, ram2_kbyte * 1024U);
 	stm32f1_add_flash(target, 0x08000000U, flash_kbyte * 1024U, block_size);
 	target_add_commands(target, stm32f1_cmd_list, name);
 	return true;
@@ -522,7 +522,7 @@ bool stm32f1_probe(target_s *target)
 	case 0x410U: /* Medium density */
 	case 0x412U: /* Low density */
 	case 0x420U: /* Value Line, Low-/Medium density */
-		target_add_ram(target, 0x20000000, 0x5000);
+		target_add_ram32(target, 0x20000000, 0x5000);
 		stm32f1_add_flash(target, 0x8000000, 0x20000, 0x400);
 		target_add_commands(target, stm32f1_cmd_list, "STM32 LD/MD/VL-LD/VL-MD");
 		/* Test for clone parts with Core rev 2*/
@@ -540,7 +540,7 @@ bool stm32f1_probe(target_s *target)
 	case 0x428U: /* Value Line, High Density */
 		target->driver = "STM32F1  VL density";
 		target->part_id = device_id;
-		target_add_ram(target, 0x20000000, 0x10000);
+		target_add_ram32(target, 0x20000000, 0x10000);
 		stm32f1_add_flash(target, 0x8000000, 0x80000, 0x800);
 		target_add_commands(target, stm32f1_cmd_list, "STM32 HF/CL/VL-HD");
 		return true;
@@ -548,7 +548,7 @@ bool stm32f1_probe(target_s *target)
 	case 0x430U: /* XL-density */
 		target->driver = "STM32F1  XL density";
 		target->part_id = device_id;
-		target_add_ram(target, 0x20000000, 0x18000);
+		target_add_ram32(target, 0x20000000, 0x18000);
 		stm32f1_add_flash(target, 0x8000000, 0x80000, 0x800);
 		stm32f1_add_flash(target, 0x8080000, 0x80000, 0x800);
 		target_add_commands(target, stm32f1_cmd_list, "STM32 XL/VL-XL");
@@ -557,14 +557,14 @@ bool stm32f1_probe(target_s *target)
 	case 0x438U: /* STM32F303x6/8 and STM32F328 */
 	case 0x422U: /* STM32F30x */
 	case 0x446U: /* STM32F303xD/E and STM32F398xE */
-		target_add_ram(target, 0x10000000, 0x4000);
+		target_add_ram32(target, 0x10000000, 0x4000);
 
 		BMD_FALLTHROUGH
 	case 0x432U: /* STM32F37x */
 	case 0x439U: /* STM32F302C8 */
 		target->driver = "STM32F3";
 		target->part_id = device_id;
-		target_add_ram(target, 0x20000000, 0x10000);
+		target_add_ram32(target, 0x20000000, 0x10000);
 		stm32f1_add_flash(target, 0x8000000, 0x80000, 0x800);
 		target_add_commands(target, stm32f1_cmd_list, "STM32F3");
 		return true;
@@ -602,7 +602,7 @@ bool stm32f1_probe(target_s *target)
 	}
 
 	target->part_id = device_id;
-	target_add_ram(target, 0x20000000, 0x5000);
+	target_add_ram32(target, 0x20000000, 0x5000);
 	stm32f1_add_flash(target, 0x8000000, flash_size, block_size);
 	target_add_commands(target, stm32f1_cmd_list, "STM32F0");
 	return true;

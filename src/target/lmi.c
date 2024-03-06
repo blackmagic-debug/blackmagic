@@ -130,11 +130,11 @@ bool lm3s_probe(target_s *const target, const uint16_t did1)
 	switch (did1) {
 	case DID1_LM3S3748:
 	case DID1_LM3S5732:
-		target_add_ram(target, 0x20000000U, 0x10000U);
+		target_add_ram32(target, 0x20000000U, 0x10000U);
 		lmi_add_flash(target, 0x20000U);
 		break;
 	case DID1_LM3S8962:
-		target_add_ram(target, 0x2000000U, 0x10000U);
+		target_add_ram32(target, 0x2000000U, 0x10000U);
 		lmi_add_flash(target, 0x40000U);
 		break;
 	default:
@@ -149,7 +149,7 @@ bool tm4c_probe(target_s *const target, const uint16_t did1)
 {
 	switch (did1) {
 	case DID1_TM4C123GH6PM:
-		target_add_ram(target, 0x20000000, 0x10000);
+		target_add_ram32(target, 0x20000000, 0x10000);
 		lmi_add_flash(target, 0x80000);
 		/*
 		 * On Tiva targets, asserting nRST results in the debug
@@ -159,17 +159,17 @@ bool tm4c_probe(target_s *const target, const uint16_t did1)
 		target->target_options |= TOPT_INHIBIT_NRST;
 		break;
 	case DID1_TM4C1230C3PM:
-		target_add_ram(target, 0x20000000, 0x6000);
+		target_add_ram32(target, 0x20000000, 0x6000);
 		lmi_add_flash(target, 0x10000);
 		target->target_options |= TOPT_INHIBIT_NRST;
 		break;
 	case DID1_TM4C1294KCPDT:
-		target_add_ram(target, 0x20000000, 0x40000);
+		target_add_ram32(target, 0x20000000, 0x40000);
 		lmi_add_flash(target, 0x80000);
 		target->target_options |= TOPT_INHIBIT_NRST;
 		break;
 	case DID1_TM4C1294NCPDT:
-		target_add_ram(target, 0x20000000, 0x40000);
+		target_add_ram32(target, 0x20000000, 0x40000);
 		lmi_add_flash(target, 0x100000);
 		target->target_options |= TOPT_INHIBIT_NRST;
 		break;

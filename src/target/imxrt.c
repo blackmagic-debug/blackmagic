@@ -244,8 +244,8 @@ bool imxrt_probe(target_s *const target)
 	}
 
 	/* Build the RAM map for the part */
-	target_add_ram(target, IMXRT_OCRAM1_BASE, IMXRT_OCRAM1_SIZE);
-	target_add_ram(target, IMXRT_OCRAM2_BASE, IMXRT_OCRAM2_SIZE);
+	target_add_ram32(target, IMXRT_OCRAM1_BASE, IMXRT_OCRAM1_SIZE);
+	target_add_ram32(target, IMXRT_OCRAM2_BASE, IMXRT_OCRAM2_SIZE);
 
 	if (priv->boot_source == BOOT_FLEX_SPI) {
 		/* Try to detect the Flash that should be attached */

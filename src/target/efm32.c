@@ -583,7 +583,7 @@ bool efm32_probe(target_s *t)
 	t->driver = priv_storage->efm32_variant_string;
 	tc_printf(t, "flash size %u page size %u\n", flash_size, flash_page_size);
 
-	target_add_ram(t, SRAM_BASE, ram_size);
+	target_add_ram32(t, SRAM_BASE, ram_size);
 	efm32_add_flash(t, 0x00000000, flash_size, flash_page_size);
 	if (device->user_data_size) { /* optional User Data (UD) section */
 		efm32_add_flash(t, 0x0fe00000, device->user_data_size, flash_page_size);

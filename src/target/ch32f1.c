@@ -215,7 +215,7 @@ bool ch32f1_probe(target_s *t)
 	}
 	uint32_t flashSize = signature & 0xffffU;
 
-	target_add_ram(t, 0x20000000, 0x5000);
+	target_add_ram32(t, 0x20000000, 0x5000);
 	ch32f1_add_flash(t, FLASH_BEGIN_ADDRESS_CH32, flashSize * 1024U, 128);
 	target_add_commands(t, stm32f1_cmd_list, "STM32 LD/MD/VL-LD/VL-MD");
 	t->driver = "CH32F1 medium density (stm32f1 clone)";

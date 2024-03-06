@@ -183,8 +183,8 @@ bool renesas_rz_probe(target_s *const target)
 	if (boot_mode == RENESAS_BSCAN_BOOT_MODE_SPI)
 		renesas_rz_add_flash(target);
 
-	target_add_ram(target, RENESAS_OCRAM_BASE, RENESAS_OCRAM_SIZE);
-	target_add_ram(target, RENESAS_OCRAM_MIRROR_BASE, RENESAS_OCRAM_SIZE);
+	target_add_ram32(target, RENESAS_OCRAM_BASE, RENESAS_OCRAM_SIZE);
+	target_add_ram32(target, RENESAS_OCRAM_MIRROR_BASE, RENESAS_OCRAM_SIZE);
 	return true;
 }
 

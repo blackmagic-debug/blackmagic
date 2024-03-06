@@ -184,7 +184,7 @@ void target_ram_map_free(target_s *target);
 void target_flash_map_free(target_s *target);
 void target_mem_map_free(target_s *target);
 void target_add_commands(target_s *target, const command_s *cmds, const char *name);
-void target_add_ram(target_s *target, target_addr_t start, uint32_t len);
+void target_add_ram32(target_s *target, target_addr32_t start, uint32_t len);
 void target_add_flash(target_s *target, target_flash_s *flash);
 
 target_flash_s *target_flash_for_addr(target_s *target, uint32_t addr);

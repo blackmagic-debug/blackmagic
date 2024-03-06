@@ -224,7 +224,7 @@ bool sam4l_probe(target_s *t)
 	/* This function says we need to do "extra" stuff after reset */
 	t->extended_reset = sam4l_extended_reset;
 
-	target_add_ram(t, 0x20000000, ram_size);
+	target_add_ram32(t, 0x20000000, ram_size);
 	sam4l_add_flash(t, 0x0, flash_size);
 
 	DEBUG_INFO("SAM4L - RAM: 0x%" PRIx32 " (%" PRIu32 "kiB), FLASH: 0x%" PRIx32 " (%" PRIu32 "kiB)\n", ram_size,

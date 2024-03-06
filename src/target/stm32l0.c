@@ -227,7 +227,7 @@ bool stm32l0_probe(target_s *const target)
 	case 0x436U: /* CAT. 4 device */
 	case 0x437U: /* CAT. 5 device  */
 		target->driver = "STM32L1x";
-		target_add_ram(target, 0x20000000, 0x14000);
+		target_add_ram32(target, 0x20000000, 0x14000);
 		stm32l_add_flash(target, 0x8000000, 0x80000, 0x100);
 		//stm32l_add_eeprom(t, 0x8080000, 0x4000);
 		target_add_commands(target, stm32lx_cmd_list, "STM32L1x");
@@ -237,7 +237,7 @@ bool stm32l0_probe(target_s *const target)
 	case 0x417U: /* STM32L0xx Cat3 */
 	case 0x447U: /* STM32L0xx Cat5 */
 		target->driver = "STM32L0x";
-		target_add_ram(target, 0x20000000, 0x5000);
+		target_add_ram32(target, 0x20000000, 0x5000);
 		stm32l_add_flash(target, 0x8000000, 0x10000, 0x80);
 		stm32l_add_flash(target, 0x8010000, 0x10000, 0x80);
 		stm32l_add_flash(target, 0x8020000, 0x10000, 0x80);

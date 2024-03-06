@@ -204,7 +204,7 @@ bool msp432p4_probe(target_s *t)
 		return false;
 	}
 	/* SRAM region, SRAM zone */
-	target_add_ram(t, SRAM_BASE, target_mem32_read32(t, SYS_SRAM_SIZE));
+	target_add_ram32(t, SRAM_BASE, target_mem32_read32(t, SYS_SRAM_SIZE));
 	/* Flash bank size */
 	uint32_t banksize = target_mem32_read32(t, SYS_FLASH_SIZE) / 2U;
 	/* Main Flash Bank 0 */

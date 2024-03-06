@@ -118,8 +118,8 @@ bool stm32mp15_cm4_probe(target_s *const target)
 	target->target_storage = priv;
 
 	/* Figure 4. Memory map from §2.5.2 in RM0436 rev 6, pg158 */
-	target_add_ram(target, STM32MP15_CM4_RETRAM_BASE, STM32MP15_RETRAM_SIZE);
-	target_add_ram(target, STM32MP15_AHBSRAM_BASE, STM32MP15_AHBSRAM_SIZE);
+	target_add_ram32(target, STM32MP15_CM4_RETRAM_BASE, STM32MP15_RETRAM_SIZE);
+	target_add_ram32(target, STM32MP15_AHBSRAM_BASE, STM32MP15_AHBSRAM_SIZE);
 
 	return true;
 }
@@ -134,16 +134,16 @@ bool stm32mp15_ca7_probe(target_s *const target)
 	target_add_commands(target, stm32mp15_cmd_list, target->driver);
 
 	/* Figure 4. Memory map from §2.5.2 in RM0436 rev 6, pg158 */
-	target_add_ram(target, STM32MP15_CA7_RETRAM_BASE, STM32MP15_RETRAM_SIZE);
-	target_add_ram(target, STM32MP15_AHBSRAM_BASE, STM32MP15_AHBSRAM_SIZE);
+	target_add_ram32(target, STM32MP15_CA7_RETRAM_BASE, STM32MP15_RETRAM_SIZE);
+	target_add_ram32(target, STM32MP15_AHBSRAM_BASE, STM32MP15_AHBSRAM_SIZE);
 	/*
 	 * The SRAM appears twice in the map as it's mapped to both the main SRAM
 	 * window and the alias window on the Cortex-A7 cores.
 	 * (Unlike the RETRAM which only appears in the alias window)
 	 */
-	target_add_ram(target, STM32MP15_CA7_AHBSRAM_ALIAS_BASE, STM32MP15_AHBSRAM_SIZE);
-	target_add_ram(target, STM32MP15_SYSRAM_BASE, STM32MP15_SYSRAM_SIZE);
-	target_add_ram(target, STM32MP15_CAN_SRAM_BASE, STM32MP15_CAN_SRAM_SIZE);
+	target_add_ram32(target, STM32MP15_CA7_AHBSRAM_ALIAS_BASE, STM32MP15_AHBSRAM_SIZE);
+	target_add_ram32(target, STM32MP15_SYSRAM_BASE, STM32MP15_SYSRAM_SIZE);
+	target_add_ram32(target, STM32MP15_CAN_SRAM_BASE, STM32MP15_CAN_SRAM_SIZE);
 	return true;
 }
 #endif

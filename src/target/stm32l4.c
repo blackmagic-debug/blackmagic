@@ -623,10 +623,10 @@ static bool stm32l4_attach(target_s *const t)
 	target_mem_map_free(t);
 	/* And rebuild the RAM map */
 	if (device->family == STM32L4_FAMILY_L55x || device->family == STM32L4_FAMILY_U5xx)
-		target_add_ram(t, 0x0a000000, (device->sram1 + device->sram2) * 1024U);
+		target_add_ram32(t, 0x0a000000, (device->sram1 + device->sram2) * 1024U);
 	else
-		target_add_ram(t, 0x10000000, device->sram2 * 1024U);
-	target_add_ram(t, 0x20000000, stm32l4_main_sram_length(t));
+		target_add_ram32(t, 0x10000000, device->sram2 * 1024U);
+	target_add_ram32(t, 0x20000000, stm32l4_main_sram_length(t));
 
 	const uint16_t flash_len = stm32l4_flash_read16(t, FLASHSIZE);
 	const uint32_t options = stm32l4_flash_read32(t, FLASH_OPTR);

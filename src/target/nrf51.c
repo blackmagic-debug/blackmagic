@@ -144,7 +144,7 @@ bool nrf51_probe(target_s *t)
 		uint32_t ram_size = target_mem32_read32(t, NRF52_INFO_RAM);
 		t->driver = "Nordic nRF52";
 		t->target_options |= TOPT_INHIBIT_NRST;
-		target_add_ram(t, 0x20000000U, ram_size * 1024U);
+		target_add_ram32(t, 0x20000000U, ram_size * 1024U);
 		nrf51_add_flash(t, 0, page_size * code_size, page_size);
 		nrf51_add_flash(t, NRF51_UICR, page_size, page_size);
 		target_add_commands(t, nrf51_cmd_list, "nRF52");
@@ -154,7 +154,7 @@ bool nrf51_probe(target_s *t)
 		 * Use the biggest RAM size seen in NRF51 fammily.
 		 * IDCODE is kept as '0', as deciphering is hard and there is later no usage.
 		 */
-		target_add_ram(t, 0x20000000U, 0x8000U);
+		target_add_ram32(t, 0x20000000U, 0x8000U);
 		t->target_options |= TOPT_INHIBIT_NRST;
 		nrf51_add_flash(t, 0, page_size * code_size, page_size);
 		nrf51_add_flash(t, NRF51_UICR, page_size, page_size);
