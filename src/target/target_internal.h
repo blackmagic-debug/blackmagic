@@ -94,9 +94,10 @@ struct target_command {
 typedef struct breakwatch breakwatch_s;
 
 struct breakwatch {
+	/* XXX: This needs adjusting for 64-bit operations */
 	breakwatch_s *next;
 	target_breakwatch_e type;
-	target_addr_t addr;
+	target_addr32_t addr;
 	size_t size;
 	uint32_t reserved[4]; /* For use by the implementing driver */
 };
@@ -141,7 +142,6 @@ struct target {
 	/* Flash functions */
 	bool (*enter_flash_mode)(target_s *target);
 	bool (*exit_flash_mode)(target_s *target);
-	bool flash_mode;
 
 	/* Target-defined options */
 	uint32_t target_options;
@@ -152,6 +152,9 @@ struct target {
 		bool unsafe_enabled;
 		bool ke04_mode;
 	};
+
+	bool attached;
+	bool flash_mode;
 
 	target_ram_s *ram;
 	target_flash_s *flash;
@@ -177,8 +180,6 @@ struct target {
 	 * fallback to AP partno
 	 */
 	uint16_t part_id;
-
-	bool attached;
 };
 
 void target_print_progress(platform_timeout_s *timeout);
@@ -199,6 +200,12 @@ uint8_t target_mem32_read8(target_s *target, target_addr32_t addr);
 bool target_mem32_write32(target_s *target, target_addr32_t addr, uint32_t value);
 bool target_mem32_write16(target_s *target, target_addr32_t addr, uint16_t value);
 bool target_mem32_write8(target_s *target, target_addr32_t addr, uint8_t value);
+uint32_t target_mem64_read32(target_s *target, target_addr64_t addr);
+uint16_t target_mem64_read16(target_s *target, target_addr64_t addr);
+uint8_t target_mem64_read8(target_s *target, target_addr64_t addr);
+bool target_mem64_write32(target_s *target, target_addr64_t addr, uint32_t value);
+bool target_mem64_write16(target_s *target, target_addr64_t addr, uint16_t value);
+bool target_mem64_write8(target_s *target, target_addr64_t addr, uint8_t value);
 bool target_check_error(target_s *target);
 
 /* Access to host controller interface */
