@@ -187,7 +187,12 @@ target_s *target_attach(target_s *target, target_controller_s *controller)
 	return target;
 }
 
-void target_add_ram32(target_s *target, target_addr32_t start, uint32_t len)
+void target_add_ram32(target_s *const target, const target_addr32_t start, const uint32_t len)
+{
+	target_add_ram64(target, start, len);
+}
+
+void target_add_ram64(target_s *const target, const target_addr64_t start, const uint64_t len)
 {
 	target_ram_s *ram = malloc(sizeof(*ram));
 	if (!ram) { /* malloc failed: heap exhaustion */
