@@ -159,6 +159,9 @@ static void renesas_rz_add_flash(target_s *const target)
 	/* Put the controller back into bus usage mode */
 	target_mem_write32(target, RENESAS_MULTI_IO_SPI_COMMON_CTRL,
 		target_mem_read32(target, RENESAS_MULTI_IO_SPI_COMMON_CTRL) & ~RENESAS_MULTI_IO_SPI_COMMON_CTRL_MODE_SPI);
+
+	/* Register the SPI Flash mass erase implementation for mass erase */
+	target->mass_erase = bmp_spi_mass_erase;
 }
 
 bool renesas_rz_probe(target_s *const target)
