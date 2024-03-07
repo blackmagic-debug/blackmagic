@@ -47,23 +47,23 @@
 #undef REMOTE_ADIv5_MEM_WRITE_LENGTH
 
 /* This version of the protocol introduces a command for sending JTAG device information */
-#define REMOTE_HL_PACKET    'H'
-#define REMOTE_ADD_JTAG_DEV 'J'
+#define REMOTE_HL_PACKET       'H'
+#define REMOTE_HL_ADD_JTAG_DEV 'J'
 /* And introduces a device index concept to the ADIv5 protocol */
 #define REMOTE_ADIv5_DEV_INDEX REMOTE_UINT8
 
 /* High-level protocol message for sending a jtag_dev_s */
-#define REMOTE_JTAG_ADD_DEV_STR                                                            \
-	(char[])                                                                               \
-	{                                                                                      \
-		REMOTE_SOM, REMOTE_HL_PACKET, REMOTE_ADD_JTAG_DEV, REMOTE_UINT8, /* index */       \
-			REMOTE_UINT8,                                                /* dr_prescan */  \
-			REMOTE_UINT8,                                                /* dr_postscan */ \
-			REMOTE_UINT8,                                                /* ir_len */      \
-			REMOTE_UINT8,                                                /* ir_prescan */  \
-			REMOTE_UINT8,                                                /* ir_postscan */ \
-			REMOTE_UINT32,                                               /* current_ir */  \
-			REMOTE_EOM, 0                                                                  \
+#define REMOTE_JTAG_ADD_DEV_STR                                                               \
+	(char[])                                                                                  \
+	{                                                                                         \
+		REMOTE_SOM, REMOTE_HL_PACKET, REMOTE_HL_ADD_JTAG_DEV, REMOTE_UINT8, /* index */       \
+			REMOTE_UINT8,                                                   /* dr_prescan */  \
+			REMOTE_UINT8,                                                   /* dr_postscan */ \
+			REMOTE_UINT8,                                                   /* ir_len */      \
+			REMOTE_UINT8,                                                   /* ir_prescan */  \
+			REMOTE_UINT8,                                                   /* ir_postscan */ \
+			REMOTE_UINT32,                                                  /* current_ir */  \
+			REMOTE_EOM, 0                                                                     \
 	}
 
 /* ADIv5 remote protocol messages */

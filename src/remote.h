@@ -101,7 +101,6 @@
 #define REMOTE_VOLTAGE       'V'
 #define REMOTE_NRST_SET      'Z'
 #define REMOTE_NRST_GET      'z'
-#define REMOTE_ADD_JTAG_DEV  'J'
 
 #define REMOTE_START_STR                                                            \
 	(char[])                                                                        \
@@ -220,25 +219,26 @@
 	}
 
 /* High-level protocol elements */
-#define REMOTE_HL_PACKET 'H'
-#define REMOTE_HL_CHECK  'C'
+#define REMOTE_HL_PACKET       'H'
+#define REMOTE_HL_CHECK        'C'
+#define REMOTE_HL_ADD_JTAG_DEV 'J'
 
 #define REMOTE_HL_CHECK_STR                                          \
 	(char[])                                                         \
 	{                                                                \
 		REMOTE_SOM, REMOTE_HL_PACKET, REMOTE_HL_CHECK, REMOTE_EOM, 0 \
 	}
-#define REMOTE_JTAG_ADD_DEV_STR                                                            \
-	(char[])                                                                               \
-	{                                                                                      \
-		REMOTE_SOM, REMOTE_HL_PACKET, REMOTE_ADD_JTAG_DEV, REMOTE_UINT8, /* index */       \
-			REMOTE_UINT8,                                                /* dr_prescan */  \
-			REMOTE_UINT8,                                                /* dr_postscan */ \
-			REMOTE_UINT8,                                                /* ir_len */      \
-			REMOTE_UINT8,                                                /* ir_prescan */  \
-			REMOTE_UINT8,                                                /* ir_postscan */ \
-			REMOTE_UINT32,                                               /* current_ir */  \
-			REMOTE_EOM, 0                                                                  \
+#define REMOTE_JTAG_ADD_DEV_STR                                                               \
+	(char[])                                                                                  \
+	{                                                                                         \
+		REMOTE_SOM, REMOTE_HL_PACKET, REMOTE_HL_ADD_JTAG_DEV, REMOTE_UINT8, /* index */       \
+			REMOTE_UINT8,                                                   /* dr_prescan */  \
+			REMOTE_UINT8,                                                   /* dr_postscan */ \
+			REMOTE_UINT8,                                                   /* ir_len */      \
+			REMOTE_UINT8,                                                   /* ir_prescan */  \
+			REMOTE_UINT8,                                                   /* ir_postscan */ \
+			REMOTE_UINT32,                                                  /* current_ir */  \
+			REMOTE_EOM, 0                                                                     \
 	}
 
 /* ADIv5 protocol elements */

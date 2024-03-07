@@ -323,7 +323,7 @@ static void remote_packet_process_high_level(const char *packet, const size_t pa
 		remote_respond(REMOTE_RESP_OK, REMOTE_HL_VERSION);
 		break;
 
-	case REMOTE_ADD_JTAG_DEV: { /* HJ = fill firmware jtag_devs */
+	case REMOTE_HL_ADD_JTAG_DEV: { /* HJ = fill firmware jtag_devs */
 		/* Check the packet is an appropriate length */
 		if (packet_len < 22U) {
 			remote_respond(REMOTE_RESP_ERR, REMOTE_ERROR_WRONGLEN);
