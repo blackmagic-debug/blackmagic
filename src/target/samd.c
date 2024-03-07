@@ -730,17 +730,11 @@ static bool samd_set_flashlock(target_s *t, uint16_t value, const char **argv)
 
 static bool parse_unsigned(const char *str, uint32_t *val)
 {
-	int result;
+	char *end = NULL;
 	unsigned long num;
 
-	size_t len = strlen(str);
-	// TODO: port to use substrate::toInt_t<> style parser for robustness and smaller code size
-	if (len > 2U && str[0] == '0' && (str[1] == 'x' || str[1] == 'X'))
-		result = sscanf(str + 2, "%lx", &num);
-	else
-		result = sscanf(str, "%lu", &num);
-
-	if (result < 1)
+	num = strtoul(str, &end, 0);
+	if (end == NULL || end == str)
 		return false;
 
 	*val = (uint32_t)num;
