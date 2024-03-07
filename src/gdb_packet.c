@@ -88,7 +88,7 @@ packet_state_e consume_remote_packet(char *const packet, const size_t size)
 			/* Null terminate packet */
 			packet[offset] = '\0';
 			/* Handle packet */
-			remote_packet_process(offset, packet);
+			remote_packet_process(packet, offset);
 
 			/* Restart packet capture */
 			packet[0] = '\0';

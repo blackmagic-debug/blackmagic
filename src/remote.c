@@ -582,30 +582,30 @@ void remote_packet_process_spi(const char *const packet, const size_t packet_len
 	}
 }
 
-void remote_packet_process(unsigned i, char *packet)
+void remote_packet_process(char *const packet, const size_t packet_length)
 {
 	switch (packet[0]) {
 	case REMOTE_SWDP_PACKET:
-		remote_packet_process_swd(packet, i);
+		remote_packet_process_swd(packet, packet_length);
 		break;
 
 	case REMOTE_JTAG_PACKET:
-		remote_packet_process_jtag(packet, i);
+		remote_packet_process_jtag(packet, packet_length);
 		break;
 
 	case REMOTE_GEN_PACKET:
-		remote_packet_process_general(packet, i);
+		remote_packet_process_general(packet, packet_length);
 		break;
 
 	case REMOTE_HL_PACKET:
-		remote_packet_process_high_level(packet, i);
+		remote_packet_process_high_level(packet, packet_length);
 		break;
 
 	case REMOTE_ADIv5_PACKET: {
 		/* Setup an exception frame to try the ADIv5 operation in */
 		volatile exception_s error = {0};
 		TRY_CATCH (error, EXCEPTION_ALL) {
-			remote_packet_process_adiv5(packet, i);
+			remote_packet_process_adiv5(packet, packet_length);
 		}
 		/* Handle any exception we've caught by translating it into a remote protocol response */
 		if (error.type)
@@ -614,7 +614,7 @@ void remote_packet_process(unsigned i, char *packet)
 	}
 
 	case REMOTE_SPI_PACKET:
-		remote_packet_process_spi(packet, i);
+		remote_packet_process_spi(packet, packet_length);
 		break;
 
 	default: /* Oh dear, unrecognised, return an error */

@@ -23,7 +23,7 @@
 #ifndef REMOTE_H
 #define REMOTE_H
 
-#include <inttypes.h>
+#include <stddef.h>
 #include "general.h"
 
 #define REMOTE_HL_VERSION 3
@@ -360,6 +360,6 @@
 			REMOTE_UINT24, REMOTE_EOM, 0                                                                  \
 	}
 
-void remote_packet_process(unsigned int i, char *packet);
+void remote_packet_process(char *packet, size_t packet_length);
 
 #endif /* REMOTE_H */
