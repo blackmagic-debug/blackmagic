@@ -39,4 +39,18 @@ static inline bool is_hex(const char x)
 	return (x >= '0' && x <= '9') || (x >= 'A' && x <= 'F') || (x >= 'a' && x <= 'f');
 }
 
+#define READ_HEX_NO_FOLLOW '\xff'
+
+bool read_unum32(const char *input, const char **rest, uint32_t *val, char follow, int base);
+
+static inline bool read_hex32(const char *input, const char **rest, uint32_t *val, char follow)
+{
+	return read_unum32(input, rest, val, follow, 16);
+}
+
+static inline bool read_dec32(const char *input, const char **rest, uint32_t *val, char follow)
+{
+	return read_unum32(input, rest, val, follow, 10);
+}
+
 #endif /* INCLUDE_HEX_UTILS_H */
