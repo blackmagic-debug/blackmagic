@@ -588,16 +588,14 @@ int target_command(target_s *t, int argc, const char *argv[])
 	return -1;
 }
 
-void tc_printf(target_s *t, const char *fmt, ...)
+void tc_printf(target_s *target, const char *fmt, ...)
 {
-	(void)t;
-	va_list ap;
-
-	if (t->tc == NULL)
+	if (target->tc == NULL)
 		return;
 
+	va_list ap;
 	va_start(ap, fmt);
-	t->tc->printf(t->tc, fmt, ap);
+	target->tc->printf(target->tc, fmt, ap);
 	fflush(stdout);
 	va_end(ap);
 }
