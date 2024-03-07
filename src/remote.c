@@ -419,10 +419,10 @@ static void remote_packet_process_adiv5(const char *const packet, const size_t p
 		/* Grab the CSW value to use in the access */
 		remote_ap.csw = hex_string_to_num(8, packet + 6);
 		/* Grab the start address for the read */
-		const uint32_t address = hex_string_to_num(8, packet + 14U);
+		const target_addr64_t address = hex_string_to_num(16, packet + 14U);
 		/* And how many bytes to read, validating it for buffer overflows */
-		const uint32_t length = hex_string_to_num(8, packet + 22U);
-		if (length > 1024U) {
+		const uint32_t length = hex_string_to_num(8, packet + 30U);
+		if (length > GDB_PACKET_BUFFER_SIZE - REMOTE_ADIv5_MEM_READ_LENGTH) {
 			remote_respond(REMOTE_RESP_PARERR, 0);
 			break;
 		}
@@ -439,10 +439,10 @@ static void remote_packet_process_adiv5(const char *const packet, const size_t p
 		/* Grab the alignment for the access */
 		const align_e align = hex_string_to_num(2, packet + 14U);
 		/* Grab the start address for the write */
-		const uint32_t dest = hex_string_to_num(8, packet + 16U);
+		const target_addr64_t address = hex_string_to_num(16, packet + 16U);
 		/* And how many bytes to read, validating it for buffer overflows */
-		const size_t length = hex_string_to_num(8, packet + 24U);
-		if (length > 1024U) {
+		const uint32_t length = hex_string_to_num(8, packet + 32U);
+		if (length > GDB_PACKET_BUFFER_SIZE - REMOTE_ADIv5_MEM_WRITE_LENGTH) {
 			remote_respond(REMOTE_RESP_PARERR, 0);
 			break;
 		}
@@ -454,9 +454,9 @@ static void remote_packet_process_adiv5(const char *const packet, const size_t p
 		/* Get the aligned packet buffer to reuse for the data to write */
 		void *data = gdb_packet_buffer();
 		/* And decode the data from the packet into it */
-		unhexify(data, packet + 32U, length);
+		unhexify(data, packet + 40U, length);
 		/* Perform the write and report success/failures */
-		adiv5_mem_write_aligned(&remote_ap, dest, data, length, align);
+		adiv5_mem_write_aligned(&remote_ap, address, data, length, align);
 		remote_adiv5_respond(NULL, 0);
 		break;
 	}

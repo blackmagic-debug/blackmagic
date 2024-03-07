@@ -26,7 +26,7 @@
 #include <stddef.h>
 #include "general.h"
 
-#define REMOTE_HL_VERSION 3
+#define REMOTE_HL_VERSION 4
 
 /*
  * Commands to remote end, and responses
@@ -76,6 +76,7 @@
 #define REMOTE_UINT16 '%', '0', '4', 'x'
 #define REMOTE_UINT24 '%', '0', '6', 'x'
 #define REMOTE_UINT32 '%', '0', '8', 'x'
+#define REMOTE_UINT64 '%', '0', '1', '6', 'x'
 
 /* Generic protocol elements */
 #define REMOTE_GEN_PACKET 'G'
@@ -252,7 +253,7 @@
 #define REMOTE_ADIv5_DEV_INDEX REMOTE_UINT8
 #define REMOTE_ADIv5_AP_SEL    REMOTE_UINT8
 #define REMOTE_ADIv5_ADDR16    REMOTE_UINT16
-#define REMOTE_ADIv5_ADDR32    REMOTE_UINT32
+#define REMOTE_ADIv5_ADDR64    REMOTE_UINT64
 #define REMOTE_ADIv5_DATA      REMOTE_UINT32
 #define REMOTE_ADIv5_CSW       REMOTE_UINT32
 #define REMOTE_ADIv5_ALIGNMENT REMOTE_UINT8
@@ -286,24 +287,24 @@
 	(char[])                                                                                           \
 	{                                                                                                  \
 		REMOTE_SOM, REMOTE_ADIv5_PACKET, REMOTE_MEM_READ, REMOTE_ADIv5_DEV_INDEX, REMOTE_ADIv5_AP_SEL, \
-			REMOTE_ADIv5_CSW, REMOTE_ADIv5_ADDR32, REMOTE_ADIv5_COUNT, REMOTE_EOM, 0                   \
+			REMOTE_ADIv5_CSW, REMOTE_ADIv5_ADDR64, REMOTE_ADIv5_COUNT, REMOTE_EOM, 0                   \
 	}
 /*
- * 3 leader bytes + 2 bytes for dev index + 2 bytes for AP select + 8 for CSW + 8 for the address
- * and 8 for the count and one trailer gives 32U
+ * 3 leader bytes + 2 bytes for dev index + 2 bytes for AP select + 8 for CSW + 16 for the address
+ * and 8 for the count and one trailer gives 40U
  */
-#define REMOTE_ADIv5_MEM_READ_LENGTH 32U
+#define REMOTE_ADIv5_MEM_READ_LENGTH 40U
 #define REMOTE_ADIv5_MEM_WRITE_STR                                                                      \
 	(char[])                                                                                            \
 	{                                                                                                   \
 		REMOTE_SOM, REMOTE_ADIv5_PACKET, REMOTE_MEM_WRITE, REMOTE_ADIv5_DEV_INDEX, REMOTE_ADIv5_AP_SEL, \
-			REMOTE_ADIv5_CSW, REMOTE_ADIv5_ALIGNMENT, REMOTE_ADIv5_ADDR32, REMOTE_ADIv5_COUNT, 0        \
+			REMOTE_ADIv5_CSW, REMOTE_ADIv5_ALIGNMENT, REMOTE_ADIv5_ADDR64, REMOTE_ADIv5_COUNT, 0        \
 	}
 /*
  * 3 leader bytes + 2 bytes for dev index + 2 bytes for AP select + 8 for CSW + 2 for the alignment +
- * 8 for the address and 8 for the count and one trailer gives 34U
+ * 16 for the address and 8 for the count and one trailer gives 42U
  */
-#define REMOTE_ADIv5_MEM_WRITE_LENGTH 34U
+#define REMOTE_ADIv5_MEM_WRITE_LENGTH 42U
 
 /* SPI protocol elements */
 #define REMOTE_SPI_PACKET      's'
