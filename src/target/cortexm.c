@@ -60,8 +60,8 @@ static const char *cortexm_regs_description(target_s *target);
 static void cortexm_regs_read(target_s *target, void *data);
 static void cortexm_regs_write(target_s *target, const void *data);
 static uint32_t cortexm_pc_read(target_s *target);
-static ssize_t cortexm_reg_read(target_s *target, uint32_t reg, void *data, size_t max);
-static ssize_t cortexm_reg_write(target_s *target, uint32_t reg, const void *data, size_t max);
+static size_t cortexm_reg_read(target_s *target, uint32_t reg, void *data, size_t max);
+static size_t cortexm_reg_write(target_s *target, uint32_t reg, const void *data, size_t max);
 
 static void cortexm_reset(target_s *target);
 static target_halt_reason_e cortexm_halt_poll(target_s *target, target_addr_t *watch);
@@ -880,20 +880,20 @@ static int dcrsr_regnum(target_s *target, uint32_t reg)
 	return -1;
 }
 
-static ssize_t cortexm_reg_read(target_s *target, uint32_t reg, void *data, size_t max)
+static size_t cortexm_reg_read(target_s *target, uint32_t reg, void *data, size_t max)
 {
 	if (max < 4U)
-		return -1;
+		return 0;
 	uint32_t *r = data;
 	target_mem_write32(target, CORTEXM_DCRSR, dcrsr_regnum(target, reg));
 	*r = target_mem_read32(target, CORTEXM_DCRDR);
 	return 4U;
 }
 
-static ssize_t cortexm_reg_write(target_s *target, uint32_t reg, const void *data, size_t max)
+static size_t cortexm_reg_write(target_s *target, uint32_t reg, const void *data, size_t max)
 {
 	if (max < 4U)
-		return -1;
+		return 0;
 	const uint32_t *r = data;
 	target_mem_write32(target, CORTEXM_DCRDR, *r);
 	target_mem_write32(target, CORTEXM_DCRSR, CORTEXM_DCRSR_REGWnR | dcrsr_regnum(target, reg));

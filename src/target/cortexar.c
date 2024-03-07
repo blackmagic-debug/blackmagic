@@ -380,8 +380,8 @@ static void cortexar_mem_write(target_s *target, target_addr_t dest, const void 
 
 static void cortexar_regs_read(target_s *target, void *data);
 static void cortexar_regs_write(target_s *target, const void *data);
-static ssize_t cortexar_reg_read(target_s *target, uint32_t reg, void *data, size_t max);
-static ssize_t cortexar_reg_write(target_s *target, uint32_t reg, const void *data, size_t max);
+static size_t cortexar_reg_read(target_s *target, uint32_t reg, void *data, size_t max);
+static size_t cortexar_reg_write(target_s *target, uint32_t reg, const void *data, size_t max);
 
 static void cortexar_reset(target_s *target);
 static target_halt_reason_e cortexar_halt_poll(target_s *target, target_addr_t *watch);
@@ -1280,31 +1280,31 @@ static size_t cortexar_reg_width(const size_t reg)
 	return 8U;
 }
 
-static ssize_t cortexar_reg_read(target_s *const target, const uint32_t reg, void *const data, const size_t max)
+static size_t cortexar_reg_read(target_s *const target, const uint32_t reg, void *const data, const size_t max)
 {
 	/* Try to get a pointer to the storage for the requested register, and return -1 if that fails */
 	const void *const reg_ptr = cortexar_reg_ptr(target, reg);
 	if (!reg_ptr)
-		return -1;
+		return 0;
 	/* Now we have a valid register, get its width in bytes, and check that against max */
 	const size_t reg_width = cortexar_reg_width(reg);
 	if (max < reg_width)
-		return -1;
+		return 0;
 	/* Finally, copy the register data out and return the width */
 	memcpy(data, reg_ptr, reg_width);
 	return reg_width;
 }
 
-static ssize_t cortexar_reg_write(target_s *const target, const uint32_t reg, const void *const data, const size_t max)
+static size_t cortexar_reg_write(target_s *const target, const uint32_t reg, const void *const data, const size_t max)
 {
 	/* Try to get a pointer to the storage for the requested register, and return -1 if that fails */
 	void *const reg_ptr = cortexar_reg_ptr(target, reg);
 	if (!reg_ptr)
-		return -1;
+		return 0;
 	/* Now we have a valid register, get its width in bytes, and check that against max */
 	const size_t reg_width = cortexar_reg_width(reg);
 	if (max < reg_width)
-		return -1;
+		return 0;
 	/* Finally, copy the new register data in and return the width */
 	memcpy(reg_ptr, data, reg_width);
 	return reg_width;

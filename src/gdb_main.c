@@ -234,7 +234,7 @@ int gdb_main_loop(target_controller_s *tc, char *pbuf, size_t pbuf_size, size_t 
 			sscanf(pbuf, "p%" SCNx32, &reg);
 			uint8_t val[8];
 			size_t s = target_reg_read(cur_target, reg, val, sizeof(val));
-			if (s > 0)
+			if (s != 0)
 				gdb_putpacket(hexify(pbuf, val, s), s * 2U);
 			else
 				gdb_putpacketz("EFF");
@@ -267,7 +267,7 @@ int gdb_main_loop(target_controller_s *tc, char *pbuf, size_t pbuf_size, size_t 
 			uint8_t value[4] = {0};
 			unhexify(value, packet, value_length);
 			/* Finally, write the converted value to the target */
-			if (target_reg_write(cur_target, reg, value, sizeof(value)) > 0)
+			if (target_reg_write(cur_target, reg, value, sizeof(value)) != 0)
 				gdb_putpacketz("OK");
 			else
 				gdb_putpacketz("EFF");

@@ -68,8 +68,8 @@ typedef struct riscv32_regs {
 #define RV32_MATCH_BEFORE 0x00000000U
 #define RV32_MATCH_AFTER  0x00040000U
 
-static ssize_t riscv32_reg_read(target_s *target, uint32_t c, void *data, size_t max);
-static ssize_t riscv32_reg_write(target_s *target, uint32_t c, const void *data, size_t max);
+static size_t riscv32_reg_read(target_s *target, uint32_t c, void *data, size_t max);
+static size_t riscv32_reg_write(target_s *target, uint32_t c, const void *data, size_t max);
 static void riscv32_regs_read(target_s *target, void *data);
 static void riscv32_regs_write(target_s *target, const void *data);
 
@@ -136,15 +136,15 @@ static void riscv32_regs_write(target_s *const target, const void *const data)
 	riscv_csr_write(hart, RV_DPC, &regs->pc);
 }
 
-static inline ssize_t riscv32_bool_to_4(const bool ret)
+static inline size_t riscv32_bool_to_4(const bool ret)
 {
-	return ret ? 4 : -1;
+	return ret ? 4 : 0;
 }
 
-static ssize_t riscv32_reg_read(target_s *target, const uint32_t reg, void *data, const size_t max)
+static size_t riscv32_reg_read(target_s *target, const uint32_t reg, void *data, const size_t max)
 {
 	if (max != 4)
-		return -1;
+		return 0;
 	/* Grab the hart structure  */
 	riscv_hart_s *const hart = riscv_hart_struct(target);
 	if (reg < 32)
@@ -155,13 +155,13 @@ static ssize_t riscv32_reg_read(target_s *target, const uint32_t reg, void *data
 		return riscv32_bool_to_4(riscv_csr_read(hart, reg - RV_CSR_GDB_OFFSET, data));
 	if (reg >= RV_FPU_GDB_OFFSET)
 		return riscv32_bool_to_4(riscv_csr_read(hart, RV_FP_BASE + reg - RV_FPU_GDB_OFFSET, data));
-	return -1;
+	return 0;
 }
 
-static ssize_t riscv32_reg_write(target_s *const target, const uint32_t reg, const void *data, const size_t max)
+static size_t riscv32_reg_write(target_s *const target, const uint32_t reg, const void *data, const size_t max)
 {
 	if (max != 4)
-		return -1;
+		return 0;
 	/* Grab the hart structure  */
 	riscv_hart_s *const hart = riscv_hart_struct(target);
 	if (reg < 32)
@@ -172,7 +172,7 @@ static ssize_t riscv32_reg_write(target_s *const target, const uint32_t reg, con
 		return riscv32_bool_to_4(riscv_csr_write(hart, reg - RV_CSR_GDB_OFFSET, data));
 	if (reg >= RV_FPU_GDB_OFFSET)
 		return riscv32_bool_to_4(riscv_csr_write(hart, RV_FP_BASE + reg - RV_FPU_GDB_OFFSET, data));
-	return -1;
+	return 0;
 }
 
 /* Takes in data from abstract command arg0 and, based on the access width, unpacks it to dest */
