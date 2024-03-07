@@ -1,0 +1,4 @@
+[wrap-git]
+url = https://github.com/dragonmux/crunch
+revision = head
+clone-recursive = false

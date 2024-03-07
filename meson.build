@@ -106,7 +106,7 @@ extended_warnings = [
 	'-Wformat-truncation',
 	'-Wformat=2',
 	'-w24774', # ‘<function>’ : format string expected in argument <position> is not a string literal
-	'-w24777', #‘<function>’ : format string ‘<format-string>’ requires an argument of type ‘<type>’, but variadic argument <position> has type ‘<type>’ 
+	'-w24777', #‘<function>’ : format string ‘<format-string>’ requires an argument of type ‘<type>’, but variadic argument <position> has type ‘<type>’
 	'-Wimplicit-fallthrough',
 	'-Wmaybe-uninitialized',
 	'-w24701', # Potentially uninitialized local variable 'name' used
@@ -300,6 +300,15 @@ elif bmda_platform.found()
 		native: is_cross_build,
 	)
 	alias_target('bmda', bmda)
+
+	crunch_dep = dependency(
+		'crunch',
+		fallback: 'crunch',
+		required: not is_cross_build,
+		disabler: true,
+		native: true,
+	)
+	subdir('tests', if_found: crunch_dep)
 elif not is_firmware_build
 	error('''
 One or more dependencies for BMDA were not found, and you are not building the firmware.
