@@ -2,7 +2,7 @@
  * This file is part of the Black Magic Debug project.
  *
  * Copyright (C) 2012-2020 Black Sphere Technologies Ltd.
- * Copyright (C) 2022-2023 1BitSquared <info@1bitsquared.com>
+ * Copyright (C) 2022-2024 1BitSquared <info@1bitsquared.com>
  * Written by Rachel Mant <git@dragonmux.network>
  * Contains source and ideas from Gareth McMullin <gareth@blacksphere.co.nz>
  *
