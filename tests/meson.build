@@ -45,3 +45,32 @@ crunch_make_command = [
 	libcrunch_c_args,
 	libcrunch_link_args,
 ]
+
+# This dictionary defines the test .c files, and the respective object files from BMDA needed to build the test
+bmd_tests = {
+	'test_gdb_main': ['gdb_main.c'],
+}
+
+# Loop through all the tests defined, extracting the necessary objects and then building and registering the tests
+foreach test_name, test_deps : bmd_tests
+	test_files = [
+		files(f'@test_name@.c'),
+		bmda.extract_objects(test_deps),
+	]
+
+	test = custom_target(
+		test_name,
+		command: crunch_make_command,
+		input: test_files,
+		output: f'@test_name@.so',
+		depends: crunch_dep,
+		build_by_default: true,
+		native: not is_cross_build,
+	)
+
+	test(
+		test_name,
+		crunch,
+		args: [test_name],
+	)
+endforeach
