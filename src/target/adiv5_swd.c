@@ -31,17 +31,17 @@
 #include "target.h"
 #include "target_internal.h"
 
-uint8_t make_packet_request(uint8_t RnW, uint16_t addr)
+uint8_t make_packet_request(uint8_t rnw, uint16_t addr)
 {
-	bool APnDP = addr & ADIV5_APnDP;
+	bool is_ap = addr & ADIV5_APnDP;
 
 	addr &= 0xffU;
 
 	uint8_t request = 0x81U; /* Park and Startbit */
 
-	if (APnDP)
+	if (is_ap)
 		request ^= 0x22U;
-	if (RnW)
+	if (rnw)
 		request ^= 0x24U;
 
 	addr &= 0xcU;
@@ -375,12 +375,12 @@ uint32_t adiv5_swd_clear_error(adiv5_debug_port_s *const dp, const bool protocol
 	return err;
 }
 
-uint32_t adiv5_swd_raw_access(adiv5_debug_port_s *dp, const uint8_t RnW, const uint16_t addr, const uint32_t value)
+uint32_t adiv5_swd_raw_access(adiv5_debug_port_s *dp, const uint8_t rnw, const uint16_t addr, const uint32_t value)
 {
 	if ((addr & ADIV5_APnDP) && dp->fault)
 		return 0;
 
-	const uint8_t request = make_packet_request(RnW, addr);
+	const uint8_t request = make_packet_request(rnw, addr);
 	uint32_t response = 0;
 	uint8_t ack = SWDP_ACK_WAIT;
 	platform_timeout_s timeout;
@@ -422,7 +422,7 @@ uint32_t adiv5_swd_raw_access(adiv5_debug_port_s *dp, const uint8_t RnW, const u
 		raise_exception(EXCEPTION_ERROR, "SWD invalid ACK");
 	}
 
-	if (RnW) {
+	if (rnw) {
 		if (swd_proc.seq_in_parity(&response, 32U)) { /* Give up on parity error */
 			dp->fault = 1U;
 			DEBUG_ERROR("SWD access resulted in parity error\n");
