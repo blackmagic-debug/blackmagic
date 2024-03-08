@@ -51,8 +51,15 @@ bool remote_v3_adiv5_check_error(
 		const uint64_t response_code = remote_decode_response(buffer + 1, (size_t)length - 1U);
 		const uint8_t error = response_code & 0xffU;
 		/* If the error part of the response code indicates a fault, store the fault value */
-		if (error == REMOTE_ERROR_FAULT)
+		if (error == REMOTE_ERROR_FAULT) {
 			dp->fault = response_code >> 8U;
+			/*
+			 * If we're not handling errors for a function where no-response is non-fatal,
+			 * then turn any no-response fault codes into a fatal exception.
+			 */
+			if (dp->fault == SWDP_ACK_NO_RESPONSE && strcmp(func, "remote_v3_adiv5_raw_access") != 0)
+				raise_exception(EXCEPTION_ERROR, "SWD invalid ACK");
+		}
 		/* If the error part indicates an exception had occurred, make that happen here too */
 		else if (error == REMOTE_ERROR_EXCEPTION)
 			raise_exception(response_code >> 8U, "Remote protocol exception");
