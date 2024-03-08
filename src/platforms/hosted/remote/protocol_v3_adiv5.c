@@ -38,7 +38,7 @@
 #include "hex_utils.h"
 #include "exception.h"
 
-static bool remote_adiv5_check_error(
+bool remote_v3_adiv5_check_error(
 	const char *const func, adiv5_debug_port_s *const dp, const char *const buffer, const ssize_t length)
 {
 	/* Check the response length for error codes */
@@ -80,7 +80,7 @@ uint32_t remote_v3_adiv5_raw_access(
 	platform_buffer_write(buffer, length);
 	/* Read back the answer and check for errors */
 	length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
-	if (!remote_adiv5_check_error(__func__, dp, buffer, length))
+	if (!remote_v3_adiv5_check_error(__func__, dp, buffer, length))
 		return 0U;
 	/* If the response indicates all's OK, decode the data read and return it */
 	uint32_t result_value = 0U;
@@ -101,7 +101,7 @@ uint32_t remote_v3_adiv5_dp_read(adiv5_debug_port_s *const dp, const uint16_t ad
 	platform_buffer_write(buffer, length);
 	/* Read back the answer and check for errors */
 	length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
-	if (!remote_adiv5_check_error(__func__, dp, buffer, length))
+	if (!remote_v3_adiv5_check_error(__func__, dp, buffer, length))
 		return 0U;
 	/* If the response indicates all's OK, decode the data read and return it */
 	uint32_t value = 0U;
@@ -118,7 +118,7 @@ uint32_t remote_v3_adiv5_ap_read(adiv5_access_port_s *const ap, const uint16_t a
 	platform_buffer_write(buffer, length);
 	/* Read back the answer and check for errors */
 	length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
-	if (!remote_adiv5_check_error(__func__, ap->dp, buffer, length))
+	if (!remote_v3_adiv5_check_error(__func__, ap->dp, buffer, length))
 		return 0U;
 	/* If the response indicates all's OK, decode the data read and return it */
 	uint32_t value = 0U;
@@ -136,7 +136,7 @@ void remote_v3_adiv5_ap_write(adiv5_access_port_s *const ap, const uint16_t addr
 	platform_buffer_write(buffer, length);
 	/* Read back the answer and check for errors */
 	length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
-	if (!remote_adiv5_check_error(__func__, ap->dp, buffer, length))
+	if (!remote_v3_adiv5_check_error(__func__, ap->dp, buffer, length))
 		return;
 	DEBUG_PROBE("%s: addr %04x <- %08" PRIx32 "\n", __func__, addr, value);
 }
@@ -171,7 +171,7 @@ void remote_v3_adiv5_mem_read_bytes(
 
 		/* Read back the answer and check for errors */
 		length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
-		if (!remote_adiv5_check_error(__func__, ap->dp, buffer, length)) {
+		if (!remote_v3_adiv5_check_error(__func__, ap->dp, buffer, length)) {
 			DEBUG_ERROR("%s error around 0x%08zx\n", __func__, (size_t)src + offset);
 			return;
 		}
@@ -215,7 +215,7 @@ void remote_v3_adiv5_mem_write_bytes(adiv5_access_port_s *const ap, const target
 
 		/* Read back the answer and check for errors */
 		length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
-		if (!remote_adiv5_check_error(__func__, ap->dp, buffer, length)) {
+		if (!remote_v3_adiv5_check_error(__func__, ap->dp, buffer, length)) {
 			DEBUG_ERROR("%s error around 0x%08zx\n", __func__, (size_t)dest + offset);
 			return;
 		}
