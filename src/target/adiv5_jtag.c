@@ -96,17 +96,17 @@ uint32_t adiv5_jtag_clear_error(adiv5_debug_port_s *dp, const bool protocol_reco
 	return adiv5_dp_low_access(dp, ADIV5_LOW_WRITE, ADIV5_DP_CTRLSTAT, status) & 0x32U;
 }
 
-uint32_t adiv5_jtag_raw_access(adiv5_debug_port_s *dp, uint8_t RnW, uint16_t addr, uint32_t value)
+uint32_t adiv5_jtag_raw_access(adiv5_debug_port_s *dp, uint8_t rnw, uint16_t addr, uint32_t value)
 {
-	const bool APnDP = addr & ADIV5_APnDP;
+	const bool is_ap = addr & ADIV5_APnDP;
 	addr &= 0xffU;
 
-	const uint64_t request = ((uint64_t)value << 3U) | ((addr >> 1U) & 0x06U) | (RnW ? 1U : 0U);
+	const uint64_t request = ((uint64_t)value << 3U) | ((addr >> 1U) & 0x06U) | (rnw ? 1U : 0U);
 
 	uint32_t result;
 	uint8_t ack;
 
-	jtag_dev_write_ir(dp->dev_index, APnDP ? IR_APACC : IR_DPACC);
+	jtag_dev_write_ir(dp->dev_index, is_ap ? IR_APACC : IR_DPACC);
 
 	platform_timeout_s timeout;
 	platform_timeout_set(&timeout, 250);
