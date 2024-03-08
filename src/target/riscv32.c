@@ -143,7 +143,8 @@ static inline size_t riscv32_bool_to_4(const bool ret)
 
 static size_t riscv32_reg_read(target_s *target, const uint32_t reg, void *data, const size_t max)
 {
-	if (max != 4)
+	/* We may be called with a buffer larger then necessary, so only error if there is too little space */
+	if (max < 4)
 		return 0;
 	/* Grab the hart structure  */
 	riscv_hart_s *const hart = riscv_hart_struct(target);
