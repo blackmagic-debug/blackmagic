@@ -264,6 +264,11 @@ int gdb_main_loop(target_controller_s *tc, char *pbuf, size_t pbuf_size, size_t 
 			/* Skip past the '=' and convert the value */
 			++packet;
 			const size_t value_length = strlen(packet) / 2U;
+			/* If the value is bigger than 4 bytes report error */
+			if (value_length > 4U) {
+				gdb_putpacketz("EFF");
+				break;
+			}
 			uint8_t value[4] = {0};
 			unhexify(value, packet, value_length);
 			/* Finally, write the converted value to the target */
