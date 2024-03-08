@@ -221,12 +221,18 @@
 /* High-level protocol elements */
 #define REMOTE_HL_PACKET       'H'
 #define REMOTE_HL_CHECK        'C'
+#define REMOTE_HL_ACCEL        'A'
 #define REMOTE_HL_ADD_JTAG_DEV 'J'
 
 #define REMOTE_HL_CHECK_STR                                          \
 	(char[])                                                         \
 	{                                                                \
 		REMOTE_SOM, REMOTE_HL_PACKET, REMOTE_HL_CHECK, REMOTE_EOM, 0 \
+	}
+#define REMOTE_HL_ACCEL_STR                                          \
+	(char[])                                                         \
+	{                                                                \
+		REMOTE_SOM, REMOTE_HL_PACKET, REMOTE_HL_ACCEL, REMOTE_EOM, 0 \
 	}
 #define REMOTE_JTAG_ADD_DEV_STR                                                               \
 	(char[])                                                                                  \
@@ -240,6 +246,11 @@
 			REMOTE_UINT32,                                                  /* current_ir */  \
 			REMOTE_EOM, 0                                                                     \
 	}
+
+/* Remote protocol enabled acceleration bit values */
+#define REMOTE_ACCEL_ADIV5     (1U << 0U)
+#define REMOTE_ACCEL_CORTEX_AR (1U << 1U)
+#define REMOTE_ACCEL_RISCV     (1U << 2U)
 
 /* ADIv5 protocol elements */
 #define REMOTE_ADIv5_PACKET     'A'

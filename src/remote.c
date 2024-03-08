@@ -343,6 +343,12 @@ static void remote_packet_process_high_level(const char *packet, const size_t pa
 		break;
 	}
 
+	case REMOTE_HL_ACCEL: { /* HA = request what accelerations are available */
+		/* Build a response value that depends on what things are built into the firmare */
+		remote_respond(REMOTE_RESP_OK, REMOTE_ACCEL_ADIV5);
+		break;
+	}
+
 	default:
 		remote_respond(REMOTE_RESP_ERR, REMOTE_ERROR_UNRECOGNISED);
 		break;
