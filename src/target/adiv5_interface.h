@@ -25,6 +25,7 @@
 #define TARGET_ADIV5_INTERFACE_H
 
 #include "adiv5_internal.h"
+#include "exception.h"
 
 #ifndef DEBUG_PROTO_IS_NOOP
 void decode_access(uint16_t addr, uint8_t rnw, uint8_t apsel, uint32_t value);
@@ -157,7 +158,11 @@ static inline uint32_t adiv5_dp_recoverable_access(adiv5_debug_port_s *dp, uint8
 		swd_proc.seq_in_parity(&response, 32);
 		DEBUG_WARN("Recovering and re-trying access\n");
 		dp->error(dp, true);
-		return dp->low_access(dp, rnw, addr, value);
+		response = dp->low_access(dp, rnw, addr, value);
+		/* If the access results in no-response again, throw to propergate that up */
+		if (dp->fault == SWDP_ACK_NO_RESPONSE)
+			raise_exception(EXCEPTION_ERROR, "SWD invalid ACK");
+		return response;
 	}
 	return result;
 }
