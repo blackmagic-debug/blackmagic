@@ -30,6 +30,7 @@
 #include "remote/protocol_v1.h"
 #include "remote/protocol_v2.h"
 #include "remote/protocol_v3.h"
+#include "remote/protocol_v4.h"
 
 #ifndef _MSC_VER
 #include <sys/time.h>
@@ -94,6 +95,10 @@ bool remote_init(const bool power_up)
 			break;
 		case 3:
 			remote_v3_init();
+			break;
+		case 4:
+			if (!remote_v4_init())
+				return false;
 			break;
 		default:
 			DEBUG_ERROR("Unknown remote protocol version %" PRIu64 ", aborting\n", version);
