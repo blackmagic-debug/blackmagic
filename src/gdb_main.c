@@ -166,20 +166,21 @@ int32_t gdb_main_loop(target_controller_s *tc, char *pbuf, size_t pbuf_size, siz
 	case 'M': { /* 'M addr,len:XX': Write len bytes to addr */
 		uint32_t addr = 0;
 		uint32_t len = 0;
-		int hex;
+		rest = NULL;
 		ERROR_IF_NO_TARGET();
-		sscanf(pbuf, "M%" SCNx32 ",%" SCNx32 ":%n", &addr, &len, &hex);
-		if (len > (unsigned)(size - hex) / 2U) {
-			gdb_putpacketz("E02");
-			break;
+		if (read_hex32(pbuf + 1, &rest, &addr, ',') && read_hex32(rest, &rest, &len, ':')) {
+			if (len > (unsigned)(size - (pbuf - rest)) / 2U) {
+				gdb_putpacketz("E02");
+				break;
+			}
+			DEBUG_GDB("M packet: addr = %" PRIx32 ", len = %" PRIx32 "\n", addr, len);
+			uint8_t *mem = alloca(len);
+			unhexify(mem, rest, len);
+			if (target_mem_write(cur_target, addr, mem, len))
+				gdb_putpacketz("E01");
+			else
+				gdb_putpacketz("OK");
 		}
-		DEBUG_GDB("M packet: addr = %" PRIx32 ", len = %" PRIx32 "\n", addr, len);
-		uint8_t *mem = alloca(len);
-		unhexify(mem, pbuf + hex, len);
-		if (target_mem_write(cur_target, addr, mem, len))
-			gdb_putpacketz("E01");
-		else
-			gdb_putpacketz("OK");
 		break;
 	}
 	/*
