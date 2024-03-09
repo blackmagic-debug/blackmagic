@@ -188,10 +188,12 @@ int32_t gdb_main_loop(target_controller_s *tc, char *pbuf, size_t pbuf_size, siz
 	 * (we don't actually care which as we only care about the TID for whether to send OK or an error)
 	 */
 	case 'H': {
-		char operation = 0;
 		uint32_t thread_id = 0;
-		sscanf(pbuf, "H%c%" SCNx32, &operation, &thread_id);
-		if (thread_id <= 1)
+		/*
+		 * Since we don't care about the operation just skip it but check there is at least 3 characters
+		 * in the packet.
+		 */
+		if (size >= 3 && read_hex32(pbuf + 2, NULL, &thread_id, READ_HEX_NO_FOLLOW) && thread_id <= 1)
 			gdb_putpacketz("OK");
 		else
 			gdb_putpacketz("E01");
