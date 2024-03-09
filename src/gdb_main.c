@@ -615,8 +615,8 @@ static void exec_v_attach(const char *packet, const size_t length)
 {
 	(void)length;
 
-	uint32_t addr = 0;
-	if (sscanf(packet, "%08" PRIx32, &addr) == 1) {
+	uint32_t addr;
+	if (read_hex32(packet, NULL, &addr, READ_HEX_NO_FOLLOW)) {
 		/* Attach to remote target processor */
 		cur_target = target_attach_n(addr, &gdb_controller);
 		if (cur_target) {
