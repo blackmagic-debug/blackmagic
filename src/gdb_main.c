@@ -785,20 +785,20 @@ static void exec_v_flash_erase(const char *packet, const size_t length)
 
 static void exec_v_flash_write(const char *packet, const size_t length)
 {
-	uint32_t addr = 0;
-	int bin;
-
-	if (sscanf(packet, "%08" PRIx32 ":%n", &addr, &bin) == 1) {
+	uint32_t addr;
+	const char *rest = NULL;
+	if (read_hex32(packet, &rest, &addr, ':')) {
 		/* Write Flash Memory */
-		const uint32_t count = length - bin;
+		const uint32_t count = length - (packet - rest);
 		DEBUG_GDB("Flash Write %08" PRIX32 " %08" PRIX32 "\n", addr, count);
-		if (cur_target && target_flash_write(cur_target, addr, (uint8_t *)packet + bin, count))
+		if (cur_target && target_flash_write(cur_target, addr, (uint8_t *)rest, count))
 			gdb_putpacketz("OK");
 		else {
 			target_flash_complete(cur_target);
 			gdb_putpacketz("EFF");
 		}
-	}
+	} else
+		gdb_putpacketz("EFF");
 }
 
 static void exec_v_flash_done(const char *packet, const size_t length)
