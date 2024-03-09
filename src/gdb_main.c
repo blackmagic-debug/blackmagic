@@ -262,24 +262,21 @@ int32_t gdb_main_loop(target_controller_s *tc, char *pbuf, size_t pbuf_size, siz
 			 * For now we only support 32-bit targets which have registers the same width, so constrain
 			 * the value buffer accordingly. If the `=` is missing it's an invalid packet.
 			 */
-			char *packet = NULL;
-			/* Extract the register number */
-			uint32_t reg = strtoul(pbuf + 1, &packet, 16);
-			/* Check that the conversion succeeded and we have that '=' */
-			if (packet == NULL || packet[0] != '=') {
+			uint32_t reg;
+
+			/* Extract the register number and check that '=' follows it */
+			if (!read_hex32(pbuf + 1, &rest, &reg, '=')) {
 				gdb_putpacketz("EFF");
 				break;
 			}
-			/* Skip past the '=' and convert the value */
-			++packet;
-			const size_t value_length = strlen(packet) / 2U;
+			const size_t value_length = strlen(rest) / 2U;
 			/* If the value is bigger than 4 bytes report error */
 			if (value_length > 4U) {
 				gdb_putpacketz("EFF");
 				break;
 			}
 			uint8_t value[4] = {0};
-			unhexify(value, packet, value_length);
+			unhexify(value, rest, value_length);
 			/* Finally, write the converted value to the target */
 			if (target_reg_write(cur_target, reg, value, sizeof(value)) != 0)
 				gdb_putpacketz("OK");
