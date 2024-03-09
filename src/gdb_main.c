@@ -237,13 +237,16 @@ int32_t gdb_main_loop(target_controller_s *tc, char *pbuf, size_t pbuf_size, siz
 		ERROR_IF_NO_TARGET();
 		if (cur_target->reg_read) {
 			uint32_t reg;
-			sscanf(pbuf, "p%" SCNx32, &reg);
-			uint8_t val[8];
-			size_t s = target_reg_read(cur_target, reg, val, sizeof(val));
-			if (s != 0)
-				gdb_putpacket(hexify(pbuf, val, s), s * 2U);
-			else
+			if (!read_hex32(pbuf + 1, NULL, &reg, READ_HEX_NO_FOLLOW))
 				gdb_putpacketz("EFF");
+			else {
+				uint8_t val[8];
+				size_t s = target_reg_read(cur_target, reg, val, sizeof(val));
+				if (s != 0)
+					gdb_putpacket(hexify(pbuf, val, s), s * 2U);
+				else
+					gdb_putpacketz("EFF");
+			}
 		} else {
 			gdb_putpacketz("00");
 		}
