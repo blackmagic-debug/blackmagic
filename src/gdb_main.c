@@ -611,13 +611,12 @@ static void handle_q_packet(char *packet, const size_t length)
 	gdb_putpacket("", 0);
 }
 
-static void handle_v_packet(char *packet, const size_t plen)
+static void exec_v_attach(const char *packet, const size_t length)
 {
-	uint32_t addr = 0;
-	uint32_t len = 0;
-	int bin;
+	(void)length;
 
-	if (sscanf(packet, "vAttach;%08" PRIx32, &addr) == 1) {
+	uint32_t addr = 0;
+	if (sscanf(packet, "%08" PRIx32, &addr) == 1) {
 		/* Attach to remote target processor */
 		cur_target = target_attach_n(addr, &gdb_controller);
 		if (cur_target) {
@@ -635,115 +634,137 @@ static void handle_v_packet(char *packet, const size_t plen)
 		} else
 			gdb_putpacketz("E01");
 
-	} else if (!strncmp(packet, "vKill;", 6U)) {
-		/* Kill the target - we don't actually care about the PID that follows "vKill;" */
-		handle_kill_target();
-		gdb_putpacketz("OK");
+	} else {
+		DEBUG_GDB("*** Unsupported packet: %s\n", packet);
+		gdb_putpacket("", 0);
+	}
+}
 
-	} else if (!strncmp(packet, "vRun", 4U)) {
-		/* Parse command line for SYS_GET_CMDLINE semihosting call */
-		char cmdline[MAX_CMDLINE];
-		size_t offset = 0;
-		char *tok = packet + 4U;
-		if (tok[0] == ';')
-			++tok;
-		while (*tok != '\0') {
-			/* Check if there's space for another character */
-			if (offset + 1U >= MAX_CMDLINE)
-				break;
-			/* Translate ';' delimeters into spaces */
-			if (tok[0] == ';') {
-				cmdline[offset++] = ' ';
-				++tok;
-				continue;
-			}
-			/* If the next thing's a hex digit pair, decode that */
-			if (is_hex(tok[0U]) && is_hex(tok[1U])) {
-				unhexify(cmdline + offset, tok, 2U);
-				/* If the character decoded is ' ' or '\' then prefix it with a leading '\' */
-				if (cmdline[offset] == ' ' || cmdline[offset] == '\\') {
-					/* First check if there's space */
-					if (offset + 2U >= MAX_CMDLINE)
-						break;
-					cmdline[offset + 1] = cmdline[offset];
-					cmdline[offset++] = '\\';
-				}
-				++offset;
-				tok += 2U;
-				continue;
-			}
+static void exec_v_kill(const char *packet, const size_t length)
+{
+	(void)packet;
+	(void)length;
+	/* Kill the target - we don't actually care about the PID that follows "vKill;" */
+	handle_kill_target();
+	gdb_putpacketz("OK");
+}
+
+static void exec_v_run(const char *packet, const size_t length)
+{
+	(void)length;
+	/* Parse command line for SYS_GET_CMDLINE semihosting call */
+	char cmdline[MAX_CMDLINE];
+	size_t offset = 0;
+	const char *tok = packet;
+	if (tok[0] == ';')
+		++tok;
+	while (*tok != '\0') {
+		/* Check if there's space for another character */
+		if (offset + 1U >= MAX_CMDLINE)
 			break;
+		/* Translate ';' delimeters into spaces */
+		if (tok[0] == ';') {
+			cmdline[offset++] = ' ';
+			++tok;
+			continue;
 		}
-		cmdline[offset] = '\0';
-		/* Reset the semihosting SYS_CLOCK start point */
-		semihosting_wallclock_epoch = UINT32_MAX;
+		/* If the next thing's a hex digit pair, decode that */
+		if (is_hex(tok[0U]) && is_hex(tok[1U])) {
+			unhexify(cmdline + offset, tok, 2U);
+			/* If the character decoded is ' ' or '\' then prefix it with a leading '\' */
+			if (cmdline[offset] == ' ' || cmdline[offset] == '\\') {
+				/* First check if there's space */
+				if (offset + 2U >= MAX_CMDLINE)
+					break;
+				cmdline[offset + 1] = cmdline[offset];
+				cmdline[offset++] = '\\';
+			}
+			++offset;
+			tok += 2U;
+			continue;
+		}
+		break;
+	}
+	cmdline[offset] = '\0';
+	/* Reset the semihosting SYS_CLOCK start point */
+	semihosting_wallclock_epoch = UINT32_MAX;
 #ifdef ENABLE_RTT
-		/* Force searching for the RTT control block */
-		rtt_found = false;
+	/* Force searching for the RTT control block */
+	rtt_found = false;
 #endif
-		/* Run target program. For us (embedded) this means reset. */
+	/* Run target program. For us (embedded) this means reset. */
+	if (cur_target) {
+		target_set_cmdline(cur_target, cmdline, offset);
+		target_reset(cur_target);
+		gdb_putpacketz("T05");
+	} else if (last_target) {
+		cur_target = target_attach(last_target, &gdb_controller);
+
+		/* If we were able to attach to the target again */
 		if (cur_target) {
 			target_set_cmdline(cur_target, cmdline, offset);
 			target_reset(cur_target);
+			morse(NULL, false);
 			gdb_putpacketz("T05");
-		} else if (last_target) {
-			cur_target = target_attach(last_target, &gdb_controller);
-
-			/* If we were able to attach to the target again */
-			if (cur_target) {
-				target_set_cmdline(cur_target, cmdline, offset);
-				target_reset(cur_target);
-				morse(NULL, false);
-				gdb_putpacketz("T05");
-			} else
-				gdb_putpacketz("E01");
-
 		} else
 			gdb_putpacketz("E01");
 
-	} else if (!strncmp(packet, "vCont", 5U)) {
-		/* Check if this is a "vCont?" packet */
-		if (packet[5] == '?') {
-			/*
-			 * It is, so reply with what we support doing when receiving the command version of this packet.
-			 *
-			 * We support 'c' (continue), 'C' (continue + signal), and 's' (step) actions.
-			 * If we didn't support both 'c' and 'C', then GDB would disable vCont usage even though
-			 * 'C' doesn't make any sense in our context.
-			 * See https://github.com/bminor/binutils-gdb/blob/de2efa143e3652d69c278dd1eb10a856593917c0/gdb/remote.c#L6526
-			 * for more details.
-			 *
-			 * TODO: Support the 't' (stop) action needed for non-stop debug so GDB can request a halt.
-			 */
-			gdb_putpacketz("vCont;c;C;s;t");
-			return;
-		}
+	} else
+		gdb_putpacketz("E01");
+}
 
-		/* Otherwise it's a standard `vCont` packet, check if we're presently attached to a target */
+static void exec_v_cont(const char *packet, const size_t length)
+{
+	(void)length;
+	/* Check if this is a "vCont?" packet */
+	if (packet[0] == '?') {
+		/*
+		 * It is, so reply with what we support doing when receiving the command version of this packet.
+		 *
+		 * We support 'c' (continue), 'C' (continue + signal), and 's' (step) actions.
+		 * If we didn't support both 'c' and 'C', then GDB would disable vCont usage even though
+		 * 'C' doesn't make any sense in our context.
+		 * See https://github.com/bminor/binutils-gdb/blob/de2efa143e3652d69c278dd1eb10a856593917c0/gdb/remote.c#L6526
+		 * for more details.
+		 *
+		 * TODO: Support the 't' (stop) action needed for non-stop debug so GDB can request a halt.
+		 */
+		gdb_putpacketz("vCont;c;C;s;t");
+		return;
+	}
+
+	/* Otherwise it's a standard `vCont` packet, check if we're presently attached to a target */
+	if (!cur_target) {
+		gdb_putpacketz("E01");
+		return;
+	}
+
+	bool single_step = false;
+	switch (packet[1]) {
+	case 's': /* 's': Single step */
+		single_step = true;
+		BMD_FALLTHROUGH
+	case 'c': /* 'c': Continue */
+	case 'C': /* 'C sig': Continue with signal */
 		if (!cur_target) {
-			gdb_putpacketz("E01");
-			return;
-		}
-
-		bool single_step = false;
-		switch (packet[6]) {
-		case 's': /* 's': Single step */
-			single_step = true;
-			BMD_FALLTHROUGH
-		case 'c': /* 'c': Continue */
-		case 'C': /* 'C sig': Continue with signal */
-			if (!cur_target) {
-				gdb_putpacketz("X1D");
-				break;
-			}
-
-			target_halt_resume(cur_target, single_step);
-			SET_RUN_STATE(true);
-			gdb_target_running = true;
+			gdb_putpacketz("X1D");
 			break;
 		}
 
-	} else if (sscanf(packet, "vFlashErase:%08" PRIx32 ",%08" PRIx32, &addr, &len) == 2) {
+		target_halt_resume(cur_target, single_step);
+		SET_RUN_STATE(true);
+		gdb_target_running = true;
+		break;
+	}
+}
+
+static void exec_v_flash_erase(const char *packet, const size_t length)
+{
+	(void)length;
+	uint32_t addr = 0;
+	uint32_t len = 0;
+
+	if (sscanf(packet, "%08" PRIx32 ",%08" PRIx32, &addr, &len) == 2) {
 		/* Erase Flash Memory */
 		DEBUG_GDB("Flash Erase %08" PRIX32 " %08" PRIX32 "\n", addr, len);
 		if (!cur_target) {
@@ -757,10 +778,17 @@ static void handle_v_packet(char *packet, const size_t plen)
 			target_flash_complete(cur_target);
 			gdb_putpacketz("EFF");
 		}
+	}
+}
 
-	} else if (sscanf(packet, "vFlashWrite:%08" PRIx32 ":%n", &addr, &bin) == 1) {
+static void exec_v_flash_write(const char *packet, const size_t length)
+{
+	uint32_t addr = 0;
+	int bin;
+
+	if (sscanf(packet, "%08" PRIx32 ":%n", &addr, &bin) == 1) {
 		/* Write Flash Memory */
-		const uint32_t count = plen - bin;
+		const uint32_t count = length - bin;
 		DEBUG_GDB("Flash Write %08" PRIX32 " %08" PRIX32 "\n", addr, count);
 		if (cur_target && target_flash_write(cur_target, addr, (uint8_t *)packet + bin, count))
 			gdb_putpacketz("OK");
@@ -768,30 +796,55 @@ static void handle_v_packet(char *packet, const size_t plen)
 			target_flash_complete(cur_target);
 			gdb_putpacketz("EFF");
 		}
-
-	} else if (!strcmp(packet, "vFlashDone")) {
-		/* Commit flash operations. */
-		if (target_flash_complete(cur_target))
-			gdb_putpacketz("OK");
-		else
-			gdb_putpacketz("EFF");
-
-	} else if (!strcmp(packet, "vStopped")) {
-		if (gdb_needs_detach_notify) {
-			gdb_putpacketz("W00");
-			gdb_needs_detach_notify = false;
-		} else
-			gdb_putpacketz("OK");
-
-	} else {
-		/*
-		 * The vMustReplyEmpty is used as a feature test to check how gdbserver handles
-		 * unknown packets, don't print an error message for it.
-		 */
-		if (strcmp(packet, "vMustReplyEmpty") != 0)
-			DEBUG_GDB("*** Unsupported packet: %s\n", packet);
-		gdb_putpacket("", 0);
 	}
+}
+
+static void exec_v_flash_done(const char *packet, const size_t length)
+{
+	(void)packet;
+	(void)length;
+	/* Commit flash operations. */
+	if (target_flash_complete(cur_target))
+		gdb_putpacketz("OK");
+	else
+		gdb_putpacketz("EFF");
+}
+
+static void exec_v_stopped(const char *packet, const size_t length)
+{
+	(void)packet;
+	(void)length;
+	if (gdb_needs_detach_notify) {
+		gdb_putpacketz("W00");
+		gdb_needs_detach_notify = false;
+	} else
+		gdb_putpacketz("OK");
+}
+
+static const cmd_executer_s v_commands[] = {
+	{"vAttach;", exec_v_attach},
+	{"vKill;", exec_v_kill},
+	{"vRun", exec_v_run},
+	{"vCont", exec_v_cont},
+	{"vFlashErase:", exec_v_flash_erase},
+	{"vFlashWrite:", exec_v_flash_write},
+	{"vFlashDone", exec_v_flash_done},
+	{"vStopped", exec_v_stopped},
+	{NULL, NULL},
+};
+
+static void handle_v_packet(char *packet, const size_t plen)
+{
+	if (exec_command(packet, plen, v_commands))
+		return;
+
+	/*
+	 * The vMustReplyEmpty is used as a feature test to check how gdbserver handles
+	 * unknown packets, don't print an error message for it.
+	 */
+	if (strcmp(packet, "vMustReplyEmpty") != 0)
+		DEBUG_GDB("*** Unsupported packet: %s\n", packet);
+	gdb_putpacket("", 0);
 }
 
 static void handle_z_packet(char *packet, const size_t plen)
