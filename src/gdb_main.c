@@ -117,6 +117,7 @@ target_controller_s gdb_controller = {
 int32_t gdb_main_loop(target_controller_s *tc, char *pbuf, size_t pbuf_size, size_t size, bool in_syscall)
 {
 	bool single_step = false;
+	const char *rest = NULL;
 
 	/* GDB protocol main loop */
 	switch (pbuf[0]) {
@@ -136,17 +137,19 @@ int32_t gdb_main_loop(target_controller_s *tc, char *pbuf, size_t pbuf_size, siz
 	case 'm': { /* 'm addr,len': Read len bytes from addr */
 		uint32_t addr, len;
 		ERROR_IF_NO_TARGET();
-		sscanf(pbuf, "m%" SCNx32 ",%" SCNx32, &addr, &len);
-		if (len > pbuf_size / 2U) {
-			gdb_putpacketz("E02");
-			break;
-		}
-		DEBUG_GDB("m packet: addr = %" PRIx32 ", len = %" PRIx32 "\n", addr, len);
-		uint8_t *mem = alloca(len);
-		if (target_mem_read(cur_target, mem, addr, len))
-			gdb_putpacketz("E01");
-		else
-			gdb_putpacket(hexify(pbuf, mem, len), len * 2U);
+		if (read_hex32(pbuf + 1, &rest, &addr, ',') && read_hex32(rest, NULL, &len, READ_HEX_NO_FOLLOW)) {
+			if (len > pbuf_size / 2U) {
+				gdb_putpacketz("E02");
+				break;
+			}
+			DEBUG_GDB("m packet: addr = %" PRIx32 ", len = %" PRIx32 "\n", addr, len);
+			uint8_t *mem = alloca(len);
+			if (target_mem_read(cur_target, mem, addr, len))
+				gdb_putpacketz("E01");
+			else
+				gdb_putpacket(hexify(pbuf, mem, len), len * 2U);
+		} else
+			gdb_putpacketz("EFF");
 		break;
 	}
 	case 'G': { /* 'G XX': Write general registers */
