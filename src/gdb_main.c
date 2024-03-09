@@ -114,7 +114,7 @@ target_controller_s gdb_controller = {
 };
 
 /* execute gdb remote command stored in 'pbuf'. returns immediately, no busy waiting. */
-int gdb_main_loop(target_controller_s *tc, char *pbuf, size_t pbuf_size, size_t size, bool in_syscall)
+int32_t gdb_main_loop(target_controller_s *tc, char *pbuf, size_t pbuf_size, size_t size, bool in_syscall)
 {
 	bool single_step = false;
 
@@ -284,7 +284,8 @@ int gdb_main_loop(target_controller_s *tc, char *pbuf, size_t pbuf_size, size_t 
 
 	case 'F': /* Semihosting call finished */
 		if (in_syscall)
-			return semihosting_reply(tc, pbuf, size);
+			/* Trim off the 'F' before calling semihosting_reply so that it doesn't have to skip it */
+			return semihosting_reply(tc, pbuf + 1);
 		else {
 			DEBUG_GDB("*** F packet when not in syscall! '%s'\n", pbuf);
 			gdb_putpacketz("");
