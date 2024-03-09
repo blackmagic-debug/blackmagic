@@ -416,8 +416,9 @@ static void handle_q_string_reply(const char *reply, const char *param)
 	const size_t reply_length = strlen(reply);
 	uint32_t addr = 0;
 	uint32_t len = 0;
+	const char *rest = NULL;
 
-	if (sscanf(param, "%08" PRIx32 ",%08" PRIx32, &addr, &len) != 2) {
+	if (!read_hex32(param, &rest, &addr, ',') || !read_hex32(rest, NULL, &len, READ_HEX_NO_FOLLOW)) {
 		gdb_putpacketz("E01");
 		return;
 	}
