@@ -491,7 +491,8 @@ static void exec_q_crc(const char *packet, const size_t length)
 	(void)length;
 	uint32_t addr;
 	uint32_t addr_length;
-	if (sscanf(packet, "%" PRIx32 ",%" PRIx32, &addr, &addr_length) == 2) {
+	const char *rest = NULL;
+	if (read_hex32(packet, &rest, &addr, ',') && read_hex32(rest, NULL, &addr_length, READ_HEX_NO_FOLLOW)) {
 		if (!cur_target) {
 			gdb_putpacketz("E01");
 			return;
