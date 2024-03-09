@@ -801,23 +801,27 @@ static void handle_z_packet(char *packet, const size_t plen)
 	uint32_t type;
 	uint32_t len;
 	uint32_t addr;
-	sscanf(packet, "%*[zZ]%" PRIu32 ",%08" PRIx32 ",%" PRIu32, &type, &addr, &len);
+	const char *rest = NULL;
 
-	int ret = 0;
-	if (packet[0] == 'Z')
-		ret = target_breakwatch_set(cur_target, type, addr, len);
-	else
-		ret = target_breakwatch_clear(cur_target, type, addr, len);
+	if (read_dec32(packet + 1, &rest, &type, ',') && read_hex32(rest, &rest, &addr, ',') &&
+		read_dec32(rest, NULL, &len, READ_HEX_NO_FOLLOW)) {
+		int ret = 0;
+		if (packet[0] == 'Z')
+			ret = target_breakwatch_set(cur_target, type, addr, len);
+		else
+			ret = target_breakwatch_clear(cur_target, type, addr, len);
 
-	/* If the target handler was unable to set/clear the break/watch-point, return an error */
-	if (ret < 0)
+		/* If the target handler was unable to set/clear the break/watch-point, return an error */
+		if (ret < 0)
+			gdb_putpacketz("E01");
+		/* If the handler does not support the kind requested, return empty string */
+		else if (ret > 0)
+			gdb_putpacketz("");
+		/* Otherwise let GDB know that everything went well */
+		else
+			gdb_putpacketz("OK");
+	} else
 		gdb_putpacketz("E01");
-	/* If the handler does not support the kind requested, return empty string */
-	else if (ret > 0)
-		gdb_putpacketz("");
-	/* Otherwise let GDB know that everything went well */
-	else
-		gdb_putpacketz("OK");
 }
 
 void gdb_main(char *pbuf, size_t pbuf_size, size_t size)
