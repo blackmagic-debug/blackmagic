@@ -342,18 +342,19 @@ int32_t gdb_main_loop(target_controller_s *tc, char *pbuf, size_t pbuf_size, siz
 
 	case 'X': { /* 'X addr,len:XX': Write binary data to addr */
 		uint32_t addr, len;
-		int bin;
 		ERROR_IF_NO_TARGET();
-		sscanf(pbuf, "X%" SCNx32 ",%" SCNx32 ":%n", &addr, &len, &bin);
-		if (len > (unsigned)(size - bin)) {
-			gdb_putpacketz("E02");
-			break;
-		}
-		DEBUG_GDB("X packet: addr = %" PRIx32 ", len = %" PRIx32 "\n", addr, len);
-		if (target_mem_write(cur_target, addr, pbuf + bin, len))
-			gdb_putpacketz("E01");
-		else
-			gdb_putpacketz("OK");
+		if (read_hex32(pbuf + 1, &rest, &addr, ',') && read_hex32(rest, &rest, &len, ':')) {
+			if (len > (size - (size_t)(pbuf - rest))) {
+				gdb_putpacketz("E02");
+				break;
+			}
+			DEBUG_GDB("X packet: addr = %" PRIx32 ", len = %" PRIx32 "\n", addr, len);
+			if (target_mem_write(cur_target, addr, rest, len))
+				gdb_putpacketz("E01");
+			else
+				gdb_putpacketz("OK");
+		} else
+			gdb_putpacketz("EFF");
 		break;
 	}
 
