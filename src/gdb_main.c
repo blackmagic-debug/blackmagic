@@ -760,10 +760,11 @@ static void exec_v_cont(const char *packet, const size_t length)
 static void exec_v_flash_erase(const char *packet, const size_t length)
 {
 	(void)length;
-	uint32_t addr = 0;
-	uint32_t len = 0;
+	uint32_t addr;
+	uint32_t len;
+	const char *rest = NULL;
 
-	if (sscanf(packet, "%08" PRIx32 ",%08" PRIx32, &addr, &len) == 2) {
+	if (read_hex32(packet, &rest, &addr, ',') && read_hex32(rest, NULL, &len, READ_HEX_NO_FOLLOW)) {
 		/* Erase Flash Memory */
 		DEBUG_GDB("Flash Erase %08" PRIX32 " %08" PRIX32 "\n", addr, len);
 		if (!cur_target) {
