@@ -48,6 +48,11 @@
 	{                                                                     \
 		lpc55_dp_prepare_nop(debug_port);                                 \
 	};
+#define NRF91_DP_PREPARE_WEAK_NOP(name)                                   \
+	__attribute__((weak)) bool name(adiv5_debug_port_s *const debug_port) \
+	{                                                                     \
+		return nrf91_dp_prepare_nop(debug_port);                                 \
+	};
 #else
 #define CORTEXAR_PROBE_WEAK_NOP(name) \
 	extern bool name(adiv5_access_port_s *, target_addr_t) __attribute__((weak, alias("cortexar_probe_nop")));
@@ -56,6 +61,8 @@
 #define TARGET_PROBE_WEAK_NOP(name) extern bool name(target_s *) __attribute__((weak, alias("target_probe_nop")));
 #define LPC55_DP_PREPARE_WEAK_NOP(name) \
 	extern void name(adiv5_debug_port_s *) __attribute__((weak, alias("lpc55_dp_prepare_nop")));
+#define NRF91_DP_PREPARE_WEAK_NOP(name) \
+	extern bool name(adiv5_debug_port_s *) __attribute__((weak, alias("nrf91_dp_prepare_nop")));
 #endif
 
 static inline bool cortexar_probe_nop(adiv5_access_port_s *const access_port, const target_addr_t base_address)
@@ -80,6 +87,12 @@ static inline bool target_probe_nop(target_s *const target)
 static inline void lpc55_dp_prepare_nop(adiv5_debug_port_s *const debug_port)
 {
 	(void)debug_port;
+}
+
+static inline bool nrf91_dp_prepare_nop(adiv5_debug_port_s *const debug_port)
+{
+	(void)debug_port;
+	return true;
 }
 
 /*
