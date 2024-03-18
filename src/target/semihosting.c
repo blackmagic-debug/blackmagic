@@ -45,6 +45,7 @@
 #include "target_internal.h"
 #include "gdb_main.h"
 #include "gdb_packet.h"
+#include "hex_utils.h"
 #include "semihosting.h"
 #include "semihosting_internal.h"
 #include "buffer_utils.h"
@@ -126,10 +127,8 @@ const char *const semihosting_names[] = {
 static semihosting_errno_e semihosting_errno(void);
 #endif
 
-int semihosting_reply(target_controller_s *const tc, char *const pbuf, const int len)
+int32_t semihosting_reply(target_controller_s *const tc, char *const pbuf)
 {
-	(void)len;
-
 	/*
 	 * File-I/O Remote Protocol Extension
 	 * See https://sourceware.org/gdb/onlinedocs/gdb/Protocol-Basics.html#Protocol-Basics
@@ -146,16 +145,14 @@ int semihosting_reply(target_controller_s *const tc, char *const pbuf, const int
 	 * 		The Ctrl-C flag itself consists of the character ‘C’:
 	 */
 
-	const bool retcode_is_negative = pbuf[1U] == '-';
+	uint32_t retcode = 0;
+	uint32_t gdb_errno = 0;
+	const char *rest = NULL;
 
-	unsigned int retcode = 0;
-	unsigned int gdb_errno = 0;
-	char ctrl_c_flag = '\0';
-	const int items = sscanf(pbuf + (retcode_is_negative ? 2U : 1U), "%x,%x,%c", &retcode, &gdb_errno, &ctrl_c_flag);
-
-	if (items < 1) {
+	/* This function will handle '-' preceding the return code and correctly negate the result. */
+	if (!read_hex32(pbuf, &rest, &retcode, READ_HEX_NO_FOLLOW)) {
 		/*
-		 * Something went wrong with the sscanf or the packet format, avoid UB
+		 * There is no retcode in the packet, so what do?
 		 * FIXME: how do we properly handle this?
 		 */
 		tc->interrupted = false;
@@ -163,13 +160,17 @@ int semihosting_reply(target_controller_s *const tc, char *const pbuf, const int
 		return -1;
 	}
 
+	tc->gdb_errno = TARGET_SUCCESS;
+
 	/* If the call was successful the errno may be omitted */
-	tc->gdb_errno = items >= 2 ? gdb_errno : TARGET_SUCCESS;
+	if (rest[0] == ',' && read_hex32(rest + 1, &rest, &gdb_errno, READ_HEX_NO_FOLLOW)) {
+		tc->gdb_errno = gdb_errno;
+		/* If break is requested */
+		if (rest[0] == ',')
+			tc->interrupted = rest[1] == 'C';
+	}
 
-	/* If break is requested */
-	tc->interrupted = items == 3 && ctrl_c_flag == 'C';
-
-	return retcode_is_negative ? -retcode : retcode;
+	return retcode;
 }
 
 static int32_t semihosting_get_gdb_response(target_controller_s *const tc)

@@ -42,6 +42,7 @@
 
 #ifdef ENABLE_RTT
 #include "rtt.h"
+#include "hex_utils.h"
 #endif
 
 #ifdef PLATFORM_HAS_TRACESWO
@@ -574,11 +575,12 @@ static bool cmd_rtt(target_s *t, int argc, const char **argv)
 	} else if (argc == 2 && strncmp(argv[1], "ram", command_len) == 0)
 		rtt_flag_ram = false;
 	else if (argc == 4 && strncmp(argv[1], "ram", command_len) == 0) {
-		const int cnt1 = sscanf(argv[2], "%" SCNx32, &rtt_ram_start);
-		const int cnt2 = sscanf(argv[3], "%" SCNx32, &rtt_ram_end);
-		rtt_flag_ram = cnt1 == 1 && cnt2 == 1 && rtt_ram_end > rtt_ram_start;
-		if (!rtt_flag_ram)
-			gdb_out("address?\n");
+		if (read_hex32(argv[2], NULL, &rtt_ram_start, READ_HEX_NO_FOLLOW) &&
+			read_hex32(argv[3], NULL, &rtt_ram_end, READ_HEX_NO_FOLLOW)) {
+			rtt_flag_ram = rtt_ram_end > rtt_ram_start;
+			if (!rtt_flag_ram)
+				gdb_out("address?\n");
+		}
 	} else if (argc == 5 && strncmp(argv[1], "poll", command_len) == 0) {
 		/* set polling params */
 		rtt_max_poll_ms = strtoul(argv[2], NULL, 0);
