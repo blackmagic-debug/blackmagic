@@ -463,6 +463,18 @@ static bool stm32h7_mass_erase(target_s *target)
 	return stm32h7_check_bank(target, FPEC1_BASE) && stm32h7_check_bank(target, FPEC2_BASE);
 }
 
+/*
+ * RM0399 §64.1 (pg3510) and RM0433 §61.1 (pg3290)
+ * Unique device ID register
+ * Other ref.manuals omit the decoding details.
+ */
+struct __attribute__((packed)) stm32h7_uid {
+	uint16_t wafer_xcoord;
+	uint16_t wafer_ycoord;
+	uint8_t wafer_number;
+	uint8_t lot_number[7];
+};
+
 static uint32_t stm32h7_part_uid_addr(target_s *const target)
 {
 	if (target->part_id == ID_STM32H7Bx)
@@ -479,15 +491,22 @@ static bool stm32h7_uid(target_s *target, int argc, const char **argv)
 	(void)argc;
 	(void)argv;
 
+	struct stm32h7_uid uid = {0};
+	uint32_t values[3] = {0};
+	char uid_hex[25] = {0};
 	const uint32_t uid_addr = stm32h7_part_uid_addr(target);
 
-	tc_printf(target, "0x");
 	for (size_t i = 0; i < 12U; i += 4U) {
 		const uint32_t value = target_mem_read32(target, uid_addr + i);
-		tc_printf(target, "%02X%02X%02X%02X", (value >> 24U) & 0xffU, (value >> 16U) & 0xffU, (value >> 8U) & 0xffU,
-			value & 0xffU);
+		/* XXX: use utoa_upper? */
+		snprintf(uid_hex + i * 2U, 9, "%02" PRIX32 "%02" PRIX32 "%02" PRIX32 "%02" PRIX32, (value >> 24U) & 0xffU,
+			(value >> 16U) & 0xffU, (value >> 8U) & 0xffU, value & 0xffU);
+		values[i / 4U] = value;
 	}
-	tc_printf(target, "\n");
+	tc_printf(target, "0x%s\n", uid_hex);
+	memcpy(&uid, values, 12U);
+	tc_printf(target, "Wafer coords X=%u, Y=%u, number %u; Lot number %.7s\n", uid.wafer_xcoord, uid.wafer_ycoord,
+		uid.wafer_number, &uid.lot_number[0]);
 	return true;
 }
 
