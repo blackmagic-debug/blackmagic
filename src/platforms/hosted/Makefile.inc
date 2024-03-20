@@ -8,6 +8,7 @@ CFLAGS +=-I ./target
 # Architecture enables
 ENABLE_CORTEXAR := 1
 ENABLE_RISCV := 1
+ENABLE_AVR := 1
 # Target enables
 ENABLE_XILINX := 1
 
