@@ -41,6 +41,7 @@ SRC =              \
 	cortex.c       \
 	cortexm.c      \
 	crc32.c        \
+	ch579.c        \
 	efm32.c        \
 	exception.c    \
 	gdb_if.c       \
