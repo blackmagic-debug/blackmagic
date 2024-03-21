@@ -36,15 +36,83 @@
 #include "cortexm.h"
 #include "adiv5.h"
 
+/*
+ * Memory map
+ */
+/* 250KB + 2KB，CodeFlash + DataFlash of FlashROM */
+#define CH579_FLASH_BASE_ADDR  0x00000000U
+#define CH579_FLASH_SIZE       0x3f000U
+#define CH579_FLASH_BLOCK_SIZE 512U
+#define CH579_FLASH_WRITE_SIZE 4U
+/* 32KB，SRAM */
+#define CH579_SRAM_BASE_ADDR 0x20000000U
+#define CH579_SRAM_SIZE      0x8000U
+
+/*
+ * Registers
+ */
+
+/* System Control registers */
+#define CH579_R8_CHIP_ID 0x40001041U
+
+/*
+ * Flash functions
+ */
+static bool ch579_flash_erase(target_flash_s *flash, target_addr_t addr, size_t len);
+static bool ch579_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t len);
+static bool ch579_flash_prepare(target_flash_s *flash);
+static bool ch579_flash_done(target_flash_s *flash);
+
 bool ch579_probe(target_s *target)
 {
-	DEBUG_INFO("ch579 probe\n");
-	uint8_t chip_id = target_mem32_read8(target, 0x40001041);
+	uint8_t chip_id = target_mem32_read8(target, CH579_R8_CHIP_ID);
 	if (chip_id != 0x79) {
-		DEBUG_ERROR("Not CH579! 0x%02x\n", chip_id);
+		DEBUG_ERROR("Not CH579! 0x%02" PRIx8 "\n", chip_id);
 		return false;
 	}
 
 	target->driver = "CH579";
+
+	target_flash_s *flash = calloc(1, sizeof(*flash));
+	if (!flash) { /* calloc failed: heap exhaustion */
+		DEBUG_ERROR("calloc: failed in %s\n", __func__);
+		return false;
+	}
+	flash->start = CH579_FLASH_BASE_ADDR;
+	flash->length = CH579_FLASH_SIZE;
+	flash->blocksize = CH579_FLASH_BLOCK_SIZE;
+	flash->writesize = CH579_FLASH_WRITE_SIZE;
+	flash->erase = ch579_flash_erase;
+	flash->write = ch579_flash_write;
+	flash->prepare = ch579_flash_prepare;
+	flash->done = ch579_flash_done;
+	flash->erased = 0xffU;
+	target_add_flash(target, flash);
+
+	target_add_ram32(target, CH579_SRAM_BASE_ADDR, CH579_SRAM_SIZE);
 	return true;
+}
+
+static bool ch579_flash_erase(target_flash_s *flash, target_addr_t addr, size_t len)
+{
+	DEBUG_INFO("ch579 flash erase\n");
+	return false;
+}
+
+static bool ch579_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t len)
+{
+	DEBUG_INFO("ch579 flash write\n");
+	return false;
+}
+
+static bool ch579_flash_prepare(target_flash_s *flash)
+{
+	DEBUG_INFO("ch579 flash prepare\n");
+	return false;
+}
+
+static bool ch579_flash_done(target_flash_s *flash)
+{
+	DEBUG_INFO("ch579 flash done\n");
+	return false;
 }
