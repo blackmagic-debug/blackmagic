@@ -274,6 +274,7 @@ struct adiv5_debug_port {
 	/* TARGETID designer and partno, present on DPv2 */
 	uint16_t target_designer_code;
 	uint16_t target_partno;
+	uint8_t target_revision;
 };
 
 struct adiv5_access_port {

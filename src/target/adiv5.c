@@ -954,6 +954,8 @@ void adiv5_dp_init(adiv5_debug_port_s *const dp)
 
 		dp->target_partno = (targetid & ADIV5_DP_TARGETID_TPARTNO_MASK) >> ADIV5_DP_TARGETID_TPARTNO_OFFSET;
 
+		dp->target_revision = (targetid & ADIV5_DP_TARGETID_TREVISION_MASK) >> ADIV5_DP_TARGETID_TREVISION_OFFSET;
+
 		DEBUG_INFO("TARGETID 0x%08" PRIx32 " designer 0x%x partno 0x%x\n", targetid, dp->target_designer_code,
 			dp->target_partno);
 
@@ -1002,6 +1004,13 @@ void adiv5_dp_init(adiv5_debug_port_s *const dp)
 
 	if (dp->target_designer_code == JEP106_MANUFACTURER_NXP)
 		lpc55_dp_prepare(dp);
+
+	if (dp->target_designer_code == JEP106_MANUFACTURER_NORDIC && dp->target_partno == 0x90U) {
+		if (!nrf91_dp_prepare(dp)) {
+			/* device is in secure state, only show rescue target */
+			return;
+		}
+	}
 
 	/* Probe for APs on this DP */
 	size_t invalid_aps = 0;
