@@ -70,6 +70,7 @@ if is_firmware_build
 		'cortexm': 'Cortex-M support',
 		'riscv32': 'RISC-V 32-bit support',
 		'riscv64': 'RISC-V 64-bit support',
+		'ch579': 'CH579',
 		'efm': 'Energy Micro parts',
 		'hc32': 'HC32 parts',
 		'lpc': 'LPC series parts',
@@ -143,6 +144,11 @@ target_riscv32 = declare_dependency(
 target_riscv64 = declare_dependency(
 	sources: files('riscv64.c'),
 	dependencies: target_riscv,
+)
+
+target_ch579 = declare_dependency(
+	sources: files('ch579.c'),
+	dependencies: target_cortexm,
 )
 
 target_efm = declare_dependency(
@@ -283,6 +289,7 @@ libbmd_target_deps = [
 	target_riscv32,
 	target_riscv64,
 	# Enable all targets for libbmd
+	target_ch579,
 	target_efm,
 	target_hc32,
 	target_lpc,
