@@ -288,6 +288,8 @@ static bool at32f40_detect(target_s *target, const uint16_t part_id)
 	target->part_id = part_id;
 	target->target_options |= STM32F1_TOPT_32BIT_WRITES;
 	target->mass_erase = stm32f1_mass_erase;
+	// AT32F403A/F407 have 48 bytes of User System Data
+	target_add_commands(target, stm32f1_cmd_list, target->driver);
 	return true;
 }
 
@@ -798,7 +800,7 @@ static bool stm32f1_option_write_erased(
 
 	stm32f1_flash_clear_eop(target, FLASH_BANK1_OFFSET);
 
-	/* Erase option bytes instruction */
+	/* Program option bytes instruction */
 	target_mem_write32(target, FLASH_CR, FLASH_CR_OPTPG | FLASH_CR_OPTWRE);
 
 	const uint32_t addr = FLASH_OBP_RDP + (offset * 2U);
@@ -820,16 +822,22 @@ static bool stm32f1_option_write_erased(
 	return status == SR_PROG_ERROR;
 }
 
+#define STM32F1_OB_COUNT 8U
+#define AT32F4_OB_COUNT 24U
+
 static bool stm32f1_option_write(target_s *const target, const uint32_t addr, const uint16_t value)
 {
+	/* Arterytek has 24 option byte halfwords (48 bytes) */
+	const uint16_t ob_count = (target->target_options & STM32F1_TOPT_32BIT_WRITES) ? AT32F4_OB_COUNT : STM32F1_OB_COUNT;
+
 	const uint32_t index = (addr - FLASH_OBP_RDP) >> 1U;
 	/* If index would be negative, the high most bit is set, so we get a giant positive number. */
-	if (index > 7U)
+	if (index > ob_count - 1U)
 		return false;
 
-	uint16_t opt_val[8];
+	uint16_t opt_val[AT32F4_OB_COUNT];
 	/* Retrieve old values */
-	for (size_t i = 0U; i < 16U; i += 4U) {
+	for (size_t i = 0U; i < ob_count*2U; i += 4U) {
 		const size_t offset = i >> 1U;
 		uint32_t val = target_mem_read32(target, FLASH_OBP_RDP + i);
 		opt_val[offset] = val & 0xffffU;
@@ -849,7 +857,7 @@ static bool stm32f1_option_write(target_s *const target, const uint32_t addr, co
 	 * GD32E230 is a special case as target_mem_write16 does not work
 	 */
 	const bool write16_broken = target->part_id == 0x410U && (target->cpuid & CORTEX_CPUID_PARTNO_MASK) == CORTEX_M23;
-	for (size_t i = 0U; i < 8U; ++i) {
+	for (size_t i = 0U; i < ob_count; ++i) {
 		if (!stm32f1_option_write_erased(target, i, opt_val[i], write16_broken))
 			return false;
 	}
@@ -896,8 +904,11 @@ static bool stm32f1_cmd_option(target_s *target, int argc, const char **argv)
 	} else
 		tc_printf(target, "usage: monitor option erase\nusage: monitor option <addr> <value>\n");
 
+	/* Arterytek AT32F403A/F407 (and F413) have 24 option byte halfwords (48 bytes) */
+	const uint16_t ob_count = (target->target_options & STM32F1_TOPT_32BIT_WRITES) ? AT32F4_OB_COUNT : STM32F1_OB_COUNT;
+
 	/* When all gets said and done, display the current option bytes values */
-	for (size_t i = 0U; i < 16U; i += 4U) {
+	for (size_t i = 0U; i < ob_count*2U; i += 4U) {
 		const uint32_t addr = FLASH_OBP_RDP + i;
 		const uint32_t val = target_mem_read32(target, addr);
 		tc_printf(target, "0x%08X: 0x%04X\n", addr, val & 0xffffU);
