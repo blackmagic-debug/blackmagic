@@ -143,6 +143,7 @@
 #define AT32F40_SERIES             0x70050000U
 #define AT32F421_SERIES_16KB       0x50010000U
 #define AT32F421_SERIES            0x50020000U
+#define AT32F425_SERIES            0x50092000U
 #define AT32F4x_PROJECT_ID         0x1ffff7f3U
 #define AT32F4x_FLASHSIZE          0x1ffff7e0U
 
@@ -557,6 +558,20 @@ static bool at32f421_detect(target_s *target, const uint16_t part_id)
 	return stm32f1_configure_dbgmcu(target, STM32F1_DBGMCU_CONFIG);
 }
 
+static bool at32f425_detect(target_s *target, const uint16_t part_id)
+{
+	const uint16_t flash_size = target_mem32_read16(target, AT32F4x_FLASHSIZE);
+	stm32f1_add_flash(target, 0x08000000, flash_size * 1024U, 1U * 1024U);
+	// All parts have 20 KiB SRAM
+	target_add_ram32(target, 0x20000000, 20U * 1024U);
+	target->driver = "AT32F425";
+	target->part_id = part_id;
+	target->target_options |= STM32F1_TOPT_32BIT_WRITES;
+	target->mass_erase = stm32f1_mass_erase;
+	// TODO: AT32F425 have 512 bytes of User System Data
+	return stm32f1_configure_dbgmcu(target, STM32F1_DBGMCU_CONFIG);
+}
+
 /* Identify AT32F40x "Mainstream" line devices (Cortex-M4) */
 bool at32f40x_probe(target_s *target)
 {
@@ -586,6 +601,10 @@ bool at32f40x_probe(target_s *target)
 	// Value line
 	if ((series == AT32F421_SERIES || series == AT32F421_SERIES_16KB) && project_id == 9U)
 		return at32f421_detect(target, part_id);
+
+	if (series == AT32F425_SERIES && project_id == 0x0fU)
+		return at32f425_detect(target, part_id);
+
 	return false;
 }
 
