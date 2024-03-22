@@ -141,6 +141,10 @@
 #define AT32F4x_IDCODE_PART_MASK   0x00000fffU
 #define AT32F41_SERIES             0x70030000U
 #define AT32F40_SERIES             0x70050000U
+#define AT32F421_SERIES_16KB       0x50010000U
+#define AT32F421_SERIES            0x50020000U
+#define AT32F4x_PROJECT_ID         0x1ffff7f3U
+#define AT32F4x_FLASHSIZE          0x1ffff7e0U
 
 #define STM32F1_FLASH_BANK1_BASE 0x08000000U
 #define STM32F1_FLASH_BANK2_BASE 0x08080000U
@@ -420,11 +424,13 @@ static bool at32f40_detect(target_s *target, const uint16_t part_id)
 
 	// AT32F403A/F407 have 48 bytes of User System Data
 	target_add_commands(target, stm32f1_cmd_list, target->driver);
+	// TODO: SPIM 0x08400000 bank support
+
 	/* Now we have a stable debug environment, make sure the WDTs + WFI and WFE instructions can't cause problems */
 	return stm32f1_configure_dbgmcu(target, STM32F1_DBGMCU_CONFIG);
 }
 
-static bool at32f41_detect(target_s *target, const uint16_t part_id)
+static bool at32f415_detect(target_s *target, const uint16_t part_id)
 {
 	switch (part_id) {
 	case 0x0240U: // LQFP64_10x10
@@ -459,8 +465,95 @@ static bool at32f41_detect(target_s *target, const uint16_t part_id)
 	target->part_id = part_id;
 	target->target_options |= STM32F1_TOPT_32BIT_WRITES;
 	target->mass_erase = stm32f1_mass_erase;
+	// TODO: 1 KiB User System Data, i.e. Option bytes
 
 	/* Now we have a stable debug environment, make sure the WDTs + WFI and WFE instructions can't cause problems */
+	return stm32f1_configure_dbgmcu(target, STM32F1_DBGMCU_CONFIG);
+}
+
+static bool at32f413_detect(target_s *target, const uint16_t part_id)
+{
+	switch (part_id) {
+	case 0x0240U: // LQFP64
+	case 0x0242U: // LQFP48
+	case 0x0244U: // QFN32
+	case 0x0247U: // QFN48
+		// Flash (C): 256 KiB / 2 KiB per block
+		stm32f1_add_flash(target, 0x08000000, 256U * 1024U, 2U * 1024U);
+		break;
+	case 0x01c1U: // LQFP64
+	case 0x01c3U: // LQFP48
+	case 0x01c5U: // QFN32
+	case 0x01caU: // QFN48
+		// Flash (B): 128 KiB / 1 KiB per block
+		stm32f1_add_flash(target, 0x08000000, 128U * 1024U, 1U * 1024U);
+		break;
+	case 0x0106U: // LQFP48
+		// Flash (8): 64 KiB / 1 KiB per block
+		stm32f1_add_flash(target, 0x08000000, 64U * 1024U, 1U * 1024U);
+		break;
+	// Unknown/undocumented
+	default:
+		return false;
+	}
+	// All parts have 32 KiB of SRAM extensible by EOPB0 up to 64 KiB or down to 16 KiB
+	target_add_ram32(target, 0x20000000, 32U * 1024U);
+	target->driver = "AT32F413";
+	target->part_id = part_id;
+	target->target_options |= STM32F1_TOPT_32BIT_WRITES;
+	target->mass_erase = stm32f1_mass_erase;
+	// TODO: AT32F413 have 48 bytes of User System Data
+	// TODO: SPIM 0x08400000 bank support
+	return stm32f1_configure_dbgmcu(target, STM32F1_DBGMCU_CONFIG);
+}
+
+static bool at32f421_detect(target_s *target, const uint16_t part_id)
+{
+	// Extra part: AT32F4212C8T7 with dual Op-Amp? (16/64, LQFP48)
+	switch (part_id) {
+	case 0x0100U: // AT32F421C8T7 / LQFP48
+	case 0x0101U: // AT32F421K8T7 / LQFP32
+	case 0x0102U: // AT32F421K8U7 / QFN32_5x5
+	case 0x0103U: // AT32F421K8U7-4 / QFN32_4x4
+	case 0x0104U: // AT32F421F8U7 / QFN20
+	case 0x0105U: // AT32F421F8P7 / TSSOP20
+	case 0x0112U: // AT32F421G8U7 / QFN28
+		// Flash (8): 64 KiB / 1 KiB per block
+		stm32f1_add_flash(target, 0x08000000, 64U * 1024U, 1U * 1024U);
+		target_add_ram32(target, 0x20000000, 16U * 1024U);
+		break;
+	case 0x0086U: // LQFP48
+	case 0x0087U: // LQFP32
+	case 0x0088U: // QFN32_5x5
+	case 0x0089U: // QFN32_4x4
+	case 0x008aU: // QFN20
+	case 0x008bU: // TSSOP20
+	case 0x0093U: // QFN28
+		// Flash (6): 32 KiB / 1 KiB per block
+		stm32f1_add_flash(target, 0x08000000, 32U * 1024U, 1U * 1024U);
+		target_add_ram32(target, 0x20000000, 16U * 1024U);
+		break;
+	case 0x000cU: // LQFP48
+	case 0x000dU: // LQFP32
+	case 0x000eU: // QFN32_5x5
+	case 0x000fU: // QFN32_4x4
+	case 0x0010U: // QFN20
+	case 0x0011U: // TSSOP20
+	case 0x0014U: // QFN28
+		// Flash (4): 16 KiB / 1 KiB per block
+		stm32f1_add_flash(target, 0x08000000, 16U * 1024U, 1U * 1024U);
+		target_add_ram32(target, 0x20000000, 8U * 1024U);
+		break;
+	// Unknown/undocumented
+	default:
+		return false;
+	}
+
+	target->driver = "AT32F421";
+	target->part_id = part_id;
+	target->target_options |= STM32F1_TOPT_32BIT_WRITES;
+	target->mass_erase = stm32f1_mass_erase;
+	// TODO: AT32F421 have 512 bytes of User System Data
 	return stm32f1_configure_dbgmcu(target, STM32F1_DBGMCU_CONFIG);
 }
 
@@ -475,11 +568,24 @@ bool at32f40x_probe(target_s *target)
 	const uint32_t idcode = target_mem32_read32(target, STM32F1_DBGMCU_IDCODE);
 	const uint32_t series = idcode & AT32F4x_IDCODE_SERIES_MASK;
 	const uint16_t part_id = idcode & AT32F4x_IDCODE_PART_MASK;
+	// ... and first byte of UID
+	const uint32_t project_id = target_mem32_read8(target, AT32F4x_PROJECT_ID);
 
-	if (series == AT32F40_SERIES)
-		return at32f40_detect(target, part_id);
-	if (series == AT32F41_SERIES)
-		return at32f41_detect(target, part_id);
+	if (series == AT32F40_SERIES) {
+		if (project_id == 2U) // F403
+			return false;
+		if (project_id == 7U || project_id == 8U) // F403A, F407
+			return at32f40_detect(target, part_id);
+	}
+	if (series == AT32F41_SERIES) {
+		if (project_id == 4U)
+			return at32f413_detect(target, part_id);
+		if (project_id == 5U)
+			return at32f415_detect(target, part_id);
+	}
+	// Value line
+	if ((series == AT32F421_SERIES || series == AT32F421_SERIES_16KB) && project_id == 9U)
+		return at32f421_detect(target, part_id);
 	return false;
 }
 
