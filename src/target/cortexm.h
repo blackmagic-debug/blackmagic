@@ -69,7 +69,7 @@ extern unsigned cortexm_wait_timeout;
 /* Application Interrupt and Reset Control Register (AIRCR) */
 #define CORTEXM_AIRCR_VECTKEY (0x05faU << 16U)
 /* Bits 31:16 - Read as VECTKETSTAT, 0xfa05 */
-#define CORTEXM_AIRCR_ENDIANESS (1U << 15U)
+#define CORTEXM_AIRCR_ENDIANNESS (1U << 15U)
 /* Bits 15:11 - Unused, reserved */
 #define CORTEXM_AIRCR_PRIGROUP (7U << 8U)
 /* Bits 7:3 - Unused, reserved */
