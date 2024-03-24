@@ -143,7 +143,9 @@
 #define AT32F40_SERIES             0x70050000U
 #define AT32F421_SERIES_16KB       0x50010000U
 #define AT32F421_SERIES            0x50020000U
+#define AT32F425_SERIES            0x50092000U
 #define AT32F4x_PROJECT_ID         0x1ffff7f3U
+#define AT32F4x_FLASHSIZE          0x1ffff7e0U
 
 #define STM32F1_OB_COUNT 8U
 #define AT32F4_OB_COUNT  24U
@@ -611,6 +613,55 @@ static bool at32f421_detect(target_s *target, const uint16_t part_id)
 	return stm32f1_configure_dbgmcu(target, STM32F1_DBGMCU_CONFIG);
 }
 
+static bool at32f425_detect(target_s *target, const uint16_t part_id)
+{
+#if 0
+	/*
+	 * F_SIZE, when readable, provides total internal flash size in KiB.
+	 * When unreadable (RDP1): don't add banks (also unreadable)
+	 * but allow to mass-erase via option byte regression.
+	 * TODO: implement OB/USD support for 512/1024 byte areas.
+	 */
+	const uint16_t flash_size = target_mem32_read16(target, AT32F4x_FLASHSIZE);
+	if (flash_size != 0xffffU)
+		stm32f1_add_flash(target, STM32F1_FLASH_BANK1_BASE, flash_size * 1024U, 1U * 1024U);
+#else
+	switch (part_id) {
+	case 0x0100U: // AT32F425R8T7 / LQFP64_10x10
+	case 0x0103U: // AT32F425R8T7-7 LQFP64_7x7
+	case 0x0106U: // LQFP48
+	case 0x0109U: // QFN48
+	case 0x010cU: // LQFP32
+	case 0x010fU: // QFN32
+	case 0x0112U: // TSSOP20
+		// Flash (8): 64 KiB / 1 KiB per block
+		stm32f1_add_flash(target, STM32F1_FLASH_BANK1_BASE, 64U * 1024U, 1U * 1024U);
+		break;
+	case 0x0081U: // AT32F425R6T7 / LQFP64_10x10
+	case 0x0084U: // AT32F425R6T7-7 / LQFP64_7x7
+	case 0x0087U: // LQFP48
+	case 0x008aU: // QFN48
+	case 0x008dU: // LQFP32
+	case 0x0090U: // QFN32
+	case 0x0093U: // TSSOP20
+		// Flash (6): 32 KiB / 1 KiB per block
+		stm32f1_add_flash(target, STM32F1_FLASH_BANK1_BASE, 32U * 1024U, 1U * 1024U);
+		break;
+	// Unknown/undocumented
+	default:
+		return false;
+	}
+#endif
+	// All parts have 20 KiB SRAM
+	target_add_ram32(target, 0x20000000, 20U * 1024U);
+	target->driver = "AT32F425";
+	target->part_id = part_id;
+	target->target_options |= STM32F1_TOPT_32BIT_WRITES;
+	target->mass_erase = stm32f1_mass_erase;
+	// TODO: AT32F425 have 512 bytes of User System Data
+	return stm32f1_configure_dbgmcu(target, STM32F1_DBGMCU_CONFIG);
+}
+
 /* Identify AT32F40x "Mainstream" line devices (Cortex-M4) */
 bool at32f40x_probe(target_s *target)
 {
@@ -653,6 +704,14 @@ bool at32f40x_probe(target_s *target)
 	if (series == AT32F421_SERIES || series == AT32F421_SERIES_16KB) {
 		if (project_id == 9U)
 			return at32f421_detect(target, part_id);
+		if (project_id == 0xffU)
+			return false;
+	}
+	/* Value line. 0x0f: F425 (OTGFS) */
+	if (series == AT32F425_SERIES) {
+		if (project_id == 0x0fU)
+			return at32f425_detect(target, part_id);
+		/* TODO: these parts implement DEBUG_SER_ID at 0xe0042020 visible under RDP1. */
 		if (project_id == 0xffU)
 			return false;
 	}
