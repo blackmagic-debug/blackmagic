@@ -521,6 +521,42 @@ static bool at32f415_detect(target_s *target, const uint16_t part_id)
 	return stm32f1_configure_dbgmcu(target, STM32F1_DBGMCU_CONFIG);
 }
 
+static bool at32f413_detect(target_s *target, const uint16_t part_id)
+{
+	switch (part_id) {
+	case 0x0240U: // LQFP64
+	case 0x0242U: // LQFP48
+	case 0x0244U: // QFN32
+	case 0x0247U: // QFN48
+		// Flash (C): 256 KiB / 2 KiB per block
+		stm32f1_add_flash(target, 0x08000000, 256U * 1024U, 2U * 1024U);
+		break;
+	case 0x01c1U: // LQFP64
+	case 0x01c3U: // LQFP48
+	case 0x01c5U: // QFN32
+	case 0x01caU: // QFN48
+		// Flash (B): 128 KiB / 1 KiB per block
+		stm32f1_add_flash(target, 0x08000000, 128U * 1024U, 1U * 1024U);
+		break;
+	case 0x0106U: // LQFP48
+		// Flash (8): 64 KiB / 1 KiB per block
+		stm32f1_add_flash(target, 0x08000000, 64U * 1024U, 1U * 1024U);
+		break;
+	// Unknown/undocumented
+	default:
+		return false;
+	}
+	// All parts have 32 KiB of SRAM extensible by EOPB0 up to 64 KiB or down to 16 KiB
+	target_add_ram32(target, 0x20000000, 32U * 1024U);
+	target->driver = "AT32F413";
+	target->part_id = part_id;
+	target->target_options |= STM32F1_TOPT_32BIT_WRITES;
+	target->mass_erase = stm32f1_mass_erase;
+	// TODO: AT32F413 have 48 bytes of User System Data
+	// TODO: SPIM 0x08400000 bank support
+	return stm32f1_configure_dbgmcu(target, STM32F1_DBGMCU_CONFIG);
+}
+
 /* Identify AT32F40x "Mainstream" line devices (Cortex-M4) */
 bool at32f40x_probe(target_s *target)
 {
@@ -550,10 +586,12 @@ bool at32f40x_probe(target_s *target)
 		if (project_id == 0xffU)
 			return false;
 	}
-	/* Value line. 0x05: F415 (OTGFS) */
+	/* Value line. 0x05: F415 (OTGFS), 0x04: F413 (CAN+USB). */
 	if (series == AT32F41_SERIES) {
 		if (project_id == 5U)
 			return at32f415_detect(target, part_id);
+		if (project_id == 4U)
+			return at32f413_detect(target, part_id);
 		if (project_id == 0xffU)
 			return false;
 	}
