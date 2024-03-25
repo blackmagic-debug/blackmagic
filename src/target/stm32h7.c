@@ -258,15 +258,15 @@ bool stm32h7_probe(target_s *target)
 	case ID_STM32H74x: {
 		/* Read the Flash size from the device (expressed in KiB) and multiply it by 1024 */
 		const uint32_t flash_size = target_mem_read32(target, STM32H7_FLASH_SIZE) << 10U;
-		/* STM32H750nB */
+		/* STM32H750nB: 128 KiB, single sector of first bank */
 		if (flash_size == FLASH_SECTOR_SIZE)
 			stm32h7_add_flash(target, STM32H7_FLASH_BANK1_BASE, flash_size, FLASH_SECTOR_SIZE);
-		/* STM32H742xG/H743xG */
+		/* STM32H742xG/H743xG: two banks, each 512 KiB in only 4 sectors of 128 KiB, (and a hole in 0x08080000-0x080fffff), no crypto */
 		else if (flash_size == STM32H74xxG_FLASH_SIZE) {
 			stm32h7_add_flash(target, STM32H7_FLASH_BANK1_BASE, STM32H74xxG_FLASH_BANK_SIZE, FLASH_SECTOR_SIZE);
 			stm32h7_add_flash(target, STM32H7_FLASH_BANK2_BASE, STM32H74xxG_FLASH_BANK_SIZE, FLASH_SECTOR_SIZE);
 		}
-		/* STM32H742xL/H743xL/H753xL */
+		/* STM32H742xI/H743xI/H753xI: two banks, each 1024 KiB in 8 sectors of 128 KiB */
 		else {
 			stm32h7_add_flash(target, STM32H7_FLASH_BANK1_BASE, STM32H7_FLASH_BANK_SIZE, FLASH_SECTOR_SIZE);
 			stm32h7_add_flash(target, STM32H7_FLASH_BANK2_BASE, STM32H7_FLASH_BANK_SIZE, FLASH_SECTOR_SIZE);
