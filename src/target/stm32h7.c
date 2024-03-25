@@ -111,8 +111,9 @@
 #define STM32H7_OPT_KEY1 0x08192a3bU
 #define STM32H7_OPT_KEY2 0x4c5d6e7fU
 
-#define DBGMCU_IDCODE      0x5c001000U
-#define STM32H7_FLASH_SIZE 0x1ff1e800U
+#define DBGMCU_IDCODE        0x5c001000U
+#define STM32H7_FLASH_SIZE   0x1ff1e880U
+#define STM32H7Bx_FLASH_SIZE 0x08fff80cU
 /* Access from processor address space.
  * Access via the APB-D is at 0xe00e1000 */
 #define DBGMCU_IDC  (DBGMCU_IDCODE + 0U)
@@ -275,7 +276,7 @@ bool stm32h7_probe(target_s *target)
 	}
 	case ID_STM32H7Bx: {
 		/* Read the Flash size from the device (expressed in KiB) and multiply it by 1024 */
-		const uint32_t flash_size = target_mem_read32(target, 0x08fff80cU) << 10U;
+		const uint32_t flash_size = target_mem_read16(target, STM32H7Bx_FLASH_SIZE) << 10U;
 		/* STM32H7B0nB: 128 KiB in 16 sectors of 8 KiB */
 		if (flash_size == 0x20000U)
 			stm32h7_add_flash(target, STM32H7_FLASH_BANK1_BASE, flash_size, 0x2000U);
@@ -300,8 +301,7 @@ bool stm32h7_probe(target_s *target)
 		break;
 	}
 	default:
-		stm32h7_add_flash(target, STM32H7_FLASH_BANK1_BASE, STM32H7_FLASH_BANK_SIZE, FLASH_SECTOR_SIZE);
-		stm32h7_add_flash(target, STM32H7_FLASH_BANK2_BASE, STM32H7_FLASH_BANK_SIZE, FLASH_SECTOR_SIZE);
+		break;
 	}
 
 	/* RM0433 Rev 4 is not really clear, what bits are needed in DBGMCU_CR. Maybe more flags needed? */
