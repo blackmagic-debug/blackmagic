@@ -274,8 +274,19 @@ bool stm32h7_probe(target_s *target)
 		break;
 	}
 	case ID_STM32H7Bx: {
+		/* Read the Flash size from the device (expressed in KiB) and multiply it by 1024 */
+		const uint32_t flash_size = target_mem_read32(target, 0x08fff80cU) << 10U;
 		/* STM32H7B0nB: 128 KiB in 16 sectors of 8 KiB */
-		stm32h7_add_flash(target, STM32H7_FLASH_BANK1_BASE, 0x20000U, 0x2000U);
+		if (flash_size == 0x20000U)
+			stm32h7_add_flash(target, STM32H7_FLASH_BANK1_BASE, flash_size, 0x2000U);
+		/* STM32H7A3xG: 1024 KiB in 128 sectors of 8 KiB, single bank, no crypto */
+		else if (flash_size == 1048576U)
+			stm32h7_add_flash(target, STM32H7_FLASH_BANK1_BASE, 1048576U, 0x2000U);
+		/* STM32H7A3xI/H7B3xI: two banks, each 1024 KiB in 128 sectors of 8 KiB */
+		else if (flash_size == 2097152U) {
+			stm32h7_add_flash(target, STM32H7_FLASH_BANK1_BASE, 1048576U, 0x2000U);
+			stm32h7_add_flash(target, STM32H7_FLASH_BANK2_BASE, 1048576U, 0x2000U);
+		}
 		break;
 	}
 	case ID_STM32H72x:
