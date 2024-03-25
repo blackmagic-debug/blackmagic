@@ -371,6 +371,7 @@ static bool stm32h7_flash_unlock(target_s *const target, const uint32_t addr)
 
 static bool stm32h7_flash_erase(target_flash_s *const target_flash, target_addr_t addr, const size_t len)
 {
+	const uint32_t sector_size = target_flash->blocksize;
 	target_s *target = target_flash->t;
 	const stm32h7_flash_s *const flash = (stm32h7_flash_s *)target_flash;
 	/* Unlock the Flash */
@@ -378,12 +379,13 @@ static bool stm32h7_flash_erase(target_flash_s *const target_flash, target_addr_
 		return false;
 	/* We come out of reset with HSI 64 MHz. Adapt FLASH_ACR.*/
 	target_mem_write32(target, flash->regbase + FLASH_ACR, 0);
-	addr &= (NUM_SECTOR_PER_BANK * FLASH_SECTOR_SIZE) - 1U;
-	const size_t end_sector = (addr + len - 1U) / FLASH_SECTOR_SIZE;
+	/* Calculate SNB span */
+	addr &= target_flash->length - 1U;
+	const size_t end_sector = (addr + len - 1U) / sector_size;
 	const align_e psize = flash->psize;
 	const uint32_t reg_base = flash->regbase;
 
-	for (size_t begin_sector = addr / FLASH_SECTOR_SIZE; begin_sector <= end_sector; ++begin_sector) {
+	for (size_t begin_sector = addr / sector_size; begin_sector <= end_sector; ++begin_sector) {
 		/* Erase the current Flash sector */
 		const uint32_t ctrl = (psize * FLASH_CR_PSIZE16) | FLASH_CR_SER | (begin_sector * FLASH_CR_SNB_1);
 		target_mem_write32(target, reg_base + FLASH_CR, ctrl);
