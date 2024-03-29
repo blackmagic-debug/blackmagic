@@ -369,6 +369,30 @@ static bool stm32h7_flash_unlock(target_s *const target, const uint32_t addr)
 	return !(target_mem_read32(target, regbase + FLASH_CR) & FLASH_CR_LOCK);
 }
 
+/* Helper for offsetting FLASH_CR bits correctly */
+static uint32_t stm32h7_flash_cr(uint32_t sector_size, const uint32_t ctrl, const uint8_t sector_number)
+{
+	uint32_t command = ctrl;
+	/* H74x, H72x IP: 128 KiB and has PSIZE */
+	if (sector_size == FLASH_SECTOR_SIZE) {
+		command |= sector_number * FLASH_CR_SNB_1;
+		DEBUG_TARGET("%s: patching FLASH_CR from 0x%08" PRIx32 " to 0x%08" PRIx32 "\n", __func__, ctrl, command);
+		return command;
+	}
+
+	/* H7Bx IP: 8 KiB and no PSIZE */
+	/* Save and right-shift FW, START bits */
+	const uint32_t temp_fw_start = command & (FLASH_CR_FW | FLASH_CR_START);
+	/* Parallelism is ignored */
+	command &= ~(FLASH_CR_PSIZE64 | FLASH_CR_FW | FLASH_CR_START);
+	/* Restore FW, START to H7Bx-correct bits */
+	command |= temp_fw_start >> 2U;
+	/* SNB offset is different, too */
+	command |= sector_number << 6U;
+	DEBUG_TARGET("%s: patching FLASH_CR from 0x%08" PRIx32 " to 0x%08" PRIx32 "\n", __func__, ctrl, command);
+	return command;
+}
+
 static bool stm32h7_flash_erase(target_flash_s *const target_flash, target_addr_t addr, const size_t len)
 {
 	const uint32_t sector_size = target_flash->blocksize;
@@ -386,10 +410,13 @@ static bool stm32h7_flash_erase(target_flash_s *const target_flash, target_addr_
 	const uint32_t reg_base = flash->regbase;
 
 	for (size_t begin_sector = addr / sector_size; begin_sector <= end_sector; ++begin_sector) {
-		/* Erase the current Flash sector */
-		const uint32_t ctrl = (psize * FLASH_CR_PSIZE16) | FLASH_CR_SER | (begin_sector * FLASH_CR_SNB_1);
+		/* Select current Flash sector for erasing */
+		const uint32_t ctrl_h74 = (psize * FLASH_CR_PSIZE16) | FLASH_CR_SER;
+		const uint32_t ctrl = stm32h7_flash_cr(sector_size, ctrl_h74, begin_sector);
 		target_mem_write32(target, reg_base + FLASH_CR, ctrl);
-		target_mem_write32(target, reg_base + FLASH_CR, ctrl | FLASH_CR_START);
+		/* Start erase (as a separate command). Note START1 is at different positions, so use the helper again. */
+		const uint32_t ctrl_start = stm32h7_flash_cr(sector_size, ctrl_h74 | FLASH_CR_START, begin_sector);
+		target_mem_write32(target, reg_base + FLASH_CR, ctrl_start);
 
 		/* Wait for the operation to complete and report errors */
 		DEBUG_INFO("Erasing, ctrl = %08" PRIx32 " status = %08" PRIx32 "\n",
@@ -411,8 +438,9 @@ static bool stm32h7_flash_write(
 		return false;
 
 	/* Prepare the Flash write operation */
-	const uint32_t ctrl = flash->psize * FLASH_CR_PSIZE16;
+	const uint32_t ctrl = stm32h7_flash_cr(target_flash->blocksize, flash->psize * FLASH_CR_PSIZE16, 0);
 	target_mem_write32(target, flash->regbase + FLASH_CR, ctrl);
+	/* Submit Page Program command */
 	target_mem_write32(target, flash->regbase + FLASH_CR, ctrl | FLASH_CR_PG);
 	/* does H7 stall?*/
 
@@ -436,7 +464,7 @@ static bool stm32h7_erase_bank(
 		return false;
 	}
 	/* BER and start can be merged (§3.3.10). */
-	const uint32_t ctrl = (psize * FLASH_CR_PSIZE16) | FLASH_CR_BER | FLASH_CR_START;
+	const uint32_t ctrl = stm32h7_flash_cr(target->flash->blocksize, (psize * FLASH_CR_PSIZE16) | FLASH_CR_BER | FLASH_CR_START, 0);
 	target_mem_write32(target, reg_base + FLASH_CR, ctrl);
 	DEBUG_INFO("Mass erase of bank started\n");
 	return true;
