@@ -29,6 +29,8 @@ option(
 		'cortexm',
 		'riscv32',
 		'riscv64',
+		'avr',
+		'atxmega',
 		'efm',
 		'hc32',
 		'lpc',
