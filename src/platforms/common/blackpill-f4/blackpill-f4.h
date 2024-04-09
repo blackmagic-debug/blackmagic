@@ -299,12 +299,12 @@ extern bool debug_bmp;
 #define SWO_UART_PIN_AF GPIO_AF7
 
 /* Bind to the same DMA Rx channel */
-#define SWO_DMA_BUS    USBUSART1_DMA_BUS
-#define SWO_DMA_CLK    USBUSART1_DMA_CLK
-#define SWO_DMA_CHAN   USBUSART1_DMA_RX_CHAN
-#define SWO_DMA_IRQ    USBUSART1_DMA_RX_IRQ
-#define SWO_DMA_ISR(x) USBUSART1_DMA_RX_ISRx(x)
-#define SWO_DMA_TRG    DMA_SxCR_CHSEL_4
+#define SWO_DMA_BUS     USBUSART1_DMA_BUS
+#define SWO_DMA_CLK     USBUSART1_DMA_CLK
+#define SWO_DMA_CHAN    USBUSART1_DMA_RX_CHAN
+#define SWO_DMA_IRQ     USBUSART1_DMA_RX_IRQ
+#define SWO_DMA_ISR(x)  USBUSART1_DMA_RX_ISRx(x)
+#define SWO_DMA_TRG     DMA_SxCR_CHSEL_4
 
 #define SET_RUN_STATE(state)      \
 	{                             \
