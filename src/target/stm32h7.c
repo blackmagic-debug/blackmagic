@@ -402,7 +402,11 @@ static bool stm32h7_flash_erase(target_flash_s *const target_flash, target_addr_
 	if (!stm32h7_flash_unlock(target, addr))
 		return false;
 	/* We come out of reset with HSI 64 MHz. Adapt FLASH_ACR.*/
-	target_mem_write32(target, flash->regbase + FLASH_ACR, 0);
+	uint32_t acr = 0;
+	/* H7Bx starts up in VOS3 from HSI 64 MHz with default ACR of 0x13 */
+	if (sector_size == 0x2000U)
+		acr = 0x13;
+	target_mem_write32(target, flash->regbase + FLASH_ACR, acr);
 	/* Calculate SNB span */
 	addr &= target_flash->length - 1U;
 	const size_t end_sector = (addr + len - 1U) / sector_size;
