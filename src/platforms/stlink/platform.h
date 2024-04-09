@@ -76,13 +76,6 @@ extern bool debug_bmp;
 #define LED_PORT_UART GPIOA
 #define LED_UART      GPIO9
 
-#ifndef SWIM_NRST_AS_UART
-#define PLATFORM_HAS_TRACESWO 1
-#endif
-
-#define NUM_TRACE_PACKETS 128U /* This is an 8K buffer */
-#define TRACESWO_PROTOCOL 2U   /* 1 = Manchester, 2 = NRZ / async */
-
 #define SWD_CR      GPIO_CRH(SWDIO_PORT)
 #define SWD_CR_MULT (1U << ((14U - 8U) << 2U))
 
@@ -134,6 +127,7 @@ extern bool debug_bmp;
 #define IRQ_PRI_USBUSART_DMA (2U << 4U)
 #define IRQ_PRI_USB_VBUS     (14U << 4U)
 #define IRQ_PRI_SWO_DMA      (0U << 4U)
+#define IRQ_PRI_TRACE        (0U << 4U)
 
 #ifdef SWIM_NRST_AS_UART
 #define USBUSART               USART1
@@ -172,6 +166,24 @@ extern bool debug_bmp;
 #define USBUSART_DMA_BUS DMA1
 #define USBUSART_DMA_CLK RCC_DMA1
 
+#ifndef SWIM_AS_UART
+#define PLATFORM_HAS_TRACESWO 1
+#endif
+#define NUM_TRACE_PACKETS 128U /* This is an 8K buffer */
+//#define TRACESWO_PROTOCOL     2U   /* 1 = Manchester, 2 = NRZ / async */
+
+#if TRACESWO_PROTOCOL == 1
+
+/* Use TIM3 Input 1 (from PA6/TDO) */
+#define TRACE_TIM          TIM3
+#define TRACE_TIM_CLK_EN() rcc_periph_clock_enable(RCC_TIM3)
+#define TRACE_IRQ          NVIC_TIM3_IRQ
+#define TRACE_ISR(x)       tim3_isr(x)
+#define TRACE_IC_IN        TIM_IC_IN_TI1
+#define TRACE_TRIG_IN      TIM_SMCR_TS_TI1FP1
+
+#elif TRACESWO_PROTOCOL == 2
+
 /* On F103, only USART1 is on AHB2 and can reach 4.5MBaud at 72 MHz. */
 #define SWO_UART        USART1
 #define SWO_UART_DR     USART1_DR
@@ -185,6 +197,8 @@ extern bool debug_bmp;
 #define SWO_DMA_CHAN    DMA_CHANNEL5
 #define SWO_DMA_IRQ     NVIC_DMA1_CHANNEL5_IRQ
 #define SWO_DMA_ISR(x)  dma1_channel5_isr(x)
+
+#endif /* TRACESWO_PROTOCOL */
 
 extern uint16_t led_idle_run;
 #define LED_IDLE_RUN led_idle_run
