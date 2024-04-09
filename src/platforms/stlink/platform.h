@@ -180,11 +180,11 @@ extern bool debug_bmp;
 #define SWO_UART_RX_PIN GPIO10
 
 /* This DMA channel is set by the USART in use */
-#define SWO_DMA_BUS    DMA1
-#define SWO_DMA_CLK    RCC_DMA1
-#define SWO_DMA_CHAN   DMA_CHANNEL5
-#define SWO_DMA_IRQ    NVIC_DMA1_CHANNEL5_IRQ
-#define SWO_DMA_ISR(x) dma1_channel5_isr(x)
+#define SWO_DMA_BUS     DMA1
+#define SWO_DMA_CLK     RCC_DMA1
+#define SWO_DMA_CHAN    DMA_CHANNEL5
+#define SWO_DMA_IRQ     NVIC_DMA1_CHANNEL5_IRQ
+#define SWO_DMA_ISR(x)  dma1_channel5_isr(x)
 
 extern uint16_t led_idle_run;
 #define LED_IDLE_RUN led_idle_run
