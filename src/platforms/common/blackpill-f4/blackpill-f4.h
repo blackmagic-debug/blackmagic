@@ -32,10 +32,6 @@
 #include "timing.h"
 #include "timing_stm32.h"
 
-#define PLATFORM_HAS_TRACESWO
-#define NUM_TRACE_PACKETS 256U /* 16K buffer */
-#define TRACESWO_PROTOCOL 2U   /* 1 = RZ/Manchester, 2 = NRZ/async/uart */
-
 #if ENABLE_DEBUG == 1
 #define PLATFORM_HAS_DEBUG
 extern bool debug_bmp;
@@ -285,10 +281,22 @@ extern bool debug_bmp;
 #define IRQ_PRI_TRACE        (0U << 4U)
 #define IRQ_PRI_SWO_DMA      (0U << 4U)
 
-#define TRACE_TIM          TIM3
-#define TRACE_TIM_CLK_EN() rcc_periph_clock_enable(RCC_TIM3)
-#define TRACE_IRQ          NVIC_TIM3_IRQ
-#define TRACE_ISR(x)       tim3_isr(x)
+#define PLATFORM_HAS_TRACESWO
+#define NUM_TRACE_PACKETS 256U /* 16K buffer */
+//#define TRACESWO_PROTOCOL 2U   /* 1 = RZ/Manchester, 2 = NRZ/async/uart */
+
+#if TRACESWO_PROTOCOL == 1
+
+/* Use TIM4 Input 2 (from PB7/TDO) or Input 1 (from PB6/TDO), AF2, trigger on Rising Edge */
+#define TRACE_TIM          TIM4
+#define TRACE_TIM_CLK_EN() rcc_periph_clock_enable(RCC_TIM4)
+#define TRACE_IRQ          NVIC_TIM4_IRQ
+#define TRACE_ISR(x)       tim4_isr(x)
+#define TRACE_IC_IN        PINOUT_SWITCH(TIM_IC_IN_TI2, TIM_IC_IN_TI1)
+#define TRACE_TRIG_IN      TIM_SMCR_TS_TI1FP1
+#define TRACE_TIM_PIN_AF   GPIO_AF2
+
+#elif TRACESWO_PROTOCOL == 2
 
 /* On F411 use USART1_RX mapped on PB7 for async capture */
 #define SWO_UART        USBUSART1
@@ -305,6 +313,8 @@ extern bool debug_bmp;
 #define SWO_DMA_IRQ     USBUSART1_DMA_RX_IRQ
 #define SWO_DMA_ISR(x)  USBUSART1_DMA_RX_ISRx(x)
 #define SWO_DMA_TRG     DMA_SxCR_CHSEL_4
+
+#endif /* TRACESWO_PROTOCOL */
 
 #define SET_RUN_STATE(state)      \
 	{                             \
