@@ -140,11 +140,11 @@ extern bool debug_bmp;
 #define SWO_UART_RX_PIN GPIO3
 
 /* This DMA channel is set by the USART in use */
-#define SWO_DMA_BUS    DMA1
-#define SWO_DMA_CLK    RCC_DMA1
-#define SWO_DMA_CHAN   DMA_CHANNEL6
-#define SWO_DMA_IRQ    NVIC_DMA1_CHANNEL6_IRQ
-#define SWO_DMA_ISR(x) dma1_channel6_isr(x)
+#define SWO_DMA_BUS     DMA1
+#define SWO_DMA_CLK     RCC_DMA1
+#define SWO_DMA_CHAN    DMA_CHANNEL6
+#define SWO_DMA_IRQ     NVIC_DMA1_CHANNEL6_IRQ
+#define SWO_DMA_ISR(x)  dma1_channel6_isr(x)
 
 #define LED_PORT     GPIOC
 #define LED_IDLE_RUN GPIO15
