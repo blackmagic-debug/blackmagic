@@ -94,43 +94,45 @@ extern bool debug_bmp;
 /*
  * Important pin mappings for STM32 implementation:
  *   * JTAG/SWD
- *     * PB6 or PB5: TDI
- *     * PB7 or PB6: TDO/SWO
- *     * PB8 or PB7: TCK/SWCLK
- *     * PB9 or PB8: TMS/SWDIO
- *     * PA6 or PB3: TRST
- *     * PA5 or PB4: nRST
+ *     * PB6 or PB5 or PA15: TDI
+ *     * PB7 or PB6 or PB3: TDO/SWO
+ *     * PB8 or PB7 or PA14: TCK/SWCLK
+ *     * PB9 or PB8 or PA13: TMS/SWDIO
+ *     * PA6 or PB3 or PB4: TRST
+ *     * PA5 or PB4 or PA5: nRST
  *   * USB USART
  *     * PA2: USART TX
  *     * PA3: USART RX
  *   * +3V3
- *     * PA1 or PB9: power pin
+ *     * PA1 or PB9 or PA1: power pin
  *   * Force DFU mode button:
  *     * PA0: user button KEY
  */
 
 /* Hardware definitions... */
 /* Build the code using `make PROBE_HOST=blackpill-f4x1cx ALTERNATIVE_PINOUT=1` to select the second pinout. */
-#define TDI_PORT GPIOB
-#define TDI_PIN  PINOUT_SWITCH(GPIO6, GPIO5)
+/* `ALTERNATIVE_PINOUT=2` results in self SWJ-DP unmapped, like `swlink` */
+#define TDI_PORT PINOUT_SWITCH(GPIOB, GPIOB, GPIOA)
+#define TDI_PIN  PINOUT_SWITCH(GPIO6, GPIO5, GPIO15)
 
 #define TDO_PORT GPIOB
-#define TDO_PIN  PINOUT_SWITCH(GPIO7, GPIO6)
+#define TDO_PIN  PINOUT_SWITCH(GPIO7, GPIO6, GPIO3)
 
-#define TCK_PORT   GPIOB
-#define TCK_PIN    PINOUT_SWITCH(GPIO8, GPIO7)
+#define TCK_PORT   PINOUT_SWITCH(GPIOB, GPIOB, GPIOA)
+#define TCK_PIN    PINOUT_SWITCH(GPIO8, GPIO7, GPIO14)
 #define SWCLK_PORT TCK_PORT
 #define SWCLK_PIN  TCK_PIN
 
-#define TMS_PORT   GPIOB
-#define TMS_PIN    PINOUT_SWITCH(GPIO9, GPIO8)
+#define TMS_PORT   PINOUT_SWITCH(GPIOB, GPIOB, GPIOA)
+#define TMS_PIN    PINOUT_SWITCH(GPIO9, GPIO8, GPIO13)
 #define SWDIO_PORT TMS_PORT
 #define SWDIO_PIN  TMS_PIN
 
-#define SWDIO_MODE_REG_MULT_PB9 (1U << (9U << 1U))
-#define SWDIO_MODE_REG_MULT_PB8 (1U << (8U << 1U))
+#define SWDIO_MODE_REG_MULT_PB9  (1U << (9U << 1U))
+#define SWDIO_MODE_REG_MULT_PB8  (1U << (8U << 1U))
+#define SWDIO_MODE_REG_MULT_PA13 (1U << (13U << 1U))
 /* Update when adding more alternative pinouts */
-#define SWDIO_MODE_REG_MULT PINOUT_SWITCH(SWDIO_MODE_REG_MULT_PB9, SWDIO_MODE_REG_MULT_PB8)
+#define SWDIO_MODE_REG_MULT PINOUT_SWITCH(SWDIO_MODE_REG_MULT_PB9, SWDIO_MODE_REG_MULT_PB8, SWDIO_MODE_REG_MULT_PA13)
 #define SWDIO_MODE_REG      GPIO_MODER(TMS_PORT)
 
 #define TMS_SET_MODE()                                                    \
@@ -152,18 +154,18 @@ extern bool debug_bmp;
 		SWDIO_MODE_REG = mode_reg;              \
 	} while (0)
 
-#define TRST_PORT PINOUT_SWITCH(GPIOA, GPIOB)
-#define TRST_PIN  PINOUT_SWITCH(GPIO6, GPIO3)
+#define TRST_PORT PINOUT_SWITCH(GPIOA, GPIOB, GPIOB)
+#define TRST_PIN  PINOUT_SWITCH(GPIO6, GPIO3, GPIO4)
 
-#define NRST_PORT PINOUT_SWITCH(GPIOA, GPIOB)
-#define NRST_PIN  PINOUT_SWITCH(GPIO5, GPIO4)
+#define NRST_PORT PINOUT_SWITCH(GPIOA, GPIOB, GPIOA)
+#define NRST_PIN  PINOUT_SWITCH(GPIO5, GPIO4, GPIO5)
 
-/* SWO comes in on the same pin as TDO */
+/* SWO comes in on the same pin as TDO (FIXME: PB6 TX. Half-duplex?) */
 #define SWO_PORT GPIOB
-#define SWO_PIN  PINOUT_SWITCH(GPIO7, GPIO6)
+#define SWO_PIN  PINOUT_SWITCH(GPIO7, GPIO6, GPIO3)
 
-#define PWR_BR_PORT PINOUT_SWITCH(GPIOA, GPIOB)
-#define PWR_BR_PIN  PINOUT_SWITCH(GPIO1, GPIO9)
+#define PWR_BR_PORT PINOUT_SWITCH(GPIOA, GPIOB, GPIOA)
+#define PWR_BR_PIN  PINOUT_SWITCH(GPIO1, GPIO9, GPIO1)
 
 #define USER_BUTTON_KEY_PORT GPIOA
 #define USER_BUTTON_KEY_PIN  GPIO0
@@ -174,7 +176,7 @@ extern bool debug_bmp;
 #define LED_BOOTLOADER GPIO15
 
 #define LED_PORT_UART GPIOA
-#define LED_UART      PINOUT_SWITCH(GPIO4, GPIO1)
+#define LED_UART      PINOUT_SWITCH(GPIO4, GPIO1, GPIO4)
 
 /* SPI2: PB12/13/14/15 to external chips */
 #define EXT_SPI         SPI2
