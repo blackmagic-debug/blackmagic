@@ -327,7 +327,16 @@ bool kinetis_probe(target_s *const t)
 			}
 			break;
 		case 0x010U: /* K20 Family, DIEID=0x0 */
+			return false;
 		case 0x090U: /* K20 Family, DIEID=0x1 */
+			t->driver = "MK20DX256";
+			target_add_ram(t, 0x1fff8000, 0x00008000);	/* SRAM_L, 32 KB */
+			target_add_ram(t, 0x20000000, 0x00008000);	/* SRAM_H, 32 KB */
+
+			kinetis_add_flash(t, 0x00000000, 0x40000, 0x800, KL_WRITE_LEN); /* P-Flash, 256 KB, 2 KB Sectors */
+			kinetis_add_flash(t, 0x10000000, 0x8000, 0x400, KL_WRITE_LEN); /* FlexNVM, 32 KB, 1 KB Sectors */
+
+			break;
 		case 0x110U: /* K20 Family, DIEID=0x2 */
 		case 0x190U: /* K20 Family, DIEID=0x3 */
 		case 0x230U: /* K21 Family, DIEID=0x4 */
