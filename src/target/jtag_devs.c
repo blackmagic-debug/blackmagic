@@ -4,6 +4,7 @@
  * Copyright (C) 2011  Black Sphere Technologies Ltd.
  * Written by Gareth McMullin <gareth@blacksphere.co.nz>
  * Copyright (C) 2022  1bitsquared - Rachel Mant <git@dragonmux.network>
+ * Modified by LAK132
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -328,6 +329,18 @@ const jtag_dev_descr_s dev_descr[] = {
 			{
 				.ir_length = 6U,
 				.ir_value = 1U,
+			},
+	},
+	{
+		.idcode = 0x03636093U,
+		.idmask = 0x0fffffffU,
+#if ENABLE_DEBUG == 1
+		.descr = "Xilinx 6-bit IR.",
+#endif
+		.ir_quirks =
+			{
+				.ir_length = 6U,
+				.ir_value = 0x35U,
 			},
 	},
 	{
