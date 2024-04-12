@@ -619,25 +619,12 @@ static uint32_t stm32h7_part_uid_addr(target_s *const target)
 	return 0x1ff1e800U;
 }
 
-/*
- * Print the Unique device ID.
- * Can be reused for other STM32 devices with uid as parameter.
- */
 static bool stm32h7_uid(target_s *target, int argc, const char **argv)
 {
 	(void)argc;
 	(void)argv;
-
 	const uint32_t uid_addr = stm32h7_part_uid_addr(target);
-
-	tc_printf(target, "0x");
-	for (size_t i = 0; i < 12U; i += 4U) {
-		const uint32_t value = target_mem32_read32(target, uid_addr + i);
-		tc_printf(target, "%02X%02X%02X%02X", (value >> 24U) & 0xffU, (value >> 16U) & 0xffU, (value >> 8U) & 0xffU,
-			value & 0xffU);
-	}
-	tc_printf(target, "\n");
-	return true;
+	return stm32_uid(target, uid_addr);
 }
 
 static bool stm32h7_crc_bank(target_s *target, uint32_t addr)
