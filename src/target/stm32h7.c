@@ -114,21 +114,29 @@
 #define STM32H7_OPT_KEY1 0x08192a3bU
 #define STM32H7_OPT_KEY2 0x4c5d6e7fU
 
-#define DBGMCU_IDCODE        0x5c001000U
 #define STM32H7_FLASH_SIZE   0x1ff1e880U
 #define STM32H7Bx_FLASH_SIZE 0x08fff80cU
 #define STM32H7_CHIP_IDENT   0x1ff1e8c0U
-/* Access from processor address space.
- * Access via the APB-D is at 0xe00e1000 */
-#define DBGMCU_IDC  (DBGMCU_IDCODE + 0U)
-#define DBGMCU_CR   (DBGMCU_IDCODE + 4U)
-#define DBGSLEEP_D1 (1U << 0U)
-#define DBGSTOP_D1  (1U << 1U)
-#define DBGSTBY_D1  (1U << 2U)
-#define DBGSTOP_D3  (1U << 7U)
-#define DBGSTBY_D3  (1U << 8U)
-#define D1DBGCKEN   (1U << 21U)
-#define D3DBGCKEN   (1U << 22U)
+
+/*
+ * Base address for the DBGMCU peripehral for access from the processor
+ * address space. For access via AP2, use base address 0xe00e1000.
+ */
+#define DBGMCU_BASE       0x5c001000U
+#define DBGMCU_IDCODE     (DBGMCU_BASE + 0x000U)
+#define DBGMCU_CONFIG     (DBGMCU_BASE + 0x004U)
+#define DBGMCU_APB3FREEZE (DBGMCU_BASE + 0x034U)
+#define DBGMCU_APB4FREEZE (DBGMCU_BASE + 0x054U)
+
+#define DBGMCU_CONFIG_DBGSLEEP_D1 (1U << 0U)
+#define DBGMCU_CONFIG_DBGSTOP_D1  (1U << 1U)
+#define DBGMCU_CONFIG_DBGSTBY_D1  (1U << 2U)
+#define DBGMCU_CONFIG_DBGSTOP_D3  (1U << 7U)
+#define DBGMCU_CONFIG_DBGSTBY_D3  (1U << 8U)
+#define DBGMCU_CONFIG_D1DBGCKEN   (1U << 21U)
+#define DBGMCU_CONFIG_D3DBGCKEN   (1U << 22U)
+#define DBGMCU_APB3FREEZE_WWDG1   (1U << 6U)
+#define DBGMCU_APB4FREEZE_IWDG1   (1U << 18U)
 
 #define STM32H7_DBGMCU_IDCODE_DEV_MASK  0x00000fffU
 #define STM32H7_DBGMCU_IDCODE_REV_SHIFT 16U
@@ -230,7 +238,7 @@ bool stm32h7_probe(target_s *target)
 		DEBUG_ERROR("calloc: failed in %s\n", __func__);
 		return false;
 	}
-	priv_storage->dbg_cr = target_mem32_read32(target, DBGMCU_CR);
+	priv_storage->dbg_cr = target_mem32_read32(target, DBGMCU_CONFIG);
 	target->target_storage = priv_storage;
 
 	memcpy(priv_storage->name, "STM32", 5U);
@@ -249,6 +257,17 @@ bool stm32h7_probe(target_s *target)
 	target->detach = stm32h7_detach;
 	target->mass_erase = stm32h7_mass_erase;
 	target_add_commands(target, stm32h7_cmd_list, target->driver);
+
+	/* Now we have a stable debug environment, make sure the WDTs can't bonk the processor out from under us */
+	target_mem32_write32(target, DBGMCU_APB3FREEZE, DBGMCU_APB3FREEZE_WWDG1);
+	target_mem32_write32(target, DBGMCU_APB4FREEZE, DBGMCU_APB4FREEZE_IWDG1);
+	/*
+	 * Make sure that both domain D1 and D3 debugging are enabled and that we can keep
+	 * debugging through sleep, stop and standby states for domain D1
+	 */
+	target_mem32_write32(target, DBGMCU_CONFIG,
+		DBGMCU_CONFIG_DBGSLEEP_D1 | DBGMCU_CONFIG_DBGSTOP_D1 | DBGMCU_CONFIG_DBGSTBY_D1 | DBGMCU_CONFIG_D1DBGCKEN |
+			DBGMCU_CONFIG_D1DBGCKEN);
 
 	/* Build the RAM map */
 	target_add_ram32(target, 0x00000000, 0x10000); /* ITCM RAM,   64 KiB */
@@ -334,10 +353,6 @@ bool stm32h7_probe(target_s *target)
 	default:
 		break;
 	}
-
-	/* RM0433 Rev 4 is not really clear, what bits are needed in DBGMCU_CR. Maybe more flags needed? */
-	const uint32_t dbgmcu_ctrl = DBGSLEEP_D1 | D1DBGCKEN;
-	target_mem32_write32(target, DBGMCU_CR, dbgmcu_ctrl);
 	return true;
 }
 
@@ -359,7 +374,7 @@ static bool stm32h7_attach(target_s *target)
 static void stm32h7_detach(target_s *target)
 {
 	stm32h7_priv_s *ps = (stm32h7_priv_s *)target->target_storage;
-	target_mem32_write32(target, DBGMCU_CR, ps->dbg_cr);
+	target_mem32_write32(target, DBGMCU_CONFIG, ps->dbg_cr);
 	cortexm_detach(target);
 }
 
@@ -673,10 +688,9 @@ static bool stm32h7_cmd_rev(target_s *target, int argc, const char **argv)
 {
 	(void)argc;
 	(void)argv;
-	/* DBGMCU identity code register */
-	const uint32_t dbgmcu_idc = target_mem32_read32(target, DBGMCU_IDC);
-	const uint16_t rev_id = dbgmcu_idc >> STM32H7_DBGMCU_IDCODE_REV_SHIFT;
-	const uint16_t dev_id = dbgmcu_idc & STM32H7_DBGMCU_IDCODE_DEV_MASK;
+	const uint32_t idcode = target_mem32_read32(target, DBGMCU_IDCODE);
+	const uint16_t rev_id = idcode >> STM32H7_DBGMCU_IDCODE_REV_SHIFT;
+	const uint16_t dev_id = idcode & STM32H7_DBGMCU_IDCODE_DEV_MASK;
 
 	/* Print device */
 	switch (dev_id) {
