@@ -59,4 +59,6 @@ static inline bool stm32_psize_from_string(target_s *t, const char *const str, a
 	return true;
 }
 
+bool stm32_uid(target_s *const target, target_addr_t uid_base);
+
 #endif /*TARGET_STM32_COMMON_H*/

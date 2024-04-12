@@ -32,7 +32,7 @@
 #include "target.h"
 #include "target_internal.h"
 #include "cortexm.h"
-#include "buffer_utils.h"
+#include "stm32_common.h"
 
 /* Memory map constants for STM32MP15x */
 #define STM32MP15_CM4_RETRAM_BASE        0x00000000U
@@ -171,43 +171,11 @@ static void stm32mp15_detach(target_s *const target)
 	cortexm_detach(target);
 }
 
-typedef struct stm32mp15x_uid {
-	uint16_t wafer_xcoord;
-	uint16_t wafer_ycoord;
-	uint8_t wafer_number;
-	uint8_t lot_number[7];
-} stm32mp15x_uid_s;
-
-/*
- * Print the Unique device ID.
- * Can be reused for other STM32 devices with uid as parameter.
- */
 static bool stm32mp15_uid(target_s *const target, const int argc, const char **const argv)
 {
 	(void)argc;
 	(void)argv;
-	char uid_hex[25] = {0};
-	uint8_t uid_bytes[12] = {0};
-	if (target_mem32_read(target, uid_bytes, STM32MP15_UID_BASE, 12))
-		return false;
-
-	for (size_t i = 0; i < 12U; i += 4U) {
-		const uint32_t value = read_le4(uid_bytes, i);
-		//utoa_upper(value, &uid_hex[i * 2U], 16);
-		snprintf(uid_hex + i * 2U, 9, "%08" PRIX32, value);
-	}
-	tc_printf(target, "0x%s\n", uid_hex);
-
-	stm32mp15x_uid_s uid;
-	//	memcpy(&uid, values, 12U);
-	uid.wafer_xcoord = read_le2(uid_bytes, 0);
-	uid.wafer_ycoord = read_le2(uid_bytes, 2);
-	uid.wafer_number = uid_bytes[4];
-	memcpy(uid.lot_number, &uid_bytes[5], 7);
-
-	tc_printf(target, "Wafer coords X=%u, Y=%u, number %u; Lot number %.7s\n", uid.wafer_xcoord, uid.wafer_ycoord,
-		uid.wafer_number, uid.lot_number);
-	return true;
+	return stm32_uid(target, STM32MP15_UID_BASE);
 }
 
 static const struct {

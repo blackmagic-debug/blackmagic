@@ -252,6 +252,7 @@ target_stm = declare_dependency(
 		'stm32l0.c',
 		'stm32l4.c',
 		'stm32mp15.c',
+		'stm32_common.c',
 	),
 	dependencies: target_stm_deps,
 )

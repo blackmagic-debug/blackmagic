@@ -91,6 +91,7 @@ SRC =              \
 	stm32l0.c      \
 	stm32l4.c      \
 	stm32g0.c      \
+	stm32_common.c \
 	renesas_ra.c   \
 	target.c       \
 	target_flash.c \
