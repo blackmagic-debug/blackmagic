@@ -32,6 +32,7 @@
 #include "target.h"
 #include "target_internal.h"
 #include "cortexm.h"
+#include "buffer_utils.h"
 
 /* Memory map constants for STM32MP15x */
 #define STM32MP15_CM4_RETRAM_BASE        0x00000000U
@@ -185,31 +186,27 @@ static bool stm32mp15_uid(target_s *const target, const int argc, const char **c
 {
 	(void)argc;
 	(void)argv;
-	uint32_t values[3] = {0};
 	char uid_hex[25] = {0};
+	uint8_t uid_bytes[12] = {0};
+	if (target_mem32_read(target, uid_bytes, STM32MP15_UID_BASE, 12))
+		return false;
 
 	for (size_t i = 0; i < 12U; i += 4U) {
-		const uint32_t value = target_mem32_read32(target, STM32MP15_UID_BASE + i);
-		/* XXX: use `utoa_upper(value, &uid_hex[i * 2U], 16)`? */
-		snprintf(uid_hex + i * 2U, 9, "%02" PRIX32 "%02" PRIX32 "%02" PRIX32 "%02" PRIX32, (value >> 24U) & 0xffU,
-			(value >> 16U) & 0xffU, (value >> 8U) & 0xffU, value & 0xffU);
-		values[i / 4U] = value;
+		const uint32_t value = read_le4(uid_bytes, i);
+		//utoa_upper(value, &uid_hex[i * 2U], 16);
+		snprintf(uid_hex + i * 2U, 9, "%08" PRIX32, value);
 	}
 	tc_printf(target, "0x%s\n", uid_hex);
 
 	stm32mp15x_uid_s uid;
 	//	memcpy(&uid, values, 12U);
-	uid.wafer_xcoord = values[0] & 0xffffU;
-	uid.wafer_ycoord = values[0] >> 16U;
-	uid.wafer_number = values[1] & 0xffU;
-	/* This is ugly but MSVC can't do packed structs portably */
-	uid.lot_number[0] = values[1] >> 8U & 0xffU;
-	uid.lot_number[1] = values[1] >> 16U & 0xffU;
-	uid.lot_number[2] = values[1] >> 24U & 0xffU;
-	memcpy(&uid.lot_number[3], (uint8_t *)&values[2], 4);
+	uid.wafer_xcoord = read_le2(uid_bytes, 0);
+	uid.wafer_ycoord = read_le2(uid_bytes, 2);
+	uid.wafer_number = uid_bytes[4];
+	memcpy(uid.lot_number, &uid_bytes[5], 7);
 
 	tc_printf(target, "Wafer coords X=%u, Y=%u, number %u; Lot number %.7s\n", uid.wafer_xcoord, uid.wafer_ycoord,
-		uid.wafer_number, &uid.lot_number[0]);
+		uid.wafer_number, uid.lot_number);
 	return true;
 }
 
