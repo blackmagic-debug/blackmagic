@@ -492,28 +492,21 @@ static uint32_t stm32h7_flash_cr(uint32_t sector_size, const uint32_t ctrl, cons
 
 static bool stm32h7_flash_erase(target_flash_s *const target_flash, target_addr_t addr, const size_t len)
 {
-	const uint32_t sector_size = target_flash->blocksize;
+	(void)len;
+	/* Erases are always done one sector at a time - the target Flash API guarantees this */
 	target_s *target = target_flash->t;
 	const stm32h7_flash_s *const flash = (stm32h7_flash_s *)target_flash;
 
-	/* Calculate SNB span */
-	addr &= target_flash->length - 1U;
-	const size_t end_sector = (addr + len - 1U) / sector_size;
-	const align_e psize = flash->psize;
-	const uint32_t ctrl = (psize * STM32H7_FLASH_CTRL_PSIZE16) | STM32H7_FLASH_CTRL_SECTOR_ERASE;
+	/* Calculate the sector to erase and set the operation runnning */
+	const uint32_t sector = (addr - target_flash->start) / target_flash->blocksize;
+	const uint32_t ctrl = (flash->psize * STM32H7_FLASH_CTRL_PSIZE16) | STM32H7_FLASH_CTRL_SECTOR_ERASE;
+	target_mem32_write32(
+		target, flash->regbase + STM32H7_FLASH_CTRL, stm32h7_flash_cr(target_flash->blocksize, ctrl, sector));
+	target_mem32_write32(target, flash->regbase + STM32H7_FLASH_CTRL,
+		stm32h7_flash_cr(target_flash->blocksize, ctrl | STM32H7_FLASH_CTRL_START, sector));
 
-	for (size_t begin_sector = addr / sector_size; begin_sector <= end_sector; ++begin_sector) {
-		/* Select the next Flash sector to erase */
-		target_mem32_write32(
-			target, flash->regbase + STM32H7_FLASH_CTRL, stm32h7_flash_cr(sector_size, ctrl, begin_sector));
-		target_mem32_write32(target, flash->regbase + STM32H7_FLASH_CTRL,
-			stm32h7_flash_cr(target_flash->blocksize, ctrl | STM32H7_FLASH_CTRL_START, begin_sector));
-
-		/* Wait for the operation to complete and report errors */
-		if (!stm32h7_flash_wait_complete(target, flash->regbase))
-			return false;
-	}
-	return true;
+	/* Wait for the operation to complete and report errors */
+	return stm32h7_flash_wait_complete(target, flash->regbase);
 }
 
 static bool stm32h7_flash_write(
