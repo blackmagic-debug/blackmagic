@@ -61,7 +61,6 @@
 #define FLASH_CRCDATA   0x5cU
 
 /* Flash Program and Erase Controller Register Map */
-#define H7_IWDG_BASE        0x58004c00U
 #define FPEC1_BASE          0x52002000U
 #define FPEC2_BASE          0x52002100U
 #define FLASH_SR_BSY        (1U << 0U)
@@ -117,6 +116,16 @@
 #define STM32H7_FLASH_SIZE   0x1ff1e880U
 #define STM32H7Bx_FLASH_SIZE 0x08fff80cU
 #define STM32H7_CHIP_IDENT   0x1ff1e8c0U
+
+/* WWDG base address and register map */
+#define STM32H7_WWDG_BASE     0x50003000U
+#define STM32H7_WWDG_CR       (STM32H7_WWDG_BASE + 0x00)
+#define STM32H7_WWDG_CR_RESET 0x0000007fU
+
+/* IWDG base address and register map */
+#define STM32H7_IWDG_BASE      0x58004800U
+#define STM32H7_IWDG_KEY       (STM32H7_IWDG_BASE + 0x00U)
+#define STM32H7_IWDG_KEY_RESET 0x0000aaaaU
 
 /*
  * Base address for the DBGMCU peripehral for access from the processor
@@ -228,6 +237,16 @@ static void stm32h7_add_flash(target_s *target, uint32_t addr, size_t length, si
 	target_add_flash(target, target_flash);
 }
 
+void stm32h7_configure_wdts(target_s *const target)
+{
+	/*
+	 * Feed the watchdogs to ensure things are stable - though note that the DBGMCU writes
+	 * in the probe routine to the APB freeze registers mean they are halted with the CPU core.
+	 */
+	target_mem32_write32(target, STM32H7_WWDG_CR, STM32H7_WWDG_CR_RESET);
+	target_mem32_write32(target, STM32H7_IWDG_KEY, STM32H7_IWDG_KEY_RESET);
+}
+
 bool stm32h7_probe(target_s *target)
 {
 	const uint16_t part_id = target->part_id >> 4U;
@@ -271,7 +290,8 @@ bool stm32h7_probe(target_s *target)
 	 */
 	target_mem32_write32(target, DBGMCU_CONFIG,
 		DBGMCU_CONFIG_DBGSLEEP_D1 | DBGMCU_CONFIG_DBGSTOP_D1 | DBGMCU_CONFIG_DBGSTBY_D1 | DBGMCU_CONFIG_D1DBGCKEN |
-			DBGMCU_CONFIG_D1DBGCKEN);
+			DBGMCU_CONFIG_D3DBGCKEN);
+	stm32h7_configure_wdts(target);
 
 	/* Build the RAM map */
 	target_add_ram32(target, 0x00000000, 0x10000); /* ITCM RAM,   64 KiB */
@@ -365,13 +385,13 @@ static bool stm32h7_attach(target_s *target)
 	if (!cortexm_attach(target))
 		return false;
 	/*
-	 * If IWDG runs as HARDWARE watchdog (§44.3.4) erase
-	 * will be aborted by the Watchdog and erase fails!
-	 * Setting IWDG_KR to 0xaaaa does not seem to help!
+	 * Make sure that both domain D1 and D3 debugging are enabled and that we can keep
+	 * debugging through sleep, stop and standby states for domain D1 - this is duplicated as it's undone by detach.
 	 */
-	const uint32_t optsr = target_mem32_read32(target, FPEC1_BASE + FLASH_OPTSR);
-	if (!(optsr & FLASH_OPTSR_IWDG1_SW))
-		tc_printf(target, "Hardware IWDG running. Expect failure. Set IWDG1_SW!");
+	target_mem32_write32(target, DBGMCU_CONFIG,
+		DBGMCU_CONFIG_DBGSLEEP_D1 | DBGMCU_CONFIG_DBGSTOP_D1 | DBGMCU_CONFIG_DBGSTBY_D1 | DBGMCU_CONFIG_D1DBGCKEN |
+			DBGMCU_CONFIG_D3DBGCKEN);
+	stm32h7_configure_wdts(target);
 	return true;
 }
 
