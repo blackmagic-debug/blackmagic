@@ -91,9 +91,11 @@
 #define FLASH_CR_PSIZE64 (3U << 4U)
 #define FLASH_CR_FW      (1U << 6U)
 #define FLASH_CR_START   (1U << 7U)
-#define FLASH_CR_SNB_1   (1U << 8U)
 #define FLASH_CR_SNB     (3U << 8U)
 #define FLASH_CR_CRC_EN  (1U << 15U)
+
+#define STM32H74X_FLASH_CR_SNB_SHIFT 8U
+#define STM32H7BX_FLASH_CR_SNB_SHIFT 6U
 
 #define FLASH_OPTCR_OPTLOCK (1U << 0U)
 #define FLASH_OPTCR_OPTSTRT (1U << 1U)
@@ -375,7 +377,7 @@ static uint32_t stm32h7_flash_cr(uint32_t sector_size, const uint32_t ctrl, cons
 	uint32_t command = ctrl;
 	/* H74x, H72x IP: 128 KiB and has PSIZE */
 	if (sector_size == FLASH_SECTOR_SIZE) {
-		command |= sector_number * FLASH_CR_SNB_1;
+		command |= sector_number << STM32H74X_FLASH_CR_SNB_SHIFT;
 		DEBUG_TARGET("%s: patching FLASH_CR from 0x%08" PRIx32 " to 0x%08" PRIx32 "\n", __func__, ctrl, command);
 		return command;
 	}
@@ -388,7 +390,7 @@ static uint32_t stm32h7_flash_cr(uint32_t sector_size, const uint32_t ctrl, cons
 	/* Restore FW, START to H7Bx-correct bits */
 	command |= temp_fw_start >> 2U;
 	/* SNB offset is different, too */
-	command |= sector_number << 6U;
+	command |= sector_number << STM32H7BX_FLASH_CR_SNB_SHIFT;
 	DEBUG_TARGET("%s: patching FLASH_CR from 0x%08" PRIx32 " to 0x%08" PRIx32 "\n", __func__, ctrl, command);
 	return command;
 }
