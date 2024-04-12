@@ -479,10 +479,6 @@ static bool stm32h7_flash_erase(target_flash_s *const target_flash, target_addr_
 			stm32h7_flash_cr(target_flash->blocksize, ctrl | FLASH_CR_START, begin_sector));
 
 		/* Wait for the operation to complete and report errors */
-		DEBUG_INFO("Erasing, ctrl = %08" PRIx32 " status = %08" PRIx32 "\n",
-			target_mem32_read32(target, flash->regbase + FLASH_CR),
-			target_mem32_read32(target, flash->regbase + FLASH_SR));
-
 		if (!stm32h7_flash_busy_wait(target, flash->regbase))
 			return false;
 	}
