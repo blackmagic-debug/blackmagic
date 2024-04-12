@@ -448,22 +448,20 @@ static bool stm32h7_flash_erase(target_flash_s *const target_flash, target_addr_
 	addr &= target_flash->length - 1U;
 	const size_t end_sector = (addr + len - 1U) / sector_size;
 	const align_e psize = flash->psize;
-	const uint32_t reg_base = flash->regbase;
+	const uint32_t ctrl = (psize * FLASH_CR_PSIZE16) | FLASH_CR_SER;
 
 	for (size_t begin_sector = addr / sector_size; begin_sector <= end_sector; ++begin_sector) {
-		/* Select current Flash sector for erasing */
-		const uint32_t ctrl_h74 = (psize * FLASH_CR_PSIZE16) | FLASH_CR_SER;
-		const uint32_t ctrl = stm32h7_flash_cr(sector_size, ctrl_h74, begin_sector);
-		target_mem32_write32(target, reg_base + FLASH_CR, ctrl);
-		/* Start erase (as a separate command). Note START1 is at different positions, so use the helper again. */
-		const uint32_t ctrl_start = stm32h7_flash_cr(sector_size, ctrl_h74 | FLASH_CR_START, begin_sector);
-		target_mem32_write32(target, reg_base + FLASH_CR, ctrl_start);
+		/* Select the next Flash sector to erase */
+		target_mem32_write32(target, flash->regbase + FLASH_CR, stm32h7_flash_cr(sector_size, ctrl, begin_sector));
+		target_mem32_write32(target, flash->regbase + FLASH_CR,
+			stm32h7_flash_cr(target_flash->blocksize, ctrl | FLASH_CR_START, begin_sector));
 
 		/* Wait for the operation to complete and report errors */
 		DEBUG_INFO("Erasing, ctrl = %08" PRIx32 " status = %08" PRIx32 "\n",
-			target_mem32_read32(target, reg_base + FLASH_CR), target_mem32_read32(target, reg_base + FLASH_SR));
+			target_mem32_read32(target, flash->regbase + FLASH_CR),
+			target_mem32_read32(target, flash->regbase + FLASH_SR));
 
-		if (!stm32h7_flash_busy_wait(target, reg_base))
+		if (!stm32h7_flash_busy_wait(target, flash->regbase))
 			return false;
 	}
 	return true;
