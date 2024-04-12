@@ -40,10 +40,12 @@
 
 static bool stm32f4_cmd_option(target_s *target, int argc, const char **argv);
 static bool stm32f4_cmd_psize(target_s *target, int argc, const char **argv);
+static bool stm32f4_cmd_uid(target_s *target, int argc, const char **argv);
 
 const command_s stm32f4_cmd_list[] = {
 	{"option", stm32f4_cmd_option, "Manipulate option bytes"},
 	{"psize", stm32f4_cmd_psize, "Configure flash write parallelism: (x8|x16|x32(default)|x64)"},
+	{"uid", stm32f4_cmd_uid, "Print unique device ID"},
 	{NULL, NULL, NULL},
 };
 
@@ -97,8 +99,11 @@ static bool stm32f4_mass_erase(target_s *target);
 #define SR_ERROR_MASK 0xf2U
 #define SR_EOP        0x01U
 
+#define F4_UID_BASE    0x1fff7a10U
 #define F4_FLASHSIZE   0x1fff7a22U
+#define F7_UID_BASE    0x1ff0f420U
 #define F7_FLASHSIZE   0x1ff0f442U
+#define F72X_UID_BASE  0x1ff07a10U
 #define F72X_FLASHSIZE 0x1ff07a22U
 
 #define STM32F4_DBGMCU_BASE   0xe0042000U
@@ -791,4 +796,25 @@ static bool stm32f4_cmd_psize(target_s *target, int argc, const char **argv)
 		((stm32f4_priv_s *)target->target_storage)->psize = psize;
 	}
 	return true;
+}
+
+static bool stm32f4_cmd_uid(target_s *target, int argc, const char **argv)
+{
+	(void)argc;
+	(void)argv;
+	target_addr_t uid_base = 0;
+
+	switch (target->part_id) {
+	case ID_STM32F72X:
+		uid_base = F72X_UID_BASE;
+		break;
+	case ID_STM32F74X:
+	case ID_STM32F76X:
+		uid_base = F7_UID_BASE;
+		break;
+	default: /* including STM32F2, STM32F4; and GD32F4 */
+		uid_base = F4_UID_BASE;
+		break;
+	}
+	return stm32_uid(target, uid_base);
 }
