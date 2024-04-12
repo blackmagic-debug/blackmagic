@@ -51,6 +51,14 @@ static inline void write_le4(uint8_t *const buffer, const size_t offset, const u
 	buffer[offset + 3U] = (value >> 24U) & 0xffU;
 }
 
+static inline void write_be4(uint8_t *const buffer, const size_t offset, const uint32_t value)
+{
+	buffer[offset + 0U] = (value >> 24U) & 0xffU;
+	buffer[offset + 1U] = (value >> 16U) & 0xffU;
+	buffer[offset + 2U] = (value >> 8U) & 0xffU;
+	buffer[offset + 3U] = value & 0xffU;
+}
+
 static inline uint16_t read_le2(const uint8_t *const buffer, const size_t offset)
 {
 	return buffer[offset + 0U] | ((uint16_t)buffer[offset + 1U] << 8U);

@@ -46,6 +46,7 @@
 #include "target_internal.h"
 #include "cortexm.h"
 #include "stm32_common.h"
+#include "buffer_utils.h"
 
 #define FLASH_ACR       0x00U
 #define FLASH_KEYR      0x04U
@@ -116,6 +117,7 @@
 #define DBGMCU_IDCODE        0x5c001000U
 #define STM32H7_FLASH_SIZE   0x1ff1e880U
 #define STM32H7Bx_FLASH_SIZE 0x08fff80cU
+#define STM32H7_CHIP_IDENT   0x1ff1e8c0U
 /* Access from processor address space.
  * Access via the APB-D is at 0xe00e1000 */
 #define DBGMCU_IDC  (DBGMCU_IDCODE + 0U)
@@ -156,6 +158,8 @@
 #define ID_STM32H7Bx 0x480U /* RM0455 */
 #define ID_STM32H72x 0x483U /* RM0468 */
 
+#define STM32H7_NAME_MAX_LENGTH 10U
+
 typedef struct stm32h7_flash {
 	target_flash_s target_flash;
 	align_e psize;
@@ -164,6 +168,7 @@ typedef struct stm32h7_flash {
 
 typedef struct stm32h7_priv {
 	uint32_t dbg_cr;
+	char name[STM32H7_NAME_MAX_LENGTH];
 } stm32h7_priv_s;
 
 /* static bool stm32h7_cmd_option(target_s *t, int argc, const char **argv); */
@@ -219,12 +224,6 @@ bool stm32h7_probe(target_s *target)
 	/* Update part_id on match */
 	target->part_id = part_id;
 
-	target->driver = "STM32H7";
-	target->attach = stm32h7_attach;
-	target->detach = stm32h7_detach;
-	target->mass_erase = stm32h7_mass_erase;
-	target_add_commands(target, stm32h7_cmd_list, target->driver);
-
 	/* Save private storage */
 	stm32h7_priv_s *priv_storage = calloc(1, sizeof(*priv_storage));
 	if (!priv_storage) { /* calloc failed: heap exhaustion */
@@ -233,6 +232,23 @@ bool stm32h7_probe(target_s *target)
 	}
 	priv_storage->dbg_cr = target_mem32_read32(target, DBGMCU_CR);
 	target->target_storage = priv_storage;
+
+	memcpy(priv_storage->name, "STM32", 5U);
+	switch (target->part_id) {
+	case ID_STM32H72x:
+		write_be4((uint8_t *)priv_storage->name, 5U, target_mem32_read32(target, STM32H7_CHIP_IDENT));
+		priv_storage->name[9] = '\0';
+		break;
+	default:
+		memcpy(priv_storage->name + 5U, "H7", 3U);
+		break;
+	}
+
+	target->driver = priv_storage->name;
+	target->attach = stm32h7_attach;
+	target->detach = stm32h7_detach;
+	target->mass_erase = stm32h7_mass_erase;
+	target_add_commands(target, stm32h7_cmd_list, target->driver);
 
 	/* Build the RAM map */
 	target_add_ram32(target, 0x00000000, 0x10000); /* ITCM RAM,   64 KiB */
