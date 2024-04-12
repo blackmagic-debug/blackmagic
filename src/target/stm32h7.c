@@ -209,6 +209,8 @@ static bool stm32h7_attach(target_s *target);
 static void stm32h7_detach(target_s *target);
 static bool stm32h7_flash_erase(target_flash_s *target_flash, target_addr_t addr, size_t len);
 static bool stm32h7_flash_write(target_flash_s *target_flash, target_addr_t dest, const void *src, size_t len);
+static bool stm32h7_flash_prepare(target_flash_s *target_flash);
+static bool stm32h7_flash_done(target_flash_s *target_flash);
 static bool stm32h7_mass_erase(target_s *target);
 
 static uint32_t stm32h7_flash_bank_base(const uint32_t addr)
@@ -232,6 +234,8 @@ static void stm32h7_add_flash(target_s *target, uint32_t addr, size_t length, si
 	target_flash->blocksize = blocksize;
 	target_flash->erase = stm32h7_flash_erase;
 	target_flash->write = stm32h7_flash_write;
+	target_flash->prepare = stm32h7_flash_prepare;
+	target_flash->done = stm32h7_flash_done;
 	target_flash->writesize = 2048;
 	target_flash->erased = 0xffU;
 	flash->regbase = stm32h7_flash_bank_base(addr);
@@ -432,6 +436,7 @@ static bool stm32h7_flash_unlock(target_s *const target, const uint32_t regbase)
 	/* Wait for any pending operations to complete */
 	if (!stm32h7_flash_wait_complete(target, regbase))
 		return false;
+
 	/* Unlock the device Flash if not already unlocked (it's an error to re-key the controller if it is) */
 	if (target_mem32_read32(target, regbase + STM32H7_FLASH_CTRL) & STM32H7_FLASH_CTRL_LOCK) {
 		/* Enable Flash controller access */
@@ -440,6 +445,25 @@ static bool stm32h7_flash_unlock(target_s *const target, const uint32_t regbase)
 	}
 	/* Return whether we were able to put the device into unlocked mode */
 	return !(target_mem32_read32(target, regbase + STM32H7_FLASH_CTRL) & STM32H7_FLASH_CTRL_LOCK);
+}
+
+static bool stm32h7_flash_prepare(target_flash_s *target_flash)
+{
+	target_s *target = target_flash->t;
+	const stm32h7_flash_s *const flash = (stm32h7_flash_s *)target_flash;
+
+	/* Unlock the Flash controller to prepare it for operations */
+	return stm32h7_flash_unlock(target, flash->regbase);
+}
+
+static bool stm32h7_flash_done(target_flash_s *target_flash)
+{
+	target_s *target = target_flash->t;
+	const stm32h7_flash_s *const flash = (stm32h7_flash_s *)target_flash;
+	/* Lock the Flash controller to complete operations */
+	target_mem32_write32(target, flash->regbase + STM32H7_FLASH_CTRL,
+		(flash->psize * STM32H7_FLASH_CTRL_PSIZE16) | STM32H7_FLASH_CTRL_LOCK);
+	return true;
 }
 
 /* Helper for offsetting FLASH_CR bits correctly */
@@ -472,9 +496,6 @@ static bool stm32h7_flash_erase(target_flash_s *const target_flash, target_addr_
 	target_s *target = target_flash->t;
 	const stm32h7_flash_s *const flash = (stm32h7_flash_s *)target_flash;
 
-	/* Unlock the Flash */
-	if (!stm32h7_flash_unlock(target, flash->regbase))
-		return false;
 	/* Calculate SNB span */
 	addr &= target_flash->length - 1U;
 	const size_t end_sector = (addr + len - 1U) / sector_size;
@@ -500,27 +521,17 @@ static bool stm32h7_flash_write(
 {
 	target_s *target = target_flash->t;
 	const stm32h7_flash_s *const flash = (stm32h7_flash_s *)target_flash;
-	/* Unlock the Flash */
-	if (!stm32h7_flash_unlock(target, flash->regbase))
-		return false;
 
 	/* Prepare the Flash write operation */
 	const uint32_t ctrl = stm32h7_flash_cr(target_flash->blocksize, flash->psize * STM32H7_FLASH_CTRL_PSIZE16, 0);
 	target_mem32_write32(target, flash->regbase + STM32H7_FLASH_CTRL, ctrl);
-	/* Submit Page Program command */
 	target_mem32_write32(target, flash->regbase + STM32H7_FLASH_CTRL, ctrl | STM32H7_FLASH_CTRL_PROGRAM);
-	/* does H7 stall?*/
 
 	/* Write the data to the Flash */
 	target_mem32_write(target, dest, src, len);
 
 	/* Wait for the operation to complete and report errors */
-	if (!stm32h7_flash_wait_complete(target, flash->regbase))
-		return false;
-
-	/* Close write windows */
-	target_mem32_write32(target, flash->regbase + STM32H7_FLASH_CTRL, 0);
-	return true;
+	return stm32h7_flash_wait_complete(target, flash->regbase);
 }
 
 static bool stm32h7_erase_bank(target_s *const target, const align_e psize, const uint32_t reg_base)
