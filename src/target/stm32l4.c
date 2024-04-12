@@ -46,16 +46,18 @@
  * - https://www.st.com/resource/en/reference_manual/rm0434-multiprotocol-wireless-32bit-mcu-armbased-cortexm4-with-fpu-bluetooth-lowenergy-and-802154-radio-solution-stmicroelectronics.pdf
  */
 
-#include <limits.h>
-#include <assert.h>
 #include "general.h"
 #include "target.h"
 #include "target_internal.h"
 #include "cortexm.h"
+#include "stm32_common.h"
+#include <limits.h>
+#include <assert.h>
 
 static bool stm32l4_cmd_erase_bank1(target_s *t, int argc, const char **argv);
 static bool stm32l4_cmd_erase_bank2(target_s *t, int argc, const char **argv);
 static bool stm32l4_cmd_option(target_s *t, int argc, const char **argv);
+static bool stm32l4_cmd_uid(target_s *t, int argc, const char **argv);
 
 static bool stm32l4_attach(target_s *t);
 static void stm32l4_detach(target_s *t);
@@ -67,6 +69,7 @@ const command_s stm32l4_cmd_list[] = {
 	{"erase_bank1", stm32l4_cmd_erase_bank1, "Erase entire bank1 flash memory"},
 	{"erase_bank2", stm32l4_cmd_erase_bank2, "Erase entire bank2 flash memory"},
 	{"option", stm32l4_cmd_option, "Manipulate option bytes"},
+	{"uid", stm32l4_cmd_uid, "Print unique device ID"},
 	{NULL, NULL, NULL},
 };
 
@@ -137,6 +140,7 @@ const command_s stm32l4_cmd_list[] = {
 #define STM32L4_DBGMCU_IDCODE_PHYS 0xe0042000U
 #define STM32L5_DBGMCU_IDCODE_PHYS 0xe0044000U
 
+#define STM32L4_UID_BASE       0x1fff7590U
 #define STM32L4_FLASH_SIZE_REG 0x1fff75e0U
 #define STM32L5_FLASH_SIZE_REG 0x0bfa05e0U
 #define STM32U5_FLASH_SIZE_REG 0x0bfa07a0U
@@ -983,4 +987,12 @@ static bool stm32l4_cmd_option(target_s *t, int argc, const char **argv)
 		tc_printf(t, "0x%08X: 0x%08X\n", addr, val);
 	}
 	return true;
+}
+
+/* Read and decode Unique Device ID register of L4 and G4 */
+static bool stm32l4_cmd_uid(target_s *t, int argc, const char **argv)
+{
+	(void)argc;
+	(void)argv;
+	return stm32_uid(t, STM32L4_UID_BASE);
 }
