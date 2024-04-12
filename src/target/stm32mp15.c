@@ -170,7 +170,7 @@ static void stm32mp15_detach(target_s *const target)
 	cortexm_detach(target);
 }
 
-typedef struct __attribute__((packed)) stm32mp15x_uid {
+typedef struct stm32mp15x_uid {
 	uint16_t wafer_xcoord;
 	uint16_t wafer_ycoord;
 	uint8_t wafer_number;
@@ -190,7 +190,7 @@ static bool stm32mp15_uid(target_s *const target, const int argc, const char **c
 
 	for (size_t i = 0; i < 12U; i += 4U) {
 		const uint32_t value = target_mem32_read32(target, STM32MP15_UID_BASE + i);
-		/* XXX: use utoa_upper? */
+		/* XXX: use `utoa_upper(value, &uid_hex[i * 2U], 16)`? */
 		snprintf(uid_hex + i * 2U, 9, "%02" PRIX32 "%02" PRIX32 "%02" PRIX32 "%02" PRIX32, (value >> 24U) & 0xffU,
 			(value >> 16U) & 0xffU, (value >> 8U) & 0xffU, value & 0xffU);
 		values[i / 4U] = value;
@@ -198,7 +198,16 @@ static bool stm32mp15_uid(target_s *const target, const int argc, const char **c
 	tc_printf(target, "0x%s\n", uid_hex);
 
 	stm32mp15x_uid_s uid;
-	memcpy(&uid, values, 12U);
+	//	memcpy(&uid, values, 12U);
+	uid.wafer_xcoord = values[0] & 0xffffU;
+	uid.wafer_ycoord = values[0] >> 16U;
+	uid.wafer_number = values[1] & 0xffU;
+	/* This is ugly but MSVC can't do packed structs portably */
+	uid.lot_number[0] = values[1] >> 8U & 0xffU;
+	uid.lot_number[1] = values[1] >> 16U & 0xffU;
+	uid.lot_number[2] = values[1] >> 24U & 0xffU;
+	memcpy(&uid.lot_number[3], (uint8_t *)&values[2], 4);
+
 	tc_printf(target, "Wafer coords X=%u, Y=%u, number %u; Lot number %.7s\n", uid.wafer_xcoord, uid.wafer_ycoord,
 		uid.wafer_number, &uid.lot_number[0]);
 	return true;
