@@ -42,11 +42,14 @@
 #include "target_internal.h"
 #include "cortexm.h"
 #include "jep106.h"
+#include "stm32_common.h"
 
 static bool stm32f1_cmd_option(target_s *target, int argc, const char **argv);
+static bool stm32f1_cmd_uid(target_s *target, int argc, const char **argv);
 
 const command_s stm32f1_cmd_list[] = {
 	{"option", stm32f1_cmd_option, "Manipulate option bytes"},
+	{"uid", stm32f1_cmd_uid, "Print unique device ID"},
 	{NULL, NULL, NULL},
 };
 
@@ -97,6 +100,9 @@ static bool stm32f1_mass_erase(target_s *target);
 #define DBGMCU_IDCODE        0xe0042000U
 #define DBGMCU_IDCODE_F0     0x40015800U
 #define DBGMCU_IDCODE_GD32E5 0xe0044000U
+
+#define STM32F3_UID_BASE 0x1ffff7acU
+#define STM32F1_UID_BASE 0x1ffff7e8U
 
 #define GD32Fx_FLASHSIZE 0x1ffff7e0U
 #define GD32F0_FLASHSIZE 0x1ffff7ccU
@@ -922,4 +928,15 @@ static bool stm32f1_cmd_option(target_s *target, int argc, const char **argv)
 	}
 
 	return true;
+}
+
+static bool stm32f1_cmd_uid(target_s *target, int argc, const char **argv)
+{
+	(void)argc;
+	(void)argv;
+	target_addr_t uid_base = STM32F1_UID_BASE;
+	/* These parts have their UID elsewhere */
+	if (stm32f1_flash_readable_key(target) == FLASH_OBP_RDP_KEY_F3)
+		uid_base = STM32F3_UID_BASE;
+	return stm32_uid(target, uid_base);
 }
