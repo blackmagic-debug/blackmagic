@@ -406,24 +406,31 @@ static void stm32h7_detach(target_s *target)
 	cortexm_detach(target);
 }
 
-static bool stm32h7_flash_busy_wait(target_s *const target, const uint32_t regbase)
+static bool stm32h7_flash_wait_complete(target_s *const target, const uint32_t regbase)
 {
-	uint32_t status = STM32H7_FLASH_STATUS_BUSY | STM32H7_FLASH_STATUS_QUEUE_WAIT;
-	while (status & (STM32H7_FLASH_STATUS_BUSY | STM32H7_FLASH_STATUS_QUEUE_WAIT)) {
+	uint32_t status = STM32H7_FLASH_STATUS_QUEUE_WAIT;
+	/* Loop waiting for thewait queue bits to clear and EOP to set, indicating completion of all ongoing operations */
+	while (!(status & STM32H7_FLASH_STATUS_EOP) && (status & STM32H7_FLASH_STATUS_QUEUE_WAIT)) {
 		status = target_mem32_read32(target, regbase + STM32H7_FLASH_STATUS);
-		if ((status & STM32H7_FLASH_STATUS_ERROR_MASK) || target_check_error(target)) {
-			DEBUG_ERROR("%s: error status %08" PRIx32 "\n", __func__, status);
-			target_mem32_write32(target, regbase + STM32H7_FLASH_CLEAR_CTRL, status & STM32H7_FLASH_STATUS_ERROR_MASK);
+		/* If an error occurs, make noises */
+		if (target_check_error(target)) {
+			DEBUG_ERROR("%s: error reading status\n", __func__);
 			return false;
 		}
 	}
-	return true;
+	/* Now the operation's complete, we can check the error bits */
+	if (status & STM32H7_FLASH_STATUS_ERROR_MASK)
+		DEBUG_ERROR("%s: Flash error: %08" PRIx32 "\n", __func__, status);
+	target_mem32_write32(target, regbase + STM32H7_FLASH_CLEAR_CTRL,
+		status & (STM32H7_FLASH_STATUS_ERROR_MASK | STM32H7_FLASH_STATUS_EOP));
+	/* Return whether any errors occured */
+	return !(status & STM32H7_FLASH_STATUS_ERROR_MASK);
 }
 
 static bool stm32h7_flash_unlock(target_s *const target, const uint32_t regbase)
 {
 	/* Wait for any pending operations to complete */
-	if (!stm32h7_flash_busy_wait(target, regbase))
+	if (!stm32h7_flash_wait_complete(target, regbase))
 		return false;
 	/* Unlock the device Flash if not already unlocked (it's an error to re-key the controller if it is) */
 	if (target_mem32_read32(target, regbase + STM32H7_FLASH_CTRL) & STM32H7_FLASH_CTRL_LOCK) {
@@ -482,7 +489,7 @@ static bool stm32h7_flash_erase(target_flash_s *const target_flash, target_addr_
 			stm32h7_flash_cr(target_flash->blocksize, ctrl | STM32H7_FLASH_CTRL_START, begin_sector));
 
 		/* Wait for the operation to complete and report errors */
-		if (!stm32h7_flash_busy_wait(target, flash->regbase))
+		if (!stm32h7_flash_wait_complete(target, flash->regbase))
 			return false;
 	}
 	return true;
@@ -508,7 +515,7 @@ static bool stm32h7_flash_write(
 	target_mem32_write(target, dest, src, len);
 
 	/* Wait for the operation to complete and report errors */
-	if (!stm32h7_flash_busy_wait(target, flash->regbase))
+	if (!stm32h7_flash_wait_complete(target, flash->regbase))
 		return false;
 
 	/* Close write windows */
