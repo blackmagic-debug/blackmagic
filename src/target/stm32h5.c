@@ -46,6 +46,7 @@
 #include "target.h"
 #include "target_internal.h"
 #include "cortex.h"
+#include "stm32_common.h"
 
 /* Memory map constants for STM32H5xx */
 #define STM32H5_FLASH_BANK1_BASE 0x08000000U
@@ -304,14 +305,7 @@ static bool stm32h5_cmd_uid(target_s *target, int argc, const char **argv)
 {
 	(void)argc;
 	(void)argv;
-	tc_printf(target, "0x");
-	for (size_t i = 0U; i < 12U; i += 4U) {
-		const uint32_t value = target_mem32_read32(target, STM32H5_UID_BASE + i);
-		tc_printf(target, "%02X%02X%02X%02X", (value >> 24U) & 0xffU, (value >> 16U) & 0xffU, (value >> 8U) & 0xffU,
-			value & 0xffU);
-	}
-	tc_printf(target, "\n");
-	return true;
+	return stm32_uid(target, STM32H5_UID_BASE);
 }
 
 static const struct {
