@@ -331,7 +331,7 @@ bool stm32h7_probe(target_s *target)
 	/* Build the Flash map */
 	switch (target->part_id) {
 	case ID_STM32H74x: {
-		/* Read the Flash size from the device (expressed in KiB) and multiply it by 1024 */
+		/* Read the Flash size from the device (expressed in kiB) and multiply it by 1024 */
 		const uint32_t flash_size = target_mem32_read32(target, STM32H7_FLASH_SIZE) << 10U;
 		/* STM32H750nB: 128 KiB, single sector of first bank */
 		if (flash_size == FLASH_SECTOR_SIZE)
@@ -365,9 +365,11 @@ bool stm32h7_probe(target_s *target)
 		break;
 	}
 	case ID_STM32H72x: {
-		/* Read the Flash size from the device (expressed in KiB) and multiply it by 1024 */
+		/* Read the Flash size from the device (expressed in kiB) and multiply it by 1024 */
 		const uint32_t flash_size = target_mem32_read32(target, STM32H7_FLASH_SIZE) << 10U;
 		/*
+		 * None of the H72x and H73x parts have more than one Flash bank, making this simple.
+		 * NB: STM32H73xB has just one Flash sector though this should be automatically taken care of here.
 		 * STM32H723xE/H725xE: 512 KiB in 4 sectors of 128 KiB, single bank, no crypto
 		 * STM32H72xxG (H723xG/H733xG, H725xG/H735xG): 1024 KiB in 8 sectors of 128 KiB, single bank
 		 */
