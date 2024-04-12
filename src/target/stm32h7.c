@@ -200,6 +200,13 @@ static bool stm32h7_flash_erase(target_flash_s *target_flash, target_addr_t addr
 static bool stm32h7_flash_write(target_flash_s *target_flash, target_addr_t dest, const void *src, size_t len);
 static bool stm32h7_mass_erase(target_s *target);
 
+static uint32_t stm32h7_flash_bank_base(const uint32_t addr)
+{
+	if (addr >= STM32H7_FLASH_BANK2_BASE)
+		return FPEC2_BASE;
+	return FPEC1_BASE;
+}
+
 static void stm32h7_add_flash(target_s *target, uint32_t addr, size_t length, size_t blocksize)
 {
 	stm32h7_flash_s *flash = calloc(1, sizeof(*flash));
@@ -216,10 +223,7 @@ static void stm32h7_add_flash(target_s *target, uint32_t addr, size_t length, si
 	target_flash->write = stm32h7_flash_write;
 	target_flash->writesize = 2048;
 	target_flash->erased = 0xffU;
-	if (addr < STM32H7_FLASH_BANK2_BASE)
-		flash->regbase = FPEC1_BASE;
-	else
-		flash->regbase = FPEC2_BASE;
+	flash->regbase = stm32h7_flash_bank_base(addr);
 	flash->psize = ALIGN_64BIT;
 	target_add_flash(target, target_flash);
 }
@@ -392,16 +396,8 @@ static bool stm32h7_flash_busy_wait(target_s *const target, const uint32_t regba
 	return true;
 }
 
-static uint32_t stm32h7_flash_bank_base(const uint32_t addr)
+static bool stm32h7_flash_unlock(target_s *const target, const uint32_t regbase)
 {
-	if (addr >= STM32H7_FLASH_BANK2_BASE)
-		return FPEC2_BASE;
-	return FPEC1_BASE;
-}
-
-static bool stm32h7_flash_unlock(target_s *const target, const uint32_t addr)
-{
-	const uint32_t regbase = stm32h7_flash_bank_base(addr);
 	/* Wait for any pending operations to complete */
 	if (!stm32h7_flash_busy_wait(target, regbase))
 		return false;
@@ -444,8 +440,9 @@ static bool stm32h7_flash_erase(target_flash_s *const target_flash, target_addr_
 	const uint32_t sector_size = target_flash->blocksize;
 	target_s *target = target_flash->t;
 	const stm32h7_flash_s *const flash = (stm32h7_flash_s *)target_flash;
+
 	/* Unlock the Flash */
-	if (!stm32h7_flash_unlock(target, addr))
+	if (!stm32h7_flash_unlock(target, flash->regbase))
 		return false;
 	/* We come out of reset with HSI 64 MHz. Adapt FLASH_ACR.*/
 	uint32_t acr = 0;
@@ -484,7 +481,7 @@ static bool stm32h7_flash_write(
 	target_s *target = target_flash->t;
 	const stm32h7_flash_s *const flash = (stm32h7_flash_s *)target_flash;
 	/* Unlock the Flash */
-	if (!stm32h7_flash_unlock(target, dest))
+	if (!stm32h7_flash_unlock(target, flash->regbase))
 		return false;
 
 	/* Prepare the Flash write operation */
@@ -506,10 +503,9 @@ static bool stm32h7_flash_write(
 	return true;
 }
 
-static bool stm32h7_erase_bank(
-	target_s *const target, const align_e psize, const uint32_t start_addr, const uint32_t reg_base)
+static bool stm32h7_erase_bank(target_s *const target, const align_e psize, const uint32_t reg_base)
 {
-	if (!stm32h7_flash_unlock(target, start_addr)) {
+	if (!stm32h7_flash_unlock(target, reg_base)) {
 		DEBUG_ERROR("Bank erase: Unlock bank failed\n");
 		return false;
 	}
@@ -555,8 +551,7 @@ static bool stm32h7_mass_erase(target_s *target)
 			psize = ((struct stm32h7_flash *)flash)->psize;
 	}
 	/* Send mass erase Flash start instruction */
-	if (!stm32h7_erase_bank(target, psize, STM32H7_FLASH_BANK1_BASE, FPEC1_BASE) ||
-		!stm32h7_erase_bank(target, psize, STM32H7_FLASH_BANK2_BASE, FPEC2_BASE))
+	if (!stm32h7_erase_bank(target, psize, FPEC1_BASE) || !stm32h7_erase_bank(target, psize, FPEC2_BASE))
 		return false;
 
 	platform_timeout_s timeout;
@@ -601,7 +596,7 @@ static bool stm32h7_uid(target_s *target, int argc, const char **argv)
 static bool stm32h7_crc_bank(target_s *target, uint32_t addr)
 {
 	const uint32_t reg_base = stm32h7_flash_bank_base(addr);
-	if (!stm32h7_flash_unlock(target, addr))
+	if (!stm32h7_flash_unlock(target, reg_base))
 		return false;
 
 	target_mem32_write32(target, reg_base + FLASH_CR, FLASH_CR_CRC_EN);
