@@ -48,64 +48,66 @@
 #include "stm32_common.h"
 #include "buffer_utils.h"
 
-#define FLASH_ACR       0x00U
-#define FLASH_KEYR      0x04U
-#define FLASH_OPTKEYR   0x08U
-#define FLASH_CR        0x0cU
-#define FLASH_SR        0x10U
-#define FLASH_CCR       0x14U
-#define FLASH_OPTCR     0x18U
-#define FLASH_OPTSR_CUR 0x1cU
-#define FLASH_OPTSR     0x20U
-#define FLASH_CRCCR     0x50U
-#define FLASH_CRCDATA   0x5cU
+#define STM32H7_FLASH_ACR        0x00U
+#define STM32H7_FLASH_KEYR       0x04U
+#define STM32H7_FLASH_OPTKEYR    0x08U
+#define STM32H7_FLASH_CTRL       0x0cU
+#define STM32H7_FLASH_STATUS     0x10U
+#define STM32H7_FLASH_CLEAR_CTRL 0x14U
+#define STM32H7_FLASH_OPTCR      0x18U
+#define STM32H7_FLASH_OPTSR_CUR  0x1cU
+#define STM32H7_FLASH_OPTSR      0x20U
+#define STM32H7_FLASH_CRCCR      0x50U
+#define STM32H7_FLASH_CRCDATA    0x5cU
 
 /* Flash Program and Erase Controller Register Map */
-#define FPEC1_BASE          0x52002000U
-#define FPEC2_BASE          0x52002100U
-#define FLASH_SR_BSY        (1U << 0U)
-#define FLASH_SR_WBNE       (1U << 1U)
-#define FLASH_SR_QW         (1U << 2U)
-#define FLASH_SR_CRC_BUSY   (1U << 3U)
-#define FLASH_SR_EOP        (1U << 16U)
-#define FLASH_SR_WRPERR     (1U << 17U)
-#define FLASH_SR_PGSERR     (1U << 18U)
-#define FLASH_SR_STRBERR    (1U << 19U)
-#define FLASH_SR_INCERR     (1U << 21U)
-#define FLASH_SR_OPERR      (1U << 22U)
-#define FLASH_SR_OPERR      (1U << 22U)
-#define FLASH_SR_RDPERR     (1U << 23U)
-#define FLASH_SR_RDSERR     (1U << 24U)
-#define FLASH_SR_SNECCERR   (1U << 25U)
-#define FLASH_SR_DBERRERR   (1U << 26U)
-#define FLASH_SR_ERROR_READ (FLASH_SR_RDPERR | FLASH_SR_RDSERR | FLASH_SR_SNECCERR | FLASH_SR_DBERRERR)
-#define FLASH_SR_ERROR_MASK \
-	(FLASH_SR_WRPERR | FLASH_SR_PGSERR | FLASH_SR_STRBERR | FLASH_SR_INCERR | FLASH_SR_OPERR | FLASH_SR_ERROR_READ)
-#define FLASH_CR_LOCK    (1U << 0U)
-#define FLASH_CR_PG      (1U << 1U)
-#define FLASH_CR_SER     (1U << 2U)
-#define FLASH_CR_BER     (1U << 3U)
-#define FLASH_CR_PSIZE8  (0U << 4U)
-#define FLASH_CR_PSIZE16 (1U << 4U)
-#define FLASH_CR_PSIZE32 (2U << 4U)
-#define FLASH_CR_PSIZE64 (3U << 4U)
-#define FLASH_CR_FW      (1U << 6U)
-#define FLASH_CR_START   (1U << 7U)
-#define FLASH_CR_SNB     (3U << 8U)
-#define FLASH_CR_CRC_EN  (1U << 15U)
+#define STM32H7_FPEC1_BASE              0x52002000U
+#define STM32H7_FPEC2_BASE              0x52002100U
+#define STM32H7_FLASH_STATUS_BUSY       (1U << 0U)
+#define STM32H7_FLASH_STATUS_WBNE       (1U << 1U)
+#define STM32H7_FLASH_STATUS_QUEUE_WAIT (1U << 2U)
+#define STM32H7_FLASH_STATUS_CRC_BUSY   (1U << 3U)
+#define STM32H7_FLASH_STATUS_EOP        (1U << 16U)
+#define STM32H7_FLASH_STATUS_WRPERR     (1U << 17U)
+#define STM32H7_FLASH_STATUS_PGSERR     (1U << 18U)
+#define STM32H7_FLASH_STATUS_STRBERR    (1U << 19U)
+#define STM32H7_FLASH_STATUS_INCERR     (1U << 21U)
+#define STM32H7_FLASH_STATUS_OPERR      (1U << 22U)
+#define STM32H7_FLASH_STATUS_OPERR      (1U << 22U)
+#define STM32H7_FLASH_STATUS_RDPERR     (1U << 23U)
+#define STM32H7_FLASH_STATUS_RDSERR     (1U << 24U)
+#define STM32H7_FLASH_STATUS_SNECCERR   (1U << 25U)
+#define STM32H7_FLASH_STATUS_DBERRERR   (1U << 26U)
+#define STM32H7_FLASH_STATUS_ERROR_READ                                                          \
+	(STM32H7_FLASH_STATUS_RDPERR | STM32H7_FLASH_STATUS_RDSERR | STM32H7_FLASH_STATUS_SNECCERR | \
+		STM32H7_FLASH_STATUS_DBERRERR)
+#define STM32H7_FLASH_STATUS_ERROR_MASK                                                         \
+	(STM32H7_FLASH_STATUS_WRPERR | STM32H7_FLASH_STATUS_PGSERR | STM32H7_FLASH_STATUS_STRBERR | \
+		STM32H7_FLASH_STATUS_INCERR | STM32H7_FLASH_STATUS_OPERR | STM32H7_FLASH_STATUS_ERROR_READ)
+#define STM32H7_FLASH_CTRL_LOCK               (1U << 0U)
+#define STM32H7_FLASH_CTRL_PROGRAM            (1U << 1U)
+#define STM32H7_FLASH_CTRL_SECTOR_ERASE       (1U << 2U)
+#define STM32H7_FLASH_CTRL_BANK_ERASE         (1U << 3U)
+#define STM32H7_FLASH_CTRL_PSIZE8             (0U << 4U)
+#define STM32H7_FLASH_CTRL_PSIZE16            (1U << 4U)
+#define STM32H7_FLASH_CTRL_PSIZE32            (2U << 4U)
+#define STM32H7_FLASH_CTRL_PSIZE64            (3U << 4U)
+#define STM32H7_FLASH_CTRL_FORCE_WRITE        (1U << 6U)
+#define STM32H7_FLASH_CTRL_START              (1U << 7U)
+#define STM32H7_FLASH_CTRL_SECTOR_NUM_SHIFT   8U
+#define STM32H7BX_FLASH_CTRL_SECTOR_NUM_SHIFT 6U
+#define STM32H7_FLASH_CTRL_SECTOR_NUM_MASK    (3U << 8U)
+#define STM32H7_FLASH_CTRL_CRC_EN             (1U << 15U)
 
-#define STM32H74X_FLASH_CR_SNB_SHIFT 8U
-#define STM32H7BX_FLASH_CR_SNB_SHIFT 6U
+#define STM32H7_FLASH_OPTCR_OPTLOCK (1U << 0U)
+#define STM32H7_FLASH_OPTCR_OPTSTRT (1U << 1U)
 
-#define FLASH_OPTCR_OPTLOCK (1U << 0U)
-#define FLASH_OPTCR_OPTSTRT (1U << 1U)
+#define STM32H7_FLASH_OPTSR_IWDG1_SW (1U << 4U)
 
-#define FLASH_OPTSR_IWDG1_SW (1U << 4U)
-
-#define FLASH_CRCCR_ALL_BANK    (1U << 7U)
-#define FLASH_CRCCR_START_CRC   (1U << 16U)
-#define FLASH_CRCCR_CLEAN_CRC   (1U << 17U)
-#define FLASH_CRCCR_CRC_BURST_3 (3U << 20U)
+#define STM32H7_FLASH_CRCCR_ALL_BANK    (1U << 7U)
+#define STM32H7_FLASH_CRCCR_START_CRC   (1U << 16U)
+#define STM32H7_FLASH_CRCCR_CLEAN_CRC   (1U << 17U)
+#define STM32H7_FLASH_CRCCR_CRC_BURST_3 (3U << 20U)
 
 #define STM32H7_FLASH_KEY1 0x45670123U
 #define STM32H7_FLASH_KEY2 0xcdef89abU
@@ -212,8 +214,8 @@ static bool stm32h7_mass_erase(target_s *target);
 static uint32_t stm32h7_flash_bank_base(const uint32_t addr)
 {
 	if (addr >= STM32H7_FLASH_BANK2_BASE)
-		return FPEC2_BASE;
-	return FPEC1_BASE;
+		return STM32H7_FPEC2_BASE;
+	return STM32H7_FPEC1_BASE;
 }
 
 static void stm32h7_add_flash(target_s *target, uint32_t addr, size_t length, size_t blocksize)
@@ -406,12 +408,12 @@ static void stm32h7_detach(target_s *target)
 
 static bool stm32h7_flash_busy_wait(target_s *const target, const uint32_t regbase)
 {
-	uint32_t status = FLASH_SR_BSY | FLASH_SR_QW;
-	while (status & (FLASH_SR_BSY | FLASH_SR_QW)) {
-		status = target_mem32_read32(target, regbase + FLASH_SR);
-		if ((status & FLASH_SR_ERROR_MASK) || target_check_error(target)) {
+	uint32_t status = STM32H7_FLASH_STATUS_BUSY | STM32H7_FLASH_STATUS_QUEUE_WAIT;
+	while (status & (STM32H7_FLASH_STATUS_BUSY | STM32H7_FLASH_STATUS_QUEUE_WAIT)) {
+		status = target_mem32_read32(target, regbase + STM32H7_FLASH_STATUS);
+		if ((status & STM32H7_FLASH_STATUS_ERROR_MASK) || target_check_error(target)) {
 			DEBUG_ERROR("%s: error status %08" PRIx32 "\n", __func__, status);
-			target_mem32_write32(target, regbase + FLASH_CCR, status & FLASH_SR_ERROR_MASK);
+			target_mem32_write32(target, regbase + STM32H7_FLASH_CLEAR_CTRL, status & STM32H7_FLASH_STATUS_ERROR_MASK);
 			return false;
 		}
 	}
@@ -424,13 +426,13 @@ static bool stm32h7_flash_unlock(target_s *const target, const uint32_t regbase)
 	if (!stm32h7_flash_busy_wait(target, regbase))
 		return false;
 	/* Unlock the device Flash if not already unlocked (it's an error to re-key the controller if it is) */
-	if (target_mem32_read32(target, regbase + FLASH_CR) & FLASH_CR_LOCK) {
+	if (target_mem32_read32(target, regbase + STM32H7_FLASH_CTRL) & STM32H7_FLASH_CTRL_LOCK) {
 		/* Enable Flash controller access */
-		target_mem32_write32(target, regbase + FLASH_KEYR, STM32H7_FLASH_KEY1);
-		target_mem32_write32(target, regbase + FLASH_KEYR, STM32H7_FLASH_KEY2);
+		target_mem32_write32(target, regbase + STM32H7_FLASH_KEYR, STM32H7_FLASH_KEY1);
+		target_mem32_write32(target, regbase + STM32H7_FLASH_KEYR, STM32H7_FLASH_KEY2);
 	}
 	/* Return whether we were able to put the device into unlocked mode */
-	return !(target_mem32_read32(target, regbase + FLASH_CR) & FLASH_CR_LOCK);
+	return !(target_mem32_read32(target, regbase + STM32H7_FLASH_CTRL) & STM32H7_FLASH_CTRL_LOCK);
 }
 
 /* Helper for offsetting FLASH_CR bits correctly */
@@ -439,20 +441,20 @@ static uint32_t stm32h7_flash_cr(uint32_t sector_size, const uint32_t ctrl, cons
 	uint32_t command = ctrl;
 	/* H74x, H72x IP: 128 KiB and has PSIZE */
 	if (sector_size == FLASH_SECTOR_SIZE) {
-		command |= sector_number << STM32H74X_FLASH_CR_SNB_SHIFT;
+		command |= sector_number << STM32H7_FLASH_CTRL_SECTOR_NUM_SHIFT;
 		DEBUG_TARGET("%s: patching FLASH_CR from 0x%08" PRIx32 " to 0x%08" PRIx32 "\n", __func__, ctrl, command);
 		return command;
 	}
 
 	/* H7Bx IP: 8 KiB and no PSIZE */
 	/* Save and right-shift FW, START bits */
-	const uint32_t temp_fw_start = command & (FLASH_CR_FW | FLASH_CR_START);
+	const uint32_t temp_fw_start = command & (STM32H7_FLASH_CTRL_FORCE_WRITE | STM32H7_FLASH_CTRL_START);
 	/* Parallelism is ignored */
-	command &= ~(FLASH_CR_PSIZE64 | FLASH_CR_FW | FLASH_CR_START);
+	command &= ~(STM32H7_FLASH_CTRL_PSIZE64 | STM32H7_FLASH_CTRL_FORCE_WRITE | STM32H7_FLASH_CTRL_START);
 	/* Restore FW, START to H7Bx-correct bits */
 	command |= temp_fw_start >> 2U;
 	/* SNB offset is different, too */
-	command |= sector_number << STM32H7BX_FLASH_CR_SNB_SHIFT;
+	command |= sector_number << STM32H7BX_FLASH_CTRL_SECTOR_NUM_SHIFT;
 	DEBUG_TARGET("%s: patching FLASH_CR from 0x%08" PRIx32 " to 0x%08" PRIx32 "\n", __func__, ctrl, command);
 	return command;
 }
@@ -470,13 +472,14 @@ static bool stm32h7_flash_erase(target_flash_s *const target_flash, target_addr_
 	addr &= target_flash->length - 1U;
 	const size_t end_sector = (addr + len - 1U) / sector_size;
 	const align_e psize = flash->psize;
-	const uint32_t ctrl = (psize * FLASH_CR_PSIZE16) | FLASH_CR_SER;
+	const uint32_t ctrl = (psize * STM32H7_FLASH_CTRL_PSIZE16) | STM32H7_FLASH_CTRL_SECTOR_ERASE;
 
 	for (size_t begin_sector = addr / sector_size; begin_sector <= end_sector; ++begin_sector) {
 		/* Select the next Flash sector to erase */
-		target_mem32_write32(target, flash->regbase + FLASH_CR, stm32h7_flash_cr(sector_size, ctrl, begin_sector));
-		target_mem32_write32(target, flash->regbase + FLASH_CR,
-			stm32h7_flash_cr(target_flash->blocksize, ctrl | FLASH_CR_START, begin_sector));
+		target_mem32_write32(
+			target, flash->regbase + STM32H7_FLASH_CTRL, stm32h7_flash_cr(sector_size, ctrl, begin_sector));
+		target_mem32_write32(target, flash->regbase + STM32H7_FLASH_CTRL,
+			stm32h7_flash_cr(target_flash->blocksize, ctrl | STM32H7_FLASH_CTRL_START, begin_sector));
 
 		/* Wait for the operation to complete and report errors */
 		if (!stm32h7_flash_busy_wait(target, flash->regbase))
@@ -495,10 +498,10 @@ static bool stm32h7_flash_write(
 		return false;
 
 	/* Prepare the Flash write operation */
-	const uint32_t ctrl = stm32h7_flash_cr(target_flash->blocksize, flash->psize * FLASH_CR_PSIZE16, 0);
-	target_mem32_write32(target, flash->regbase + FLASH_CR, ctrl);
+	const uint32_t ctrl = stm32h7_flash_cr(target_flash->blocksize, flash->psize * STM32H7_FLASH_CTRL_PSIZE16, 0);
+	target_mem32_write32(target, flash->regbase + STM32H7_FLASH_CTRL, ctrl);
 	/* Submit Page Program command */
-	target_mem32_write32(target, flash->regbase + FLASH_CR, ctrl | FLASH_CR_PG);
+	target_mem32_write32(target, flash->regbase + STM32H7_FLASH_CTRL, ctrl | STM32H7_FLASH_CTRL_PROGRAM);
 	/* does H7 stall?*/
 
 	/* Write the data to the Flash */
@@ -509,7 +512,7 @@ static bool stm32h7_flash_write(
 		return false;
 
 	/* Close write windows */
-	target_mem32_write32(target, flash->regbase + FLASH_CR, 0);
+	target_mem32_write32(target, flash->regbase + STM32H7_FLASH_CTRL, 0);
 	return true;
 }
 
@@ -520,16 +523,16 @@ static bool stm32h7_erase_bank(target_s *const target, const align_e psize, cons
 		return false;
 	}
 	/* BER and start can be merged (§3.3.10). */
-	const uint32_t ctrl =
-		stm32h7_flash_cr(target->flash->blocksize, (psize * FLASH_CR_PSIZE16) | FLASH_CR_BER | FLASH_CR_START, 0);
-	target_mem32_write32(target, reg_base + FLASH_CR, ctrl);
+	const uint32_t ctrl = stm32h7_flash_cr(target->flash->blocksize,
+		(psize * STM32H7_FLASH_CTRL_PSIZE16) | STM32H7_FLASH_CTRL_BANK_ERASE | STM32H7_FLASH_CTRL_START, 0);
+	target_mem32_write32(target, reg_base + STM32H7_FLASH_CTRL, ctrl);
 	DEBUG_INFO("Mass erase of bank started\n");
 	return true;
 }
 
 static bool stm32h7_wait_erase_bank(target_s *const target, platform_timeout_s *const timeout, const uint32_t reg_base)
 {
-	while (target_mem32_read32(target, reg_base + FLASH_SR) & FLASH_SR_QW) {
+	while (target_mem32_read32(target, reg_base + STM32H7_FLASH_STATUS) & STM32H7_FLASH_STATUS_QUEUE_WAIT) {
 		if (target_check_error(target)) {
 			DEBUG_ERROR("mass erase bank: comm failed\n");
 			return false;
@@ -541,10 +544,10 @@ static bool stm32h7_wait_erase_bank(target_s *const target, platform_timeout_s *
 
 static bool stm32h7_check_bank(target_s *const target, const uint32_t reg_base)
 {
-	uint32_t status = target_mem32_read32(target, reg_base + FLASH_SR);
-	if (status & FLASH_SR_ERROR_MASK)
+	uint32_t status = target_mem32_read32(target, reg_base + STM32H7_FLASH_STATUS);
+	if (status & STM32H7_FLASH_STATUS_ERROR_MASK)
 		DEBUG_ERROR("mass erase bank: error sr %" PRIx32 "\n", status);
-	return !(status & FLASH_SR_ERROR_MASK);
+	return !(status & STM32H7_FLASH_STATUS_ERROR_MASK);
 }
 
 /* Both banks are erased in parallel.*/
@@ -561,18 +564,19 @@ static bool stm32h7_mass_erase(target_s *target)
 			psize = ((struct stm32h7_flash *)flash)->psize;
 	}
 	/* Send mass erase Flash start instruction */
-	if (!stm32h7_erase_bank(target, psize, FPEC1_BASE) || !stm32h7_erase_bank(target, psize, FPEC2_BASE))
+	if (!stm32h7_erase_bank(target, psize, STM32H7_FPEC1_BASE) ||
+		!stm32h7_erase_bank(target, psize, STM32H7_FPEC2_BASE))
 		return false;
 
 	platform_timeout_s timeout;
 	platform_timeout_set(&timeout, 500);
 	/* Wait for the banks to finish erasing */
-	if (!stm32h7_wait_erase_bank(target, &timeout, FPEC1_BASE) ||
-		!stm32h7_wait_erase_bank(target, &timeout, FPEC2_BASE))
+	if (!stm32h7_wait_erase_bank(target, &timeout, STM32H7_FPEC1_BASE) ||
+		!stm32h7_wait_erase_bank(target, &timeout, STM32H7_FPEC2_BASE))
 		return false;
 
 	/* Check the banks for final errors */
-	return stm32h7_check_bank(target, FPEC1_BASE) && stm32h7_check_bank(target, FPEC2_BASE);
+	return stm32h7_check_bank(target, STM32H7_FPEC1_BASE) && stm32h7_check_bank(target, STM32H7_FPEC2_BASE);
 }
 
 static uint32_t stm32h7_part_uid_addr(target_s *const target)
@@ -609,21 +613,22 @@ static bool stm32h7_crc_bank(target_s *target, uint32_t addr)
 	if (!stm32h7_flash_unlock(target, reg_base))
 		return false;
 
-	target_mem32_write32(target, reg_base + FLASH_CR, FLASH_CR_CRC_EN);
-	const uint32_t crc_ctrl = FLASH_CRCCR_CRC_BURST_3 | FLASH_CRCCR_CLEAN_CRC | FLASH_CRCCR_ALL_BANK;
-	target_mem32_write32(target, reg_base + FLASH_CRCCR, crc_ctrl);
-	target_mem32_write32(target, reg_base + FLASH_CRCCR, crc_ctrl | FLASH_CRCCR_START_CRC);
-	uint32_t status = FLASH_SR_CRC_BUSY;
+	target_mem32_write32(target, reg_base + STM32H7_FLASH_CTRL, STM32H7_FLASH_CTRL_CRC_EN);
+	const uint32_t crc_ctrl =
+		STM32H7_FLASH_CRCCR_CRC_BURST_3 | STM32H7_FLASH_CRCCR_CLEAN_CRC | STM32H7_FLASH_CRCCR_ALL_BANK;
+	target_mem32_write32(target, reg_base + STM32H7_FLASH_CRCCR, crc_ctrl);
+	target_mem32_write32(target, reg_base + STM32H7_FLASH_CRCCR, crc_ctrl | STM32H7_FLASH_CRCCR_START_CRC);
+	uint32_t status = STM32H7_FLASH_STATUS_CRC_BUSY;
 #if ENABLE_DEBUG == 1
-	const uint8_t bank = reg_base == FPEC1_BASE ? 1 : 2;
+	const uint8_t bank = reg_base == STM32H7_FPEC1_BASE ? 1 : 2;
 #endif
-	while (status & FLASH_SR_CRC_BUSY) {
-		status = target_mem32_read32(target, reg_base + FLASH_SR);
+	while (status & STM32H7_FLASH_STATUS_CRC_BUSY) {
+		status = target_mem32_read32(target, reg_base + STM32H7_FLASH_STATUS);
 		if (target_check_error(target)) {
 			DEBUG_ERROR("CRC bank %u: comm failed\n", bank);
 			return false;
 		}
-		if (status & FLASH_SR_ERROR_READ) {
+		if (status & STM32H7_FLASH_STATUS_ERROR_READ) {
 			DEBUG_ERROR("CRC bank %u: error status %08" PRIx32 "\n", bank, status);
 			return false;
 		}
@@ -637,10 +642,10 @@ static bool stm32h7_crc(target_s *target, int argc, const char **argv)
 	(void)argv;
 	if (!stm32h7_crc_bank(target, STM32H7_FLASH_BANK1_BASE))
 		return false;
-	uint32_t crc1 = target_mem32_read32(target, FPEC1_BASE + FLASH_CRCDATA);
+	uint32_t crc1 = target_mem32_read32(target, STM32H7_FPEC1_BASE + STM32H7_FLASH_CRCDATA);
 	if (!stm32h7_crc_bank(target, STM32H7_FLASH_BANK2_BASE))
 		return false;
-	uint32_t crc2 = target_mem32_read32(target, FPEC2_BASE + FLASH_CRCDATA);
+	uint32_t crc2 = target_mem32_read32(target, STM32H7_FPEC2_BASE + STM32H7_FLASH_CRCDATA);
 	tc_printf(target, "CRC: bank1 0x%08lx, bank2 0x%08lx\n", crc1, crc2);
 	return true;
 }
