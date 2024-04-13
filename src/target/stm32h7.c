@@ -517,13 +517,24 @@ static bool stm32h7_flash_write(
 	const stm32h7_flash_s *const flash = (stm32h7_flash_s *)target_flash;
 
 	/* Prepare the Flash write operation */
-	const uint32_t ctrl =
-		stm32h7_flash_cr(target_flash->blocksize, (flash->psize << STM32H7_FLASH_CTRL_PSIZE_SHIFT), 0);
+	const uint32_t ctrl = stm32h7_flash_cr(
+		target_flash->blocksize, (flash->psize << STM32H7_FLASH_CTRL_PSIZE_SHIFT) | STM32H7_FLASH_CTRL_PROGRAM, 0);
 	target_mem32_write32(target, flash->regbase + STM32H7_FLASH_CTRL, ctrl);
-	target_mem32_write32(target, flash->regbase + STM32H7_FLASH_CTRL, ctrl | STM32H7_FLASH_CTRL_PROGRAM);
 
 	/* Write the data to the Flash */
-	target_mem32_write(target, dest, src, len);
+	for (size_t offset = 0U; offset < len; offset += 32U) {
+		const size_t amount = MIN(len - offset, 32U);
+		target_mem32_write(target, dest + offset, ((const uint8_t *)src) + offset, amount);
+		/*
+		 * If this is the final chunk and the amount is not a multiple of 32 bytes,
+		 * make sure the write is forced to complete per RM0468 §4.3.9 "Single write sequence" pg164
+		 */
+		if (amount < 32U)
+			target_mem32_write32(target, flash->regbase + STM32H7_FLASH_CTRL,
+				stm32h7_flash_cr(target_flash->blocksize, ctrl | STM32H7_FLASH_CTRL_FORCE_WRITE, 0U));
+		while (target_mem32_read32(target, flash->regbase + STM32H7_FLASH_STATUS) & STM32H7_FLASH_STATUS_QUEUE_WAIT)
+			continue;
+	}
 
 	/* Wait for the operation to complete and report errors */
 	return stm32h7_flash_wait_complete(target, flash->regbase);
