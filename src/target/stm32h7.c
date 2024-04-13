@@ -92,6 +92,7 @@
 #define STM32H7_FLASH_CTRL_PSIZE16            (1U << 4U)
 #define STM32H7_FLASH_CTRL_PSIZE32            (2U << 4U)
 #define STM32H7_FLASH_CTRL_PSIZE64            (3U << 4U)
+#define STM32H7_FLASH_CTRL_PSIZE_SHIFT        4U
 #define STM32H7_FLASH_CTRL_FORCE_WRITE        (1U << 6U)
 #define STM32H7_FLASH_CTRL_START              (1U << 7U)
 #define STM32H7_FLASH_CTRL_SECTOR_NUM_SHIFT   8U
@@ -462,7 +463,7 @@ static bool stm32h7_flash_done(target_flash_s *target_flash)
 	const stm32h7_flash_s *const flash = (stm32h7_flash_s *)target_flash;
 	/* Lock the Flash controller to complete operations */
 	target_mem32_write32(target, flash->regbase + STM32H7_FLASH_CTRL,
-		(flash->psize * STM32H7_FLASH_CTRL_PSIZE16) | STM32H7_FLASH_CTRL_LOCK);
+		(flash->psize << STM32H7_FLASH_CTRL_PSIZE_SHIFT) | STM32H7_FLASH_CTRL_LOCK);
 	return true;
 }
 
@@ -499,7 +500,7 @@ static bool stm32h7_flash_erase(target_flash_s *const target_flash, target_addr_
 
 	/* Calculate the sector to erase and set the operation runnning */
 	const uint32_t sector = (addr - target_flash->start) / target_flash->blocksize;
-	const uint32_t ctrl = (flash->psize * STM32H7_FLASH_CTRL_PSIZE16) | STM32H7_FLASH_CTRL_SECTOR_ERASE;
+	const uint32_t ctrl = (flash->psize << STM32H7_FLASH_CTRL_PSIZE_SHIFT) | STM32H7_FLASH_CTRL_SECTOR_ERASE;
 	target_mem32_write32(
 		target, flash->regbase + STM32H7_FLASH_CTRL, stm32h7_flash_cr(target_flash->blocksize, ctrl, sector));
 	target_mem32_write32(target, flash->regbase + STM32H7_FLASH_CTRL,
@@ -516,7 +517,8 @@ static bool stm32h7_flash_write(
 	const stm32h7_flash_s *const flash = (stm32h7_flash_s *)target_flash;
 
 	/* Prepare the Flash write operation */
-	const uint32_t ctrl = stm32h7_flash_cr(target_flash->blocksize, flash->psize * STM32H7_FLASH_CTRL_PSIZE16, 0);
+	const uint32_t ctrl =
+		stm32h7_flash_cr(target_flash->blocksize, (flash->psize << STM32H7_FLASH_CTRL_PSIZE_SHIFT), 0);
 	target_mem32_write32(target, flash->regbase + STM32H7_FLASH_CTRL, ctrl);
 	target_mem32_write32(target, flash->regbase + STM32H7_FLASH_CTRL, ctrl | STM32H7_FLASH_CTRL_PROGRAM);
 
@@ -535,7 +537,7 @@ static bool stm32h7_erase_bank(target_s *const target, const align_e psize, cons
 	}
 	/* BER and start can be merged (§3.3.10). */
 	const uint32_t ctrl = stm32h7_flash_cr(target->flash->blocksize,
-		(psize * STM32H7_FLASH_CTRL_PSIZE16) | STM32H7_FLASH_CTRL_BANK_ERASE | STM32H7_FLASH_CTRL_START, 0);
+		(psize << STM32H7_FLASH_CTRL_PSIZE_SHIFT) | STM32H7_FLASH_CTRL_BANK_ERASE | STM32H7_FLASH_CTRL_START, 0);
 	target_mem32_write32(target, reg_base + STM32H7_FLASH_CTRL, ctrl);
 	DEBUG_INFO("Mass erase of bank started\n");
 	return true;
