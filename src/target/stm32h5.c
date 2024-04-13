@@ -216,7 +216,7 @@ static bool stm32h5_flash_wait_complete(target_s *const target, platform_timeout
 		DEBUG_ERROR("%s: Flash error: %08" PRIx32 "\n", __func__, status);
 	/* Clear all error and status bits */
 	target_mem32_write32(
-		target, STM32H5_FLASH_CLEAR_CTRL, (status & (STM32H5_FLASH_STATUS_ERROR_MASK | STM32H5_FLASH_STATUS_EOP)));
+		target, STM32H5_FLASH_CLEAR_CTRL, status & (STM32H5_FLASH_STATUS_ERROR_MASK | STM32H5_FLASH_STATUS_EOP));
 	return !(status & STM32H5_FLASH_STATUS_ERROR_MASK);
 }
 
