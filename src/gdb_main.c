@@ -674,7 +674,7 @@ static void exec_v_attach(const char *const packet, const size_t length)
 			 * https://sourceware.org/pipermail/gdb-patches/2022-April/188058.html
 			 * https://sourceware.org/pipermail/gdb-patches/2022-July/190869.html
 			 */
-			gdb_putpacket_str_f("T%02Xthread:1;", GDB_SIGTRAP);
+			gdb_putpacket_str_f("T%02Xthread:p1.1;", GDB_SIGTRAP);
 		} else
 			gdb_put_packet_error(1U);
 
@@ -967,16 +967,16 @@ void gdb_poll_target(void)
 		morse("TARGET LOST.", true);
 		break;
 	case TARGET_HALT_REQUEST:
-		gdb_putpacket_str_f("T%02Xthread:1;", GDB_SIGINT);
+		gdb_putpacket_str_f("T%02Xthread:p1.1;", GDB_SIGINT);
 		break;
 	case TARGET_HALT_WATCHPOINT:
 		gdb_putpacket_str_f(
 			"T%02Xwatch:%0" PRIX32 "%08" PRIX32 ";", GDB_SIGTRAP, (uint32_t)(watch >> 32U), (uint32_t)watch);
 		break;
 	case TARGET_HALT_FAULT:
-		gdb_putpacket_str_f("T%02Xthread:1;", GDB_SIGSEGV);
+		gdb_putpacket_str_f("T%02Xthread:p1.1;", GDB_SIGSEGV);
 		break;
 	default:
-		gdb_putpacket_str_f("T%02Xthread:1;", GDB_SIGTRAP);
+		gdb_putpacket_str_f("T%02Xthread:p1.1;", GDB_SIGTRAP);
 	}
 }
