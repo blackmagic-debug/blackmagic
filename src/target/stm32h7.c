@@ -131,6 +131,19 @@
 #define STM32H7_DBGMCU_IDCODE_DEV_MASK  0x00000fffU
 #define STM32H7_DBGMCU_IDCODE_REV_SHIFT 16U
 
+/*
+ * Flash capacity in STM32 chips is indicated by this number/letter:
+ * STM32H7B0VBT6 (STM32H74xxI, STM32H72xxE)
+ *           ^
+ * where known sizes for STM32H7 families are
+ * 8: 64 KiB (H7Rx, H7Sx: DS14359-DS14360)
+ * B: 128 KiB (Value line: DS12556, DS13315, DS13196)
+ * E: 512 KiB
+ * G: 1024 KiB
+ * I: 2048 KiB
+ * Refer to the (as of 2024) 17 datasheets, Ordering information.
+ * DS12110/DS12117, DS12919/DS12923, DS12930-DS12931, DS13139/DS13195, DS13311-DS13314.
+ */
 #define STM32H7_FLASH_BANK1_BASE    0x08000000U
 #define STM32H7_FLASH_BANK2_BASE    0x08100000U
 #define STM32H7_FLASH_BANK_SIZE     0x00100000U
