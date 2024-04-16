@@ -236,7 +236,7 @@ void bmda_add_jtag_dev(uint32_t dev_index, const jtag_dev_s *jtag_dev);
 #endif
 
 /* Data transfer value packing/unpacking helper functions */
-void *adiv5_unpack_data(void *dest, target_addr32_t src, uint32_t val, align_e align);
+void *adiv5_unpack_data(void *dest, target_addr32_t src, uint32_t data, align_e align);
 const void *adiv5_pack_data(target_addr32_t dest, const void *src, uint32_t *data, align_e align);
 
 /* ADIv5 high-level memory write function */
