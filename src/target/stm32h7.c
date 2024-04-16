@@ -546,7 +546,7 @@ static bool stm32h7_erase_bank(target_s *const target, const align_e psize, cons
 		DEBUG_ERROR("Bank erase: Unlock bank failed\n");
 		return false;
 	}
-	/* BER and start can be merged (§3.3.10). */
+	/* BER and start can be merged per §4.3.10 "Standard flash bank erase sequence" of RM0433 rev8, pg166. */
 	const uint32_t ctrl = stm32h7_flash_cr(target->flash->blocksize,
 		(psize << STM32H7_FLASH_CTRL_PSIZE_SHIFT) | STM32H7_FLASH_CTRL_BANK_ERASE | STM32H7_FLASH_CTRL_START, 0);
 	target_mem32_write32(target, reg_base + STM32H7_FLASH_CTRL, ctrl);
