@@ -735,10 +735,10 @@ static bool stm32h7_cmd_rev(target_s *target, int argc, const char **argv)
 		tc_printf(target, "STM32H7B3/7A3/7B0\n");
 		break;
 	case ID_STM32H72x:
-		tc_printf(target, "STM32H72x/73x\n");
+		tc_printf(target, "%s\n", target->driver);
 		break;
 	default:
-		tc_printf(target, "Unknown %s. BMP may not correctly support it!\n", target->driver);
+		tc_printf(target, "Unknown %s (%03x). BMP may not correctly support it!\n", target->driver, dev_id);
 		return false;
 	}
 	/* Print revision */
