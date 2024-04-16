@@ -417,8 +417,6 @@ typedef struct ex_frame {
 	uintptr_t return_address;
 } ex_frame_s;
 
-void debug_monitor_handler(void) __attribute__((used)) __attribute__((naked));
-
 /*
  * This implements the other half of the newlib syscall puzzle.
  * When newlib is built for ARM, various calls that do file IO
