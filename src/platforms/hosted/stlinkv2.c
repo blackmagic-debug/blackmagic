@@ -608,10 +608,15 @@ static int stlink_write_dp_register(const uint16_t apsel, const uint16_t address
 
 uint32_t stlink_raw_access(adiv5_debug_port_s *dp, uint8_t rnw, uint16_t addr, uint32_t request_value)
 {
-	DEBUG_PROBE("%s: Attempting access to addr %04x\n", __func__, addr);
 	uint32_t result_value = 0;
-	const int result = rnw ? stlink_read_dp_register(dp, addr < 0x100U ? STLINK_DEBUG_PORT : 0U, addr, &result_value) :
-							 stlink_write_dp_register(addr < 0x100U ? STLINK_DEBUG_PORT : 0U, addr, request_value);
+	/*
+	 * Note: Accesses to AP registers need to use the last known apsel value.
+	 * Accesses to DP registers need to use the Debug Port special value.
+	 */
+	const uint16_t apsel = (addr & ADIV5_APnDP) ? stlink.apsel : STLINK_DEBUG_PORT;
+	DEBUG_PROBE("%s: Attempting access to addr %04x via apsel %u\n", __func__, addr, apsel);
+	const int result = rnw ? stlink_read_dp_register(dp, apsel, addr, &result_value) :
+				 stlink_write_dp_register(apsel, addr, request_value);
 
 	if (result == STLINK_ERROR_WAIT) {
 		DEBUG_ERROR("SWD access resulted in wait, aborting\n");
