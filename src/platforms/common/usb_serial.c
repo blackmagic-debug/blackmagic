@@ -40,12 +40,10 @@
  *
  */
 
-#if ENABLE_DEBUG != 1
 #include <sys/stat.h>
 #include <string.h>
 
 typedef struct stat stat_s;
-#endif
 #include "general.h"
 #include "platform.h"
 #include "gdb_if.h"
@@ -78,14 +76,6 @@ static bool debug_serial_send_complete = true;
 #endif
 
 #if ENABLE_DEBUG == 1 && defined(PLATFORM_HAS_DEBUG)
-/*
- * This call initialises "SemiHosting", only we then do our own SVC interrupt things to
- * route all output through to the debug USB serial interface if debug_bmp is true.
- *
- * https://github.com/mirror/newlib-cygwin/blob/master/newlib/libc/sys/arm/syscalls.c#L115
- */
-void initialise_monitor_handles(void);
-
 static char debug_serial_debug_buffer[AUX_UART_BUFFER_SIZE];
 static uint8_t debug_serial_debug_write_index;
 static uint8_t debug_serial_debug_read_index;
@@ -213,10 +203,6 @@ void usb_serial_set_config(usbd_device *dev, uint16_t value)
 	 */
 	usb_serial_set_state(dev, GDB_IF_NO, CDCACM_GDB_ENDPOINT + 1U);
 	usb_serial_set_state(dev, UART_IF_NO, CDCACM_UART_ENDPOINT + 1U);
-
-#if ENABLE_DEBUG == 1 && defined(PLATFORM_HAS_DEBUG)
-	initialise_monitor_handles();
-#endif
 }
 
 void debug_serial_send_stdout(const uint8_t *const data, const size_t len)
@@ -372,6 +358,7 @@ static size_t debug_serial_debug_write(const char *buf, const size_t len)
 	return offset;
 }
 #endif
+#endif
 
 /*
  * newlib defines _write as a weak link'd function for user code to override.
@@ -395,67 +382,9 @@ __attribute__((used)) int _write(const int file, const void *const ptr, const si
 }
 
 /*
- * newlib defines isatty as a weak link'd function for user code to override.
- *
- * The result of this function is always 'true'.
+ * The remaining I/O stubs have to be defined, or GCC 12 with
+ * `--spec=nosys.specs` will issue warnings are link time.
  */
-__attribute__((used)) int isatty(const int file)
-{
-	(void)file;
-	return true;
-}
-
-#define RDI_SYS_OPEN 0x01U
-
-typedef struct ex_frame {
-	uint32_t r0;
-	const uint32_t *params;
-	uint32_t r2;
-	uint32_t r3;
-	uint32_t r12;
-	uintptr_t lr;
-	uintptr_t return_address;
-} ex_frame_s;
-
-void debug_monitor_handler(void) __attribute__((used)) __attribute__((naked));
-
-/*
- * This implements the other half of the newlib syscall puzzle.
- * When newlib is built for ARM, various calls that do file IO
- * such as printf end up calling [_swiwrite](https://github.com/mirror/newlib-cygwin/blob/master/newlib/libc/sys/arm/syscalls.c#L317)
- * and other similar low-level implementation functions. These
- * generate `swi` instructions for the "RDI Monitor" and that lands us.. here.
- *
- * The RDI calling convention sticks the file number in r0, the buffer pointer in r1, and length in r2.
- * ARMv7-M's SWI (SVC) instruction then takes all that and maps it into an exception frame on the stack.
- */
-void debug_monitor_handler(void)
-{
-	ex_frame_s *frame;
-	__asm__("mov %[frame], sp" : [frame] "=r"(frame));
-
-	/* Make sure to return to the instruction after the SWI/BKPT */
-	frame->return_address += 2U;
-
-	switch (frame->r0) {
-	case RDI_SYS_OPEN:
-		frame->r0 = 1;
-		break;
-	default:
-		frame->r0 = UINT32_MAX;
-	}
-	__asm__("bx lr");
-}
-#else
-/* This defines stubs for the newlib fake file IO layer for compatibility with GCC 12 `-specs=nosys.specs` */
-
-/* NOLINTNEXTLINE(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp) */
-__attribute__((used)) int _write(const int file, const void *const buffer, const size_t length)
-{
-	(void)file;
-	(void)buffer;
-	return length;
-}
 
 /* NOLINTNEXTLINE(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp) */
 __attribute__((used)) int _read(const int file, void *const buffer, const size_t length)
@@ -509,4 +438,3 @@ __attribute__((used)) int _kill(const int pid, const int signal)
 	(void)signal;
 	return 0;
 }
-#endif
