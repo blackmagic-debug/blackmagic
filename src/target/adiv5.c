@@ -703,6 +703,25 @@ static void adiv5_component_probe(
 	}
 }
 
+static void adiv5_display_ap(const adiv5_access_port_s *const ap)
+{
+#if ENABLE_DEBUG == 1
+	const uint8_t ap_type = ADIV5_AP_IDR_TYPE(ap->idr);
+	const uint8_t ap_class = ADIV5_AP_IDR_CLASS(ap->idr);
+	/* Decode the AP designer code */
+	uint16_t designer = ADIV5_AP_IDR_DESIGNER(ap->idr);
+	designer = (designer & ADIV5_DP_DESIGNER_JEP106_CONT_MASK) << 1U | (designer & ADIV5_DP_DESIGNER_JEP106_CODE_MASK);
+	/* If this is an ARM-designed AP, map the AP type. Otherwise display "Unknown" */
+	const char *const ap_type_name =
+		designer == JEP106_MANUFACTURER_ARM ? adiv5_arm_ap_type_string(ap_type, ap_class) : "Unknown";
+	/* Display the AP's type, variant and revision information */
+	DEBUG_INFO(" (%s var%" PRIx32 " rev%" PRIx32 ")\n", ap_type_name, ADIV5_AP_IDR_VARIANT(ap->idr),
+		ADIV5_AP_IDR_REVISION(ap->idr));
+#else
+	(void)ap;
+#endif
+}
+
 adiv5_access_port_s *adiv5_new_ap(adiv5_debug_port_s *dp, uint8_t apsel)
 {
 	adiv5_access_port_s ap = {0};
@@ -821,18 +840,7 @@ adiv5_access_port_s *adiv5_new_ap(adiv5_debug_port_s *dp, uint8_t apsel)
 		}
 	}
 
-#if ENABLE_DEBUG == 1
-	/* Decode the AP designer code */
-	uint16_t designer = ADIV5_AP_IDR_DESIGNER(ap.idr);
-	designer = (designer & ADIV5_DP_DESIGNER_JEP106_CONT_MASK) << 1U | (designer & ADIV5_DP_DESIGNER_JEP106_CODE_MASK);
-	/* If this is an ARM-designed AP, map the AP type. Otherwise display "Unknown" */
-	const char *const ap_type_name =
-		designer == JEP106_MANUFACTURER_ARM ? adiv5_arm_ap_type_string(ap_type, ap_class) : "Unknown";
-	/* Display the AP's type, variant and revision information */
-	DEBUG_INFO(" (%s var%" PRIx32 " rev%" PRIx32 ")\n", ap_type_name, ADIV5_AP_IDR_VARIANT(ap.idr),
-		ADIV5_AP_IDR_REVISION(ap.idr));
-#endif
-
+	adiv5_display_ap(&ap);
 	/* It's valid to so create a heap copy */
 	adiv5_access_port_s *result = malloc(sizeof(*result));
 	if (!result) { /* malloc failed: heap exhaustion */
