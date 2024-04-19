@@ -37,10 +37,10 @@
 /* Bring in the v3 protocol definitions and undefine the memory portion of the ADIv5 acceleration protocol */
 #include "protocol_v3_defs.h"
 
-#undef REMOTE_ADIv5_MEM_READ_STR
-#undef REMOTE_ADIv5_MEM_READ_LENGTH
-#undef REMOTE_ADIv5_MEM_WRITE_STR
-#undef REMOTE_ADIv5_MEM_WRITE_LENGTH
+#undef REMOTE_ADIV5_MEM_READ_STR
+#undef REMOTE_ADIV5_MEM_READ_LENGTH
+#undef REMOTE_ADIV5_MEM_WRITE_STR
+#undef REMOTE_ADIV5_MEM_WRITE_LENGTH
 
 /* This version of the protocol introduces a command for determining what protocol acclerations are available */
 #define REMOTE_HL_ACCEL 'A'
@@ -59,30 +59,30 @@
 
 /* This version of the protocol introduces 64-bit support for the ADIv5 acceleration protocol */
 #define REMOTE_UINT64       '%', '0', '1', '6', 'l', 'l', 'x'
-#define REMOTE_ADIv5_ADDR64 REMOTE_UINT64
+#define REMOTE_ADIV5_ADDR64 REMOTE_UINT64
 
 /* ADIv5 remote protocol memory I/O messages */
-#define REMOTE_ADIv5_MEM_READ_STR                                                                      \
+#define REMOTE_ADIV5_MEM_READ_STR                                                                      \
 	(char[])                                                                                           \
 	{                                                                                                  \
-		REMOTE_SOM, REMOTE_ADIv5_PACKET, REMOTE_MEM_READ, REMOTE_ADIv5_DEV_INDEX, REMOTE_ADIv5_AP_SEL, \
-			REMOTE_ADIv5_CSW, REMOTE_ADIv5_ADDR64, REMOTE_ADIv5_COUNT, REMOTE_EOM, 0                   \
+		REMOTE_SOM, REMOTE_ADIV5_PACKET, REMOTE_MEM_READ, REMOTE_ADIV5_DEV_INDEX, REMOTE_ADIV5_AP_SEL, \
+			REMOTE_ADIV5_CSW, REMOTE_ADIV5_ADDR64, REMOTE_ADIV5_COUNT, REMOTE_EOM, 0                   \
 	}
 /*
  * 3 leader bytes + 2 bytes for dev index + 2 bytes for AP select + 8 for CSW + 16 for the address
  * and 8 for the count and one trailer gives 40U
  */
-#define REMOTE_ADIv5_MEM_READ_LENGTH 40U
-#define REMOTE_ADIv5_MEM_WRITE_STR                                                                      \
+#define REMOTE_ADIV5_MEM_READ_LENGTH 40U
+#define REMOTE_ADIV5_MEM_WRITE_STR                                                                      \
 	(char[])                                                                                            \
 	{                                                                                                   \
-		REMOTE_SOM, REMOTE_ADIv5_PACKET, REMOTE_MEM_WRITE, REMOTE_ADIv5_DEV_INDEX, REMOTE_ADIv5_AP_SEL, \
-			REMOTE_ADIv5_CSW, REMOTE_ADIv5_ALIGNMENT, REMOTE_ADIv5_ADDR64, REMOTE_ADIv5_COUNT, 0        \
+		REMOTE_SOM, REMOTE_ADIV5_PACKET, REMOTE_MEM_WRITE, REMOTE_ADIV5_DEV_INDEX, REMOTE_ADIV5_AP_SEL, \
+			REMOTE_ADIV5_CSW, REMOTE_ADIV5_ALIGNMENT, REMOTE_ADIV5_ADDR64, REMOTE_ADIV5_COUNT, 0        \
 	}
 /*
  * 3 leader bytes + 2 bytes for dev index + 2 bytes for AP select + 8 for CSW + 2 for the alignment +
  * 16 for the address and 8 for the count and one trailer gives 42U
  */
-#define REMOTE_ADIv5_MEM_WRITE_LENGTH 42U
+#define REMOTE_ADIV5_MEM_WRITE_LENGTH 42U
 
 #endif /*PLATFORMS_HOSTED_REMOTE_PROTOCOL_V4_DEFS_H*/

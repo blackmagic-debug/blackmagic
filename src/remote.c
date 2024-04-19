@@ -395,7 +395,7 @@ static void remote_packet_process_adiv5(const char *const packet, const size_t p
 		break;
 	}
 	/* Raw access comands */
-	case REMOTE_ADIv5_RAW_ACCESS: { /* AR = Perform a raw ADIv5 access */
+	case REMOTE_ADIV5_RAW_ACCESS: { /* AR = Perform a raw ADIv5 access */
 		/* Grab the address to perform an access against and the value to work with */
 		const uint16_t addr = hex_string_to_num(4, packet + 6);
 		const uint32_t value = hex_string_to_num(8, packet + 10);
@@ -428,7 +428,7 @@ static void remote_packet_process_adiv5(const char *const packet, const size_t p
 		const target_addr64_t address = hex_string_to_num(16, packet + 14U);
 		/* And how many bytes to read, validating it for buffer overflows */
 		const uint32_t length = hex_string_to_num(8, packet + 30U);
-		if (length > GDB_PACKET_BUFFER_SIZE - REMOTE_ADIv5_MEM_READ_LENGTH) {
+		if (length > GDB_PACKET_BUFFER_SIZE - REMOTE_ADIV5_MEM_READ_LENGTH) {
 			remote_respond(REMOTE_RESP_PARERR, 0);
 			break;
 		}
@@ -448,7 +448,7 @@ static void remote_packet_process_adiv5(const char *const packet, const size_t p
 		const target_addr64_t address = hex_string_to_num(16, packet + 16U);
 		/* And how many bytes to read, validating it for buffer overflows */
 		const uint32_t length = hex_string_to_num(8, packet + 32U);
-		if (length > GDB_PACKET_BUFFER_SIZE - REMOTE_ADIv5_MEM_WRITE_LENGTH) {
+		if (length > GDB_PACKET_BUFFER_SIZE - REMOTE_ADIV5_MEM_WRITE_LENGTH) {
 			remote_respond(REMOTE_RESP_PARERR, 0);
 			break;
 		}
@@ -607,7 +607,7 @@ void remote_packet_process(char *const packet, const size_t packet_length)
 		remote_packet_process_high_level(packet, packet_length);
 		break;
 
-	case REMOTE_ADIv5_PACKET: {
+	case REMOTE_ADIV5_PACKET: {
 		/* Setup an exception frame to try the ADIv5 operation in */
 		volatile exception_s error = {0};
 		TRY_CATCH (error, EXCEPTION_ALL) {

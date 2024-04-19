@@ -157,65 +157,65 @@
 	}
 
 /* ADIv5 protocol elements and messages */
-#define REMOTE_ADIv5_PACKET     'H'
-#define REMOTE_ADIv5_RAW_ACCESS 'L'
+#define REMOTE_ADIV5_PACKET     'H'
+#define REMOTE_ADIV5_RAW_ACCESS 'L'
 #define REMOTE_DP_READ          'd'
 #define REMOTE_AP_READ          'a'
 #define REMOTE_AP_WRITE         'A'
 #define REMOTE_MEM_READ         'M'
 #define REMOTE_MEM_WRITE        'm'
 
-#define REMOTE_ADIv5_AP_SEL    REMOTE_UINT8
-#define REMOTE_ADIv5_ADDR16    REMOTE_UINT16
-#define REMOTE_ADIv5_ADDR32    REMOTE_UINT32
-#define REMOTE_ADIv5_DATA      REMOTE_UINT32
-#define REMOTE_ADIv5_CSW       REMOTE_UINT32
-#define REMOTE_ADIv5_ALIGNMENT REMOTE_UINT8
-#define REMOTE_ADIv5_COUNT     REMOTE_UINT32
+#define REMOTE_ADIV5_AP_SEL    REMOTE_UINT8
+#define REMOTE_ADIV5_ADDR16    REMOTE_UINT16
+#define REMOTE_ADIV5_ADDR32    REMOTE_UINT32
+#define REMOTE_ADIV5_DATA      REMOTE_UINT32
+#define REMOTE_ADIV5_CSW       REMOTE_UINT32
+#define REMOTE_ADIV5_ALIGNMENT REMOTE_UINT8
+#define REMOTE_ADIV5_COUNT     REMOTE_UINT32
 
-#define REMOTE_ADIv5_RAW_ACCESS_STR                                                                         \
+#define REMOTE_ADIV5_RAW_ACCESS_STR                                                                         \
 	(char[])                                                                                                \
 	{                                                                                                       \
-		REMOTE_SOM, REMOTE_ADIv5_PACKET, REMOTE_ADIv5_RAW_ACCESS, REMOTE_ADIv5_AP_SEL, REMOTE_ADIv5_ADDR16, \
-			REMOTE_ADIv5_DATA, REMOTE_EOM, 0                                                                \
+		REMOTE_SOM, REMOTE_ADIV5_PACKET, REMOTE_ADIV5_RAW_ACCESS, REMOTE_ADIV5_AP_SEL, REMOTE_ADIV5_ADDR16, \
+			REMOTE_ADIV5_DATA, REMOTE_EOM, 0                                                                \
 	}
 #define REMOTE_DP_READ_STR                                                                            \
 	(char[])                                                                                          \
 	{                                                                                                 \
-		REMOTE_SOM, REMOTE_ADIv5_PACKET, REMOTE_DP_READ, 'f', 'f', REMOTE_ADIv5_ADDR16, REMOTE_EOM, 0 \
+		REMOTE_SOM, REMOTE_ADIV5_PACKET, REMOTE_DP_READ, 'f', 'f', REMOTE_ADIV5_ADDR16, REMOTE_EOM, 0 \
 	}
 #define REMOTE_AP_READ_STR                                                                                       \
 	(char[])                                                                                                     \
 	{                                                                                                            \
-		REMOTE_SOM, REMOTE_ADIv5_PACKET, REMOTE_AP_READ, REMOTE_ADIv5_AP_SEL, REMOTE_ADIv5_ADDR16, REMOTE_EOM, 0 \
+		REMOTE_SOM, REMOTE_ADIV5_PACKET, REMOTE_AP_READ, REMOTE_ADIV5_AP_SEL, REMOTE_ADIV5_ADDR16, REMOTE_EOM, 0 \
 	}
 #define REMOTE_AP_WRITE_STR                                                                                            \
 	(char[])                                                                                                           \
 	{                                                                                                                  \
-		REMOTE_SOM, REMOTE_ADIv5_PACKET, REMOTE_AP_WRITE, REMOTE_ADIv5_AP_SEL, REMOTE_ADIv5_ADDR16, REMOTE_ADIv5_DATA, \
+		REMOTE_SOM, REMOTE_ADIV5_PACKET, REMOTE_AP_WRITE, REMOTE_ADIV5_AP_SEL, REMOTE_ADIV5_ADDR16, REMOTE_ADIV5_DATA, \
 			REMOTE_EOM, 0                                                                                              \
 	}
-#define REMOTE_ADIv5_MEM_READ_STR                                                                                     \
+#define REMOTE_ADIV5_MEM_READ_STR                                                                                     \
 	(char[])                                                                                                          \
 	{                                                                                                                 \
-		REMOTE_SOM, REMOTE_ADIv5_PACKET, REMOTE_MEM_READ, REMOTE_ADIv5_AP_SEL, REMOTE_ADIv5_CSW, REMOTE_ADIv5_ADDR32, \
-			REMOTE_ADIv5_COUNT, REMOTE_EOM, 0                                                                         \
+		REMOTE_SOM, REMOTE_ADIV5_PACKET, REMOTE_MEM_READ, REMOTE_ADIV5_AP_SEL, REMOTE_ADIV5_CSW, REMOTE_ADIV5_ADDR32, \
+			REMOTE_ADIV5_COUNT, REMOTE_EOM, 0                                                                         \
 	}
 /*
  * 3 leader bytes + 2 bytes for AP select + 8 for CSW + 8 for the address
  * and 8 for the count and one trailer gives 32U
  */
-#define REMOTE_ADIv5_MEM_READ_LENGTH 30U
-#define REMOTE_ADIv5_MEM_WRITE_STR                                                                \
+#define REMOTE_ADIV5_MEM_READ_LENGTH 30U
+#define REMOTE_ADIV5_MEM_WRITE_STR                                                                \
 	(char[])                                                                                      \
 	{                                                                                             \
-		REMOTE_SOM, REMOTE_ADIv5_PACKET, REMOTE_MEM_WRITE, REMOTE_ADIv5_AP_SEL, REMOTE_ADIv5_CSW, \
-			REMOTE_ADIv5_ALIGNMENT, REMOTE_ADIv5_ADDR32, REMOTE_ADIv5_COUNT, 0                    \
+		REMOTE_SOM, REMOTE_ADIV5_PACKET, REMOTE_MEM_WRITE, REMOTE_ADIV5_AP_SEL, REMOTE_ADIV5_CSW, \
+			REMOTE_ADIV5_ALIGNMENT, REMOTE_ADIV5_ADDR32, REMOTE_ADIV5_COUNT, 0                    \
 	}
 /*
  * 3 leader bytes + 2 bytes for AP select + 8 for CSW + 2 for the alignment +
  * 8 for the address and 8 for the count and one trailer gives 34U
  */
-#define REMOTE_ADIv5_MEM_WRITE_LENGTH 32U
+#define REMOTE_ADIV5_MEM_WRITE_LENGTH 32U
 
 #endif /*PLATFORMS_HOSTED_REMOTE_PROTOCOL_V0_DEFS_H*/

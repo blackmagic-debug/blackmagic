@@ -66,7 +66,7 @@ uint32_t remote_v1_adiv5_raw_access(
 	char buffer[REMOTE_MAX_MSG_SIZE];
 	/* Create the request and send it to the remote */
 	ssize_t length =
-		snprintf(buffer, REMOTE_MAX_MSG_SIZE, REMOTE_ADIv5_RAW_ACCESS_STR, dp->dev_index, rnw, addr, request_value);
+		snprintf(buffer, REMOTE_MAX_MSG_SIZE, REMOTE_ADIV5_RAW_ACCESS_STR, dp->dev_index, rnw, addr, request_value);
 	platform_buffer_write(buffer, length);
 	/* Read back the answer and check for errors */
 	length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
@@ -155,7 +155,7 @@ void remote_v1_adiv5_mem_read_bytes(
 		/* Pick the amount left to read or the block size, whichever is smaller */
 		const size_t amount = MIN(read_length - offset, blocksize);
 		/* Create the request and send it to the remote */
-		ssize_t length = snprintf(buffer, REMOTE_MAX_MSG_SIZE, REMOTE_ADIv5_MEM_READ_STR, ap->dp->dev_index, ap->apsel,
+		ssize_t length = snprintf(buffer, REMOTE_MAX_MSG_SIZE, REMOTE_ADIV5_MEM_READ_STR, ap->dp->dev_index, ap->apsel,
 			ap->csw, (uint32_t)src + offset, amount);
 		platform_buffer_write(buffer, length);
 
@@ -187,15 +187,15 @@ void remote_v1_adiv5_mem_write_bytes(adiv5_access_port_s *const ap, const target
 	char buffer[REMOTE_MAX_MSG_SIZE + 1U];
 	/* As we do, calculate how large a transfer we can do to the firmware */
 	const size_t alignment_mask = ~((1U << align) - 1U);
-	const size_t blocksize = ((REMOTE_MAX_MSG_SIZE - REMOTE_ADIv5_MEM_WRITE_LENGTH) / 2U) & alignment_mask;
+	const size_t blocksize = ((REMOTE_MAX_MSG_SIZE - REMOTE_ADIV5_MEM_WRITE_LENGTH) / 2U) & alignment_mask;
 	/* For each transfer block size, ask the firmware to write that block of bytes */
 	for (size_t offset = 0; offset < write_length; offset += blocksize) {
 		/* Pick the amount left to write or the block size, whichever is smaller */
 		const size_t amount = MIN(write_length - offset, blocksize);
 		/* Create the request and validate it ends up the right length */
-		ssize_t length = snprintf(buffer, REMOTE_MAX_MSG_SIZE, REMOTE_ADIv5_MEM_WRITE_STR, ap->dp->dev_index, ap->apsel,
+		ssize_t length = snprintf(buffer, REMOTE_MAX_MSG_SIZE, REMOTE_ADIV5_MEM_WRITE_STR, ap->dp->dev_index, ap->apsel,
 			ap->csw, align, (uint32_t)dest + offset, amount);
-		assert(length == REMOTE_ADIv5_MEM_WRITE_LENGTH - 1U);
+		assert(length == REMOTE_ADIV5_MEM_WRITE_LENGTH - 1U);
 		/* Encode the data to send after the request block and append the packet termination marker */
 		hexify(buffer + length, data + offset, amount);
 		length += (ssize_t)(amount * 2U);
