@@ -950,6 +950,43 @@ static bool s32k3xx_dp_prepare(adiv5_debug_port_s *const dp)
 	return true;
 }
 
+static bool adiv5_power_cycle_aps(adiv5_debug_port_s *const dp)
+{
+	platform_timeout_s timeout;
+	platform_timeout_set(&timeout, 250);
+
+	/* Start by resetting the DP control state so the debug domain powers down */
+	adiv5_dp_write(dp, ADIV5_DP_CTRLSTAT, 0U);
+	uint32_t status = ADIV5_DP_CTRLSTAT_CSYSPWRUPACK | ADIV5_DP_CTRLSTAT_CDBGPWRUPACK;
+	/* Wait for the acknowledgements to go low */
+	while (status & (ADIV5_DP_CTRLSTAT_CSYSPWRUPACK | ADIV5_DP_CTRLSTAT_CDBGPWRUPACK)) {
+		status = adiv5_dp_read(dp, ADIV5_DP_CTRLSTAT);
+		if (platform_timeout_is_expired(&timeout)) {
+			DEBUG_WARN("adiv5: power-down failed\n");
+			break;
+		}
+	}
+
+	platform_timeout_set(&timeout, 201);
+	/* Write request for system and debug power up */
+	adiv5_dp_write(dp, ADIV5_DP_CTRLSTAT, ADIV5_DP_CTRLSTAT_CSYSPWRUPREQ | ADIV5_DP_CTRLSTAT_CDBGPWRUPREQ);
+	/* Wait for acknowledge */
+	status = 0U;
+	while (status != (ADIV5_DP_CTRLSTAT_CSYSPWRUPACK | ADIV5_DP_CTRLSTAT_CDBGPWRUPACK)) {
+		platform_delay(10);
+		status =
+			adiv5_dp_read(dp, ADIV5_DP_CTRLSTAT) & (ADIV5_DP_CTRLSTAT_CSYSPWRUPACK | ADIV5_DP_CTRLSTAT_CDBGPWRUPACK);
+		if (status == (ADIV5_DP_CTRLSTAT_CSYSPWRUPACK | ADIV5_DP_CTRLSTAT_CDBGPWRUPACK))
+			break;
+		if (platform_timeout_is_expired(&timeout)) {
+			DEBUG_WARN("adiv5: power-up failed\n");
+			return false;
+		}
+	}
+	/* At this point due to the guaranteed power domain restart, the APs are all up and in their reset state. */
+	return true;
+}
+
 void adiv5_dp_init(adiv5_debug_port_s *const dp)
 {
 	/*
@@ -1052,39 +1089,12 @@ void adiv5_dp_init(adiv5_debug_port_s *const dp)
 		return;
 	}
 
-	platform_timeout_s timeout;
-	platform_timeout_set(&timeout, 250);
-
-	/* Start by resetting the DP control state so the debug domain powers down */
-	adiv5_dp_write(dp, ADIV5_DP_CTRLSTAT, 0U);
-	uint32_t status = ADIV5_DP_CTRLSTAT_CSYSPWRUPACK | ADIV5_DP_CTRLSTAT_CDBGPWRUPACK;
-	/* Wait for the acknowledgements to go low */
-	while (status & (ADIV5_DP_CTRLSTAT_CSYSPWRUPACK | ADIV5_DP_CTRLSTAT_CDBGPWRUPACK)) {
-		status = adiv5_dp_read(dp, ADIV5_DP_CTRLSTAT);
-		if (platform_timeout_is_expired(&timeout)) {
-			DEBUG_WARN("adiv5: power-down failed\n");
-			break;
-		}
+	/* Try to power cycle the APs, affecting a reset on them */
+	if (!adiv5_power_cycle_aps(dp)) {
+		/* Clean up by freeing the DP - no APs have been constructed at this point, so this is safe */
+		free(dp);
+		return;
 	}
-
-	platform_timeout_set(&timeout, 201);
-	/* Write request for system and debug power up */
-	adiv5_dp_write(dp, ADIV5_DP_CTRLSTAT, ADIV5_DP_CTRLSTAT_CSYSPWRUPREQ | ADIV5_DP_CTRLSTAT_CDBGPWRUPREQ);
-	/* Wait for acknowledge */
-	status = 0U;
-	while (status != (ADIV5_DP_CTRLSTAT_CSYSPWRUPACK | ADIV5_DP_CTRLSTAT_CDBGPWRUPACK)) {
-		platform_delay(10);
-		status =
-			adiv5_dp_read(dp, ADIV5_DP_CTRLSTAT) & (ADIV5_DP_CTRLSTAT_CSYSPWRUPACK | ADIV5_DP_CTRLSTAT_CDBGPWRUPACK);
-		if (status == (ADIV5_DP_CTRLSTAT_CSYSPWRUPACK | ADIV5_DP_CTRLSTAT_CDBGPWRUPACK))
-			break;
-		if (platform_timeout_is_expired(&timeout)) {
-			DEBUG_WARN("adiv5: power-up failed\n");
-			free(dp); /* No AP that referenced this DP so long*/
-			return;
-		}
-	}
-	/* At this point due to the guaranteed power domain restart, the APs are all up and in their reset state. */
 
 	if (dp->target_designer_code == JEP106_MANUFACTURER_NXP)
 		lpc55_dp_prepare(dp);
