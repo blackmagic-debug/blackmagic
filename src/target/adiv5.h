@@ -203,7 +203,7 @@
 #define JTAG_IDCODE_DESIGNER_JEP106_CONT_MASK   (0xfU << ADIV5_DP_DESIGNER_JEP106_CONT_OFFSET)
 #define JTAG_IDCODE_DESIGNER_JEP106_CODE_MASK   (0x7fU)
 
-#define JTAG_IDCODE_PARTNO_DPv0 0xba00U
+#define JTAG_IDCODE_PARTNO_DPV0 0xba00U
 
 /* Constants for the DP's quirks field */
 #define ADIV5_DP_QUIRK_MINDP    (1U << 0U) /* DP is a minimal DP implementation */

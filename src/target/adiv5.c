@@ -963,7 +963,7 @@ void adiv5_dp_init(adiv5_debug_port_s *const dp)
 	 *
 	 * for SWD-DP, we are guaranteed to be DP v1 or later.
 	 */
-	if (dp->designer_code != JEP106_MANUFACTURER_ARM || dp->partno != JTAG_IDCODE_PARTNO_DPv0) {
+	if (dp->designer_code != JEP106_MANUFACTURER_ARM || dp->partno != JTAG_IDCODE_PARTNO_DPV0) {
 		const uint32_t dpidr = adiv5_dp_read_dpidr(dp);
 		if (!dpidr) {
 			DEBUG_ERROR("Failed to read DPIDR\n");

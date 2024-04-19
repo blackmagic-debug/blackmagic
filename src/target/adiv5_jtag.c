@@ -75,7 +75,7 @@ void adiv5_jtag_dp_handler(const uint8_t dev_index)
 		((designer & ADIV5_DP_DESIGNER_JEP106_CONT_MASK) << 1U) | (designer & ADIV5_DP_DESIGNER_JEP106_CODE_MASK);
 	dp->partno = (idcode & JTAG_IDCODE_PARTNO_MASK) >> JTAG_IDCODE_PARTNO_OFFSET;
 
-	if (dp->partno == JTAG_IDCODE_PARTNO_DPv0)
+	if (dp->partno == JTAG_IDCODE_PARTNO_DPV0)
 		adiv5_dp_error(dp);
 	else
 		adiv5_dp_abort(dp, ADIV5_DP_ABORT_STKERRCLR);
