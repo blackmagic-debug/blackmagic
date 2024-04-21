@@ -168,7 +168,7 @@ int32_t gdb_main_loop(target_controller_s *tc, char *pbuf, size_t pbuf_size, siz
 		uint32_t len = 0;
 		ERROR_IF_NO_TARGET();
 		if (read_hex32(pbuf + 1, &rest, &addr, ',') && read_hex32(rest, &rest, &len, ':')) {
-			if (len > (size - (size_t)(pbuf - rest)) / 2U) {
+			if (len > (size - (size_t)(rest - pbuf)) / 2U) {
 				gdb_putpacketz("E02");
 				break;
 			}
@@ -344,7 +344,7 @@ int32_t gdb_main_loop(target_controller_s *tc, char *pbuf, size_t pbuf_size, siz
 		uint32_t addr, len;
 		ERROR_IF_NO_TARGET();
 		if (read_hex32(pbuf + 1, &rest, &addr, ',') && read_hex32(rest, &rest, &len, ':')) {
-			if (len > (size - (size_t)(pbuf - rest))) {
+			if (len > (size - (size_t)(rest - pbuf))) {
 				gdb_putpacketz("E02");
 				break;
 			}
@@ -789,7 +789,7 @@ static void exec_v_flash_write(const char *packet, const size_t length)
 	const char *rest = NULL;
 	if (read_hex32(packet, &rest, &addr, ':')) {
 		/* Write Flash Memory */
-		const uint32_t count = length - (packet - rest);
+		const uint32_t count = length - (size_t)(rest - packet);
 		DEBUG_GDB("Flash Write %08" PRIX32 " %08" PRIX32 "\n", addr, count);
 		if (cur_target && target_flash_write(cur_target, addr, (uint8_t *)rest, count))
 			gdb_putpacketz("OK");
