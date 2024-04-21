@@ -114,6 +114,10 @@ void platform_init(int argc, char **argv)
 {
 #if defined(_WIN32) || defined(__CYGWIN__)
 	SetConsoleOutputCP(CP_UTF8);
+	if (setvbuf(stdout, NULL, _IONBF, 0) < 0) {
+		int err = errno;
+		fprintf(stderr, "%s: %s returns %s\n", __func__, "setvbuf()", strerror(err));
+	}
 #endif
 	cl_init(&cl_opts, argc, argv);
 	atexit(exit_function);
