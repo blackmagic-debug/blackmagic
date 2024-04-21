@@ -385,6 +385,16 @@ static uint64_t adiv5_ap_read_pidr(adiv5_access_port_s *ap, uint32_t addr)
 }
 
 /*
+ * Decode a designer code that's in the following form into BMD's internal designer code representation
+ * Bits 10:7 - JEP-106 Continuation code
+ * Bits 6:0 - JEP-106 Identity code
+ */
+static inline uint16_t adiv5_decode_designer(const uint16_t designer)
+{
+	return (designer & ADIV5_DP_DESIGNER_JEP106_CONT_MASK) << 1U | (designer & ADIV5_DP_DESIGNER_JEP106_CODE_MASK);
+}
+
+/*
  * This function tries to halt Cortex-M processors.
  * To handle WFI and other sleep states, it does this in as tight a loop as it can,
  * either using the TRNCNT bits, or, if on a minimal DP implementation by doing the
@@ -708,9 +718,7 @@ static void adiv5_display_ap(const adiv5_access_port_s *const ap)
 #if ENABLE_DEBUG == 1
 	const uint8_t ap_type = ADIV5_AP_IDR_TYPE(ap->idr);
 	const uint8_t ap_class = ADIV5_AP_IDR_CLASS(ap->idr);
-	/* Decode the AP designer code */
-	uint16_t designer = ADIV5_AP_IDR_DESIGNER(ap->idr);
-	designer = (designer & ADIV5_DP_DESIGNER_JEP106_CONT_MASK) << 1U | (designer & ADIV5_DP_DESIGNER_JEP106_CODE_MASK);
+	const uint16_t designer = adiv5_decode_designer(ADIV5_AP_IDR_DESIGNER(ap->idr));
 	/* If this is an ARM-designed AP, map the AP type. Otherwise display "Unknown" */
 	const char *const ap_type_name =
 		designer == JEP106_MANUFACTURER_ARM ? adiv5_arm_ap_type_string(ap_type, ap_class) : "Unknown";
@@ -1024,11 +1032,10 @@ void adiv5_dp_init(adiv5_debug_port_s *const dp)
 		 * Bits 6:0 - JEP-106 Identity code
 		 * here we convert it to our internal representation, See JEP-106 code list
 		 *
-		 * note: this is the code of the designer not the implementer, we expect it to be ARM
+		 * Note: this is the code of the designer not the implementer, we expect it to be ARM
 		 */
-		const uint16_t designer = (dpidr & ADIV5_DP_DPIDR_DESIGNER_MASK) >> ADIV5_DP_DPIDR_DESIGNER_OFFSET;
 		dp->designer_code =
-			(designer & ADIV5_DP_DESIGNER_JEP106_CONT_MASK) << 1U | (designer & ADIV5_DP_DESIGNER_JEP106_CODE_MASK);
+			adiv5_decode_designer((dpidr & ADIV5_DP_DPIDR_DESIGNER_MASK) >> ADIV5_DP_DPIDR_DESIGNER_OFFSET);
 		dp->partno = (dpidr & ADIV5_DP_DPIDR_PARTNO_MASK) >> ADIV5_DP_DPIDR_PARTNO_OFFSET;
 
 		/* Minimal Debug Port (MINDP) functions implemented */
@@ -1068,12 +1075,12 @@ void adiv5_dp_init(adiv5_debug_port_s *const dp)
 		const uint32_t targetid = adiv5_dp_read(dp, ADIV5_DP_TARGETID);
 		adiv5_dp_write(dp, ADIV5_DP_SELECT, ADIV5_DP_BANK0);
 
-		/* Use TARGETID register to identify target */
-		const uint16_t tdesigner = (targetid & ADIV5_DP_TARGETID_TDESIGNER_MASK) >> ADIV5_DP_TARGETID_TDESIGNER_OFFSET;
-
-		/* convert it to our internal representation, See JEP-106 code list */
+		/*
+		 * Use TARGETID register to identify target and convert it
+		 * to our internal representation, See JEP-106 code list.
+		 */
 		dp->target_designer_code =
-			(tdesigner & ADIV5_DP_DESIGNER_JEP106_CONT_MASK) << 1U | (tdesigner & ADIV5_DP_DESIGNER_JEP106_CODE_MASK);
+			adiv5_decode_designer((targetid & ADIV5_DP_TARGETID_TDESIGNER_MASK) >> ADIV5_DP_TARGETID_TDESIGNER_OFFSET);
 
 		dp->target_partno = (targetid & ADIV5_DP_TARGETID_TPARTNO_MASK) >> ADIV5_DP_TARGETID_TPARTNO_OFFSET;
 
