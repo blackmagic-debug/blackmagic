@@ -732,11 +732,14 @@ static void stlink_mem_write(
 	if (!stlink_ensure_ap(ap->apsel))
 		raise_exception(EXCEPTION_ERROR, "ST-Link AP selection error");
 
+	DEBUG_PROBE("%s: @0x%08" PRIx32 "+%zu\n", __func__, dest, len);
+
 	const uint8_t *const data = (const uint8_t *)src;
-	/* Chunk the write up into stlink.block_size blocks */
-	for (size_t offset = 0; offset < len; offset += stlink.block_size) {
+	const uint16_t block_size = (align == ALIGN_8BIT) ? stlink.block_size : STLINK_READMEM_32BIT_MAX_SIZE;
+	/* Chunk the write up into firmware-digestible blocks */
+	for (size_t offset = 0; offset < len; offset += block_size) {
 		/* Figure out how many bytes are in the block and at what start address */
-		const size_t amount = MIN(len - offset, stlink.block_size);
+		const size_t amount = MIN(len - offset, block_size);
 		const uint32_t addr = dest + offset;
 		/* Now generate an appropriate access packet */
 		stlink_mem_command_s command;
