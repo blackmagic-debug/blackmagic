@@ -28,6 +28,8 @@
  * References:
  * RM0090 - STM32F405/415, STM32F407/417, STM32F427/437 and STM32F429/439 advanced Arm®-based 32-bit MCUs, Rev. 20
  * https://www.st.com/resource/en/reference_manual/rm0090-stm32f405415-stm32f407417-stm32f427437-and-stm32f429439-advanced-armbased-32bit-mcus-stmicroelectronics.pdf
+ * RM0401 - STM32F410 advanced Arm®-based 32-bit MCUs
+ * https://www.st.com/resource/en/reference_manual/rm0401-stm32f410-advanced-armbased-32bit-mcus-stmicroelectronics.pdf
  */
 
 #include "general.h"
@@ -180,6 +182,8 @@ static char *stm32f4_get_chip_name(const uint32_t device_id)
 		return "STM32F446";
 	case ID_STM32F401C: /* F401 B/C RM0368 Rev.3 */
 		return "STM32F401C";
+	case ID_STM32F410: /* F410 RM0401 Rev.3 */
+		return "STM32F410";
 	case ID_STM32F411: /* F411 xC/E  RM0383 Rev.4 */
 		return "STM32F411";
 	case ID_STM32F412: /* F412 xG/I  RM0402 Rev.4, 256 kB Ram */
@@ -229,6 +233,7 @@ bool stm32f4_probe(target_s *target)
 	case ID_STM32F40X:
 	case ID_STM32F446:  /* F446 */
 	case ID_STM32F401C: /* F401 B/C RM0368 Rev.3 */
+	case ID_STM32F410:  /* F410     RM0401 Rev.3 */
 	case ID_STM32F411:  /* F411     RM0383 Rev.4 */
 	case ID_STM32F412:  /* F412     RM0402 Rev.4, 256 kB Ram */
 	case ID_STM32F401E: /* F401 D/E RM0368 Rev.3 */
@@ -319,6 +324,9 @@ static bool stm32f4_attach(target_s *target)
 	/* First try and figure out the Flash size (if we don't know the part ID, warn and return false) */
 	uint16_t max_flashsize = 0;
 	switch (target->part_id) {
+	case ID_STM32F410: /* F410 RM0401 Rev.3 */
+		max_flashsize = 128;
+		break;
 	case ID_STM32F401E: /* F401D/E RM0368 Rev.3 */
 	case ID_STM32F411:  /* F411 RM0383 Rev.4 */
 	case ID_STM32F446:  /* F446 */
