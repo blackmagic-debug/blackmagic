@@ -1,10 +1,11 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
- * Copyright (C) 2011  Black Sphere Technologies Ltd.
+ * Copyright (C) 2011 Black Sphere Technologies Ltd.
  * Written by Gareth McMullin <gareth@blacksphere.co.nz>
- * Copyright (C) 2017, 2018  Uwe Bonnes
- *                           <bon@elektron.ikp.physik.tu-darmstadt.de>
+ * Copyright (C) 2017, 2018 Uwe Bonnes <bon@elektron.ikp.physik.tu-darmstadt.de>
+ * Copyright (C) 2023-2024 1BitSquared <info@1bitsquared.com>
+ * Modified by Rachel Mant <git@dragonmux.network>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,16 +22,12 @@
  */
 
 /*
- * This file implements STM32F4 target specific functions for detecting
- * the device, providing the XML memory map and Flash memory programming.
+ * This file implements support for STM32F4xx, STM32F20x and GD32F4x series
+ * devices, providing memory maps and Flash programming routines.
  *
  * References:
- * ST doc - RM0090
- *   Reference manual - STM32F405xx, STM32F407xx, STM32F415xx and STM32F417xx
- *   advanced ARM-based 32-bit MCUs
- * ST doc - PM0081
- *   Programming manual - STM32F40xxx and STM32F41xxx Flash programming
- *    manual
+ * RM0090 - STM32F405/415, STM32F407/417, STM32F427/437 and STM32F429/439 advanced Arm®-based 32-bit MCUs, Rev. 20
+ * https://www.st.com/resource/en/reference_manual/rm0090-stm32f405415-stm32f407417-stm32f427437-and-stm32f429439-advanced-armbased-32bit-mcus-stmicroelectronics.pdf
  */
 
 #include "general.h"
