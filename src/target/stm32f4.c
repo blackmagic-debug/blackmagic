@@ -47,7 +47,7 @@ const command_s stm32f4_cmd_list[] = {
 
 static bool stm32f4_attach(target_s *target);
 static void stm32f4_detach(target_s *target);
-static bool stm32f4_flash_erase(target_flash_s *flash, target_addr_t addr, size_t len);
+static bool stm32f4_flash_erase(target_flash_s *target_flash, target_addr_t addr, size_t len);
 static bool stm32f4_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t len);
 static bool stm32f4_mass_erase(target_s *target);
 
@@ -143,24 +143,24 @@ static void stm32f4_add_flash(target_s *const target, const uint32_t addr, const
 	if (length == 0)
 		return;
 
-	stm32f4_flash_s *sf = calloc(1, sizeof(*sf));
-	if (!sf) { /* calloc failed: heap exhaustion */
+	stm32f4_flash_s *flash = calloc(1, sizeof(*flash));
+	if (!flash) { /* calloc failed: heap exhaustion */
 		DEBUG_ERROR("calloc: failed in %s\n", __func__);
 		return;
 	}
 
-	target_flash_s *flash = &sf->flash;
-	flash->start = addr;
-	flash->length = length;
-	flash->blocksize = blocksize;
-	flash->erase = stm32f4_flash_erase;
-	flash->write = stm32f4_flash_write;
-	flash->writesize = 1024;
-	flash->erased = 0xffU;
-	sf->base_sector = base_sector;
-	sf->bank_split = split;
-	sf->psize = ALIGN_32BIT;
-	target_add_flash(target, flash);
+	target_flash_s *target_flash = &flash->flash;
+	target_flash->start = addr;
+	target_flash->length = length;
+	target_flash->blocksize = blocksize;
+	target_flash->erase = stm32f4_flash_erase;
+	target_flash->write = stm32f4_flash_write;
+	target_flash->writesize = 1024;
+	target_flash->erased = 0xffU;
+	flash->base_sector = base_sector;
+	flash->bank_split = split;
+	flash->psize = ALIGN_32BIT;
+	target_add_flash(target, target_flash);
 }
 
 static char *stm32f4_get_chip_name(const uint32_t device_id)
@@ -474,10 +474,10 @@ static bool stm32f4_flash_busy_wait(target_s *const target, platform_timeout_s *
 	return true;
 }
 
-static bool stm32f4_flash_erase(target_flash_s *flash, target_addr_t addr, size_t len)
+static bool stm32f4_flash_erase(target_flash_s *target_flash, target_addr_t addr, size_t len)
 {
-	target_s *target = flash->t;
-	stm32f4_flash_s *sf = (stm32f4_flash_s *)flash;
+	target_s *target = target_flash->t;
+	stm32f4_flash_s *flash = (stm32f4_flash_s *)target_flash;
 	stm32f4_flash_unlock(target);
 
 	align_e psize = ALIGN_32BIT;
@@ -492,10 +492,10 @@ static bool stm32f4_flash_erase(target_flash_s *flash, target_addr_t addr, size_
 	}
 
 	/* No address translation is needed here, as we erase by sector number */
-	uint8_t sector = sf->base_sector + ((addr - flash->start) / flash->blocksize);
+	uint8_t sector = flash->base_sector + ((addr - target_flash->start) / target_flash->blocksize);
 
 	/* Erase the requested chunk of flash, one sector at a time. */
-	for (size_t offset = 0; offset < len; offset += flash->blocksize) {
+	for (size_t offset = 0; offset < len; offset += target_flash->blocksize) {
 		uint32_t cr = FLASH_CR_EOPIE | FLASH_CR_ERRIE | FLASH_CR_SER | (psize * FLASH_CR_PSIZE16) | (sector << 3U);
 		/* Flash page erase instruction */
 		target_mem32_write32(target, FLASH_CR, cr);
@@ -507,7 +507,7 @@ static bool stm32f4_flash_erase(target_flash_s *flash, target_addr_t addr, size_
 			return false;
 
 		++sector;
-		if (sf->bank_split && sector == sf->bank_split)
+		if (flash->bank_split && sector == flash->bank_split)
 			sector = 16;
 	}
 	return true;
