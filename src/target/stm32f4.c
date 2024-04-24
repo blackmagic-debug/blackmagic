@@ -233,15 +233,26 @@ bool stm32f4_probe(target_s *target)
 	case ID_STM32F412:  /* F412     RM0402 Rev.4, 256 kB Ram */
 	case ID_STM32F401E: /* F401 D/E RM0368 Rev.3 */
 	case ID_STM32F413:  /* F413     RM0430 Rev.2, 320 kB Ram, 1.5 MB flash. */
-		target->attach = stm32f4_attach;
-		target->detach = stm32f4_detach;
-		target->mass_erase = stm32f4_mass_erase;
-		target->driver = stm32f4_get_chip_name(device_id);
-		target->part_id = device_id;
-		target_add_commands(target, stm32f4_cmd_list, target->driver);
-		return true;
+		break;
+	default:
+		return false;
 	}
-	return false;
+
+	/* Allocate target-specific storage */
+	stm32f4_priv_s *priv_storage = calloc(1, sizeof(*priv_storage));
+	if (!priv_storage) { /* calloc failed: heap exhaustion */
+		DEBUG_ERROR("calloc: failed in %s\n", __func__);
+		return false;
+	}
+	target->target_storage = priv_storage;
+
+	target->attach = stm32f4_attach;
+	target->detach = stm32f4_detach;
+	target->mass_erase = stm32f4_mass_erase;
+	target->driver = stm32f4_get_chip_name(device_id);
+	target->part_id = device_id;
+	target_add_commands(target, stm32f4_cmd_list, target->driver);
+	return true;
 }
 
 bool gd32f4_probe(target_s *target)
@@ -346,17 +357,10 @@ static bool stm32f4_attach(target_s *target)
 	const bool is_f7 = stm32f4_device_is_f7(target->part_id);
 	const bool large_sectors = stm32f4_device_has_large_sectors(target->part_id);
 
-	/* Allocate target-specific storage */
-	stm32f4_priv_s *priv_storage = calloc(1, sizeof(*priv_storage));
-	if (!priv_storage) { /* calloc failed: heap exhaustion */
-		DEBUG_ERROR("calloc: failed in %s\n", __func__);
-		return false;
-	}
-	target->target_storage = priv_storage;
-
+	stm32f4_priv_s *const priv_storage = target->target_storage;
 	/* Get the current value of the debug control register (and store it for later) */
 	priv_storage->dbgmcu_cr = target_mem32_read32(target, STM32F4_DBGMCU_CTRL);
-	/* Enable debugging during all low power modes*/
+	/* Enable debugging during all low power modes */
 	target_mem32_write32(target, STM32F4_DBGMCU_CTRL,
 		priv_storage->dbgmcu_cr | STM32F4_DBGMCU_CTRL_DBG_SLEEP | STM32F4_DBGMCU_CTRL_DBG_STANDBY |
 			STM32F4_DBGMCU_CTRL_DBG_STOP);
@@ -446,9 +450,10 @@ static bool stm32f4_attach(target_s *target)
 
 static void stm32f4_detach(target_s *target)
 {
-	stm32f4_priv_s *ps = target->target_storage;
-	/*reverse all changes to STM32F4_DBGMCU_CTRL*/
-	target_mem32_write32(target, STM32F4_DBGMCU_CTRL, ps->dbgmcu_cr);
+	const stm32f4_priv_s *const priv_storage = target->target_storage;
+	/* Reverse all changes to STM32F4_DBGMCU_CTRL */
+	target_mem32_write32(target, STM32F4_DBGMCU_CTRL, priv_storage->dbgmcu_cr);
+	/* Now defer to the normal Cortex-M detach routine to complete the detach */
 	cortexm_detach(target);
 }
 
