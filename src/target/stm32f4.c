@@ -336,6 +336,10 @@ static uint32_t stm32f4_remaining_bank_length(const uint32_t bank_length, const 
 	return 0;
 }
 
+/*
+ * XXX: It would definitely be nice if all this soup of logic could reasonably be refactored and moved into
+ * the stm32f4_probe() routine as this is doing work that should not be repeated every attach.
+ */
 static bool stm32f4_attach(target_s *target)
 {
 	/* First try and figure out the Flash size (if we don't know the part ID, warn and return false) */
