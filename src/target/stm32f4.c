@@ -98,16 +98,18 @@ static bool stm32f4_mass_erase(target_s *target);
 #define F4_FLASHSIZE   0x1fff7a22U
 #define F7_FLASHSIZE   0x1ff0f442U
 #define F72X_FLASHSIZE 0x1ff07a22U
-#define DBGMCU_IDCODE  0xe0042000U
-#define DBGMCU_CR      0xe0042004U
-#define DBG_SLEEP      (1U << 0U)
+
+#define STM32F4_DBGMCU_BASE   0xe0042000U
+#define STM32F4_DBGMCU_IDCODE (STM32F4_DBGMCU_BASE + 0U)
+#define STM32F4_DBGMCU_CTRL   (STM32F4_DBGMCU_BASE + 4U)
+#define DBG_SLEEP             (1U << 0U)
 
 #define AXIM_BASE 0x8000000U
 #define ITCM_BASE 0x0200000U
 
-#define DBGMCU_CR_DBG_SLEEP   (0x1U << 0U)
-#define DBGMCU_CR_DBG_STOP    (0x1U << 1U)
-#define DBGMCU_CR_DBG_STANDBY (0x1U << 2U)
+#define STM32F4_DBGMCU_CTRL_DBG_SLEEP   (0x1U << 0U)
+#define STM32F4_DBGMCU_CTRL_DBG_STOP    (0x1U << 1U)
+#define STM32F4_DBGMCU_CTRL_DBG_STANDBY (0x1U << 2U)
 
 typedef struct stm32f4_flash {
 	target_flash_s flash;
@@ -203,7 +205,7 @@ static char *stm32f4_get_chip_name(const uint32_t device_id)
 
 static uint16_t stm32f4_read_idcode(target_s *const target)
 {
-	const uint16_t idcode = target_mem32_read32(target, DBGMCU_IDCODE) & 0xfffU;
+	const uint16_t idcode = target_mem32_read32(target, STM32F4_DBGMCU_IDCODE) & 0xfffU;
 	/*
 	 * F405 revision A has the wrong IDCODE, use ARM_CPUID to make the
 	 * distinction with F205. Revision is also wrong (0x2000 instead
@@ -353,10 +355,11 @@ static bool stm32f4_attach(target_s *target)
 	target->target_storage = priv_storage;
 
 	/* Get the current value of the debug control register (and store it for later) */
-	priv_storage->dbgmcu_cr = target_mem32_read32(target, DBGMCU_CR);
+	priv_storage->dbgmcu_cr = target_mem32_read32(target, STM32F4_DBGMCU_CTRL);
 	/* Enable debugging during all low power modes*/
-	target_mem32_write32(
-		target, DBGMCU_CR, priv_storage->dbgmcu_cr | DBGMCU_CR_DBG_SLEEP | DBGMCU_CR_DBG_STANDBY | DBGMCU_CR_DBG_STOP);
+	target_mem32_write32(target, STM32F4_DBGMCU_CTRL,
+		priv_storage->dbgmcu_cr | STM32F4_DBGMCU_CTRL_DBG_SLEEP | STM32F4_DBGMCU_CTRL_DBG_STANDBY |
+			STM32F4_DBGMCU_CTRL_DBG_STOP);
 
 	/* Free any previously built memory map */
 	target_mem_map_free(target);
@@ -444,8 +447,8 @@ static bool stm32f4_attach(target_s *target)
 static void stm32f4_detach(target_s *target)
 {
 	stm32f4_priv_s *ps = target->target_storage;
-	/*reverse all changes to DBGMCU_CR*/
-	target_mem32_write32(target, DBGMCU_CR, ps->dbgmcu_cr);
+	/*reverse all changes to STM32F4_DBGMCU_CTRL*/
+	target_mem32_write32(target, STM32F4_DBGMCU_CTRL, ps->dbgmcu_cr);
 	cortexm_detach(target);
 }
 
