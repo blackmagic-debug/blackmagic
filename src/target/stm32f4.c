@@ -277,6 +277,8 @@ bool gd32f4_probe(target_s *target)
 	}
 	target->target_storage = priv_storage;
 
+	/* Get the current value of the debug control register (and store it for later) */
+	priv_storage->dbgmcu_cr = target_mem32_read32(target, STM32F4_DBGMCU_CTRL);
 	/* Set up the Flash write/erase parallelism to 32-bit */
 	priv_storage->psize = ALIGN_32BIT;
 
@@ -381,8 +383,6 @@ static bool stm32f4_attach(target_s *target)
 	const bool large_sectors = stm32f4_device_has_large_sectors(target->part_id);
 
 	stm32f4_priv_s *const priv_storage = target->target_storage;
-	/* Get the current value of the debug control register (and store it for later) */
-	priv_storage->dbgmcu_cr = target_mem32_read32(target, STM32F4_DBGMCU_CTRL);
 	/* Enable debugging during all low power modes */
 	target_mem32_write32(target, STM32F4_DBGMCU_CTRL,
 		priv_storage->dbgmcu_cr | STM32F4_DBGMCU_CTRL_DBG_SLEEP | STM32F4_DBGMCU_CTRL_DBG_STANDBY |
@@ -473,9 +473,8 @@ static bool stm32f4_attach(target_s *target)
 
 static void stm32f4_detach(target_s *target)
 {
-	const stm32f4_priv_s *const priv_storage = target->target_storage;
 	/* Reverse all changes to STM32F4_DBGMCU_CTRL */
-	target_mem32_write32(target, STM32F4_DBGMCU_CTRL, priv_storage->dbgmcu_cr);
+	target_mem32_write32(target, STM32F4_DBGMCU_CTRL, ((const stm32f4_priv_s *)target->target_storage)->dbgmcu_cr);
 	/* Now defer to the normal Cortex-M detach routine to complete the detach */
 	cortexm_detach(target);
 }
