@@ -47,8 +47,8 @@ const command_s stm32f4_cmd_list[] = {
 
 static bool stm32f4_attach(target_s *target);
 static void stm32f4_detach(target_s *target);
-static bool stm32f4_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
-static bool stm32f4_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
+static bool stm32f4_flash_erase(target_flash_s *flash, target_addr_t addr, size_t len);
+static bool stm32f4_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t len);
 static bool stm32f4_mass_erase(target_s *target);
 
 /* Flash Program and Erase Controller Register Map */
@@ -110,7 +110,7 @@ static bool stm32f4_mass_erase(target_s *target);
 #define DBGMCU_CR_DBG_STANDBY (0x1U << 2U)
 
 typedef struct stm32f4_flash {
-	target_flash_s f;
+	target_flash_s flash;
 	align_e psize;
 	uint8_t base_sector;
 	uint8_t bank_split;
@@ -149,18 +149,18 @@ static void stm32f4_add_flash(target_s *const target, const uint32_t addr, const
 		return;
 	}
 
-	target_flash_s *f = &sf->f;
-	f->start = addr;
-	f->length = length;
-	f->blocksize = blocksize;
-	f->erase = stm32f4_flash_erase;
-	f->write = stm32f4_flash_write;
-	f->writesize = 1024;
-	f->erased = 0xffU;
+	target_flash_s *flash = &sf->flash;
+	flash->start = addr;
+	flash->length = length;
+	flash->blocksize = blocksize;
+	flash->erase = stm32f4_flash_erase;
+	flash->write = stm32f4_flash_write;
+	flash->writesize = 1024;
+	flash->erased = 0xffU;
 	sf->base_sector = base_sector;
 	sf->bank_split = split;
 	sf->psize = ALIGN_32BIT;
-	target_add_flash(target, f);
+	target_add_flash(target, flash);
 }
 
 static char *stm32f4_get_chip_name(const uint32_t device_id)
@@ -474,10 +474,10 @@ static bool stm32f4_flash_busy_wait(target_s *const target, platform_timeout_s *
 	return true;
 }
 
-static bool stm32f4_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
+static bool stm32f4_flash_erase(target_flash_s *flash, target_addr_t addr, size_t len)
 {
-	target_s *target = f->t;
-	stm32f4_flash_s *sf = (stm32f4_flash_s *)f;
+	target_s *target = flash->t;
+	stm32f4_flash_s *sf = (stm32f4_flash_s *)flash;
 	stm32f4_flash_unlock(target);
 
 	align_e psize = ALIGN_32BIT;
@@ -492,10 +492,10 @@ static bool stm32f4_flash_erase(target_flash_s *f, target_addr_t addr, size_t le
 	}
 
 	/* No address translation is needed here, as we erase by sector number */
-	uint8_t sector = sf->base_sector + ((addr - f->start) / f->blocksize);
+	uint8_t sector = sf->base_sector + ((addr - flash->start) / flash->blocksize);
 
 	/* Erase the requested chunk of flash, one sector at a time. */
-	for (size_t offset = 0; offset < len; offset += f->blocksize) {
+	for (size_t offset = 0; offset < len; offset += flash->blocksize) {
 		uint32_t cr = FLASH_CR_EOPIE | FLASH_CR_ERRIE | FLASH_CR_SER | (psize * FLASH_CR_PSIZE16) | (sector << 3U);
 		/* Flash page erase instruction */
 		target_mem32_write32(target, FLASH_CR, cr);
@@ -513,14 +513,14 @@ static bool stm32f4_flash_erase(target_flash_s *f, target_addr_t addr, size_t le
 	return true;
 }
 
-static bool stm32f4_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len)
+static bool stm32f4_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t len)
 {
 	/* Translate ITCM addresses to AXIM */
 	if (dest >= ITCM_BASE && dest < AXIM_BASE)
 		dest += AXIM_BASE - ITCM_BASE;
-	target_s *target = f->t;
+	target_s *target = flash->t;
 
-	align_e psize = ((stm32f4_flash_s *)f)->psize;
+	align_e psize = ((stm32f4_flash_s *)flash)->psize;
 	target_mem32_write32(target, FLASH_CR, (psize * FLASH_CR_PSIZE16) | FLASH_CR_PG);
 	cortexm_mem_write_aligned(target, dest, src, len, psize);
 
@@ -763,9 +763,9 @@ static bool stm32f4_cmd_psize(target_s *target, int argc, const char **argv)
 		 * A dry-run walk-through says it'll pull out the psize for the Flash region added first by stm32f4_attach()
 		 * because all Flash regions added by stm32f4_add_flash match the if condition. This looks redundant and wrong.
 		 */
-		for (target_flash_s *f = target->flash; f; f = f->next) {
-			if (f->write == stm32f4_flash_write)
-				psize = ((stm32f4_flash_s *)f)->psize;
+		for (target_flash_s *flash = target->flash; flash; flash = flash->next) {
+			if (flash->write == stm32f4_flash_write)
+				psize = ((stm32f4_flash_s *)flash)->psize;
 		}
 		tc_printf(target, "Flash write parallelism: %s\n", stm32_psize_to_string(psize));
 	} else {
@@ -778,9 +778,9 @@ static bool stm32f4_cmd_psize(target_s *target, int argc, const char **argv)
 		 * A dry-run walk-through says it'll overwrite psize for every Flash region added by stm32f4_attach()
 		 * because all Flash regions added by stm32f4_add_flash match the if condition. This looks redundant and wrong.
 		 */
-		for (target_flash_s *f = target->flash; f; f = f->next) {
-			if (f->write == stm32f4_flash_write)
-				((stm32f4_flash_s *)f)->psize = psize;
+		for (target_flash_s *flash = target->flash; flash; flash = flash->next) {
+			if (flash->write == stm32f4_flash_write)
+				((stm32f4_flash_s *)flash)->psize = psize;
 		}
 	}
 	return true;
