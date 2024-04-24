@@ -115,13 +115,13 @@ static bool stm32f4_mass_erase(target_s *target);
 
 typedef struct stm32f4_flash {
 	target_flash_s flash;
-	align_e psize;
 	uint8_t base_sector;
 	uint8_t bank_split;
 } stm32f4_flash_s;
 
 typedef struct stm32f4_priv {
 	uint32_t dbgmcu_cr;
+	align_e psize;
 } stm32f4_priv_s;
 
 #define ID_STM32F20X  0x411U
@@ -163,7 +163,6 @@ static void stm32f4_add_flash(target_s *const target, const uint32_t addr, const
 	target_flash->erased = 0xffU;
 	flash->base_sector = base_sector;
 	flash->bank_split = split;
-	flash->psize = ALIGN_32BIT;
 	target_add_flash(target, target_flash);
 }
 
@@ -251,6 +250,11 @@ bool stm32f4_probe(target_s *target)
 	}
 	target->target_storage = priv_storage;
 
+	/* Get the current value of the debug control register (and store it for later) */
+	priv_storage->dbgmcu_cr = target_mem32_read32(target, STM32F4_DBGMCU_CTRL);
+	/* Set up the Flash write/erase parallelism to 32-bit */
+	priv_storage->psize = ALIGN_32BIT;
+
 	target->attach = stm32f4_attach;
 	target->detach = stm32f4_detach;
 	target->mass_erase = stm32f4_mass_erase;
@@ -264,6 +268,17 @@ bool gd32f4_probe(target_s *target)
 {
 	if (target->part_id != ID_GD32F450 && target->part_id != ID_GD32F470)
 		return false;
+
+	/* Allocate target-specific storage */
+	stm32f4_priv_s *priv_storage = calloc(1, sizeof(*priv_storage));
+	if (!priv_storage) { /* calloc failed: heap exhaustion */
+		DEBUG_ERROR("calloc: failed in %s\n", __func__);
+		return false;
+	}
+	target->target_storage = priv_storage;
+
+	/* Set up the Flash write/erase parallelism to 32-bit */
+	priv_storage->psize = ALIGN_32BIT;
 
 	target->attach = cortexm_attach;
 	target->detach = cortexm_detach;
@@ -496,16 +511,7 @@ static bool stm32f4_flash_erase(target_flash_s *target_flash, target_addr_t addr
 	stm32f4_flash_s *flash = (stm32f4_flash_s *)target_flash;
 	stm32f4_flash_unlock(target);
 
-	align_e psize = ALIGN_32BIT;
-	/*
-	 * XXX: What is this and why does it exist?
-	 * A dry-run walk-through says it'll pull out the psize for the Flash region added first by stm32f4_attach()
-	 * because all Flash regions added by stm32f4_add_flash match the if condition. This looks redundant and wrong.
-	 */
-	for (target_flash_s *currf = target->flash; currf; currf = currf->next) {
-		if (currf->write == stm32f4_flash_write)
-			psize = ((stm32f4_flash_s *)currf)->psize;
-	}
+	align_e psize = ((const stm32f4_priv_s *)target->target_storage)->psize;
 
 	/* No address translation is needed here, as we erase by sector number */
 	uint8_t sector = flash->base_sector + ((addr - target_flash->start) / target_flash->blocksize);
@@ -536,7 +542,7 @@ static bool stm32f4_flash_write(target_flash_s *flash, target_addr_t dest, const
 		dest += AXIM_BASE - ITCM_BASE;
 	target_s *target = flash->t;
 
-	align_e psize = ((stm32f4_flash_s *)flash)->psize;
+	align_e psize = ((const stm32f4_priv_s *)target->target_storage)->psize;
 	target_mem32_write32(target, FLASH_CR, (psize * FLASH_CR_PSIZE16) | FLASH_CR_PG);
 	cortexm_mem_write_aligned(target, dest, src, len, psize);
 
@@ -773,31 +779,13 @@ static bool stm32f4_cmd_option(target_s *target, int argc, const char **argv)
 static bool stm32f4_cmd_psize(target_s *target, int argc, const char **argv)
 {
 	if (argc == 1) {
-		align_e psize = ALIGN_32BIT;
-		/*
-		 * XXX: What is this and why does it exist?
-		 * A dry-run walk-through says it'll pull out the psize for the Flash region added first by stm32f4_attach()
-		 * because all Flash regions added by stm32f4_add_flash match the if condition. This looks redundant and wrong.
-		 */
-		for (target_flash_s *flash = target->flash; flash; flash = flash->next) {
-			if (flash->write == stm32f4_flash_write)
-				psize = ((stm32f4_flash_s *)flash)->psize;
-		}
+		align_e psize = ((const stm32f4_priv_s *)target->target_storage)->psize;
 		tc_printf(target, "Flash write parallelism: %s\n", stm32_psize_to_string(psize));
 	} else {
-		align_e psize;
+		align_e psize = ALIGN_32BIT;
 		if (!stm32_psize_from_string(target, argv[1], &psize))
 			return false;
-
-		/*
-		 * XXX: What is this and why does it exist?
-		 * A dry-run walk-through says it'll overwrite psize for every Flash region added by stm32f4_attach()
-		 * because all Flash regions added by stm32f4_add_flash match the if condition. This looks redundant and wrong.
-		 */
-		for (target_flash_s *flash = target->flash; flash; flash = flash->next) {
-			if (flash->write == stm32f4_flash_write)
-				((stm32f4_flash_s *)flash)->psize = psize;
-		}
+		((stm32f4_priv_s *)target->target_storage)->psize = psize;
 	}
 	return true;
 }
