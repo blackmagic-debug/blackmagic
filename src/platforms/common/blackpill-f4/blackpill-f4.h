@@ -20,6 +20,11 @@
 
 /* This file provides the platform specific declarations for the blackpill-f4 implementation. */
 
+/* References: ST doc
+ * RM0383 Rev 3, 2015: https://www.st.com/resource/en/reference_manual/dm00119316-stm32f411xc-e-advanced-arm-based-32-bit-mcus-stmicroelectronics.pdf
+ * DS10314 Rev 7, 2017: https://www.st.com/resource/en/datasheet/stm32f411ce.pdf
+ */
+
 #ifndef PLATFORMS_COMMON_BLACKPILL_F4_H
 #define PLATFORMS_COMMON_BLACKPILL_F4_H
 
@@ -205,8 +210,10 @@ extern bool debug_bmp;
 #define USBUSART_DMA_TRG DMA_SxCR_CHSEL_4
 
 /*
- * To use USART1 as USBUSART, DMA2 is selected from https://www.st.com/resource/en/reference_manual/dm00119316-stm32f411xc-e-advanced-arm-based-32-bit-mcus-stmicroelectronics.pdf, page 170, table 28.
+ * To use USART1 as USBUSART, DMA2 is selected from RM0383, page 170, table 28.
  * This table defines USART1_TX as stream 7, channel 4, and USART1_RX as stream 5, channel 4.
+ * Because USART1 is on APB2 with max Pclk of 100 MHz,
+ * reachable baudrates are up to 12.5M with OVER8 or 6.25M with default OVER16 (per DS10314, page 31, table 6)
  */
 #define USBUSART1                USART1
 #define USBUSART1_CR1            USART1_CR1
@@ -227,8 +234,10 @@ extern bool debug_bmp;
 #define USBUSART1_DMA_RX_ISRx(x) dma2_stream5_isr(x)
 
 /*
- * To use USART2 as USBUSART, DMA1 is selected from https://www.st.com/resource/en/reference_manual/dm00119316-stm32f411xc-e-advanced-arm-based-32-bit-mcus-stmicroelectronics.pdf, page 170, table 27.
+ * To use USART2 as USBUSART, DMA1 is selected from RM0383, page 170, table 27.
  * This table defines USART2_TX as stream 6, channel 4, and USART2_RX as stream 5, channel 4.
+ * Because USART2 is on APB1 with max Pclk of 50 MHz,
+ * reachable baudrates are up to 6.25M with OVER8 or 3.125M with default OVER16 (per DS10314, page 31, table 6)
  */
 #define USBUSART2                USART2
 #define USBUSART2_CR1            USART2_CR1
