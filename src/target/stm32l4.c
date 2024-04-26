@@ -140,6 +140,7 @@ const command_s stm32l4_cmd_list[] = {
 
 #define STM32L4_FLASH_SIZE_REG 0x1fff75e0U
 #define STM32L5_FLASH_SIZE_REG 0x0bfa05e0U
+#define STM32U5_FLASH_SIZE_REG 0x0bfa07a0U
 
 #define STM32L5_RCC_APB1ENR1       0x50021058U
 #define STM32L5_RCC_APB1ENR1_PWREN (1U << 28U)
@@ -148,6 +149,9 @@ const command_s stm32l4_cmd_list[] = {
 
 #define DUAL_BANK     0x80U
 #define RAM_COUNT_MSK 0x07U
+
+/* TODO: add block size constants for other MCUs */
+#define STM32U5_FLASH_BLOCK_SIZE	0x2000U
 
 typedef enum stm32l4_device_id {
 	/* This first block of devices uses an ID code register located in the DBG_MCU block at 0xe0042000 */
@@ -187,6 +191,11 @@ typedef enum stm32l4_family {
 	STM32L4_FAMILY_WLxx,
 } stm32l4_family_e;
 
+/*
+ * XXX: Recommend augmenting this structure with flash block size,
+ * which would get rid of the hard-coded magic numbers in
+ * stm32l4_attach, but I have not implemented that yet
+ */
 typedef struct stm32l4_device_info {
 	const char *designator;
 	uint16_t sram1; /* Normal SRAM mapped at 0x20000000 */
@@ -196,6 +205,7 @@ typedef struct stm32l4_device_info {
 	stm32l4_device_id_e device_id;
 	stm32l4_family_e family;
 	const uint32_t *flash_regs_map;
+	const uint32_t flash_size_reg;
 } stm32l4_device_info_s;
 
 typedef struct stm32l4_flash {
@@ -220,7 +230,6 @@ typedef enum stm32l4_flash_reg {
 	FLASH_SR,
 	FLASH_CR,
 	FLASH_OPTR,
-	FLASHSIZE,
 	FLASH_REGS_COUNT
 } stm32l4_flash_reg_e;
 
@@ -230,7 +239,6 @@ static const uint32_t stm32l4_flash_regs_map[FLASH_REGS_COUNT] = {
 	STM32L4_FPEC_BASE + 0x10U, /* SR */
 	STM32L4_FPEC_BASE + 0x14U, /* CR */
 	STM32L4_FPEC_BASE + 0x20U, /* OPTR */
-	STM32L4_FLASH_SIZE_REG,    /* FLASHSIZE */
 };
 
 static const uint32_t stm32l5_flash_regs_map[FLASH_REGS_COUNT] = {
@@ -239,7 +247,6 @@ static const uint32_t stm32l5_flash_regs_map[FLASH_REGS_COUNT] = {
 	STM32L5_FPEC_BASE + 0x20U, /* SR */
 	STM32L5_FPEC_BASE + 0x28U, /* CR */
 	STM32L5_FPEC_BASE + 0x40U, /* OPTR */
-	STM32L5_FLASH_SIZE_REG,    /* FLASHSIZE */
 };
 
 static const uint32_t stm32wl_flash_regs_map[FLASH_REGS_COUNT] = {
@@ -248,7 +255,6 @@ static const uint32_t stm32wl_flash_regs_map[FLASH_REGS_COUNT] = {
 	STM32WL_FPEC_BASE + 0x10U, /* SR */
 	STM32WL_FPEC_BASE + 0x14U, /* CR */
 	STM32WL_FPEC_BASE + 0x20U, /* OPTR */
-	STM32L4_FLASH_SIZE_REG,    /* FLASHSIZE */
 };
 
 static const uint32_t stm32wb_flash_regs_map[FLASH_REGS_COUNT] = {
@@ -257,7 +263,6 @@ static const uint32_t stm32wb_flash_regs_map[FLASH_REGS_COUNT] = {
 	STM32WB_FPEC_BASE + 0x10U, /* SR */
 	STM32WB_FPEC_BASE + 0x14U, /* CR */
 	STM32WB_FPEC_BASE + 0x20U, /* OPTR */
-	STM32L4_FLASH_SIZE_REG,    /* FLASHSIZE */
 };
 
 static stm32l4_device_info_s const stm32l4_device_info[] = {
@@ -269,6 +274,7 @@ static stm32l4_device_info_s const stm32l4_device_info[] = {
 		.sram2 = 8U,
 		.flags = 2U,
 		.flash_regs_map = stm32l4_flash_regs_map,
+		.flash_size_reg = STM32L4_FLASH_SIZE_REG,
 	},
 	{
 		.device_id = ID_STM32L43,
@@ -278,6 +284,7 @@ static stm32l4_device_info_s const stm32l4_device_info[] = {
 		.sram2 = 16U,
 		.flags = 2U,
 		.flash_regs_map = stm32l4_flash_regs_map,
+		.flash_size_reg = STM32L4_FLASH_SIZE_REG,
 	},
 	{
 		.device_id = ID_STM32L45,
@@ -287,6 +294,7 @@ static stm32l4_device_info_s const stm32l4_device_info[] = {
 		.sram2 = 32U,
 		.flags = 2U,
 		.flash_regs_map = stm32l4_flash_regs_map,
+		.flash_size_reg = STM32L4_FLASH_SIZE_REG,
 	},
 	{
 		.device_id = ID_STM32L47,
@@ -296,6 +304,7 @@ static stm32l4_device_info_s const stm32l4_device_info[] = {
 		.sram2 = 32U,
 		.flags = 2U | DUAL_BANK,
 		.flash_regs_map = stm32l4_flash_regs_map,
+		.flash_size_reg = STM32L4_FLASH_SIZE_REG,
 	},
 	{
 		.device_id = ID_STM32L49,
@@ -305,6 +314,7 @@ static stm32l4_device_info_s const stm32l4_device_info[] = {
 		.sram2 = 64U,
 		.flags = 2U | DUAL_BANK,
 		.flash_regs_map = stm32l4_flash_regs_map,
+		.flash_size_reg = STM32L4_FLASH_SIZE_REG,
 	},
 	{
 		.device_id = ID_STM32L4R,
@@ -315,6 +325,7 @@ static stm32l4_device_info_s const stm32l4_device_info[] = {
 		.sram3 = 384U,
 		.flags = 3U | DUAL_BANK,
 		.flash_regs_map = stm32l4_flash_regs_map,
+		.flash_size_reg = STM32L4_FLASH_SIZE_REG,
 	},
 	{
 		.device_id = ID_STM32G43,
@@ -323,6 +334,7 @@ static stm32l4_device_info_s const stm32l4_device_info[] = {
 		.sram1 = 22U,
 		.sram2 = 10U,
 		.flash_regs_map = stm32l4_flash_regs_map,
+		.flash_size_reg = STM32L4_FLASH_SIZE_REG,
 	},
 	{
 		.device_id = ID_STM32G47,
@@ -332,6 +344,7 @@ static stm32l4_device_info_s const stm32l4_device_info[] = {
 		.sram2 = 32U, /* CCM SRAM is mapped as per SRAM2 on G4 */
 		.flags = 2U,
 		.flash_regs_map = stm32l4_flash_regs_map,
+		.flash_size_reg = STM32L4_FLASH_SIZE_REG,
 	},
 	{
 		.device_id = ID_STM32G49,
@@ -341,6 +354,7 @@ static stm32l4_device_info_s const stm32l4_device_info[] = {
 		.sram2 = 16U, /* CCM SRAM is mapped as per SRAM2 on G4 */
 		.flags = 2U,
 		.flash_regs_map = stm32l4_flash_regs_map,
+		.flash_size_reg = STM32L4_FLASH_SIZE_REG,
 	},
 	{
 		.device_id = ID_STM32L55,
@@ -350,6 +364,7 @@ static stm32l4_device_info_s const stm32l4_device_info[] = {
 		.sram2 = 64U,
 		.flags = 2U,
 		.flash_regs_map = stm32l5_flash_regs_map,
+		.flash_size_reg = STM32L5_FLASH_SIZE_REG,
 	},
 	{
 		.device_id = ID_STM32U535,
@@ -358,6 +373,7 @@ static stm32l4_device_info_s const stm32l4_device_info[] = {
 		.sram1 = 192U + 64U, /* SRAM1+2 continuous */
 		.flags = 2U | DUAL_BANK,
 		.flash_regs_map = stm32l5_flash_regs_map,
+		.flash_size_reg = STM32U5_FLASH_SIZE_REG,
 	},
 	{
 		.device_id = ID_STM32U575,
@@ -366,6 +382,7 @@ static stm32l4_device_info_s const stm32l4_device_info[] = {
 		.sram1 = 192U + 64U + 512U, /* SRAM1+2+3 continuous */
 		.flags = 2U | DUAL_BANK,
 		.flash_regs_map = stm32l5_flash_regs_map,
+		.flash_size_reg = STM32U5_FLASH_SIZE_REG,
 	},
 	{
 		.device_id = ID_STM32U59X,
@@ -374,6 +391,7 @@ static stm32l4_device_info_s const stm32l4_device_info[] = {
 		.sram1 = 786U + 64U + 832U + 832U, /* SRAM1+2+3+5 continuous */
 		.flags = 2U | DUAL_BANK,
 		.flash_regs_map = stm32l5_flash_regs_map,
+		.flash_size_reg = STM32U5_FLASH_SIZE_REG,
 	},
 	{
 		.device_id = ID_STM32U5FX,
@@ -382,6 +400,7 @@ static stm32l4_device_info_s const stm32l4_device_info[] = {
 		.sram1 = 786U + 64U + 832U + 832U + 512U, /* SRAM1+2+3+5+6 continuous */
 		.flags = 2U | DUAL_BANK,
 		.flash_regs_map = stm32l5_flash_regs_map,
+		.flash_size_reg = STM32U5_FLASH_SIZE_REG,
 	},
 	{
 		.device_id = ID_STM32WLXX,
@@ -391,6 +410,7 @@ static stm32l4_device_info_s const stm32l4_device_info[] = {
 		.sram2 = 32U,
 		.flags = 2U,
 		.flash_regs_map = stm32wl_flash_regs_map,
+		.flash_size_reg = STM32L4_FLASH_SIZE_REG,
 	},
 	{
 		.device_id = ID_STM32WBXX,
@@ -400,6 +420,7 @@ static stm32l4_device_info_s const stm32l4_device_info[] = {
 		.sram2 = 64U,
 		.flags = 2U,
 		.flash_regs_map = stm32wb_flash_regs_map,
+		.flash_size_reg = STM32L4_FLASH_SIZE_REG,
 	},
 	{
 		.device_id = ID_STM32WB1X,
@@ -409,6 +430,7 @@ static stm32l4_device_info_s const stm32l4_device_info[] = {
 		.sram2 = 36U,
 		.flags = 2U,
 		.flash_regs_map = stm32wb_flash_regs_map,
+		.flash_size_reg = STM32L4_FLASH_SIZE_REG,
 	},
 	{
 		/* Sentinel entry */
@@ -480,11 +502,11 @@ static const stm32l4_device_info_s *stm32l4_get_device_info(const uint16_t devic
 	return device_info;
 }
 
-static inline uint32_t stm32l4_flash_read16(target_s *const t, const stm32l4_flash_reg_e reg)
+static inline uint32_t stm32l4_read_flash_size(target_s *const t)
 {
 	stm32l4_priv_s *ps = (stm32l4_priv_s *)t->target_storage;
 	const stm32l4_device_info_s *const device = ps->device;
-	return target_mem32_read16(t, device->flash_regs_map[reg]);
+	return target_mem32_read16(t, device->flash_size_reg);
 }
 
 static inline uint32_t stm32l4_flash_read32(target_s *const t, const stm32l4_flash_reg_e reg)
@@ -628,7 +650,7 @@ static bool stm32l4_attach(target_s *const t)
 		target_add_ram32(t, 0x10000000, device->sram2 * 1024U);
 	target_add_ram32(t, 0x20000000, stm32l4_main_sram_length(t));
 
-	const uint16_t flash_len = stm32l4_flash_read16(t, FLASHSIZE);
+	const uint16_t flash_len = stm32l4_read_flash_size(t);
 	const uint32_t options = stm32l4_flash_read32(t, FLASH_OPTR);
 
 	/* Now we have a base RAM map, rebuild the Flash map */
@@ -679,9 +701,13 @@ static bool stm32l4_attach(target_s *const t)
 	} else if (device->flags & DUAL_BANK) {
 		if (options & OR_DUALBANK) {
 			const uint32_t bank_len = flash_len * 512U;
-			stm32l4_add_flash(t, STM32L4_FLASH_BANK_1_BASE, bank_len, 0x0800, STM32L4_FLASH_BANK_1_BASE + bank_len);
-			stm32l4_add_flash(
-				t, STM32L4_FLASH_BANK_1_BASE + bank_len, bank_len, 0x0800, STM32L4_FLASH_BANK_1_BASE + bank_len);
+			if (device->family == STM32L4_FAMILY_U5xx) {
+				stm32l4_add_flash(t, STM32L4_FLASH_BANK_1_BASE, bank_len, STM32U5_FLASH_BLOCK_SIZE, STM32L4_FLASH_BANK_1_BASE + bank_len);
+				stm32l4_add_flash(t, STM32L4_FLASH_BANK_1_BASE + bank_len, bank_len, STM32U5_FLASH_BLOCK_SIZE, STM32L4_FLASH_BANK_1_BASE + bank_len);
+			} else {
+				stm32l4_add_flash(t, STM32L4_FLASH_BANK_1_BASE, bank_len, 0x0800, STM32L4_FLASH_BANK_1_BASE + bank_len);
+				stm32l4_add_flash(t, STM32L4_FLASH_BANK_1_BASE + bank_len, bank_len, 0x0800, STM32L4_FLASH_BANK_1_BASE + bank_len);
+			}
 		} else {
 			const uint32_t bank_len = flash_len * 1024U;
 			stm32l4_add_flash(t, STM32L4_FLASH_BANK_1_BASE, bank_len, 0x0800, UINT32_MAX);
