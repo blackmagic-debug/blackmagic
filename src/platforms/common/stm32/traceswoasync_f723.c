@@ -84,7 +84,7 @@ void traceswo_setspeed(uint32_t baudrate)
 {
 	dma_disable_stream(SWO_DMA_BUS, SWO_DMA_STREAM);
 	usart_disable(SWO_UART);
-	usart_set_baudrate(SWO_UART, baudrate);
+	bmd_usart_set_baudrate(SWO_UART, baudrate);
 	usart_set_databits(SWO_UART, 8);
 	usart_set_stopbits(SWO_UART, USART_STOPBITS_1);
 	usart_set_mode(SWO_UART, USART_MODE_RX);

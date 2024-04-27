@@ -29,6 +29,7 @@
 void traceswo_init(uint32_t baudrate, uint32_t swo_chan_bitmask);
 void traceswo_deinit(void);
 uint32_t traceswo_get_baudrate(void);
+void bmd_usart_set_baudrate(uint32_t usart, uint32_t baud_rate);
 #else
 void traceswo_init(uint32_t swo_chan_bitmask);
 #endif

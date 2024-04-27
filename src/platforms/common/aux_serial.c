@@ -87,6 +87,39 @@ static char aux_serial_transmit_buffer[AUX_UART_BUFFER_SIZE];
 #define usart_set_parity(uart, parity)     uart_set_parity(uart, parity)
 #endif
 
+void bmd_usart_set_baudrate(uint32_t usart, uint32_t baud_rate)
+{
+	/* If the new baud rate is out of supported range for a given USART, then keep previous */
+#if defined(LM4F)
+	/* Are we running off the internal clock or system clock? */
+	const uint32_t clock = UART_CC(usart) == UART_CC_CS_PIOSC ? 16000000U : rcc_get_system_clock_frequency();
+#else
+	const uint32_t clock = rcc_get_usart_clk_freq(usart);
+#endif
+	const uint32_t baud_lowest = clock / 65535U;
+	const uint32_t baud_highest_16x = clock / 16U;
+#if defined(USART_CR1_OVER8)
+	const uint32_t baud_highest_8x = clock / 8U;
+
+	/* Four-way range match */
+	if (baud_rate < baud_lowest) /* Too low */
+		return;
+	/* less-than-or-equal: Prefer OVER16 at exactly /16 */
+	else if (baud_rate > baud_lowest && baud_rate <= baud_highest_16x)
+		usart_set_oversampling(usart, USART_OVERSAMPLING_16);
+	else if (baud_rate > baud_highest_16x && baud_rate <= baud_highest_8x)
+		usart_set_oversampling(usart, USART_OVERSAMPLING_8);
+	else /* Too high */
+		return;
+#else
+	/* STM32F103 (16-bit wide BRR) and TM4C123 PL011 (16-bit wide IBRD) */
+	if (baud_rate < baud_lowest || baud_rate > baud_highest_16x)
+		return;
+#endif
+
+	usart_set_baudrate(usart, baud_rate);
+}
+
 #if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4) || defined(STM32F7)
 void aux_serial_init(void)
 {
@@ -96,7 +129,7 @@ void aux_serial_init(void)
 
 	/* Setup UART parameters */
 	UART_PIN_SETUP();
-	usart_set_baudrate(USBUSART, 38400);
+	bmd_usart_set_baudrate(USBUSART, 38400);
 	usart_set_databits(USBUSART, 8);
 	usart_set_stopbits(USBUSART, USART_STOPBITS_1);
 	usart_set_mode(USBUSART, USART_MODE_TX_RX);
@@ -218,7 +251,7 @@ void aux_serial_set_encoding(const usb_cdc_line_coding_s *const coding)
 	/* Some devices require that the usart is disabled before
 	 * changing the usart registers. */
 	usart_disable(USBUSART);
-	usart_set_baudrate(USBUSART, coding->dwDTERate);
+	bmd_usart_set_baudrate(USBUSART, coding->dwDTERate);
 
 #if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4) || defined(STM32F7)
 	if (coding->bParityType != USB_CDC_NO_PARITY)
