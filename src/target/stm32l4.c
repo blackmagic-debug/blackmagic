@@ -151,7 +151,7 @@ const command_s stm32l4_cmd_list[] = {
 #define RAM_COUNT_MSK 0x07U
 
 /* TODO: add block size constants for other MCUs */
-#define STM32U5_FLASH_BLOCK_SIZE	0x2000U
+#define STM32U5_FLASH_BLOCK_SIZE 0x2000U
 
 typedef enum stm32l4_device_id {
 	/* This first block of devices uses an ID code register located in the DBG_MCU block at 0xe0042000 */
@@ -702,11 +702,14 @@ static bool stm32l4_attach(target_s *const t)
 		if (options & OR_DUALBANK) {
 			const uint32_t bank_len = flash_len * 512U;
 			if (device->family == STM32L4_FAMILY_U5xx) {
-				stm32l4_add_flash(t, STM32L4_FLASH_BANK_1_BASE, bank_len, STM32U5_FLASH_BLOCK_SIZE, STM32L4_FLASH_BANK_1_BASE + bank_len);
-				stm32l4_add_flash(t, STM32L4_FLASH_BANK_1_BASE + bank_len, bank_len, STM32U5_FLASH_BLOCK_SIZE, STM32L4_FLASH_BANK_1_BASE + bank_len);
+				stm32l4_add_flash(t, STM32L4_FLASH_BANK_1_BASE, bank_len, STM32U5_FLASH_BLOCK_SIZE,
+					STM32L4_FLASH_BANK_1_BASE + bank_len);
+				stm32l4_add_flash(t, STM32L4_FLASH_BANK_1_BASE + bank_len, bank_len, STM32U5_FLASH_BLOCK_SIZE,
+					STM32L4_FLASH_BANK_1_BASE + bank_len);
 			} else {
 				stm32l4_add_flash(t, STM32L4_FLASH_BANK_1_BASE, bank_len, 0x0800, STM32L4_FLASH_BANK_1_BASE + bank_len);
-				stm32l4_add_flash(t, STM32L4_FLASH_BANK_1_BASE + bank_len, bank_len, 0x0800, STM32L4_FLASH_BANK_1_BASE + bank_len);
+				stm32l4_add_flash(
+					t, STM32L4_FLASH_BANK_1_BASE + bank_len, bank_len, 0x0800, STM32L4_FLASH_BANK_1_BASE + bank_len);
 			}
 		} else {
 			const uint32_t bank_len = flash_len * 1024U;
