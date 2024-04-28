@@ -416,10 +416,10 @@ jobs:
 
   build-macos-homebrew:
     # Name the job more appropriately so we can tell which GCC version is in use
-    name: 'build-macos (${{ matrix.compiler }})'
+    name: 'build-macos (${{ matrix.os }}, ${{ matrix.compiler }})'
 
     # The type of runner that the job will run on
-    runs-on: macos-latest
+    runs-on: ${{ matrix.os }}
 
     # Set the shell so run steps will execute inside the native environment
     defaults:
@@ -431,10 +431,25 @@ jobs:
     # workflow contains an extended set.
     strategy:
       matrix:
+        os:
+          - macos-latest
+          - macos-13
         compiler:
           - gcc@11
           - gcc@12
           - gcc@13 # Don't use 'gcc', the symlink is versioned -- see below
+        exclude:
+          # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=114007
+          # Fix was backported to GCC 13, but there's no release available yet
+          # Changing the SDK is not viable either, because GCC hotpatches
+          # some includes at build time based on the sysroot
+          # defined when configured:
+          #    In file included from /Applications/Xcode_14.3.1.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/Availability.h:166,
+          #    from /Applications/Xcode_14.3.1.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/stdlib.h:61,
+          #    from ../src/include/general.h:62,
+          #    from ../src/command.c:28:
+          #    /opt/homebrew/Cellar/gcc@11/11.4.0/lib/gcc/11/gcc/aarch64-apple-darwin23/11/include-fixed/AvailabilityInternal.h:162:10: fatal error: AvailabilityInternalLegacy.h: No such file or directory
+          - os: macos-latest
       fail-fast: false
 
     # Steps represent a sequence of tasks that will be executed as part of the job
@@ -483,7 +498,7 @@ jobs:
       # Build the default BMDA configuration
       - name: Build full BMDA
         run: |
-          meson setup build
+          meson setup build $BUILD_OPTS
           meson compile -C build
 
   size-diff:
