@@ -5,7 +5,8 @@ repos:
   rev: v16.0.2
   hooks:
   - id: clang-format
-    args: [-Werror]  # change formatting warnings to errors, hook includes -i (in-place edit) by default
+    # entries here override, not extend, upstream's configuration
+    args: [-Werror, -style=file, -i]  # change formatting warnings to errors, and edit in-place
     types_or: [c++, c]  # override default file types to only C and CPP files
 
 - repo: https://github.com/perigoso/pre-commit-hooks
