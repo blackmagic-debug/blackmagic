@@ -62,8 +62,8 @@ void platform_timing_init(void)
 {
 	/* Setup heartbeat timer */
 	systick_set_clocksource(STK_CSR_CLKSOURCE_AHB_DIV8);
-	/* Interrupt us at 100 Hz */
-	systick_set_reload(rcc_ahb_frequency / (8U * SYSTICKHZ));
+	/* Interrupt us at 1kHz */
+	systick_set_reload((rcc_ahb_frequency / (8U * SYSTICKHZ)) - 1U);
 	/* SYSTICK_IRQ with low priority */
 	nvic_set_priority(NVIC_SYSTICK_IRQ, 14U << 4U);
 	systick_interrupt_enable();
