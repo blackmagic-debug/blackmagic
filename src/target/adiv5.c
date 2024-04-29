@@ -439,7 +439,7 @@ static uint32_t cortexm_initial_halt(adiv5_access_port_s *ap)
 		 */
 		if ((ap->dp->quirks & ADIV5_DP_QUIRK_MINDP)
 #if PC_HOSTED == 1
-			&& bmda_probe_info.type != PROBE_TYPE_CMSIS_DAP
+			&& bmda_probe_info.type != PROBE_TYPE_CMSIS_DAP && bmda_probe_info.type != PROBE_TYPE_STLINK_V2
 #endif
 		)
 			dhcsr = adiv5_dp_low_access(ap->dp, ADIV5_LOW_READ, ADIV5_DP_RDBUFF, 0);
