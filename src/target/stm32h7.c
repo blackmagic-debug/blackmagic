@@ -256,11 +256,11 @@ void stm32h7_configure_wdts(target_s *const target)
 
 bool stm32h7_probe(target_s *target)
 {
-	const uint16_t part_id = target->part_id >> 4U;
-	if (part_id != ID_STM32H74x && part_id != ID_STM32H7Bx && part_id != ID_STM32H72x)
+	const adiv5_access_port_s *const ap = cortex_ap(target);
+	/* Use the partno from the AP always to handle the difference between JTAG and SWD */
+	if (ap->partno != ID_STM32H72x && ap->partno != ID_STM32H74x && ap->partno != ID_STM32H7Bx)
 		return false;
-	/* Update part_id on match */
-	target->part_id = part_id;
+	target->part_id = ap->partno;
 
 	/* Save private storage */
 	stm32h7_priv_s *priv_storage = calloc(1, sizeof(*priv_storage));
