@@ -434,9 +434,18 @@ static bool stm32h7_flash_wait_complete(target_s *const target, const uint32_t r
 
 static bool stm32h7_flash_unlock(target_s *const target, const uint32_t regbase)
 {
-	/* Wait for any pending operations to complete */
-	if (!stm32h7_flash_wait_complete(target, regbase))
-		return false;
+	/* Read out the Flash status and tend to any pending conditions */
+	const uint32_t status = target_mem32_read32(target, regbase + STM32H7_FLASH_STATUS);
+	/* Start by checking if there are any pending ongoing operations */
+	if (status & STM32H7_FLASH_STATUS_QUEUE_WAIT) {
+		/* Wait for any pending operations to complete */
+		if (!stm32h7_flash_wait_complete(target, regbase))
+			return false;
+	}
+	/* Clear any pending errors so we're in a good state */
+	else if (status & STM32H7_FLASH_STATUS_ERROR_MASK)
+		target_mem32_write32(target, regbase + STM32H7_FLASH_CLEAR_CTRL,
+			status & (STM32H7_FLASH_STATUS_ERROR_MASK | STM32H7_FLASH_STATUS_EOP));
 
 	/* Unlock the device Flash if not already unlocked (it's an error to re-key the controller if it is) */
 	if (target_mem32_read32(target, regbase + STM32H7_FLASH_CTRL) & STM32H7_FLASH_CTRL_LOCK) {
