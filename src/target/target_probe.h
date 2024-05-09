@@ -77,6 +77,7 @@ bool msp432e4_probe(target_s *target);
 bool msp432p4_probe(target_s *target);
 bool nrf51_probe(target_s *target);
 bool nrf91_probe(target_s *target);
+bool puya_probe(target_s *target);
 bool renesas_ra_probe(target_s *target);
 bool renesas_rz_probe(target_s *target);
 bool rp_probe(target_s *target);

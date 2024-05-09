@@ -35,6 +35,7 @@ option(
 		'lpc',
 		'nrf',
 		'nxp',
+		'puya',
 		'renesas',
 		'rp',
 		'sam',

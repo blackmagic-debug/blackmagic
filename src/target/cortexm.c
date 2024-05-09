@@ -637,6 +637,7 @@ bool cortexm_probe(adiv5_access_port_s *ap)
 		if (target->part_id == 0x4c0U) {        /* Cortex-M0+ ROM */
 			PROBE(lpc11xx_probe);               /* LPC8 */
 			PROBE(hc32l110_probe);              /* HDSC HC32L110 */
+			PROBE(puya_probe);                  /* Puya PY32 */
 		} else if (target->part_id == 0x4c1U) { /* NXP Cortex-M0+ ROM */
 			PROBE(lpc11xx_probe);               /* newer LPC11U6x */
 		} else if (target->part_id == 0x4c3U) { /* Cortex-M3 ROM */
