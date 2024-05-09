@@ -75,6 +75,7 @@ if is_firmware_build
 		'lpc': 'LPC series parts',
 		'nrf': 'nRF series parts',
 		'nxp': 'Kinetis series parts',
+		'puya': 'Puya PY32 series parts',
 		'renesas': 'Renesas parts',
 		'rp': 'RP2040',
 		'sam': 'ATSAM series parts',
@@ -187,6 +188,11 @@ target_nxp = declare_dependency(
 	dependencies: target_cortexm,
 )
 
+target_puya = declare_dependency(
+	sources: files('puya.c'),
+	dependencies: target_cortexm,
+)
+
 target_renesas_ra = declare_dependency(
 	sources: files('renesas_ra.c'),
 	dependencies: target_cortexm,
@@ -288,6 +294,7 @@ libbmd_target_deps = [
 	target_lpc,
 	target_nrf,
 	target_nxp,
+	target_puya,
 	target_renesas_ra,
 	target_renesas_rz,
 	target_rp,
