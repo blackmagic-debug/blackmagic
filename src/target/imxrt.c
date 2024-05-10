@@ -218,7 +218,7 @@ bool imxrt_probe(target_s *const target)
 	snprintf(priv->name, IMXRT_NAME_MAX_LENGTH, "i.MXRT%u", priv->chip_id);
 	target->driver = priv->name;
 
-#if ENABLE_DEBUG == 1 && (PC_HOSTED == 1 || defined(ESP_LOGD))
+#ifndef DEBUG_TARGET_IS_NOOP
 	const uint8_t boot_mode = (target_mem32_read32(target, IMXRT_SRC_BOOT_MODE2) >> 24U) & 3U;
 #endif
 	DEBUG_TARGET("i.MXRT boot mode is %x\n", boot_mode);
