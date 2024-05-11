@@ -171,6 +171,7 @@ void platform_init(void)
 	rcc_periph_clock_enable(RCC_GPIOH);
 	rcc_periph_clock_enable(RCC_GPIOF);
 	rcc_periph_clock_enable(RCC_GPIOG);
+	rcc_periph_clock_enable(RCC_CRC);
 
 	/* Initialize ADC. */
 	gpio_mode_setup(GPIOA, GPIO_MODE_ANALOG, GPIO_PUPD_NONE, GPIO0);
