@@ -35,6 +35,7 @@
 #include "target_internal.h"
 #include "cortexm.h"
 #include "adiv5.h"
+#include "buffer_utils.h"
 
 /*
  * Memory map
@@ -54,6 +55,35 @@
 
 /* System Control registers */
 #define CH579_R8_CHIP_ID 0x40001041U
+
+/* FlashROM registers */
+#define CH579_R32_FLASH_DATA   0x40001800U
+#define CH579_R32_FLASH_ADDR   0x40001804U
+#define CH579_R8_FLASH_COMMAND 0x40001808U
+#define CH579_R8_FLASH_PROTECT 0x40001809U
+#define CH579_R16_FLASH_STATUS 0x4000180aU
+
+/*
+ * Constants
+ */
+/* ADDR_OK */
+#define CH579_CONST_ADDR_OK 0x40U
+
+/* FlashROM Commands */
+#define CH579_CONST_ROM_CMD_ERASE   0xa6U
+#define CH579_CONST_ROM_CMD_PROGRAM 0x9aU
+/* Undocumented FlashROM Commands */
+#define CH579_CONST_ROM_CMD_ERASE_INFO   0xa5U
+#define CH579_CONST_ROM_CMD_PROGRAM_INFO 0x99U
+
+/* Flash Protect base value; upper bits must be set*/
+#define CH579_RB_ROM_WE_MUST_10 0b10000000U
+/* Flash Protect Bitmasks */
+#define CH579_RB_ROM_CODE_WE 1U << 3U
+#define CH579_RB_ROM_DATA_WE 1U << 2U
+/* Flash Protect Standard value */
+#define CH579_RB_ROM_WRITE_ENABLE  CH579_RB_ROM_WE_MUST_10 | CH579_RB_ROM_CODE_WE | CH579_RB_ROM_DATA_WE
+#define CH579_RB_ROM_WRITE_DISABLE CH579_RB_ROM_WE_MUST_10
 
 /*
  * Flash functions
@@ -93,26 +123,58 @@ bool ch579_probe(target_s *target)
 	return true;
 }
 
+/* Helper function to wait for flash */
+static bool ch579_wait_flash(target_s *const target, platform_timeout_s *const timeout)
+{
+	uint16_t status = target_mem32_read16(target, CH579_R16_FLASH_STATUS);
+	/*
+	 * XXX it isn't 100% certain how this is supposed to be done.
+	 * When self-programming, the CPU core is halted until the programming is finished.
+	 * It isn't clear whether or not anything like that happens when accessing over SWD.
+	 * No bit is documented as being an "in progress" bit.
+	 * The bootloader checks for this exact value to detect success as
+	 * all of the (documented) bits that indicate error are zero.
+	 */
+	while ((status & 0xff) != CH579_CONST_ADDR_OK) {
+		DEBUG_TARGET("ch579 wait %04" PRIx16 "\n", status);
+		if (target_check_error(target))
+			return false;
+		if (timeout)
+			target_print_progress(timeout);
+		status = target_mem32_read16(target, CH579_R16_FLASH_STATUS);
+	}
+	return true;
+}
+
 static bool ch579_flash_erase(target_flash_s *flash, target_addr_t addr, size_t len)
 {
-	DEBUG_INFO("ch579 flash erase\n");
-	return false;
+	(void)len;
+	target_mem32_write32(flash->t, CH579_R32_FLASH_ADDR, addr);
+	target_mem32_write8(flash->t, CH579_R8_FLASH_COMMAND, CH579_CONST_ROM_CMD_ERASE);
+
+	return ch579_wait_flash(flash->t, NULL);
 }
 
 static bool ch579_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t len)
 {
-	DEBUG_INFO("ch579 flash write\n");
-	return false;
+	(void)len;
+	target_mem32_write32(flash->t, CH579_R32_FLASH_ADDR, dest);
+	target_mem32_write32(flash->t, CH579_R32_FLASH_DATA, read_le4((const uint8_t *)src, 0));
+	target_mem32_write8(flash->t, CH579_R8_FLASH_COMMAND, CH579_CONST_ROM_CMD_PROGRAM);
+
+	return ch579_wait_flash(flash->t, NULL);
 }
 
 static bool ch579_flash_prepare(target_flash_s *flash)
 {
-	DEBUG_INFO("ch579 flash prepare\n");
-	return false;
+	/* Just enable both write flags now, so that code/data flash can be treated as contiguous */
+	target_mem32_write8(flash->t, CH579_R8_FLASH_PROTECT, CH579_RB_ROM_WRITE_ENABLE);
+	return true;
 }
 
 static bool ch579_flash_done(target_flash_s *flash)
 {
-	DEBUG_INFO("ch579 flash done\n");
-	return false;
+	DEBUG_TARGET("ch579 flash done\n");
+	target_mem32_write8(flash->t, CH579_R8_FLASH_PROTECT, CH579_RB_ROM_WRITE_DISABLE);
+	return true;
 }
