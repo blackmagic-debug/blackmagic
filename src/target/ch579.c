@@ -85,6 +85,17 @@
 #define CH579_RB_ROM_WRITE_ENABLE  CH579_RB_ROM_WE_MUST_10 | CH579_RB_ROM_CODE_WE | CH579_RB_ROM_DATA_WE
 #define CH579_RB_ROM_WRITE_DISABLE CH579_RB_ROM_WE_MUST_10
 
+/* Flash addresses */
+#define CH579_FLASH_CONFIG_ADDR 0x00040010U
+/* Undocumented Flash addresses */
+#define CH579_FLASH_INFO_ADDR 0x00040000U
+
+/* Flash config address info */
+#define CH579_FLASH_CONFIG_FLAG_CFG_RESET_EN 1U << 3U
+#define CH579_FLASH_CONFIG_FLAG_CFG_DEBUG_EN 1U << 4U
+#define CH579_FLASH_CONFIG_FLAG_CFG_BOOT_EN  1U << 6U
+#define CH579_FLASH_CONFIG_FLAG_CFG_ROM_READ 1U << 7U
+
 /*
  * Flash functions
  */
@@ -92,6 +103,19 @@ static bool ch579_flash_erase(target_flash_s *flash, target_addr_t addr, size_t 
 static bool ch579_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t len);
 static bool ch579_flash_prepare(target_flash_s *flash);
 static bool ch579_flash_done(target_flash_s *flash);
+/*
+ * Monitor functions
+ */
+static bool ch579_cmd_erase_info_dangerous(target_s *target, int argc, const char **argv);
+static bool ch579_cmd_write_info_dangerous(target_s *target, int argc, const char **argv);
+static bool ch579_cmd_disable_bootloader(target_s *target, int argc, const char **argv);
+
+const command_s ch579_cmd_list[] = {
+	{"void_warranty_erase_infoflash", ch579_cmd_erase_info_dangerous, "Erase info flash sector"},
+	{"void_warranty_write_infoflash", ch579_cmd_write_info_dangerous, "Write to info flash: [address] [value]"},
+	{"disable_bootloader", ch579_cmd_disable_bootloader, "Disables ISP bootloader"},
+	{NULL, NULL, NULL},
+};
 
 bool ch579_probe(target_s *target)
 {
@@ -120,6 +144,7 @@ bool ch579_probe(target_s *target)
 	target_add_flash(target, flash);
 
 	target_add_ram32(target, CH579_SRAM_BASE_ADDR, CH579_SRAM_SIZE);
+	target_add_commands(target, ch579_cmd_list, target->driver);
 	return true;
 }
 
@@ -177,4 +202,56 @@ static bool ch579_flash_done(target_flash_s *flash)
 	DEBUG_TARGET("ch579 flash done\n");
 	target_mem32_write8(flash->t, CH579_R8_FLASH_PROTECT, CH579_RB_ROM_WRITE_DISABLE);
 	return true;
+}
+
+/*
+ *Monitor commands
+ */
+
+/* Dangerous as this disables debugging; may disable bootloader; will likely lock you out of the chip */
+static bool ch579_cmd_erase_info_dangerous(target_s *target, int argc, const char **argv)
+{
+	(void)argc;
+	(void)argv;
+	target_mem32_write8(target, CH579_R8_FLASH_PROTECT, CH579_RB_ROM_WRITE_ENABLE);
+	target_mem32_write32(target, CH579_R32_FLASH_ADDR, CH579_FLASH_INFO_ADDR);
+	target_mem32_write8(target, CH579_R8_FLASH_COMMAND, CH579_CONST_ROM_CMD_ERASE_INFO);
+	const bool okay = ch579_wait_flash(target, NULL);
+	target_mem32_write8(target, CH579_R8_FLASH_PROTECT, CH579_RB_ROM_WRITE_DISABLE);
+	return okay;
+}
+
+/* Dangerous as is able to lock oneself out of programming */
+static bool ch579_cmd_write_info_dangerous(target_s *target, int argc, const char **argv)
+{
+	uint32_t addr;
+	uint32_t val;
+
+	if (argc == 3) {
+		addr = strtoul(argv[1], NULL, 0);
+		val = strtoul(argv[2], NULL, 0);
+	} else
+		return false;
+
+	target_mem32_write8(target, CH579_R8_FLASH_PROTECT, CH579_RB_ROM_WRITE_ENABLE);
+	target_mem32_write32(target, CH579_R32_FLASH_ADDR, addr);
+	target_mem32_write32(target, CH579_R32_FLASH_DATA, val);
+	target_mem32_write8(target, CH579_R8_FLASH_COMMAND, CH579_CONST_ROM_CMD_PROGRAM_INFO);
+	const bool okay = ch579_wait_flash(target, NULL);
+	target_mem32_write8(target, CH579_R8_FLASH_PROTECT, CH579_RB_ROM_WRITE_DISABLE);
+	return okay;
+}
+
+/* This is much safer as it only clears a bit in flash from 1->0 */
+static bool ch579_cmd_disable_bootloader(target_s *target, int argc, const char **argv)
+{
+	(void)argc;
+	(void)argv;
+	target_mem32_write8(target, CH579_R8_FLASH_PROTECT, CH579_RB_ROM_WRITE_ENABLE);
+	target_mem32_write32(target, CH579_R32_FLASH_ADDR, CH579_FLASH_CONFIG_ADDR);
+	target_mem32_write32(target, CH579_R32_FLASH_DATA, 0xffffffff & ~CH579_FLASH_CONFIG_FLAG_CFG_BOOT_EN);
+	target_mem32_write8(target, CH579_R8_FLASH_COMMAND, CH579_CONST_ROM_CMD_PROGRAM_INFO);
+	const bool okay = ch579_wait_flash(target, NULL);
+	target_mem32_write8(target, CH579_R8_FLASH_PROTECT, CH579_RB_ROM_WRITE_DISABLE);
+	return okay;
 }
