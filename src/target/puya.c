@@ -36,6 +36,7 @@
 #include "target_internal.h"
 #include "cortexm.h"
 #include "adiv5.h"
+#include "buffer_utils.h"
 
 /* Flash */
 #define PUYA_FLASH_START     0x08000000U
@@ -186,12 +187,44 @@ static bool puya_flash_done(target_flash_s *flash)
 	return true;
 }
 
+static bool puya_wait_flash(target_s *const target, platform_timeout_s *const timeout)
+{
+	while (target_mem32_read32(target, PUYA_FLASH_SR) & PUYA_FLASH_SR_BSY) {
+		if (target_check_error(target))
+			return false;
+		if (timeout)
+			target_print_progress(timeout);
+	}
+	return true;
+}
+
+static bool puya_check_flash_no_error(target_s *const target)
+{
+	uint32_t status = target_mem32_read32(target, PUYA_FLASH_SR);
+	if (status & PUYA_FLASH_SR_WRPERR)
+		DEBUG_ERROR("puya flash erase error: sr 0x%" PRIx32 "\n", status);
+	return !((status & PUYA_FLASH_SR_WRPERR));
+}
+
 static bool puya_flash_erase(target_flash_s *flash, target_addr_t addr, size_t len)
 {
-	return false;
+	(void)len;
+	target_mem32_write32(flash->t, PUYA_FLASH_CR, PUYA_FLASH_CR_PER);
+	target_mem32_write32(flash->t, addr, 0);
+	if (!puya_wait_flash(flash->t, NULL))
+		return false;
+	return puya_check_flash_no_error(flash->t);
 }
 
 static bool puya_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t len)
 {
-	return false;
+	target_mem32_write32(flash->t, PUYA_FLASH_CR, PUYA_FLASH_CR_PG);
+	for (size_t i = 0; i < len; i += 4) {
+		if (i == len - 4)
+			target_mem32_write32(flash->t, PUYA_FLASH_CR, PUYA_FLASH_CR_PG | PUYA_FLASH_CR_PGSTRT);
+		target_mem32_write32(flash->t, dest + i, read_le4(src, i));
+	}
+	if (!puya_wait_flash(flash->t, NULL))
+		return false;
+	return puya_check_flash_no_error(flash->t);
 }
