@@ -30,6 +30,21 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+
+/*
+ * This file implements support for CH579 devices, providing
+ * ram and flash memory maps and Flash programming routines.
+ *
+ * This may support other chips from WCH but this has not been
+ * tested.
+ *
+ * References:
+ * - CH579 Datasheet: https://www.wch-ic.com/downloads/CH579DS1_PDF.html
+ * - Special Function Register list is found in eval board zip
+ *   - Can be downloaded at: https://www.wch.cn/downloads/CH579EVT_ZIP.html
+ *   - Path: EVT/EXAM/SRC/StdPeriphDriver/inc/CH579SFR.h
+ */
+
 #include "general.h"
 #include "target.h"
 #include "target_internal.h"
