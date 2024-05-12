@@ -79,7 +79,8 @@
  * This code is not listed in the JEP106 standard, but is used by some stm32f1 clones
  * since we're not using this code elsewhere let's switch to the stm code.
  */
-#define JEP106_MANUFACTURER_ERRATA_CS 0x555U
+#define JEP106_MANUFACTURER_ERRATA_CS       0x555U
+#define JEP106_MANUFACTURER_ERRATA_CS_ASCII 0x8055U
 
 /*
  * CPU2 for STM32W(L|B) uses ARM's JEP-106 continuation code (4) instead of

@@ -581,17 +581,19 @@ static void adiv5_component_probe(
 		designer_code = (pidr & PIDR_JEP106_CONT_MASK) >> (PIDR_JEP106_CONT_OFFSET - 8U) |
 			(pidr & PIDR_JEP106_CODE_MASK) >> PIDR_JEP106_CODE_OFFSET;
 
-		if (designer_code == JEP106_MANUFACTURER_ERRATA_STM32WX || designer_code == JEP106_MANUFACTURER_ERRATA_CS) {
-			/**
-			 * see 'JEP-106 code list' for context, here we are aliasing codes that are non compliant with the
-			 * JEP-106 standard to their expected codes, this is later used to determine the correct probe function.
-			 */
-			DEBUG_WARN("Patching Designer code 0x%03" PRIx16 " -> 0x%03u\n", designer_code, JEP106_MANUFACTURER_STM);
-			designer_code = JEP106_MANUFACTURER_STM;
-		}
 	} else {
 		/* legacy ascii code */
 		designer_code = (pidr & PIDR_JEP106_CODE_MASK) >> PIDR_JEP106_CODE_OFFSET | ASCII_CODE_FLAG;
+	}
+
+	if (designer_code == JEP106_MANUFACTURER_ERRATA_STM32WX || designer_code == JEP106_MANUFACTURER_ERRATA_CS ||
+		designer_code == JEP106_MANUFACTURER_ERRATA_CS_ASCII) {
+		/**
+         * see 'JEP-106 code list' for context, here we are aliasing codes that are non compliant with the
+         * JEP-106 standard to their expected codes, this is later used to determine the correct probe function.
+         */
+		DEBUG_WARN("Patching Designer code %03x -> %03x\n", designer_code, JEP106_MANUFACTURER_STM);
+		designer_code = JEP106_MANUFACTURER_STM;
 	}
 
 	/* Extract part number from the part id register. */
@@ -622,8 +624,9 @@ static void adiv5_component_probe(
 			DEBUG_ERROR("Fault reading ROM table entry\n");
 		else if (memtype)
 			ap->flags |= ADIV5_AP_FLAGS_HAS_MEM;
-		DEBUG_INFO("ROM: Table BASE=0x%" PRIx32 " SYSMEM=%u, Manufacturer %03x Partno %03x\n", addr, memtype,
-			designer_code, part_number);
+		DEBUG_INFO("ROM: Table BASE=0x%" PRIx32 " SYSMEM=%u, Manufacturer %03x Partno %03x (PIDR = 0x%08" PRIx32
+				   "%08" PRIx32 ")\n",
+			addr, memtype, designer_code, part_number, (uint32_t)(pidr >> 32), (uint32_t)pidr);
 
 		for (uint32_t i = 0; i < 960U; i++) {
 			adiv5_dp_error(ap->dp);
