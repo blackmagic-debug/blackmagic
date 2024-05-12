@@ -9,6 +9,7 @@ CFLAGS +=-I ./target
 ENABLE_CORTEXAR := 1
 ENABLE_RISCV := 1
 # Target enables
+ENABLE_PUYA := 1
 ENABLE_XILINX := 1
 
 # Clang requires some special handling here: -gnu means MinGW

@@ -4,6 +4,7 @@ VPATH += $(PLATFORM_DIR) target
 ENABLE_DEBUG ?= 0
 ENABLE_CORTEXAR ?= 0
 ENABLE_RISCV ?= 0
+ENABLE_PUYA ?= 0
 ENABLE_XILINX ?= 0
 
 SYS = $(shell $(CC) -dumpmachine)
@@ -71,7 +72,6 @@ SRC =              \
 	nrf51.c        \
 	nrf91.c        \
 	nxpke04.c      \
-	puya.c         \
 	remote.c       \
 	rp.c           \
 	sam3x.c        \
@@ -98,6 +98,11 @@ SRC =              \
 
 ifeq (,$(filter all_platforms,$(MAKECMDGOALS)))
 include $(PLATFORM_DIR)/Makefile.inc
+endif
+
+ifeq ($(ENABLE_PUYA), 1)
+SRC +=     \
+	puya.c
 endif
 
 ifeq ($(ENABLE_CORTEXAR), 1)
