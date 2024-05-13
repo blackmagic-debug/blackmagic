@@ -502,6 +502,15 @@ int stlink_hwversion(void)
 	return stlink.ver_stlink;
 }
 
+static void stlink_line_reset(void)
+{
+	stlink_simple_query(STLINK_DEBUG_COMMAND, STLINK_DEBUG_EXIT, NULL, 0);
+	uint8_t data[2];
+	stlink_simple_request(
+		STLINK_DEBUG_COMMAND, STLINK_DEBUG_APIV2_ENTER, STLINK_DEBUG_ENTER_SWD_NO_RESET, data, sizeof(data));
+	stlink_usb_error_check(data, true);
+}
+
 uint32_t stlink_adiv5_clear_error(adiv5_debug_port_s *const dp, const bool protocol_recovery)
 {
 	DEBUG_PROBE("%s (protocol recovery: %s)\n", __func__, protocol_recovery ? "true" : "false");
@@ -512,9 +521,16 @@ uint32_t stlink_adiv5_clear_error(adiv5_debug_port_s *const dp, const bool proto
 		 * we must then re-select the target to bring the device back
 		 * into the expected state.
 		 */
-		stlink_reset_adaptor();
+		stlink_line_reset();
 		if (dp->version >= 2)
-			adiv5_dp_write(dp, ADIV5_DP_TARGETSEL, dp->targetsel);
+			/*
+			 * The correct thing to do here is some form of this:
+			 * adiv5_dp_write(dp, ADIV5_DP_TARGETSEL, dp->targetsel);
+			 * but ST-Link adaptors cannot handle this properly right now, so warn instead.
+			 */
+			DEBUG_WARN("ST-Link v2/v3 adaptors cannot handle multi-drop correctly, pretending everything's fine\n");
+		/* Re-select the current AP on completion so we keep talking with the same thing */
+		stlink_ap_setup(stlink.apsel);
 		adiv5_dp_read(dp, ADIV5_DP_DPIDR);
 	}
 	const uint32_t err = adiv5_dp_read(dp, ADIV5_DP_CTRLSTAT) &
