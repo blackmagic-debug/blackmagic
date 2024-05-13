@@ -1289,7 +1289,7 @@ void advi5_mem_read_bytes(adiv5_access_port_s *const ap, void *dest, const targe
 		 * Check if the address doesn't overflow the 10-bit auto increment bound for TAR,
 		 * if it's not the first transfer (offset == 0)
 		 */
-		if (begin != src && (begin & 0x00000effU) == 0U) {
+		if (begin != src && (begin & 0x000003ffU) == 0U) {
 			/* Update TAR to adjust the upper bits */
 			if (ap->flags & ADIV5_AP_FLAGS_64BIT)
 				adiv5_dp_write(ap->dp, ADIV5_AP_TAR_HIGH, (uint32_t)(begin >> 32));
@@ -1321,7 +1321,7 @@ void adiv5_mem_write_bytes(
 		 * Check if the address doesn't overflow the 10-bit auto increment bound for TAR,
 		 * if it's not the first transfer (offset == 0)
 		 */
-		if (begin != dest && (begin & 0x00000effU) == 0U) {
+		if (begin != dest && (begin & 0x000003ffU) == 0U) {
 			/* Update TAR to adjust the upper bits */
 			if (ap->flags & ADIV5_AP_FLAGS_64BIT)
 				adiv5_dp_write(ap->dp, ADIV5_AP_TAR_HIGH, (uint32_t)(begin >> 32));
