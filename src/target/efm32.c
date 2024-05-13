@@ -960,7 +960,8 @@ bool efm32_aap_probe(adiv5_access_port_s *ap)
 	DEBUG_INFO("EFM32: AAP STATUS=%08" PRIx32 "\n", adiv5_ap_read(ap, AAP_STATUS));
 
 	efm32_aap_priv_s *priv_storage = calloc(1, sizeof(*priv_storage));
-	sprintf(priv_storage->aap_driver_string, "EFM32 Authentication Access Port rev.%hu", aap_revision);
+	snprintf(priv_storage->aap_driver_string, sizeof(priv_storage->aap_driver_string),
+		"EFM32 Authentication Access Port rev.%hu", aap_revision);
 	t->driver = priv_storage->aap_driver_string;
 	t->regs_size = 0;
 

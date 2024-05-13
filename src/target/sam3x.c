@@ -407,9 +407,9 @@ bool samx7x_probe(target_s *t)
 	sam_add_flash(t, SAMX7X_EEFC_BASE, 0x00400000, priv_storage->descr.flash_size);
 	target_add_commands(t, sam_cmd_list, "SAMX7X");
 
-	sprintf(priv_storage->sam_variant_string, "SAM%c%02d%c%d%c", priv_storage->descr.product_code,
-		priv_storage->descr.product_id, priv_storage->descr.pins, priv_storage->descr.density,
-		priv_storage->descr.revision);
+	snprintf(priv_storage->sam_variant_string, sizeof(priv_storage->sam_variant_string), "SAM%c%02d%c%d%c",
+		priv_storage->descr.product_code, priv_storage->descr.product_id, priv_storage->descr.pins,
+		priv_storage->descr.density, priv_storage->descr.revision);
 
 	t->driver = priv_storage->sam_variant_string;
 	return true;

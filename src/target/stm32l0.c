@@ -258,7 +258,8 @@ bool stm32l0_probe(target_s *const target)
 	const uint32_t nvm = stm32lx_nvm_phys(target);
 	const bool protected =
 		(target_mem32_read32(target, STM32Lx_NVM_OPTR(nvm)) & STM32Lx_NVM_OPTR_RDPROT_M) != STM32Lx_NVM_OPTR_RDPROT_0;
-	sprintf(priv_storage->stm32l_variant, "%s%s", target->driver, protected ? " (protected)" : "");
+	snprintf(priv_storage->stm32l_variant, sizeof(priv_storage->stm32l_variant), "%s%s", target->driver,
+		protected ? " (protected)" : "");
 	target->driver = priv_storage->stm32l_variant;
 
 	if (protected) {
