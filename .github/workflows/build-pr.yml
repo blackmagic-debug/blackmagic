@@ -449,6 +449,7 @@ jobs:
           #    from ../src/include/general.h:62,
           #    from ../src/command.c:28:
           #    /opt/homebrew/Cellar/gcc@11/11.4.0/lib/gcc/11/gcc/aarch64-apple-darwin23/11/include-fixed/AvailabilityInternal.h:162:10: fatal error: AvailabilityInternalLegacy.h: No such file or directory
+          # FIXME: remove the brew unlink step once `gcc` itself works
           - os: macos-latest
       fail-fast: false
 
@@ -465,6 +466,7 @@ jobs:
       # Install a suitable system compiler for the build
       - name: Setup Homebrew GCC
         run: |
+          brew unlink gcc
           brew install ${{ matrix.compiler }}
           CC=${COMPILER/@/-}
           CXX=${CC/#gcc/g++}
