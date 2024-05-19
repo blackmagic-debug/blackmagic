@@ -741,7 +741,7 @@ int32_t semihosting_exit(target_s *const target, const semihosting_exit_reason_e
 	if (reason == EXIT_REASON_APPLICATION_EXIT)
 		tc_printf(target, "exit(%" PRIu32 ")\n", status_code);
 	else
-		tc_printf(target, "Exception trapped: %" PRIx32 " (%" PRIu32 ")\n", reason, status_code);
+		tc_printf(target, "Exception trapped: %x (%" PRIu32 ")\n", reason, status_code);
 	target_halt_resume(target, true);
 	return 0;
 }

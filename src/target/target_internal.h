@@ -208,7 +208,15 @@ bool target_mem64_write16(target_s *target, target_addr64_t addr, uint16_t value
 bool target_mem64_write8(target_s *target, target_addr64_t addr, uint8_t value);
 bool target_check_error(target_s *target);
 
+#if defined(__MINGW32__) || defined(__MINGW64__) || defined(__CYGWIN__)
+#define TC_FORMAT_ATTR __attribute__((format(__MINGW_PRINTF_FORMAT, 2, 3)))
+#elif defined(__GNUC__) || defined(__clang__)
+#define TC_FORMAT_ATTR __attribute__((format(printf, 2, 3)))
+#else
+#define TC_FORMAT_ATTR
+#endif
+
 /* Access to host controller interface */
-void tc_printf(target_s *target, const char *fmt, ...);
+void tc_printf(target_s *target, const char *fmt, ...) TC_FORMAT_ATTR;
 
 #endif /* TARGET_TARGET_INTERNAL_H */

@@ -581,7 +581,7 @@ bool efm32_probe(target_s *t)
 	/* Setup Target */
 	t->target_options |= TOPT_INHIBIT_NRST;
 	t->driver = priv_storage->efm32_variant_string;
-	tc_printf(t, "flash size %u page size %u\n", flash_size, flash_page_size);
+	tc_printf(t, "flash size %" PRIu32 " page size %" PRIu32 "\n", flash_size, flash_page_size);
 
 	target_add_ram32(t, SRAM_BASE, ram_size);
 	efm32_add_flash(t, 0x00000000, flash_size, flash_page_size);
@@ -744,11 +744,11 @@ static bool efm32_cmd_serial(target_s *t, int argc, const char **argv)
 		break;
 
 	default:
-		tc_printf(t, "Bad DI version %hhu! This driver doesn't know about this DI version\n", di_version);
+		tc_printf(t, "Bad DI version %u! This driver doesn't know about this DI version\n", di_version);
 		return false;
 	}
 
-	tc_printf(t, "Unique Number: 0x%016llx\n", unique);
+	tc_printf(t, "Unique Number: 0x%08" PRIx32 "%08" PRIx32 "\n", (uint32_t)(unique >> 32U), (uint32_t)unique);
 
 	return true;
 }
@@ -768,15 +768,15 @@ static bool efm32_cmd_efm_info(target_s *t, int argc, const char **argv)
 
 	switch (di_version) {
 	case 1:
-		tc_printf(t, "DI version 1 (silabs remix?) base 0x%08" PRIx32 "\n\n", EFM32_V1_DI);
+		tc_printf(t, "DI version 1 (silabs remix?) base 0x%08" PRIx16 "\n\n", EFM32_V1_DI);
 		break;
 
 	case 2:
-		tc_printf(t, "DI version 2 (energy micro remix?) base 0x%08" PRIx32 "\n\n", EFM32_V2_DI);
+		tc_printf(t, "DI version 2 (energy micro remix?) base 0x%08" PRIx16 "\n\n", EFM32_V2_DI);
 		break;
 
 	default:
-		tc_printf(t, "Bad DI version %hhu! This driver doesn't know about this DI version\n", di_version);
+		tc_printf(t, "Bad DI version %u! This driver doesn't know about this DI version\n", di_version);
 		return false;
 	}
 
@@ -791,8 +791,8 @@ static bool efm32_cmd_efm_info(target_s *t, int argc, const char **argv)
 
 	tc_printf(t, "%s %hu F%hu = %s %hukiB flash, %hukiB ram\n", device->name, part_number, flash_kib,
 		device->description, flash_kib, ram_kib);
-	tc_printf(t, "Device says flash page size is %u bytes, we're using %u bytes\n", flash_page_size_reported,
-		flash_page_size);
+	tc_printf(t, "Device says flash page size is %" PRIu32 " bytes, we're using %" PRIu32 " bytes\n",
+		flash_page_size_reported, flash_page_size);
 	if (flash_page_size_reported < flash_page_size) {
 		tc_printf(t, "This is bad, flash writes may be corrupted\n");
 	}
@@ -814,7 +814,7 @@ static bool efm32_cmd_efm_info(target_s *t, int argc, const char **argv)
 			}
 		}
 
-		tc_printf(t, "Package %s %hhu pins\n", pkgtype->name, miscchip.pincount);
+		tc_printf(t, "Package %s %u pins\n", pkgtype->name, miscchip.pincount);
 		tc_printf(t, "Temperature grade %s\n", tempgrade->name);
 		tc_printf(t, "\n");
 	}

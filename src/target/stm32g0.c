@@ -673,7 +673,7 @@ static void stm32g0_display_registers(target_s *target)
 {
 	for (size_t i = 0; i < OPT_REG_COUNT; ++i) {
 		const uint32_t val = target_mem32_read32(target, options_def[i].addr);
-		tc_printf(target, "0x%08X: 0x%08X\n", options_def[i].addr, val);
+		tc_printf(target, "0x%08" PRIX32 ": 0x%08" PRIX32 "\n", options_def[i].addr, val);
 	}
 }
 

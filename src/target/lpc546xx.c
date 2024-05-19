@@ -208,7 +208,7 @@ static bool lpc546xx_cmd_read_partid(target_s *target, int argc, const char **ar
 	iap_result_s result;
 	if (lpc_iap_call(flash, &result, IAP_CMD_PARTID))
 		return false;
-	tc_printf(target, "PART ID: 0x%08x\n", result.values[0]);
+	tc_printf(target, "PART ID: 0x%08" PRIx32 "\n", result.values[0]);
 	return true;
 }
 

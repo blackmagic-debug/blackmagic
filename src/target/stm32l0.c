@@ -757,7 +757,7 @@ static bool stm32lx_cmd_option(target_s *const target, const int argc, const cha
 		uint32_t val = strtoul(argv[3], NULL, 0);
 		if (!raw_write)
 			val = (val & 0xffffU) | ((~val & 0xffffU) << 16U);
-		tc_printf(target, "%s %08x <- %08x\n", argv[1], addr, val);
+		tc_printf(target, "%s %08" PRIx32 " <- %08" PRIx32 "\n", argv[1], addr, val);
 
 		if (addr >= STM32Lx_FLASH_OPT_BASE && addr < STM32Lx_FLASH_OPT_BASE + opt_size && (addr & 3U) == 0) {
 			if (!stm32lx_option_write(target, addr, val))
@@ -770,22 +770,23 @@ static bool stm32lx_cmd_option(target_s *const target, const int argc, const cha
 	for (size_t i = 0; i < opt_size; i += 4U) {
 		const uint32_t addr = STM32Lx_FLASH_OPT_BASE + i;
 		const uint32_t val = target_mem32_read32(target, addr);
-		tc_printf(target, "0x%08" PRIx32 ": 0x%04u 0x%04u %s\n", addr, val & 0xffffU, (val >> 16U) & 0xffffU,
-			(val & 0xffffU) == ((~val >> 16U) & 0xffffU) ? "OK" : "ERR");
+		tc_printf(target, "0x%08" PRIx32 ": 0x%04" PRIu32 " 0x%04" PRIu32 " %s\n", addr, val & 0xffffU,
+			(val >> 16U) & 0xffffU, (val & 0xffffU) == ((~val >> 16U) & 0xffffU) ? "OK" : "ERR");
 	}
 
 	const uint32_t options = target_mem32_read32(target, STM32Lx_FLASH_OPTR(flash_base));
 	const size_t read_protection = stm32lx_prot_level(options);
 	if (stm32lx_is_stm32l1(target)) {
 		tc_printf(target,
-			"OPTR: 0x%08" PRIx32 ", RDPRT %u, SPRMD %u, BOR %u, WDG_SW %u, nRST_STP %u, nRST_STBY %u, nBFB2 %u\n",
-			options, read_protection, (options & STM32L1_FLASH_OPTR_SPRMOD) ? 1 : 0,
+			"OPTR: 0x%08" PRIx32 ", RDPRT %" PRIu32 ", SPRMD %u, BOR %" PRIu32 " , WDG_SW %u"
+			", nRST_STP %u, nRST_STBY %u, nBFB2 %u\n",
+			options, (uint32_t)read_protection, (options & STM32L1_FLASH_OPTR_SPRMOD) ? 1 : 0,
 			(options >> STM32L1_FLASH_OPTR_BOR_LEV_SHIFT) & STM32L1_FLASH_OPTR_BOR_LEV_MASK,
 			(options & STM32Lx_FLASH_OPTR_WDG_SW) ? 1 : 0, (options & STM32L1_FLASH_OPTR_nRST_STOP) ? 1 : 0,
 			(options & STM32L1_FLASH_OPTR_nRST_STDBY) ? 1 : 0, (options & STM32L1_FLASH_OPTR_nBFB2) ? 1 : 0);
 	} else {
-		tc_printf(target, "OPTR: 0x%08" PRIx32 ", RDPROT %u, WPRMOD %u, WDG_SW %u, BOOT1 %u\n", options,
-			read_protection, (options & STM32L0_FLASH_OPTR_WPRMOD) ? 1 : 0,
+		tc_printf(target, "OPTR: 0x%08" PRIx32 ", RDPROT %" PRIu32 ", WPRMOD %" PRIu16 ", WDG_SW %u, BOOT1 %u\n",
+			options, (uint32_t)read_protection, (options & STM32L0_FLASH_OPTR_WPRMOD) ? 1 : 0,
 			(options & STM32Lx_FLASH_OPTR_WDG_SW) ? 1 : 0, (options & STM32L0_FLASH_OPTR_BOOT1) ? 1 : 0);
 	}
 
@@ -867,8 +868,8 @@ usage:
 	tc_printf(target, "  byte     <addr> <value8>  - Write a byte\n");
 	tc_printf(target, "  halfword <addr> <value16> - Write a half-word\n");
 	tc_printf(target, "  word     <addr> <value32> - Write a word\n");
-	tc_printf(target, "The value of <addr> must in the interval [0x%08x, 0x%x)\n", STM32Lx_FLASH_EEPROM_BASE,
-		STM32Lx_FLASH_EEPROM_BASE + stm32lx_nvm_eeprom_size(target));
+	tc_printf(target, "The value of <addr> must in the interval [0x%08" PRIx32 ", 0x%" PRIx32 ")\n",
+		STM32Lx_FLASH_EEPROM_BASE, STM32Lx_FLASH_EEPROM_BASE + stm32lx_nvm_eeprom_size(target));
 
 done:
 	stm32lx_nvm_lock(target, flash_base);

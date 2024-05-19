@@ -1075,8 +1075,8 @@ static bool stm32f1_cmd_option(target_s *target, int argc, const char **argv)
 	for (size_t i = 0U; i < 16U; i += 4U) {
 		const uint32_t addr = FLASH_OBP_RDP + i;
 		const uint32_t val = target_mem32_read32(target, addr);
-		tc_printf(target, "0x%08X: 0x%04X\n", addr, val & 0xffffU);
-		tc_printf(target, "0x%08X: 0x%04X\n", addr + 2U, val >> 16U);
+		tc_printf(target, "0x%08" PRIX32 ": 0x%04" PRIX32 "\n", addr, val & 0xffffU);
+		tc_printf(target, "0x%08" PRIX32 ": 0x%04" PRIX32 "\n", addr + 2U, val >> 16U);
 	}
 
 	return true;

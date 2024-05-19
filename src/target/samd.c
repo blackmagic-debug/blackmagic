@@ -846,7 +846,7 @@ static bool samd_cmd_serial(target_s *t, int argc, const char **argv)
 	tc_printf(t, "Serial Number: 0x");
 
 	for (size_t i = 0; i < 4U; ++i)
-		tc_printf(t, "%08x", target_mem32_read32(t, SAMD_NVM_SERIAL(i)));
+		tc_printf(t, "%08" PRIx32 "", target_mem32_read32(t, SAMD_NVM_SERIAL(i)));
 	tc_printf(t, "\n");
 	return true;
 }

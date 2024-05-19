@@ -626,7 +626,7 @@ static bool sam_cmd_gpnvm(target_s *t, int argc, const char **argv)
 	uint32_t gpnvm = 0;
 	if (!sam_gpnvm_get(t, base, &gpnvm))
 		return false;
-	tc_printf(t, "GPNVM: 0x%08X\n", gpnvm);
+	tc_printf(t, "GPNVM: 0x%08" PRIX32 "\n", gpnvm);
 
 	if (drv == DRIVER_SAMX7X && (mask & GPNVM_SAMX7X_TCM_BIT_MASK)) {
 		sam_priv_s *storage = (sam_priv_s *)t->target_storage;

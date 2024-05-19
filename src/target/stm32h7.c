@@ -682,7 +682,7 @@ static bool stm32h7_crc(target_s *target, int argc, const char **argv)
 	if (!stm32h7_crc_bank(target, STM32H7_FLASH_BANK2_BASE))
 		return false;
 	uint32_t crc2 = target_mem32_read32(target, STM32H7_FPEC2_BASE + STM32H7_FLASH_CRCDATA);
-	tc_printf(target, "CRC: bank1 0x%08lx, bank2 0x%08lx\n", crc1, crc2);
+	tc_printf(target, "CRC: bank1 0x%08" PRIx32 ", bank2 0x%08" PRIx32 " \n", crc1, crc2);
 	return true;
 }
 
