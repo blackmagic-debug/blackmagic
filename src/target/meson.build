@@ -262,6 +262,7 @@ target_ti = declare_dependency(
 		'lmi.c',
 		'msp432e4.c',
 		'msp432p4.c',
+		'mspm0l.c'
 	),
 	dependencies: target_cortexm,
 )
