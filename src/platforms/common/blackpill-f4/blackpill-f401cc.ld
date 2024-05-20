@@ -2,6 +2,8 @@
  * This file is part of the libopenstm32 project.
  *
  * Copyright (C) 2010 Thomas Otto <tommi@viadmin.org>
+ * Copyright (C) 2024 1BitSquared <info@1bitsquared.com>
+ * Modified by Rachel Mant <git@dragonmux.network>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,5 +26,5 @@ MEMORY
 	ram (rwx) : ORIGIN = 0x20000000, LENGTH = 64K
 }
 
-/* Include the common ld script from libopenstm32. */
-INCLUDE cortex-m-generic.ld
+/* Include the platform common linker script. */
+INCLUDE ../blackmagic.ld
