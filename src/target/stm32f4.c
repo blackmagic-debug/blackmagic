@@ -145,6 +145,7 @@ typedef struct stm32f4_priv {
 #define ID_STM32F413  0x463U
 #define ID_GD32F450   0x2b3U
 #define ID_GD32F470   0xa2eU
+#define ID_GD32F405   0xfa4U
 
 static void stm32f4_add_flash(target_s *const target, const uint32_t addr, const size_t length, const size_t blocksize,
 	const uint8_t base_sector, const uint8_t split)
@@ -206,6 +207,8 @@ static char *stm32f4_get_chip_name(const uint32_t device_id)
 		return "GD32F450";
 	case ID_GD32F470: /* GigaDevice F470 */
 		return "GD32F470";
+	case ID_GD32F405: /* Gigadevice F405 */
+		return "GD32F405";
 	default:
 		return NULL;
 	}
@@ -271,7 +274,7 @@ bool stm32f4_probe(target_s *target)
 
 bool gd32f4_probe(target_s *target)
 {
-	if (target->part_id != ID_GD32F450 && target->part_id != ID_GD32F470)
+	if (target->part_id != ID_GD32F450 && target->part_id != ID_GD32F470 && target->part_id != ID_GD32F405)
 		return false;
 
 	/* Allocate target-specific storage */
@@ -608,6 +611,7 @@ static bool optcr_mask(target_s *const target, uint32_t *const val)
 	case ID_STM32F42X:
 	case ID_GD32F450:
 	case ID_GD32F470:
+	case ID_GD32F405:
 		val[0] &= ~0x30000000U;
 		val[1] &= 0x0fff0000U;
 		break;
@@ -648,7 +652,7 @@ static size_t stm32f4_opt_bytes_for(const uint16_t part_id)
 		return 3;
 	if (part_id == ID_STM32F42X || part_id == ID_STM32F46X || part_id == ID_STM32F74X || part_id == ID_STM32F76X)
 		return 2;
-	if (part_id == ID_GD32F450 || part_id == ID_GD32F470)
+	if (part_id == ID_GD32F450 || part_id == ID_GD32F470 || part_id == ID_GD32F405)
 		return 2;
 	return 1;
 }
@@ -707,6 +711,7 @@ static bool stm32f4_option_write_default(target_s *target)
 	case ID_STM32F46X:
 	case ID_GD32F450:
 	case ID_GD32F470:
+	case ID_GD32F405:
 		val[0] = 0x0fffaaedU;
 		val[1] = 0x0fff0000U;
 		return stm32f4_option_write(target, val, 2);
