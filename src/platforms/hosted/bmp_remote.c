@@ -154,7 +154,7 @@ bool remote_nrst_get_val(void)
 	platform_buffer_write(buffer, length);
 	length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
 	if (length < 1 || buffer[0] == REMOTE_RESP_ERR) {
-		DEBUG_ERROR("platform_nrst_set_val failed, error %s\n", length ? buffer + 1 : "unknown");
+		DEBUG_ERROR("platform_nrst_get_val failed, error %s\n", length ? buffer + 1 : "unknown");
 		exit(-1);
 	}
 	return buffer[1] == '1';
