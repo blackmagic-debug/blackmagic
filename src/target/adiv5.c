@@ -768,6 +768,7 @@ adiv5_access_port_s *adiv5_new_ap(adiv5_debug_port_s *dp, uint8_t apsel)
 			ap.base |= (uint64_t)adiv5_ap_read(&ap, ADIV5_AP_BASE_HIGH) << 32U;
 		}
 		/* Check the Debug Base Address register for not-present. See ADIv5 Specification C2.6.1 */
+#if 0
 		if (base_flags == (ADIV5_AP_BASE_FORMAT_ADIV5 | ADIV5_AP_BASE_PRESENT_NO_ENTRY) ||
 			(!(ap.flags & ADIV5_AP_FLAGS_64BIT) && (uint32_t)ap.base == ADIV5_AP_BASE_NOT_PRESENT)) {
 			/*
@@ -778,6 +779,7 @@ adiv5_access_port_s *adiv5_new_ap(adiv5_debug_port_s *dp, uint8_t apsel)
 			DEBUG_INFO(" -> Not Present\n");
 			return NULL;
 		}
+#endif
 		/* Check if the AP is disabled, skipping it if that is the case */
 		if ((ap.csw & ADIV5_AP_CSW_AP_ENABLED) == 0U) {
 			DEBUG_INFO(" -> Disabled\n");
