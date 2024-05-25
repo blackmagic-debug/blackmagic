@@ -26,13 +26,15 @@
 #include "cortex.h"
 
 
-// Code			0x0000.0000	0x1FFF.FFFF
-// SRAM			0x2000.0000	0x3FFF.FFFF
-// Peripheral	0x4000.0000 0x5FFF.FFFF		Aliased flash memory	0x4100.0000 0x41FF.FFFF
-// BCR Configuration 41C0.0000h 41C0.005Bh CRC 41C0.005Ch 41C0.005Fh 
-// BSL Configuration 41C0.0100h 41C0.0153h CRC 41C0.0154h 41C0.0157h
-// Subsystem	0x6000.0000 0x7FFF.FFFF
-// System PPB	0xE000.0000 0xE00F.FFFF
+/*
+	Code				0x0000.0000	0x1FFF.FFFF
+	SRAM				0x2000.0000	0x3FFF.FFFF
+	Peripheral			0x4000.0000 0x5FFF.FFFF		Aliased flash memory	0x4100.0000 0x41FF.FFFF
+	BCR Configuration	41C0.0000h 41C0.005Bh		CRC 41C0.005Ch 41C0.005Fh
+	BSL Configuration	41C0.0100h 41C0.0153h		CRC 41C0.0154h 41C0.0157h
+	Subsystem			0x6000.0000 0x7FFF.FFFF
+	System PPB			0xE000.0000 0xE00F.FFFF
+*/
 
 #define MSPM0L_SRAM_BASE		0x20000000U
 #define MSPM0L_FLASH_MAIN		0x00000000U
@@ -54,36 +56,23 @@
 #define MSPM0L_FLASHCTL_CMDDATA1	(MSPM0L_FLASHCTL_BASE + 0x1134)
 #define MSPM0L_FLASHCTL_CMDDATA2	(MSPM0L_FLASHCTL_BASE + 0x1138)
 #define MSPM0L_FLASHCTL_CMDDATA3	(MSPM0L_FLASHCTL_BASE + 0x113c)
-#define MSPM0L_FLASHCTL_CMDDATA4	(MSPM0L_FLASHCTL_BASE + 0x1140)
-#define MSPM0L_FLASHCTL_CMDDATA5	(MSPM0L_FLASHCTL_BASE + 0x1144)
-#define MSPM0L_FLASHCTL_CMDDATA6	(MSPM0L_FLASHCTL_BASE + 0x1148)
-#define MSPM0L_FLASHCTL_CMDDATA7	(MSPM0L_FLASHCTL_BASE + 0x114c)
-#define MSPM0L_FLASHCTL_CMDDATA8	(MSPM0L_FLASHCTL_BASE + 0x1150)
-#define MSPM0L_FLASHCTL_CMDDATA9	(MSPM0L_FLASHCTL_BASE + 0x1154)
-#define MSPM0L_FLASHCTL_CMDDATA10	(MSPM0L_FLASHCTL_BASE + 0x1158)
-#define MSPM0L_FLASHCTL_CMDDATA11	(MSPM0L_FLASHCTL_BASE + 0x115c)
-#define MSPM0L_FLASHCTL_CMDDATA12	(MSPM0L_FLASHCTL_BASE + 0x1160)
-#define MSPM0L_FLASHCTL_CMDDATA13	(MSPM0L_FLASHCTL_BASE + 0x1164)
-#define MSPM0L_FLASHCTL_CMDDATA14	(MSPM0L_FLASHCTL_BASE + 0x1168)
-#define MSPM0L_FLASHCTL_CMDDATA15	(MSPM0L_FLASHCTL_BASE + 0x116c)
 #define MSPM0L_FLASHCTL_CMDWEPROTA	(MSPM0L_FLASHCTL_BASE + 0x11d0)
 #define MSPM0L_FLASHCTL_CMDWEPROTB	(MSPM0L_FLASHCTL_BASE + 0x11d4)
 #define MSPM0L_FLASHCTL_CMDWEPROTC	(MSPM0L_FLASHCTL_BASE + 0x11d8)
 #define MSPM0L_FLASHCTL_CMDWEPROTNM	(MSPM0L_FLASHCTL_BASE + 0x1210)
 
+#define MSPM0L_FLASH_CMDTYPE_NOOP		0U
+#define MSPM0L_FLASH_CMDTYPE_PROG		1U
+#define MSPM0L_FLASH_CMDTYPE_ERASE		2U
+#define MSPM0L_FLASH_CMDTYPE_RDVERIFY	3U
+#define MSPM0L_FLASH_CMDTYPE_BLVERIFY	6U
 
-#define MSPM0L_FLASH_CMDTYPE_NOOP		0
-#define MSPM0L_FLASH_CMDTYPE_PROG		1
-#define MSPM0L_FLASH_CMDTYPE_ERASE		2
-#define MSPM0L_FLASH_CMDTYPE_RDVERIFY	3
-#define MSPM0L_FLASH_CMDTYPE_BLVERIFY	6
-
-#define MSPM0L_FLASH_CMDTYPE_SZ_1WORD	(0 << 4)
-#define MSPM0L_FLASH_CMDTYPE_SZ_2WORDS	(1 << 4)
-#define MSPM0L_FLASH_CMDTYPE_SZ_4WORDS	(2 << 4)
-#define MSPM0L_FLASH_CMDTYPE_SZ_8WORDS	(3 << 4)
-#define MSPM0L_FLASH_CMDTYPE_SZ_SECTOR	(4 << 4)
-#define MSPM0L_FLASH_CMDTYPE_SZ_BANK	(5 << 4)
+#define MSPM0L_FLASH_CMDTYPE_SZ_1WORD	(0U << 4)
+#define MSPM0L_FLASH_CMDTYPE_SZ_2WORDS	(1U << 4)
+#define MSPM0L_FLASH_CMDTYPE_SZ_4WORDS	(2U << 4)
+#define MSPM0L_FLASH_CMDTYPE_SZ_8WORDS	(3U << 4)
+#define MSPM0L_FLASH_CMDTYPE_SZ_SECTOR	(4U << 4)
+#define MSPM0L_FLASH_CMDTYPE_SZ_BANK	(5U << 4)
 
 #define MSPM0L_FLASHCTL_STAT_DONE		0x01
 #define MSPM0L_FLASHCTL_STAT_CMDPASS	0x02
@@ -190,8 +179,7 @@ bool mspm0l_probe(target_s *const target)
 	if (BITS(11, 1, deviceid) != JEP106_MANUFACTURER_TEXAS)
 	 	return false;
 
-	uint32_t const userid = target_mem32_read32(target, MSPM0L_FLASH_FACTORY + 0x8);
-	/* DEBUG_INFO("%s: Device ID %" PRIx32 ":%" PRIx32 ", TraceID: %" PRIx32 "\n", __func__, deviceid, userid, traceid); */
+	uint32_t const userid __attribute__((unused)) = target_mem32_read32(target, MSPM0L_FLASH_FACTORY + 0x8);
 
 	DEBUG_TARGET("%s: Device %" PRIx32 "/%" PRIx32 " rev. %" PRIu32 ": user ver. %" PRIu32 ".%" PRIu32 ".%" PRIu32 " part %" PRIu32 "\n",
 		__func__,
@@ -199,6 +187,7 @@ bool mspm0l_probe(target_s *const target)
 		BITS(30, 28, userid), BITS(27, 24, userid), BITS(23, 16, userid), BITS(15, 0, userid));
 
 	target->driver = "MSPM0L";
+	target->target_options |= TOPT_INHIBIT_NRST;
 	target->mass_erase = mspm0l_mass_erase;
 
 	uint32_t const sramflash = target_mem32_read32(target, MSPM0L_FLASH_FACTORY + 0x18);
@@ -220,8 +209,7 @@ bool mspm0l_probe(target_s *const target)
 
 static void mspm0l_dump_regs(target_s *const target, const confreg_s* regs, uint32_t base)
 {
-	for (confreg_s const* r=regs; r->id; r++)
-	{
+	for (confreg_s const* r=regs; r->id; r++) {
 		tc_printf(target, "%15s: ", r->id);
 		for (int q=0; q<r->words; q++) {
 			uint32_t value = target_mem32_read32(target, base + r->offset + q*4);
@@ -245,12 +233,18 @@ static bool mspm0l_dump_bcr_config(target_s *const target, const int argc, const
 }
 
 
-/* Wait for flash command to finish and return the status word */
+/* Wait for flash command to finish and return the status word. -1 if timout */
 static uint32_t mspm0l_flash_wait_done(target_s *const target)
 {
+	platform_timeout_s timeout;
+	platform_timeout_set(&timeout, 2000);
+
 	uint32_t statcmd;
-	while (!((statcmd = target_mem32_read32(target, MSPM0L_FLASHCTL_STATCMD)) & MSPM0L_FLASHCTL_STAT_DONE))
+	while (!((statcmd = target_mem32_read32(target, MSPM0L_FLASHCTL_STATCMD)) & MSPM0L_FLASHCTL_STAT_DONE)) {
+		if (platform_timeout_is_expired(&timeout))
+			return -1;
 		continue;
+	}
 	return statcmd;
 }
 
@@ -274,60 +268,35 @@ static void mspm0l_flash_unprotect_sector(target_flash_s *const target_flash, co
 		uint32_t mask = ~(1u << ((sector - 256) / 8));
 		target_mem32_write32(target_flash->t, MSPM0L_FLASHCTL_CMDWEPROTC, mask);
 	}
-
-#if 0
-	unsigned sector_end = (ALIGN(addr + len, MSPM0L_FLASH_SECTOR_SZ) - target_flash->start) / MSPM0L_FLASH_SECTOR_SZ;
-
-	/* This holds bits set to 1 for sectors that we want to unprotect, will invert later */
-	uint32_t unprot_abc[3] = { 0, 0, 0 };
-
-	unsigned l;
-	while (sector < sector_end) {
-		if (sector < 32) {
-			l = MIN(32, sector_end) - sector;
-			uint32_t mask = BIT_LMASK(uint32_t, l);
-			unprot_abc[0] = mask << sector;
-		} else if (sector < 256) {
-			l = MIN(256, sector_end) - sector;
-			uint32_t mask = BIT_LMASK(uint32_t, l/8);
-			unprot_abc[1] = mask << sector;
-		} else {
-			l = MIN(256, sector_end) - sector;
-			uint32_t mask = BIT_LMASK(uint32_t, l/8);
-			unprot_abc[2] = mask << sector;
-		}
-		sector += l;
-	}
-
-	if (unprot_abc[0]) target_mem_write32(target_flash->t, MSPM0L_FLASHCTL_CMDWEPROTA, ~unprot_abc[0]);
-	if (unprot_abc[1]) target_mem_write32(target_flash->t, MSPM0L_FLASHCTL_CMDWEPROTB, ~unprot_abc[1]);
-	if (unprot_abc[2]) target_mem_write32(target_flash->t, MSPM0L_FLASHCTL_CMDWEPROTC, ~unprot_abc[2]);
-#endif
 }
 
-static bool mspm0l_flash_erase(target_flash_s *const target_flash, const target_addr_t addr, const size_t length)
+static bool mspm0l_flash_erase(target_flash_s *const target_flash, const target_addr_t addr,
+	const size_t length __attribute__((unused)))
 {
 	assert(length == target_flash->blocksize);
 
 	target_s *const target = target_flash->t;
 
+	DEBUG_INFO("%s: erasing flash addr %08" PRIx32 " length %08" PRIx32"\n",
+		__func__, addr, (uint32_t)length);
+
 	mspm0l_flash_unprotect_sector(target_flash, addr);
- 	target_mem32_write32(target, MSPM0L_FLASHCTL_CMDWEPROTA, 0);
 	target_mem32_write32(target, MSPM0L_FLASHCTL_CMDTYPE, MSPM0L_FLASH_CMDTYPE_SZ_SECTOR | MSPM0L_FLASH_CMDTYPE_ERASE);
+	target_mem32_write32(target, MSPM0L_FLASHCTL_BYTEN, 0xffffffff);
 	target_mem32_write32(target, MSPM0L_FLASHCTL_CMDCTL, 0);
 	target_mem32_write32(target, MSPM0L_FLASHCTL_CMDADDR, addr);
 	target_mem32_write32(target, MSPM0L_FLASHCTL_CMDEXEC, 1);
 
 	uint32_t statcmd = mspm0l_flash_wait_done(target);
-	if (!(statcmd & MSPM0L_FLASHCTL_STAT_CMDPASS))
+	if (statcmd == (uint32_t)-1 || !(statcmd & MSPM0L_FLASHCTL_STAT_CMDPASS))
 		DEBUG_TARGET("%s: Failed to erase flash, status %08" PRIx32 " addr %08" PRIx32 " length %08" PRIx32 "\n",
 			__func__, statcmd, addr, (uint32_t)length);
 
 	return statcmd & MSPM0L_FLASHCTL_STAT_CMDPASS;
 }
 
-static bool mspm0l_flash_write(
-	target_flash_s *const target_flash, target_addr_t dest, const void *const src, const size_t length)
+static bool mspm0l_flash_write( target_flash_s *const target_flash, target_addr_t dest,
+	const void *const src, const size_t length __attribute__((unused)) )
 {
 	assert(length == target_flash->writesize);
 
@@ -343,9 +312,10 @@ static bool mspm0l_flash_write(
 	target_mem32_write32(target, MSPM0L_FLASHCTL_CMDEXEC, 1);
 
 	uint32_t statcmd = mspm0l_flash_wait_done(target);
-	if (!(statcmd & MSPM0L_FLASHCTL_STAT_CMDPASS))
+	if (statcmd == (uint32_t)-1 || !(statcmd & MSPM0L_FLASHCTL_STAT_CMDPASS))
 		DEBUG_TARGET("%s: Failed to write to flash, status %08" PRIx32 " addr %08" PRIx32 " length %08" PRIx32 "\n",
 			__func__, statcmd, dest, (uint32_t)length);
+
 	return statcmd & MSPM0L_FLASHCTL_STAT_CMDPASS;
 }
 
@@ -358,6 +328,9 @@ static bool mspm0l_mass_erase(target_s *const target)
 	for (mspm0l_flash_s* flash = (mspm0l_flash_s*)target->flash; flash && success;
 		flash = (mspm0l_flash_s*)flash->target_flash.next)
 	{
+		DEBUG_INFO("%s: mass erase flash bank starting %08" PRIx32 " length %08" PRIx32 "\n",
+			__func__, flash->target_flash.start, (uint32_t)flash->target_flash.length);
+
 		mspm0l_flash_unprotect(&flash->target_flash);
 		target_mem32_write32(target, MSPM0L_FLASHCTL_CMDTYPE, MSPM0L_FLASH_CMDTYPE_SZ_BANK | MSPM0L_FLASH_CMDTYPE_ERASE);
 		target_mem32_write32(target, MSPM0L_FLASHCTL_CMDCTL, 0);
@@ -372,7 +345,7 @@ static bool mspm0l_mass_erase(target_s *const target)
 			DEBUG_TARGET("%s: Failed to mass erase flash, status %08" PRIx32 " start %08" PRIx32 " length %08" PRIx32 "\n",
 				__func__, statcmd, flash->target_flash.start, (uint32_t)flash->target_flash.length);
 
-		success &= (statcmd & MSPM0L_FLASHCTL_STAT_CMDPASS);
+		success &= (statcmd & MSPM0L_FLASHCTL_STAT_CMDPASS) == MSPM0L_FLASHCTL_STAT_CMDPASS;
 	}
 
 	return success;
