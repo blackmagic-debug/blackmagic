@@ -104,7 +104,7 @@ void platform_init(void)
 		gpio_set(GPIOA, GPIO15);
 	blackmagic_usb_init();
 
-#ifdef SWIM_AS_UART
+#ifdef SWIM_NRST_AS_UART
 	gpio_primary_remap(AFIO_MAPR_SWJ_CFG_FULL_SWJ, AFIO_MAPR_USART1_REMAP);
 #endif
 

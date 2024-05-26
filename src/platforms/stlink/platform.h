@@ -58,10 +58,14 @@ extern bool debug_bmp;
 #define SWDIO_IN_PIN  GPIO12
 #endif
 
-#define NRST_PORT      GPIOB
-#define NRST_PIN_V1    GPIO1
-#define NRST_PIN_V2    GPIO0
+#define NRST_PORT   GPIOB
+#define NRST_PIN_V1 GPIO1
+#define NRST_PIN_V2 GPIO0
+#ifdef SWIM_NRST_AS_UART
+#define NRST_PIN_CLONE GPIO0
+#else
 #define NRST_PIN_CLONE GPIO6
+#endif
 
 #ifdef BLUEPILL
 #define LED_PORT GPIOC
@@ -72,7 +76,7 @@ extern bool debug_bmp;
 #define LED_PORT_UART GPIOA
 #define LED_UART      GPIO9
 
-#ifndef SWIM_AS_UART
+#ifndef SWIM_NRST_AS_UART
 #define PLATFORM_HAS_TRACESWO 1
 #endif
 
@@ -131,7 +135,7 @@ extern bool debug_bmp;
 #define IRQ_PRI_USB_VBUS     (14U << 4U)
 #define IRQ_PRI_SWO_DMA      (0U << 4U)
 
-#ifdef SWIM_AS_UART
+#ifdef SWIM_NRST_AS_UART
 #define USBUSART               USART1
 #define USBUSART_CR1           USART1_CR1
 #define USBUSART_DR            USART1_DR

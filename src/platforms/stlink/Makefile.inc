@@ -26,7 +26,12 @@ LDFLAGS += --specs=nosys.specs
 endif
 
 ifeq ($(SWIM_AS_UART), 1)
-CFLAGS += -DSWIM_AS_UART=1
+SWIM_NRST_AS_UART=1
+$(warning Deprecation: SWIM_AS_UART has been renamed to SWIM_NRST_AS_UART; it might be ignored in the future)
+endif
+
+ifeq ($(SWIM_NRST_AS_UART), 1)
+CFLAGS += -DSWIM_NRST_AS_UART=1
 else
 SRC += traceswoasync.c
 endif

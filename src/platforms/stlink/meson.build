@@ -67,10 +67,10 @@ endif
 
 probe_stlink_dependencies = [platform_common, platform_stm32f1]
 
-stlink_swim_as_uart = get_option('stlink_swim_as_uart')
+stlink_swim_nrst_as_uart = get_option('stlink_swim_nrst_as_uart')
 
-if probe == 'stlink' and stlink_swim_as_uart
-	probe_stlink_args += ['-DSWIM_AS_UART=1']
+if probe == 'stlink' and stlink_swim_nrst_as_uart
+	probe_stlink_args += ['-DSWIM_NRST_AS_UART=1']
 else
 	probe_stlink_dependencies += fixme_platform_stm32_traceswoasync
 endif
@@ -97,7 +97,7 @@ summary(
 		'Platform': 'STM32F1',
 		'Bootloader': bmd_bootloader ? 'Black Magic Debug Bootloader' : 'OEM ST Bootloader',
 		'Load Address': probe_stlink_load_address,
-		'SWIM as UART': probe == 'stlink' and stlink_swim_as_uart,
+		'SWIM as UART': probe == 'stlink' and stlink_swim_nrst_as_uart,
 	},
 	bool_yn: true,
 	section: 'Probe',
