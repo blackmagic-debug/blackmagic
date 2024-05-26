@@ -6,8 +6,8 @@ CFLAGS += -Istm32/include -mcpu=cortex-m0 -mthumb \
 	-DSTM32F0 -I../deps/libopencm3/include \
 	-DDFU_SERIAL_LENGTH=13 -Iplatforms/common/stm32
 
-LDFLAGS = --specs=nano.specs -lopencm3_stm32f0 \
-	-Wl,-T,platforms/f072/stm32f07xzb.ld \
+LDFLAGS = -lopencm3_stm32f0 -Lplatforms/f072 \
+	-Tstm32f07xzb.ld --specs=nano.specs \
 	-nostartfiles -lc -lnosys -Wl,-Map=mapfile -mthumb \
 	-mcpu=cortex-m0 -Wl,-gc-sections -L../deps/libopencm3/lib
 

@@ -6,8 +6,8 @@ OBJCOPY = $(CROSS_COMPILE)objcopy
 OPT_FLAGS = -Os
 CFLAGS += -mcpu=cortex-m3 -mthumb -DSTM32F1 -I../deps/libopencm3/include \
 	-I platforms/common/stm32
-LDFLAGS_BOOT := $(LDFLAGS) --specs=nano.specs -lopencm3_stm32f1 \
-	-Wl,-T,platforms/stlink/stlink.ld -nostartfiles -lc \
+LDFLAGS_BOOT := $(LDFLAGS) -lopencm3_stm32f1 -Lplatforms/stlink \
+	-Tstlink.ld --specs=nano.specs -nostartfiles -lc \
 	-Wl,-Map=mapfile -mthumb -mcpu=cortex-m3 -Wl,-gc-sections \
 	-L../deps/libopencm3/lib
 ifeq ($(ST_BOOTLOADER), 1)

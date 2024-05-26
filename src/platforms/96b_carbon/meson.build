@@ -42,7 +42,6 @@ probe_96b_carbon_args = [
 probe_96b_carbon_link_args = [
 	'-L@0@'.format(meson.current_source_dir()),
 	'-T@0@'.format('96b_carbon.ld'),
-	'-Wl,--defsym,_stack=0x20006000',
 ]
 
 probe_host = declare_dependency(

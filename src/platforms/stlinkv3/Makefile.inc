@@ -7,8 +7,8 @@ CFLAGS += -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard \
 	-DSTM32F7 -DDFU_SERIAL_LENGTH=25 -I../deps/libopencm3/include \
 	-I platforms/common/stm32
 LDFLAGS_BOOT := $(LDFLAGS) -mfpu=fpv5-sp-d16 -mfloat-abi=hard \
-	--specs=nano.specs -lopencm3_stm32f7 \
-	-Wl,-T,platforms/stlinkv3/stlinkv3.ld -nostartfiles -lc \
+	--specs=nano.specs -lopencm3_stm32f7 -Lplatforms/stlinkv3 \
+	-Tstlinkv3.ld -nostartfiles -lc \
 	-Wl,-Map=mapfile -mthumb -mcpu=cortex-m7 -Wl,-gc-sections \
 	-L../deps/libopencm3/lib
 

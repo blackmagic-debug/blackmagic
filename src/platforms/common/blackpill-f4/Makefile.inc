@@ -15,17 +15,18 @@ CFLAGS +=                           \
 	-Iplatforms/common/stm32        \
 	-Iplatforms/common/blackpill-f4
 
-LDFLAGS_BOOT :=              \
-	-lopencm3_stm32f4       \
-	-Wl,-T,$(LINKER_SCRIPT) \
-	-nostartfiles           \
-	-lc                     \
-	-Wl,-Map=mapfile        \
-	-mthumb                 \
-	-mcpu=cortex-m4         \
-	-Wl,-gc-sections        \
-	-mfloat-abi=hard        \
-	-mfpu=fpv4-sp-d16       \
+LDFLAGS_BOOT :=                     \
+	-lopencm3_stm32f4               \
+	-Lplatforms/common/blackpill-f4 \
+	-T$(LINKER_SCRIPT)              \
+	-nostartfiles                   \
+	-lc                             \
+	-Wl,-Map=mapfile                \
+	-mthumb                         \
+	-mcpu=cortex-m4                 \
+	-Wl,-gc-sections                \
+	-mfloat-abi=hard                \
+	-mfpu=fpv4-sp-d16               \
 	-L../deps/libopencm3/lib
 
 ifeq ($(BMP_BOOTLOADER), 1)
