@@ -12,9 +12,15 @@ Running the BMP firmware on ST-Link v2 and ST-Link v2-1 provides:
 
 For all commands below, unplug all other BMP/ST-Link beside the target(*1)
 
-If your adaptor offers SWIM pins on the connector (many of clones of the official adaptors do this)
-then they often don't provide a UART interface. In this case, build the firmware with
-`SWIM_AS_UART=1` to repurpose the pins as the UART interface provided to the host over USB.
+This build provides a UART interface over USB to the host.
+By default, it's USART2 with pins PA2 and PA3 used as TX and RX.
+Many clones of the official adaptors provide SWIM pins on the connector and don't provide a UART interface. 
+In this case, the firmware can be built with `SWIM_NRST_AS_UART=1` flag to repurpose the SWIM pins as the UART.
+In particular, USART1 will be provided to the host and pins PB6 and PB7 will be used as TX and RX. 
+
+Note: on some clones PB6 is used as nRST pin, so with `SWIM_NRST_AS_UART=1` the UART will take up both SWIM (PB7) and RST (PB6) pins.
+In this case nRST function is moved to PB0 pin and, if this pin is not on the connector, reset functionality will be lost.
+On other devices where nRST pin is PB0, reset feature will remain functional.
 
 Note: on some clones, SWIM is strongly pulled up by a 680 Ohm resistor.
 
