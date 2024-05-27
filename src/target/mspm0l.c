@@ -153,7 +153,7 @@ static void mspm0l_add_flash(
 {
 	mspm0l_flash_s *const flash = calloc(1, sizeof(*flash));
 	if (flash == NULL) {
-		DEBUG_WARN("calloc: failed in %s\n", __func__);
+		DEBUG_WARN("%s: calloc failed for %" PRIu32 " bytes\n", __func__, (uint32_t)length);
 		return;
 	}
 
@@ -233,11 +233,11 @@ static bool mspm0l_dump_bcr_config(target_s *const target, const int argc, const
 }
 
 
-/* Wait for flash command to finish and return the status word. -1 if timout */
+/* Wait for flash command to finish and return the status word or -1 if timout */
 static uint32_t mspm0l_flash_wait_done(target_s *const target)
 {
 	platform_timeout_s timeout;
-	platform_timeout_set(&timeout, 2000);
+	platform_timeout_set(&timeout, 500);
 
 	uint32_t statcmd;
 	while (!((statcmd = target_mem32_read32(target, MSPM0L_FLASHCTL_STATCMD)) & MSPM0L_FLASHCTL_STAT_DONE)) {
@@ -258,14 +258,17 @@ static void mspm0l_flash_unprotect(target_flash_s *const target_flash)
 static void mspm0l_flash_unprotect_sector(target_flash_s *const target_flash, const target_addr_t addr)
 {
 	unsigned sector = (addr - target_flash->start) / MSPM0L_FLASH_SECTOR_SZ;
+
 	if (sector < 32) {
 		uint32_t mask = ~(1u << sector);
 		target_mem32_write32(target_flash->t, MSPM0L_FLASHCTL_CMDWEPROTA, mask);
 	} else if (sector < 256) {
-		uint32_t mask = ~(1u << (sector / 8));
+		/* The datasheet provides conflicting information and actually bit0 seems to correspond
+			to 8k starting after the first 32k. The first 4 bits of PROTB are NOT ignored. */
+		uint32_t mask = ~(1u << ((sector-32) >> 3));
 		target_mem32_write32(target_flash->t, MSPM0L_FLASHCTL_CMDWEPROTB, mask);
 	} else {
-		uint32_t mask = ~(1u << ((sector - 256) / 8));
+		uint32_t mask = ~(1u << ((sector - 256) >> 3));
 		target_mem32_write32(target_flash->t, MSPM0L_FLASHCTL_CMDWEPROTC, mask);
 	}
 }
@@ -277,7 +280,7 @@ static bool mspm0l_flash_erase(target_flash_s *const target_flash, const target_
 
 	target_s *const target = target_flash->t;
 
-	DEBUG_INFO("%s: erasing flash addr %08" PRIx32 " length %08" PRIx32"\n",
+	DEBUG_INFO("%s: Erasing flash addr %08" PRIx32 " length %08" PRIx32"\n",
 		__func__, addr, (uint32_t)length);
 
 	mspm0l_flash_unprotect_sector(target_flash, addr);
@@ -328,7 +331,7 @@ static bool mspm0l_mass_erase(target_s *const target)
 	for (mspm0l_flash_s* flash = (mspm0l_flash_s*)target->flash; flash && success;
 		flash = (mspm0l_flash_s*)flash->target_flash.next)
 	{
-		DEBUG_INFO("%s: mass erase flash bank starting %08" PRIx32 " length %08" PRIx32 "\n",
+		DEBUG_INFO("%s: Mass erase flash bank starting %08" PRIx32 " length %08" PRIx32 "\n",
 			__func__, flash->target_flash.start, (uint32_t)flash->target_flash.length);
 
 		mspm0l_flash_unprotect(&flash->target_flash);
