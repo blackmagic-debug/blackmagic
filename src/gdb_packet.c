@@ -349,9 +349,12 @@ void gdb_out(const char *const buf)
 
 void gdb_voutf(const char *const fmt, va_list ap)
 {
-	char *buf;
-	if (vasprintf(&buf, fmt, ap) < 0)
+	char *buf = NULL;
+	if (vasprintf(&buf, fmt, ap) < 0) {
+		/* Heap exhaustion. Report with puts() elsewhere. */
+		DEBUG_ERROR("gdb_voutf: vasprintf failed\n");
 		return;
+	}
 
 	gdb_out(buf);
 	free(buf);
