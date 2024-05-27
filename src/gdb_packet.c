@@ -325,13 +325,17 @@ void gdb_put_notification(const char *const packet, const size_t size)
 void gdb_putpacket_f(const char *const fmt, ...)
 {
 	va_list ap;
-	char *buf;
+	char *buf = NULL;
 
 	va_start(ap, fmt);
 	const int size = vasprintf(&buf, fmt, ap);
-	if (size > 0)
+	if (size < 0) {
+		/* Heap exhaustion. Report with puts() elsewhere. */
+		DEBUG_ERROR("gdb_putpacket_f: vasprintf failed\n");
+	} else {
 		gdb_putpacket(buf, size);
-	free(buf);
+		free(buf);
+	}
 	va_end(ap);
 }
 
