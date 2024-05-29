@@ -27,6 +27,7 @@
 #include "timing.h"
 #include "timing_stm32.h"
 
+#define TRACESWO_PROTOCOL 1U /* 1 = Manchester, 2 = NRZ / async */
 #define PLATFORM_HAS_TRACESWO
 
 #if ENABLE_DEBUG == 1
@@ -273,10 +274,15 @@ extern bool debug_bmp;
 #define IRQ_PRI_USBUSART_DMA (2U << 4U)
 #define IRQ_PRI_TRACE        (0U << 4U)
 
-#define TRACE_TIM          TIM3
-#define TRACE_TIM_CLK_EN() rcc_periph_clock_enable(RCC_TIM3)
-#define TRACE_IRQ          NVIC_TIM3_IRQ
-#define TRACE_ISR(x)       tim3_isr(x)
+#if (TRACESWO_PROTOCOL == 1)
+/* Use TIM4 Input 2 (from PB7/TDO) or Input 1 (from PB6/TDO)*/
+#define TRACE_TIM          TIM4
+#define TRACE_TIM_CLK_EN() rcc_periph_clock_enable(RCC_TIM4)
+#define TRACE_IRQ          NVIC_TIM4_IRQ
+#define TRACE_ISR(x)       tim4_isr(x)
+#define TRACE_IC_IN        PINOUT_SWITCH(TIM_IC_IN_TI2, TIM_IC_IN_TI1)
+#define TRACE_TRIG_IN      PINOUT_SWITCH(TIM_SMCR_TS_TI2FP2, TIM_SMCR_TS_TI1FP1)
+#endif
 
 #define SET_RUN_STATE(state)      \
 	{                             \
