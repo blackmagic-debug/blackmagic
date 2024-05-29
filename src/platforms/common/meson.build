@@ -37,6 +37,7 @@ platform_common_sources = files(
 	'usb.c',
 	'usb_dfu_stub.c',
 	'usb_serial.c',
+	'syscalls.c',
 )
 
 platform_common = declare_dependency(

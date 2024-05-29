@@ -3,7 +3,7 @@
  *
  * Copyright (C) 2011 Black Sphere Technologies Ltd.
  * Written by Gareth McMullin <gareth@blacksphere.co.nz>
- * Copyright (C) 2022 1BitSquared <info@1bitsquared.com>
+ * Copyright (C) 2022-2024 1BitSquared <info@1bitsquared.com>
  * Written by Rachel Mant <git@dragonmux.network>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -20,7 +20,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* This file implements a the USB Communications Device Class - Abstract
+/*
+ * This file implements a the USB Communications Device Class - Abstract
  * Control Model (CDC-ACM) as defined in CDC PSTN subclass 1.2.
  * A Device Firmware Upgrade (DFU 1.1) class interface is provided for
  * field firmware upgrade.
@@ -40,12 +41,6 @@
  *
  */
 
-#if ENABLE_DEBUG != 1
-#include <sys/stat.h>
-#include <string.h>
-
-typedef struct stat stat_s;
-#endif
 #include "general.h"
 #include "platform.h"
 #include "gdb_if.h"
@@ -57,7 +52,6 @@ typedef struct stat stat_s;
 #include "rtt.h"
 #include "rtt_if.h"
 #include "usb_types.h"
-#include <errno.h>
 
 #include <libopencm3/cm3/cortex.h>
 #include <libopencm3/cm3/nvic.h>
@@ -91,10 +85,6 @@ static char debug_serial_debug_buffer[AUX_UART_BUFFER_SIZE];
 static uint8_t debug_serial_debug_write_index;
 static uint8_t debug_serial_debug_read_index;
 #endif
-
-extern uint8_t heap_start;
-extern uint8_t heap_end;
-static uint8_t *heap_current = NULL;
 
 static usbd_request_return_codes_e gdb_serial_control_request(usbd_device *dev, usb_setup_data_s *req, uint8_t **buf,
 	uint16_t *const len, void (**complete)(usbd_device *dev, usb_setup_data_s *req))
@@ -344,8 +334,7 @@ static void debug_serial_receive_callback(usbd_device *dev, uint8_t ep)
 #endif
 }
 
-#if ENABLE_DEBUG == 1
-#ifdef PLATFORM_HAS_DEBUG
+#if ENABLE_DEBUG == 1 && defined(PLATFORM_HAS_DEBUG)
 static void debug_serial_append_char(const char c)
 {
 	debug_serial_debug_buffer[debug_serial_debug_write_index] = c;
@@ -353,7 +342,7 @@ static void debug_serial_append_char(const char c)
 	debug_serial_debug_write_index %= AUX_UART_BUFFER_SIZE;
 }
 
-static size_t debug_serial_debug_write(const char *buf, const size_t len)
+size_t debug_serial_debug_write(const char *buf, const size_t len)
 {
 	if (nvic_get_active_irq(USB_IRQ) || nvic_get_active_irq(USBUSART_IRQ) || nvic_get_active_irq(USBUSART_DMA_RX_IRQ))
 		return 0;
@@ -377,160 +366,3 @@ static size_t debug_serial_debug_write(const char *buf, const size_t len)
 	return offset;
 }
 #endif
-
-/*
- * newlib defines _write as a weak link'd function for user code to override.
- *
- * This function forms the root of the implementation of a variety of functions
- * that can write to stdout/stderr, including printf().
- *
- * The result of this function is the number of bytes written.
- */
-/* NOLINTNEXTLINE(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp) */
-__attribute__((used)) int _write(const int file, const void *const ptr, const size_t len)
-{
-	(void)file;
-#ifdef PLATFORM_HAS_DEBUG
-	if (debug_bmp)
-		return debug_serial_debug_write(ptr, len);
-#else
-	(void)ptr;
-#endif
-	return len;
-}
-
-/*
- * newlib defines isatty as a weak link'd function for user code to override.
- *
- * The result of this function is always 'true'.
- */
-__attribute__((used)) int isatty(const int file)
-{
-	(void)file;
-	return true;
-}
-
-#define RDI_SYS_OPEN 0x01U
-
-typedef struct ex_frame {
-	uint32_t r0;
-	const uint32_t *params;
-	uint32_t r2;
-	uint32_t r3;
-	uint32_t r12;
-	uintptr_t lr;
-	uintptr_t return_address;
-} ex_frame_s;
-
-/*
- * This implements the other half of the newlib syscall puzzle.
- * When newlib is built for ARM, various calls that do file IO
- * such as printf end up calling [_swiwrite](https://github.com/mirror/newlib-cygwin/blob/master/newlib/libc/sys/arm/syscalls.c#L317)
- * and other similar low-level implementation functions. These
- * generate `swi` instructions for the "RDI Monitor" and that lands us.. here.
- *
- * The RDI calling convention sticks the file number in r0, the buffer pointer in r1, and length in r2.
- * ARMv7-M's SWI (SVC) instruction then takes all that and maps it into an exception frame on the stack.
- */
-void debug_monitor_handler(void)
-{
-	ex_frame_s *frame;
-	__asm__("mov %[frame], sp" : [frame] "=r"(frame));
-
-	/* Make sure to return to the instruction after the SWI/BKPT */
-	frame->return_address += 2U;
-
-	switch (frame->r0) {
-	case RDI_SYS_OPEN:
-		frame->r0 = 1;
-		break;
-	default:
-		frame->r0 = UINT32_MAX;
-	}
-	__asm__("bx lr");
-}
-#else
-/* This defines stubs for the newlib fake file IO layer for compatibility with GCC 12 `-specs=nosys.specs` */
-
-/* NOLINTNEXTLINE(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp) */
-__attribute__((used)) int _write(const int file, const void *const buffer, const size_t length)
-{
-	(void)file;
-	(void)buffer;
-	return length;
-}
-
-/* NOLINTNEXTLINE(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp) */
-__attribute__((used)) int _read(const int file, void *const buffer, const size_t length)
-{
-	(void)file;
-	(void)buffer;
-	return length;
-}
-
-/* NOLINTNEXTLINE(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp) */
-__attribute__((used)) off_t _lseek(const int file, const off_t offset, const int direction)
-{
-	(void)file;
-	(void)offset;
-	(void)direction;
-	return 0;
-}
-
-/* NOLINTNEXTLINE(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp) */
-__attribute__((used)) int _fstat(const int file, stat_s *stats)
-{
-	(void)file;
-	memset(stats, 0, sizeof(*stats));
-	return 0;
-}
-
-/* NOLINTNEXTLINE(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp) */
-__attribute__((used)) int _isatty(const int file)
-{
-	(void)file;
-	return true;
-}
-
-/* NOLINTNEXTLINE(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp) */
-__attribute__((used)) int _close(const int file)
-{
-	(void)file;
-	return 0;
-}
-
-/* NOLINTNEXTLINE(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp) */
-__attribute__((used)) pid_t _getpid(void)
-{
-	return 1;
-}
-
-/* NOLINTNEXTLINE(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp) */
-__attribute__((used)) int _kill(const int pid, const int signal)
-{
-	(void)pid;
-	(void)signal;
-	return 0;
-}
-#endif
-
-__attribute__((used)) void *_sbrk(const ptrdiff_t alloc_size)
-{
-	/* If we've not yet made any heap allocations, set the heap pointer up */
-	if (heap_current == NULL)
-		heap_current = &heap_start;
-
-	/* Check if this allocation would exhaust the heap */
-	if (heap_current + alloc_size > &heap_end) {
-		errno = ENOMEM;
-		return (void *)-1;
-	}
-
-	/*
-	 * Everything is ok, so make a copy of the heap pointer to return then add the
-	 * allocation to the heap pointer
-	 */
-	void *const result = heap_current;
-	heap_current += alloc_size;
-	return result;
-}

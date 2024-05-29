@@ -32,4 +32,8 @@ bool gdb_serial_get_dtr(void);
 void debug_serial_run(void);
 uint32_t debug_serial_fifo_send(const char *fifo, uint32_t fifo_begin, uint32_t fifo_end);
 
+#if ENABLE_DEBUG == 1 && defined(PLATFORM_HAS_DEBUG)
+size_t debug_serial_debug_write(const char *buf, const size_t len);
+#endif
+
 #endif /* PLATFORMS_COMMON_USB_SERIAL_H */
