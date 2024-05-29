@@ -1096,9 +1096,7 @@ static void cortexar_mem_read(target_s *const target, void *const dest, const ta
 	cortexar_mem_handle_fault(target, __func__);
 
 	DEBUG_PROTO("%s: Reading %zu bytes @0x%" PRIx64 ":", __func__, len, src);
-#ifndef DEBUG_PROTO_IS_NOOP
 	const uint8_t *const data = (const uint8_t *)dest;
-#endif
 	for (size_t offset = 0; offset < len; ++offset) {
 		if (offset == 16U)
 			break;
@@ -1191,9 +1189,7 @@ static void cortexar_mem_write(
 {
 	cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
 	DEBUG_PROTO("%s: Writing %zu bytes @0x%" PRIx64 ":", __func__, len, dest);
-#ifndef DEBUG_PROTO_IS_NOOP
 	const uint8_t *const data = (const uint8_t *)src;
-#endif
 	for (size_t offset = 0; offset < len; ++offset) {
 		if (offset == 16U)
 			break;
