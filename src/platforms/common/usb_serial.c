@@ -57,6 +57,7 @@ typedef struct stat stat_s;
 #include "rtt.h"
 #include "rtt_if.h"
 #include "usb_types.h"
+#include <errno.h>
 
 #include <libopencm3/cm3/cortex.h>
 #include <libopencm3/cm3/nvic.h>
@@ -90,6 +91,10 @@ static char debug_serial_debug_buffer[AUX_UART_BUFFER_SIZE];
 static uint8_t debug_serial_debug_write_index;
 static uint8_t debug_serial_debug_read_index;
 #endif
+
+extern uint8_t heap_start;
+extern uint8_t heap_end;
+static uint8_t *heap_current = NULL;
 
 static usbd_request_return_codes_e gdb_serial_control_request(usbd_device *dev, usb_setup_data_s *req, uint8_t **buf,
 	uint16_t *const len, void (**complete)(usbd_device *dev, usb_setup_data_s *req))
@@ -508,3 +513,24 @@ __attribute__((used)) int _kill(const int pid, const int signal)
 	return 0;
 }
 #endif
+
+__attribute__((used)) void *_sbrk(const ptrdiff_t alloc_size)
+{
+	/* If we've not yet made any heap allocations, set the heap pointer up */
+	if (heap_current == NULL)
+		heap_current = &heap_start;
+
+	/* Check if this allocation would exhaust the heap */
+	if (heap_current + alloc_size > &heap_end) {
+		errno = ENOMEM;
+		return (void *)-1;
+	}
+
+	/*
+	 * Everything is ok, so make a copy of the heap pointer to return then add the
+	 * allocation to the heap pointer
+	 */
+	void *const result = heap_current;
+	heap_current += alloc_size;
+	return result;
+}

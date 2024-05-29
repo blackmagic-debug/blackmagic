@@ -102,9 +102,10 @@ SECTIONS
 		. = ALIGN(4);
 		_ebss = .;
 		. = ALIGN(4);
-		end = .;
-		PROVIDE(_end = .);
 	} >ram
+
+	PROVIDE(heap_start = .);
+	PROVIDE(heap_end = ORIGIN(ram) + LENGTH(ram));
 
 	/*
 	 * The .eh_frame section appears to be used for C++ exception handling.
