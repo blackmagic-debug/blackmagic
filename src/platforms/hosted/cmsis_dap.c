@@ -265,12 +265,19 @@ static bool dap_init_bulk(void)
 bool dap_init(void)
 {
 	/* Initialise the adaptor via a suitable protocol */
-	if (bmda_probe_info.in_ep && bmda_probe_info.out_ep) {
+	if (bmda_probe_info.in_ep && bmda_probe_info.out_ep)
 		type = CMSIS_TYPE_BULK;
-		if (!dap_init_bulk())
-			return false;
-	} else {
+	else
 		type = CMSIS_TYPE_HID;
+
+	/* Windows hosts may not have the winusb driver associated with v2, handle that by degrading to v1 */
+	if (type == CMSIS_TYPE_BULK) {
+		if (!dap_init_bulk()) {
+			DEBUG_WARN("Could not setup a CMSIS-DAP v2 device in Bulk mode (no drivers?), retrying HID mode\n");
+			type = CMSIS_TYPE_HID;
+		}
+	}
+	if (type == CMSIS_TYPE_HID) {
 		if (!dap_init_hid())
 			return false;
 	}
