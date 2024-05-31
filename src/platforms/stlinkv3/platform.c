@@ -230,6 +230,19 @@ void platform_init(void)
 	gpio_mode_setup(LED_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, LED_PIN);
 	gpio_set_output_options(LED_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_2MHZ, LED_PIN);
 
+	/* Switch SWO UART clocksource from Pclk (54M) to Hclk (216M) */
+	const uint8_t uart5_clksel = RCC_DCKCFGR2_UARTxSEL_SYSCLK;
+	uint32_t regval = RCC_DCKCFGR2;
+	regval &= ~(RCC_DCKCFGR2_UARTxSEL_MASK << RCC_DCKCFGR2_UART5SEL_SHIFT);
+	regval |= (uart5_clksel & RCC_DCKCFGR2_UARTxSEL_MASK) << RCC_DCKCFGR2_UART5SEL_SHIFT;
+	RCC_DCKCFGR2 = regval;
+	/* Switch USB UART clocksource from Pclk (108M) to Hclk (216M) */
+	const uint8_t usart6_clksel = RCC_DCKCFGR2_UARTxSEL_SYSCLK;
+	regval = RCC_DCKCFGR2;
+	regval &= ~(RCC_DCKCFGR2_UARTxSEL_MASK << RCC_DCKCFGR2_USART6SEL_SHIFT);
+	regval |= (usart6_clksel & RCC_DCKCFGR2_UARTxSEL_MASK) << RCC_DCKCFGR2_USART6SEL_SHIFT;
+	RCC_DCKCFGR2 = regval;
+
 	/* Relocate interrupt vector table here */
 	SCB_VTOR = (uintptr_t)&vector_table;
 
