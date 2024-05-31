@@ -31,7 +31,7 @@ typedef struct stat stat_s;
 
 extern uint8_t heap_start;
 extern uint8_t heap_end;
-static uint8_t *heap_current = NULL;
+static uint8_t *heap_current = &heap_start;
 
 #if ENABLE_DEBUG == 1
 /*
@@ -172,10 +172,6 @@ __attribute__((used)) int _kill(const int pid, const int signal)
 
 __attribute__((used)) void *_sbrk(const ptrdiff_t alloc_size)
 {
-	/* If we've not yet made any heap allocations, set the heap pointer up */
-	if (heap_current == NULL)
-		heap_current = &heap_start;
-
 	/* Check if this allocation would exhaust the heap */
 	if (heap_current + alloc_size > &heap_end) {
 		errno = ENOMEM;
