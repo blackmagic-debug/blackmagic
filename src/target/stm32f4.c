@@ -106,17 +106,19 @@ static bool stm32f4_mass_erase(target_s *target);
 #define F72X_UID_BASE  0x1ff07a10U
 #define F72X_FLASHSIZE 0x1ff07a22U
 
-#define STM32F4_DBGMCU_BASE   0xe0042000U
-#define STM32F4_DBGMCU_IDCODE (STM32F4_DBGMCU_BASE + 0U)
-#define STM32F4_DBGMCU_CTRL   (STM32F4_DBGMCU_BASE + 4U)
-#define DBG_SLEEP             (1U << 0U)
+#define STM32F4_DBGMCU_BASE       0xe0042000U
+#define STM32F4_DBGMCU_IDCODE     (STM32F4_DBGMCU_BASE + 0x00U)
+#define STM32F4_DBGMCU_CTRL       (STM32F4_DBGMCU_BASE + 0x04U)
+#define STM32F4_DBGMCU_APB1FREEZE (STM32F4_DBGMCU_BASE + 0x08U)
 
 #define AXIM_BASE 0x8000000U
 #define ITCM_BASE 0x0200000U
 
-#define STM32F4_DBGMCU_CTRL_DBG_SLEEP   (0x1U << 0U)
-#define STM32F4_DBGMCU_CTRL_DBG_STOP    (0x1U << 1U)
-#define STM32F4_DBGMCU_CTRL_DBG_STANDBY (0x1U << 2U)
+#define STM32F4_DBGMCU_CTRL_DBG_SLEEP   (1U << 0U)
+#define STM32F4_DBGMCU_CTRL_DBG_STOP    (1U << 1U)
+#define STM32F4_DBGMCU_CTRL_DBG_STANDBY (1U << 2U)
+#define STM32F4_DBGMCU_APB1FREEZE_WWDG  (1U << 11U)
+#define STM32F4_DBGMCU_APB1FREEZE_IWDG  (1U << 12U)
 
 typedef struct stm32f4_flash {
 	target_flash_s flash;
@@ -399,6 +401,9 @@ static bool stm32f4_attach(target_s *target)
 	target_mem32_write32(target, STM32F4_DBGMCU_CTRL,
 		priv_storage->dbgmcu_cr | STM32F4_DBGMCU_CTRL_DBG_SLEEP | STM32F4_DBGMCU_CTRL_DBG_STANDBY |
 			STM32F4_DBGMCU_CTRL_DBG_STOP);
+	/* And make sure the WDTs stay synchronised to the run state of the processor */
+	target_mem32_write32(
+		target, STM32F4_DBGMCU_APB1FREEZE, STM32F4_DBGMCU_APB1FREEZE_WWDG | STM32F4_DBGMCU_APB1FREEZE_IWDG);
 
 	/* Free any previously built memory map */
 	target_mem_map_free(target);
