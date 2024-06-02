@@ -1365,12 +1365,11 @@ static void cortexar_halt_request(target_s *const target)
 static target_halt_reason_e cortexar_halt_poll(target_s *const target, target_addr_t *const watch)
 {
 	volatile uint32_t dscr = 0;
-	volatile exception_s error;
-	TRY_CATCH (error, EXCEPTION_ALL) {
+	TRY (EXCEPTION_ALL) {
 		/* If this times out because the target is in WFI then the target is still running. */
 		dscr = cortex_dbg_read32(target, CORTEXAR_DBG_DSCR);
 	}
-	switch (error.type) {
+	CATCH () {
 	case EXCEPTION_ERROR:
 		/* Things went seriously wrong and there is no recovery from this... */
 		target_list_free();
