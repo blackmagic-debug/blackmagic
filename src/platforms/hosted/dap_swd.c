@@ -170,8 +170,7 @@ static bool dap_swd_seq_in_parity(uint32_t *const result, const size_t clock_cyc
 		data |= sequence.data[offset >> 3U] << offset;
 	*result = data;
 	uint8_t parity = calculate_odd_parity(data);
-	parity ^= sequence.data[4] & 1U;
-	return !parity;
+	return parity == (sequence.data[4] & 1U);
 }
 
 static bool dap_write_reg_no_check(const uint16_t addr, const uint32_t data)

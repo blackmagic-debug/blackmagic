@@ -423,7 +423,7 @@ uint32_t adiv5_swd_raw_access(adiv5_debug_port_s *dp, const uint8_t rnw, const u
 	}
 
 	if (rnw) {
-		if (swd_proc.seq_in_parity(&response, 32U)) { /* Give up on parity error */
+		if (!swd_proc.seq_in_parity(&response, 32U)) { /* Give up on parity error */
 			dp->fault = 1U;
 			DEBUG_ERROR("SWD access resulted in parity error\n");
 			raise_exception(EXCEPTION_ERROR, "SWD parity error");

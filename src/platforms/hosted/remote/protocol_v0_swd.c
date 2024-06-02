@@ -69,7 +69,7 @@ bool remote_v0_swd_seq_in_parity(uint32_t *result, size_t clock_cycles)
 	*result = hex_string_to_num(-1, buffer + 1);
 	DEBUG_PROBE("%s %zu clock_cycles: %08" PRIx32 " %s\n", __func__, clock_cycles, *result,
 		buffer[0] != REMOTE_RESP_OK ? "ERR" : "OK");
-	return buffer[0] != REMOTE_RESP_OK;
+	return buffer[0] == REMOTE_RESP_OK;
 }
 
 void remote_v0_swd_seq_out(uint32_t value, size_t clock_cycles)

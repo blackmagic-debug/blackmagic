@@ -49,7 +49,7 @@ bool swdptap_seq_in_parity(uint32_t *ret, int ticks)
 	if (swdptap_bit_in())
 		parity ^= 1U;
 
-	return parity;
+	return !parity;
 }
 
 void swdptap_seq_out(uint32_t MS, int ticks)

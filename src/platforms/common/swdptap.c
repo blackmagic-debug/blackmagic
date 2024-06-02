@@ -142,7 +142,7 @@ static bool swdptap_seq_in_parity(uint32_t *ret, size_t clock_cycles)
 	*ret = result;
 	/* Terminate the read cycle now */
 	swdptap_turnaround(SWDIO_STATUS_DRIVE);
-	return parity != bit;
+	return parity == bit;
 }
 
 static void swdptap_seq_out_clk_delay(uint32_t tms_states, size_t clock_cycles) __attribute__((optimize(3)));

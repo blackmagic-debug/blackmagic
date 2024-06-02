@@ -142,8 +142,8 @@ static void remote_packet_process_swd(const char *const packet, const size_t pac
 	case REMOTE_IN_PAR: { /* SI = In parity ============================= */
 		const size_t clock_cycles = hex_string_to_num(2, packet + 2);
 		uint32_t result = 0;
-		const bool parity_error = swd_proc.seq_in_parity(&result, clock_cycles);
-		remote_respond(parity_error ? REMOTE_RESP_PARERR : REMOTE_RESP_OK, result);
+		const bool parity_ok = swd_proc.seq_in_parity(&result, clock_cycles);
+		remote_respond(parity_ok ? REMOTE_RESP_OK : REMOTE_RESP_PARERR, result);
 		break;
 	}
 

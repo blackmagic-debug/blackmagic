@@ -252,7 +252,7 @@ static bool ftdi_swd_seq_in_parity_mpsse(uint32_t *const result, const size_t cl
 	parity ^= data_out[4] & 1U;
 	DEBUG_PROBE("%s %zu clock_cycles: %08" PRIx32 " %s\n", __func__, clock_cycles, data, parity ? "ERR" : "OK");
 	*result = data;
-	return parity;
+	return !parity;
 }
 
 static bool ftdi_swd_seq_in_parity_raw(uint32_t *const result, const size_t clock_cycles)
@@ -279,7 +279,7 @@ static bool ftdi_swd_seq_in_parity_raw(uint32_t *const result, const size_t cloc
 	}
 	DEBUG_PROBE("%s %zu clock_cycles: %08" PRIx32 " %s\n", __func__, clock_cycles, data, parity ? "ERR" : "OK");
 	*result = data;
-	return parity;
+	return !parity;
 }
 
 static bool ftdi_swd_seq_in_parity(uint32_t *const result, const size_t clock_cycles)
