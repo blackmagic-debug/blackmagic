@@ -105,14 +105,18 @@ static void zynq7_reset(target_s *const target)
 	/* Spin until the Zynq comes back up */
 	platform_timeout_s reset_timeout;
 	platform_timeout_set(&reset_timeout, 1000U);
-	volatile exception_s error = {.type = EXCEPTION_ERROR};
-	while (error.type == EXCEPTION_ERROR && !platform_timeout_is_expired(&reset_timeout)) {
+	uint32_t type = EXCEPTION_ERROR;
+	const char *message = NULL;
+	while (type == EXCEPTION_ERROR && !platform_timeout_is_expired(&reset_timeout)) {
 		/* Try doing a new read of the core's ID register */
-		TRY_CATCH (error, EXCEPTION_ALL) {
+		TRY (EXCEPTION_ALL) {
 			cortex_dbg_read32(target, CORTEXA_DBG_IDR);
 		}
+		innermost_exception = exception_frame.outer;
+		type = exception_frame.type;
+		message = exception_frame.msg;
 	}
 	/* If that failed, propagate the error */
-	if (error.type == EXCEPTION_ERROR)
-		raise_exception(error.type, error.msg);
+	if (type == EXCEPTION_ERROR)
+		raise_exception(type, message);
 }
