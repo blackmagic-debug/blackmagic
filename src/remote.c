@@ -610,13 +610,14 @@ void remote_packet_process(char *const packet, const size_t packet_length)
 
 	case REMOTE_ADIV5_PACKET: {
 		/* Setup an exception frame to try the ADIv5 operation in */
-		volatile exception_s error = {0};
-		TRY_CATCH (error, EXCEPTION_ALL) {
+		TRY (EXCEPTION_ALL) {
 			remote_packet_process_adiv5(packet, packet_length);
 		}
+		CATCH () {
 		/* Handle any exception we've caught by translating it into a remote protocol response */
-		if (error.type)
-			remote_respond(REMOTE_RESP_ERR, REMOTE_ERROR_EXCEPTION | ((uint64_t)error.type << 8U));
+		default:
+			remote_respond(REMOTE_RESP_ERR, REMOTE_ERROR_EXCEPTION | ((uint64_t)exception_frame.type << 8U));
+		}
 		break;
 	}
 
