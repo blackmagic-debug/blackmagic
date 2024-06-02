@@ -260,20 +260,19 @@ bool cmd_swd_scan(target_s *target, int argc, const char **argv)
 		platform_nrst_set_val(true); /* will be deasserted after attach */
 
 	bool scan_result = false;
-	volatile exception_s e;
-	TRY_CATCH (e, EXCEPTION_ALL) {
+	TRY (EXCEPTION_ALL) {
 #if PC_HOSTED == 1
 		scan_result = bmda_swd_scan(targetid);
 #else
 		scan_result = adiv5_swd_scan(targetid);
 #endif
 	}
-	switch (e.type) {
+	CATCH () {
 	case EXCEPTION_TIMEOUT:
 		gdb_outf("Timeout during scan. Is target stuck in WFI?\n");
 		break;
 	case EXCEPTION_ERROR:
-		gdb_outf("Exception: %s\n", e.msg);
+		gdb_outf("Exception: %s\n", exception_frame.msg);
 		break;
 	}
 
