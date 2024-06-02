@@ -75,6 +75,10 @@ extern exception_s *innermost_exception;
 	if (exception_frame.type)                    \
 		switch (exception_frame.type)
 
+#define RETHROW              \
+	if (innermost_exception) \
+	raise_exception(exception_frame->type, exception_frame->msg)
+
 #define TRY_CATCH(e, type_mask)                   \
 	(e).type = 0;                                 \
 	(e).mask = (type_mask);                       \
