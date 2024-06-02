@@ -80,14 +80,14 @@ int main(void)
 #endif
 
 	while (true) {
-		volatile exception_s e;
-		TRY_CATCH (e, EXCEPTION_ALL) {
+		TRY (EXCEPTION_ALL) {
 			bmp_poll_loop();
 		}
-		if (e.type) {
+		CATCH () {
+		default:
 			gdb_putpacketz("EFF");
 			target_list_free();
-			gdb_outf("Uncaught exception: %s\n", e.msg);
+			gdb_outf("Uncaught exception: %s\n", exception_frame.msg);
 			morse("TARGET LOST.", true);
 		}
 #if PC_HOSTED == 1
