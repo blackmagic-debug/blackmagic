@@ -982,12 +982,11 @@ static target_halt_reason_e cortexm_halt_poll(target_s *target, target_addr_t *w
 	cortexm_priv_s *priv = target->priv;
 
 	volatile uint32_t dhcsr = 0;
-	volatile exception_s e;
-	TRY_CATCH (e, EXCEPTION_ALL) {
+	TRY (EXCEPTION_ALL) {
 		/* If this times out because the target is in WFI then the target is still running. */
 		dhcsr = target_mem32_read32(target, CORTEXM_DHCSR);
 	}
-	switch (e.type) {
+	CATCH () {
 	case EXCEPTION_ERROR:
 		/* Things went seriously wrong and there is no recovery from this... */
 		target_list_free();
