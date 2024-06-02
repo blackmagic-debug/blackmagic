@@ -32,6 +32,7 @@
  */
 
 #include "bmp_remote.h"
+#include "hex_utils.h"
 #include "protocol_v0_defs.h"
 #include "protocol_v0_swd.h"
 
@@ -47,7 +48,7 @@ uint32_t remote_v0_swd_seq_in(size_t clock_cycles)
 		DEBUG_ERROR("%s failed, error %s\n", __func__, length ? buffer + 1 : "short response");
 		exit(-1);
 	}
-	const uint32_t result = remote_hex_string_to_num(-1, buffer + 1);
+	const uint32_t result = hex_string_to_num(-1, buffer + 1);
 	DEBUG_PROBE("%s %zu clock_cycles: %08" PRIx32 "\n", __func__, clock_cycles, result);
 	return result;
 }
@@ -65,7 +66,7 @@ bool remote_v0_swd_seq_in_parity(uint32_t *result, size_t clock_cycles)
 		exit(-1);
 	}
 
-	*result = remote_hex_string_to_num(-1, buffer + 1);
+	*result = hex_string_to_num(-1, buffer + 1);
 	DEBUG_PROBE("%s %zu clock_cycles: %08" PRIx32 " %s\n", __func__, clock_cycles, *result,
 		buffer[0] != REMOTE_RESP_OK ? "ERR" : "OK");
 	return buffer[0] != REMOTE_RESP_OK;

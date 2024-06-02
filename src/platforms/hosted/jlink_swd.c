@@ -34,6 +34,7 @@
 #include "jlink.h"
 #include "jlink_protocol.h"
 #include "buffer_utils.h"
+#include "maths_utils.h"
 #include "cli.h"
 
 /*
@@ -121,7 +122,7 @@ static void jlink_swd_seq_out_parity(const uint32_t tms_states, const size_t clo
 	/* Construct the parity bit */
 	const size_t byte = clock_cycles >> 3U;
 	const uint8_t bit = clock_cycles & 7U;
-	data[byte] |= (__builtin_parity(tms_states) & 1U) << bit;
+	data[byte] |= calculate_odd_parity(tms_states) << bit;
 	/* Attempt the transfer */
 	if (!jlink_transfer_swd(clock_cycles + 1U, JLINK_SWD_OUT, data, NULL)) {
 		/* If things go wrong, report it */
@@ -159,9 +160,9 @@ static bool jlink_swd_seq_in_parity(uint32_t *const result, const size_t clock_c
 	/* Compute the parity and validate it */
 	const size_t byte = clock_cycles >> 3U;
 	const uint8_t bit = clock_cycles & 7U;
-	uint8_t parity = __builtin_parity(data) & 1U;
+	uint8_t parity = calculate_odd_parity(data);
 	parity ^= (data_out[byte] >> bit) & 1U;
-	/* Retrn the result of the calculation */
+	/* Return the result of the calculation */
 	DEBUG_PROBE("%s %zu clock_cycles: %08" PRIx32 " %s\n", __func__, clock_cycles, data, parity ? "ERR" : "OK");
 	*result = data;
 	return !parity;
@@ -183,7 +184,7 @@ static bool jlink_adiv5_raw_write_no_check(const uint16_t addr, const uint32_t d
 	/* Build the response payload buffer */
 	uint8_t response[6] = {0};
 	write_le4(response, 0, data);
-	response[4] = __builtin_popcount(data) & 1U;
+	response[4] = calculate_odd_parity(data);
 	/* Try sending the data to the device */
 	if (!jlink_transfer(33U + 8U, jlink_adiv5_write_request, response, NULL)) {
 		DEBUG_ERROR("jlink_adiv5_raw_write_no_check failed\n");
@@ -213,7 +214,7 @@ static uint32_t jlink_adiv5_raw_read_no_check(const uint16_t addr)
 	/* Extract the data phase and return it if the transaction succeeded */
 	const uint32_t data = read_le4(response, 0);
 	DEBUG_PROBE("jlink_adiv5_raw_read_no_check %04x -> %08" PRIx32 " %s\n", addr, data,
-		__builtin_parity(data) ^ response[4] ? "ERR" : "OK");
+		calculate_odd_parity(data) != response[4] ? "ERR" : "OK");
 	return ack == SWDP_ACK_OK ? data : 0U;
 }
 
@@ -228,7 +229,7 @@ static uint32_t jlink_adiv5_raw_read(adiv5_debug_port_s *const dp)
 	/* Extract the data phase */
 	const uint32_t response = read_le4(result, 0);
 	/* Calculate and do a parity check */
-	uint8_t parity = __builtin_parity(response) & 1U;
+	uint8_t parity = calculate_odd_parity(response);
 	parity ^= result[4] & 1U;
 	/* If that fails, turn it into an error */
 	if (parity) {
@@ -244,7 +245,7 @@ static uint32_t jlink_adiv5_raw_write(const uint32_t request_value)
 	/* Build the response payload buffer */
 	uint8_t request[6] = {0};
 	write_le4(request, 0, request_value);
-	request[4] = __builtin_popcount(request_value) & 1U;
+	request[4] = calculate_odd_parity(request_value);
 	/* Allocate storage for the result */
 	uint8_t result[6] = {0};
 	/* Try sending the data to the device */

@@ -2,7 +2,12 @@
  * This file is part of the Black Magic Debug project.
  *
  * Copyright (C) 2015  Black Sphere Technologies Ltd.
+ * Copyright (C) 2017-2021 Uwe Bonnes <bon@elektron.ikp.physik.tu-darmstadt.de>
+ * Copyright (C) 2022-2024 1BitSquared <info@1bitsquared.com>
  * Written by Gareth McMullin <gareth@blacksphere.co.nz>
+ * Modified by Uwe Bonnes <bon@elektron.ikp.physik.tu-darmstadt.de>
+ * Modified by Rachel Mant <git@dragonmux.network>
+ * Modified by ALTracer <tolstov_den@mail.ru>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,6 +27,8 @@
 #include <libopencm3/stm32/desig.h>
 
 char serial_no[DFU_SERIAL_LENGTH];
+
+static char *utoa_upper(uint32_t value, char *const str, uint8_t base) __attribute__((unused));
 
 void read_serial_number(void)
 {
@@ -43,7 +50,9 @@ void read_serial_number(void)
 #elif defined(STM32L0) || defined(STM32F0) || defined(STM32F3)
 	int offset = 5;
 #endif
-	sprintf(serial_no, "%04X%04X%04X", uid[1] + uid[5], uid[0] + uid[4], uid[offset]);
+	utoa_upper(uid[1] + uid[5], serial_no, 16);
+	utoa_upper(uid[0] + uid[4], serial_no + 4, 16);
+	utoa_upper(uid[offset], serial_no + 8, 16);
 #elif DFU_SERIAL_LENGTH == 25
 	const volatile uint32_t *const unique_id_p = (uint32_t *)DESIG_UNIQUE_ID_BASE;
 	uint32_t unique_id = 0;
@@ -63,4 +72,47 @@ void read_serial_number(void)
 #warning "Unhandled DFU_SERIAL_LENGTH"
 #endif
 	serial_no[DFU_SERIAL_LENGTH - 1] = '\0';
+}
+
+/*
+ * Converts an unsigned integer value into an equivalent base-N ASCII printable representation.
+ * It takes as arguments (in order): the value to convert,
+ * a pointer to a buffer large enough to store the result,
+ * and the base to perform the conversion to, in between 2 and 36 inclusive.
+ * The result of this function is NULL on error (unsupported base),
+ * or a pointer into the input buffer advanced by the amount written,
+ * not including the nul terminator guaranteed by this function.
+ */
+static char *utoa_upper(uint32_t value, char *const str, const uint8_t base)
+{
+	static const char digits[] = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+	static char buf[32] = {0};
+	size_t total = 0;
+
+	/* Check base is supported. */
+	if (base < 2 || base > 36) {
+		str[0] = '\0';
+		return NULL;
+	}
+
+	/* Push up to 32 symbols (base-2 aka binary, worst case) */
+	for (size_t offset = 0; offset < 32; ++offset) {
+		const div_t result = div(value, base);
+		const uint32_t remainder = result.rem;
+		buf[offset] = digits[remainder];
+		if (result.quot == 0) {
+			total = offset;
+			break;
+		}
+		value = result.quot;
+	}
+
+	/* Reverse local buffer into caller buffer */
+	for (size_t i = 0; i <= total; ++i)
+		str[i] = buf[total - i];
+
+	/* Terminate the result just in case */
+	str[++total] = '\0';
+
+	return str + total;
 }

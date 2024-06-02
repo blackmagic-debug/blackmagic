@@ -10,32 +10,30 @@ CFLAGS +=                           \
 	-mfloat-abi=hard                \
 	-mfpu=fpv4-sp-d16               \
 	-DSTM32F4                       \
-	-I../libopencm3/include         \
+	-DDFU_SERIAL_LENGTH=13          \
+	-I../deps/libopencm3/include    \
 	-Iplatforms/common/stm32        \
 	-Iplatforms/common/blackpill-f4
 
-LDFLAGS_BOOT =              \
+LDFLAGS_BOOT :=              \
 	-lopencm3_stm32f4       \
 	-Wl,-T,$(LINKER_SCRIPT) \
 	-nostartfiles           \
 	-lc                     \
-	-lnosys                 \
 	-Wl,-Map=mapfile        \
 	-mthumb                 \
 	-mcpu=cortex-m4         \
 	-Wl,-gc-sections        \
 	-mfloat-abi=hard        \
 	-mfpu=fpv4-sp-d16       \
-	-L../libopencm3/lib
+	-L../deps/libopencm3/lib
 
 ifeq ($(BMP_BOOTLOADER), 1)
 $(info  Load address 0x08004000 for BMPBootloader)
 LDFLAGS = $(LDFLAGS_BOOT) -Wl,-Ttext=0x8004000
 CFLAGS += -DAPP_START=0x08004000 -DBMP_BOOTLOADER
-CFLAGS += -DDFU_SERIAL_LENGTH=9
 else
-LDFLAGS += $(LDFLAGS_BOOT)
-CFLAGS += -DDFU_SERIAL_LENGTH=13
+LDFLAGS = $(LDFLAGS_BOOT)
 endif
 
 ifdef ALTERNATIVE_PINOUT
@@ -44,6 +42,12 @@ endif
 
 ifdef SHIELD
 CFLAGS += -DSHIELD=$(SHIELD)
+endif
+
+ifeq ($(ENABLE_DEBUG), 1)
+LDFLAGS += --specs=rdimon.specs
+else
+LDFLAGS += --specs=nosys.specs
 endif
 
 VPATH +=                          \
@@ -63,7 +67,7 @@ all:	blackmagic.bin
 else
 all:	blackmagic.bin  blackmagic_dfu.bin blackmagic_dfu.hex
 blackmagic_dfu: usbdfu.o dfucore.o dfu_f4.o serialno.o
-	$(CC) $^ -o $@ $(LDFLAGS_BOOT)
+	$(CC) $^ -o $@ $(LDFLAGS_BOOT) --specs=nosys.specs
 
 blackmagic_dfu.bin:    blackmagic_dfu
 	$(OBJCOPY) -O binary $^ $@

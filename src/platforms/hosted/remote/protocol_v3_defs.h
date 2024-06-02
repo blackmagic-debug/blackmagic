@@ -37,11 +37,11 @@
 /* Bring in the v2 protocol definitions and undefine the ADIv5 acceleration protocol */
 #include "protocol_v2_defs.h"
 
-#undef REMOTE_ADIv5_PACKET
+#undef REMOTE_ADIV5_PACKET
 #undef REMOTE_DP_READ
 #undef REMOTE_AP_READ
 #undef REMOTE_AP_WRITE
-#undef REMOTE_ADIv5_RAW_ACCESS
+#undef REMOTE_ADIV5_RAW_ACCESS
 #undef REMOTE_MEM_READ
 #undef REMOTE_MEM_WRITE
 
@@ -50,11 +50,11 @@
 #define REMOTE_ERROR_EXCEPTION 4
 
 /* This version of the protocol completely reimplements the ADIv5 acceleration protocol message IDs */
-#define REMOTE_ADIv5_PACKET     'A'
+#define REMOTE_ADIV5_PACKET     'A'
 #define REMOTE_DP_READ          'd'
 #define REMOTE_AP_READ          'a'
 #define REMOTE_AP_WRITE         'A'
-#define REMOTE_ADIv5_RAW_ACCESS 'R'
+#define REMOTE_ADIV5_RAW_ACCESS 'R'
 #define REMOTE_MEM_READ         'm'
 #define REMOTE_MEM_WRITE        'M'
 

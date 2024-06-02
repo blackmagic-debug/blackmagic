@@ -34,9 +34,8 @@ The order matches that of the SWD pins for easy hook up.
 
 ## How to Build
 
-    cd blackmagic
-    make clean
-    make PROBE_HOST=96b_carbon
+    meson setup build --cross-file=cross-file/96b_carbon.ini
+    meson compile -C build
 
 ## Flashing using dfu-util
 

@@ -27,21 +27,15 @@
  */
 
 #include "general.h"
-#include "gdb_if.h"
-#include "adiv5.h"
 #include "jlink.h"
 #include "jlink_protocol.h"
-#include "exception.h"
 #include "buffer_utils.h"
 
-#include <assert.h>
+#ifndef _MSC_VER
 #include <unistd.h>
-#include <signal.h>
-#include <ctype.h>
 #include <sys/time.h>
+#endif
 #include <libusb.h>
-
-#include "cli.h"
 
 typedef struct jlink {
 	char fw_version[256U];         /* Firmware version string */

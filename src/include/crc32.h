@@ -24,6 +24,6 @@
 #include <stdint.h>
 #include <target.h>
 
-bool generic_crc32(target_s *target, uint32_t *crc, uint32_t base, size_t len);
+bool bmd_crc32(target_s *target, uint32_t *crc, uint32_t base, size_t len);
 
 #endif /* INCLUDE_CRC32_H */

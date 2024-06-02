@@ -1,5 +1,5 @@
 ---
-Checks: 'bugprone-*,cert-*,clang-analyzer-*,misc-*,modernize-*,portability-*,performance-*,readability-*,-readability-magic-numbers,-readability-braces-around-statements,-clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling,-modernize-macro-to-enum,-bugprone-easily-swappable-parameters'
+Checks: 'bugprone-*,cert-*,clang-analyzer-*,misc-*,modernize-*,portability-*,performance-*,readability-*,-readability-magic-numbers,-readability-braces-around-statements,-clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling,-modernize-macro-to-enum,-bugprone-easily-swappable-parameters,-misc-include-cleaner'
 FormatStyle: 'none'
 HeaderFilterRegex: '(src|upgrade)/.+'
 AnalyzeTemporaryDtors: false
@@ -35,13 +35,13 @@ CheckOptions:
   - key:   readability-identifier-naming.ConstantCase
     value: 'lower_case'
   - key:   readability-identifier-naming.EnumCase
-  value: 'lower_case'
-   - key:   readability-identifier-naming.StructCase
-  value: 'lower_case'
-   - key:   readability-identifier-naming.UnionCase
-  value: 'lower_case'
-   - key:   readability-identifier-naming.TypedefCase
-  value: 'lower_case'
+    value: 'lower_case'
+  - key:   readability-identifier-naming.StructCase
+    value: 'lower_case'
+  - key:   readability-identifier-naming.UnionCase
+    value: 'lower_case'
+  - key:   readability-identifier-naming.TypedefCase
+    value: 'lower_case'
   - key:   readability-identifier-naming.MacroDefinitionCase
     value: 'UPPER_CASE'
   - key:   readability-identifier-length.MinimumParameterNameLength

@@ -34,7 +34,7 @@
 #endif
 
 /* This has to be aligned so the remote protocol can re-use it without causing Problems */
-static char pbuf[GDB_PACKET_BUFFER_SIZE + 1U] __attribute__((aligned(8)));
+static char BMD_ALIGN_DEF(8) pbuf[GDB_PACKET_BUFFER_SIZE + 1U];
 
 char *gdb_packet_buffer()
 {
@@ -69,13 +69,13 @@ static void bmp_poll_loop(void)
 	gdb_main(pbuf, GDB_PACKET_BUFFER_SIZE, size);
 }
 
+#if PC_HOSTED == 1
 int main(int argc, char **argv)
 {
-#if PC_HOSTED == 1
 	platform_init(argc, argv);
 #else
-	(void)argc;
-	(void)argv;
+int main(void)
+{
 	platform_init();
 #endif
 

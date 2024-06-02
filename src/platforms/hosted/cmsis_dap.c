@@ -53,16 +53,14 @@
 */
 
 #include "general.h"
-#include "gdb_if.h"
 #include "adiv5.h"
 
-#include <assert.h>
 #include <string.h>
+#ifndef _MSC_VER
 #include <unistd.h>
-#include <stdlib.h>
-#include <signal.h>
-#include <ctype.h>
 #include <sys/time.h>
+#endif
+#include <stdlib.h>
 #include <hidapi.h>
 #include <wchar.h>
 #include <sys/stat.h>
@@ -71,11 +69,8 @@
 #include "dap.h"
 #include "dap_command.h"
 #include "cmsis_dap.h"
-#include "buffer_utils.h"
 
-#include "cli.h"
 #include "target.h"
-#include "target_internal.h"
 
 #define TRANSFER_TIMEOUT_MS (100)
 
@@ -104,8 +99,13 @@ static libusb_device_handle *usb_handle = NULL;
 static uint8_t in_ep;
 static uint8_t out_ep;
 static hid_device *handle = NULL;
-static uint8_t buffer[1024U];
-static size_t report_size = 64U + 1U; // TODO: read actual report size
+/* Provide enough space for up to a HS USB HID payload + the HID report ID byte */
+static uint8_t buffer[1025U];
+/*
+ * Start by defaulting this to the typical size of `DAP_PACKET_SIZE` for FS USB. This value is pulled from here:
+ * https://www.keil.com/pack/doc/CMSIS/DAP/html/group__DAP__Config__Debug__gr.html#gaa28bb1da2661291634c4a8fb3e227404
+ */
+static size_t packet_size = 64U;
 bool dap_has_swd_sequence = false;
 
 dap_version_s dap_adaptor_version(dap_info_e version_kind);
@@ -127,15 +127,39 @@ static size_t mbslen(const char *str)
 	return result;
 }
 
-// Return maximum length in bytes that can be sent in the 'data' payload of a
-// DAP transfer, given the interface type and (provided) DAP command header
-// size.
+static inline bool dap_version_compare_ge(const dap_version_s lhs, const dap_version_s rhs)
+{
+	/*
+	 * Try to first check if the major on the left is more than the one on the right.
+	 * If it is not, check that they're equal and that the minor on the left is more than the right.
+	 * If that is still not true, check that the majors are equal, the minors are equal and that the
+	 * revision on the left is more than or equal the one on the right.
+	 */
+	return lhs.major > rhs.major || (lhs.major == rhs.major && lhs.minor > rhs.minor) ||
+		(lhs.major == rhs.major && lhs.minor == rhs.minor && lhs.revision >= rhs.revision);
+}
+
+static inline bool dap_version_compare_le(const dap_version_s lhs, const dap_version_s rhs)
+{
+	/*
+	 * Try to first check if the major on the left is less than the one on the right.
+	 * If it is not, check that they're equal and that the minor on the left is less than the right.
+	 * If that is still not true, check that the majors are equal, the minors are equal and that the
+	 * revision on the left is less than or equal the one on the right.
+	 */
+	return lhs.major < rhs.major || (lhs.major == rhs.major && lhs.minor < rhs.minor) ||
+		(lhs.major == rhs.major && lhs.minor == rhs.minor && lhs.revision <= rhs.revision);
+}
+
+/*
+ * Return maximum length in bytes that can be sent in the 'data' payload of a
+ * DAP transfer, given the interface type and (provided) DAP command header size.
+ */
 static inline size_t dap_max_transfer_data(size_t command_header_len)
 {
-	const size_t result = report_size - command_header_len;
+	const size_t result = packet_size - command_header_len;
 
-	// Allow for an additional byte of payload overhead
-	// when sending data in HID Report payloads
+	/* Allow for an additional byte of payload overhead when sending data in HID Report payloads */
 	if (type == CMSIS_TYPE_HID)
 		return result - 1U;
 
@@ -175,10 +199,12 @@ static void dap_hid_print_permissions(const uint16_t vid, const uint16_t pid, co
 
 static bool dap_init_hid(void)
 {
+	/* Initialise HIDAPI */
 	DEBUG_INFO("Using hid transfer\n");
 	if (hid_init())
 		return false;
 
+	/* Extract the serial number information */
 	const size_t size = mbslen(bmda_probe_info.serial);
 	if (size > 64U) {
 		DEBUG_ERROR("Serial number invalid, aborting\n");
@@ -192,14 +218,18 @@ static bool dap_init_hid(void)
 		return false;
 	}
 	serial[size] = 0;
+
 	/*
-	 * Special-case devices that do not work with 513 byte report length
-	 * FIXME: Find a solution to decipher from the device.
+	 * Base the report length information for the device on the max packet length from its descriptors.
+	 * Add 1 to account for HIDAPI's need to prefix with a report type byte.
 	 */
-	if (bmda_probe_info.vid == 0x1fc9U && bmda_probe_info.pid == 0x0132U) {
-		DEBUG_WARN("Device does not work with the normal report length, activating quirk\n");
-		report_size = 64U + 1U;
-	}
+	packet_size = bmda_probe_info.max_packet_length + 1U;
+
+	/* Handle the NXP LPC11U3x CMSIS-DAP v1.0.7 implementation needing a 64 byte report length */
+	if (bmda_probe_info.vid == 0x1fc9U && bmda_probe_info.pid == 0x0132U)
+		packet_size = 64U + 1U;
+
+	/* Now open the device with HIDAPI so we can talk with it */
 	handle = hid_open(bmda_probe_info.vid, bmda_probe_info.pid, serial[0] ? serial : NULL);
 	if (!handle) {
 		DEBUG_ERROR("hid_open failed: %ls\n", hid_error(NULL));
@@ -224,6 +254,8 @@ static bool dap_init_bulk(void)
 		DEBUG_ERROR("libusb_claim_interface() failed\n");
 		return false;
 	}
+	/* Base the packet size on the one retrieved from the device descriptors */
+	packet_size = bmda_probe_info.max_packet_length;
 	in_ep = bmda_probe_info.in_ep;
 	out_ep = bmda_probe_info.out_ep;
 	return true;
@@ -246,14 +278,29 @@ bool dap_init(void)
 	/* Ensure the adaptor is idle and not prepared for any protocol in particular */
 	dap_disconnect();
 	/* Get the adaptor version information so we can set quirks as-needed */
-	const dap_version_s adaptor_version = dap_adaptor_version(DAP_INFO_ADAPTOR_VERSION);
 	const dap_version_s cmsis_version = dap_adaptor_version(DAP_INFO_CMSIS_DAP_VERSION);
+	dap_version_s adaptor_version = {UINT16_MAX, UINT16_MAX, UINT16_MAX};
+	/*
+	 * If the adaptor implements CMSIS-DAP < 1.3.0 (in the 1.x series) or
+	 * CMSIS-DAP < 2.1.0 (in the 2.x series) it won't have this command
+	 */
+	if ((cmsis_version.major == 1 && cmsis_version.minor >= 3) ||
+		(cmsis_version.major == 2 && cmsis_version.minor >= 1) || cmsis_version.major > 2)
+		adaptor_version = dap_adaptor_version(DAP_INFO_ADAPTOR_VERSION);
 	/* Look for CMSIS-DAP v1.2+ */
-	dap_has_swd_sequence = cmsis_version.major > 1 || (cmsis_version.major == 1 && cmsis_version.minor > 1);
+	dap_has_swd_sequence = dap_version_compare_ge(cmsis_version, (dap_version_s){1, 2, 0});
+
+	/* Try to get the actual packet size information from the adaptor */
+	uint16_t dap_packet_size;
+	if (dap_info(DAP_INFO_PACKET_SIZE, &dap_packet_size, sizeof(dap_packet_size)) != sizeof(dap_packet_size))
+		/* Report the failure */
+		DEBUG_WARN("Failed to get adaptor packet size, assuming descriptor provided size\n");
+	else
+		packet_size = dap_packet_size + (type == CMSIS_TYPE_HID ? 1U : 0U);
 
 	/* Try to get the device's capabilities */
 	const size_t size = dap_info(DAP_INFO_CAPABILITIES, &dap_caps, sizeof(dap_caps));
-	if (size != 1U) {
+	if (size != sizeof(dap_caps)) {
 		/* Report the failure */
 		DEBUG_ERROR("Failed to get adaptor capabilities, aborting\n");
 		/* Close any open connections and return failure so we don't go further */
@@ -280,11 +327,15 @@ bool dap_init(void)
 	DEBUG_INFO("Adaptor %s DAP SWD sequences\n", dap_has_swd_sequence ? "supports" : "does not support");
 
 	dap_quirks = 0;
-	/* Handle multi-TAP JTAG on older ORBTrace gateware being broken */
+	/* Handle multi-TAP JTAG on older (pre-v1.3) ORBTrace gateware being broken */
 	if (strcmp(bmda_probe_info.product, "Orbtrace") == 0 &&
-		(adaptor_version.major < 1 || (adaptor_version.major == 1 && adaptor_version.minor <= 2))) {
+		dap_version_compare_le(adaptor_version, (dap_version_s){1, 2, UINT16_MAX}))
 		dap_quirks |= DAP_QUIRK_NO_JTAG_MUTLI_TAP;
-	}
+
+	/* Handle SWD no-response turnarounds on older (pre-v1.3.2) ORBTrace gateware being broken */
+	if (strcmp(bmda_probe_info.product, "Orbtrace") == 0 &&
+		dap_version_compare_le(adaptor_version, (dap_version_s){1, 3, 1}))
+		dap_quirks |= DAP_QUIRK_BAD_SWD_NO_RESP_DATA_PHASE;
 
 	return true;
 }
@@ -299,9 +350,9 @@ dap_version_s dap_adaptor_version(const dap_info_e version_kind)
 
 	/* Display the version string */
 	if (version_kind == DAP_INFO_ADAPTOR_VERSION)
-		DEBUG_INFO("Adaptor version %s, ", version_str);
+		DEBUG_INFO("Adaptor version %s\n", version_str);
 	else if (version_kind == DAP_INFO_CMSIS_DAP_VERSION)
-		DEBUG_INFO("CMSIS-DAP v%s\n", version_str);
+		DEBUG_INFO("CMSIS-DAP v%s, ", version_str);
 	const char *begin = version_str;
 	char *end = NULL;
 	dap_version_s version = {0};
@@ -351,7 +402,7 @@ void dap_dp_abort(adiv5_debug_port_s *const target_dp, const uint32_t abort)
 	dap_write_reg(target_dp, ADIV5_DP_ABORT, abort);
 }
 
-uint32_t dap_dp_low_access(
+uint32_t dap_dp_raw_access(
 	adiv5_debug_port_s *const target_dp, const uint8_t rnw, const uint16_t addr, const uint32_t value)
 {
 	const bool APnDP = addr & ADIV5_APnDP;
@@ -366,11 +417,11 @@ uint32_t dap_dp_low_access(
 
 uint32_t dap_dp_read_reg(adiv5_debug_port_s *const target_dp, const uint16_t addr)
 {
-	uint32_t result = dap_dp_low_access(target_dp, ADIV5_LOW_READ, addr, 0);
+	uint32_t result = dap_dp_raw_access(target_dp, ADIV5_LOW_READ, addr, 0);
 	if (target_dp->fault == DAP_TRANSFER_NO_RESPONSE) {
 		DEBUG_WARN("Recovering and re-trying access\n");
 		target_dp->error(target_dp, true);
-		result = dap_dp_low_access(target_dp, ADIV5_LOW_READ, addr, 0);
+		result = dap_dp_raw_access(target_dp, ADIV5_LOW_READ, addr, 0);
 	}
 	DEBUG_PROBE("dp_read %04x %08" PRIx32 "\n", addr, result);
 	return result;
@@ -395,17 +446,17 @@ ssize_t dbg_dap_cmd_hid(const uint8_t *const request_data, const size_t request_
 	const size_t response_length)
 {
 	// Need room to prepend HID Report ID byte
-	if (request_length + 1U > report_size) {
+	if (request_length + 1U > packet_size) {
 		DEBUG_ERROR(
-			"Attempted to make over-long request of %zu bytes, max length is %zu\n", request_length + 1U, report_size);
+			"Attempted to make over-long request of %zu bytes, max length is %zu\n", request_length + 1U, packet_size);
 		exit(-1);
 	}
 
-	memset(buffer + request_length + 1U, 0xff, report_size - (request_length + 1U));
+	memset(buffer + request_length + 1U, 0xff, packet_size - (request_length + 1U));
 	buffer[0] = 0x00; // Report ID
 	memcpy(buffer + 1, request_data, request_length);
 
-	const int result = hid_write(handle, buffer, report_size);
+	const int result = hid_write(handle, buffer, packet_size);
 	if (result < 0) {
 		DEBUG_ERROR("CMSIS-DAP write error: %ls\n", hid_error(handle));
 		exit(-1);
@@ -456,13 +507,19 @@ static ssize_t dap_run_cmd_raw(const uint8_t *const request_data, const size_t r
 		DEBUG_WIRE("%02x ", request_data[i]);
 	DEBUG_WIRE("\n");
 
-	uint8_t data[65];
+	/* Provide enough space for up to a HS USB HID payload */
+	uint8_t data[1024];
+	/* Make sure that we're not about to blow this buffer when we request data back */
+	if (sizeof(data) < packet_size) {
+		DEBUG_ERROR("CMSIS-DAP request would exceed response buffer\n");
+		return -1;
+	}
 
 	ssize_t response = -1;
 	if (type == CMSIS_TYPE_HID)
-		response = dbg_dap_cmd_hid(request_data, request_length, data, report_size);
+		response = dbg_dap_cmd_hid(request_data, request_length, data, packet_size);
 	else if (type == CMSIS_TYPE_BULK)
-		response = dbg_dap_cmd_bulk(request_data, request_length, data, report_size);
+		response = dbg_dap_cmd_bulk(request_data, request_length, data, packet_size);
 	if (response < 0)
 		return response;
 	const size_t result = (size_t)response;
@@ -483,15 +540,17 @@ bool dap_run_cmd(const void *const request_data, const size_t request_length, vo
 	/* This subtracts one off the result to account for the command byte that gets stripped above */
 	const ssize_t result =
 		dap_run_cmd_raw((const uint8_t *)request_data, request_length, (uint8_t *)response_data, response_length) - 1U;
+	if (result < 0)
+		return false;
 	return (size_t)result >= response_length;
 }
 
-static void dap_mem_read(adiv5_access_port_s *ap, void *dest, uint32_t src, size_t len)
+static void dap_mem_read(adiv5_access_port_s *ap, void *dest, target_addr64_t src, size_t len)
 {
 	if (len == 0)
 		return;
 	const align_e align = MIN_ALIGN(src, len);
-	DEBUG_WIRE("dap_mem_read @ %" PRIx32 " len %zu, align %d\n", src, len, align);
+	DEBUG_PROBE("dap_mem_read @ %" PRIx64 " len %zu, align %d\n", src, len, align);
 	/* If the read can be done in a single transaction, use the dap_read_single() fast-path */
 	if ((1U << align) == len) {
 		dap_read_single(ap, dest, src, align);
@@ -515,7 +574,7 @@ static void dap_mem_read(adiv5_access_port_s *ap, void *dest, uint32_t src, size
 			/* blocks - i gives how many blocks are left to transfer in this 1024 byte chunk */
 			const size_t transfer_length = MIN(blocks - i, blocks_per_transfer) << align;
 			if (!dap_read_block(ap, data + offset, src + offset, transfer_length, align)) {
-				DEBUG_WIRE("mem_read failed: %u\n", ap->dp->fault);
+				DEBUG_WIRE("dap_mem_read failed: %u\n", ap->dp->fault);
 				return;
 			}
 			offset += transfer_length;
@@ -524,11 +583,11 @@ static void dap_mem_read(adiv5_access_port_s *ap, void *dest, uint32_t src, size
 	DEBUG_WIRE("dap_mem_read transferred %zu blocks\n", len >> align);
 }
 
-static void dap_mem_write(adiv5_access_port_s *ap, uint32_t dest, const void *src, size_t len, align_e align)
+static void dap_mem_write(adiv5_access_port_s *ap, target_addr64_t dest, const void *src, size_t len, align_e align)
 {
 	if (len == 0)
 		return;
-	DEBUG_WIRE("memwrite @ %" PRIx32 " len %zu, align %d\n", dest, len, align);
+	DEBUG_PROBE("dap_mem_write @ %" PRIx64 " len %zu, align %d\n", dest, len, align);
 	/* If the write can be done in a single transaction, use the dap_write_single() fast-path */
 	if ((1U << align) == len) {
 		dap_write_single(ap, dest, src, align);
@@ -552,13 +611,13 @@ static void dap_mem_write(adiv5_access_port_s *ap, uint32_t dest, const void *sr
 			/* blocks - i gives how many blocks are left to transfer in this 1024 byte chunk */
 			const size_t transfer_length = MIN(blocks - i, blocks_per_transfer) << align;
 			if (!dap_write_block(ap, dest + offset, data + offset, transfer_length, align)) {
-				DEBUG_WIRE("mem_write failed: %u\n", ap->dp->fault);
+				DEBUG_WIRE("dap_mem_write failed: %u\n", ap->dp->fault);
 				return;
 			}
 			offset += transfer_length;
 		}
 	}
-	DEBUG_WIRE("dap_mem_write_sized transferred %zu blocks\n", len >> align);
+	DEBUG_WIRE("dap_dap_mem_write transferred %zu blocks\n", len >> align);
 
 	/* Make sure this write is complete by doing a dummy read */
 	adiv5_dp_read(ap->dp, ADIV5_DP_RDBUFF);

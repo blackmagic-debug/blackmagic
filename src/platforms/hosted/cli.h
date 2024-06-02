@@ -65,8 +65,9 @@ typedef struct bmda_cli_options {
 	char *opt_monitor;
 	uint32_t opt_target_dev;
 	uint32_t opt_flash_start;
-	uint32_t opt_max_swj_frequency;
+	uint32_t opt_max_frequency;
 	size_t opt_flash_size;
+	char *opt_gpio_map;
 } bmda_cli_options_s;
 
 void cl_init(bmda_cli_options_s *opt, int argc, char **argv);

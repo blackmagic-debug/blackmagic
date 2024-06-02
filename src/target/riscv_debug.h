@@ -214,6 +214,13 @@ typedef struct riscv_hart {
 #define RV_CSR_MTVAL      0x343
 #define RV_CSR_MIP        0x344
 
+// These two lines are about allowing gdb to access
+// fpu registers through fake registers offset by
+// RV_FPU_GDB_OFFSET for normal fpu registers
+// and RV_FPU_GDB_CSR_OFFSET (for fpu related CSR)
+#define RV_FPU_GDB_OFFSET     33
+#define RV_FPU_GDB_CSR_OFFSET 66
+
 void riscv_jtag_dtm_handler(uint8_t dev_index);
 void riscv_dmi_init(riscv_dmi_s *dmi);
 riscv_hart_s *riscv_hart_struct(target_s *target);
@@ -231,7 +238,7 @@ uint8_t riscv_mem_access_width(const riscv_hart_s *hart, target_addr_t address, 
 void riscv32_unpack_data(void *dest, uint32_t data, uint8_t access_width);
 uint32_t riscv32_pack_data(const void *src, uint8_t access_width);
 
-void riscv32_mem_read(target_s *target, void *dest, target_addr_t src, size_t len);
-void riscv32_mem_write(target_s *target, target_addr_t dest, const void *src, size_t len);
+void riscv32_mem_read(target_s *target, void *dest, target_addr64_t src, size_t len);
+void riscv32_mem_write(target_s *target, target_addr64_t dest, const void *src, size_t len);
 
 #endif /*TARGET_RISCV_DEBUG_H*/

@@ -26,12 +26,12 @@
  */
 
 #include "general.h"
-#include <assert.h>
 #include <stdlib.h>
 
 #include <ftdi.h>
 #include "ftdi_bmp.h"
 #include "buffer_utils.h"
+#include "maths_utils.h"
 
 typedef enum swdio_status {
 	SWDIO_STATUS_DRIVE,
@@ -73,6 +73,15 @@ bool ftdi_swd_possible(void)
 	direct_bb_swd = true;
 	return true;
 }
+
+#if defined(_MSC_VER) && !defined(__clang__)
+static inline uint32_t __builtin_ctz(uint32_t value)
+{
+	uint32_t result = 0U;
+	_BitScanForward(&result, value);
+	return result;
+}
+#endif
 
 bool ftdi_swd_init(void)
 {
@@ -237,7 +246,9 @@ static bool ftdi_swd_seq_in_parity_mpsse(uint32_t *const result, const size_t cl
 	uint8_t data_out[5U] = {0};
 	ftdi_jtag_tdi_tdo_seq(data_out, false, NULL, clock_cycles + 1U);
 	const uint32_t data = read_le4(data_out, 0);
-	uint8_t parity = __builtin_parity(data & ((UINT64_C(1) << clock_cycles) - 1U));
+	/* NB: This calculation must be done in 64-bit space due to `1U << 32U` value of 0x00000001'00000000ULL */
+	const uint32_t bitmask = (UINT64_C(1) << clock_cycles) - 1U;
+	uint8_t parity = calculate_odd_parity(data & bitmask);
 	parity ^= data_out[4] & 1U;
 	DEBUG_PROBE("%s %zu clock_cycles: %08" PRIx32 " %s\n", __func__, clock_cycles, data, parity ? "ERR" : "OK");
 	*result = data;
@@ -428,7 +439,7 @@ static void ftdi_swd_seq_out_parity(uint32_t tms_states, size_t clock_cycles)
 {
 	if (clock_cycles > 32U)
 		return;
-	const uint8_t parity = __builtin_parity(tms_states) & 1U;
+	const uint8_t parity = calculate_odd_parity(tms_states);
 	ftdi_swd_turnaround(SWDIO_STATUS_DRIVE);
 	if (do_mpsse)
 		ftdi_swd_seq_out_parity_mpsse(tms_states, parity, clock_cycles);

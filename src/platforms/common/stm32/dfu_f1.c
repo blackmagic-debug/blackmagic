@@ -56,10 +56,24 @@ void dfu_flash_program_buffer(const uint32_t baseaddr, const void *const buf, co
 
 uint32_t dfu_poll_timeout(uint8_t cmd, uint32_t addr, uint16_t blocknum)
 {
-	(void)cmd;
 	(void)addr;
 	(void)blocknum;
-	return 100;
+
+	/*
+	 * Page (1KiB) erase times:
+	 * STM32F103CB: 20 ms (min), 40 ms (max);
+	 *  GD32F103CB: 50 ms (typ), 400 ms (max);
+	 */
+	if (cmd == CMD_ERASE)
+		return 20U;
+
+	/*
+	 * Programming times:
+	 * STM32F103CB: 40 us (min), 52.5 us (typ), 70 us (max) -- for 16-bit half-word
+	 *  GD32F103CB: 37.5 us (typ), 105 us (max) -- for 32-bit word
+	 * 52.5 us * 512 half-words, or 105 us * 256 words, gives 26.88 ms estimate (typ)
+	 */
+	return 27U;
 }
 
 void dfu_protect(bool enable)

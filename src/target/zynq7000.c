@@ -80,12 +80,12 @@ bool zynq7_probe(target_s *const target)
 	target->reset = zynq7_reset;
 
 	/* Read back the OCM mapping status */
-	const uint8_t ocm_mapping = target_mem_read32(target, ZYNQ7_SLCR_OCM_CFG) & 0x0fU;
+	const uint8_t ocm_mapping = target_mem32_read32(target, ZYNQ7_SLCR_OCM_CFG) & 0x0fU;
 	/* For each of the 4 chunks, pull out if it's mapped low or high and define a mapping accordingly */
 	for (uint8_t chunk = 0U; chunk < 4U; ++chunk) {
 		const bool chunk_high = (ocm_mapping >> chunk) & 1U;
 		const uint32_t chunk_offset = chunk * ZYNQ7_OCM_CHUNK_SIZE;
-		target_add_ram(
+		target_add_ram32(
 			target, (chunk_high ? ZYNQ7_OCM_HIGH_BASE : ZYNQ7_OCM_LOW_BASE) + chunk_offset, ZYNQ7_OCM_CHUNK_SIZE);
 	}
 
@@ -95,8 +95,8 @@ bool zynq7_probe(target_s *const target)
 static void zynq7_reset(target_s *const target)
 {
 	/* Try to unlock the SLCR registers and issue the reset */
-	target_mem_write32(target, ZYNQ7_SLCR_UNLOCK, ZYNQ7_SLCR_UNLOCK_KEY);
-	target_mem_write32(target, ZYNQ7_SLCR_PSS_RST_CTRL, ZYNQ7_SLCR_PSS_RST_CTRL_SOFT_RESET);
+	target_mem32_write32(target, ZYNQ7_SLCR_UNLOCK, ZYNQ7_SLCR_UNLOCK_KEY);
+	target_mem32_write32(target, ZYNQ7_SLCR_PSS_RST_CTRL, ZYNQ7_SLCR_PSS_RST_CTRL_SOFT_RESET);
 
 	/* For good measure, also try pulsing the physical reset pin */
 	platform_nrst_set_val(true);

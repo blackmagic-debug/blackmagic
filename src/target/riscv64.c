@@ -44,7 +44,7 @@ typedef struct riscv64_regs {
 
 static void riscv64_regs_read(target_s *target, void *data);
 static void riscv64_regs_write(target_s *target, const void *data);
-static void riscv64_mem_read(target_s *target, void *dest, target_addr_t src, size_t len);
+static void riscv64_mem_read(target_s *target, void *dest, target_addr64_t src, size_t len);
 
 bool riscv64_probe(target_s *const target)
 {
@@ -109,10 +109,9 @@ void riscv64_unpack_data(
 	}
 }
 
-/* XXX: target_addr_t supports only 32-bit addresses, artificially limiting this function */
-static void riscv64_mem_read(target_s *const target, void *const dest, const target_addr_t src, const size_t len)
+static void riscv64_mem_read(target_s *const target, void *const dest, const target_addr64_t src, const size_t len)
 {
-	DEBUG_TARGET("Performing %zu byte read of %08" PRIx32 "\n", len, src);
+	DEBUG_TARGET("Performing %zu byte read of %08" PRIx64 "\n", len, src);
 	/* If we're asked to do a 0-byte read, do nothing */
 	if (!len)
 		return;
@@ -124,7 +123,8 @@ static void riscv64_mem_read(target_s *const target, void *const dest, const tar
 	const uint32_t command = RV_DM_ABST_CMD_ACCESS_MEM | RV_ABST_READ | (access_width << RV_ABST_MEM_ACCESS_SHIFT) |
 		(access_length < len ? RV_ABST_MEM_ADDR_POST_INC : 0U);
 	/* Write the address to read to arg1 */
-	if (!riscv_dm_write(hart->dbg_module, RV_DM_DATA2, src) || !riscv_dm_write(hart->dbg_module, RV_DM_DATA3, 0U))
+	if (!riscv_dm_write(hart->dbg_module, RV_DM_DATA2, (uint32_t)src) ||
+		!riscv_dm_write(hart->dbg_module, RV_DM_DATA3, (uint32_t)(src >> 32U)))
 		return;
 	uint8_t *const data = (uint8_t *)dest;
 	for (size_t offset = 0; offset < len; offset += access_length) {

@@ -38,13 +38,17 @@
 // NOLINTNEXTLINE(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp)
 #define __USE_MINGW_ANSI_STDIO 1
 #endif
+
 #include <stdint.h>
-#include <stdio.h>
+
 typedef const char *debug_str_t;
-#if defined(_WIN32) || defined(__CYGWIN__)
+
+#if defined(__MINGW32__) || defined(__MINGW64__) || defined(__CYGWIN__)
 #define DEBUG_FORMAT_ATTR __attribute__((format(__MINGW_PRINTF_FORMAT, 1, 2)))
-#else
+#elif defined(__GNUC__) || defined(__clang__)
 #define DEBUG_FORMAT_ATTR __attribute__((format(printf, 1, 2)))
+#else
+#define DEBUG_FORMAT_ATTR
 #endif
 
 #define BMD_DEBUG_ERROR      (1U << 0U)
@@ -71,5 +75,13 @@ void debug_target(const char *format, ...) DEBUG_FORMAT_ATTR;
 void debug_protocol(const char *format, ...) DEBUG_FORMAT_ATTR;
 void debug_probe(const char *format, ...) DEBUG_FORMAT_ATTR;
 void debug_wire(const char *format, ...) DEBUG_FORMAT_ATTR;
+
+#if defined(_WIN32) && !defined(__MINGW32__) && !defined(__CYGWIN__)
+#define STDIN_FILENO  0
+#define STDOUT_FILENO 1
+#define STDERR_FILENO 2
+#else
+#include <unistd.h>
+#endif
 
 #endif /*PLATFORMS_HOSTED_DEBUG_H*/

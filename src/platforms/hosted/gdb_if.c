@@ -58,7 +58,9 @@ typedef int32_t socket_t;
 #include <string.h>
 #include <assert.h>
 #include <errno.h>
+#ifndef _MSC_VER
 #include <unistd.h>
+#endif
 
 #include "gdb_if.h"
 #include "bmp_hosted.h"
@@ -138,9 +140,16 @@ static sockaddr_storage_s sockaddr_prepare(const uint16_t port)
 		return (sockaddr_storage_s){AF_UNSPEC};
 	}
 
-	/* Pick the first result, copy it and free the list structure getaddrinfo() returns */
+	/* Try to find an IPv6 result but fall back to the first result if none can be found */
 	sockaddr_storage_s service;
 	memcpy(&service, results->ai_addr, family_to_size(results->ai_addr->sa_family));
+	for (addrinfo_s *curr = results; curr; curr = curr->ai_next) {
+		if (curr->ai_addr->sa_family == AF_INET6) {
+			memcpy(&service, curr->ai_addr, family_to_size(curr->ai_addr->sa_family));
+			break;
+		}
+	}
+	/* Free the getaddrinfo result list */
 	freeaddrinfo(results);
 
 	/* Copy in the port number as appropriate for the returned structure */
@@ -242,6 +251,12 @@ int gdb_if_init(void)
 		if (!socket_set_int_opt(gdb_if_serv, SOL_SOCKET, SO_REUSEADDR, 1) ||
 			!socket_set_int_opt(gdb_if_serv, IPPROTO_TCP, TCP_NODELAY, 1))
 			continue;
+
+		if (addr.ss_family == AF_INET6) {
+			DEBUG_INFO("Setting V6ONLY to off for dual stack listening.\n");
+			if (!socket_set_int_opt(gdb_if_serv, IPPROTO_IPV6, IPV6_V6ONLY, 0))
+				DEBUG_WARN("Listening on IPv6 only.\n");
+		}
 
 		if (bind(gdb_if_serv, (sockaddr_s *)&addr, family_to_size(addr.ss_family)) == -1) {
 			handle_error(gdb_if_serv, "binding socket");

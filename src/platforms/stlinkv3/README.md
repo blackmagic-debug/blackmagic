@@ -31,9 +31,9 @@ warm plug will fail. Cold plug should work with any STM32 device.
 ## Building.
 
 As simple as
-```
-make PROBE_HOST=stlinkv3 clean
-make PROBE_HOST=stlinkv3
+```sh
+meson setup build --cross-file=cross-file/stlinkv3.ini
+meson compile -C build
 ```
 
 ## Flashing
@@ -47,9 +47,9 @@ use soldered connections to CN3. For [STLINK-V3MINI](https://www.st.com/resource
 It is a good idea to keep a full image of the original flash content as backup!
 
 If you want to keep the original bootloader or access via SWD is disabled, clone
-https://github.com/UweBonnes/stlink-tool/tree/stlinkv21
+https://github.com/blackmagic-debug/stlink-tool
 make and use like
-`stlink-tool blackmagic.bin`
+`stlink-tool blackmagic_stlinkv3_firmware.bin`
 Revert to original ST firmware with
 `java -jar STLinkUpgrade.jar`
 Try to use old version that do not disable SWD access. Expect newer ST firmware even to be more restrictive.

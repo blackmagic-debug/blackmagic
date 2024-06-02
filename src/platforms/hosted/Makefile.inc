@@ -5,8 +5,12 @@ SYS := $(shell $(CC) -dumpmachine)
 CFLAGS += -DPLATFORM_HAS_DEBUG
 CFLAGS +=-I ./target
 
+# Architecture enables
 ENABLE_CORTEXAR := 1
 ENABLE_RISCV := 1
+# Target enables
+ENABLE_PUYA := 1
+ENABLE_XILINX := 1
 
 # Clang requires some special handling here: -gnu means MinGW
 # while -msvc means Clang/CL. We don't currently support the latter
@@ -29,7 +33,7 @@ ifneq (,$(findstring linux, $(SYS)))
 else
     HOSTED_BMP_ONLY ?= 1
 endif
-CFLAGS += -DHOSTED_BMP_ONLY=$(HOSTED_BMP_ONLY)
+CFLAGS += -DHOSTED_BMP_ONLY=$(HOSTED_BMP_ONLY) -D_FILE_OFFSET_BITS=64
 
 ifeq ($(ASAN), 1)
     CFLAGS += -fsanitize=address
@@ -109,7 +113,6 @@ ifneq ($(HOSTED_BMP_ONLY), 1)
 endif
 
 ifneq ($(HOSTED_BMP_ONLY), 1)
-    CFLAGS += -DCMSIS_DAP
     SRC += cmsis_dap.c dap.c dap_command.c dap_swd.c dap_jtag.c
     ifneq ($(shell pkg-config --exists $(HIDAPILIB); echo $$?), 0)
         $(error Please install $(HIDAPILIB) dependency or set HOSTED_BMP_ONLY to 1)
@@ -125,6 +128,7 @@ SRC += timing.c cli.c utils.c probe_info.c debug.c
 SRC += protocol_v0.c protocol_v0_swd.c protocol_v0_jtag.c protocol_v0_adiv5.c
 SRC += protocol_v1.c protocol_v1_adiv5.c protocol_v2.c
 SRC += protocol_v3.c protocol_v3_adiv5.c
+SRC += protocol_v4.c protocol_v4_adiv5.c
 SRC += bmp_remote.c
 ifneq ($(HOSTED_BMP_ONLY), 1)
     ifeq ($(OS), Windows_NT)

@@ -373,7 +373,7 @@ static const efm32_v2_di_tempgrade_s efm32_v2_di_tempgrades[] = {
 /* Reads the EFM32 Extended Unique Identifier EUI64 (V1) */
 static uint64_t efm32_v1_read_eui64(target_s *t)
 {
-	return ((uint64_t)target_mem_read32(t, EFM32_V1_DI_EUI64_1) << 32U) | target_mem_read32(t, EFM32_V1_DI_EUI64_0);
+	return ((uint64_t)target_mem32_read32(t, EFM32_V1_DI_EUI64_1) << 32U) | target_mem32_read32(t, EFM32_V1_DI_EUI64_0);
 }
 
 /* Reads the Unique Number (DI V2 only) */
@@ -382,7 +382,7 @@ static uint64_t efm32_v2_read_unique(target_s *t, uint8_t di_version)
 	if (di_version != 2)
 		return 0;
 
-	return ((uint64_t)target_mem_read32(t, EFM32_V2_DI_UNIQUEH) << 32U) | target_mem_read32(t, EFM32_V2_DI_UNIQUEL);
+	return ((uint64_t)target_mem32_read32(t, EFM32_V2_DI_UNIQUEH) << 32U) | target_mem32_read32(t, EFM32_V2_DI_UNIQUEL);
 }
 
 /* Reads the EFM32 flash size in kiB */
@@ -390,9 +390,9 @@ static uint16_t efm32_read_flash_size(target_s *t, uint8_t di_version)
 {
 	switch (di_version) {
 	case 1:
-		return target_mem_read16(t, EFM32_V1_DI_MEM_INFO_FLASH);
+		return target_mem32_read16(t, EFM32_V1_DI_MEM_INFO_FLASH);
 	case 2:
-		return target_mem_read32(t, EFM32_V2_DI_MSIZE) & 0xffffU;
+		return target_mem32_read32(t, EFM32_V2_DI_MSIZE) & 0xffffU;
 	default:
 		return 0;
 	}
@@ -403,9 +403,9 @@ static uint16_t efm32_read_ram_size(target_s *t, uint8_t di_version)
 {
 	switch (di_version) {
 	case 1:
-		return target_mem_read16(t, EFM32_V1_DI_MEM_INFO_RAM);
+		return target_mem32_read16(t, EFM32_V1_DI_MEM_INFO_RAM);
 	case 2:
-		return (target_mem_read32(t, EFM32_V2_DI_MSIZE) >> 16U) & 0xffffU;
+		return (target_mem32_read32(t, EFM32_V2_DI_MSIZE) >> 16U) & 0xffffU;
 	default:
 		return 0;
 	}
@@ -423,10 +423,10 @@ static uint32_t efm32_flash_page_size(target_s *t, uint8_t di_version)
 
 	switch (di_version) {
 	case 1U:
-		mem_info_page_size = target_mem_read8(t, EFM32_V1_DI_MEM_INFO_PAGE_SIZE);
+		mem_info_page_size = target_mem32_read8(t, EFM32_V1_DI_MEM_INFO_PAGE_SIZE);
 		break;
 	case 2U:
-		mem_info_page_size = (target_mem_read32(t, EFM32_V2_DI_MEMINFO) >> 24U) & 0xffU;
+		mem_info_page_size = (target_mem32_read32(t, EFM32_V2_DI_MEMINFO) >> 24U) & 0xffU;
 		break;
 	default:
 		return 0;
@@ -440,9 +440,9 @@ static uint16_t efm32_read_part_number(target_s *t, uint8_t di_version)
 {
 	switch (di_version) {
 	case 1:
-		return target_mem_read8(t, EFM32_V1_DI_PART_NUMBER);
+		return target_mem32_read8(t, EFM32_V1_DI_PART_NUMBER);
 	case 2:
-		return target_mem_read32(t, EFM32_V2_DI_PART) & 0xffffU;
+		return target_mem32_read32(t, EFM32_V2_DI_PART) & 0xffffU;
 	default:
 		return 0;
 	}
@@ -453,9 +453,9 @@ static uint8_t efm32_read_part_family(target_s *t, uint8_t di_version)
 {
 	switch (di_version) {
 	case 1:
-		return target_mem_read8(t, EFM32_V1_DI_PART_FAMILY);
+		return target_mem32_read8(t, EFM32_V1_DI_PART_FAMILY);
 	case 2:
-		return (target_mem_read32(t, EFM32_V2_DI_PART) >> 16U) & 0xffU;
+		return (target_mem32_read32(t, EFM32_V2_DI_PART) >> 16U) & 0xffU;
 	default:
 		return 0;
 	}
@@ -466,7 +466,7 @@ static uint16_t efm32_read_radio_part_number(target_s *t, uint8_t di_version)
 {
 	switch (di_version) {
 	case 1:
-		return target_mem_read16(t, EFM32_V1_DI_RADIO_OPN);
+		return target_mem32_read16(t, EFM32_V1_DI_RADIO_OPN);
 	default:
 		return 0;
 	}
@@ -479,7 +479,7 @@ static efm32_v2_di_miscchip_s efm32_v2_read_miscchip(target_s *t, uint8_t di_ver
 
 	switch (di_version) {
 	case 2: {
-		const uint32_t meminfo = target_mem_read32(t, EFM32_V2_DI_MEMINFO);
+		const uint32_t meminfo = target_mem32_read32(t, EFM32_V2_DI_MEMINFO);
 		miscchip.pincount = (meminfo >> 16U) & 0xffU;
 		miscchip.pkgtype = (meminfo >> 8U) & 0xffU;
 		miscchip.tempgrade = (meminfo >> 0U) & 0xffU;
@@ -583,7 +583,7 @@ bool efm32_probe(target_s *t)
 	t->driver = priv_storage->efm32_variant_string;
 	tc_printf(t, "flash size %u page size %u\n", flash_size, flash_page_size);
 
-	target_add_ram(t, SRAM_BASE, ram_size);
+	target_add_ram32(t, SRAM_BASE, ram_size);
 	efm32_add_flash(t, 0x00000000, flash_size, flash_page_size);
 	if (device->user_data_size) { /* optional User Data (UD) section */
 		efm32_add_flash(t, 0x0fe00000, device->user_data_size, flash_page_size);
@@ -609,21 +609,21 @@ static bool efm32_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 	uint32_t msc = priv_storage->device->msc_addr;
 
 	/* Unlock */
-	target_mem_write32(t, EFM32_MSC_LOCK(msc), EFM32_MSC_LOCK_LOCKKEY);
+	target_mem32_write32(t, EFM32_MSC_LOCK(msc), EFM32_MSC_LOCK_LOCKKEY);
 
 	/* Set WREN bit to enable MSC write and erase functionality */
-	target_mem_write32(t, EFM32_MSC_WRITECTRL(msc), 1);
+	target_mem32_write32(t, EFM32_MSC_WRITECTRL(msc), 1);
 
 	while (len) {
 		/* Write address of first word in row to erase it */
-		target_mem_write32(t, EFM32_MSC_ADDRB(msc), addr);
-		target_mem_write32(t, EFM32_MSC_WRITECMD(msc), EFM32_MSC_WRITECMD_LADDRIM);
+		target_mem32_write32(t, EFM32_MSC_ADDRB(msc), addr);
+		target_mem32_write32(t, EFM32_MSC_WRITECMD(msc), EFM32_MSC_WRITECMD_LADDRIM);
 
 		/* Issue the erase command */
-		target_mem_write32(t, EFM32_MSC_WRITECMD(msc), EFM32_MSC_WRITECMD_ERASEPAGE);
+		target_mem32_write32(t, EFM32_MSC_WRITECMD(msc), EFM32_MSC_WRITECMD_ERASEPAGE);
 
 		/* Poll MSC Busy */
-		while ((target_mem_read32(t, EFM32_MSC_STATUS(msc)) & EFM32_MSC_STATUS_BUSY)) {
+		while ((target_mem32_read32(t, EFM32_MSC_STATUS(msc)) & EFM32_MSC_STATUS_BUSY)) {
 			if (target_check_error(t))
 				return false;
 		}
@@ -650,16 +650,16 @@ static bool efm32_flash_write(target_flash_s *f, target_addr_t dest, const void 
 		return false;
 
 	/* Write flashloader */
-	target_mem_write(t, SRAM_BASE, efm32_flash_write_stub, sizeof(efm32_flash_write_stub));
+	target_mem32_write(t, SRAM_BASE, efm32_flash_write_stub, sizeof(efm32_flash_write_stub));
 	/* Write Buffer */
-	target_mem_write(t, STUB_BUFFER_BASE, src, len);
+	target_mem32_write(t, STUB_BUFFER_BASE, src, len);
 	/* Run flashloader */
 	const bool ret = cortexm_run_stub(t, SRAM_BASE, dest, STUB_BUFFER_BASE, len, priv_storage->device->msc_addr) == 0;
 
 #if ENABLE_DEBUG == 1
 	/* Check the MSC_IF */
 	uint32_t msc = priv_storage->device->msc_addr;
-	uint32_t msc_if = target_mem_read32(t, EFM32_MSC_IF(msc));
+	uint32_t msc_if = target_mem32_read32(t, EFM32_MSC_IF(msc));
 	DEBUG_INFO("EFM32: Flash write done MSC_IF=%08" PRIx32 "\n", msc_if);
 #endif
 	return ret;
@@ -683,18 +683,18 @@ static bool efm32_mass_erase(target_s *t)
 	uint16_t flash_kib = efm32_read_flash_size(t, priv_storage->di_version);
 
 	/* Set WREN bit to enable MSC write and erase functionality */
-	target_mem_write32(t, EFM32_MSC_WRITECTRL(msc), 1);
+	target_mem32_write32(t, EFM32_MSC_WRITECTRL(msc), 1);
 
 	/* Unlock mass erase */
-	target_mem_write32(t, EFM32_MSC_MASSLOCK(msc), EFM32_MSC_MASSLOCK_LOCKKEY);
+	target_mem32_write32(t, EFM32_MSC_MASSLOCK(msc), EFM32_MSC_MASSLOCK_LOCKKEY);
 
 	/* Erase operation */
-	target_mem_write32(t, EFM32_MSC_WRITECMD(msc), EFM32_MSC_WRITECMD_ERASEMAIN0);
+	target_mem32_write32(t, EFM32_MSC_WRITECMD(msc), EFM32_MSC_WRITECMD_ERASEMAIN0);
 
 	platform_timeout_s timeout;
 	platform_timeout_set(&timeout, 500);
 	/* Poll MSC Busy */
-	while ((target_mem_read32(t, EFM32_MSC_STATUS(msc)) & EFM32_MSC_STATUS_BUSY)) {
+	while ((target_mem32_read32(t, EFM32_MSC_STATUS(msc)) & EFM32_MSC_STATUS_BUSY)) {
 		if (target_check_error(t))
 			return false;
 		target_print_progress(&timeout);
@@ -703,10 +703,10 @@ static bool efm32_mass_erase(target_s *t)
 	/* Parts with >= 512 kiB flash have 2 mass erase regions */
 	if (flash_kib >= 512) {
 		/* Erase operation */
-		target_mem_write32(t, EFM32_MSC_WRITECMD(msc), EFM32_MSC_WRITECMD_ERASEMAIN1);
+		target_mem32_write32(t, EFM32_MSC_WRITECMD(msc), EFM32_MSC_WRITECMD_ERASEMAIN1);
 
 		/* Poll MSC Busy */
-		while ((target_mem_read32(t, EFM32_MSC_STATUS(msc)) & EFM32_MSC_STATUS_BUSY)) {
+		while ((target_mem32_read32(t, EFM32_MSC_STATUS(msc)) & EFM32_MSC_STATUS_BUSY)) {
 			if (target_check_error(t))
 				return false;
 			target_print_progress(&timeout);
@@ -714,7 +714,7 @@ static bool efm32_mass_erase(target_s *t)
 	}
 
 	/* Relock mass erase */
-	target_mem_write32(t, EFM32_MSC_MASSLOCK(msc), 0);
+	target_mem32_write32(t, EFM32_MSC_MASSLOCK(msc), 0);
 
 	return true;
 }
@@ -847,7 +847,7 @@ static bool efm32_cmd_bootloader(target_s *t, int argc, const char **argv)
 		return false;
 	}
 
-	uint32_t clw0 = target_mem_read32(t, EFM32_LOCK_BITS_CLW0);
+	uint32_t clw0 = target_mem32_read32(t, EFM32_LOCK_BITS_CLW0);
 
 	if (argc == 1) {
 		const bool bootloader_status = clw0 & EFM32_CLW0_BOOTLOADER_ENABLE;
@@ -862,21 +862,21 @@ static bool efm32_cmd_bootloader(target_s *t, int argc, const char **argv)
 		clw0 &= ~EFM32_CLW0_BOOTLOADER_ENABLE;
 
 	/* Unlock */
-	target_mem_write32(t, EFM32_MSC_LOCK(msc), EFM32_MSC_LOCK_LOCKKEY);
+	target_mem32_write32(t, EFM32_MSC_LOCK(msc), EFM32_MSC_LOCK_LOCKKEY);
 
 	/* Set WREN bit to enable MSC write and erase functionality */
-	target_mem_write32(t, EFM32_MSC_WRITECTRL(msc), 1);
+	target_mem32_write32(t, EFM32_MSC_WRITECTRL(msc), 1);
 
 	/* Write address of CLW0 */
-	target_mem_write32(t, EFM32_MSC_ADDRB(msc), EFM32_LOCK_BITS_CLW0);
-	target_mem_write32(t, EFM32_MSC_WRITECMD(msc), EFM32_MSC_WRITECMD_LADDRIM);
+	target_mem32_write32(t, EFM32_MSC_ADDRB(msc), EFM32_LOCK_BITS_CLW0);
+	target_mem32_write32(t, EFM32_MSC_WRITECMD(msc), EFM32_MSC_WRITECMD_LADDRIM);
 
 	/* Issue the write */
-	target_mem_write32(t, EFM32_MSC_WDATA(msc), clw0);
-	target_mem_write32(t, EFM32_MSC_WRITECMD(msc), EFM32_MSC_WRITECMD_WRITEONCE);
+	target_mem32_write32(t, EFM32_MSC_WDATA(msc), clw0);
+	target_mem32_write32(t, EFM32_MSC_WRITECMD(msc), EFM32_MSC_WRITECMD_WRITEONCE);
 
 	/* Poll MSC Busy */
-	while ((target_mem_read32(t, EFM32_MSC_STATUS(msc)) & EFM32_MSC_STATUS_BUSY)) {
+	while ((target_mem32_read32(t, EFM32_MSC_STATUS(msc)) & EFM32_MSC_STATUS_BUSY)) {
 		if (target_check_error(t))
 			return false;
 	}
@@ -960,7 +960,8 @@ bool efm32_aap_probe(adiv5_access_port_s *ap)
 	DEBUG_INFO("EFM32: AAP STATUS=%08" PRIx32 "\n", adiv5_ap_read(ap, AAP_STATUS));
 
 	efm32_aap_priv_s *priv_storage = calloc(1, sizeof(*priv_storage));
-	sprintf(priv_storage->aap_driver_string, "EFM32 Authentication Access Port rev.%hu", aap_revision);
+	snprintf(priv_storage->aap_driver_string, sizeof(priv_storage->aap_driver_string),
+		"EFM32 Authentication Access Port rev.%hu", aap_revision);
 	t->driver = priv_storage->aap_driver_string;
 	t->regs_size = 0;
 

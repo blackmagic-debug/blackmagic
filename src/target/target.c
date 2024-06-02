@@ -21,21 +21,36 @@
 #include "general.h"
 #include "target_internal.h"
 #include "gdb_packet.h"
+#include "command.h"
 
 #include <stdarg.h>
+#include <assert.h>
+
+#ifndef _MSC_VER
 #include <unistd.h>
+#endif
+
+#if PC_HOSTED == 1
+#include "platform.h"
+#endif
+
+/* Fixup for when _FILE_OFFSET_BITS == 64 as unistd.h screws this up for us */
+#if defined(lseek)
+#undef lseek
+#endif
 
 target_s *target_list = NULL;
 
-#define STDOUT_READ_BUF_SIZE       64U
 #define FLASH_WRITE_BUFFER_CEILING 1024U
 
 static bool target_cmd_mass_erase(target_s *target, int argc, const char **argv);
 static bool target_cmd_range_erase(target_s *target, int argc, const char **argv);
+static bool target_cmd_redirect_output(target_s *target, int argc, const char **argv);
 
 const command_s target_cmd_list[] = {
 	{"erase_mass", target_cmd_mass_erase, "Erase whole device Flash"},
 	{"erase_range", target_cmd_range_erase, "Erase a range of memory on a device"},
+	{"redirect_stdout", target_cmd_redirect_output, "Redirect semihosting output to aux USB serial"},
 	{NULL, NULL, NULL},
 };
 
@@ -172,7 +187,12 @@ target_s *target_attach(target_s *target, target_controller_s *controller)
 	return target;
 }
 
-void target_add_ram(target_s *target, target_addr_t start, uint32_t len)
+void target_add_ram32(target_s *const target, const target_addr32_t start, const uint32_t len)
+{
+	target_add_ram64(target, start, len);
+}
+
+void target_add_ram64(target_s *const target, const target_addr64_t start, const uint64_t len)
 {
 	target_ram_s *ram = malloc(sizeof(*ram));
 	if (!ram) { /* malloc failed: heap exhaustion */
@@ -263,24 +283,47 @@ bool target_check_error(target_s *target)
 	return false;
 }
 
-bool target_attached(target_s *target)
-{
-	return target->attached;
-}
-
 /* Memory access functions */
-int target_mem_read(target_s *t, void *dest, target_addr_t src, size_t len)
+bool target_mem32_read(target_s *const target, void *const dest, const target_addr_t src, const size_t len)
 {
-	if (t->mem_read)
-		t->mem_read(t, dest, src, len);
-	return target_check_error(t);
+	return target_mem64_read(target, dest, src, len);
 }
 
-int target_mem_write(target_s *t, target_addr_t dest, const void *src, size_t len)
+bool target_mem64_read(target_s *const target, void *const dest, const target_addr64_t src, const size_t len)
 {
-	if (t->mem_write)
-		t->mem_write(t, dest, src, len);
-	return target_check_error(t);
+	/* If we're processing a semihosting syscall and it needs IO redirected, handle that instead */
+	if (target->target_options & TOPT_IN_SEMIHOSTING_SYSCALL) {
+		/* Make sure we can't go over the bounds of the buffer */
+		const size_t amount = MIN(len, target->tc->semihosting_buffer_len);
+		/* Copy data into the request destination buffer from the semihosting buffer */
+		memcpy(dest, target->tc->semihosting_buffer_ptr, amount);
+		return false;
+	}
+	/* Otherwise if the target defines a memory read function, call that instead and check for errors */
+	if (target->mem_read)
+		target->mem_read(target, dest, src, len);
+	return target_check_error(target);
+}
+
+bool target_mem32_write(target_s *const target, const target_addr_t dest, const void *const src, const size_t len)
+{
+	return target_mem64_write(target, dest, src, len);
+}
+
+bool target_mem64_write(target_s *const target, const target_addr64_t dest, const void *const src, const size_t len)
+{
+	/* If we're processing a semihosting syscall and it needs IO redirected, handle that instead */
+	if (target->target_options & TOPT_IN_SEMIHOSTING_SYSCALL) {
+		/* Make sure we can't go over the bounds of the buffer */
+		const size_t amount = MIN(len, target->tc->semihosting_buffer_len);
+		/* Copy data into the semihosting buffer from the request source buffer */
+		memcpy(target->tc->semihosting_buffer_ptr, src, amount);
+		return false;
+	}
+	/* Otherwise if the target defines a memory write function, call that instead and check for errors */
+	if (target->mem_write)
+		target->mem_write(target, dest, src, len);
+	return target_check_error(target);
 }
 
 /* target_mem_access_needs_halt() is true if the target needs to be halted during jtag memory access */
@@ -293,14 +336,14 @@ bool target_mem_access_needs_halt(target_s *t)
 }
 
 /* Register access functions */
-ssize_t target_reg_read(target_s *t, uint32_t reg, void *data, size_t max)
+size_t target_reg_read(target_s *t, uint32_t reg, void *data, size_t max)
 {
 	if (t->reg_read)
 		return t->reg_read(t, reg, data, max);
 	return 0;
 }
 
-ssize_t target_reg_write(target_s *t, uint32_t reg, const void *data, size_t size)
+size_t target_reg_write(target_s *t, uint32_t reg, const void *data, size_t size)
 {
 	if (t->reg_write)
 		return t->reg_write(t, reg, data, size);
@@ -354,14 +397,16 @@ void target_halt_resume(target_s *t, bool step)
 		t->halt_resume(t, step);
 }
 
-/* Command line for semihosting get_cmdline */
-void target_set_cmdline(target_s *t, char *cmdline)
+/* Command line for semihosting SYS_GET_CMDLINE */
+void target_set_cmdline(target_s *target, const char *const cmdline, const size_t cmdline_len)
 {
-	const size_t cmdline_len = strlen(cmdline);
-	const size_t copy_len = MIN(sizeof(t->cmdline) - 1U, cmdline_len);
-	memcpy(t->cmdline, cmdline, copy_len);
-	t->cmdline[copy_len] = '\0';
-	DEBUG_INFO("cmdline: >%s<\n", t->cmdline);
+	/* This assertion is really expensive, so only include it on BMDA builds */
+#if PC_HOSTED == 1
+	/* Check and make sure that we don't exceed the target buffer size */
+	assert(cmdline_len < MAX_CMDLINE);
+#endif
+	memcpy(target->cmdline, cmdline, cmdline_len + 1U);
+	DEBUG_INFO("cmdline: >%s<\n", target->cmdline);
 }
 
 /* Set heapinfo for semihosting */
@@ -460,6 +505,15 @@ static bool target_cmd_range_erase(target_s *const t, const int argc, const char
 	return target_flash_erase(t, addr, length);
 }
 
+static bool target_cmd_redirect_output(target_s *target, int argc, const char **argv)
+{
+	if (argc == 1) {
+		gdb_outf("Semihosting stdout redirection: %s\n", target->stdout_redirected ? "enabled" : "disabled");
+		return true;
+	}
+	return parse_enable_or_disable(argv[1], &target->stdout_redirected);
+}
+
 /* Accessor functions */
 size_t target_regs_size(target_s *t)
 {
@@ -478,66 +532,40 @@ const char *target_regs_description(target_s *t)
 	return NULL;
 }
 
-const char *target_driver_name(target_s *t)
-{
-	return t->driver;
-}
-
-const char *target_core_name(target_s *t)
-{
-	return t->core;
-}
-
-unsigned int target_designer(target_s *t)
-{
-	return t->designer_code;
-}
-
-unsigned int target_part_id(target_s *t)
-{
-	return t->part_id;
-}
-
-uint32_t target_mem_read32(target_s *t, uint32_t addr)
+uint32_t target_mem32_read32(target_s *target, target_addr32_t addr)
 {
 	uint32_t result = 0;
-	if (t->mem_read)
-		t->mem_read(t, &result, addr, sizeof(result));
+	target_mem32_read(target, &result, addr, sizeof(result));
 	return result;
 }
 
-void target_mem_write32(target_s *t, uint32_t addr, uint32_t value)
+bool target_mem32_write32(target_s *target, target_addr32_t addr, uint32_t value)
 {
-	if (t->mem_write)
-		t->mem_write(t, addr, &value, sizeof(value));
+	return target_mem32_write(target, addr, &value, sizeof(value));
 }
 
-uint16_t target_mem_read16(target_s *t, uint32_t addr)
+uint16_t target_mem32_read16(target_s *target, target_addr32_t addr)
 {
 	uint16_t result = 0;
-	if (t->mem_read)
-		t->mem_read(t, &result, addr, sizeof(result));
+	target_mem32_read(target, &result, addr, sizeof(result));
 	return result;
 }
 
-void target_mem_write16(target_s *t, uint32_t addr, uint16_t value)
+bool target_mem32_write16(target_s *target, target_addr32_t addr, uint16_t value)
 {
-	if (t->mem_write)
-		t->mem_write(t, addr, &value, sizeof(value));
+	return target_mem32_write(target, addr, &value, sizeof(value));
 }
 
-uint8_t target_mem_read8(target_s *t, uint32_t addr)
+uint8_t target_mem32_read8(target_s *target, target_addr32_t addr)
 {
 	uint8_t result = 0;
-	if (t->mem_read)
-		t->mem_read(t, &result, addr, sizeof(result));
+	target_mem32_read(target, &result, addr, sizeof(result));
 	return result;
 }
 
-void target_mem_write8(target_s *t, uint32_t addr, uint8_t value)
+bool target_mem32_write8(target_s *target, target_addr32_t addr, uint8_t value)
 {
-	if (t->mem_write)
-		t->mem_write(t, addr, &value, sizeof(value));
+	return target_mem32_write(target, addr, &value, sizeof(value));
 }
 
 void target_command_help(target_s *t)
@@ -560,131 +588,14 @@ int target_command(target_s *t, int argc, const char *argv[])
 	return -1;
 }
 
-void tc_printf(target_s *t, const char *fmt, ...)
+void tc_printf(target_s *target, const char *fmt, ...)
 {
-	(void)t;
-	va_list ap;
-
-	if (t->tc == NULL)
+	if (target->tc == NULL)
 		return;
 
+	va_list ap;
 	va_start(ap, fmt);
-	t->tc->printf(t->tc, fmt, ap);
+	target->tc->printf(target->tc, fmt, ap);
 	fflush(stdout);
 	va_end(ap);
-}
-
-/* Interface to host system calls */
-int tc_open(target_s *t, target_addr_t path, size_t plen, target_open_flags_e flags, mode_t mode)
-{
-	if (t->tc->open == NULL) {
-		t->tc->errno_ = TARGET_ENFILE;
-		return -1;
-	}
-	return t->tc->open(t->tc, path, plen, flags, mode);
-}
-
-int tc_close(target_s *t, int fd)
-{
-	if (t->tc->close == NULL) {
-		t->tc->errno_ = TARGET_EBADF;
-		return -1;
-	}
-	return t->tc->close(t->tc, fd);
-}
-
-int tc_read(target_s *t, int fd, target_addr_t buf, unsigned int count)
-{
-	if (t->tc->read == NULL)
-		return 0;
-	return t->tc->read(t->tc, fd, buf, count);
-}
-
-int tc_write(target_s *t, int fd, target_addr_t buf, unsigned int count)
-{
-#if PC_HOSTED == 0
-	if (t->stdout_redirected && (fd == STDOUT_FILENO || fd == STDERR_FILENO)) {
-		while (count) {
-			uint8_t tmp[STDOUT_READ_BUF_SIZE];
-			unsigned int cnt = sizeof(tmp);
-			if (cnt > count)
-				cnt = count;
-			target_mem_read(t, tmp, buf, cnt);
-			debug_serial_send_stdout(tmp, cnt);
-			count -= cnt;
-			buf += cnt;
-		}
-		return 0;
-	}
-#endif
-
-	if (t->tc->write == NULL)
-		return 0;
-	return t->tc->write(t->tc, fd, buf, count);
-}
-
-long tc_lseek(target_s *t, int fd, long offset, target_seek_flag_e flag)
-{
-	if (t->tc->lseek == NULL)
-		return 0;
-	return t->tc->lseek(t->tc, fd, offset, flag);
-}
-
-int tc_rename(target_s *t, target_addr_t oldpath, size_t oldlen, target_addr_t newpath, size_t newlen)
-{
-	if (t->tc->rename == NULL) {
-		t->tc->errno_ = TARGET_ENOENT;
-		return -1;
-	}
-	return t->tc->rename(t->tc, oldpath, oldlen, newpath, newlen);
-}
-
-int tc_unlink(target_s *t, target_addr_t path, size_t plen)
-{
-	if (t->tc->unlink == NULL) {
-		t->tc->errno_ = TARGET_ENOENT;
-		return -1;
-	}
-	return t->tc->unlink(t->tc, path, plen);
-}
-
-int tc_stat(target_s *t, target_addr_t path, size_t plen, target_addr_t buf)
-{
-	if (t->tc->stat == NULL) {
-		t->tc->errno_ = TARGET_ENOENT;
-		return -1;
-	}
-	return t->tc->stat(t->tc, path, plen, buf);
-}
-
-int tc_fstat(target_s *t, int fd, target_addr_t buf)
-{
-	if (t->tc->fstat == NULL) {
-		return 0;
-	}
-	return t->tc->fstat(t->tc, fd, buf);
-}
-
-int tc_gettimeofday(target_s *t, target_addr_t tv, target_addr_t tz)
-{
-	if (t->tc->gettimeofday == NULL) {
-		return -1;
-	}
-	return t->tc->gettimeofday(t->tc, tv, tz);
-}
-
-int tc_isatty(target_s *t, int fd)
-{
-	if (t->tc->isatty == NULL) {
-		return 1;
-	}
-	return t->tc->isatty(t->tc, fd);
-}
-
-int tc_system(target_s *t, target_addr_t cmd, size_t cmdlen)
-{
-	if (t->tc->system == NULL) {
-		return -1;
-	}
-	return t->tc->system(t->tc, cmd, cmdlen);
 }

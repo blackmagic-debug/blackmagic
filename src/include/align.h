@@ -33,6 +33,8 @@
 #ifndef INCLUDE_ALIGN_H
 #define INCLUDE_ALIGN_H
 
+#include <stdalign.h>
+
 typedef enum align {
 	ALIGN_8BIT = 0U,
 	ALIGN_16BIT = 1U,
@@ -44,5 +46,13 @@ typedef enum align {
 #define MIN_ALIGN(x, y) MIN(ALIGN_OF(x), ALIGN_OF(y))
 
 #define ALIGN(x, n) (((x) + (n)-1) & ~((n)-1))
+
+#define BMD_ALIGN_DEF(x) _Alignas(x)
+
+#ifdef _MSC_VER
+#define BMD_ALIGN_DECL(x) __declspec(align(x))
+#else
+#define BMD_ALIGN_DECL(x) __attribute__((aligned(x)))
+#endif
 
 #endif /* INCLUDE_ALIGN_H */

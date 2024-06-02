@@ -25,6 +25,7 @@
 
 #include "usbdfu.h"
 #include "platform.h"
+#include "platform_common.h"
 
 uintptr_t app_address = 0x08002000U;
 uint32_t rev;

@@ -132,7 +132,7 @@ typedef enum lpc55xx_iap_status {
 
 static target_addr_t lpc55xx_get_bootloader_tree_address(target_s *target)
 {
-	switch (target_mem_read32(target, LPC55xx_CHIPID_ADDRESS)) {
+	switch (target_mem32_read32(target, LPC55xx_CHIPID_ADDRESS)) {
 	//case LPC5512_CHIPID:
 	//case LPC5514_CHIPID:
 	//case LPC55S14_CHIPID:
@@ -190,12 +190,12 @@ static const char *lpc55xx_get_device_name(uint32_t chipid)
 
 static int lpc55xx_get_rom_api_version(target_s *target, target_addr_t bootloader_tree_address)
 {
-	return ((target_mem_read32(target, bootloader_tree_address + 0x4) >> 16) & 0xff) == 3 ? 1 : 0;
+	return ((target_mem32_read32(target, bootloader_tree_address + 0x4) >> 16) & 0xff) == 3 ? 1 : 0;
 }
 
 static target_addr_t lpc55xx_get_flash_table_address(target_s *target, target_addr_t bootloader_tree_address)
 {
-	return target_mem_read32(target, bootloader_tree_address + 0x10);
+	return target_mem32_read32(target, bootloader_tree_address + 0x10);
 }
 
 static target_addr_t lpc55xx_get_flash_init_address(target_s *target)
@@ -203,7 +203,7 @@ static target_addr_t lpc55xx_get_flash_init_address(target_s *target)
 	target_addr_t bootloader_tree_address = lpc55xx_get_bootloader_tree_address(target);
 
 	target_addr_t flash_table_address = lpc55xx_get_flash_table_address(target, bootloader_tree_address);
-	return target_mem_read32(target, flash_table_address + sizeof(uint32_t));
+	return target_mem32_read32(target, flash_table_address + sizeof(uint32_t));
 }
 
 static target_addr_t lpc55xx_get_flash_erase_address(target_s *target)
@@ -214,7 +214,7 @@ static target_addr_t lpc55xx_get_flash_erase_address(target_s *target)
 		return 0x1300413bU; // UNTESTED: found in SDK, not referenced in UM
 
 	target_addr_t flash_table_address = lpc55xx_get_flash_table_address(target, bootloader_tree_address);
-	return target_mem_read32(target, flash_table_address + 2 * sizeof(uint32_t));
+	return target_mem32_read32(target, flash_table_address + 2 * sizeof(uint32_t));
 }
 
 static target_addr_t lpc55xx_get_flash_program_address(target_s *target)
@@ -225,7 +225,7 @@ static target_addr_t lpc55xx_get_flash_program_address(target_s *target)
 		return 0x1300419dU; // UNTESTED: found in SDK, not referenced in UM
 
 	target_addr_t flash_table_address = lpc55xx_get_flash_table_address(target, bootloader_tree_address);
-	return target_mem_read32(target, flash_table_address + 3 * sizeof(uint32_t));
+	return target_mem32_read32(target, flash_table_address + 3 * sizeof(uint32_t));
 }
 
 static target_addr_t lpc55xx_get_ffr_init_address(target_s *target)
@@ -234,8 +234,8 @@ static target_addr_t lpc55xx_get_ffr_init_address(target_s *target)
 	target_addr_t flash_table_address = lpc55xx_get_flash_table_address(target, bootloader_tree_address);
 
 	if (lpc55xx_get_rom_api_version(target, bootloader_tree_address) == 0)
-		return target_mem_read32(target, flash_table_address + 7 * sizeof(uint32_t));
-	return target_mem_read32(target, flash_table_address + 10 * sizeof(uint32_t));
+		return target_mem32_read32(target, flash_table_address + 7 * sizeof(uint32_t));
+	return target_mem32_read32(target, flash_table_address + 10 * sizeof(uint32_t));
 }
 
 static target_addr_t lpc55xx_get_ffr_get_uuid_address(target_s *target)
@@ -244,8 +244,8 @@ static target_addr_t lpc55xx_get_ffr_get_uuid_address(target_s *target)
 	target_addr_t flash_table_address = lpc55xx_get_flash_table_address(target, bootloader_tree_address);
 
 	if (lpc55xx_get_rom_api_version(target, bootloader_tree_address) == 0)
-		return target_mem_read32(target, flash_table_address + 10 * sizeof(uint32_t));
-	return target_mem_read32(target, flash_table_address + 13 * sizeof(uint32_t));
+		return target_mem32_read32(target, flash_table_address + 10 * sizeof(uint32_t));
+	return target_mem32_read32(target, flash_table_address + 13 * sizeof(uint32_t));
 }
 
 static lpc55xx_iap_status_e iap_call_raw(target_s *target, lpc55xx_iap_cmd_e cmd, uint32_t r1, uint32_t r2, uint32_t r3)
@@ -287,7 +287,7 @@ static lpc55xx_iap_status_e iap_call_raw(target_s *target, lpc55xx_iap_cmd_e cmd
 	 * hard-fault. Instead, set LR to a word known to contain the BKPT
 	 * instruction, so that we can safely halt on IAP function return.
 	 */
-	target_mem_write16(target, LPC55xx_CODE_PATCH_ADDRESS, CORTEX_THUMB_BREAKPOINT);
+	target_mem32_write16(target, LPC55xx_CODE_PATCH_ADDRESS, CORTEX_THUMB_BREAKPOINT);
 	regs[CORTEX_REG_LR] = LPC55xx_CODE_PATCH_ADDRESS | 1; // set the ARM thumb call bit
 
 	/* Write the registers to the target and perform the IAP call */
@@ -324,7 +324,7 @@ static void lpc55xx_prepare_flash_config(target_s *target, target_addr_t address
 		.sys_freq_mhz = LPC55xx_IAP_FREQ_IN_MHZ,
 	};
 
-	target_mem_write(target, address, &config, sizeof(config));
+	target_mem32_write(target, address, &config, sizeof(config));
 }
 
 static bool lpc55xx_flash_init(target_s *target, lpc55xx_flash_config_s *config)
@@ -333,7 +333,7 @@ static bool lpc55xx_flash_init(target_s *target, lpc55xx_flash_config_s *config)
 	uint32_t regs[CORTEXM_GENERAL_REG_COUNT + CORTEX_FLOAT_REG_COUNT];
 
 	target_regs_read(target, regs);
-	target_mem_read(target, backup_memory, LPC55xx_FLASH_CONFIG_ADDRESS, sizeof(backup_memory));
+	target_mem32_read(target, backup_memory, LPC55xx_FLASH_CONFIG_ADDRESS, sizeof(backup_memory));
 
 	bool success = false;
 
@@ -345,12 +345,12 @@ static bool lpc55xx_flash_init(target_s *target, lpc55xx_flash_config_s *config)
 		goto exit;
 	}
 
-	target_mem_read(target, config, LPC55xx_FLASH_CONFIG_ADDRESS, sizeof(*config));
+	target_mem32_read(target, config, LPC55xx_FLASH_CONFIG_ADDRESS, sizeof(*config));
 
 	success = true;
 
 exit:
-	target_mem_write(target, LPC55xx_FLASH_CONFIG_ADDRESS, backup_memory, sizeof(backup_memory));
+	target_mem32_write(target, LPC55xx_FLASH_CONFIG_ADDRESS, backup_memory, sizeof(backup_memory));
 	target_regs_write(target, regs);
 
 	return success;
@@ -362,7 +362,7 @@ static bool lpc55xx_get_uuid(target_s *target, uint8_t *uuid)
 	uint32_t regs[CORTEXM_GENERAL_REG_COUNT + CORTEX_FLOAT_REG_COUNT];
 
 	target_regs_read(target, regs);
-	target_mem_read(target, backup_memory, LPC55xx_FLASH_CONFIG_ADDRESS, sizeof(backup_memory));
+	target_mem32_read(target, backup_memory, LPC55xx_FLASH_CONFIG_ADDRESS, sizeof(backup_memory));
 
 	bool success = false;
 
@@ -386,12 +386,12 @@ static bool lpc55xx_get_uuid(target_s *target, uint8_t *uuid)
 		goto exit;
 	}
 
-	target_mem_read(target, uuid, LPC55xx_UUID_ADDRESS, LPC55xx_UUID_LEN);
+	target_mem32_read(target, uuid, LPC55xx_UUID_ADDRESS, LPC55xx_UUID_LEN);
 
 	success = true;
 
 exit:
-	target_mem_write(target, LPC55xx_FLASH_CONFIG_ADDRESS, backup_memory, sizeof(backup_memory));
+	target_mem32_write(target, LPC55xx_FLASH_CONFIG_ADDRESS, backup_memory, sizeof(backup_memory));
 	target_regs_write(target, regs);
 
 	return success;
@@ -410,7 +410,7 @@ static bool lpc55xx_enter_flash_mode(target_s *target)
 	// consists of the instructions CPSID I; BKPT; in ARM Thumb encoding.
 	const uint32_t CODE_PATCH = 0xbe00b672U;
 
-	target_mem_write32(target, LPC55xx_CODE_PATCH_ADDRESS, CODE_PATCH);
+	target_mem32_write32(target, LPC55xx_CODE_PATCH_ADDRESS, CODE_PATCH);
 	target_reg_write(target, CORTEX_REG_PC, &reg_pc_value, sizeof(uint32_t));
 
 	target_halt_resume(target, false);
@@ -445,7 +445,7 @@ static bool lpc55xx_flash_erase(target_flash_s *flash, target_addr_t addr, size_
 
 static bool lpc55xx_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t len)
 {
-	target_mem_write(flash->t, LPC55xx_WRITE_BUFFER_ADDRESS, src, len);
+	target_mem32_write(flash->t, LPC55xx_WRITE_BUFFER_ADDRESS, src, len);
 
 	const lpc55xx_iap_status_e status =
 		iap_call_raw(flash->t, IAP_CMD_FLASH_PROGRAM, dest, LPC55xx_WRITE_BUFFER_ADDRESS, (uint32_t)len);
@@ -558,7 +558,7 @@ bool lpc55xx_probe(target_s *const target)
 	if (ap->apsel == 1)
 		return false;
 
-	const uint32_t chipid = target_mem_read32(target, LPC55xx_CHIPID_ADDRESS);
+	const uint32_t chipid = target_mem32_read32(target, LPC55xx_CHIPID_ADDRESS);
 	DEBUG_WARN("Chip ID: %08" PRIx32 "\n", chipid);
 
 	target->target_options |= TOPT_INHIBIT_NRST;
@@ -567,28 +567,28 @@ bool lpc55xx_probe(target_s *const target)
 	switch (chipid) {
 	case LPC5502_CHIPID:
 	case LPC5512_CHIPID:
-		target_add_ram(target, 0x04000000U, 0x4000U); // SRAM_X
-		target_add_ram(target, 0x20000000U, 0x8000U); // SRAM_0
+		target_add_ram32(target, 0x04000000U, 0x4000U); // SRAM_X
+		target_add_ram32(target, 0x20000000U, 0x8000U); // SRAM_0
 		break;
 	case LPC5504_CHIPID:
 	case LPC55S04_CHIPID:
 	case LPC5514_CHIPID:
 	case LPC55S14_CHIPID:
-		target_add_ram(target, 0x04000000U, 0x4000U); // SRAM_X
-		target_add_ram(target, 0x20000000U, 0x8000U); // SRAM_0
-		target_add_ram(target, 0x20008000U, 0x4000U); // SRAM_1
-		target_add_ram(target, 0x2000c000U, 0x4000U); // SRAM_2
+		target_add_ram32(target, 0x04000000U, 0x4000U); // SRAM_X
+		target_add_ram32(target, 0x20000000U, 0x8000U); // SRAM_0
+		target_add_ram32(target, 0x20008000U, 0x4000U); // SRAM_1
+		target_add_ram32(target, 0x2000c000U, 0x4000U); // SRAM_2
 		break;
 	case LPC5506_CHIPID:
 	case LPC55S06_CHIPID:
 	case LPC5516_CHIPID:
 	case LPC55S16_CHIPID:
 	case LPC55S69_CHIPID:
-		target_add_ram(target, 0x04000000U, 0x4000U); // SRAM_X
-		target_add_ram(target, 0x20000000U, 0x8000U); // SRAM_0
-		target_add_ram(target, 0x20008000U, 0x4000U); // SRAM_1
-		target_add_ram(target, 0x2000c000U, 0x4000U); // SRAM_2
-		target_add_ram(target, 0x20010000U, 0x4000U); // SRAM_3
+		target_add_ram32(target, 0x04000000U, 0x4000U); // SRAM_X
+		target_add_ram32(target, 0x20000000U, 0x8000U); // SRAM_0
+		target_add_ram32(target, 0x20008000U, 0x4000U); // SRAM_1
+		target_add_ram32(target, 0x2000c000U, 0x4000U); // SRAM_2
+		target_add_ram32(target, 0x20010000U, 0x4000U); // SRAM_3
 		break;
 	default:
 		// TODO: not enough testing to enable other devices
@@ -642,7 +642,7 @@ static bool lpc55_dmap_cmd(adiv5_access_port_s *const ap, const uint32_t cmd)
 			return false;
 	}
 
-	adiv5_ap_write(ap, ADIV5_AP_TAR, cmd);
+	adiv5_ap_write(ap, ADIV5_AP_TAR_LOW, cmd);
 
 	platform_timeout_set(&timeout, 20);
 	while (true) {

@@ -42,11 +42,14 @@
 #include "target_internal.h"
 #include "cortexm.h"
 #include "jep106.h"
+#include "stm32_common.h"
 
 static bool stm32f1_cmd_option(target_s *target, int argc, const char **argv);
+static bool stm32f1_cmd_uid(target_s *target, int argc, const char **argv);
 
 const command_s stm32f1_cmd_list[] = {
 	{"option", stm32f1_cmd_option, "Manipulate option bytes"},
+	{"uid", stm32f1_cmd_uid, "Print unique device ID"},
 	{NULL, NULL, NULL},
 };
 
@@ -98,6 +101,9 @@ static bool stm32f1_mass_erase(target_s *target);
 #define DBGMCU_IDCODE_F0     0x40015800U
 #define DBGMCU_IDCODE_GD32E5 0xe0044000U
 
+#define STM32F3_UID_BASE 0x1ffff7acU
+#define STM32F1_UID_BASE 0x1ffff7e8U
+
 #define GD32Fx_FLASHSIZE 0x1ffff7e0U
 #define GD32F0_FLASHSIZE 0x1ffff7ccU
 
@@ -108,6 +114,8 @@ static bool stm32f1_mass_erase(target_s *target);
 
 #define DBGMCU_IDCODE_MM32L0 0x40013400U
 #define DBGMCU_IDCODE_MM32F3 0x40007080U
+
+#define STM32F1_TOPT_32BIT_WRITES (1U << 8U)
 
 static void stm32f1_add_flash(target_s *target, uint32_t addr, size_t length, size_t erasesize)
 {
@@ -131,12 +139,12 @@ static uint16_t stm32f1_read_idcode(target_s *const target)
 {
 	if ((target->cpuid & CORTEX_CPUID_PARTNO_MASK) == CORTEX_M0 ||
 		(target->cpuid & CORTEX_CPUID_PARTNO_MASK) == CORTEX_M23)
-		return target_mem_read32(target, DBGMCU_IDCODE_F0) & 0xfffU;
+		return target_mem32_read32(target, DBGMCU_IDCODE_F0) & 0xfffU;
 	/* Is this a Cortex-M33 core with STM32F1-style peripherals? (GD32E50x) */
 	if ((target->cpuid & CORTEX_CPUID_PARTNO_MASK) == CORTEX_M33)
-		return target_mem_read32(target, DBGMCU_IDCODE_GD32E5) & 0xfffU;
+		return target_mem32_read32(target, DBGMCU_IDCODE_GD32E5) & 0xfffU;
 
-	return target_mem_read32(target, DBGMCU_IDCODE) & 0xfffU;
+	return target_mem32_read32(target, DBGMCU_IDCODE) & 0xfffU;
 }
 
 /* Identify GD32F1, GD32F2 and GD32F3 chips */
@@ -146,22 +154,25 @@ bool gd32f1_probe(target_s *target)
 	size_t block_size = 0x400;
 
 	switch (device_id) {
-	case 0x414U: /* Gigadevice gd32f303 */
-	case 0x430U:
+	case 0x414U: /* GD32F30x_HD, High density */
+	case 0x430U: /* GD32F30x_XD, XL-density */
 		target->driver = "GD32F3";
+		block_size = 0x800;
 		break;
-	case 0x418U:
+	case 0x418U: /* Connectivity Line */
 		target->driver = "GD32F2";
+		block_size = 0x800;
 		break;
-	case 0x410U: /* Gigadevice gd32f103, gd32e230 */
+	case 0x410U: /* Medium density */
 		if ((target->cpuid & CORTEX_CPUID_PARTNO_MASK) == CORTEX_M23)
-			target->driver = "GD32E230";
-		else if ((target->cpuid & CORTEX_CPUID_PARTNO_MASK) == CORTEX_M4)
+			target->driver = "GD32E230"; /* GD32E230, 64 KiB max in 1 KiB pages */
+		else if ((target->cpuid & CORTEX_CPUID_PARTNO_MASK) == CORTEX_M4) {
 			target->driver = "GD32F3";
-		else
-			target->driver = "GD32F1";
+			block_size = 0x800;
+		} else
+			target->driver = "GD32F1"; /* GD32F103, 1 KiB pages */
 		break;
-	case 0x444U: /* Gigadevice gd32e50x */
+	case 0x444U: /* GD32E50x_CL, 512 KiB max in 8 KiB pages */
 		target->driver = "GD32E5";
 		block_size = 0x2000;
 		break;
@@ -169,14 +180,29 @@ bool gd32f1_probe(target_s *target)
 		return false;
 	}
 
-	const uint32_t signature = target_mem_read32(target, GD32Fx_FLASHSIZE);
+	const uint32_t signature = target_mem32_read32(target, GD32Fx_FLASHSIZE);
 	const uint16_t flash_size = signature & 0xffffU;
 	const uint16_t ram_size = signature >> 16U;
 
+	/*
+	 * GD32F303x User Manual Rev2.9, 2.3.1 Flash memory architecture:
+	 * HD and <=512 KiB CL devices have only bank0 with 2 KiB sized pages
+	 * XD and  >512 KiB CL devices also have bank1 with 4 KiB sized pages
+	 * Same boundaries found in other families.
+	 * XXX: This driver currently only supports parts with a FLASH_BANK_SPLIT
+	 * at the 512 KiB boundary (i.e. 0x08080000) like STM32F1 XL-density.
+	 */
+	if (flash_size > 512U) {
+		const uint16_t flash_size_bank1 = flash_size - 512U;
+		stm32f1_add_flash(target, 0x8000000, 512U * 1024U, block_size);
+		stm32f1_add_flash(target, 0x8080000, flash_size_bank1 * 1024U, 0x1000U);
+	} else
+		stm32f1_add_flash(target, 0x8000000, (size_t)flash_size * 1024U, block_size);
+
 	target->part_id = device_id;
+	target->target_options |= STM32F1_TOPT_32BIT_WRITES;
 	target->mass_erase = stm32f1_mass_erase;
-	target_add_ram(target, 0x20000000, ram_size * 1024U);
-	stm32f1_add_flash(target, 0x8000000, (size_t)flash_size * 1024U, block_size);
+	target_add_ram32(target, 0x20000000, ram_size * 1024U);
 	target_add_commands(target, stm32f1_cmd_list, target->driver);
 
 	return true;
@@ -190,7 +216,7 @@ bool gd32vf1_probe(target_s *const target)
 	if (target->cpuid != 0x80000022U)
 		return false;
 	/* Then read out the device ID */
-	const uint16_t device_id = target_mem_read32(target, DBGMCU_IDCODE) & 0xfffU;
+	const uint16_t device_id = target_mem32_read32(target, DBGMCU_IDCODE) & 0xfffU;
 	switch (device_id) {
 	case 0x410U: /* GD32VF103 */
 		target->driver = "GD32VF1";
@@ -199,13 +225,13 @@ bool gd32vf1_probe(target_s *const target)
 		return false;
 	}
 
-	const uint32_t signature = target_mem_read32(target, GD32Fx_FLASHSIZE);
+	const uint32_t signature = target_mem32_read32(target, GD32Fx_FLASHSIZE);
 	const uint16_t flash_size = signature & 0xffffU;
 	const uint16_t ram_size = signature >> 16U;
 
 	target->part_id = device_id;
 	target->mass_erase = stm32f1_mass_erase;
-	target_add_ram(target, 0x20000000, ram_size * 1024U);
+	target_add_ram32(target, 0x20000000, ram_size * 1024U);
 	stm32f1_add_flash(target, 0x8000000, (size_t)flash_size * 1024U, 0x400U);
 	target_add_commands(target, stm32f1_cmd_list, target->driver);
 
@@ -263,9 +289,10 @@ static bool at32f40_detect(target_s *target, const uint16_t part_id)
 			return false;
 	}
 	// All parts have 96 KiB SRAM
-	target_add_ram(target, 0x20000000, 96U * 1024U);
+	target_add_ram32(target, 0x20000000, 96U * 1024U);
 	target->driver = "AT32F403A/407";
 	target->part_id = part_id;
+	target->target_options |= STM32F1_TOPT_32BIT_WRITES;
 	target->mass_erase = stm32f1_mass_erase;
 	return true;
 }
@@ -300,9 +327,10 @@ static bool at32f41_detect(target_s *target, const uint16_t part_id)
 		return false;
 	}
 	// All parts have 32 KiB SRAM
-	target_add_ram(target, 0x20000000, 32U * 1024U);
+	target_add_ram32(target, 0x20000000, 32U * 1024U);
 	target->driver = "AT32F415";
 	target->part_id = part_id;
+	target->target_options |= STM32F1_TOPT_32BIT_WRITES;
 	target->mass_erase = stm32f1_mass_erase;
 	return true;
 }
@@ -315,7 +343,7 @@ bool at32f40x_probe(target_s *target)
 		return false;
 
 	// Artery chips use the complete idcode word for identification
-	const uint32_t idcode = target_mem_read32(target, DBGMCU_IDCODE);
+	const uint32_t idcode = target_mem32_read32(target, DBGMCU_IDCODE);
 	const uint32_t series = idcode & AT32F4x_IDCODE_SERIES_MASK;
 	const uint16_t part_id = idcode & AT32F4x_IDCODE_PART_MASK;
 
@@ -326,52 +354,69 @@ bool at32f40x_probe(target_s *target)
 	return false;
 }
 
-/*
- * On STM32, 16-bit writes use bits 0:15 for even halfwords; bits 16:31 for odd halfwords.
- * On MM32 cortex-m0, 16-bit writes always use bits 0:15.
- * Set both halfwords to the same value, works on both STM32 and MM32.
- */
-void mm32l0_mem_write_sized(adiv5_access_port_s *ap, uint32_t dest, const void *src, size_t len, align_e align)
+/* Pack data from the source value into a uint32_t based on data alignment */
+const void *mm32l0_pack_data(const void *const src, uint32_t *const data, const align_e align)
 {
-	uint32_t odest = dest;
+	switch (align) {
+	case ALIGN_8BIT: {
+		uint8_t value;
+		/* Copy the data to pack in from the source buffer */
+		memcpy(&value, src, sizeof(value));
+		/* Then broadcast it to all 4 bytes of the uint32_t */
+		*data = (uint32_t)value | ((uint32_t)value << 8U) | ((uint32_t)value << 16U) | ((uint32_t)value << 24U);
+		break;
+	}
+	case ALIGN_16BIT: {
+		uint16_t value;
+		/* Copy the data to pack in from the source buffer (avoids unaligned read issues) */
+		memcpy(&value, src, sizeof(value));
+		/* Then broadcast it to both halfs of the uint32_t */
+		*data = (uint32_t)value | ((uint32_t)value << 16U);
+		break;
+	}
+	default:
+		/*
+		 * 32- and 64-bit aligned reads don't need to do anything special beyond using memcpy()
+		 * to avoid doing  an unaligned read of src, or any UB casts.
+		 */
+		memcpy(data, src, sizeof(*data));
+		break;
+	}
+	return (const uint8_t *)src + (1U << align);
+}
 
-	len >>= align;
-	ap_mem_access_setup(ap, dest, align);
-	while (len--) {
-		uint32_t tmp = 0;
-		/* Pack data into correct data lane */
-		switch (align) {
-		case ALIGN_8BIT: {
-			uint8_t value;
-			memcpy(&value, src, sizeof(value));
-			/* copy byte to be written to all four bytes of the uint32_t */
-			tmp = (uint32_t)value;
-			tmp = tmp | tmp << 8U;
-			tmp = tmp | tmp << 16U;
-			break;
-		}
-		case ALIGN_16BIT: {
-			uint16_t value;
-			memcpy(&value, src, sizeof(value));
-			/* copy halfword to be written to both halfwords of the uint32_t */
-			tmp = (uint32_t)value;
-			tmp = tmp | tmp << 16U;
-			break;
-		}
-		case ALIGN_64BIT:
-		case ALIGN_32BIT:
-			memcpy(&tmp, src, sizeof(tmp));
-			break;
-		}
-		src = (uint8_t *)src + (1 << align);
-		dest += (1 << align);
-		adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_DRW, tmp);
-
-		/* Check for 10 bit address overflow */
-		if ((dest ^ odest) & 0xfffffc00U) {
-			odest = dest;
-			adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_TAR, dest);
-		}
+/*
+ * Perform a memory write. Unlike with fully compliant ADIv5 devices, MM32 ones, like the
+ * Cortex-M0 based MM32L0 parts always use the lowest lane (0:7, 0:15, etc) for the data.
+ * Broadcasting the value to write to all lanes is harmless though and works for both
+ * MM32 devices and STM32 devices which comply properly with ADIv5.
+ */
+void mm32l0_mem_write_sized(adiv5_access_port_s *ap, target_addr64_t dest, const void *src, size_t len, align_e align)
+{
+	/* Do nothing and return if there's nothing to write */
+	if (len == 0U)
+		return;
+	/* Calculate the extent of the transfer (NB: no MM32 parts are 64-bit, so truncate) */
+	target_addr32_t begin = (target_addr32_t)dest;
+	const target_addr32_t end = begin + len;
+	/* Calculate how much each loop will increment the destination address by */
+	const uint8_t stride = 1U << align;
+	/* Set up the transfer */
+	adiv5_mem_access_setup(ap, dest, align);
+	/* Now loop through the data and move it 1 stride at a time to the target */
+	for (; begin < end; begin += stride) {
+		/*
+		 * Check if the address doesn't overflow the 10-bit auto increment bound for TAR,
+		 * if it's not the first transfer (offset == 0)
+		 */
+		if (begin != dest && (begin & 0x00000effU) == 0U)
+			/* Update TAR to adjust the upper bits */
+			adiv5_dp_write(ap->dp, ADIV5_AP_TAR_LOW, begin);
+		/* Pack the data for transfer */
+		uint32_t value = 0;
+		src = mm32l0_pack_data(src, &value, align);
+		/* And copy the result to the target */
+		adiv5_dp_write(ap->dp, ADIV5_AP_DRW, value);
 	}
 	/* Make sure this write is complete by doing a dummy read */
 	adiv5_dp_read(ap->dp, ADIV5_DP_RDBUFF);
@@ -386,7 +431,7 @@ bool mm32l0xx_probe(target_s *target)
 	size_t ram_kbyte = 0;
 	size_t block_size = 0x400U;
 
-	const uint32_t mm32_id = target_mem_read32(target, DBGMCU_IDCODE_MM32L0);
+	const uint32_t mm32_id = target_mem32_read32(target, DBGMCU_IDCODE_MM32L0);
 	if (target_check_error(target)) {
 		DEBUG_ERROR("%s: read error at 0x%" PRIx32 "\n", __func__, (uint32_t)DBGMCU_IDCODE_MM32L0);
 		return false;
@@ -417,7 +462,7 @@ bool mm32l0xx_probe(target_s *target)
 	target->part_id = mm32_id & 0xfffU;
 	target->driver = name;
 	target->mass_erase = stm32f1_mass_erase;
-	target_add_ram(target, 0x20000000U, ram_kbyte * 1024U);
+	target_add_ram32(target, 0x20000000U, ram_kbyte * 1024U);
 	stm32f1_add_flash(target, 0x08000000U, flash_kbyte * 1024U, block_size);
 	target_add_commands(target, stm32f1_cmd_list, name);
 	cortex_ap(target)->dp->mem_write = mm32l0_mem_write_sized;
@@ -433,7 +478,7 @@ bool mm32f3xx_probe(target_s *target)
 	size_t ram2_kbyte = 0; /* ram at 0x30000000 */
 	size_t block_size = 0x400U;
 
-	const uint32_t mm32_id = target_mem_read32(target, DBGMCU_IDCODE_MM32F3);
+	const uint32_t mm32_id = target_mem32_read32(target, DBGMCU_IDCODE_MM32F3);
 	if (target_check_error(target)) {
 		DEBUG_ERROR("%s: read error at 0x%" PRIx32 "\n", __func__, (uint32_t)DBGMCU_IDCODE_MM32F3);
 		return false;
@@ -461,9 +506,9 @@ bool mm32f3xx_probe(target_s *target)
 	target->driver = name;
 	target->mass_erase = stm32f1_mass_erase;
 	if (ram1_kbyte != 0)
-		target_add_ram(target, 0x20000000U, ram1_kbyte * 1024U);
+		target_add_ram32(target, 0x20000000U, ram1_kbyte * 1024U);
 	if (ram2_kbyte != 0)
-		target_add_ram(target, 0x30000000U, ram2_kbyte * 1024U);
+		target_add_ram32(target, 0x30000000U, ram2_kbyte * 1024U);
 	stm32f1_add_flash(target, 0x08000000U, flash_kbyte * 1024U, block_size);
 	target_add_commands(target, stm32f1_cmd_list, name);
 	return true;
@@ -483,7 +528,7 @@ bool stm32f1_probe(target_s *target)
 	case 0x410U: /* Medium density */
 	case 0x412U: /* Low density */
 	case 0x420U: /* Value Line, Low-/Medium density */
-		target_add_ram(target, 0x20000000, 0x5000);
+		target_add_ram32(target, 0x20000000, 0x5000);
 		stm32f1_add_flash(target, 0x8000000, 0x20000, 0x400);
 		target_add_commands(target, stm32f1_cmd_list, "STM32 LD/MD/VL-LD/VL-MD");
 		/* Test for clone parts with Core rev 2*/
@@ -501,7 +546,7 @@ bool stm32f1_probe(target_s *target)
 	case 0x428U: /* Value Line, High Density */
 		target->driver = "STM32F1  VL density";
 		target->part_id = device_id;
-		target_add_ram(target, 0x20000000, 0x10000);
+		target_add_ram32(target, 0x20000000, 0x10000);
 		stm32f1_add_flash(target, 0x8000000, 0x80000, 0x800);
 		target_add_commands(target, stm32f1_cmd_list, "STM32 HF/CL/VL-HD");
 		return true;
@@ -509,7 +554,7 @@ bool stm32f1_probe(target_s *target)
 	case 0x430U: /* XL-density */
 		target->driver = "STM32F1  XL density";
 		target->part_id = device_id;
-		target_add_ram(target, 0x20000000, 0x18000);
+		target_add_ram32(target, 0x20000000, 0x18000);
 		stm32f1_add_flash(target, 0x8000000, 0x80000, 0x800);
 		stm32f1_add_flash(target, 0x8080000, 0x80000, 0x800);
 		target_add_commands(target, stm32f1_cmd_list, "STM32 XL/VL-XL");
@@ -518,14 +563,14 @@ bool stm32f1_probe(target_s *target)
 	case 0x438U: /* STM32F303x6/8 and STM32F328 */
 	case 0x422U: /* STM32F30x */
 	case 0x446U: /* STM32F303xD/E and STM32F398xE */
-		target_add_ram(target, 0x10000000, 0x4000);
-		/* fall through */
+		target_add_ram32(target, 0x10000000, 0x4000);
 
+		BMD_FALLTHROUGH
 	case 0x432U: /* STM32F37x */
 	case 0x439U: /* STM32F302C8 */
 		target->driver = "STM32F3";
 		target->part_id = device_id;
-		target_add_ram(target, 0x20000000, 0x10000);
+		target_add_ram32(target, 0x20000000, 0x10000);
 		stm32f1_add_flash(target, 0x8000000, 0x80000, 0x800);
 		target_add_commands(target, stm32f1_cmd_list, "STM32F3");
 		return true;
@@ -563,7 +608,7 @@ bool stm32f1_probe(target_s *target)
 	}
 
 	target->part_id = device_id;
-	target_add_ram(target, 0x20000000, 0x5000);
+	target_add_ram32(target, 0x20000000, 0x5000);
 	stm32f1_add_flash(target, 0x8000000, flash_size, block_size);
 	target_add_commands(target, stm32f1_cmd_list, "STM32F0");
 	return true;
@@ -571,9 +616,9 @@ bool stm32f1_probe(target_s *target)
 
 static bool stm32f1_flash_unlock(target_s *target, uint32_t bank_offset)
 {
-	target_mem_write32(target, FLASH_KEYR + bank_offset, KEY1);
-	target_mem_write32(target, FLASH_KEYR + bank_offset, KEY2);
-	uint32_t ctrl = target_mem_read32(target, FLASH_CR);
+	target_mem32_write32(target, FLASH_KEYR + bank_offset, KEY1);
+	target_mem32_write32(target, FLASH_KEYR + bank_offset, KEY2);
+	uint32_t ctrl = target_mem32_read32(target, FLASH_CR + bank_offset);
 	if (ctrl & FLASH_CR_LOCK)
 		DEBUG_ERROR("unlock failed, cr: 0x%08" PRIx32 "\n", ctrl);
 	return !(ctrl & FLASH_CR_LOCK);
@@ -581,8 +626,8 @@ static bool stm32f1_flash_unlock(target_s *target, uint32_t bank_offset)
 
 static inline void stm32f1_flash_clear_eop(target_s *const target, const uint32_t bank_offset)
 {
-	const uint32_t status = target_mem_read32(target, FLASH_SR + bank_offset);
-	target_mem_write32(target, FLASH_SR + bank_offset, status | SR_EOP); /* EOP is W1C */
+	const uint32_t status = target_mem32_read32(target, FLASH_SR + bank_offset);
+	target_mem32_write32(target, FLASH_SR + bank_offset, status | SR_EOP); /* EOP is W1C */
 }
 
 static bool stm32f1_flash_busy_wait(
@@ -598,7 +643,7 @@ static bool stm32f1_flash_busy_wait(
 	 * https://www.st.com/resource/en/programming_manual/pm0075-stm32f10xxx-flash-memory-microcontrollers-stmicroelectronics.pdf
 	 */
 	while (!(status & SR_EOP) && (status & FLASH_SR_BSY)) {
-		status = target_mem_read32(target, FLASH_SR + bank_offset);
+		status = target_mem32_read32(target, FLASH_SR + bank_offset);
 		if (target_check_error(target)) {
 			DEBUG_ERROR("Lost communications with target");
 			return false;
@@ -643,11 +688,11 @@ static bool stm32f1_flash_erase(target_flash_s *flash, target_addr_t addr, size_
 	stm32f1_flash_clear_eop(target, bank_offset);
 
 	/* Flash page erase instruction */
-	target_mem_write32(target, FLASH_CR + bank_offset, FLASH_CR_PER);
+	target_mem32_write32(target, FLASH_CR + bank_offset, FLASH_CR_PER);
 	/* write address to FMA */
-	target_mem_write32(target, FLASH_AR + bank_offset, addr);
+	target_mem32_write32(target, FLASH_AR + bank_offset, addr);
 	/* Flash page erase start instruction */
-	target_mem_write32(target, FLASH_CR + bank_offset, FLASH_CR_STRT | FLASH_CR_PER);
+	target_mem32_write32(target, FLASH_CR + bank_offset, FLASH_CR_STRT | FLASH_CR_PER);
 
 	/* Wait for completion or an error */
 	return stm32f1_flash_busy_wait(target, bank_offset, NULL);
@@ -668,16 +713,19 @@ static bool stm32f1_flash_write(target_flash_s *flash, target_addr_t dest, const
 	const size_t offset = stm32f1_bank1_length(dest, len);
 	DEBUG_TARGET("%s: at %08" PRIx32 " for %zu bytes\n", __func__, dest, len);
 
+	/* Allow wider writes on Gigadevices and Arterytek */
+	const align_e psize = (target->target_options & STM32F1_TOPT_32BIT_WRITES) ? ALIGN_32BIT : ALIGN_16BIT;
+
 	/* Start by writing any bank 1 data */
 	if (offset) {
 		stm32f1_flash_clear_eop(target, FLASH_BANK1_OFFSET);
 
-		target_mem_write32(target, FLASH_CR, FLASH_CR_PG);
+		target_mem32_write32(target, FLASH_CR, FLASH_CR_PG);
 		/* Use the target API instead of a direct Cortex-M call for GD32VF103 parts */
 		if (target->designer_code == JEP106_MANUFACTURER_RV_GIGADEVICE && target->cpuid == 0x80000022U)
-			target_mem_write(target, dest, src, offset);
+			target_mem32_write(target, dest, src, offset);
 		else
-			cortexm_mem_write_sized(target, dest, src, offset, ALIGN_16BIT);
+			cortexm_mem_write_aligned(target, dest, src, offset, psize);
 
 		/* Wait for completion or an error */
 		if (!stm32f1_flash_busy_wait(target, FLASH_BANK1_OFFSET, NULL))
@@ -690,12 +738,12 @@ static bool stm32f1_flash_write(target_flash_s *flash, target_addr_t dest, const
 		const uint8_t *data = src;
 		stm32f1_flash_clear_eop(target, FLASH_BANK2_OFFSET);
 
-		target_mem_write32(target, FLASH_CR + FLASH_BANK2_OFFSET, FLASH_CR_PG);
+		target_mem32_write32(target, FLASH_CR + FLASH_BANK2_OFFSET, FLASH_CR_PG);
 		/* Use the target API instead of a direct Cortex-M call for GD32VF103 parts */
 		if (target->designer_code == JEP106_MANUFACTURER_RV_GIGADEVICE && target->cpuid == 0x80000022U)
-			target_mem_write(target, dest + offset, data + offset, remainder);
+			target_mem32_write(target, dest + offset, data + offset, remainder);
 		else
-			cortexm_mem_write_sized(target, dest + offset, data + offset, remainder, ALIGN_16BIT);
+			cortexm_mem_write_aligned(target, dest + offset, data + offset, remainder, psize);
 
 		/* Wait for completion or an error */
 		if (!stm32f1_flash_busy_wait(target, FLASH_BANK2_OFFSET, NULL))
@@ -714,8 +762,8 @@ static bool stm32f1_mass_erase_bank(
 	stm32f1_flash_clear_eop(target, bank_offset);
 
 	/* Flash mass erase start instruction */
-	target_mem_write32(target, FLASH_CR + bank_offset, FLASH_CR_MER);
-	target_mem_write32(target, FLASH_CR + bank_offset, FLASH_CR_STRT | FLASH_CR_MER);
+	target_mem32_write32(target, FLASH_CR + bank_offset, FLASH_CR_MER);
+	target_mem32_write32(target, FLASH_CR + bank_offset, FLASH_CR_STRT | FLASH_CR_MER);
 
 	/* Wait for completion or an error */
 	return stm32f1_flash_busy_wait(target, bank_offset, timeout);
@@ -758,8 +806,8 @@ static bool stm32f1_option_erase(target_s *target)
 	stm32f1_flash_clear_eop(target, FLASH_BANK1_OFFSET);
 
 	/* Erase option bytes instruction */
-	target_mem_write32(target, FLASH_CR, FLASH_CR_OPTER | FLASH_CR_OPTWRE);
-	target_mem_write32(target, FLASH_CR, FLASH_CR_STRT | FLASH_CR_OPTER | FLASH_CR_OPTWRE);
+	target_mem32_write32(target, FLASH_CR, FLASH_CR_OPTER | FLASH_CR_OPTWRE);
+	target_mem32_write32(target, FLASH_CR, FLASH_CR_STRT | FLASH_CR_OPTER | FLASH_CR_OPTWRE);
 
 	/* Wait for completion or an error */
 	return stm32f1_flash_busy_wait(target, FLASH_BANK1_OFFSET, NULL);
@@ -774,13 +822,13 @@ static bool stm32f1_option_write_erased(
 	stm32f1_flash_clear_eop(target, FLASH_BANK1_OFFSET);
 
 	/* Erase option bytes instruction */
-	target_mem_write32(target, FLASH_CR, FLASH_CR_OPTPG | FLASH_CR_OPTWRE);
+	target_mem32_write32(target, FLASH_CR, FLASH_CR_OPTPG | FLASH_CR_OPTWRE);
 
 	const uint32_t addr = FLASH_OBP_RDP + (offset * 2U);
 	if (write16_broken)
-		target_mem_write32(target, addr, 0xffff0000U | value);
+		target_mem32_write32(target, addr, 0xffff0000U | value);
 	else
-		target_mem_write16(target, addr, value);
+		target_mem32_write16(target, addr, value);
 
 	/* Wait for completion or an error */
 	const bool result = stm32f1_flash_busy_wait(target, FLASH_BANK1_OFFSET, NULL);
@@ -791,7 +839,7 @@ static bool stm32f1_option_write_erased(
 	 * check if we got a status of "Program Error" in FLASH_SR, indicating the target
 	 * refused to erase the read protection option bytes (and turn it into a truthy return).
 	 */
-	const uint8_t status = target_mem_read32(target, FLASH_SR) & SR_ERROR_MASK;
+	const uint8_t status = target_mem32_read32(target, FLASH_SR) & SR_ERROR_MASK;
 	return status == SR_PROG_ERROR;
 }
 
@@ -806,7 +854,7 @@ static bool stm32f1_option_write(target_s *const target, const uint32_t addr, co
 	/* Retrieve old values */
 	for (size_t i = 0U; i < 16U; i += 4U) {
 		const size_t offset = i >> 1U;
-		uint32_t val = target_mem_read32(target, FLASH_OBP_RDP + i);
+		uint32_t val = target_mem32_read32(target, FLASH_OBP_RDP + i);
 		opt_val[offset] = val & 0xffffU;
 		opt_val[offset + 1U] = val >> 16U;
 	}
@@ -821,7 +869,7 @@ static bool stm32f1_option_write(target_s *const target, const uint32_t addr, co
 
 	/*
 	 * Write changed values, taking into account if we can use 32- or have to use 16-bit writes.
-	 * GD32E230 is a special case as target_mem_write16 does not work
+	 * GD32E230 is a special case as target_mem32_write16 does not work
 	 */
 	const bool write16_broken = target->part_id == 0x410U && (target->cpuid & CORTEX_CPUID_PARTNO_MASK) == CORTEX_M23;
 	for (size_t i = 0U; i < 8U; ++i) {
@@ -834,7 +882,7 @@ static bool stm32f1_option_write(target_s *const target, const uint32_t addr, co
 
 static bool stm32f1_cmd_option(target_s *target, int argc, const char **argv)
 {
-	const uint32_t read_protected = target_mem_read32(target, FLASH_OBR) & FLASH_OBR_RDPRT;
+	const uint32_t read_protected = target_mem32_read32(target, FLASH_OBR) & FLASH_OBR_RDPRT;
 	const bool erase_requested = argc == 2 && strcmp(argv[1], "erase") == 0;
 	/* Fast-exit if the Flash is not readable and the user didn't ask us to erase the option bytes */
 	if (read_protected && !erase_requested) {
@@ -845,8 +893,8 @@ static bool stm32f1_cmd_option(target_s *target, int argc, const char **argv)
 	/* Unprotect the option bytes so we can modify them */
 	if (!stm32f1_flash_unlock(target, FLASH_BANK1_OFFSET))
 		return false;
-	target_mem_write32(target, FLASH_OPTKEYR, KEY1);
-	target_mem_write32(target, FLASH_OPTKEYR, KEY2);
+	target_mem32_write32(target, FLASH_OPTKEYR, KEY1);
+	target_mem32_write32(target, FLASH_OPTKEYR, KEY2);
 
 	if (erase_requested) {
 		/* When the user asks us to erase the option bytes, kick of an erase */
@@ -855,7 +903,7 @@ static bool stm32f1_cmd_option(target_s *target, int argc, const char **argv)
 		/*
 		 * Write the option bytes Flash readable key, taking into account if we can
 		 * use 32- or have to use 16-bit writes.
-		 * GD32E230 is a special case as target_mem_write16 does not work
+		 * GD32E230 is a special case as target_mem32_write16 does not work
 		 */
 		const bool write16_broken =
 			target->part_id == 0x410U && (target->cpuid & CORTEX_CPUID_PARTNO_MASK) == CORTEX_M23;
@@ -874,10 +922,21 @@ static bool stm32f1_cmd_option(target_s *target, int argc, const char **argv)
 	/* When all gets said and done, display the current option bytes values */
 	for (size_t i = 0U; i < 16U; i += 4U) {
 		const uint32_t addr = FLASH_OBP_RDP + i;
-		const uint32_t val = target_mem_read32(target, addr);
+		const uint32_t val = target_mem32_read32(target, addr);
 		tc_printf(target, "0x%08X: 0x%04X\n", addr, val & 0xffffU);
 		tc_printf(target, "0x%08X: 0x%04X\n", addr + 2U, val >> 16U);
 	}
 
 	return true;
+}
+
+static bool stm32f1_cmd_uid(target_s *target, int argc, const char **argv)
+{
+	(void)argc;
+	(void)argv;
+	target_addr_t uid_base = STM32F1_UID_BASE;
+	/* These parts have their UID elsewhere */
+	if (stm32f1_flash_readable_key(target) == FLASH_OBP_RDP_KEY_F3)
+		uid_base = STM32F3_UID_BASE;
+	return stm32_uid(target, uid_base);
 }

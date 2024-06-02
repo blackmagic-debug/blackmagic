@@ -21,10 +21,11 @@
 #include <libopencm3/stm32/rcc.h>
 #include <libopencm3/stm32/gpio.h>
 
+#include "general.h"
 #include "platform_common.h"
 
 /* Return 0 for the ST-Link on a STM8S Discovery board and 1 for Bluepill */
-uint8_t detect_rev()
+uint8_t detect_rev(void)
 {
 	/* Enable peripherals used by both debugger and DFU. */
 	rcc_periph_clock_enable(RCC_GPIOA);

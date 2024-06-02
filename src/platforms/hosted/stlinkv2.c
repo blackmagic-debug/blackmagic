@@ -27,7 +27,6 @@
  */
 
 #include "general.h"
-#include "gdb_if.h"
 #include "adiv5.h"
 #include "bmp_hosted.h"
 #include "stlinkv2.h"
@@ -35,17 +34,13 @@
 #include "exception.h"
 #include "cortexm.h"
 #include "buffer_utils.h"
-
-#include <assert.h>
-#include <unistd.h>
-#include <signal.h>
-#include <ctype.h>
-#include <sys/time.h>
-
-#include "cli.h"
+#include "maths_utils.h"
 
 #ifdef _MSC_VER
 #include <intrin.h>
+#else
+#include <unistd.h>
+#include <sys/time.h>
 #endif
 
 typedef enum transport_mode {
@@ -92,7 +87,7 @@ static bool stlink_ap_setup(uint8_t ap);
 static bool stlink_ap_cleanup(void);
 
 static stlink_mem_command_s stlink_memory_access(
-	const uint8_t operation, const uint32_t address, const uint16_t length, const uint8_t apsel)
+	const uint8_t operation, const target_addr64_t address, const uint16_t length, const uint8_t apsel)
 {
 	stlink_mem_command_s command = {
 		.command = STLINK_DEBUG_COMMAND,
@@ -384,7 +379,7 @@ const char *stlink_target_voltage(void)
 	if (adc[0])
 		result = 2.0F * (float)adc[1] * 1.2F / (float)adc[0];
 	static char res[6];
-	const int written = snprintf(res, sizeof(res), "%4.2fV", result);
+	const int written = snprintf(res, sizeof(res), "%4.2fV", (double)result);
 	if (written < 0 || written >= (int)sizeof(res))
 		return "ERROR!";
 	return res;
@@ -507,6 +502,15 @@ int stlink_hwversion(void)
 	return stlink.ver_stlink;
 }
 
+static void stlink_line_reset(void)
+{
+	stlink_simple_query(STLINK_DEBUG_COMMAND, STLINK_DEBUG_EXIT, NULL, 0);
+	uint8_t data[2];
+	stlink_simple_request(
+		STLINK_DEBUG_COMMAND, STLINK_DEBUG_APIV2_ENTER, STLINK_DEBUG_ENTER_SWD_NO_RESET, data, sizeof(data));
+	stlink_usb_error_check(data, true);
+}
+
 uint32_t stlink_adiv5_clear_error(adiv5_debug_port_s *const dp, const bool protocol_recovery)
 {
 	DEBUG_PROBE("%s (protocol recovery: %s)\n", __func__, protocol_recovery ? "true" : "false");
@@ -517,9 +521,16 @@ uint32_t stlink_adiv5_clear_error(adiv5_debug_port_s *const dp, const bool proto
 		 * we must then re-select the target to bring the device back
 		 * into the expected state.
 		 */
-		stlink_reset_adaptor();
+		stlink_line_reset();
 		if (dp->version >= 2)
-			adiv5_dp_write(dp, ADIV5_DP_TARGETSEL, dp->targetsel);
+			/*
+			 * The correct thing to do here is some form of this:
+			 * adiv5_dp_write(dp, ADIV5_DP_TARGETSEL, dp->targetsel);
+			 * but ST-Link adaptors cannot handle this properly right now, so warn instead.
+			 */
+			DEBUG_WARN("ST-Link v2/v3 adaptors cannot handle multi-drop correctly, pretending everything's fine\n");
+		/* Re-select the current AP on completion so we keep talking with the same thing */
+		stlink_ap_setup(stlink.apsel);
 		adiv5_dp_read(dp, ADIV5_DP_DPIDR);
 	}
 	const uint32_t err = adiv5_dp_read(dp, ADIV5_DP_CTRLSTAT) &
@@ -613,10 +624,15 @@ static int stlink_write_dp_register(const uint16_t apsel, const uint16_t address
 
 uint32_t stlink_raw_access(adiv5_debug_port_s *dp, uint8_t rnw, uint16_t addr, uint32_t request_value)
 {
-	DEBUG_PROBE("%s: Attempting access to addr %04x\n", __func__, addr);
 	uint32_t result_value = 0;
-	const int result = rnw ? stlink_read_dp_register(dp, addr < 0x100U ? STLINK_DEBUG_PORT : 0U, addr, &result_value) :
-							 stlink_write_dp_register(addr < 0x100U ? STLINK_DEBUG_PORT : 0U, addr, request_value);
+	/*
+	 * Note: Accesses to AP registers need to use the last known apsel value.
+	 * Accesses to DP registers need to use the Debug Port special value.
+	 */
+	const uint16_t apsel = (addr & ADIV5_APnDP) ? stlink.apsel : STLINK_DEBUG_PORT;
+	DEBUG_PROBE("%s: Attempting access to addr %04x via apsel %u\n", __func__, addr, apsel);
+	const int result = rnw ? stlink_read_dp_register(dp, apsel, addr, &result_value) :
+							 stlink_write_dp_register(apsel, addr, request_value);
 
 	if (result == STLINK_ERROR_WAIT) {
 		DEBUG_ERROR("SWD access resulted in wait, aborting\n");
@@ -677,24 +693,35 @@ static int stlink_usb_get_rw_status(bool verbose)
 	return stlink_usb_error_check(data, verbose);
 }
 
-static void stlink_mem_read(adiv5_access_port_s *ap, void *dest, uint32_t src, size_t len)
+static void stlink_mem_read(adiv5_access_port_s *ap, void *dest, target_addr64_t src, size_t len)
 {
-	if (len == 0)
-		return;
-	if (len > stlink.block_size) {
-		DEBUG_WARN("Too large!\n");
+	/* Check if this is supposed to be a 64-bit access and bail gracefully if it is */
+	if (ap->flags & ADIV5_AP_FLAGS_64BIT) {
+		DEBUG_ERROR("%s unable to do 64-bit memory access\n", __func__);
 		return;
 	}
+	if (len == 0)
+		return;
 	if (!stlink_ensure_ap(ap->apsel))
 		raise_exception(EXCEPTION_ERROR, "ST-Link AP selection error");
 
 	uint8_t type;
-	if ((src & 1U) || (len & 1U))
+	uint16_t block_size;
+	if ((src & 1U) || (len & 1U)) {
 		type = STLINK_DEBUG_READMEM_8BIT;
-	else if ((src & 3U) || (len & 3U))
+		block_size = stlink.block_size;
+	} else if ((src & 3U) || (len & 3U)) {
 		type = STLINK_DEBUG_APIV2_READMEM_16BIT;
-	else
+		block_size = STLINK_READMEM_32BIT_MAX_SIZE;
+	} else {
 		type = STLINK_DEBUG_READMEM_32BIT;
+		block_size = STLINK_READMEM_32BIT_MAX_SIZE;
+	}
+	if (len > block_size) {
+		DEBUG_ERROR(
+			"%s(AP %u @0x%016" PRIx64 "+%zu): Too large! Must be <%u\n", __func__, ap->apsel, src, len, block_size);
+		return;
+	}
 
 	/* Build the command packet and perform the access */
 	stlink_mem_command_s command = stlink_memory_access(type, src, len, ap->apsel);
@@ -718,25 +745,33 @@ static void stlink_mem_read(adiv5_access_port_s *ap, void *dest, uint32_t src, s
 		 * Approach taken:
 		 * Fill the memory with some fixed pattern so hopefully
 		 * the caller notices the error*/
-		DEBUG_ERROR("stlink_mem_read from  %" PRIx32 " to %p, len %zu failed\n", src, dest, len);
-		memset(dest, 0xff, len);
+		DEBUG_ERROR("stlink_mem_read from  %08" PRIx64 " to %p, len %zu failed\n", src, dest, len);
+		memset(dest, 0xffU, len);
 	}
-	DEBUG_PROBE("stlink_mem_read from %" PRIx32 " to %p, len %zu\n", src, dest, len);
+	DEBUG_PROBE("stlink_mem_read from %08" PRIx64 " to %p, len %zu\n", src, dest, len);
 }
 
-static void stlink_mem_write(
-	adiv5_access_port_s *const ap, const uint32_t dest, const void *const src, const size_t len, const align_e align)
+static void stlink_mem_write(adiv5_access_port_s *const ap, const target_addr64_t dest, const void *const src,
+	const size_t len, const align_e align)
 {
+	/* Check if this is supposed to be a 64-bit access and bail gracefully if it is */
+	if (ap->flags & ADIV5_AP_FLAGS_64BIT) {
+		DEBUG_ERROR("%s unable to do 64-bit memory access\n", __func__);
+		return;
+	}
 	if (len == 0)
 		return;
 	if (!stlink_ensure_ap(ap->apsel))
 		raise_exception(EXCEPTION_ERROR, "ST-Link AP selection error");
 
+	DEBUG_PROBE("%s: @0x%016" PRIx64 "+%zu\n", __func__, dest, len);
+
 	const uint8_t *const data = (const uint8_t *)src;
-	/* Chunk the write up into stlink.block_size blocks */
-	for (size_t offset = 0; offset < len; offset += stlink.block_size) {
+	const uint16_t block_size = (align == ALIGN_8BIT) ? stlink.block_size : STLINK_READMEM_32BIT_MAX_SIZE;
+	/* Chunk the write up into firmware-digestible blocks */
+	for (size_t offset = 0; offset < len; offset += block_size) {
 		/* Figure out how many bytes are in the block and at what start address */
-		const size_t amount = MIN(len - offset, stlink.block_size);
+		const size_t amount = MIN(len - offset, block_size);
 		const uint32_t addr = dest + offset;
 		/* Now generate an appropriate access packet */
 		stlink_mem_command_s command;

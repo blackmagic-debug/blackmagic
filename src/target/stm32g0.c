@@ -222,7 +222,7 @@ bool stm32g0_probe(target_s *t)
 
 	switch (t->part_id) {
 	case STM32G03_4:;
-		const uint16_t dev_id = target_mem_read32(t, DBG_IDCODE) & 0xfffU;
+		const uint16_t dev_id = target_mem32_read32(t, DBG_IDCODE) & 0xfffU;
 		switch (dev_id) {
 		case STM32G03_4:
 			/* SRAM 8kiB, Flash up to 64kiB */
@@ -262,14 +262,14 @@ bool stm32g0_probe(target_s *t)
 	case STM32G0B_C:
 		/* SRAM 144kiB, Flash up to 512kiB */
 		ram_size = RAM_SIZE_G0B_C;
-		flash_size = target_mem_read16(t, FLASH_MEMORY_SIZE) * 1024U;
+		flash_size = target_mem32_read16(t, FLASH_MEMORY_SIZE) * 1024U;
 		t->driver = "STM32G0B/C";
 		break;
 	default:
 		return false;
 	}
 
-	target_add_ram(t, RAM_START, ram_size);
+	target_add_ram32(t, RAM_START, ram_size);
 	/* Even dual Flash bank devices have a contiguous Flash memory space */
 	stm32g0_add_flash(t, FLASH_START, flash_size, FLASH_PAGE_SIZE);
 
@@ -307,12 +307,12 @@ static bool stm32g0_attach(target_s *t)
 	if (!cortexm_attach(t))
 		return false;
 
-	ps->saved_regs.rcc_apbenr1 = target_mem_read32(t, RCC_APBENR1);
-	target_mem_write32(t, RCC_APBENR1, ps->saved_regs.rcc_apbenr1 | RCC_APBENR1_DBGEN);
-	ps->saved_regs.dbg_cr = target_mem_read32(t, DBG_CR);
-	target_mem_write32(t, DBG_CR, ps->saved_regs.dbg_cr | (DBG_CR_DBG_STANDBY | DBG_CR_DBG_STOP));
-	ps->saved_regs.dbg_apb_fz1 = target_mem_read32(t, DBG_APB_FZ1);
-	target_mem_write32(
+	ps->saved_regs.rcc_apbenr1 = target_mem32_read32(t, RCC_APBENR1);
+	target_mem32_write32(t, RCC_APBENR1, ps->saved_regs.rcc_apbenr1 | RCC_APBENR1_DBGEN);
+	ps->saved_regs.dbg_cr = target_mem32_read32(t, DBG_CR);
+	target_mem32_write32(t, DBG_CR, ps->saved_regs.dbg_cr | (DBG_CR_DBG_STANDBY | DBG_CR_DBG_STOP));
+	ps->saved_regs.dbg_apb_fz1 = target_mem32_read32(t, DBG_APB_FZ1);
+	target_mem32_write32(
 		t, DBG_APB_FZ1, ps->saved_regs.dbg_apb_fz1 | (DBG_APB_FZ1_DBG_IWDG_STOP | DBG_APB_FZ1_DBG_WWDG_STOP));
 
 	return true;
@@ -331,31 +331,31 @@ static void stm32g0_detach(target_s *t)
 	 * First re-enable DBGEN clock, in case it got disabled in the meantime
 	 * (happens during flash), so that writes to DBG_* registers below succeed.
 	 */
-	target_mem_write32(t, RCC_APBENR1, ps->saved_regs.rcc_apbenr1 | RCC_APBENR1_DBGEN);
+	target_mem32_write32(t, RCC_APBENR1, ps->saved_regs.rcc_apbenr1 | RCC_APBENR1_DBGEN);
 
 	/* Then restore the DBG_* registers and clock settings. */
-	target_mem_write32(t, DBG_APB_FZ1, ps->saved_regs.dbg_apb_fz1);
-	target_mem_write32(t, DBG_CR, ps->saved_regs.dbg_cr);
-	target_mem_write32(t, RCC_APBENR1, ps->saved_regs.rcc_apbenr1);
+	target_mem32_write32(t, DBG_APB_FZ1, ps->saved_regs.dbg_apb_fz1);
+	target_mem32_write32(t, DBG_CR, ps->saved_regs.dbg_cr);
+	target_mem32_write32(t, RCC_APBENR1, ps->saved_regs.rcc_apbenr1);
 
 	cortexm_detach(t);
 }
 
 static void stm32g0_flash_unlock(target_s *t)
 {
-	target_mem_write32(t, FLASH_KEYR, FLASH_KEYR_KEY1);
-	target_mem_write32(t, FLASH_KEYR, FLASH_KEYR_KEY2);
+	target_mem32_write32(t, FLASH_KEYR, FLASH_KEYR_KEY1);
+	target_mem32_write32(t, FLASH_KEYR, FLASH_KEYR_KEY2);
 }
 
 static void stm32g0_flash_lock(target_s *t)
 {
-	const uint32_t ctrl = target_mem_read32(t, FLASH_CR) | FLASH_CR_LOCK;
-	target_mem_write32(t, FLASH_CR, ctrl);
+	const uint32_t ctrl = target_mem32_read32(t, FLASH_CR) | FLASH_CR_LOCK;
+	target_mem32_write32(t, FLASH_CR, ctrl);
 }
 
 static bool stm32g0_wait_busy(target_s *const t, platform_timeout_s *const timeout)
 {
-	while (target_mem_read32(t, FLASH_SR) & FLASH_SR_BSY_MASK) {
+	while (target_mem32_read32(t, FLASH_SR) & FLASH_SR_BSY_MASK) {
 		if (target_check_error(t))
 			return false;
 		if (timeout)
@@ -366,9 +366,9 @@ static bool stm32g0_wait_busy(target_s *const t, platform_timeout_s *const timeo
 
 static void stm32g0_flash_op_finish(target_s *t)
 {
-	target_mem_write32(t, FLASH_SR, FLASH_SR_EOP); // Clear EOP
+	target_mem32_write32(t, FLASH_SR, FLASH_SR_EOP); // Clear EOP
 	/* Clear PG: half-word access not to clear unwanted bits */
-	target_mem_write16(t, FLASH_CR, 0);
+	target_mem32_write16(t, FLASH_CR, 0);
 	stm32g0_flash_lock(t);
 }
 
@@ -394,7 +394,7 @@ static bool stm32g0_flash_erase(target_flash_s *f, const target_addr_t addr, con
 	}
 
 	/* Clear any previous programming error */
-	target_mem_write32(t, FLASH_SR, target_mem_read32(t, FLASH_SR));
+	target_mem32_write32(t, FLASH_SR, target_mem32_read32(t, FLASH_SR));
 
 	if (addr >= FLASH_OTP_START) {
 		stm32g0_flash_op_finish(t);
@@ -415,8 +415,8 @@ static bool stm32g0_flash_erase(target_flash_s *f, const target_addr_t addr, con
 		/* Erase the current page */
 		const uint32_t ctrl =
 			(page << FLASH_CR_PNB_SHIFT) | FLASH_CR_PER | (page >= FLASH_BANK2_START_PAGE ? FLASH_CR_BKER : 0);
-		target_mem_write32(t, FLASH_CR, ctrl);
-		target_mem_write32(t, FLASH_CR, ctrl | FLASH_CR_START);
+		target_mem32_write32(t, FLASH_CR, ctrl);
+		target_mem32_write32(t, FLASH_CR, ctrl | FLASH_CR_START);
 
 		/* Wait for the operation to finish and report errors */
 		if (!stm32g0_wait_busy(t, NULL)) {
@@ -426,7 +426,7 @@ static bool stm32g0_flash_erase(target_flash_s *f, const target_addr_t addr, con
 	}
 
 	/* Check for error */
-	const uint32_t status = target_mem_read32(t, FLASH_SR);
+	const uint32_t status = target_mem32_read32(t, FLASH_SR);
 	if (status & FLASH_SR_ERROR_MASK)
 		DEBUG_ERROR("stm32g0 flash erase error: sr 0x%" PRIx32 "\n", status);
 	stm32g0_flash_op_finish(t);
@@ -453,8 +453,8 @@ static bool stm32g0_flash_write(target_flash_s *f, target_addr_t dest, const voi
 
 	stm32g0_flash_unlock(t);
 	/* Write data to Flash */
-	target_mem_write32(t, FLASH_CR, FLASH_CR_PG);
-	target_mem_write(t, dest, src, len);
+	target_mem32_write32(t, FLASH_CR, FLASH_CR_PG);
+	target_mem32_write(t, dest, src, len);
 	/* Wait for completion or an error */
 	if (!stm32g0_wait_busy(t, NULL)) {
 		DEBUG_ERROR("stm32g0 flash write: comm error\n");
@@ -462,16 +462,16 @@ static bool stm32g0_flash_write(target_flash_s *f, target_addr_t dest, const voi
 		return false;
 	}
 
-	const uint32_t status = target_mem_read32(t, FLASH_SR);
+	const uint32_t status = target_mem32_read32(t, FLASH_SR);
 	if (status & FLASH_SR_ERROR_MASK) {
 		DEBUG_ERROR("stm32g0 flash write error: sr 0x%" PRIx32 "\n", status);
 		stm32g0_flash_op_finish(t);
 		return false;
 	}
 
-	if (dest == FLASH_START && target_mem_read32(t, FLASH_START) != 0xffffffffU) {
-		const uint32_t acr = target_mem_read32(t, FLASH_ACR) & ~FLASH_ACR_EMPTY;
-		target_mem_write32(t, FLASH_ACR, acr);
+	if (dest == FLASH_START && target_mem32_read32(t, FLASH_START) != 0xffffffffU) {
+		const uint32_t acr = target_mem32_read32(t, FLASH_ACR) & ~FLASH_ACR_EMPTY;
+		target_mem32_write32(t, FLASH_ACR, acr);
 	}
 
 	stm32g0_flash_op_finish(t);
@@ -483,7 +483,7 @@ static bool stm32g0_mass_erase(target_s *t)
 	const uint32_t ctrl = FLASH_CR_MER1 | FLASH_CR_MER2 | FLASH_CR_START;
 
 	stm32g0_flash_unlock(t);
-	target_mem_write32(t, FLASH_CR, ctrl);
+	target_mem32_write32(t, FLASH_CR, ctrl);
 
 	platform_timeout_s timeout;
 	platform_timeout_set(&timeout, 500);
@@ -494,7 +494,7 @@ static bool stm32g0_mass_erase(target_s *t)
 	}
 
 	/* Check for error */
-	const uint16_t status = target_mem_read32(t, FLASH_SR);
+	const uint16_t status = target_mem32_read32(t, FLASH_SR);
 	stm32g0_flash_op_finish(t);
 	return !(status & FLASH_SR_ERROR_MASK);
 }
@@ -520,7 +520,7 @@ static bool stm32g0_cmd_erase_bank(target_s *t, int argc, const char **argv)
 
 	/* Erase the Flash bank requested */
 	stm32g0_flash_unlock(t);
-	target_mem_write32(t, FLASH_CR, ctrl);
+	target_mem32_write32(t, FLASH_CR, ctrl);
 
 	/* Wait for completion or an error */
 	if (!stm32g0_wait_busy(t, NULL)) {
@@ -529,15 +529,15 @@ static bool stm32g0_cmd_erase_bank(target_s *t, int argc, const char **argv)
 	}
 
 	/* Check for error */
-	const uint16_t status = target_mem_read32(t, FLASH_SR);
+	const uint16_t status = target_mem32_read32(t, FLASH_SR);
 	stm32g0_flash_op_finish(t);
 	return !(status & FLASH_SR_ERROR_MASK);
 }
 
 static void stm32g0_flash_option_unlock(target_s *t)
 {
-	target_mem_write32(t, FLASH_OPTKEYR, FLASH_OPTKEYR_KEY1);
-	target_mem_write32(t, FLASH_OPTKEYR, FLASH_OPTKEYR_KEY2);
+	target_mem32_write32(t, FLASH_OPTKEYR, FLASH_OPTKEYR_KEY1);
+	target_mem32_write32(t, FLASH_OPTKEYR, FLASH_OPTKEYR_KEY2);
 }
 
 typedef enum option_bytes_registers {
@@ -598,7 +598,7 @@ static void write_registers(target_s *const t, const option_register_s *const re
 {
 	for (size_t reg = 0U; reg < nb_regs; ++reg) {
 		if (regs[reg].addr > 0U)
-			target_mem_write32(t, regs[reg].addr, regs[reg].val);
+			target_mem32_write32(t, regs[reg].addr, regs[reg].val);
 	}
 }
 
@@ -615,14 +615,14 @@ static bool stm32g0_option_write(target_s *const t, const option_register_s *con
 
 	/* Write the new option register values and begin the programming operation */
 	write_registers(t, options_req, OPT_REG_COUNT);
-	target_mem_write32(t, FLASH_CR, FLASH_CR_OPTSTART);
+	target_mem32_write32(t, FLASH_CR, FLASH_CR_OPTSTART);
 
 	/* Wait for completion or an error */
 	if (!stm32g0_wait_busy(t, NULL))
 		goto exit_error;
 
 	/* Ask the device to reload its options bytes */
-	target_mem_write32(t, FLASH_CR, FLASH_CR_OBL_LAUNCH);
+	target_mem32_write32(t, FLASH_CR, FLASH_CR_OBL_LAUNCH);
 	/* Option bytes loading generates a system reset */
 	tc_printf(t, "Scan and attach again\n");
 	return true;
@@ -679,7 +679,7 @@ static bool stm32g0_validate_options(target_s *t, const option_register_s *optio
 static void stm32g0_display_registers(target_s *t)
 {
 	for (size_t i = 0; i < OPT_REG_COUNT; ++i) {
-		const uint32_t val = target_mem_read32(t, options_def[i].addr);
+		const uint32_t val = target_mem32_read32(t, options_def[i].addr);
 		tc_printf(t, "0x%08X: 0x%08X\n", options_def[i].addr, val);
 	}
 }

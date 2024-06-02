@@ -53,10 +53,19 @@ extern bool debug_bmp;
 #define SWDIO_PIN  TMS_PIN
 #define SWCLK_PIN  TCK_PIN
 
-#define NRST_PORT      GPIOB
-#define NRST_PIN_V1    GPIO1
-#define NRST_PIN_V2    GPIO0
+#ifdef STLINK_V2_ISOL
+#define SWDIO_IN_PORT GPIOB
+#define SWDIO_IN_PIN  GPIO12
+#endif
+
+#define NRST_PORT   GPIOB
+#define NRST_PIN_V1 GPIO1
+#define NRST_PIN_V2 GPIO0
+#ifdef SWIM_NRST_AS_UART
+#define NRST_PIN_CLONE GPIO0
+#else
 #define NRST_PIN_CLONE GPIO6
+#endif
 
 #ifdef BLUEPILL
 #define LED_PORT GPIOC
@@ -67,7 +76,7 @@ extern bool debug_bmp;
 #define LED_PORT_UART GPIOA
 #define LED_UART      GPIO9
 
-#ifndef SWIM_AS_UART
+#ifndef SWIM_NRST_AS_UART
 #define PLATFORM_HAS_TRACESWO 1
 #endif
 
@@ -77,7 +86,23 @@ extern bool debug_bmp;
 #define SWD_CR      GPIO_CRH(SWDIO_PORT)
 #define SWD_CR_MULT (1U << ((14U - 8U) << 2U))
 
+#define SWDIODIR_BSRR GPIO_BSRR(GPIOA)
+#define SWDIODIR_BRR  GPIO_BRR(GPIOA)
+
 #define TMS_SET_MODE() gpio_set_mode(TMS_PORT, GPIO_MODE_OUTPUT_2_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, TMS_PIN);
+
+#ifdef STLINK_V2_ISOL
+/* The ISOL variant floats SWDIO with GPIO A1 */
+#define SWDIO_MODE_FLOAT()     \
+	do {                       \
+		SWDIODIR_BSRR = GPIO1; \
+	} while (0)
+#define SWDIO_MODE_DRIVE()    \
+	do {                      \
+		SWDIODIR_BRR = GPIO1; \
+	} while (0)
+#else
+/* All other variants just set SWDIO_PIN to floating */
 #define SWDIO_MODE_FLOAT()           \
 	do {                             \
 		uint32_t cr = SWD_CR;        \
@@ -92,6 +117,7 @@ extern bool debug_bmp;
 		cr |= (0x1U * SWD_CR_MULT);  \
 		SWD_CR = cr;                 \
 	} while (0)
+#endif
 #define UART_PIN_SETUP()                                                                                        \
 	do {                                                                                                        \
 		gpio_set_mode(USBUSART_PORT, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, USBUSART_TX_PIN); \
@@ -109,7 +135,7 @@ extern bool debug_bmp;
 #define IRQ_PRI_USB_VBUS     (14U << 4U)
 #define IRQ_PRI_SWO_DMA      (0U << 4U)
 
-#ifdef SWIM_AS_UART
+#ifdef SWIM_NRST_AS_UART
 #define USBUSART               USART1
 #define USBUSART_CR1           USART1_CR1
 #define USBUSART_DR            USART1_DR

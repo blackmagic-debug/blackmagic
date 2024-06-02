@@ -32,4 +32,25 @@ char *unhexify(void *buf, const char *hex, size_t size);
 char hex_digit(uint8_t value);
 uint8_t unhex_digit(char hex);
 
+uint64_t hex_string_to_num(size_t max_digits, const char *str);
+
+static inline bool is_hex(const char x)
+{
+	return (x >= '0' && x <= '9') || (x >= 'A' && x <= 'F') || (x >= 'a' && x <= 'f');
+}
+
+#define READ_HEX_NO_FOLLOW '\xff'
+
+bool read_unum32(const char *input, const char **rest, uint32_t *val, char follow, int base);
+
+static inline bool read_hex32(const char *input, const char **rest, uint32_t *val, char follow)
+{
+	return read_unum32(input, rest, val, follow, 16);
+}
+
+static inline bool read_dec32(const char *input, const char **rest, uint32_t *val, char follow)
+{
+	return read_unum32(input, rest, val, follow, 10);
+}
+
 #endif /* INCLUDE_HEX_UTILS_H */

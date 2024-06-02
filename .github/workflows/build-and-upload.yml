@@ -101,7 +101,7 @@ jobs:
 
       # Checkout the repository and branch to build under the default location
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       # Build the firmware for all platform variants and full BMDA
       - name: Build all platform variants firmware and Linux BMDA
@@ -201,7 +201,7 @@ jobs:
 
       # Checkout the repository and branch to build under the default location
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       # Build the firmware for all platform variants and full BMDA
       - name: Build all platform variants firmware and Windows BMDA

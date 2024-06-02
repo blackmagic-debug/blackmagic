@@ -24,7 +24,9 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <termios.h>
+#ifndef _MSC_VER
 #include <unistd.h>
+#endif
 
 #include "general.h"
 #include "remote.h"
@@ -32,7 +34,14 @@
 #include "utils.h"
 #include "cortexm.h"
 
-static int fd; /* File descriptor for connection to GDB remote */
+#define READ_BUFFER_LENGTH 4096U
+
+/* File descriptor for the connection to the remote BMP */
+static int fd;
+/* Buffer for read request data + fullness and next read position values */
+static uint8_t read_buffer[READ_BUFFER_LENGTH];
+static size_t read_buffer_fullness = 0U;
+static size_t read_buffer_offset = 0U;
 
 /* A nice routine grabbed from
  * https://stackoverflow.com/questions/6947413/how-to-open-read-and-write-from-serial-port-in-c
@@ -188,6 +197,9 @@ bool serial_open(const bmda_cli_options_s *const cl_opts, const char *const seri
 		memcpy(name, cl_opts->opt_device, truncated_len);
 		name[truncated_len] = '\0';
 	}
+	/* Reset the read buffer before opening the target BMP */
+	read_buffer_fullness = 0U;
+	read_buffer_offset = 0U;
 	fd = open(name, O_RDWR | O_SYNC | O_NOCTTY);
 	if (fd < 0) {
 		DEBUG_ERROR("Couldn't open serial port %s\n", name);
@@ -217,57 +229,80 @@ bool platform_buffer_write(const void *const data, const size_t length)
 	return (size_t)written == length;
 }
 
-/* XXX: We should either return size_t or bool */
-/* XXX: This needs documenting that it can abort the program with exit(), or the error handling fixed */
-int platform_buffer_read(void *const data, size_t length)
+static ssize_t bmda_read_more_data(void)
 {
-	char response = 0;
 	timeval_s timeout = {
 		.tv_sec = cortexm_wait_timeout / 1000U,
 		.tv_usec = 1000U * (cortexm_wait_timeout % 1000U),
 	};
 
-	/* Drain the buffer for the remote till we see a start-of-response byte */
-	while (response != REMOTE_RESP) {
-		fd_set select_set;
-		FD_ZERO(&select_set);
-		FD_SET(fd, &select_set);
+	fd_set select_set;
+	FD_ZERO(&select_set);
+	FD_SET(fd, &select_set);
 
-		const int result = select(FD_SETSIZE, &select_set, NULL, NULL, &timeout);
-		if (result < 0) {
-			DEBUG_ERROR("Failed on select\n");
-			return -3;
+	/* Set up to wait for more data from the probe */
+	const int result = select(FD_SETSIZE, &select_set, NULL, NULL, &timeout);
+	/* If select() fails, bail */
+	if (result < 0) {
+		DEBUG_ERROR("Failed on select\n");
+		return -3;
+	}
+	/* If we timed out, bail differently */
+	if (result == 0) {
+		DEBUG_ERROR("Timeout while waiting for BMP response\n");
+		return -4;
+	}
+	/* Now we know there's data, try to fill the read buffer */
+	const ssize_t bytes_received = read(fd, read_buffer, READ_BUFFER_LENGTH);
+	/* If that failed, bail */
+	if (bytes_received < 0) {
+		const int error = errno;
+		DEBUG_ERROR("Failed to read response (%d): %s\n", error, strerror(error));
+		return -6;
+	}
+	/* We now have more data, so update the read buffer counters */
+	read_buffer_fullness = (size_t)bytes_received;
+	read_buffer_offset = 0U;
+	return 0;
+}
+
+/* XXX: We should either return size_t or bool */
+/* XXX: This needs documenting that it can abort the program with exit(), or the error handling fixed */
+int platform_buffer_read(void *const data, const size_t length)
+{
+	char *const buffer = (char *)data;
+	/* Drain the buffer for the remote till we see a start-of-response byte */
+	for (char response = 0; response != REMOTE_RESP;) {
+		if (read_buffer_offset == read_buffer_fullness) {
+			const ssize_t result = bmda_read_more_data();
+			if (result < 0)
+				return result;
 		}
-		if (result == 0) {
-			DEBUG_ERROR("Timeout while waiting for BMP response\n");
-			return -4;
-		}
-		if (read(fd, &response, 1) != 1) {
-			const int error = errno;
-			DEBUG_ERROR("Failed to read response (%d): %s\n", error, strerror(error));
-			return -6;
-		}
+		response = read_buffer[read_buffer_offset++];
 	}
 	/* Now collect the response */
 	for (size_t offset = 0; offset < length;) {
-		fd_set select_set;
-		FD_ZERO(&select_set);
-		FD_SET(fd, &select_set);
-		const int result = select(FD_SETSIZE, &select_set, NULL, NULL, &timeout);
-		if (result < 0) {
-			DEBUG_ERROR("Failed on select\n");
-			exit(-4);
+		/* Check if we need more data or should use what's in the buffer already */
+		if (read_buffer_offset == read_buffer_fullness) {
+			const ssize_t result = bmda_read_more_data();
+			if (result < 0)
+				return result;
 		}
-		if (result == 0) {
-			DEBUG_ERROR("Timeout on read\n");
-			return -5;
+		/* Look for an end of packet marker */
+		size_t response_length = 0U;
+		for (; read_buffer_offset + response_length < read_buffer_fullness && offset + response_length < length;
+			 ++response_length) {
+			/* If we've found a REMOTE_EOM then stop scanning */
+			if (read_buffer[read_buffer_offset + response_length] == REMOTE_EOM) {
+				++response_length;
+				break;
+			}
 		}
-		if (read(fd, data + offset, 1) != 1) {
-			const int error = errno;
-			DEBUG_ERROR("Failed to read response (%d): %s\n", error, strerror(error));
-			return -6;
-		}
-		char *const buffer = (char *)data;
+		/* We now either have a REMOTE_EOM or need all the data from the buffer */
+		memcpy(buffer + offset, read_buffer + read_buffer_offset, response_length);
+		read_buffer_offset += response_length;
+		offset += response_length - 1U;
+		/* If this was because of REMOTE_EOM, return */
 		if (buffer[offset] == REMOTE_EOM) {
 			buffer[offset] = 0;
 			DEBUG_WIRE("       %s\n", buffer);
@@ -275,7 +310,5 @@ int platform_buffer_read(void *const data, size_t length)
 		}
 		++offset;
 	}
-
-	DEBUG_ERROR("Failed to read\n");
-	return -6;
+	return length;
 }

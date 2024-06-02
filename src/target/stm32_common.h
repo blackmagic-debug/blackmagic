@@ -21,9 +21,12 @@
 #ifndef TARGET_STM32_COMMON_H
 #define TARGET_STM32_COMMON_H
 
+// IWYU pragma: begin_keep
 #include "general.h"
 #include "target_internal.h"
 #include "adiv5.h"
+
+// IWYU pragma: end_keep
 
 static inline const char *stm32_psize_to_string(const align_e psize)
 {
@@ -55,5 +58,7 @@ static inline bool stm32_psize_from_string(target_s *t, const char *const str, a
 	}
 	return true;
 }
+
+bool stm32_uid(target_s *const target, target_addr_t uid_base);
 
 #endif /*TARGET_STM32_COMMON_H*/

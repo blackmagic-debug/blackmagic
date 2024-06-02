@@ -102,14 +102,14 @@ static void hc32l110_add_flash(target_s *target, const uint32_t flash_size)
 
 bool hc32l110_probe(target_s *target)
 {
-	const uint32_t flash_size = target_mem_read32(target, HC32L110_FLASH_SIZE);
+	const uint32_t flash_size = target_mem32_read32(target, HC32L110_FLASH_SIZE);
 
 	switch (flash_size) {
 	case 16384:
-		target_add_ram(target, 0x2000000, 2048);
+		target_add_ram32(target, 0x2000000, 2048);
 		break;
 	case 32768:
-		target_add_ram(target, 0x2000000, 4096);
+		target_add_ram32(target, 0x2000000, 4096);
 		break;
 	default:
 		return false;
@@ -126,8 +126,8 @@ bool hc32l110_probe(target_s *target)
 /* Executes the magic sequence to unlock the CR register */
 static void hc32l110_flash_cr_unlock(target_s *const target)
 {
-	target_mem_write32(target, HC32L110_FLASH_BYPASS, 0x5a5aU);
-	target_mem_write32(target, HC32L110_FLASH_BYPASS, 0xa5a5U);
+	target_mem32_write32(target, HC32L110_FLASH_BYPASS, 0x5a5aU);
+	target_mem32_write32(target, HC32L110_FLASH_BYPASS, 0xa5a5U);
 }
 
 static bool hc32l110_check_flash_completion(target_s *const target, const uint32_t timeout_ms)
@@ -136,7 +136,7 @@ static bool hc32l110_check_flash_completion(target_s *const target, const uint32
 	platform_timeout_set(&timeout, timeout_ms);
 	uint32_t status = HC32L110_FLASH_CR_BUSY;
 	while (status & HC32L110_FLASH_CR_BUSY) {
-		status = target_mem_read32(target, HC32L110_FLASH_CR);
+		status = target_mem32_read32(target, HC32L110_FLASH_CR);
 		if (target_check_error(target) || platform_timeout_is_expired(&timeout))
 			return false;
 	}
@@ -147,14 +147,14 @@ static bool hc32l110_check_flash_completion(target_s *const target, const uint32
 static void hc32l110_slock_lock_all(target_s *const target)
 {
 	hc32l110_flash_cr_unlock(target);
-	target_mem_write32(target, HC32L110_FLASH_SLOCK, 0);
+	target_mem32_write32(target, HC32L110_FLASH_SLOCK, 0);
 }
 
 /* Unlock the whole flash for writing */
 static void hc32l110_slock_unlock_all(target_s *const target)
 {
 	hc32l110_flash_cr_unlock(target);
-	target_mem_write32(target, HC32L110_FLASH_SLOCK, 0xffffU);
+	target_mem32_write32(target, HC32L110_FLASH_SLOCK, 0xffffU);
 }
 
 static bool hc32l110_enter_flash_mode(target_s *const target)
@@ -176,10 +176,10 @@ static bool hc32l110_flash_prepare(target_flash_s *const flash)
 
 	switch (flash->operation) {
 	case FLASH_OPERATION_WRITE:
-		target_mem_write32(flash->t, HC32L110_FLASH_CR, HC32L110_FLASH_CR_OP_PROGRAM);
+		target_mem32_write32(flash->t, HC32L110_FLASH_CR, HC32L110_FLASH_CR_OP_PROGRAM);
 		break;
 	case FLASH_OPERATION_ERASE:
-		target_mem_write32(flash->t, HC32L110_FLASH_CR, HC32L110_FLASH_CR_OP_ERASE_SECTOR);
+		target_mem32_write32(flash->t, HC32L110_FLASH_CR, HC32L110_FLASH_CR_OP_ERASE_SECTOR);
 		break;
 	default:
 		DEBUG_WARN("unsupported operation %u", flash->operation);
@@ -200,7 +200,7 @@ static bool hc32l110_flash_erase(target_flash_s *const flash, const target_addr_
 {
 	(void)length;
 	/* The Flash controller automatically erases the whole sector after one write operation */
-	target_mem_write32(flash->t, addr, 0);
+	target_mem32_write32(flash->t, addr, 0);
 	return hc32l110_check_flash_completion(flash->t, 1000);
 }
 
@@ -208,7 +208,7 @@ static bool hc32l110_flash_write(
 	target_flash_s *const flash, const target_addr_t dest, const void *const src, const size_t length)
 {
 	(void)length;
-	target_mem_write32(flash->t, dest, *(const uint32_t *)src);
+	target_mem32_write32(flash->t, dest, *(const uint32_t *)src);
 	return hc32l110_check_flash_completion(flash->t, 1000);
 }
 
@@ -217,14 +217,14 @@ static bool hc32l110_mass_erase(target_s *target)
 	hc32l110_enter_flash_mode(target);
 
 	hc32l110_flash_cr_unlock(target);
-	target_mem_write32(target, HC32L110_FLASH_CR, HC32L110_FLASH_CR_OP_ERASE_CHIP);
+	target_mem32_write32(target, HC32L110_FLASH_CR, HC32L110_FLASH_CR_OP_ERASE_CHIP);
 	if (!hc32l110_check_flash_completion(target, 500))
 		return false;
 
 	hc32l110_slock_unlock_all(target);
 
 	// The Flash controller automatically erases the whole Flash after one write operation
-	target_mem_write32(target, 0, 0);
+	target_mem32_write32(target, 0, 0);
 	const bool result = hc32l110_check_flash_completion(target, 4000);
 
 	hc32l110_slock_lock_all(target);

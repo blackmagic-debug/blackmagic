@@ -20,23 +20,21 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include "general.h"
-#include "gdb_if.h"
 #include "version.h"
 #include "remote.h"
 #include "target.h"
 #include "bmp_remote.h"
-#include "cli.h"
 #include "hex_utils.h"
-#include "exception.h"
 
 #include "remote/protocol_v0.h"
 #include "remote/protocol_v1.h"
 #include "remote/protocol_v2.h"
 #include "remote/protocol_v3.h"
+#include "remote/protocol_v4.h"
 
-#include <assert.h>
+#ifndef _MSC_VER
 #include <sys/time.h>
-#include <errno.h>
+#endif
 
 #include "adiv5.h"
 
@@ -98,6 +96,10 @@ bool remote_init(const bool power_up)
 		case 3:
 			remote_v3_init();
 			break;
+		case 4:
+			if (!remote_v4_init())
+				return false;
+			break;
 		default:
 			DEBUG_ERROR("Unknown remote protocol version %" PRIu64 ", aborting\n", version);
 			return false;
@@ -152,7 +154,7 @@ bool remote_nrst_get_val(void)
 	platform_buffer_write(buffer, length);
 	length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
 	if (length < 1 || buffer[0] == REMOTE_RESP_ERR) {
-		DEBUG_ERROR("platform_nrst_set_val failed, error %s\n", length ? buffer + 1 : "unknown");
+		DEBUG_ERROR("platform_nrst_get_val failed, error %s\n", length ? buffer + 1 : "unknown");
 		exit(-1);
 	}
 	return buffer[1] == '1';

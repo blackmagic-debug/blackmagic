@@ -95,6 +95,18 @@
 /* 8 byte phrases need to be written to the k64 flash */
 #define K64_WRITE_LEN 8U
 
+/* Target registers */
+#define MK20DX256_FLASH_BASE       0x00000000U
+#define MK20DX256_FLASH_SIZE       0x00040000U
+#define MK20DX256_FLASH_BLK_SIZE   0x00000800U
+#define MK20DX256_FLEXNVM_BASE     0x10000000U
+#define MK20DX256_FLEXNVM_SIZE     0x00008000U
+#define MK20DX256_FLEXNVM_BLK_SIZE 0x00000400U
+#define MK20DX256_SRAM_L_BASE      0x1fff8000U
+#define MK20DX256_SRAM_L_SIZE      0x00008000U
+#define MK20DX256_SRAM_H_BASE      0x20000000U
+#define MK20DX256_SRAM_H_SIZE      0x00008000U
+
 static bool kinetis_cmd_unsafe(target_s *t, int argc, const char **argv);
 
 const command_s kinetis_cmd_list[] = {
@@ -146,8 +158,8 @@ static void kl_s32k14_setup(
 	target_s *const t, const uint32_t sram_l, const uint32_t sram_h, const size_t flash_size, const size_t flexmem_size)
 {
 	t->driver = "S32K14x";
-	target_add_ram(t, sram_l, 0x20000000U - sram_l);
-	target_add_ram(t, 0x20000000, sram_h);
+	target_add_ram32(t, sram_l, 0x20000000U - sram_l);
+	target_add_ram32(t, 0x20000000, sram_h);
 
 	kinetis_add_flash(t, 0x00000000, flash_size, 0x1000, K64_WRITE_LEN);   /* P-Flash, 4 KB Sectors */
 	kinetis_add_flash(t, 0x10000000, flexmem_size, 0x1000, K64_WRITE_LEN); /* FlexNVM, 4 KB Sectors */
@@ -155,28 +167,28 @@ static void kl_s32k14_setup(
 
 bool kinetis_probe(target_s *const t)
 {
-	uint32_t sdid = target_mem_read32(t, SIM_SDID);
-	uint32_t fcfg1 = target_mem_read32(t, SIM_FCFG1);
+	uint32_t sdid = target_mem32_read32(t, SIM_SDID);
+	uint32_t fcfg1 = target_mem32_read32(t, SIM_FCFG1);
 
 	switch (sdid >> 20U) {
 	case 0x161U:
 		/* sram memory size */
 		switch ((sdid >> 16U) & 0x0fU) {
 		case 0x03U: /* 4 KB */
-			target_add_ram(t, 0x1ffffc00, 0x0400);
-			target_add_ram(t, 0x20000000, 0x0c00);
+			target_add_ram32(t, 0x1ffffc00, 0x0400);
+			target_add_ram32(t, 0x20000000, 0x0c00);
 			break;
 		case 0x04U: /* 8 KB */
-			target_add_ram(t, 0x1ffff800, 0x0800);
-			target_add_ram(t, 0x20000000, 0x1800);
+			target_add_ram32(t, 0x1ffff800, 0x0800);
+			target_add_ram32(t, 0x20000000, 0x1800);
 			break;
 		case 0x05U: /* 16 KB */
-			target_add_ram(t, 0x1ffff000, 0x1000);
-			target_add_ram(t, 0x20000000, 0x3000);
+			target_add_ram32(t, 0x1ffff000, 0x1000);
+			target_add_ram32(t, 0x20000000, 0x3000);
 			break;
 		case 0x06U: /* 32 KB */
-			target_add_ram(t, 0x1fffe000, 0x2000);
-			target_add_ram(t, 0x20000000, 0x6000);
+			target_add_ram32(t, 0x1fffe000, 0x2000);
+			target_add_ram32(t, 0x20000000, 0x6000);
 			break;
 		default:
 			return false;
@@ -213,28 +225,28 @@ bool kinetis_probe(target_s *const t)
 
 	case 0x251U:
 		t->driver = "KL25";
-		target_add_ram(t, 0x1ffff000, 0x1000);
-		target_add_ram(t, 0x20000000, 0x3000);
+		target_add_ram32(t, 0x1ffff000, 0x1000);
+		target_add_ram32(t, 0x20000000, 0x3000);
 		kinetis_add_flash(t, 0x00000000, 0x20000, 0x400, KL_WRITE_LEN);
 		break;
 	case 0x231U:
 		t->driver = "KL27x128"; // MKL27 >=128kb
-		target_add_ram(t, 0x1fffe000, 0x2000);
-		target_add_ram(t, 0x20000000, 0x6000);
+		target_add_ram32(t, 0x1fffe000, 0x2000);
+		target_add_ram32(t, 0x20000000, 0x6000);
 		kinetis_add_flash(t, 0x00000000, 0x40000, 0x400, KL_WRITE_LEN);
 		break;
 	case 0x271U:
 		switch ((sdid >> 16U) & 0x0f) {
 		case 4:
 			t->driver = "KL27x32";
-			target_add_ram(t, 0x1ffff800, 0x0800);
-			target_add_ram(t, 0x20000000, 0x1800);
+			target_add_ram32(t, 0x1ffff800, 0x0800);
+			target_add_ram32(t, 0x20000000, 0x1800);
 			kinetis_add_flash(t, 0x00000000, 0x8000, 0x400, KL_WRITE_LEN);
 			break;
 		case 5:
 			t->driver = "KL27x64";
-			target_add_ram(t, 0x1ffff000, 0x1000);
-			target_add_ram(t, 0x20000000, 0x3000);
+			target_add_ram32(t, 0x1ffff000, 0x1000);
+			target_add_ram32(t, 0x20000000, 0x3000);
 			kinetis_add_flash(t, 0x00000000, 0x10000, 0x400, KL_WRITE_LEN);
 			break;
 		default:
@@ -245,20 +257,20 @@ bool kinetis_probe(target_s *const t)
 		switch ((sdid >> 16U) & 0x0fU) {
 		case 3U:
 			t->driver = "KL02x32";
-			target_add_ram(t, 0x1ffffc00, 0x400);
-			target_add_ram(t, 0x20000000, 0xc00);
+			target_add_ram32(t, 0x1ffffc00, 0x400);
+			target_add_ram32(t, 0x20000000, 0xc00);
 			kinetis_add_flash(t, 0x00000000, 0x7fff, 0x400, KL_WRITE_LEN);
 			break;
 		case 2U:
 			t->driver = "KL02x16";
-			target_add_ram(t, 0x1ffffe00, 0x200);
-			target_add_ram(t, 0x20000000, 0x600);
+			target_add_ram32(t, 0x1ffffe00, 0x200);
+			target_add_ram32(t, 0x20000000, 0x600);
 			kinetis_add_flash(t, 0x00000000, 0x3fff, 0x400, KL_WRITE_LEN);
 			break;
 		case 1U:
 			t->driver = "KL02x8";
-			target_add_ram(t, 0x1fffff00, 0x100);
-			target_add_ram(t, 0x20000000, 0x300);
+			target_add_ram32(t, 0x1fffff00, 0x100);
+			target_add_ram32(t, 0x20000000, 0x300);
 			kinetis_add_flash(t, 0x00000000, 0x1fff, 0x400, KL_WRITE_LEN);
 			break;
 		default:
@@ -267,14 +279,14 @@ bool kinetis_probe(target_s *const t)
 		break;
 	case 0x031U: /* KL03 family */
 		t->driver = "KL03";
-		target_add_ram(t, 0x1ffffe00, 0x200);
-		target_add_ram(t, 0x20000000, 0x600);
+		target_add_ram32(t, 0x1ffffe00, 0x200);
+		target_add_ram32(t, 0x20000000, 0x600);
 		kinetis_add_flash(t, 0, 0x8000, 0x400, KL_WRITE_LEN);
 		break;
 	case 0x220U: /* K22F family */
 		t->driver = "K22F";
-		target_add_ram(t, 0x1c000000, 0x4000000);
-		target_add_ram(t, 0x20000000, 0x100000);
+		target_add_ram32(t, 0x1c000000, 0x4000000);
+		target_add_ram32(t, 0x20000000, 0x100000);
 		kinetis_add_flash(t, 0, 0x40000, 0x800, KL_WRITE_LEN);
 		kinetis_add_flash(t, 0x40000, 0x40000, 0x800, KL_WRITE_LEN);
 		break;
@@ -285,8 +297,8 @@ bool kinetis_probe(target_s *const t)
 		 * subfamily nibble as 2
 		 */
 		t->driver = "K64";
-		target_add_ram(t, 0x1fff0000, 0x10000);
-		target_add_ram(t, 0x20000000, 0x30000);
+		target_add_ram32(t, 0x1fff0000, 0x10000);
+		target_add_ram32(t, 0x20000000, 0x30000);
 		kinetis_add_flash(t, 0, 0x80000, 0x1000, K64_WRITE_LEN);
 		kinetis_add_flash(t, 0x80000, 0x80000, 0x1000, K64_WRITE_LEN);
 		break;
@@ -303,22 +315,22 @@ bool kinetis_probe(target_s *const t)
 			/* K12 Sub-Family Reference Manual, K12P80M50SF4RM, Rev. 4, February 2013 */
 			case 0x7U:
 				t->driver = "MK12DX128Vxx5";
-				target_add_ram(t, 0x1fffc000, 0x00004000);                         /* SRAM_L, 16 KB */
-				target_add_ram(t, 0x20000000, 0x00004000);                         /* SRAM_H, 16 KB */
+				target_add_ram32(t, 0x1fffc000, 0x00004000);                       /* SRAM_L, 16 KB */
+				target_add_ram32(t, 0x20000000, 0x00004000);                       /* SRAM_H, 16 KB */
 				kinetis_add_flash(t, 0x00000000, 0x00020000, 0x800, KL_WRITE_LEN); /* P-Flash, 128 KB, 2 KB Sectors */
 				kinetis_add_flash(t, 0x10000000, 0x00010000, 0x800, KL_WRITE_LEN); /* FlexNVM, 64 KB, 2 KB Sectors */
 				break;
 			case 0x9U:
 				t->driver = "MK12DX256Vxx5";
-				target_add_ram(t, 0x1fffc000, 0x00004000);                         /* SRAM_L, 16 KB */
-				target_add_ram(t, 0x20000000, 0x00004000);                         /* SRAM_H, 16 KB */
+				target_add_ram32(t, 0x1fffc000, 0x00004000);                       /* SRAM_L, 16 KB */
+				target_add_ram32(t, 0x20000000, 0x00004000);                       /* SRAM_H, 16 KB */
 				kinetis_add_flash(t, 0x00000000, 0x00040000, 0x800, KL_WRITE_LEN); /* P-Flash, 256 KB, 2 KB Sectors */
 				kinetis_add_flash(t, 0x10000000, 0x00010000, 0x800, KL_WRITE_LEN); /* FlexNVM, 64 KB, 2 KB Sectors */
 				break;
 			case 0xbU:
 				t->driver = "MK12DN512Vxx5";
-				target_add_ram(t, 0x1fff8000, 0x00008000);                         /* SRAM_L, 32 KB */
-				target_add_ram(t, 0x20000000, 0x00008000);                         /* SRAM_H, 32 KB */
+				target_add_ram32(t, 0x1fff8000, 0x00008000);                       /* SRAM_L, 32 KB */
+				target_add_ram32(t, 0x20000000, 0x00008000);                       /* SRAM_H, 32 KB */
 				kinetis_add_flash(t, 0x00000000, 0x00040000, 0x800, KL_WRITE_LEN); /* P-Flash, 256 KB, 2 KB Sectors */
 				kinetis_add_flash(t, 0x00040000, 0x00040000, 0x800, KL_WRITE_LEN); /* FlexNVM, 256 KB, 2 KB Sectors */
 				break;
@@ -327,7 +339,16 @@ bool kinetis_probe(target_s *const t)
 			}
 			break;
 		case 0x010U: /* K20 Family, DIEID=0x0 */
+			return false;
 		case 0x090U: /* K20 Family, DIEID=0x1 */
+			t->driver = "MK20DX256";
+			target_add_ram32(t, MK20DX256_SRAM_L_BASE, MK20DX256_SRAM_L_SIZE); /* SRAM_L, 32 KB */
+			target_add_ram32(t, MK20DX256_SRAM_H_BASE, MK20DX256_SRAM_H_SIZE); /* SRAM_H, 32 KB */
+			kinetis_add_flash(t, MK20DX256_FLASH_BASE, MK20DX256_FLASH_SIZE, MK20DX256_FLASH_BLK_SIZE,
+				KL_WRITE_LEN); /* P-Flash, 256 KB, 2 KB Sectors */
+			kinetis_add_flash(t, MK20DX256_FLEXNVM_BASE, MK20DX256_FLEXNVM_SIZE, MK20DX256_FLEXNVM_BLK_SIZE,
+				KL_WRITE_LEN); /* FlexNVM, 32 KB, 1 KB Sectors */
+			break;
 		case 0x110U: /* K20 Family, DIEID=0x2 */
 		case 0x190U: /* K20 Family, DIEID=0x3 */
 		case 0x230U: /* K21 Family, DIEID=0x4 */
@@ -350,8 +371,8 @@ bool kinetis_probe(target_s *const t)
 		break;
 	case 0x118U: /* S32K118 */
 		t->driver = "S32K118";
-		target_add_ram(t, 0x1ffffc00, 0x00000400);                          /* SRAM_L, 1 KB */
-		target_add_ram(t, 0x20000000, 0x00005800);                          /* SRAM_H, 22 KB */
+		target_add_ram32(t, 0x1ffffc00, 0x00000400);                        /* SRAM_L, 1 KB */
+		target_add_ram32(t, 0x20000000, 0x00005800);                        /* SRAM_H, 22 KB */
 		kinetis_add_flash(t, 0x00000000, 0x00040000, 0x800, K64_WRITE_LEN); /* P-Flash, 256 KB, 2 KB Sectors */
 		kinetis_add_flash(t, 0x10000000, 0x00008000, 0x800, K64_WRITE_LEN); /* FlexNVM, 32 KB, 2 KB Sectors */
 		break;
@@ -399,31 +420,31 @@ static bool kinetis_fccob_cmd(target_s *t, uint8_t cmd, uint32_t addr, const uin
 	uint8_t fstat;
 
 	/* Clear errors unconditionally, so we can start a new operation */
-	target_mem_write8(t, FTFx_FSTAT, (FTFx_FSTAT_ACCERR | FTFx_FSTAT_FPVIOL));
+	target_mem32_write8(t, FTFx_FSTAT, (FTFx_FSTAT_ACCERR | FTFx_FSTAT_FPVIOL));
 
 	/* Wait for CCIF to be high */
 	do {
-		fstat = target_mem_read8(t, FTFx_FSTAT);
+		fstat = target_mem32_read8(t, FTFx_FSTAT);
 	} while (!(fstat & FTFx_FSTAT_CCIF));
 
 	/* Write command to FCCOB */
 	addr &= 0x00ffffffU;
 	addr |= cmd << 24U;
-	target_mem_write32(t, FTFx_FCCOB0, addr);
+	target_mem32_write32(t, FTFx_FCCOB0, addr);
 	if (data && n_items) {
-		target_mem_write32(t, FTFx_FCCOB4, data[0]);
+		target_mem32_write32(t, FTFx_FCCOB4, data[0]);
 		if (n_items > 1)
-			target_mem_write32(t, FTFx_FCCOB8, data[1]);
+			target_mem32_write32(t, FTFx_FCCOB8, data[1]);
 		else
-			target_mem_write32(t, FTFx_FCCOB8, 0);
+			target_mem32_write32(t, FTFx_FCCOB8, 0);
 	}
 
 	/* Enable execution by clearing CCIF */
-	target_mem_write8(t, FTFx_FSTAT, FTFx_FSTAT_CCIF);
+	target_mem32_write8(t, FTFx_FSTAT, FTFx_FSTAT_CCIF);
 
 	/* Wait for execution to complete */
 	do {
-		fstat = target_mem_read8(t, FTFx_FSTAT);
+		fstat = target_mem32_read8(t, FTFx_FSTAT);
 		/* Check ACCERR and FPVIOL are zero in FSTAT */
 		if (fstat & (FTFx_FSTAT_ACCERR | FTFx_FSTAT_FPVIOL))
 			return false;
@@ -486,7 +507,7 @@ static bool kinetis_flash_done(target_flash_s *const f)
 	if (f->t->unsafe_enabled)
 		return true;
 
-	if (target_mem_read8(f->t, FLASH_SECURITY_BYTE_ADDRESS) == FLASH_SECURITY_BYTE_UNSECURED)
+	if (target_mem32_read8(f->t, FLASH_SECURITY_BYTE_ADDRESS) == FLASH_SECURITY_BYTE_UNSECURED)
 		return true;
 
 	/*
@@ -494,12 +515,12 @@ static bool kinetis_flash_done(target_flash_s *const f)
 	 * vs 4 byte phrases).
 	 */
 	if (kf->write_len == K64_WRITE_LEN) {
-		uint32_t vals[2] = {target_mem_read32(f->t, FLASH_SECURITY_BYTE_ADDRESS - 4U),
-			target_mem_read32(f->t, FLASH_SECURITY_BYTE_ADDRESS)};
+		uint32_t vals[2] = {target_mem32_read32(f->t, FLASH_SECURITY_BYTE_ADDRESS - 4U),
+			target_mem32_read32(f->t, FLASH_SECURITY_BYTE_ADDRESS)};
 		vals[1] = (vals[1] & 0xffffff00U) | FLASH_SECURITY_BYTE_UNSECURED;
 		kinetis_fccob_cmd(f->t, FTFx_CMD_PROGRAM_PHRASE, FLASH_SECURITY_BYTE_ADDRESS - 4U, vals, 2);
 	} else {
-		uint32_t val = target_mem_read32(f->t, FLASH_SECURITY_BYTE_ADDRESS);
+		uint32_t val = target_mem32_read32(f->t, FLASH_SECURITY_BYTE_ADDRESS);
 		val = (val & 0xffffff00U) | FLASH_SECURITY_BYTE_UNSECURED;
 		kinetis_fccob_cmd(f->t, FTFx_CMD_PROGRAM_LONGWORD, FLASH_SECURITY_BYTE_ADDRESS, &val, 1);
 	}

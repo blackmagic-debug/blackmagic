@@ -25,6 +25,7 @@
 #include "usb.h"
 #include "aux_serial.h"
 
+#include <libopencm3/cm3/vector.h>
 #include <libopencm3/stm32/rcc.h>
 #include <libopencm3/cm3/scb.h>
 #include <libopencm3/cm3/scs.h>
@@ -51,6 +52,19 @@ void platform_init(void)
 #ifdef BLUEPILL
 	led_idle_run = GPIO13;
 	nrst_pin = NRST_PIN_V1;
+#elif defined(STLINK_V2_ISOL)
+	led_idle_run = GPIO9;
+	nrst_pin = NRST_PIN_V2;
+	/* PB12 is SWDIO_IN */
+	gpio_set_mode(GPIOB, GPIO_MODE_INPUT, GPIO_CNF_INPUT_FLOAT, GPIO12);
+	/* PA4 is used to set SWDCLK floating when set to 1 */
+	gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, GPIO4);
+	gpio_clear(GPIOA, GPIO4);
+	/* PA1 is used to set SWDIO floating and MUXED to SWDIO_IN when set to 1 */
+	gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, GPIO1);
+#elif defined(STLINK_FORCE_CLONE)
+	led_idle_run = GPIO9;
+	nrst_pin = NRST_PIN_CLONE;
 #else
 	switch (rev) {
 	case 0:
@@ -68,7 +82,13 @@ void platform_init(void)
 	}
 #endif
 	/* Setup GPIO ports */
+#ifdef STLINK_V2_ISOL
+	/* In case of ISOL variant, this pin is never set to high impedance */
+	gpio_set_mode(TMS_PORT, GPIO_MODE_OUTPUT_2_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, TMS_PIN);
+#else
+	/* In all other variants, this pin is initialized as high impedance */
 	gpio_set_mode(TMS_PORT, GPIO_MODE_OUTPUT_2_MHZ, GPIO_CNF_INPUT_FLOAT, TMS_PIN);
+#endif
 	gpio_set_mode(TCK_PORT, GPIO_MODE_OUTPUT_2_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, TCK_PIN);
 	gpio_set_mode(TDI_PORT, GPIO_MODE_OUTPUT_2_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, TDI_PIN);
 
@@ -77,7 +97,6 @@ void platform_init(void)
 	gpio_set_mode(LED_PORT, GPIO_MODE_OUTPUT_2_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, led_idle_run);
 
 	/* Relocate interrupt vector table here */
-	extern uint32_t vector_table;
 	SCB_VTOR = (uintptr_t)&vector_table;
 
 	platform_timing_init();
@@ -85,7 +104,7 @@ void platform_init(void)
 		gpio_set(GPIOA, GPIO15);
 	blackmagic_usb_init();
 
-#ifdef SWIM_AS_UART
+#ifdef SWIM_NRST_AS_UART
 	gpio_primary_remap(AFIO_MAPR_SWJ_CFG_FULL_SWJ, AFIO_MAPR_USART1_REMAP);
 #endif
 

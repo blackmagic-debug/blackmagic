@@ -382,7 +382,7 @@ static size_t debug_serial_debug_write(const char *buf, const size_t len)
  * The result of this function is the number of bytes written.
  */
 /* NOLINTNEXTLINE(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp) */
-int _write(const int file, const void *const ptr, const size_t len)
+__attribute__((used)) int _write(const int file, const void *const ptr, const size_t len)
 {
 	(void)file;
 #ifdef PLATFORM_HAS_DEBUG
@@ -399,7 +399,7 @@ int _write(const int file, const void *const ptr, const size_t len)
  *
  * The result of this function is always 'true'.
  */
-int isatty(const int file)
+__attribute__((used)) int isatty(const int file)
 {
 	(void)file;
 	return true;
@@ -416,8 +416,6 @@ typedef struct ex_frame {
 	uintptr_t lr;
 	uintptr_t return_address;
 } ex_frame_s;
-
-void debug_monitor_handler(void) __attribute__((used)) __attribute__((naked));
 
 /*
  * This implements the other half of the newlib syscall puzzle.
@@ -447,10 +445,10 @@ void debug_monitor_handler(void)
 	__asm__("bx lr");
 }
 #else
-/* This defines stubs for the newlib fake file IO layer for compatibility with GCC 12 `-spec=nosys.spec` */
+/* This defines stubs for the newlib fake file IO layer for compatibility with GCC 12 `-specs=nosys.specs` */
 
 /* NOLINTNEXTLINE(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp) */
-int _write(const int file, const void *const buffer, const size_t length)
+__attribute__((used)) int _write(const int file, const void *const buffer, const size_t length)
 {
 	(void)file;
 	(void)buffer;
@@ -458,7 +456,7 @@ int _write(const int file, const void *const buffer, const size_t length)
 }
 
 /* NOLINTNEXTLINE(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp) */
-int _read(const int file, void *const buffer, const size_t length)
+__attribute__((used)) int _read(const int file, void *const buffer, const size_t length)
 {
 	(void)file;
 	(void)buffer;
@@ -466,7 +464,7 @@ int _read(const int file, void *const buffer, const size_t length)
 }
 
 /* NOLINTNEXTLINE(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp) */
-off_t _lseek(const int file, const off_t offset, const int direction)
+__attribute__((used)) off_t _lseek(const int file, const off_t offset, const int direction)
 {
 	(void)file;
 	(void)offset;
@@ -475,7 +473,7 @@ off_t _lseek(const int file, const off_t offset, const int direction)
 }
 
 /* NOLINTNEXTLINE(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp) */
-int _fstat(const int file, stat_s *stats)
+__attribute__((used)) int _fstat(const int file, stat_s *stats)
 {
 	(void)file;
 	memset(stats, 0, sizeof(*stats));
@@ -483,27 +481,27 @@ int _fstat(const int file, stat_s *stats)
 }
 
 /* NOLINTNEXTLINE(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp) */
-int _isatty(const int file)
+__attribute__((used)) int _isatty(const int file)
 {
 	(void)file;
 	return true;
 }
 
 /* NOLINTNEXTLINE(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp) */
-int _close(const int file)
+__attribute__((used)) int _close(const int file)
 {
 	(void)file;
 	return 0;
 }
 
 /* NOLINTNEXTLINE(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp) */
-pid_t _getpid(void)
+__attribute__((used)) pid_t _getpid(void)
 {
 	return 1;
 }
 
 /* NOLINTNEXTLINE(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp) */
-int _kill(const int pid, const int signal)
+__attribute__((used)) int _kill(const int pid, const int signal)
 {
 	(void)pid;
 	(void)signal;

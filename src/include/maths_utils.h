@@ -37,5 +37,6 @@
 #include <stdint.h>
 
 uint8_t ulog2(uint32_t value);
+uint8_t calculate_odd_parity(uint32_t value);
 
 #endif /* INCLUDE_MATHS_UTILS_H */

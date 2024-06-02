@@ -88,7 +88,7 @@ packet_state_e consume_remote_packet(char *const packet, const size_t size)
 			/* Null terminate packet */
 			packet[offset] = '\0';
 			/* Handle packet */
-			remote_packet_process(offset, packet);
+			remote_packet_process(packet, offset);
 
 			/* Restart packet capture */
 			packet[0] = '\0';
@@ -325,13 +325,17 @@ void gdb_put_notification(const char *const packet, const size_t size)
 void gdb_putpacket_f(const char *const fmt, ...)
 {
 	va_list ap;
-	char *buf;
+	char *buf = NULL;
 
 	va_start(ap, fmt);
 	const int size = vasprintf(&buf, fmt, ap);
-	if (size > 0)
+	if (size < 0) {
+		/* Heap exhaustion. Report with puts() elsewhere. */
+		DEBUG_ERROR("gdb_putpacket_f: vasprintf failed\n");
+	} else {
 		gdb_putpacket(buf, size);
-	free(buf);
+		free(buf);
+	}
 	va_end(ap);
 }
 
@@ -349,9 +353,12 @@ void gdb_out(const char *const buf)
 
 void gdb_voutf(const char *const fmt, va_list ap)
 {
-	char *buf;
-	if (vasprintf(&buf, fmt, ap) < 0)
+	char *buf = NULL;
+	if (vasprintf(&buf, fmt, ap) < 0) {
+		/* Heap exhaustion. Report with puts() elsewhere. */
+		DEBUG_ERROR("gdb_voutf: vasprintf failed\n");
 		return;
+	}
 
 	gdb_out(buf);
 	free(buf);

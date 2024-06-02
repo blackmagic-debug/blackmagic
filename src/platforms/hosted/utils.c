@@ -21,40 +21,21 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* This file deduplicates codes used in several pc-hosted platforms
- */
-
-#include <string.h>
-#include <unistd.h>
-#include <sys/time.h>
+/* This file defines various utility routines for BMDA */
 
 #include "general.h"
+
+#include <string.h>
+
+#include "timeofday.h"
 #include "timing.h"
 #include "bmp_hosted.h"
-
-#if defined(_WIN32) && !defined(__MINGW32__)
-int vasprintf(char **strp, const char *const fmt, va_list ap)
-{
-	const int actual_size = vsnprintf(NULL, 0, fmt, ap);
-	if (actual_size < 0)
-		return -1;
-
-	*strp = malloc(actual_size + 1);
-	if (!*strp)
-		return -1;
-
-	return vsnprintf(*strp, actual_size + 1, fmt, ap);
-}
-#endif
 
 void platform_delay(uint32_t ms)
 {
 #if defined(_WIN32) && !defined(__MINGW32__)
 	Sleep(ms);
 #else
-#if !defined(usleep)
-	int usleep(unsigned int);
-#endif
 	usleep(ms * 1000U);
 #endif
 }

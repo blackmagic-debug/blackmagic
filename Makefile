@@ -12,12 +12,11 @@ endif
 
 all:
 ifndef NO_LIBOPENCM3
-	$(Q)if [ ! -f libopencm3/Makefile ]; then \
+	$(Q)if [ ! -f deps/libopencm3/Makefile ]; then \
 		echo "Initialising git submodules..." ;\
-		git submodule init ;\
-		git submodule update ;\
+		git submodule update --init ;\
 	fi
-	$(Q)$(MAKE) $(MFLAGS) -C libopencm3 lib/stm32/f1 lib/stm32/f4 lib/lm4f
+	$(Q)$(MAKE) $(MFLAGS) -C deps/libopencm3 lib/stm32/f1 lib/stm32/f4 lib/stm32/f7 lib/lm4f
 endif
 	$(Q)$(MAKE) $(MFLAGS) -C src
 
@@ -26,7 +25,7 @@ all_platforms:
 
 clean:
 ifndef NO_LIBOPENCM3
-	$(Q)$(MAKE) $(MFLAGS) -C libopencm3 $@
+	$(Q)$(MAKE) $(MFLAGS) -C deps/libopencm3 $@
 endif
 	$(Q)$(MAKE) $(MFLAGS) -C src $@
 

@@ -4,6 +4,7 @@
  * Copyright (C) 2011  Black Sphere Technologies Ltd.
  * Written by Gareth McMullin <gareth@blacksphere.co.nz>
  * Copyright (C) 2022  1bitsquared - Rachel Mant <git@dragonmux.network>
+ * Modified by LAK132
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -100,15 +101,14 @@ const jtag_dev_descr_s dev_descr[] = {
 		.idmask = 0xffffffffU,
 		.descr = "NPX: LPC11C24.",
 	},
-	{
-		.idcode = 0x4ba00477U,
-		.idmask = 0xffffffffU,
-		.descr = "NXP: LPC17xx family.",
-	},
+#endif
+#ifdef ENABLE_XILINX
 	{
 		.idcode = 0x1396d093U,
 		.idmask = 0xffffffffU,
+#if ENABLE_DEBUG == 1
 		.descr = "Xilinx XCVU440.",
+#endif
 		.ir_quirks =
 			{
 				.ir_length = 18U,
@@ -118,7 +118,9 @@ const jtag_dev_descr_s dev_descr[] = {
 	{
 		.idcode = 0x0484a093U,
 		.idmask = 0x0fffffffU,
+#if ENABLE_DEBUG == 1
 		.descr = "Xilinx, 6-bit IR.",
+#endif
 		.ir_quirks =
 			{
 				.ir_length = 6U,
@@ -128,7 +130,9 @@ const jtag_dev_descr_s dev_descr[] = {
 	{
 		.idcode = 0x04af2093U,
 		.idmask = 0x0fffffffU,
+#if ENABLE_DEBUG == 1
 		.descr = "Xilinx 12-bit IR.",
+#endif
 		.ir_quirks =
 			{
 				.ir_length = 12U,
@@ -138,7 +142,9 @@ const jtag_dev_descr_s dev_descr[] = {
 	{
 		.idcode = 0x036d9093U,
 		.idmask = 0x0fffffffU,
+#if ENABLE_DEBUG == 1
 		.descr = "Xilinx 22-bit IR.",
+#endif
 		.ir_quirks =
 			{
 				.ir_length = 22U,
@@ -148,7 +154,9 @@ const jtag_dev_descr_s dev_descr[] = {
 	{
 		.idcode = 0x036db093U,
 		.idmask = 0x0fffffffU,
+#if ENABLE_DEBUG == 1
 		.descr = "Xilinx 38-bit IR.",
+#endif
 		.ir_quirks =
 			{
 				.ir_length = 38U,
@@ -158,7 +166,9 @@ const jtag_dev_descr_s dev_descr[] = {
 	{
 		.idcode = 0x0396d093U,
 		.idmask = 0x0fffdfffU,
+#if ENABLE_DEBUG == 1
 		.descr = "Xilinx 18-bit IR.",
+#endif
 		.ir_quirks =
 			{
 				.ir_length = 18U,
@@ -168,7 +178,9 @@ const jtag_dev_descr_s dev_descr[] = {
 	{
 		.idcode = 0x03931093U,
 		.idmask = 0x0fffdfffU,
+#if ENABLE_DEBUG == 1
 		.descr = "Xilinx 18-bit IR.",
+#endif
 		.ir_quirks =
 			{
 				.ir_length = 18U,
@@ -178,7 +190,9 @@ const jtag_dev_descr_s dev_descr[] = {
 	{
 		.idcode = 0x04b79093U,
 		.idmask = 0x0fffbfffU,
+#if ENABLE_DEBUG == 1
 		.descr = "Xilinx 18-bit IR.",
+#endif
 		.ir_quirks =
 			{
 				.ir_length = 18U,
@@ -188,7 +202,9 @@ const jtag_dev_descr_s dev_descr[] = {
 	{
 		.idcode = 0x04ac0033U,
 		.idmask = 0x0fff9fffU,
+#if ENABLE_DEBUG == 1
 		.descr = "Xilinx 6-bit IR.",
+#endif
 		.ir_quirks =
 			{
 				.ir_length = 6U,
@@ -198,7 +214,9 @@ const jtag_dev_descr_s dev_descr[] = {
 	{
 		.idcode = 0x0380d093U,
 		.idmask = 0x0feddfffU,
+#if ENABLE_DEBUG == 1
 		.descr = "Xilinx 12-bit IR.",
+#endif
 		.ir_quirks =
 			{
 				.ir_length = 12U,
@@ -208,7 +226,9 @@ const jtag_dev_descr_s dev_descr[] = {
 	{
 		.idcode = 0x04600093U,
 		.idmask = 0x0fe53fffU,
+#if ENABLE_DEBUG == 1
 		.descr = "Xilinx 12-bit IR.",
+#endif
 		.ir_quirks =
 			{
 				.ir_length = 12U,
@@ -218,7 +238,9 @@ const jtag_dev_descr_s dev_descr[] = {
 	{
 		.idcode = 0x04b21093U,
 		.idmask = 0x0ffa1fffU,
+#if ENABLE_DEBUG == 1
 		.descr = "Xilinx 12-bit IR.",
+#endif
 		.ir_quirks =
 			{
 				.ir_length = 12U,
@@ -228,7 +250,9 @@ const jtag_dev_descr_s dev_descr[] = {
 	{
 		.idcode = 0x04b01093U,
 		.idmask = 0x0ffa1fffU,
+#if ENABLE_DEBUG == 1
 		.descr = "Xilinx 18-bit IR.",
+#endif
 		.ir_quirks =
 			{
 				.ir_length = 18U,
@@ -238,7 +262,9 @@ const jtag_dev_descr_s dev_descr[] = {
 	{
 		.idcode = 0x04b01093U,
 		.idmask = 0x0ff81fffU,
+#if ENABLE_DEBUG == 1
 		.descr = "Xilinx 18-bit IR.",
+#endif
 		.ir_quirks =
 			{
 				.ir_length = 18U,
@@ -248,7 +274,9 @@ const jtag_dev_descr_s dev_descr[] = {
 	{
 		.idcode = 0x04b01093U,
 		.idmask = 0x0ff09fffU,
+#if ENABLE_DEBUG == 1
 		.descr = "Xilinx 24-bit IR.",
+#endif
 		.ir_quirks =
 			{
 				.ir_length = 24U,
@@ -258,7 +286,9 @@ const jtag_dev_descr_s dev_descr[] = {
 	{
 		.idcode = 0x04d00093U,
 		.idmask = 0x0ffc0fffU,
+#if ENABLE_DEBUG == 1
 		.descr = "Xilinx 21-bit OR 14-bit IR.",
+#endif
 		.ir_quirks =
 			{
 				.ir_length = 21U, // Not ideal but *shrug*
@@ -268,7 +298,9 @@ const jtag_dev_descr_s dev_descr[] = {
 	{
 		.idcode = 0x03681093U,
 		.idmask = 0x0ff81fffU,
+#if ENABLE_DEBUG == 1
 		.descr = "Xilinx 24-bit IR.",
+#endif
 		.ir_quirks =
 			{
 				.ir_length = 6U,
@@ -278,7 +310,9 @@ const jtag_dev_descr_s dev_descr[] = {
 	{
 		.idcode = 0x04c00093U,
 		.idmask = 0x0fe88fffU,
+#if ENABLE_DEBUG == 1
 		.descr = "Xilinx 28-bit IR.",
+#endif
 		.ir_quirks =
 			{
 				.ir_length = 28U,
@@ -288,7 +322,9 @@ const jtag_dev_descr_s dev_descr[] = {
 	{
 		.idcode = 0x03800093U,
 		.idmask = 0x0fe80fffU,
+#if ENABLE_DEBUG == 1
 		.descr = "Xilinx 6-bit IR.",
+#endif
 		.ir_quirks =
 			{
 				.ir_length = 6U,
@@ -296,9 +332,23 @@ const jtag_dev_descr_s dev_descr[] = {
 			},
 	},
 	{
+		.idcode = 0x03636093U,
+		.idmask = 0x0fffffffU,
+#if ENABLE_DEBUG == 1
+		.descr = "Xilinx 6-bit IR.",
+#endif
+		.ir_quirks =
+			{
+				.ir_length = 6U,
+				.ir_value = 0x35U,
+			},
+	},
+	{
 		.idcode = 0x03600093U,
 		.idmask = 0x0fe00fffU,
+#if ENABLE_DEBUG == 1
 		.descr = "Xilinx 6-bit IR.",
+#endif
 		.ir_quirks =
 			{
 				.ir_length = 6U,
@@ -308,7 +358,9 @@ const jtag_dev_descr_s dev_descr[] = {
 	{
 		.idcode = 0x04c00093U,
 		.idmask = 0x0fe00fffU,
+#if ENABLE_DEBUG == 1
 		.descr = "Xilinx 6-bit IR.",
+#endif
 		.ir_quirks =
 			{
 				.ir_length = 6U,
@@ -318,7 +370,9 @@ const jtag_dev_descr_s dev_descr[] = {
 	{
 		.idcode = 0x04a00093U,
 		.idmask = 0x0fe00fffU,
+#if ENABLE_DEBUG == 1
 		.descr = "Xilinx 6-bit IR.",
+#endif
 		.ir_quirks =
 			{
 				.ir_length = 6U,
@@ -328,14 +382,15 @@ const jtag_dev_descr_s dev_descr[] = {
 	{
 		.idcode = 0x04600093U,
 		.idmask = 0x0fe00fffU,
+#if ENABLE_DEBUG == 1
 		.descr = "Xilinx 12-bit IR.",
+#endif
 		.ir_quirks =
 			{
 				.ir_length = 12U,
 				.ir_value = 1U,
 			},
 	},
-#endif
 	{
 		.idcode = 0x00000093U,
 		.idmask = 0x00000fffU,
@@ -348,6 +403,7 @@ const jtag_dev_descr_s dev_descr[] = {
 				.ir_value = 1U,
 			},
 	},
+#endif
 #ifdef ENABLE_RISCV
 	{
 		.idcode = 0x0000563dU,
@@ -356,6 +412,15 @@ const jtag_dev_descr_s dev_descr[] = {
 		.descr = "RISC-V debug v0.13.",
 #endif
 		.handler = riscv_jtag_dtm_handler,
+	},
+#endif
+#if defined(ENABLE_CORTEXAR) // && defined(ENABLE_SITARA)
+	{
+		.idcode = 0x0b90002fU,
+		.idmask = 0x0ff00fffU,
+#if ENABLE_DEBUG == 1
+		.descr = "TI ICEPick.",
+#endif
 	},
 #endif
 #if ENABLE_DEBUG == 1
@@ -384,11 +449,6 @@ const jtag_dev_descr_s dev_descr[] = {
 		.idcode = 0x07b7617fU,
 		.idmask = 0xffffffffU,
 		.descr = "BCM2835.",
-	},
-	{
-		.idcode = 0x4ba00477U,
-		.idmask = 0xffffffffU,
-		.descr = "BCM2836.",
 	},
 #endif
 	{

@@ -42,8 +42,10 @@ uint32_t remote_v3_adiv5_raw_access(adiv5_debug_port_s *dp, uint8_t rnw, uint16_
 uint32_t remote_v3_adiv5_dp_read(adiv5_debug_port_s *dp, uint16_t addr);
 uint32_t remote_v3_adiv5_ap_read(adiv5_access_port_s *ap, uint16_t addr);
 void remote_v3_adiv5_ap_write(adiv5_access_port_s *ap, uint16_t addr, uint32_t value);
-void remote_v3_adiv5_mem_read_bytes(adiv5_access_port_s *ap, void *dest, uint32_t src, size_t read_length);
+void remote_v3_adiv5_mem_read_bytes(adiv5_access_port_s *ap, void *dest, target_addr64_t src, size_t read_length);
 void remote_v3_adiv5_mem_write_bytes(
-	adiv5_access_port_s *ap, uint32_t dest, const void *src, size_t write_length, align_e align);
+	adiv5_access_port_s *ap, target_addr64_t dest, const void *src, size_t write_length, align_e align);
+
+bool remote_v3_adiv5_check_error(const char *func, adiv5_debug_port_s *dp, const char *buffer, ssize_t length);
 
 #endif /*PLATFORMS_HOSTED_REMOTE_PROTOCOL_V3_ADIV5_H*/

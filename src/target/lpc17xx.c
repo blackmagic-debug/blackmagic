@@ -22,7 +22,6 @@
 #include "target_internal.h"
 #include "cortex.h"
 #include "lpc_common.h"
-#include "adiv5.h"
 
 /*
  * For detailed documentation on how this code works and the IAP variant used here, see:
@@ -50,7 +49,7 @@ typedef struct iap_config {
 	uint32_t params[4];
 } iap_config_s;
 
-typedef struct __attribute__((aligned(4))) iap_frame {
+typedef struct BMD_ALIGN_DECL(4) iap_frame {
 	/* The start of an IAP stack frame is the opcode we set as the return point. */
 	uint16_t opcode;
 	/* There's then a hidden alignment field here, followed by the IAP call setup */
@@ -137,9 +136,9 @@ bool lpc17xx_probe(target_s *target)
 		target->mass_erase = lpc17xx_mass_erase;
 		target->enter_flash_mode = lpc17xx_enter_flash_mode;
 		target->exit_flash_mode = lpc17xx_exit_flash_mode;
-		target_add_ram(target, 0x10000000U, 0x8000U);
-		target_add_ram(target, 0x2007c000U, 0x4000U);
-		target_add_ram(target, 0x20080000U, 0x4000U);
+		target_add_ram32(target, 0x10000000U, 0x8000U);
+		target_add_ram32(target, 0x2007c000U, 0x4000U);
+		target_add_ram32(target, 0x20080000U, 0x4000U);
 		lpc17xx_add_flash(target, 0x00000000U, 0x10000U, 0x1000U, 0);
 		lpc17xx_add_flash(target, 0x00010000U, 0x70000U, 0x8000U, 16);
 		return true;
@@ -152,10 +151,10 @@ static bool lpc17xx_enter_flash_mode(target_s *const target)
 {
 	lpc17xx_priv_s *const priv = (lpc17xx_priv_s *)target->target_storage;
 	/* Disable the MPU, if enabled */
-	priv->mpu_ctrl_state = target_mem_read32(target, LPC17xx_MPU_CTRL);
-	target_mem_write32(target, LPC17xx_MPU_CTRL, 0);
+	priv->mpu_ctrl_state = target_mem32_read32(target, LPC17xx_MPU_CTRL);
+	target_mem32_write32(target, LPC17xx_MPU_CTRL, 0);
 	/* And store the memory mapping state */
-	priv->memmap_state = target_mem_read32(target, LPC17xx_MEMMAP);
+	priv->memmap_state = target_mem32_read32(target, LPC17xx_MEMMAP);
 	return true;
 }
 
@@ -163,8 +162,8 @@ static bool lpc17xx_exit_flash_mode(target_s *const target)
 {
 	const lpc17xx_priv_s *const priv = (lpc17xx_priv_s *)target->target_storage;
 	/* Restore the memory mapping and MPU state (in that order!) */
-	target_mem_write32(target, LPC17xx_MEMMAP, priv->memmap_state);
-	target_mem_write32(target, LPC17xx_MPU_CTRL, priv->mpu_ctrl_state);
+	target_mem32_write32(target, LPC17xx_MEMMAP, priv->memmap_state);
+	target_mem32_write32(target, LPC17xx_MPU_CTRL, priv->mpu_ctrl_state);
 	return true;
 }
 
@@ -207,7 +206,7 @@ static void lpc17xx_extended_reset(target_s *target)
 	 * the correct environment is seen by the user
 	 * See §33.6 Debug memory re-mapping, pg655 of UM10360 for more details.
 	 */
-	target_mem_write32(target, LPC17xx_MEMMAP, 1);
+	target_mem32_write32(target, LPC17xx_MEMMAP, 1);
 }
 
 static size_t lpc17xx_iap_params(const iap_cmd_e cmd)
@@ -242,7 +241,7 @@ iap_status_e lpc17xx_iap_call(target_s *target, iap_result_s *result, iap_cmd_e 
 		frame.config.params[i] = 0U;
 
 	/* Copy the structure to RAM */
-	target_mem_write(target, IAP_RAM_BASE, &frame, sizeof(iap_frame_s));
+	target_mem32_write(target, IAP_RAM_BASE, &frame, sizeof(iap_frame_s));
 	const uint32_t iap_params_addr = IAP_RAM_BASE + offsetof(iap_frame_s, config);
 
 	/* Set up for the call to the IAP ROM */
@@ -274,6 +273,6 @@ iap_status_e lpc17xx_iap_call(target_s *target, iap_result_s *result, iap_cmd_e 
 	}
 
 	/* Copy back just the results */
-	target_mem_read(target, result, iap_params_addr, sizeof(iap_result_s));
+	target_mem32_read(target, result, iap_params_addr, sizeof(iap_result_s));
 	return result->return_code;
 }

@@ -96,7 +96,7 @@ static uint32_t fast_search(target_s *const cur_target, const uint32_t ram_start
 	for (uint32_t addr = ram_start; addr < ram_end; addr += stride) {
 		uint32_t buf_siz = MIN(stride, ram_end - addr);
 		memcpy(srch_buf, srch_buf + stride, m);
-		if (target_mem_read(cur_target, srch_buf + m, addr, buf_siz)) {
+		if (target_mem32_read(cur_target, srch_buf + m, addr, buf_siz)) {
 			gdb_outf("rtt: read fail at 0x%" PRIx32 "\r\n", addr);
 			return 0;
 		}
@@ -122,7 +122,7 @@ static uint32_t memory_search(target_s *const cur_target, const uint32_t ram_sta
 
 	for (uint32_t addr = ram_start; addr < ram_end; addr += sizeof(srch_buf) - srch_str_len - 1U) {
 		uint32_t buf_siz = MIN(ram_end - addr, sizeof(srch_buf));
-		if (target_mem_read(cur_target, srch_buf, addr, buf_siz)) {
+		if (target_mem32_read(cur_target, srch_buf, addr, buf_siz)) {
 			gdb_outf("rtt: read fail at 0x%" PRIx32 "\r\n", addr);
 			continue;
 		}
@@ -169,7 +169,7 @@ static void find_rtt(target_s *const cur_target)
 	if (rtt_cbaddr) {
 		/* read number of rtt up and down channels from target */
 		uint32_t num_buf[2];
-		if (target_mem_read(cur_target, num_buf, rtt_cbaddr + 16U, sizeof(num_buf)))
+		if (target_mem32_read(cur_target, num_buf, rtt_cbaddr + 16U, sizeof(num_buf)))
 			return;
 		rtt_num_up_chan = num_buf[0];
 		if (rtt_num_up_chan > MAX_RTT_CHAN)
@@ -204,7 +204,7 @@ static void find_rtt(target_s *const cur_target)
 		}
 
 		/* save first 24 bytes of control block */
-		if (target_mem_read(cur_target, saved_cblock_header, rtt_cbaddr, sizeof(saved_cblock_header)))
+		if (target_mem32_read(cur_target, saved_cblock_header, rtt_cbaddr, sizeof(saved_cblock_header)))
 			return;
 
 		rtt_found = true;
@@ -240,7 +240,7 @@ static rtt_retval_e read_rtt(target_s *const cur_target, const uint32_t i)
 		const int ch = rtt_getchar();
 		if (ch == -1)
 			break;
-		if (target_mem_write(cur_target, rtt_channel[i].buf_addr + rtt_channel[i].head, &ch, 1))
+		if (target_mem32_write(cur_target, rtt_channel[i].buf_addr + rtt_channel[i].head, &ch, 1))
 			return RTT_ERR;
 		/* advance head pointer */
 		rtt_channel[i].head = next_head;
@@ -248,7 +248,7 @@ static rtt_retval_e read_rtt(target_s *const cur_target, const uint32_t i)
 
 	/* update head of target 'down' buffer */
 	const uint32_t head_addr = rtt_cbaddr + 24U + i * 24U + 12U;
-	if (target_mem_write(cur_target, head_addr, &rtt_channel[i].head, sizeof(rtt_channel[i].head)))
+	if (target_mem32_write(cur_target, head_addr, &rtt_channel[i].head, sizeof(rtt_channel[i].head)))
 		return RTT_ERR;
 	return RTT_OK;
 }
@@ -260,7 +260,7 @@ static rtt_retval_e read_rtt(target_s *const cur_target, const uint32_t i)
 **********************************************************************
 */
 
-/* rtt_aligned_mem_read(): same as target_mem_read, but word aligned for speed.
+/* rtt_aligned_mem_read(): same as target_mem32_read, but word aligned for speed.
    note: dest has to be len + 8 bytes, to allow for alignment and padding.
  */
 uint32_t rtt_aligned_mem_read(target_s *t, void *dest, target_addr_t src, size_t len)
@@ -272,9 +272,9 @@ uint32_t rtt_aligned_mem_read(target_s *t, void *dest, target_addr_t src, size_t
 		len0 = (len0 + 4U) & ~0x3U;
 
 	if (src0 == src && len0 == len)
-		return target_mem_read(t, dest, src, len);
+		return target_mem32_read(t, dest, src, len);
 
-	const uint32_t retval = target_mem_read(t, dest, src0, len0);
+	const uint32_t retval = target_mem32_read(t, dest, src0, len0);
 	memmove(dest, (uint8_t *)dest + offset, len);
 	return retval;
 }
@@ -316,7 +316,7 @@ static rtt_retval_e print_rtt(target_s *const cur_target, const uint32_t i)
 
 	/* update tail of target 'up' buffer */
 	const uint32_t tail_addr = rtt_cbaddr + 24U + i * 24U + 16U;
-	if (target_mem_write(cur_target, tail_addr, &rtt_channel[i].tail, sizeof(rtt_channel[i].tail)))
+	if (target_mem32_write(cur_target, tail_addr, &rtt_channel[i].tail, sizeof(rtt_channel[i].tail)))
 		return RTT_ERR;
 
 	/* write buffer to usb */
@@ -366,7 +366,7 @@ void poll_rtt(target_s *const cur_target)
 		if (rtt_found) {
 			uint32_t cblock_header[6]; // first 24 bytes of control block
 			/* check control block not changed or corrupted */
-			if (target_mem_read(cur_target, cblock_header, rtt_cbaddr, sizeof(cblock_header)) ||
+			if (target_mem32_read(cur_target, cblock_header, rtt_cbaddr, sizeof(cblock_header)) ||
 				memcmp(saved_cblock_header, cblock_header, sizeof(cblock_header)) != 0)
 				rtt_found = false; // force searching control block next poll_rtt()
 		}
@@ -377,7 +377,7 @@ void poll_rtt(target_s *const cur_target)
 		if (rtt_found && rtt_cbaddr) {
 			/* copy control block from target */
 			uint32_t rtt_cblock_size = sizeof(rtt_channel[0]) * (rtt_num_up_chan + rtt_num_down_chan);
-			if (target_mem_read(cur_target, rtt_channel, rtt_cbaddr + 24U, rtt_cblock_size)) {
+			if (target_mem32_read(cur_target, rtt_channel, rtt_cbaddr + 24U, rtt_cblock_size)) {
 				gdb_outf("rtt: read fail at 0x%" PRIx32 "\r\n", rtt_cbaddr + 24U);
 				rtt_err = true;
 			} else {

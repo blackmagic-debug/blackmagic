@@ -212,7 +212,7 @@ static void sam4l_add_flash(target_s *t, uint32_t addr, size_t length)
  */
 bool sam4l_probe(target_s *t)
 {
-	const uint32_t cidr = target_mem_read32(t, SAM4L_CHIPID_CIDR);
+	const uint32_t cidr = target_mem32_read32(t, SAM4L_CHIPID_CIDR);
 	if (((cidr >> CHIPID_CIDR_ARCH_SHIFT) & CHIPID_CIDR_ARCH_MASK) != SAM4L_ARCH)
 		return false;
 
@@ -224,7 +224,7 @@ bool sam4l_probe(target_s *t)
 	/* This function says we need to do "extra" stuff after reset */
 	t->extended_reset = sam4l_extended_reset;
 
-	target_add_ram(t, 0x20000000, ram_size);
+	target_add_ram32(t, 0x20000000, ram_size);
 	sam4l_add_flash(t, 0x0, flash_size);
 
 	DEBUG_INFO("SAM4L - RAM: 0x%" PRIx32 " (%" PRIu32 "kiB), FLASH: 0x%" PRIx32 " (%" PRIu32 "kiB)\n", ram_size,
@@ -245,15 +245,15 @@ static void sam4l_extended_reset(target_s *t)
 	DEBUG_INFO("SAM4L: Extended Reset\n");
 
 	/* Enable SMAP in case we're dealing with a non-JTAG reset */
-	target_mem_write32(t, SMAP_CR, 0x1); /* enable SMAP */
-	uint32_t reg = target_mem_read32(t, SMAP_SR);
+	target_mem32_write32(t, SMAP_CR, 0x1); /* enable SMAP */
+	uint32_t reg = target_mem32_read32(t, SMAP_SR);
 	DEBUG_INFO("SMAP_SR has 0x%08" PRIx32 "\n", reg);
 	if ((reg & SMAP_SR_HCR) != 0) {
 		/* Write '1' bit to the status clear register */
-		target_mem_write32(t, SMAP_SCR, SMAP_SR_HCR);
+		target_mem32_write32(t, SMAP_SCR, SMAP_SR_HCR);
 		/* Waiting 250 loops for it to reset is arbitrary, it should happen right away */
 		for (size_t i = 0; i < 250U; i++) {
-			reg = target_mem_read32(t, SMAP_SR);
+			reg = target_mem32_read32(t, SMAP_SR);
 			if (!(reg & SMAP_SR_HCR))
 				break;
 			/* Not sure what to do if we can't reset that bit */
@@ -281,7 +281,7 @@ static bool sam4l_flash_command(target_s *t, uint32_t page, uint32_t cmd)
 	/* Wait for Flash controller ready */
 	platform_timeout_s timeout;
 	platform_timeout_set(&timeout, FLASH_TIMEOUT);
-	while (!(target_mem_read32(t, FLASHCALW_FSR) & FLASHCALW_FSR_FRDY)) {
+	while (!(target_mem32_read32(t, FLASHCALW_FSR) & FLASHCALW_FSR_FRDY)) {
 		if (platform_timeout_is_expired(&timeout)) {
 			DEBUG_WARN("%s: Not ready!\n", __func__);
 			return false;
@@ -294,7 +294,7 @@ static bool sam4l_flash_command(target_s *t, uint32_t page, uint32_t cmd)
 	DEBUG_INFO("%s: Writing command word 0x%08" PRIx32 "\n", __func__, cmd_reg);
 
 	/* And kick it off */
-	target_mem_write32(t, FLASHCALW_FCMD, cmd_reg);
+	target_mem32_write32(t, FLASHCALW_FCMD, cmd_reg);
 	/* Don't actually wait for it to finish, the next command will stall if it is not done */
 	return true;
 }
@@ -319,7 +319,7 @@ static bool sam4l_flash_write(
 	/* Now fill page buffer with our 512 bytes of data */
 
 	const uint32_t *const data = src;
-	/* I did try to use target_mem_write however that resulted in the
+	/* I did try to use target_mem32_write however that resulted in the
 	 * last 64 bits (8 bytes) to be incorrect on even pages (0, 2, 4, ...)
 	 * since it works this way I've not investigated further.
 	 */
@@ -331,7 +331,7 @@ static bool sam4l_flash_write(
 		 * instead we just write 0 -> pagelen (512) and that fills our
 		 * buffer correctly.
 		 */
-		target_mem_write32(t, dest + offset, data[offset / 4U]);
+		target_mem32_write32(t, dest + offset, data[offset / 4U]);
 	}
 
 	/* write the page */

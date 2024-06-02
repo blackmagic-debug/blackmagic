@@ -281,13 +281,13 @@ static const char *adiv5_arm_ap_type_string(const uint8_t ap_type, const uint8_t
 	 */
 
 	/* All types except 0 are only valid for ap_class == 0x8 */
-	if (ap_class == 0x8U || ap_type == 0U) {
+	if (ap_class == ADIV5_AP_IDR_CLASS_MEM || ap_type == 0U) {
 		switch (ap_type) {
 		case 0U:
 			/* Type 0 APs are determined by the class code */
-			if (ap_class == 0U)
+			if (ap_class == ADIV5_AP_IDR_CLASS_JTAG)
 				return "JTAG-AP";
-			if (ap_class == 1U)
+			if (ap_class == ADIV5_AP_IDR_CLASS_COM)
 				return "COM-AP";
 			break;
 		case 0x1U:
@@ -377,11 +377,21 @@ static uint32_t adiv5_ap_read_id(adiv5_access_port_s *ap, uint32_t addr)
 	return res;
 }
 
-uint64_t adiv5_ap_read_pidr(adiv5_access_port_s *ap, uint32_t addr)
+static uint64_t adiv5_ap_read_pidr(adiv5_access_port_s *ap, uint32_t addr)
 {
 	uint64_t pidr = adiv5_ap_read_id(ap, addr + PIDR4_OFFSET);
 	pidr = pidr << 32U | adiv5_ap_read_id(ap, addr + PIDR0_OFFSET);
 	return pidr;
+}
+
+/*
+ * Decode a designer code that's in the following form into BMD's internal designer code representation
+ * Bits 10:7 - JEP-106 Continuation code
+ * Bits 6:0 - JEP-106 Identity code
+ */
+static inline uint16_t adiv5_decode_designer(const uint16_t designer)
+{
+	return (designer & ADIV5_DP_DESIGNER_JEP106_CONT_MASK) << 1U | (designer & ADIV5_DP_DESIGNER_JEP106_CODE_MASK);
 }
 
 /*
@@ -399,9 +409,9 @@ static uint32_t cortexm_initial_halt(adiv5_access_port_s *ap)
 	platform_timeout_set(&halt_timeout, cortexm_wait_timeout);
 
 	/* Setup to read/write DHCSR */
-	/* ap_mem_access_setup() uses ADIV5_AP_CSW_ADDRINC_SINGLE which is undesirable for our use here */
+	/* adiv5_mem_access_setup() uses ADIV5_AP_CSW_ADDRINC_SINGLE which is undesirable for our use here */
 	adiv5_ap_write(ap, ADIV5_AP_CSW, ap->csw | ADIV5_AP_CSW_SIZE_WORD);
-	adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_TAR, CORTEXM_DHCSR);
+	adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_TAR_LOW, CORTEXM_DHCSR);
 	/* Write (and do a dummy read of) DHCSR to ensure debug is enabled */
 	adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_DRW, CORTEXM_DHCSR_DBGKEY | CORTEXM_DHCSR_C_DEBUGEN);
 	adiv5_dp_read(ap->dp, ADIV5_DP_RDBUFF);
@@ -411,7 +421,7 @@ static uint32_t cortexm_initial_halt(adiv5_access_port_s *ap)
 		uint32_t dhcsr;
 
 		/* If we're not on a minimal DP implementation, use TRNCNT to help */
-		if (!ap->dp->mindp) {
+		if (!(ap->dp->quirks & ADIV5_DP_QUIRK_MINDP)) {
 			/* Ask the AP to repeatedly retry the write to DHCSR */
 			adiv5_dp_low_access(
 				ap->dp, ADIV5_LOW_WRITE, ADIV5_DP_CTRLSTAT, ctrlstat | ADIV5_DP_CTRLSTAT_TRNCNT(0xfffU));
@@ -427,9 +437,9 @@ static uint32_t cortexm_initial_halt(adiv5_access_port_s *ap)
 		 * data we want to read will be returned in the first raw access, and on others the read
 		 * will do nothing (return 0) and instead need RDBUFF read to get the data.
 		 */
-		if (ap->dp->mindp
+		if ((ap->dp->quirks & ADIV5_DP_QUIRK_MINDP)
 #if PC_HOSTED == 1
-			&& bmda_probe_info.type != PROBE_TYPE_CMSIS_DAP
+			&& bmda_probe_info.type != PROBE_TYPE_CMSIS_DAP && bmda_probe_info.type != PROBE_TYPE_STLINK_V2
 #endif
 		)
 			dhcsr = adiv5_dp_low_access(ap->dp, ADIV5_LOW_READ, ADIV5_DP_RDBUFF, 0);
@@ -529,13 +539,11 @@ static cid_class_e adiv5_class_from_cid(const uint16_t part_number, const uint16
  * NOLINTNEXTLINE(misc-no-recursion)
  */
 static void adiv5_component_probe(
-	adiv5_access_port_s *ap, uint32_t addr, const size_t recursion, const uint32_t num_entry)
+	adiv5_access_port_s *ap, target_addr_t addr, const size_t recursion, const uint32_t num_entry)
 {
+#ifdef DEBUG_WARN_IS_NOOP
 	(void)num_entry;
-
-	addr &= 0xfffff000U; /* Mask out base address */
-	if (addr == 0)       /* No rom table on this AP */
-		return;
+#endif
 
 	const volatile uint32_t cidr = adiv5_ap_read_id(ap, addr + CIDR0_OFFSET);
 	if (ap->dp->fault) {
@@ -573,17 +581,19 @@ static void adiv5_component_probe(
 		designer_code = (pidr & PIDR_JEP106_CONT_MASK) >> (PIDR_JEP106_CONT_OFFSET - 8U) |
 			(pidr & PIDR_JEP106_CODE_MASK) >> PIDR_JEP106_CODE_OFFSET;
 
-		if (designer_code == JEP106_MANUFACTURER_ERRATA_STM32WX || designer_code == JEP106_MANUFACTURER_ERRATA_CS) {
-			/**
-			 * see 'JEP-106 code list' for context, here we are aliasing codes that are non compliant with the
-			 * JEP-106 standard to their expected codes, this is later used to determine the correct probe function.
-			 */
-			DEBUG_WARN("Patching Designer code 0x%03" PRIx16 " -> 0x%03u\n", designer_code, JEP106_MANUFACTURER_STM);
-			designer_code = JEP106_MANUFACTURER_STM;
-		}
 	} else {
 		/* legacy ascii code */
 		designer_code = (pidr & PIDR_JEP106_CODE_MASK) >> PIDR_JEP106_CODE_OFFSET | ASCII_CODE_FLAG;
+	}
+
+	if (designer_code == JEP106_MANUFACTURER_ERRATA_STM32WX || designer_code == JEP106_MANUFACTURER_ERRATA_CS ||
+		designer_code == JEP106_MANUFACTURER_ERRATA_CS_ASCII) {
+		/**
+         * see 'JEP-106 code list' for context, here we are aliasing codes that are non compliant with the
+         * JEP-106 standard to their expected codes, this is later used to determine the correct probe function.
+         */
+		DEBUG_WARN("Patching Designer code %03x -> %03x\n", designer_code, JEP106_MANUFACTURER_STM);
+		designer_code = JEP106_MANUFACTURER_STM;
 	}
 
 	/* Extract part number from the part id register. */
@@ -608,16 +618,16 @@ static void adiv5_component_probe(
 			}
 		}
 
-#if ENABLE_DEBUG == 1 && defined(PLATFORM_HAS_DEBUG)
 		/* Check SYSMEM bit */
-		const uint32_t memtype = adiv5_mem_read32(ap, addr | ADIV5_ROM_MEMTYPE) & ADIV5_ROM_MEMTYPE_SYSMEM;
-
+		const bool memtype = adiv5_mem_read32(ap, addr | ADIV5_ROM_MEMTYPE) & ADIV5_ROM_MEMTYPE_SYSMEM;
 		if (adiv5_dp_error(ap->dp))
 			DEBUG_ERROR("Fault reading ROM table entry\n");
+		else if (memtype)
+			ap->flags |= ADIV5_AP_FLAGS_HAS_MEM;
+		DEBUG_INFO("ROM: Table BASE=0x%" PRIx32 " SYSMEM=%u, Manufacturer %03x Partno %03x (PIDR = 0x%08" PRIx32
+				   "%08" PRIx32 ")\n",
+			addr, memtype, designer_code, part_number, (uint32_t)(pidr >> 32), (uint32_t)pidr);
 
-		DEBUG_INFO("ROM: Table BASE=0x%" PRIx32 " SYSMEM=0x%08" PRIx32 ", Manufacturer %03x Partno %03x\n", addr,
-			memtype, designer_code, part_number);
-#endif
 		for (uint32_t i = 0; i < 960U; i++) {
 			adiv5_dp_error(ap->dp);
 
@@ -642,9 +652,10 @@ static void adiv5_component_probe(
 
 	} else {
 		if (designer_code != JEP106_MANUFACTURER_ARM && designer_code != JEP106_MANUFACTURER_ARM_CHINA) {
-			/* non arm components not supported currently */
-			DEBUG_WARN("%s0x%" PRIx32 ": 0x%08" PRIx32 "%08" PRIx32 " Non ARM component ignored\n", indent, addr,
-				(uint32_t)(pidr >> 32U), (uint32_t)pidr);
+			/* non-ARM components are not supported currently */
+			DEBUG_WARN("%s%" PRIu32 " 0x%" PRIx32 ": 0x%08" PRIx32 "%08" PRIx32 " Non-ARM component ignored\n",
+				indent + 1, num_entry, addr, (uint32_t)(pidr >> 32U), (uint32_t)pidr);
+			DEBUG_TARGET("%s -> designer: %x, part no: %x\n", indent, designer_code, part_number);
 			return;
 		}
 
@@ -705,66 +716,152 @@ static void adiv5_component_probe(
 	}
 }
 
+static void adiv5_display_ap(const adiv5_access_port_s *const ap)
+{
+#if ENABLE_DEBUG == 1
+	const uint8_t ap_type = ADIV5_AP_IDR_TYPE(ap->idr);
+	const uint8_t ap_class = ADIV5_AP_IDR_CLASS(ap->idr);
+	const uint16_t designer = adiv5_decode_designer(ADIV5_AP_IDR_DESIGNER(ap->idr));
+	/* If this is an ARM-designed AP, map the AP type. Otherwise display "Unknown" */
+	const char *const ap_type_name =
+		designer == JEP106_MANUFACTURER_ARM ? adiv5_arm_ap_type_string(ap_type, ap_class) : "Unknown";
+	/* Display the AP's type, variant and revision information */
+	DEBUG_INFO(" (%s var%" PRIx32 " rev%" PRIx32 ")\n", ap_type_name, ADIV5_AP_IDR_VARIANT(ap->idr),
+		ADIV5_AP_IDR_REVISION(ap->idr));
+#else
+	(void)ap;
+#endif
+}
+
 adiv5_access_port_s *adiv5_new_ap(adiv5_debug_port_s *dp, uint8_t apsel)
 {
-	adiv5_access_port_s tmpap = {0};
+	adiv5_access_port_s ap = {0};
 	/* Assume valid and try to read IDR */
-	tmpap.dp = dp;
-	tmpap.apsel = apsel;
-	tmpap.idr = adiv5_ap_read(&tmpap, ADIV5_AP_IDR);
-	tmpap.base = adiv5_ap_read(&tmpap, ADIV5_AP_BASE);
-	/*
-	 * Check the Debug Base Address register. See ADIv5
-	 * Specification C2.6.1
-	 */
-	if (tmpap.base == 0xffffffffU) {
-		/*
-		 * Debug Base Address not present in this MEM-AP
-		 * No debug entries... useless AP
-		 * AP0 on STM32MP157C reads 0x00000002
-		 */
+	ap.dp = dp;
+	ap.apsel = apsel;
+	/* Grab the ID register and make sure the value is sane (non-zero) */
+	ap.idr = adiv5_ap_read(&ap, ADIV5_AP_IDR);
+	if (!ap.idr)
 		return NULL;
+	const uint8_t ap_type = ADIV5_AP_IDR_TYPE(ap.idr);
+	const uint8_t ap_class = ADIV5_AP_IDR_CLASS(ap.idr);
+	DEBUG_INFO("AP %3u: IDR=%08" PRIx32, apsel, ap.idr);
+	/* If this is a MEM-AP */
+	if (ap_class == ADIV5_AP_IDR_CLASS_MEM && ap_type >= 1U && ap_type <= 8U) {
+		/* Grab the config, base and CSW registers */
+		const uint32_t cfg = adiv5_ap_read(&ap, ADIV5_AP_CFG);
+		ap.csw = adiv5_ap_read(&ap, ADIV5_AP_CSW);
+		/* This reads the lower half of BASE */
+		ap.base = adiv5_ap_read(&ap, ADIV5_AP_BASE_LOW);
+		const uint8_t base_flags = (uint8_t)ap.base & (ADIV5_AP_BASE_FORMAT | ADIV5_AP_BASE_PRESENT);
+		/* Make sure we only pay attention to the base address, not the presence and format bits */
+		ap.base &= ADIV5_AP_BASE_BASEADDR;
+		/* Check if this is a 64-bit AP */
+		if (cfg & ADIV5_AP_CFG_LARGE_ADDRESS) {
+			/* If this base value is invalid for a LPAE MEM-AP, bomb out here */
+			if (base_flags == (ADIV5_AP_BASE_FORMAT_LEGACY | ADIV5_AP_BASE_PRESENT_NO_ENTRY)) {
+				DEBUG_INFO(" -> Invalid\n");
+				return NULL;
+			}
+			/* Otherwise note this is a 64-bit AP and read the high part */
+			ap.flags |= ADIV5_AP_FLAGS_64BIT;
+			ap.base |= (uint64_t)adiv5_ap_read(&ap, ADIV5_AP_BASE_HIGH) << 32U;
+		}
+		/* Check the Debug Base Address register for not-present. See ADIv5 Specification C2.6.1 */
+		if (base_flags == (ADIV5_AP_BASE_FORMAT_ADIV5 | ADIV5_AP_BASE_PRESENT_NO_ENTRY) ||
+			(!(ap.flags & ADIV5_AP_FLAGS_64BIT) && (uint32_t)ap.base == ADIV5_AP_BASE_NOT_PRESENT)) {
+			/*
+			 * Debug Base Address not present in this MEM-AP
+			 * No debug entries... useless AP
+			 * AP0 on STM32MP157C reads 0x00000002
+			 */
+			DEBUG_INFO(" -> Not Present\n");
+			return NULL;
+		}
+		/* Check if the AP is disabled, skipping it if that is the case */
+		if ((ap.csw & ADIV5_AP_CSW_AP_ENABLED) == 0U) {
+			DEBUG_INFO(" -> Disabled\n");
+			return NULL;
+		}
+
+		/* Apply bus-common fixups to the CSW value */
+		ap.csw &= ~(ADIV5_AP_CSW_SIZE_MASK | ADIV5_AP_CSW_ADDRINC_MASK);
+		ap.csw |= ADIV5_AP_CSW_DBGSWENABLE;
+
+		switch (ap_type) {
+		case ADIV5_AP_IDR_TYPE_AXI3_4:
+			/* XXX: Handle AXI4 w/ ACE-Lite which makes Mode and Type do ~things~™ (§E1.3.1, pg237) */
+			/* Clear any existing prot modes and disable memory tagging */
+			ap.csw &= ~(ADIV5_AP_CSW_AXI3_4_PROT_MASK | ADIV5_AP_CSW_AXI_MTE);
+			/* Check if secure access is allowed and enable it if so */
+			if (ap.csw & ADIV5_AP_CSW_SPIDEN)
+				ap.csw &= ~ADIV5_AP_CSW_AXI_PROT_NS;
+			else
+				ap.csw |= ADIV5_AP_CSW_AXI_PROT_NS;
+			/* Always privileged accesses */
+			ap.csw |= ADIV5_AP_CSW_AXI_PROT_PRIV;
+			break;
+		case ADIV5_AP_IDR_TYPE_AXI5:
+			/* Clear any existing prot modes and disable memory tagging */
+			ap.csw &= ~(ADIV5_AP_CSW_AXI5_PROT_MASK | ADIV5_AP_CSW_AXI_MTE);
+			/* Check if secure access is allowed and enable it if so */
+			if (ap.csw & ADIV5_AP_CSW_SPIDEN)
+				ap.csw &= ~ADIV5_AP_CSW_AXI_PROT_NS;
+			else
+				ap.csw |= ADIV5_AP_CSW_AXI_PROT_NS;
+			/* Always privileged accesses */
+			ap.csw |= ADIV5_AP_CSW_AXI_PROT_PRIV;
+			break;
+		case ADIV5_AP_IDR_TYPE_AHB3:
+		case ADIV5_AP_IDR_TYPE_AHB5:
+			/* Clear any existing HPROT modes */
+			ap.csw &= ~ADIV5_AP_CSW_AHB_HPROT_MASK;
+			/*
+			 * Ensure that MasterType is set to generate transactions as requested from the AHB-AP,
+			 * and that we generate privileged data requests via the HPROT bits
+			 */
+			ap.csw |= ADIV5_AP_CSW_AHB_MASTERTYPE | ADIV5_AP_CSW_AHB_HPROT_DATA | ADIV5_AP_CSW_AHB_HPROT_PRIV;
+			/* Check to see if secure access is supported and allowed */
+			if (ap.csw & ADIV5_AP_CSW_SPIDEN)
+				ap.csw &= ~ADIV5_AP_CSW_AHB_HNONSEC;
+			else
+				ap.csw |= ADIV5_AP_CSW_AHB_HNONSEC;
+			break;
+		case ADIV5_AP_IDR_TYPE_APB4_5:
+			/* Clear any existing prot modes and disable memory tagging */
+			ap.csw &= ~ADIV5_AP_CSW_APB_PPROT_MASK;
+			/* Check if secure access is allowed and enable it if so */
+			if (ap.csw & ADIV5_AP_CSW_SPIDEN)
+				ap.csw &= ~ADIV5_AP_CSW_APB_PPROT_NS;
+			else
+				ap.csw |= ADIV5_AP_CSW_APB_PPROT_NS;
+			ap.csw |= ADIV5_AP_CSW_APB_PPROT_PRIV;
+			break;
+		}
+
+		if (cfg & ADIV5_AP_CFG_LARGE_ADDRESS)
+			DEBUG_INFO(" CFG=%08" PRIx32 " BASE=%08" PRIx32 "%08" PRIx32 " CSW=%08" PRIx32, cfg,
+				(uint32_t)(ap.base >> 32U), (uint32_t)ap.base, ap.csw);
+		else
+			DEBUG_INFO(" CFG=%08" PRIx32 " BASE=%08" PRIx32 " CSW=%08" PRIx32, cfg, (uint32_t)ap.base, ap.csw);
+
+		if (ap.csw & ADIV5_AP_CSW_TRINPROG) {
+			DEBUG_ERROR("AP %3u: Transaction in progress. AP is not usable!\n", apsel);
+			return NULL;
+		}
 	}
 
-	if (!tmpap.idr) /* IDR Invalid */
-		return NULL;
-	tmpap.csw = adiv5_ap_read(&tmpap, ADIV5_AP_CSW);
-	// XXX: We might be able to use the type field in ap->idr to determine if the AP supports TrustZone
-	tmpap.csw &= ~(ADIV5_AP_CSW_SIZE_MASK | ADIV5_AP_CSW_ADDRINC_MASK | ADIV5_AP_CSW_MTE | ADIV5_AP_CSW_HNOSEC);
-	tmpap.csw |= ADIV5_AP_CSW_DBGSWENABLE;
-
-	if (tmpap.csw & ADIV5_AP_CSW_TRINPROG) {
-		DEBUG_ERROR("AP %3u: Transaction in progress. AP is not usable!\n", apsel);
-		return NULL;
-	}
-
+	adiv5_display_ap(&ap);
 	/* It's valid to so create a heap copy */
-	adiv5_access_port_s *ap = malloc(sizeof(*ap));
-	if (!ap) { /* malloc failed: heap exhaustion */
+	adiv5_access_port_s *result = malloc(sizeof(*result));
+	if (!result) { /* malloc failed: heap exhaustion */
 		DEBUG_ERROR("malloc: failed in %s\n", __func__);
 		return NULL;
 	}
-
-	memcpy(ap, &tmpap, sizeof(*ap));
-
-#if ENABLE_DEBUG == 1
-	/* Grab the config register to get a complete set */
-	uint32_t cfg = adiv5_ap_read(ap, ADIV5_AP_CFG);
-	DEBUG_INFO("AP %3u: IDR=%08" PRIx32 " CFG=%08" PRIx32 " BASE=%08" PRIx32 " CSW=%08" PRIx32, apsel, ap->idr, cfg,
-		ap->base, ap->csw);
-	/* Decode the AP designer code */
-	uint16_t designer = ADIV5_AP_IDR_DESIGNER(ap->idr);
-	designer = (designer & ADIV5_DP_DESIGNER_JEP106_CONT_MASK) << 1U | (designer & ADIV5_DP_DESIGNER_JEP106_CODE_MASK);
-	/* If this is an ARM-designed AP, map the AP type. Otherwise display "Unknown" */
-	const char *const ap_type = designer == JEP106_MANUFACTURER_ARM ?
-		adiv5_arm_ap_type_string(ADIV5_AP_IDR_TYPE(ap->idr), ADIV5_AP_IDR_CLASS(ap->idr)) :
-		"Unknown";
-	/* Display the AP's type, variant and revision information */
-	DEBUG_INFO(" (%s var%" PRIx32 " rev%" PRIx32 ")\n", ap_type, ADIV5_AP_IDR_VARIANT(ap->idr),
-		ADIV5_AP_IDR_REVISION(ap->idr));
-#endif
-	adiv5_ap_ref(ap);
-	return ap;
+	/* Copy the new AP into place and ref it */
+	memcpy(result, &ap, sizeof(*result));
+	adiv5_ap_ref(result);
+	return result;
 }
 
 /* No real AP on RP2040. Special setup.*/
@@ -790,7 +887,7 @@ static void adiv5_dp_clear_sticky_errors(adiv5_debug_port_s *dp)
 	if (dp->version)
 		adiv5_dp_abort(dp, ADIV5_DP_ABORT_STKERRCLR);
 	else
-		/* For JTAG-DPs (which all DPv0 DPs are), use the adiv5_jtagdp_error routine */
+		/* For JTAG-DPs (which all DPv0 DPs are), use the adiv5_jtag_clear_error routine */
 		adiv5_dp_error(dp);
 }
 
@@ -807,108 +904,65 @@ uint32_t adiv5_dp_read_dpidr(adiv5_debug_port_s *const dp)
 	return dpidr;
 }
 
-void adiv5_dp_init(adiv5_debug_port_s *const dp)
+#define S32K344_TARGET_PARTNO        0x995cU
+#define S32K3xx_APB_AP               1U
+#define S32K3xx_AHB_AP               4U
+#define S32K3xx_MDM_AP               6U
+#define S32K3xx_SDA_AP               7U
+#define S32K3xx_SDA_AP_DBGENCTR      ADIV5_AP_REG(0x80U)
+#define S32K3xx_SDA_AP_DBGENCTR_MASK 0x300000f0U
+
+static bool s32k3xx_dp_prepare(adiv5_debug_port_s *const dp)
 {
-	/*
-	 * We have to initialise the DP routines up front before any adiv5_* functions are called or
-	 * bad things happen under BMDA (particularly CMSIS-DAP)
-	 */
-	dp->ap_write = firmware_ap_write;
-	dp->ap_read = firmware_ap_read;
-	dp->mem_read = advi5_mem_read_bytes;
-	dp->mem_write = adiv5_mem_write_bytes;
-#if PC_HOSTED == 1
-	bmda_adiv5_dp_init(dp);
-#endif
+	/* Is this an S32K344? */
+	if (dp->target_partno != S32K344_TARGET_PARTNO)
+		return false;
 
-	/*
-	 * Start by assuming DP v1 or later.
-	 * this may not be true for JTAG-DP (we attempt to detect this with the part ID code)
-	 * in such cases (DPv0) DPIDR is not implemented and reads are UNPREDICTABLE.
-	 *
-	 * for SWD-DP, we are guaranteed to be DP v1 or later.
-	 */
-	if (dp->designer_code != JEP106_MANUFACTURER_ARM || dp->partno != JTAG_IDCODE_PARTNO_DPv0) {
-		const uint32_t dpidr = adiv5_dp_read_dpidr(dp);
-		if (!dpidr) {
-			DEBUG_ERROR("Failed to read DPIDR\n");
-			free(dp);
-			return;
+	adiv5_dp_abort(dp, ADIV5_DP_ABORT_DAPABORT);
+
+	/* SDA_AP has various flags we must enable before we can have debug access, so
+	 * start with it and enable them */
+	adiv5_access_port_s *sda_ap = adiv5_new_ap(dp, S32K3xx_SDA_AP);
+	if (!sda_ap)
+		return false;
+	adiv5_ap_write(sda_ap, S32K3xx_SDA_AP_DBGENCTR, S32K3xx_SDA_AP_DBGENCTR_MASK);
+	adiv5_ap_unref(sda_ap);
+
+	/* If we try to access an invalid AP the S32K3 will hard fault, so we must
+	 * statically enumerate the APs we expect */
+	adiv5_access_port_s *apb_ap = adiv5_new_ap(dp, S32K3xx_APB_AP);
+	if (!apb_ap)
+		return false;
+	adiv5_component_probe(apb_ap, apb_ap->base, 0, 0);
+	adiv5_ap_unref(apb_ap);
+
+	adiv5_access_port_s *ahb_ap = adiv5_new_ap(dp, S32K3xx_AHB_AP);
+	if (!ahb_ap)
+		return false;
+	adiv5_component_probe(ahb_ap, ahb_ap->base, 0, 0);
+
+	cortexm_prepare(ahb_ap);
+	for (target_s *target = target_list; target; target = target->next) {
+		if (!connect_assert_nrst && target->priv_free == cortex_priv_free) {
+			adiv5_access_port_s *target_ap = cortex_ap(target);
+			if (target_ap == ahb_ap)
+				target_halt_resume(target, false);
 		}
-
-		dp->version = (dpidr & ADIV5_DP_DPIDR_VERSION_MASK) >> ADIV5_DP_DPIDR_VERSION_OFFSET;
-
-		/*
-		 * The code in the DPIDR is in the form
-		 * Bits 10:7 - JEP-106 Continuation code
-		 * Bits 6:0 - JEP-106 Identity code
-		 * here we convert it to our internal representation, See JEP-106 code list
-		 *
-		 * note: this is the code of the designer not the implementer, we expect it to be ARM
-		 */
-		const uint16_t designer = (dpidr & ADIV5_DP_DPIDR_DESIGNER_MASK) >> ADIV5_DP_DPIDR_DESIGNER_OFFSET;
-		dp->designer_code =
-			(designer & ADIV5_DP_DESIGNER_JEP106_CONT_MASK) << 1U | (designer & ADIV5_DP_DESIGNER_JEP106_CODE_MASK);
-		dp->partno = (dpidr & ADIV5_DP_DPIDR_PARTNO_MASK) >> ADIV5_DP_DPIDR_PARTNO_OFFSET;
-
-		/* Minimal Debug Port (MINDP) functions implemented */
-		dp->mindp = !!(dpidr & ADIV5_DP_DPIDR_MINDP);
-
-		/*
-		 * Check DPIDR validity
-		 * Designer code 0 is not a valid JEP-106 code
-		 * Version 0 is reserved for DPv0 which does not implement DPIDR
-		 * Bit 0 of DPIDR is read as 1
-		 */
-		if (dp->designer_code != 0 && dp->version > 0 && (dpidr & 1U)) {
-			DEBUG_INFO("DP DPIDR 0x%08" PRIx32 " (v%x %srev%" PRIu32 ") designer 0x%x partno 0x%x\n", dpidr,
-				dp->version, dp->mindp ? "MINDP " : "",
-				(dpidr & ADIV5_DP_DPIDR_REVISION_MASK) >> ADIV5_DP_DPIDR_REVISION_OFFSET, dp->designer_code,
-				dp->partno);
-		} else {
-			DEBUG_WARN("Invalid DPIDR %08" PRIx32 " assuming DPv0\n", dpidr);
-			dp->version = 0;
-			dp->designer_code = 0;
-			dp->partno = 0;
-			dp->mindp = false;
-		}
-	} else if (dp->version == 0)
-		/* DP v0 */
-		DEBUG_WARN("DPv0 detected based on JTAG IDCode\n");
-
-	/*
-	 * Ensure that whatever previous accesses happened to this DP before we
-	 * scanned the chain and found it, the sticky error bit is cleared
-	 */
-	adiv5_dp_clear_sticky_errors(dp);
-
-	if (dp->version >= 2) {
-		/* TARGETID is on bank 2 */
-		adiv5_dp_write(dp, ADIV5_DP_SELECT, ADIV5_DP_BANK2);
-		const uint32_t targetid = adiv5_dp_read(dp, ADIV5_DP_TARGETID);
-		adiv5_dp_write(dp, ADIV5_DP_SELECT, ADIV5_DP_BANK0);
-
-		/* Use TARGETID register to identify target */
-		const uint16_t tdesigner = (targetid & ADIV5_DP_TARGETID_TDESIGNER_MASK) >> ADIV5_DP_TARGETID_TDESIGNER_OFFSET;
-
-		/* convert it to our internal representation, See JEP-106 code list */
-		dp->target_designer_code =
-			(tdesigner & ADIV5_DP_DESIGNER_JEP106_CONT_MASK) << 1U | (tdesigner & ADIV5_DP_DESIGNER_JEP106_CODE_MASK);
-
-		dp->target_partno = (targetid & ADIV5_DP_TARGETID_TPARTNO_MASK) >> ADIV5_DP_TARGETID_TPARTNO_OFFSET;
-
-		DEBUG_INFO("TARGETID 0x%08" PRIx32 " designer 0x%x partno 0x%x\n", targetid, dp->target_designer_code,
-			dp->target_partno);
-
-		dp->targetsel = dp->instance << ADIV5_DP_TARGETSEL_TINSTANCE_OFFSET |
-			(targetid & (ADIV5_DP_TARGETID_TDESIGNER_MASK | ADIV5_DP_TARGETID_TPARTNO_MASK)) | 1U;
 	}
 
-	if (dp->designer_code == JEP106_MANUFACTURER_RASPBERRY && dp->partno == 0x2U) {
-		rp_rescue_setup(dp);
-		return;
-	}
+	adiv5_ap_unref(ahb_ap);
 
+	adiv5_access_port_s *mdm_ap = adiv5_new_ap(dp, S32K3xx_MDM_AP);
+	if (!mdm_ap)
+		return false;
+	adiv5_component_probe(mdm_ap, mdm_ap->base, 0, 0);
+	adiv5_ap_unref(mdm_ap);
+
+	return true;
+}
+
+static bool adiv5_power_cycle_aps(adiv5_debug_port_s *const dp)
+{
 	platform_timeout_s timeout;
 	platform_timeout_set(&timeout, 250);
 
@@ -937,11 +991,120 @@ void adiv5_dp_init(adiv5_debug_port_s *const dp)
 			break;
 		if (platform_timeout_is_expired(&timeout)) {
 			DEBUG_WARN("adiv5: power-up failed\n");
-			free(dp); /* No AP that referenced this DP so long*/
-			return;
+			return false;
 		}
 	}
 	/* At this point due to the guaranteed power domain restart, the APs are all up and in their reset state. */
+	return true;
+}
+
+void adiv5_dp_init(adiv5_debug_port_s *const dp)
+{
+	/*
+	 * We have to initialise the DP routines up front before any adiv5_* functions are called or
+	 * bad things happen under BMDA (particularly CMSIS-DAP)
+	 */
+	dp->ap_write = adiv5_ap_reg_write;
+	dp->ap_read = adiv5_ap_reg_read;
+	dp->mem_read = advi5_mem_read_bytes;
+	dp->mem_write = adiv5_mem_write_bytes;
+#if PC_HOSTED == 1
+	bmda_adiv5_dp_init(dp);
+#endif
+
+	/*
+	 * Start by assuming DP v1 or later.
+	 * this may not be true for JTAG-DP (we attempt to detect this with the part ID code)
+	 * in such cases (DPv0) DPIDR is not implemented and reads are UNPREDICTABLE.
+	 *
+	 * for SWD-DP, we are guaranteed to be DP v1 or later.
+	 */
+	if (dp->designer_code != JEP106_MANUFACTURER_ARM || dp->partno != JTAG_IDCODE_PARTNO_DPV0) {
+		const uint32_t dpidr = adiv5_dp_read_dpidr(dp);
+		if (!dpidr) {
+			DEBUG_ERROR("Failed to read DPIDR\n");
+			free(dp);
+			return;
+		}
+
+		dp->version = (dpidr & ADIV5_DP_DPIDR_VERSION_MASK) >> ADIV5_DP_DPIDR_VERSION_OFFSET;
+
+		/*
+		 * The code in the DPIDR is in the form
+		 * Bits 10:7 - JEP-106 Continuation code
+		 * Bits 6:0 - JEP-106 Identity code
+		 * here we convert it to our internal representation, See JEP-106 code list
+		 *
+		 * Note: this is the code of the designer not the implementer, we expect it to be ARM
+		 */
+		dp->designer_code =
+			adiv5_decode_designer((dpidr & ADIV5_DP_DPIDR_DESIGNER_MASK) >> ADIV5_DP_DPIDR_DESIGNER_OFFSET);
+		dp->partno = (dpidr & ADIV5_DP_DPIDR_PARTNO_MASK) >> ADIV5_DP_DPIDR_PARTNO_OFFSET;
+
+		/* Minimal Debug Port (MINDP) functions implemented */
+		dp->quirks = (dpidr >> ADIV5_DP_DPIDR_MINDP_OFFSET) & ADIV5_DP_QUIRK_MINDP;
+
+		/*
+		 * Check DPIDR validity
+		 * Designer code 0 is not a valid JEP-106 code
+		 * Version 0 is reserved for DPv0 which does not implement DPIDR
+		 * Bit 0 of DPIDR is read as 1
+		 */
+		if (dp->designer_code != 0U && dp->version > 0U && (dpidr & 1U)) {
+			DEBUG_INFO("DP DPIDR 0x%08" PRIx32 " (v%x %srev%" PRIu32 ") designer 0x%x partno 0x%x\n", dpidr,
+				dp->version, (dp->quirks & ADIV5_DP_QUIRK_MINDP) ? "MINDP " : "",
+				(dpidr & ADIV5_DP_DPIDR_REVISION_MASK) >> ADIV5_DP_DPIDR_REVISION_OFFSET, dp->designer_code,
+				dp->partno);
+		} else {
+			DEBUG_WARN("Invalid DPIDR %08" PRIx32 " assuming DPv0\n", dpidr);
+			dp->version = 0U;
+			dp->designer_code = 0U;
+			dp->partno = 0U;
+			dp->quirks = 0U;
+		}
+	} else if (dp->version == 0)
+		/* DP v0 */
+		DEBUG_WARN("DPv0 detected based on JTAG IDCode\n");
+
+	/*
+	 * Ensure that whatever previous accesses happened to this DP before we
+	 * scanned the chain and found it, the sticky error bit is cleared
+	 */
+	adiv5_dp_clear_sticky_errors(dp);
+
+	if (dp->version >= 2) {
+		/* TARGETID is on bank 2 */
+		adiv5_dp_write(dp, ADIV5_DP_SELECT, ADIV5_DP_BANK2);
+		const uint32_t targetid = adiv5_dp_read(dp, ADIV5_DP_TARGETID);
+		adiv5_dp_write(dp, ADIV5_DP_SELECT, ADIV5_DP_BANK0);
+
+		/*
+		 * Use TARGETID register to identify target and convert it
+		 * to our internal representation, See JEP-106 code list.
+		 */
+		dp->target_designer_code =
+			adiv5_decode_designer((targetid & ADIV5_DP_TARGETID_TDESIGNER_MASK) >> ADIV5_DP_TARGETID_TDESIGNER_OFFSET);
+
+		dp->target_partno = (targetid & ADIV5_DP_TARGETID_TPARTNO_MASK) >> ADIV5_DP_TARGETID_TPARTNO_OFFSET;
+
+		DEBUG_INFO("TARGETID 0x%08" PRIx32 " designer 0x%x partno 0x%x\n", targetid, dp->target_designer_code,
+			dp->target_partno);
+
+		dp->targetsel = dp->dev_index << ADIV5_DP_TARGETSEL_TINSTANCE_OFFSET |
+			(targetid & (ADIV5_DP_TARGETID_TDESIGNER_MASK | ADIV5_DP_TARGETID_TPARTNO_MASK)) | 1U;
+	}
+
+	if (dp->designer_code == JEP106_MANUFACTURER_RASPBERRY && dp->partno == 0x2U) {
+		rp_rescue_setup(dp);
+		return;
+	}
+
+	/* Try to power cycle the APs, affecting a reset on them */
+	if (!adiv5_power_cycle_aps(dp)) {
+		/* Clean up by freeing the DP - no APs have been constructed at this point, so this is safe */
+		free(dp);
+		return;
+	}
 
 	if (dp->target_designer_code == JEP106_MANUFACTURER_NXP)
 		lpc55_dp_prepare(dp);
@@ -949,6 +1112,15 @@ void adiv5_dp_init(adiv5_debug_port_s *const dp)
 	/* Probe for APs on this DP */
 	size_t invalid_aps = 0;
 	dp->refcnt++;
+
+	if (dp->target_designer_code == JEP106_MANUFACTURER_FREESCALE) {
+		/* S32K3XX will requires special handling, do so and skip the AP enumeration */
+		if (s32k3xx_dp_prepare(dp)) {
+			adiv5_dp_unref(dp);
+			return;
+		}
+	}
+
 	for (size_t i = 0; i < 256U && invalid_aps < 8U; ++i) {
 		adiv5_access_port_s *ap = adiv5_new_ap(dp, i);
 		if (ap == NULL) {
@@ -987,25 +1159,25 @@ void adiv5_dp_init(adiv5_debug_port_s *const dp)
 				if (target_ap == ap)
 					target_halt_resume(target, false);
 			}
-
-			/*
-			 * Due to the Tiva TM4C1294KCDT repeating the single AP ad-nauseum, this check is needed
-			 * so that we bail rather than repeating the same AP ~256 times.
-			 */
-			if (target->priv_free == cortex_priv_free && cortex_ap(target) == ap &&
-				strstr(target->driver, "Tiva") != NULL) {
-				adiv5_ap_unref(ap);
-				adiv5_dp_unref(dp);
-				return;
-			}
 		}
+
+		/*
+		 * Due to the Tiva TM4C1294KCDT (among others) repeating the single AP ad-nauseum,
+		 * this check is needed so that we bail rather than repeating the same AP ~256 times.
+		 */
+		if (ap->dp->quirks & ADIV5_DP_QUIRK_DUPED_AP) {
+			adiv5_ap_unref(ap);
+			adiv5_dp_unref(dp);
+			return;
+		}
+
 		adiv5_ap_unref(ap);
 	}
 	adiv5_dp_unref(dp);
 }
 
 /* Program the CSW and TAR for sequential access at a given width */
-void ap_mem_access_setup(adiv5_access_port_s *ap, uint32_t addr, align_e align)
+void adiv5_mem_access_setup(adiv5_access_port_s *const ap, const target_addr64_t addr, const align_e align)
 {
 	uint32_t csw = ap->csw | ADIV5_AP_CSW_ADDRINC_SINGLE;
 
@@ -1021,12 +1193,16 @@ void ap_mem_access_setup(adiv5_access_port_s *ap, uint32_t addr, align_e align)
 		csw |= ADIV5_AP_CSW_SIZE_WORD;
 		break;
 	}
+	/* Select AP bank 0 and write CSW */
 	adiv5_ap_write(ap, ADIV5_AP_CSW, csw);
-	adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_TAR, addr);
+	/* Then write TAR which is in the same AP bank */
+	if (ap->flags & ADIV5_AP_FLAGS_64BIT)
+		adiv5_dp_write(ap->dp, ADIV5_AP_TAR_HIGH, (uint32_t)(addr >> 32));
+	adiv5_dp_write(ap->dp, ADIV5_AP_TAR_LOW, (uint32_t)addr);
 }
 
 /* Unpack data from the source uint32_t value based on data alignment and source address */
-void *adiv5_unpack_data(void *const dest, const uint32_t src, const uint32_t data, const align_e align)
+void *adiv5_unpack_data(void *const dest, const target_addr32_t src, const uint32_t data, const align_e align)
 {
 	switch (align) {
 	case ALIGN_8BIT: {
@@ -1058,11 +1234,12 @@ void *adiv5_unpack_data(void *const dest, const uint32_t src, const uint32_t dat
 		memcpy(dest, &data, sizeof(data));
 		break;
 	}
-	return (uint8_t *)dest + (1 << align);
+	return (uint8_t *)dest + (1U << align);
 }
 
 /* Pack data from the source value into a uint32_t based on data alignment and source address */
-const void *adiv5_pack_data(const uint32_t dest, const void *const src, uint32_t *const data, const align_e align)
+const void *adiv5_pack_data(
+	const target_addr32_t dest, const void *const src, uint32_t *const data, const align_e align)
 {
 	switch (align) {
 	case ALIGN_8BIT: {
@@ -1089,76 +1266,198 @@ const void *adiv5_pack_data(const uint32_t dest, const void *const src, uint32_t
 		memcpy(data, src, sizeof(*data));
 		break;
 	}
-	return (const uint8_t *)src + (1 << align);
+	return (const uint8_t *)src + (1U << align);
 }
 
-void advi5_mem_read_bytes(adiv5_access_port_s *const ap, void *dest, uint32_t src, size_t len)
+void advi5_mem_read_bytes(adiv5_access_port_s *const ap, void *dest, const target_addr64_t src, const size_t len)
 {
-	uint32_t osrc = src;
-	const align_e align = MIN_ALIGN(src, len);
-
-	if (len == 0)
+	/* Do nothing and return if there's nothing to read */
+	if (len == 0U)
 		return;
-
-	len >>= align;
-	ap_mem_access_setup(ap, src, align);
-	adiv5_dp_low_access(ap->dp, ADIV5_LOW_READ, ADIV5_AP_DRW, 0);
-	while (--len) {
-		const uint32_t value = adiv5_dp_low_access(ap->dp, ADIV5_LOW_READ, ADIV5_AP_DRW, 0);
-		dest = adiv5_unpack_data(dest, src, value, align);
-
-		src += 1U << align;
-		/* Check for 10 bit address overflow */
-		if ((src ^ osrc) & 0xfffffc00U) {
-			osrc = src;
-			adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_TAR, src);
-			adiv5_dp_low_access(ap->dp, ADIV5_LOW_READ, ADIV5_AP_DRW, 0);
+	/* Calculate the extent of the transfer */
+	target_addr64_t begin = src;
+	const target_addr64_t end = begin + len;
+	/* Calculate the alignment of the transfer */
+	const align_e align = MIN_ALIGN(src, len);
+	/* Calculate how much each loop will increment the destination address by */
+	const uint8_t stride = 1U << align;
+	/* Set up the transfer */
+	adiv5_mem_access_setup(ap, src, align);
+	/* Now loop through the data and move it 1 stride at a time to the target */
+	for (; begin < end; begin += stride) {
+		/*
+		 * Check if the address doesn't overflow the 10-bit auto increment bound for TAR,
+		 * if it's not the first transfer (offset == 0)
+		 */
+		if (begin != src && (begin & 0x000003ffU) == 0U) {
+			/* Update TAR to adjust the upper bits */
+			if (ap->flags & ADIV5_AP_FLAGS_64BIT)
+				adiv5_dp_write(ap->dp, ADIV5_AP_TAR_HIGH, (uint32_t)(begin >> 32));
+			adiv5_dp_write(ap->dp, ADIV5_AP_TAR_LOW, (uint32_t)begin);
 		}
+		/* Grab the next chunk of data from the target */
+		const uint32_t value = adiv5_dp_read(ap->dp, ADIV5_AP_DRW);
+		/* Unpack the data from the chunk */
+		dest = adiv5_unpack_data(dest, begin, value, align);
 	}
-	const uint32_t value = adiv5_dp_low_access(ap->dp, ADIV5_LOW_READ, ADIV5_DP_RDBUFF, 0);
-	adiv5_unpack_data(dest, src, value, align);
 }
 
-void adiv5_mem_write_bytes(adiv5_access_port_s *ap, uint32_t dest, const void *src, size_t len, align_e align)
+void adiv5_mem_write_bytes(
+	adiv5_access_port_s *const ap, const target_addr64_t dest, const void *src, const size_t len, const align_e align)
 {
-	uint32_t odest = dest;
-
-	len >>= align;
-	ap_mem_access_setup(ap, dest, align);
-	while (len--) {
-		uint32_t value = 0;
-		src = adiv5_pack_data(dest, src, &value, align);
-		adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_DRW, value);
-
-		dest += 1U << align;
-		/* Check for 10 bit address overflow */
-		if ((dest ^ odest) & 0xfffffc00U) {
-			odest = dest;
-			adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_TAR, dest);
+	/* Do nothing and return if there's nothing to write */
+	if (len == 0U)
+		return;
+	/* Calculate the extent of the transfer */
+	target_addr64_t begin = dest;
+	const target_addr64_t end = begin + len;
+	/* Calculate how much each loop will increment the destination address by */
+	const uint8_t stride = 1U << align;
+	/* Set up the transfer */
+	adiv5_mem_access_setup(ap, dest, align);
+	/* Now loop through the data and move it 1 stride at a time to the target */
+	for (; begin < end; begin += stride) {
+		/*
+		 * Check if the address doesn't overflow the 10-bit auto increment bound for TAR,
+		 * if it's not the first transfer (offset == 0)
+		 */
+		if (begin != dest && (begin & 0x000003ffU) == 0U) {
+			/* Update TAR to adjust the upper bits */
+			if (ap->flags & ADIV5_AP_FLAGS_64BIT)
+				adiv5_dp_write(ap->dp, ADIV5_AP_TAR_HIGH, (uint32_t)(begin >> 32));
+			adiv5_dp_write(ap->dp, ADIV5_AP_TAR_LOW, (uint32_t)begin);
 		}
+		/* Pack the data for transfer */
+		uint32_t value = 0;
+		src = adiv5_pack_data(begin, src, &value, align);
+		/* And copy the result to the target */
+		adiv5_dp_write(ap->dp, ADIV5_AP_DRW, value);
 	}
 	/* Make sure this write is complete by doing a dummy read */
 	adiv5_dp_read(ap->dp, ADIV5_DP_RDBUFF);
 }
 
-void firmware_ap_write(adiv5_access_port_s *ap, uint16_t addr, uint32_t value)
+void adiv5_ap_reg_write(adiv5_access_port_s *ap, uint16_t addr, uint32_t value)
 {
 	adiv5_dp_recoverable_access(
 		ap->dp, ADIV5_LOW_WRITE, ADIV5_DP_SELECT, ((uint32_t)ap->apsel << 24U) | (addr & 0xf0U));
 	adiv5_dp_write(ap->dp, addr, value);
 }
 
-uint32_t firmware_ap_read(adiv5_access_port_s *ap, uint16_t addr)
+uint32_t adiv5_ap_reg_read(adiv5_access_port_s *ap, uint16_t addr)
 {
-	uint32_t ret;
 	adiv5_dp_recoverable_access(
 		ap->dp, ADIV5_LOW_WRITE, ADIV5_DP_SELECT, ((uint32_t)ap->apsel << 24U) | (addr & 0xf0U));
-	ret = adiv5_dp_read(ap->dp, addr);
-	return ret;
+	return adiv5_dp_read(ap->dp, addr);
 }
 
-void adiv5_mem_write(adiv5_access_port_s *const ap, const uint32_t dest, const void *const src, const size_t len)
+void adiv5_mem_write(adiv5_access_port_s *const ap, const target_addr64_t dest, const void *const src, const size_t len)
 {
 	const align_e align = MIN_ALIGN(dest, len);
-	adiv5_mem_write_sized(ap, dest, src, len, align);
+	adiv5_mem_write_aligned(ap, dest, src, len, align);
 }
+
+#ifndef DEBUG_PROTO_IS_NOOP
+static void decode_dp_access(const uint8_t addr, const uint8_t rnw, const uint32_t value)
+{
+	/* How a DP address should be decoded depends on the bank that's presently selected, so make a note of that */
+	static uint8_t dp_bank = 0;
+	const char *reg = NULL;
+
+	/* Try to decode the requested address */
+	switch (addr) {
+	case 0x00U:
+		reg = rnw ? "DPIDR" : "ABORT";
+		break;
+	case 0x04U:
+		switch (dp_bank) {
+		case 0:
+			reg = rnw ? "STATUS" : "CTRL";
+			break;
+		case 1:
+			reg = "DLCR";
+			break;
+		case 2:
+			reg = "TARGETID";
+			break;
+		case 3:
+			reg = "DLPIDR";
+			break;
+		case 4:
+			reg = "EVENTSTAT";
+			break;
+		}
+		break;
+	case 0x08U:
+		if (!rnw)
+			dp_bank = value & 15U;
+		reg = rnw ? "RESEND" : "SELECT";
+		break;
+	case 0x0cU:
+		reg = rnw ? "RDBUFF" : "TARGETSEL";
+		break;
+	}
+
+	if (reg)
+		DEBUG_PROTO("%s: ", reg);
+	else
+		DEBUG_PROTO("Unknown DP register %02x: ", addr);
+}
+
+static void decode_ap_access(const uint8_t ap, const uint8_t addr)
+{
+	DEBUG_PROTO("AP %u ", ap);
+
+	const char *reg = NULL;
+	switch (addr) {
+	case 0x00U:
+		reg = "CSW";
+		break;
+	case 0x04U:
+		reg = "TAR";
+		break;
+	case 0x0cU:
+		reg = "DRW";
+		break;
+	case 0x10U:
+		reg = "DB0";
+		break;
+	case 0x14U:
+		reg = "DB1";
+		break;
+	case 0x18U:
+		reg = "DB2";
+		break;
+	case 0x1cU:
+		reg = "DB3";
+		break;
+	case 0xf8U:
+		reg = "BASE";
+		break;
+	case 0xf4U:
+		reg = "CFG";
+		break;
+	case 0xfcU:
+		reg = "IDR";
+		break;
+	}
+
+	if (reg)
+		DEBUG_PROTO("%s: ", reg);
+	else
+		DEBUG_PROTO("Reserved(%02x): ", addr);
+}
+
+void decode_access(const uint16_t addr, const uint8_t rnw, const uint8_t apsel, const uint32_t value)
+{
+	if (rnw)
+		DEBUG_PROTO("Read ");
+	else
+		DEBUG_PROTO("Write ");
+
+	if (addr & ADIV5_APnDP)
+		decode_ap_access(apsel, addr & 0xffU);
+	else
+		decode_dp_access(addr & 0xffU, rnw, value);
+}
+#endif

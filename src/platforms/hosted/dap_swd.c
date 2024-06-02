@@ -34,6 +34,7 @@
 #include "dap.h"
 #include "dap_command.h"
 #include "buffer_utils.h"
+#include "maths_utils.h"
 
 typedef enum dap_swd_turnaround_cycles {
 	DAP_SWD_TURNAROUND_1_CYCLE = 0U,
@@ -66,9 +67,8 @@ bool dap_swd_init(adiv5_debug_port_s *target_dp)
 	/* Mark that we're going into SWD mode and configure the CMSIS-DAP adaptor accordingly */
 	dap_disconnect();
 	dap_mode = DAP_CAP_SWD;
-	dap_swd_configure(DAP_SWD_TURNAROUND_1_CYCLE, DAP_SWD_FAULT_ALWAYS_DATA_PHASE);
+	dap_swd_configure(DAP_SWD_TURNAROUND_1_CYCLE, DAP_SWD_FAULT_NO_DATA_PHASE);
 	dap_connect();
-	dap_reset_link(target_dp);
 
 	/* Set up the underlying SWD functions using the implementation below */
 	swd_proc.seq_in = dap_swd_seq_in;
@@ -84,7 +84,7 @@ bool dap_swd_init(adiv5_debug_port_s *target_dp)
 	/* Set up the accelerated SWD functions for basic target operations */
 	target_dp->read_no_check = dap_read_reg_no_check;
 	target_dp->dp_read = dap_dp_read_reg;
-	target_dp->low_access = dap_dp_low_access;
+	target_dp->low_access = dap_dp_raw_access;
 	target_dp->abort = dap_dp_abort;
 	return true;
 }
@@ -127,7 +127,7 @@ static void dap_swd_seq_out_parity(const uint32_t tms_states, const size_t clock
 		DAP_SWD_OUT_SEQUENCE,
 	};
 	write_le4(sequence.data, 0, tms_states);
-	sequence.data[4] = __builtin_parity(tms_states);
+	sequence.data[4] = calculate_odd_parity(tms_states);
 	/* And perform it */
 	if (!perform_dap_swd_sequences(&sequence, 1U))
 		DEBUG_ERROR("dap_swd_seq_out_parity failed\n");
@@ -169,7 +169,7 @@ static bool dap_swd_seq_in_parity(uint32_t *const result, const size_t clock_cyc
 	for (size_t offset = 0; offset < clock_cycles; offset += 8U)
 		data |= sequence.data[offset >> 3U] << offset;
 	*result = data;
-	uint8_t parity = __builtin_parity(data) & 1U;
+	uint8_t parity = calculate_odd_parity(data);
 	parity ^= sequence.data[4] & 1U;
 	return !parity;
 }
@@ -194,7 +194,7 @@ static bool dap_write_reg_no_check(const uint16_t addr, const uint32_t data)
 			33U,
 			DAP_SWD_OUT_SEQUENCE,
 			/* The 4 data bytes are filled in below with write_le4() */
-			{0U, 0U, 0U, 0U, __builtin_parity(data)},
+			{0U, 0U, 0U, 0U, calculate_odd_parity(data)},
 		},
 	};
 	write_le4(sequences[3].data, 0, data);

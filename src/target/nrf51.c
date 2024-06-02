@@ -126,25 +126,25 @@ static void nrf51_add_flash(target_s *t, uint32_t addr, size_t length, size_t er
 
 bool nrf51_probe(target_s *t)
 {
-	uint32_t page_size = target_mem_read32(t, NRF51_FICR_CODEPAGESIZE);
-	uint32_t code_size = target_mem_read32(t, NRF51_FICR_CODESIZE);
+	uint32_t page_size = target_mem32_read32(t, NRF51_FICR_CODEPAGESIZE);
+	uint32_t code_size = target_mem32_read32(t, NRF51_FICR_CODESIZE);
 	/* Check that page_size and code_size makes sense */
 	if (page_size == 0xffffffffU || code_size == 0xffffffffU || page_size == 0 || code_size == 0 ||
 		page_size > 0x10000U || code_size > 0x10000U)
 		return false;
 	DEBUG_INFO("nRF51/52: code page size: %" PRIu32 ", code size: %" PRIu32 "\n", page_size, code_size);
 	/* Check that device identifier makes sense */
-	uint32_t uid0 = target_mem_read32(t, NRF51_FICR_DEVICEID_LOW);
-	uint32_t uid1 = target_mem_read32(t, NRF51_FICR_DEVICEID_HIGH);
+	uint32_t uid0 = target_mem32_read32(t, NRF51_FICR_DEVICEID_LOW);
+	uint32_t uid1 = target_mem32_read32(t, NRF51_FICR_DEVICEID_HIGH);
 	if (uid0 == 0xffffffffU || uid1 == 0xffffffffU || uid0 == 0 || uid1 == 0)
 		return false;
 	/* Test for NRF52 device */
-	uint32_t info_part = target_mem_read32(t, NRF52_PART_INFO);
+	uint32_t info_part = target_mem32_read32(t, NRF52_PART_INFO);
 	if (info_part != 0xffffffffU && info_part != 0 && (info_part & 0x00ff000U) == 0x52000U) {
-		uint32_t ram_size = target_mem_read32(t, NRF52_INFO_RAM);
+		uint32_t ram_size = target_mem32_read32(t, NRF52_INFO_RAM);
 		t->driver = "Nordic nRF52";
 		t->target_options |= TOPT_INHIBIT_NRST;
-		target_add_ram(t, 0x20000000U, ram_size * 1024U);
+		target_add_ram32(t, 0x20000000U, ram_size * 1024U);
 		nrf51_add_flash(t, 0, page_size * code_size, page_size);
 		nrf51_add_flash(t, NRF51_UICR, page_size, page_size);
 		target_add_commands(t, nrf51_cmd_list, "nRF52");
@@ -154,7 +154,7 @@ bool nrf51_probe(target_s *t)
 		 * Use the biggest RAM size seen in NRF51 fammily.
 		 * IDCODE is kept as '0', as deciphering is hard and there is later no usage.
 		 */
-		target_add_ram(t, 0x20000000U, 0x8000U);
+		target_add_ram32(t, 0x20000000U, 0x8000U);
 		t->target_options |= TOPT_INHIBIT_NRST;
 		nrf51_add_flash(t, 0, page_size * code_size, page_size);
 		nrf51_add_flash(t, NRF51_UICR, page_size, page_size);
@@ -167,7 +167,7 @@ bool nrf51_probe(target_s *t)
 static bool nrf51_wait_ready(target_s *const t, platform_timeout_s *const timeout)
 {
 	/* Poll for NVMC_READY */
-	while (target_mem_read32(t, NRF51_NVMC_READY) == 0) {
+	while (target_mem32_read32(t, NRF51_NVMC_READY) == 0) {
 		if (target_check_error(t))
 			return false;
 		if (timeout)
@@ -182,10 +182,10 @@ static bool nrf51_flash_prepare(target_flash_s *f)
 	/* If there is a buffer allocated, we're in the Flash write phase, otherwise it's erase */
 	if (f->buf)
 		/* Enable write */
-		target_mem_write32(t, NRF51_NVMC_CONFIG, NRF51_NVMC_CONFIG_WEN);
+		target_mem32_write32(t, NRF51_NVMC_CONFIG, NRF51_NVMC_CONFIG_WEN);
 	else
 		/* Enable erase */
-		target_mem_write32(t, NRF51_NVMC_CONFIG, NRF51_NVMC_CONFIG_EEN);
+		target_mem32_write32(t, NRF51_NVMC_CONFIG, NRF51_NVMC_CONFIG_EEN);
 	return nrf51_wait_ready(t, NULL);
 }
 
@@ -193,7 +193,7 @@ static bool nrf51_flash_done(target_flash_s *f)
 {
 	target_s *t = f->t;
 	/* Return to read-only */
-	target_mem_write32(t, NRF51_NVMC_CONFIG, NRF51_NVMC_CONFIG_REN);
+	target_mem32_write32(t, NRF51_NVMC_CONFIG, NRF51_NVMC_CONFIG_REN);
 	return nrf51_wait_ready(t, NULL);
 }
 
@@ -205,10 +205,10 @@ static bool nrf51_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 		/* If the address to erase is the UICR, we have to handle that separately */
 		if (addr + offset == NRF51_UICR)
 			/* Write to the ERASE_UICR register to erase */
-			target_mem_write32(t, NRF51_NVMC_ERASEUICR, 0x1U);
+			target_mem32_write32(t, NRF51_NVMC_ERASEUICR, 0x1U);
 		else
 			/* Write address of first word in page to erase it */
-			target_mem_write32(t, NRF51_NVMC_ERASEPAGE, addr + offset);
+			target_mem32_write32(t, NRF51_NVMC_ERASEPAGE, addr + offset);
 
 		if (!nrf51_wait_ready(t, NULL))
 			return false;
@@ -221,7 +221,7 @@ static bool nrf51_flash_write(target_flash_s *f, target_addr_t dest, const void 
 {
 	/* nrf51_flash_prepare() and nrf51_flash_done() top-and-tail this, just write the data to the target. */
 	target_s *t = f->t;
-	target_mem_write(t, dest, src, len);
+	target_mem32_write(t, dest, src, len);
 	return nrf51_wait_ready(t, NULL);
 }
 
@@ -230,14 +230,14 @@ static bool nrf51_mass_erase(target_s *t)
 	target_reset(t);
 
 	/* Enable erase */
-	target_mem_write32(t, NRF51_NVMC_CONFIG, NRF51_NVMC_CONFIG_EEN);
+	target_mem32_write32(t, NRF51_NVMC_CONFIG, NRF51_NVMC_CONFIG_EEN);
 	if (!nrf51_wait_ready(t, NULL))
 		return false;
 
 	platform_timeout_s timeout;
 	platform_timeout_set(&timeout, 500U);
 	/* Erase all */
-	target_mem_write32(t, NRF51_NVMC_ERASEALL, 1U);
+	target_mem32_write32(t, NRF51_NVMC_ERASEALL, 1U);
 	return nrf51_wait_ready(t, &timeout);
 }
 
@@ -248,12 +248,12 @@ static bool nrf51_cmd_erase_uicr(target_s *t, int argc, const char **argv)
 	tc_printf(t, "Erasing..\n");
 
 	/* Enable erase */
-	target_mem_write32(t, NRF51_NVMC_CONFIG, NRF51_NVMC_CONFIG_EEN);
+	target_mem32_write32(t, NRF51_NVMC_CONFIG, NRF51_NVMC_CONFIG_EEN);
 	if (!nrf51_wait_ready(t, NULL))
 		return false;
 
 	/* Erase UICR */
-	target_mem_write32(t, NRF51_NVMC_ERASEUICR, 1U);
+	target_mem32_write32(t, NRF51_NVMC_ERASEUICR, 1U);
 	return nrf51_wait_ready(t, NULL);
 }
 
@@ -264,11 +264,11 @@ static bool nrf51_cmd_protect_flash(target_s *t, int argc, const char **argv)
 	tc_printf(t, "Enabling Flash protection..\n");
 
 	/* Enable write */
-	target_mem_write32(t, NRF51_NVMC_CONFIG, NRF51_NVMC_CONFIG_WEN);
+	target_mem32_write32(t, NRF51_NVMC_CONFIG, NRF51_NVMC_CONFIG_WEN);
 	if (!nrf51_wait_ready(t, NULL))
 		return false;
 
-	target_mem_write32(t, NRF51_APPROTECT, 0xffffff00U);
+	target_mem32_write32(t, NRF51_APPROTECT, 0xffffff00U);
 	return nrf51_wait_ready(t, NULL);
 }
 
@@ -276,7 +276,7 @@ static bool nrf51_cmd_read_hwid(target_s *t, int argc, const char **argv)
 {
 	(void)argc;
 	(void)argv;
-	uint32_t hwid = target_mem_read32(t, NRF51_FICR_CONFIGID) & 0xffffU;
+	uint32_t hwid = target_mem32_read32(t, NRF51_FICR_CONFIGID) & 0xffffU;
 	tc_printf(t, "Hardware ID: 0x%04X\n", hwid);
 
 	return true;
@@ -286,7 +286,7 @@ static bool nrf51_cmd_read_fwid(target_s *t, int argc, const char **argv)
 {
 	(void)argc;
 	(void)argv;
-	uint32_t fwid = (target_mem_read32(t, NRF51_FICR_CONFIGID) >> 16U) & 0xffffU;
+	uint32_t fwid = (target_mem32_read32(t, NRF51_FICR_CONFIGID) >> 16U) & 0xffffU;
 	tc_printf(t, "Firmware ID: 0x%04X\n", fwid);
 
 	return true;
@@ -296,8 +296,8 @@ static bool nrf51_cmd_read_deviceid(target_s *t, int argc, const char **argv)
 {
 	(void)argc;
 	(void)argv;
-	uint32_t deviceid_low = target_mem_read32(t, NRF51_FICR_DEVICEID_LOW);
-	uint32_t deviceid_high = target_mem_read32(t, NRF51_FICR_DEVICEID_HIGH);
+	uint32_t deviceid_low = target_mem32_read32(t, NRF51_FICR_DEVICEID_LOW);
+	uint32_t deviceid_high = target_mem32_read32(t, NRF51_FICR_DEVICEID_HIGH);
 
 	tc_printf(t, "Device ID: 0x%08X%08X\n", deviceid_high, deviceid_low);
 
@@ -322,11 +322,11 @@ static bool nrf51_cmd_read_deviceinfo(target_s *t, int argc, const char **argv)
 		uint32_t flash;
 	} di;
 
-	di.package = target_mem_read32(t, NRF51_FICR_DEVICE_INFO_PACKAGE);
-	di.part = target_mem_read32(t, NRF51_FICR_DEVICE_INFO_PART);
-	di.ram = target_mem_read32(t, NRF51_FICR_DEVICE_INFO_RAM);
-	di.flash = target_mem_read32(t, NRF51_FICR_DEVICE_INFO_FLASH);
-	di.variant.f = target_mem_read32(t, NRF51_FICR_DEVICE_INFO_VARIANT);
+	di.package = target_mem32_read32(t, NRF51_FICR_DEVICE_INFO_PACKAGE);
+	di.part = target_mem32_read32(t, NRF51_FICR_DEVICE_INFO_PART);
+	di.ram = target_mem32_read32(t, NRF51_FICR_DEVICE_INFO_RAM);
+	di.flash = target_mem32_read32(t, NRF51_FICR_DEVICE_INFO_FLASH);
+	di.variant.f = target_mem32_read32(t, NRF51_FICR_DEVICE_INFO_VARIANT);
 
 	tc_printf(t, "Part:\t\tNRF%X\n", di.part);
 	tc_printf(t, "Variant:\t%c%c%c%c\n", di.variant.c[3], di.variant.c[2], di.variant.c[1], di.variant.c[0]);
@@ -358,9 +358,9 @@ static bool nrf51_cmd_read_deviceaddr(target_s *t, int argc, const char **argv)
 {
 	(void)argc;
 	(void)argv;
-	uint32_t addr_type = target_mem_read32(t, NRF51_FICR_DEVICEADDRTYPE);
-	uint32_t addr_low = target_mem_read32(t, NRF51_FICR_DEVICEADDR_LOW);
-	uint32_t addr_high = target_mem_read32(t, NRF51_FICR_DEVICEADDR_HIGH) & 0xffffU;
+	uint32_t addr_type = target_mem32_read32(t, NRF51_FICR_DEVICEADDRTYPE);
+	uint32_t addr_low = target_mem32_read32(t, NRF51_FICR_DEVICEADDR_LOW);
+	uint32_t addr_high = target_mem32_read32(t, NRF51_FICR_DEVICEADDR_HIGH) & 0xffffU;
 
 	if (!(addr_type & 1U))
 		tc_printf(t, "Publicly Listed Address: 0x%04X%08X\n", addr_high, addr_low);

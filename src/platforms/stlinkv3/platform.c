@@ -28,6 +28,7 @@
 #include "aux_serial.h"
 #include "gdb_if.h"
 
+#include <libopencm3/cm3/vector.h>
 #include <libopencm3/stm32/rcc.h>
 #include <libopencm3/cm3/scb.h>
 #include <libopencm3/cm3/scs.h>
@@ -229,7 +230,6 @@ void platform_init(void)
 	gpio_set_output_options(LED_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_2MHZ, LED_PIN);
 
 	/* Relocate interrupt vector table here */
-	extern int vector_table;
 	SCB_VTOR = (uintptr_t)&vector_table;
 
 	platform_timing_init();

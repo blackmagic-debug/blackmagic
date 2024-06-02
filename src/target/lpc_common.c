@@ -33,7 +33,7 @@ typedef struct iap_config {
 	uint32_t params[4];
 } iap_config_s;
 
-typedef struct __attribute__((aligned(4))) iap_frame {
+typedef struct BMD_ALIGN_DECL(4) iap_frame {
 	/* The start of an IAP stack frame is the opcode we set as the return point. */
 	uint16_t opcode;
 	/* There's then a hidden alignment field here, followed by the IAP call setup */
@@ -117,7 +117,7 @@ static inline bool lpc_is_full_erase(lpc_flash_s *f, const uint32_t begin, const
 void lpc_save_state(target_s *const target, const uint32_t iap_ram, iap_frame_s *const frame, uint32_t *const regs)
 {
 	/* Save IAP RAM to restore after IAP call */
-	target_mem_read(target, frame, iap_ram, sizeof(iap_frame_s));
+	target_mem32_read(target, frame, iap_ram, sizeof(iap_frame_s));
 	/* Save registers to restore after IAP call */
 	target_regs_read(target, regs);
 }
@@ -125,7 +125,7 @@ void lpc_save_state(target_s *const target, const uint32_t iap_ram, iap_frame_s 
 void lpc_restore_state(
 	target_s *const target, const uint32_t iap_ram, const iap_frame_s *const frame, const uint32_t *const regs)
 {
-	target_mem_write(target, iap_ram, frame, sizeof(iap_frame_s));
+	target_mem32_write(target, iap_ram, frame, sizeof(iap_frame_s));
 	target_regs_write(target, regs);
 }
 
@@ -186,7 +186,7 @@ iap_status_e lpc_iap_call(lpc_flash_s *const flash, iap_result_s *const result, 
 		frame.config.params[0], frame.config.params[1], frame.config.params[2], frame.config.params[3]);
 
 	/* Copy the structure to RAM */
-	target_mem_write(target, flash->iap_ram, &frame, sizeof(iap_frame_s));
+	target_mem32_write(target, flash->iap_ram, &frame, sizeof(iap_frame_s));
 	const uint32_t iap_results_addr = flash->iap_ram + offsetof(iap_frame_s, result);
 
 	/* Set up for the call to the IAP ROM */
@@ -251,7 +251,7 @@ iap_status_e lpc_iap_call(lpc_flash_s *const flash, iap_result_s *const result, 
 
 	/* Copy back just the results */
 	iap_result_s results = {0};
-	target_mem_read(target, &results, iap_results_addr, sizeof(iap_result_s));
+	target_mem32_read(target, &results, iap_results_addr, sizeof(iap_result_s));
 
 	/* Restore the original data in RAM and registers */
 	lpc_restore_state(target, flash->iap_ram, &saved_frame, saved_regs);
@@ -326,7 +326,7 @@ static bool lpc_flash_write(target_flash_s *tf, target_addr_t dest, const void *
 		return false;
 	}
 	const uint32_t bufaddr = ALIGN(f->iap_ram + sizeof(iap_frame_s), 4U);
-	target_mem_write(f->f.t, bufaddr, src, len);
+	target_mem32_write(f->f.t, bufaddr, src, len);
 	/* Only LPC80x has reserved pages!*/
 	if (!f->reserved_pages || dest + len <= tf->length - len) {
 		/*

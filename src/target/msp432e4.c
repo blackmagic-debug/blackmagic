@@ -207,16 +207,16 @@ static void msp432e4_add_flash(
 	target_add_flash(target, target_flash);
 
 	/* If the boot config KEY bit is set, use the fixed key value, otherwise read out the configured key */
-	if (target_mem_read32(target, MSP432E4_SYS_CTRL_BOOTCFG) & MSP432E4_SYS_CTRL_BOOTCFG_KEY)
+	if (target_mem32_read32(target, MSP432E4_SYS_CTRL_BOOTCFG) & MSP432E4_SYS_CTRL_BOOTCFG_KEY)
 		flash->flash_key = 0xa442U;
 	else
-		flash->flash_key = (uint16_t)target_mem_read32(target, MSP432E4_FLASH_FLPEKEY);
+		flash->flash_key = (uint16_t)target_mem32_read32(target, MSP432E4_FLASH_FLPEKEY);
 }
 
 bool msp432e4_probe(target_s *const target)
 {
-	const uint32_t devid0 = target_mem_read32(target, MSP432E4_SYS_CTRL_DID0);
-	const uint32_t devid1 = target_mem_read32(target, MSP432E4_SYS_CTRL_DID1);
+	const uint32_t devid0 = target_mem32_read32(target, MSP432E4_SYS_CTRL_DID0);
+	const uint32_t devid1 = target_mem32_read32(target, MSP432E4_SYS_CTRL_DID1);
 	DEBUG_INFO("%s: Device ID %" PRIx32 ":%" PRIx32 "\n", __func__, devid0, devid1);
 
 	/* Does it look like an msp432e4 variant? */
@@ -237,11 +237,11 @@ bool msp432e4_probe(target_s *const target)
 	target->mass_erase = msp432e4_mass_erase;
 
 	/* SRAM is banked but interleaved into one logical bank */
-	const uint32_t sram_size = ((target_mem_read32(target, MSP432E4_FLASH_SRAM_SIZE) & 0xffffU) + 1U) * 256U;
-	target_add_ram(target, MSP432E4_SRAM_BASE, sram_size);
+	const uint32_t sram_size = ((target_mem32_read32(target, MSP432E4_FLASH_SRAM_SIZE) & 0xffffU) + 1U) * 256U;
+	target_add_ram32(target, MSP432E4_SRAM_BASE, sram_size);
 
 	/* Flash is in four banks but two-way interleaved */
-	const uint32_t flash_props = target_mem_read32(target, MSP432E4_FLASH_PERIPH_PROP);
+	const uint32_t flash_props = target_mem32_read32(target, MSP432E4_FLASH_PERIPH_PROP);
 	const uint32_t flash_size = ((flash_props & 0xffffU) + 1U) * 2048U;
 	/*
 	 * Convert the Flash sector size from a value between 1 (2kiB) and 4 (16kiB) to a value of
@@ -270,9 +270,9 @@ static bool msp432e4_flash_erase(target_flash_s *const target_flash, const targe
 	 * The target Flash layer guarantees we're called at the start of each target_flash->blocksize
 	 * so we only need to trigger the erase of the Flash sector pair and that logic will take care of the rest.
 	 */
-	target_mem_write32(target, MSP432E4_FLASH_ADDR, addr);
-	target_mem_write32(target, MSP432E4_FLASH_CTRL, (flash->flash_key << 16U) | MSP432E4_FLASH_CTRL_ERASE);
-	while (target_mem_read32(target, MSP432E4_FLASH_CTRL) & MSP432E4_FLASH_CTRL_ERASE)
+	target_mem32_write32(target, MSP432E4_FLASH_ADDR, addr);
+	target_mem32_write32(target, MSP432E4_FLASH_CTRL, (flash->flash_key << 16U) | MSP432E4_FLASH_CTRL_ERASE);
+	while (target_mem32_read32(target, MSP432E4_FLASH_CTRL) & MSP432E4_FLASH_CTRL_ERASE)
 		continue;
 	return true;
 }
@@ -290,10 +290,10 @@ static bool msp432e4_flash_write(
 	 * Flash. With the write size set to 4 to match how many bytes we can write in one go, that
 	 * allows this routine to go 32-bit block at a time efficiently, passing the complexity up a layer.
 	 */
-	target_mem_write32(target, MSP432E4_FLASH_ADDR, dest);
-	target_mem_write32(target, MSP432E4_FLASH_DATA, read_le4((const uint8_t *)src, 0));
-	target_mem_write32(target, MSP432E4_FLASH_CTRL, (flash->flash_key << 16U) | MSP432E4_FLASH_CTRL_WRITE);
-	while (target_mem_read32(target, MSP432E4_FLASH_CTRL) & MSP432E4_FLASH_CTRL_WRITE)
+	target_mem32_write32(target, MSP432E4_FLASH_ADDR, dest);
+	target_mem32_write32(target, MSP432E4_FLASH_DATA, read_le4((const uint8_t *)src, 0));
+	target_mem32_write32(target, MSP432E4_FLASH_CTRL, (flash->flash_key << 16U) | MSP432E4_FLASH_CTRL_WRITE);
+	while (target_mem32_read32(target, MSP432E4_FLASH_CTRL) & MSP432E4_FLASH_CTRL_WRITE)
 		continue;
 	return true;
 }
@@ -305,9 +305,9 @@ static bool msp432e4_mass_erase(target_s *const target)
 	platform_timeout_s timeout;
 	platform_timeout_set(&timeout, 500);
 	/* Kick off the mass erase */
-	target_mem_write32(target, MSP432E4_FLASH_CTRL, (flash->flash_key << 16U) | MSP432E4_FLASH_CTRL_MASS_ERASE);
+	target_mem32_write32(target, MSP432E4_FLASH_CTRL, (flash->flash_key << 16U) | MSP432E4_FLASH_CTRL_MASS_ERASE);
 	/* Wait for the erase to complete, printing a '.' every so often to keep GDB happy */
-	while (target_mem_read32(target, MSP432E4_FLASH_CTRL) & MSP432E4_FLASH_CTRL_MASS_ERASE)
+	while (target_mem32_read32(target, MSP432E4_FLASH_CTRL) & MSP432E4_FLASH_CTRL_MASS_ERASE)
 		target_print_progress(&timeout);
 	return true;
 }

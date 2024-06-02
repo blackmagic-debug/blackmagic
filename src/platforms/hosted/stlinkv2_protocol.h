@@ -150,7 +150,11 @@
 
 #define STLINK_V3_FREQ_ENTRY_COUNT 10U
 
+/* APsel value for DP accesses */
 #define STLINK_DEBUG_PORT 0xffffU
+
+/* Tested on V2J33M25 and V2J45M30 */
+#define STLINK_READMEM_32BIT_MAX_SIZE 6144U
 
 typedef struct stlink_simple_command {
 	uint8_t command;

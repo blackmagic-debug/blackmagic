@@ -32,6 +32,7 @@
 #include "target.h"
 #include "target_internal.h"
 #include "cortexm.h"
+#include "stm32_common.h"
 
 /* Memory map constants for STM32MP15x */
 #define STM32MP15_CM4_RETRAM_BASE        0x00000000U
@@ -55,6 +56,9 @@
 #define DBGMCU_CTRL_DBGSLEEP (1U << 0U)
 #define DBGMCU_CTRL_DBGSTOP  (1U << 1U)
 #define DBGMCU_CTRL_DBGSTBY  (1U << 2U)
+
+#define STM32MP15_DBGMCU_IDCODE_DEV_MASK  0x00000fffU
+#define STM32MP15_DBGMCU_IDCODE_REV_SHIFT 16U
 
 /* Taken from DP_TARGETID.TPARTNO = 0x5000 in §66.8.3 of RM0436 rev 6, pg3669 */
 /* Taken from DBGMCU_IDC.DEV_ID = 0x500 in §66.10.9 of RM0436 rev 6, pg3825 */
@@ -115,8 +119,8 @@ bool stm32mp15_cm4_probe(target_s *const target)
 	target->target_storage = priv;
 
 	/* Figure 4. Memory map from §2.5.2 in RM0436 rev 6, pg158 */
-	target_add_ram(target, STM32MP15_CM4_RETRAM_BASE, STM32MP15_RETRAM_SIZE);
-	target_add_ram(target, STM32MP15_AHBSRAM_BASE, STM32MP15_AHBSRAM_SIZE);
+	target_add_ram32(target, STM32MP15_CM4_RETRAM_BASE, STM32MP15_RETRAM_SIZE);
+	target_add_ram32(target, STM32MP15_AHBSRAM_BASE, STM32MP15_AHBSRAM_SIZE);
 
 	return true;
 }
@@ -131,16 +135,16 @@ bool stm32mp15_ca7_probe(target_s *const target)
 	target_add_commands(target, stm32mp15_cmd_list, target->driver);
 
 	/* Figure 4. Memory map from §2.5.2 in RM0436 rev 6, pg158 */
-	target_add_ram(target, STM32MP15_CA7_RETRAM_BASE, STM32MP15_RETRAM_SIZE);
-	target_add_ram(target, STM32MP15_AHBSRAM_BASE, STM32MP15_AHBSRAM_SIZE);
+	target_add_ram32(target, STM32MP15_CA7_RETRAM_BASE, STM32MP15_RETRAM_SIZE);
+	target_add_ram32(target, STM32MP15_AHBSRAM_BASE, STM32MP15_AHBSRAM_SIZE);
 	/*
 	 * The SRAM appears twice in the map as it's mapped to both the main SRAM
 	 * window and the alias window on the Cortex-A7 cores.
 	 * (Unlike the RETRAM which only appears in the alias window)
 	 */
-	target_add_ram(target, STM32MP15_CA7_AHBSRAM_ALIAS_BASE, STM32MP15_AHBSRAM_SIZE);
-	target_add_ram(target, STM32MP15_SYSRAM_BASE, STM32MP15_SYSRAM_SIZE);
-	target_add_ram(target, STM32MP15_CAN_SRAM_BASE, STM32MP15_CAN_SRAM_SIZE);
+	target_add_ram32(target, STM32MP15_CA7_AHBSRAM_ALIAS_BASE, STM32MP15_AHBSRAM_SIZE);
+	target_add_ram32(target, STM32MP15_SYSRAM_BASE, STM32MP15_SYSRAM_SIZE);
+	target_add_ram32(target, STM32MP15_CAN_SRAM_BASE, STM32MP15_CAN_SRAM_SIZE);
 	return true;
 }
 #endif
@@ -152,10 +156,10 @@ static bool stm32mp15_attach(target_s *const target)
 
 	/* Save DBGMCU_CR to restore it when detaching */
 	stm32mp15_priv_s *const priv = (stm32mp15_priv_s *)target->target_storage;
-	priv->dbgmcu_ctrl = target_mem_read32(target, DBGMCU_CTRL);
+	priv->dbgmcu_ctrl = target_mem32_read32(target, DBGMCU_CTRL);
 
 	/* Disable C-Sleep, C-Stop, C-Standby for debugging */
-	target_mem_write32(target, DBGMCU_CTRL, DBGMCU_CTRL_DBGSLEEP | DBGMCU_CTRL_DBGSTOP | DBGMCU_CTRL_DBGSTBY);
+	target_mem32_write32(target, DBGMCU_CTRL, DBGMCU_CTRL_DBGSLEEP | DBGMCU_CTRL_DBGSTOP | DBGMCU_CTRL_DBGSTBY);
 
 	return true;
 }
@@ -163,27 +167,15 @@ static bool stm32mp15_attach(target_s *const target)
 static void stm32mp15_detach(target_s *const target)
 {
 	stm32mp15_priv_s *priv = (stm32mp15_priv_s *)target->target_storage;
-	target_mem_write32(target, DBGMCU_CTRL, priv->dbgmcu_ctrl);
+	target_mem32_write32(target, DBGMCU_CTRL, priv->dbgmcu_ctrl);
 	cortexm_detach(target);
 }
 
-/*
- * Print the Unique device ID.
- * Can be reused for other STM32 devices with uid as parameter.
- */
 static bool stm32mp15_uid(target_s *const target, const int argc, const char **const argv)
 {
 	(void)argc;
 	(void)argv;
-
-	tc_printf(target, "0x");
-	for (size_t i = 0; i < 12U; i += 4U) {
-		const uint32_t value = target_mem_read32(target, STM32MP15_UID_BASE + i);
-		tc_printf(target, "%02X%02X%02X%02X", (value >> 24U) & 0xffU, (value >> 16U) & 0xffU, (value >> 8U) & 0xffU,
-			value & 0xffU);
-	}
-	tc_printf(target, "\n");
-	return true;
+	return stm32_uid(target, STM32MP15_UID_BASE);
 }
 
 static const struct {
@@ -199,9 +191,9 @@ static bool stm32mp15_cmd_rev(target_s *const target, const int argc, const char
 	(void)argc;
 	(void)argv;
 	/* DBGMCU identity code register */
-	const uint32_t dbgmcu_idcode = target_mem_read32(target, DBGMCU_IDCODE);
-	const uint16_t rev_id = (dbgmcu_idcode >> 16U) & 0xffffU;
-	const uint16_t dev_id = (dbgmcu_idcode & 0xfffU) << 4U;
+	const uint32_t dbgmcu_idcode = target_mem32_read32(target, DBGMCU_IDCODE);
+	const uint16_t rev_id = dbgmcu_idcode >> STM32MP15_DBGMCU_IDCODE_REV_SHIFT;
+	const uint16_t dev_id = dbgmcu_idcode & STM32MP15_DBGMCU_IDCODE_DEV_MASK;
 
 	/* Print device */
 	switch (dev_id) {

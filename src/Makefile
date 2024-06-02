@@ -4,6 +4,8 @@ VPATH += $(PLATFORM_DIR) target
 ENABLE_DEBUG ?= 0
 ENABLE_CORTEXAR ?= 0
 ENABLE_RISCV ?= 0
+ENABLE_PUYA ?= 0
+ENABLE_XILINX ?= 0
 
 SYS = $(shell $(CC) -dumpmachine)
 
@@ -40,11 +42,11 @@ SRC =              \
 	cortex.c       \
 	cortexm.c      \
 	crc32.c        \
+	ch579.c        \
 	efm32.c        \
 	exception.c    \
 	gdb_if.c       \
 	gdb_main.c     \
-	gdb_hostio.c   \
 	gdb_packet.c   \
 	gdb_reg.c      \
 	hex_utils.c    \
@@ -76,8 +78,10 @@ SRC =              \
 	sam4l.c        \
 	samd.c         \
 	samx5x.c       \
+	semihosting.c  \
 	sfdp.c         \
 	spi.c          \
+	s32k3xx.c      \
 	stm32f1.c      \
 	ch32f1.c       \
 	stm32f4.c      \
@@ -87,19 +91,32 @@ SRC =              \
 	stm32l0.c      \
 	stm32l4.c      \
 	stm32g0.c      \
-	renesas.c      \
+	stm32_common.c \
+	renesas_ra.c   \
 	target.c       \
 	target_flash.c \
-	target_probe.c \
-	zynq7000.c
+	target_probe.c
 
 ifeq (,$(filter all_platforms,$(MAKECMDGOALS)))
 include $(PLATFORM_DIR)/Makefile.inc
 endif
 
+ifeq ($(ENABLE_PUYA), 1)
+SRC +=     \
+	puya.c
+endif
+
 ifeq ($(ENABLE_CORTEXAR), 1)
 CFLAGS += -DENABLE_CORTEXAR
-SRC += cortexar.c
+SRC +=           \
+	cortexar.c   \
+	renesas_rz.c
+
+ifeq ($(ENABLE_XILINX), 1)
+CFLAGS += -DENABLE_XILINX
+SRC +=         \
+	zynq7000.c
+endif
 endif
 
 ifeq ($(ENABLE_RISCV), 1)
@@ -194,12 +211,11 @@ else
 endif
 
 all_platforms:
-	$(Q)if [ ! -f ../libopencm3/Makefile ]; then \
+	$(Q)if [ ! -f ../deps/libopencm3/Makefile ]; then \
 		echo "Initialising git submodules..." ;\
-		git submodule init ;\
-		git submodule update ;\
+		git submodule update --init ;\
 	fi
-	$(Q)$(MAKE) $(MFLAGS) -C ../libopencm3 lib/stm32/f1 lib/stm32/f4 lib/lm4f
+	$(Q)$(MAKE) $(MFLAGS) -C ../deps/libopencm3 lib/stm32/f1 lib/stm32/f4 lib/stm32/f7 lib/lm4f
 	$(Q)set -e ;\
 	mkdir -p artifacts/$(shell git describe --always --dirty --tags) ;\
 	echo "<html><body><ul>" > artifacts/index.html ;\

@@ -52,12 +52,17 @@ bool dap_jtag_init(void)
 	dap_disconnect();
 	dap_mode = DAP_CAP_JTAG;
 	dap_connect();
-	dap_reset_link(NULL);
+
 	jtag_proc.jtagtap_reset = dap_jtag_reset;
 	jtag_proc.jtagtap_next = dap_jtag_next;
 	jtag_proc.jtagtap_tms_seq = dap_jtag_tms_seq;
 	jtag_proc.jtagtap_tdi_tdo_seq = dap_jtag_tdi_tdo_seq;
 	jtag_proc.jtagtap_tdi_seq = dap_jtag_tdi_seq;
+
+	/* Ensure we're in JTAG mode */
+	for (size_t i = 0; i <= 50U; ++i)
+		dap_jtag_next(true, false); /* 50 + 1 idle cycles for SWD reset */
+	dap_jtag_tms_seq(0xe73cU, 16U); /* SWD to JTAG sequence */
 
 	if (dap_quirks & DAP_QUIRK_NO_JTAG_MUTLI_TAP)
 		DEBUG_WARN("Multi-TAP JTAG is broken on this adaptor firmware revision, please upgrade it\n");
@@ -75,7 +80,7 @@ void dap_jtag_dp_init(adiv5_debug_port_s *target_dp)
 	if (!dap_jtag_configure())
 		return;
 	target_dp->dp_read = dap_dp_read_reg;
-	target_dp->low_access = dap_dp_low_access;
+	target_dp->low_access = dap_dp_raw_access;
 	target_dp->abort = dap_dp_abort;
 }
 

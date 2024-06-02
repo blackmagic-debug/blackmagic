@@ -1,15 +1,16 @@
 exclude: '^upgrade/|^scripts/'  # don't run hooks on scripts/ and upgrade/
 
 repos:
-- repo: https://github.com/pre-commit/mirrors-clang-format
+- repo: https://github.com/ssciwr/clang-format-hook
   rev: v16.0.2
   hooks:
   - id: clang-format
-    args: [-Werror]  # change formatting warnings to errors, hook includes -i (Inplace edit) by default
+    # entries here override, not extend, upstream's configuration
+    args: [-Werror, -style=file, -i]  # change formatting warnings to errors, and edit in-place
     types_or: [c++, c]  # override default file types to only C and CPP files
 
 - repo: https://github.com/perigoso/pre-commit-hooks
-  rev: v0.2
+  rev: v0.3.1
   hooks:
   - id: check-hex-case
     args: [--lower-digits] # edit-in-place, hex number digits to lower case (defaults to upper case), i.e. 0x55aa

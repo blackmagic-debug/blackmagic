@@ -23,8 +23,9 @@
 /* Low level JTAG implementation using FTDI parts via libftdi. */
 
 #include "general.h"
+#ifndef _MSC_VER
 #include <unistd.h>
-#include <assert.h>
+#endif
 #include <ftdi.h>
 #include "ftdi_bmp.h"
 
