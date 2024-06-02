@@ -38,6 +38,7 @@ ContinuationIndentWidth: 4
 MaxEmptyLinesToKeep: 1
 KeepEmptyLinesAtTheStartOfBlocks: false
 FixNamespaceComments: true
+IfMacros: ['TRY', 'CATCH']
 ForEachMacros: ['TRY_CATCH']
 #QualifierAlignment: Custom
 #QualifierOrder: ['inline', 'static', 'const', 'volatile', 'type']
