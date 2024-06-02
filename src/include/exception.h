@@ -18,25 +18,24 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* Exception handling to escape deep nesting.
+/*
+ * Exception handling to escape deep nesting.
  * Used for the case of communication failure and timeouts.
- */
-
-/* Example usage:
  *
- * volatile exception_s e;
- * TRY_CATCH (e, EXCEPTION_TIMEOUT) {
+ * Example usage:
+ *
+ * TRY (EXCEPTION_TIMEOUT) {
  *    ...
  *    raise_exception(EXCEPTION_TIMEOUT, "Timeout occurred");
  *    ...
  * }
- * if (e.type == EXCEPTION_TIMEOUT) {
- *    printf("timeout: %s\n", e.msg);
+ * CATCH () {
+ *    case EXCEPTION_TIMEOUT:
+ *        printf("timeout: %s\n", e.msg);
  * }
- */
-
-/* Limitations:
- * Can't use break, return, goto, etc from inside the TRY_CATCH block.
+ *
+ * Limitations:
+ * Can't use break, or goto, from inside the TRY block.
  */
 
 #ifndef INCLUDE_EXCEPTION_H
@@ -78,14 +77,6 @@ extern exception_s *innermost_exception;
 #define RETHROW              \
 	if (innermost_exception) \
 	raise_exception(exception_frame->type, exception_frame->msg)
-
-#define TRY_CATCH(e, type_mask)                   \
-	(e).type = 0;                                 \
-	(e).mask = (type_mask);                       \
-	(e).outer = innermost_exception;              \
-	innermost_exception = (void *)&(e);           \
-	if (setjmp(innermost_exception->jmpbuf) == 0) \
-		for (; innermost_exception == &(e); innermost_exception = (e).outer)
 
 void raise_exception(uint32_t type, const char *msg);
 
