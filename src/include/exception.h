@@ -47,7 +47,7 @@
 
 #define EXCEPTION_ERROR   0x01U
 #define EXCEPTION_TIMEOUT 0x02U
-#define EXCEPTION_ALL     (-1)
+#define EXCEPTION_ALL     UINT32_MAX
 
 typedef struct exception exception_s;
 
@@ -61,6 +61,19 @@ struct exception {
 };
 
 extern exception_s *innermost_exception;
+
+#define TRY(type_mask)                           \
+	exception_s exception_frame;                 \
+	exception_frame.type = 0U;                   \
+	exception_frame.mask = (type_mask);          \
+	exception_frame.outer = innermost_exception; \
+	innermost_exception = &exception_frame;      \
+	if (setjmp(exception_frame.jmpbuf) == 0)
+
+#define CATCH()                                  \
+	innermost_exception = exception_frame.outer; \
+	if (exception_frame.type)                    \
+		switch (exception_frame.type)
 
 #define TRY_CATCH(e, type_mask)                   \
 	(e).type = 0;                                 \
