@@ -1353,12 +1353,13 @@ static void cortexar_reset(target_s *const target)
 
 static void cortexar_halt_request(target_s *const target)
 {
-	volatile exception_s error;
-	TRY_CATCH (error, EXCEPTION_TIMEOUT) {
+	TRY (EXCEPTION_TIMEOUT) {
 		cortex_dbg_write32(target, CORTEXAR_DBG_DRCR, CORTEXAR_DBG_DRCR_HALT_REQ);
 	}
-	if (error.type)
+	CATCH () {
+	default:
 		tc_printf(target, "Timeout sending interrupt, is target in WFI?\n");
+	}
 }
 
 static target_halt_reason_e cortexar_halt_poll(target_s *const target, target_addr_t *const watch)
