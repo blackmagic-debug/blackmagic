@@ -530,7 +530,8 @@ uint32_t stlink_adiv5_clear_error(adiv5_debug_port_s *const dp, const bool proto
 			 */
 			DEBUG_WARN("ST-Link v2/v3 adaptors cannot handle multi-drop correctly, pretending everything's fine\n");
 		/* Re-select the current AP on completion so we keep talking with the same thing */
-		stlink_ap_setup(stlink.apsel);
+		if (stlink.apsel != STLINK_INVALID_AP)
+			stlink_ap_setup(stlink.apsel);
 		adiv5_dp_read(dp, ADIV5_DP_DPIDR);
 	}
 	const uint32_t err = adiv5_dp_read(dp, ADIV5_DP_CTRLSTAT) &
