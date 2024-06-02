@@ -967,13 +967,14 @@ static void cortexm_reset(target_s *const target)
 
 static void cortexm_halt_request(target_s *target)
 {
-	volatile exception_s e;
-	TRY_CATCH (e, EXCEPTION_TIMEOUT) {
+	TRY (EXCEPTION_TIMEOUT) {
 		target_mem32_write32(
 			target, CORTEXM_DHCSR, CORTEXM_DHCSR_DBGKEY | CORTEXM_DHCSR_C_HALT | CORTEXM_DHCSR_C_DEBUGEN);
 	}
-	if (e.type)
+	CATCH () {
+	default:
 		tc_printf(target, "Timeout sending interrupt, is target in WFI?\n");
+	}
 }
 
 static target_halt_reason_e cortexm_halt_poll(target_s *target, target_addr_t *watch)
