@@ -301,33 +301,30 @@ bool cmd_auto_scan(target_s *t, int argc, const char **argv)
 		platform_nrst_set_val(true); /* will be deasserted after attach */
 
 	bool scan_result = false;
-	volatile exception_s e;
-	TRY_CATCH (e, EXCEPTION_ALL) {
+	TRY (EXCEPTION_ALL) {
 #if PC_HOSTED == 1
 		scan_result = bmda_jtag_scan();
 #else
 		scan_result = jtag_scan();
 #endif
-		if (scan_result)
-			break;
-		gdb_out("JTAG scan found no devices, trying SWD!\n");
+		if (!scan_result) {
+			gdb_out("JTAG scan found no devices, trying SWD!\n");
 
 #if PC_HOSTED == 1
-		scan_result = bmda_swd_scan(0);
+			scan_result = bmda_swd_scan(0);
 #else
-		scan_result = adiv5_swd_scan(0);
+			scan_result = adiv5_swd_scan(0);
 #endif
-		if (scan_result)
-			break;
-
-		gdb_out("SWD scan found no devices.\n");
+			if (!scan_result)
+				gdb_out("SWD scan found no devices.\n");
+		}
 	}
-	switch (e.type) {
+	CATCH () {
 	case EXCEPTION_TIMEOUT:
 		gdb_outf("Timeout during scan. Is target stuck in WFI?\n");
 		break;
 	case EXCEPTION_ERROR:
-		gdb_outf("Exception: %s\n", e.msg);
+		gdb_outf("Exception: %s\n", exception_frame.msg);
 		break;
 	}
 
