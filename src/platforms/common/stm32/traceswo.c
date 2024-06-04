@@ -81,6 +81,12 @@ void traceswo_init(uint32_t swo_chan_bitmask)
 
 	timer_enable_counter(TRACE_TIM);
 
+#if defined(STM32F4) || defined(STM32F0) || defined(STM32F3)
+	/* AF2: TIM3/TIM4/TIM5 */
+	gpio_mode_setup(TDO_PORT, GPIO_MODE_AF, GPIO_PUPD_NONE, TDO_PIN);
+	gpio_set_af(TDO_PORT, TRACE_TIM_PIN_AF, TDO_PIN);
+#endif
+
 	traceswo_setmask(swo_chan_bitmask);
 	decoding = (swo_chan_bitmask != 0);
 }
