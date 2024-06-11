@@ -587,9 +587,8 @@ static bool cmd_rtt(target_s *t, int argc, const char **argv)
 #endif
 
 #ifdef PLATFORM_HAS_TRACESWO
-static bool cmd_traceswo(target_s *t, int argc, const char **argv)
+static bool cmd_traceswo_enable(int argc, const char **argv)
 {
-	(void)t;
 #if TRACESWO_PROTOCOL == 2
 	uint32_t baudrate = SWO_DEFAULT_BAUD;
 #endif
@@ -636,6 +635,35 @@ static bool cmd_traceswo(target_s *t, int argc, const char **argv)
 
 	gdb_outf("Trace enabled for BMP serial %s, USB EP %u\n", serial_no, TRACE_ENDPOINT);
 	return true;
+}
+
+static bool cmd_traceswo_disable(void)
+{
+#if TRACESWO_PROTOCOL == 2
+	traceswo_deinit();
+	gdb_out("Trace disabled\n");
+	return true;
+#else
+	gdb_out("Not implemented\n");
+	return false;
+#endif
+}
+
+static bool cmd_traceswo(target_s *t, int argc, const char **argv)
+{
+	(void)t;
+	bool mode = false;
+	if (argc >= 2) {
+		if (!parse_enable_or_disable(argv[1], &mode)) {
+			gdb_out("Usage: traceswo <enable|disable> [2000000] [decode [0 1 3 31]]\n");
+			return false;
+		}
+	}
+	if (mode) {
+		return cmd_traceswo_enable(argc - 1, argv + 1);
+	} else {
+		return cmd_traceswo_disable();
+	}
 }
 #endif
 
