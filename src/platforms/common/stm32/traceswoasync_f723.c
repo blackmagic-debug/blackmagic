@@ -142,3 +142,13 @@ void traceswo_init(uint32_t baudrate, uint32_t swo_chan_bitmask)
 	traceswo_setmask(swo_chan_bitmask);
 	decoding = swo_chan_bitmask != 0;
 }
+
+void traceswo_deinit(void)
+{
+	/* Stop peripherals servicing */
+	nvic_disable_irq(SWO_DMA_IRQ);
+	dma_disable_stream(SWO_DMA_BUS, SWO_DMA_STREAM);
+	usart_disable(SWO_UART);
+	/* Dump the buffered remains */
+	trace_buf_drain(usbdev, TRACE_ENDPOINT | USB_REQ_TYPE_IN);
+}
