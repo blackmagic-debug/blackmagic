@@ -1,5 +1,5 @@
 CROSS_COMPILE ?= arm-none-eabi-
-BMP_BOOTLOADER ?=
+BMD_BOOTLOADER ?=
 CC = $(CROSS_COMPILE)gcc
 OBJCOPY = $(CROSS_COMPILE)objcopy
 
@@ -29,10 +29,10 @@ LDFLAGS_BOOT :=                     \
 	-mfpu=fpv4-sp-d16               \
 	-L../deps/libopencm3/lib
 
-ifeq ($(BMP_BOOTLOADER), 1)
+ifeq ($(BMD_BOOTLOADER), 1)
 $(info  Load address 0x08004000 for BMPBootloader)
 LDFLAGS = $(LDFLAGS_BOOT) -Wl,-Ttext=0x8004000
-CFLAGS += -DAPP_START=0x08004000 -DBMP_BOOTLOADER
+CFLAGS += -DAPP_START=0x08004000 -DBMD_BOOTLOADER
 else
 LDFLAGS = $(LDFLAGS_BOOT)
 endif
@@ -63,7 +63,7 @@ SRC +=               \
 	timing.c         \
 	timing_stm32.c
 
-ifneq ($(BMP_BOOTLOADER), 1)
+ifneq ($(BMD_BOOTLOADER), 1)
 all:	blackmagic.bin
 else
 all:	blackmagic.bin  blackmagic_dfu.bin blackmagic_dfu.hex

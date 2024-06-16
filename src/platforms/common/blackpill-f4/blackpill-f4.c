@@ -51,7 +51,7 @@ void platform_init(void)
 	rcc_periph_clock_enable(RCC_GPIOB);
 	rcc_periph_clock_enable(RCC_CRC);
 
-#ifndef BMP_BOOTLOADER
+#ifndef BMD_BOOTLOADER
 	/* Blackpill board has a floating button on PA0. Pull it up and use as active-low. */
 	gpio_mode_setup(USER_BUTTON_KEY_PORT, GPIO_MODE_INPUT, GPIO_PUPD_PULLUP, USER_BUTTON_KEY_PIN);
 
