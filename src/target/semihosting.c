@@ -703,6 +703,20 @@ int32_t semihosting_time(target_s *const target)
 #endif
 }
 
+int32_t semihosting_elapsed(target_s *const target, const semihosting_s *const request)
+{
+	/* Extract where the write should occur to */
+	const target_addr_t block_taddr = request->r1;
+	/*
+	 * Acquire platform ticks (even if uint32_t ATM).
+	 * BMP: SysTicks. This is faster (on-probe) than talking to GDB.
+	 * BMDA: gettimeofday() as milliseconds.
+	 */
+	const uint64_t elapsed = platform_time_ms();
+	/* Write the elapsed ticks to the target as a pair of uint32_t in LE order per ABI */
+	return target_mem32_write(target, block_taddr, &elapsed, sizeof(elapsed)) ? -1 : 0;
+}
+
 int32_t semihosting_readc(target_s *const target)
 {
 	/* Define space for a character */
@@ -860,9 +874,13 @@ int32_t semihosting_handle_request(target_s *const target, const semihosting_s *
 	case SEMIHOSTING_SYS_TMPNAM:
 		return semihosting_temp_name(target, request);
 
-	// not implemented yet:
-	case SEMIHOSTING_SYS_ELAPSED:  /* elapsed */
-	case SEMIHOSTING_SYS_TICKFREQ: /* tickfreq */
+	case SEMIHOSTING_SYS_ELAPSED:
+		return semihosting_elapsed(target, request);
+
+	case SEMIHOSTING_SYS_TICKFREQ:
+		/* 1000 Hz SysTick, or BMDA "precision". Servicing breakpoints over SWD is not fast. */
+		return SYSTICKHZ;
+
 	default:
 		return -1;
 	}
