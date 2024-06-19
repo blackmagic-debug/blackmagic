@@ -43,14 +43,16 @@
  * nRST		= A2	(output)
  * PWR_BR	= PB1	(output) - supply power to the target, active low
  * 
+ * USB_PU   = PA8   (output)
  * TDI =      PA3	(output)
  * TMS =      PA4	(input/output for SWDIO)
  * TCK =      PA5	(output SWCLK)
  * TDO =      PC6	(input)
- *
  * TMS_DIR = PA1	(output) controls target buffer direction
- * TPWR =	 PB0		(analog input)
- * VBAT =	 PA0		(analog input)
+ * nRST_SNS = PA7   (input)
+
+ * TPWR =	 PB0	(analog input)
+ * VBAT =	 PA0	(analog input)
  * 
  * SW_BOOTLOADER	PB12	(input) System Bootloader button
  */
@@ -79,6 +81,8 @@
 #define TRST_PIN  GPIO2
 #define NRST_PORT GPIOA
 #define NRST_PIN  GPIO2
+#define NRST_SENSE_PORT GPIOA
+#define NRST_SENSE_PIN  GPIO7
 
 #define LED_PORT      GPIOC
 #define LED_PORT_UART GPIOB
@@ -96,6 +100,13 @@
 #define VBAT_PIN    GPIO0
 #define PWR_BR_PORT GPIOB
 #define PWR_BR_PIN  GPIO1
+
+/* USB pin definitions */
+#define USB_PU_PORT GPIOA
+#define USB_PORT    GPIOA
+#define USB_PU_PIN  GPIO8
+#define USB_DP_PIN  GPIO12
+#define USB_DM_PIN  GPIO11
 
 #define USBUSART               USART1
 #define USBUSART_CR1           USART1_CR1
@@ -126,21 +137,21 @@
 		gpio_mode_setup(TMS_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, TMS_PIN); \
 	} while (0)
 
-#define SWDIO_MODE_FLOAT()                           \
-	do {                                             \
-		uint32_t cr = SWD_CR;                        \
-		cr &= ~(0x3U << SWD_CR_SHIFT);               \
+#define SWDIO_MODE_FLOAT()                               \
+	do {                                                 \
+		uint32_t cr = SWD_CR;                            \
+		cr &= ~(0x3U << SWD_CR_SHIFT);                   \
 		GPIO_BSRR(SWDIO_DIR_PORT) = SWDIO_DIR_PIN << 16; \
-		SWD_CR = cr;                                 \
+		SWD_CR = cr;                                     \
 	} while (0)
 
-#define SWDIO_MODE_DRIVE()                     \
-	do {                                       \
-		uint32_t cr = SWD_CR;                  \
-		cr &= ~(0x3U << SWD_CR_SHIFT);         \
-		cr |= (0x1U << SWD_CR_SHIFT);          \
+#define SWDIO_MODE_DRIVE()                         \
+	do {                                           \
+		uint32_t cr = SWD_CR;                      \
+		cr &= ~(0x3U << SWD_CR_SHIFT);             \
+		cr |= (0x1U << SWD_CR_SHIFT);              \
 		GPIO_BSRR(SWDIO_DIR_PORT) = SWDIO_DIR_PIN; \
-		SWD_CR = cr;                           \
+		SWD_CR = cr;                               \
 	} while (0)
 
 #define UART_PIN_SETUP()                                                                            \
