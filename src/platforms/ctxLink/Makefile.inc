@@ -8,7 +8,7 @@ CFLAGS += -Istm32/include -mcpu=cortex-m4 -mthumb \
 	-DSTM32F4 -I../deps/libopencm3/include \
 	-Iplatforms/common/stm32
 
-LINKER_SCRIPT=platforms/f4discovery/f4discovery.ld
+LINKER_SCRIPT=platforms/ctxlink/ctxlink.ld
 
 LDFLAGS_BOOT = -lopencm3_stm32f4 \
 	-Wl,-T,$(LINKER_SCRIPT) -nostartfiles -lc -lnosys \
