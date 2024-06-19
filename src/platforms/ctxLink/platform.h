@@ -33,10 +33,10 @@
 /*
  * Important pin mappings for STM32 implementation:
  *
- * LED0 = 	PD12	(Green  LED : Running)
- * LED1 = 	PD13	(Orange LED : Idle)
- * LED2 = 	PD12	(Red LED    : Error)
- * LED3 = 	PD15	(Blue LED   : Bootloader active)
+ * LED0 = 	PB2	(Green  LED : Running)
+ * LED1 = 	PC6		(Orange LED : Idle)
+ * LED2 = 	PC8		(Red LED    : Error)
+ * LED3 = 	PC9		(Green LED   : ctxLink Mode)
  *
  * nTRST =    PC1
  * nRST_OUT = PC8
@@ -50,42 +50,45 @@
  */
 
 /* Hardware definitions... */
-#define JTAG_PORT GPIOC
+#define JTAG_PORT GPIOA
 #define TDI_PORT  JTAG_PORT
 #define TMS_PORT  JTAG_PORT
 #define TCK_PORT  JTAG_PORT
 #define TDO_PORT  GPIOC
-#define TDI_PIN   GPIO2
+#define TDI_PIN   GPIO3
 #define TMS_PIN   GPIO4
 #define TCK_PIN   GPIO5
-#define TDO_PIN   GPIO6
+#define TDO_PIN   GPIO7
 
 #define SWDIO_PORT JTAG_PORT
 #define SWCLK_PORT JTAG_PORT
 #define SWDIO_PIN  TMS_PIN
 #define SWCLK_PIN  TCK_PIN
 
-#define TRST_PORT GPIOC
-#define TRST_PIN  GPIO1
-#define NRST_PORT GPIOC
-#define NRST_PIN  GPIO8
+#define TRST_PORT GPIOA
+#define TRST_PIN  GPIO2
+#define NRST_PORT GPIOA
+#define NRST_PIN  GPIO2
 
-#define LED_PORT       GPIOD
-#define LED_PORT_UART  GPIOD
-#define LED_UART       GPIO12
-#define LED_IDLE_RUN   GPIO13
-#define LED_ERROR      GPIO14
-#define LED_BOOTLOADER GPIO15
+#define LED_PORT      GPIOC
+#define LED_PORT_UART GPIOB
+#define LED_UART      GPIO2
+#define LED_IDLE_RUN  GPIO6
+#define LED_ERROR     GPIO8
+#define LED_MODE      GPIO9
 
-#define USBUSART               USART3
-#define USBUSART_CR1           USART3_CR1
-#define USBUSART_DR            USART3_DR
-#define USBUSART_IRQ           NVIC_USART3_IRQ
-#define USBUSART_CLK           RCC_USART3
-#define USBUSART_PORT          GPIOD
-#define USBUSART_TX_PIN        GPIO8
-#define USBUSART_RX_PIN        GPIO9
-#define USBUSART_ISR(x)        usart3_isr(x)
+#define SWITCH_PORT	GPIOB
+#define SW_BOOTLOADER_PIN	GPIO12
+
+#define USBUSART               USART1
+#define USBUSART_CR1           USART1_CR1
+#define USBUSART_DR            USART1_DR
+#define USBUSART_IRQ           NVIC_USART1_IRQ
+#define USBUSART_CLK           RCC_USART1
+#define USBUSART_PORT          GPIOB
+#define USBUSART_TX_PIN        GPIO6
+#define USBUSART_RX_PIN        GPIO7
+#define USBUSART_ISR(x)        usart1_isr(x)
 #define USBUSART_DMA_BUS       DMA1
 #define USBUSART_DMA_CLK       RCC_DMA1
 #define USBUSART_DMA_TX_CHAN   DMA_STREAM3
@@ -96,9 +99,6 @@
 #define USBUSART_DMA_RX_ISR(x) dma1_stream1_isr(x)
 /* For STM32F4 DMA trigger source must be specified */
 #define USBUSART_DMA_TRG DMA_SxCR_CHSEL_4
-
-#define BOOTMAGIC0 UINT32_C(0xb007da7a)
-#define BOOTMAGIC1 UINT32_C(0xbaadfeed)
 
 #define TMS_SET_MODE()     gpio_mode_setup(TMS_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, TMS_PIN);
 #define SWDIO_MODE_FLOAT() gpio_mode_setup(SWDIO_PORT, GPIO_MODE_INPUT, GPIO_PUPD_NONE, SWDIO_PIN);
