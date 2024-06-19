@@ -34,6 +34,7 @@ SRC +=               \
 	serialno.c	\
 	timing.c	\
 	timing_stm32.c	\
+	ctxLink_gdb_if.c
 
 ifneq ($(BMP_BOOTLOADER), 1)
 all:	blackmagic.bin
