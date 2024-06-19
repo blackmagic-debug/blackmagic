@@ -31,7 +31,7 @@
  * }
  * CATCH () {
  *    case EXCEPTION_TIMEOUT:
- *        printf("timeout: %s\n", e.msg);
+ *        printf("timeout: %s\n", exception_frame.msg);
  * }
  *
  * Limitations:
