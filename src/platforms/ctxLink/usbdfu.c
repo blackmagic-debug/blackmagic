@@ -24,93 +24,50 @@
 #include <libopencm3/cm3/scb.h>
 
 #include "usbdfu.h"
+#include "general.h"
 #include "platform.h"
 
-uintptr_t app_address = 0x08002000;
-int dfu_activity_counter = 0;
+uintptr_t app_address = 0x08004000U;
+extern uint32_t _ebss; // NOLINT(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp)
 
 void dfu_detach(void)
 {
-	/* USB device must detach, we just reset... */
 	scb_reset_system();
 }
 
 int main(void)
 {
-	/* Check the force bootloader pin*/
-	rcc_periph_clock_enable(RCC_GPIOB);
-	if (gpio_get(GPIOB, GPIO12))
+	volatile uint32_t *magic = &_ebss;
+	rcc_periph_clock_enable(RCC_GPIOA);
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Warray-bounds"
+	if (gpio_get(GPIOA, GPIO0) || (magic[0] == BOOTMAGIC0 && magic[1] == BOOTMAGIC1)) {
+		magic[0] = 0;
+		magic[1] = 0;
+	} else
 		dfu_jump_app_if_valid();
+#pragma GCC diagnostic pop
+
+	rcc_clock_setup_pll(&rcc_hse_8mhz_3v3[RCC_CLOCK_3V3_168MHZ]);
+
+	/* Assert blue LED as indicator we are in the bootloader */
+	rcc_periph_clock_enable(RCC_GPIOD);
+	gpio_mode_setup(LED_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, LED_BOOTLOADER);
+	gpio_set(LED_PORT, LED_BOOTLOADER);
+
+	/* Enable peripherals */
+	rcc_periph_clock_enable(RCC_OTGFS);
+
+	/* Set up USB Pins and alternate function*/
+	gpio_mode_setup(GPIOA, GPIO_MODE_AF, GPIO_PUPD_NONE, GPIO11 | GPIO12);
+	gpio_set_af(GPIOA, GPIO_AF10, GPIO11 | GPIO12);
 
 	dfu_protect(false);
-
-	rcc_clock_setup_pll(&rcc_hse_configs[RCC_CLOCK_HSE8_72MHZ]);
-	systick_set_clocksource(STK_CSR_CLKSOURCE_AHB_DIV8);
-	systick_set_reload(900000);
-
-	/* Configure USB related clocks and pins. */
-	rcc_periph_clock_enable(RCC_GPIOA);
-	rcc_periph_clock_enable(RCC_USB);
-	gpio_set_mode(GPIOA, GPIO_MODE_INPUT, 0, GPIO8);
-
-	systick_interrupt_enable();
-	systick_counter_enable();
-
-	/* Configure the LED pins. */
-	gpio_set_mode(LED_PORT, GPIO_MODE_OUTPUT_2_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, LED_0 | LED_1 | LED_2);
-
-	dfu_init(&st_usbfs_v1_usb_driver);
-
-	/* Configure the USB pull up pin. */
-	gpio_set(GPIOA, GPIO8);
-	gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, GPIO8);
-
+	dfu_init(&USB_DRIVER);
 	dfu_main();
 }
 
 void dfu_event(void)
 {
-	/* If the counter was at 0 before we should reset LED status. */
-	if (dfu_activity_counter == 0) {
-		gpio_clear(LED_PORT, LED_0 | LED_1 | LED_2);
-	}
-
-	/* Prevent the sys_tick_handler from blinking leds for a bit. */
-	dfu_activity_counter = 10;
-
-	/* Toggle the DFU activity LED. */
-	gpio_toggle(LED_PORT, LED_1);
-}
-
-void sys_tick_handler(void)
-{
-	static int count = 0;
-	static bool reset = true;
-
-	/* Run the LED show only if there is no DFU activity. */
-	if (dfu_activity_counter != 0) {
-		dfu_activity_counter--;
-		reset = true;
-	} else {
-		if (reset) {
-			gpio_clear(LED_PORT, LED_0 | LED_1 | LED_2);
-			count = 0;
-			reset = false;
-		}
-
-		switch (count) {
-		case 0:
-			gpio_toggle(LED_PORT, LED_2); /* LED2 on/off */
-			count++;
-			break;
-		case 1:
-			gpio_toggle(LED_PORT, LED_1); /* LED1 on/off */
-			count++;
-			break;
-		case 2:
-			gpio_toggle(LED_PORT, LED_0); /* LED0 on/off */
-			count = 0;
-			break;
-		}
-	}
 }
