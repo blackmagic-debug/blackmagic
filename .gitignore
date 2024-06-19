@@ -26,3 +26,4 @@ src/ftd2xx.dll
 scripts/swolisten
 
 .direnv/
+STM32F401.svd
