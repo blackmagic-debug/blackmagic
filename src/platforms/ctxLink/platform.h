@@ -48,27 +48,32 @@
  * TCK =      PA5	(output SWCLK)
  * TDO =      PC6	(input)
  *
- * TPWR =	PB0		(analog input)
- * VBAT =	PA0		(analog input)
+ * TMS_DIR = PA1	(output) controls target buffer direction
+ * TPWR =	 PB0		(analog input)
+ * VBAT =	 PA0		(analog input)
  * 
  * SW_BOOTLOADER	PB12	(input) System Bootloader button
  */
 
 /* Hardware definitions... */
-#define JTAG_PORT GPIOA
-#define TDI_PORT  JTAG_PORT
-#define TMS_PORT  JTAG_PORT
-#define TCK_PORT  JTAG_PORT
-#define TDO_PORT  GPIOC
-#define TDI_PIN   GPIO3
-#define TMS_PIN   GPIO4
-#define TCK_PIN   GPIO5
-#define TDO_PIN   GPIO7
+#define JTAG_PORT    GPIOA
+#define TDI_PORT     JTAG_PORT
+#define TMS_PORT     JTAG_PORT
+#define TCK_PORT     JTAG_PORT
+#define TMS_DIR_PORT JTAG_PORT
+#define TDO_PORT     GPIOC
+#define TDI_PIN      GPIO3
+#define TMS_PIN      GPIO4
+#define TMS_DIR_PIN  GPIO1
+#define TCK_PIN      GPIO5
+#define TDO_PIN      GPIO7
 
-#define SWDIO_PORT JTAG_PORT
-#define SWCLK_PORT JTAG_PORT
-#define SWDIO_PIN  TMS_PIN
-#define SWCLK_PIN  TCK_PIN
+#define SWDIO_PORT     JTAG_PORT
+#define SWCLK_PORT     JTAG_PORT
+#define SWDIO_DIR_PORT JTAG_PORT
+#define SWDIO_PIN      TMS_PIN
+#define SWCLK_PIN      TCK_PIN
+#define SWDIO_DIR_PIN  TMS_DIR_PIN
 
 #define TRST_PORT GPIOA
 #define TRST_PIN  GPIO2
