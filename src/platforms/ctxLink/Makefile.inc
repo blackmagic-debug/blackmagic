@@ -3,10 +3,10 @@ CC = $(CROSS_COMPILE)gcc
 OBJCOPY = $(CROSS_COMPILE)objcopy
 
 CFLAGS += -Istm32/include -mcpu=cortex-m3 -mthumb \
-	-DSTM32F1 -DBLACKMAGIC -I../deps/libopencm3/include \
+	-DSTM32F4 -DBLACKMAGIC -I../deps/libopencm3/include \
 	-Iplatforms/common/stm32 -DDFU_SERIAL_LENGTH=9
 
-LDFLAGS_BOOT := $(LDFLAGS) --specs=nano.specs -lopencm3_stm32f1 \
+LDFLAGS_BOOT := $(LDFLAGS) --specs=nano.specs -lopencm3_stm32f4 \
 	-Wl,-T,platforms/ctxLink/ctxLink.ld -nostartfiles -lc \
 	-Wl,-Map=mapfile -mthumb -mcpu=cortex-m3 -Wl,-gc-sections \
 	-L../deps/libopencm3/lib
