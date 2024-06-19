@@ -18,10 +18,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* This file provides the platform specific declarations for the native implementation. */
+/* This file provides the platform specific declarations for the ctxLink implementation. */
 
-#ifndef PLATFORMS_NATIVE_PLATFORM_H
-#define PLATFORMS_NATIVE_PLATFORM_H
+#ifndef PLATFORMS_CTXLINK_PLATFORM_H
+#define PLATFORMS_CTXLINK_PLATFORM_H
 
 #include "gpio.h"
 #include "timing.h"
@@ -45,7 +45,7 @@ extern bool debug_bmp;
 #define HW_SWITCH(ver, opt1, opt2) (platform_hwversion() < (ver) ? (opt1) : (opt2))
 
 /*
- * Important pin mappings for native implementation:
+ * Important pin mappings for ctxLink implementation:
  *
  * LED0     = PB2   (Yellow LED : Running)
  * LED1     = PB10  (Orange LED : Idle)
@@ -331,4 +331,4 @@ extern bool debug_bmp;
 #define BITBANG_DIVIDER_OFFSET 52U
 #define BITBANG_DIVIDER_FACTOR 30U
 
-#endif /* PLATFORMS_NATIVE_PLATFORM_H */
+#endif /* PLATFORMS_CTXLINK_PLATFORM_H */

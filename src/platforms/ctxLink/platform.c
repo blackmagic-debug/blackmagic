@@ -18,7 +18,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* This file implements the platform specific functions for the native implementation. */
+/* This file implements the platform specific functions for the ctxLink implementation. */
 
 #include "general.h"
 #include "platform.h"
