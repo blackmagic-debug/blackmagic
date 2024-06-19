@@ -38,15 +38,18 @@
  * LED2 = 	PC8		(Red LED    : Error)
  * LED3 = 	PC9		(Green LED   : ctxLink Mode)
  *
- * nTRST =    PC1
- * nRST_OUT = PC8
- * TDI =      PC2
- * TMS =      PC4 (input for SWDP)
- * TCK =      PC5/SWCLK
- * TDO =      PC6 (input for TRACESWO
- * nRST =     PC8
+ * nRST		= A2	(output)
+ * PWR_BR	= PB1	(output) - supply power to the target, active low
+ * 
+ * TDI =      PA3	(output)
+ * TMS =      PA4	(input/output for SWDIO)
+ * TCK =      PA5	(output SWCLK)
+ * TDO =      PC6	(input)
  *
- * Force DFU mode button: PA0
+ * TPWR =	PB0		(analog input)
+ * VBAT =	PA0		(analog input)
+ * 
+ * SW_BOOTLOADER	PB12	(input) System Bootloader button
  */
 
 /* Hardware definitions... */
