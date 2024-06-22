@@ -30,7 +30,6 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-
 #include "general.h"
 #include "target.h"
 #include "target_internal.h"
@@ -670,4 +669,81 @@ static int riscv32_breakwatch_clear(target_s *const target, breakwatch_s *const 
 	const uint32_t config = RV32_MATCH_ADDR_DATA_TRIGGER;
 	const uint32_t address = 0;
 	return riscv_config_trigger(hart, breakwatch->reserved[0], RISCV_TRIGGER_MODE_UNUSED, &config, &address) ? 0 : -1;
+}
+
+/*
+ *   Small helper function to translate target to hart and simplify parameters
+ *   We assume it is 32 bits
+ */
+static inline bool riscv32_target_csr_write(target_s *target, const uint16_t reg, uint32_t val)
+{
+	riscv_hart_s *const hart = riscv_hart_struct(target);
+	return riscv_csr_write(hart, reg, &val);
+}
+
+/*
+ *   Small helper function to translate target to hart and simplify parameters
+ *   We assume it is 32 bits
+ */
+static inline bool riscv32_target_csr_read(target_s *target, const uint16_t reg, uint32_t *val)
+{
+	riscv_hart_s *const hart = riscv_hart_struct(target);
+	return riscv_csr_read(hart, reg, val);
+}
+
+/*
+ *   Execute code on the target with the signature void function(a,b,c,d)
+ *       - codexec is the address the code to tun is located at
+ *       - param1/2/3/4 will end up as the 4 parameters of the stub function
+ *
+ *   The flashstub must not use the stack at all.
+ *   It returns true on success, false on error
+ *   There is a built-in timeout of 10 seconds
+ */
+bool riscv32_run_stub(
+	target_s *target, uint32_t loadaddr, uint32_t param1, uint32_t param2, uint32_t param3, uint32_t param4)
+{
+	bool ret = false;
+	uint32_t pc = 0;
+	uint32_t mie = 0;
+	uint32_t zero = 0;
+	// save PC & MIE
+	target->reg_read(target, RISCV_REG_PC, &pc, 4);
+	riscv32_target_csr_read(target, RV_CSR_MIE, &mie);
+	riscv32_target_csr_write(target, RV_CSR_MIE, zero); // disable interrupt
+	target->reg_write(target, RISCV_REG_A0, &param1, 4);
+	target->reg_write(target, RISCV_REG_A1, &param2, 4);
+	target->reg_write(target, RISCV_REG_A2, &param3, 4);
+	target->reg_write(target, RISCV_REG_A3, &param4, 4);
+	target->reg_write(target, RISCV_REG_PC, &loadaddr, 4);
+
+	target->halt_resume(target, false); // go!
+	platform_timeout_s timeout;
+	platform_timeout_set(&timeout, 10000);
+	target_halt_reason_e reason = TARGET_HALT_RUNNING;
+	while (reason == TARGET_HALT_RUNNING) {
+		if (platform_timeout_is_expired(&timeout)) {
+			reason = TARGET_HALT_ERROR;
+			break;
+		}
+		reason = target->halt_poll(target, NULL);
+	}
+	switch (reason) {
+	case TARGET_HALT_REQUEST:
+		ret = true;
+		break;
+	case TARGET_HALT_ERROR: // room left here for more detailed handling
+	default:
+		break;
+	}
+	target->halt_request(target);
+	if (ret) {
+		uint32_t a0;
+		target->reg_read(target, RISCV_REG_A0, &a0, 4);
+		ret = (a0 == 0);
+	}
+	// restore PC & MIE
+	riscv32_target_csr_write(target, RV_CSR_MIE, mie); // put back MIE
+	target->reg_write(target, RISCV_REG_PC, &pc, 4);
+	return ret;
 }
