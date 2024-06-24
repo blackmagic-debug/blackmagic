@@ -59,7 +59,6 @@
 #endif
 
 #define TRACESWOASYNC_ALLOCS
-//#define TRACESWOASYNC_DEALLOCS
 
 static volatile uint32_t write_index; /* Packet currently received via UART */
 static volatile uint32_t read_index;  /* Packet currently waiting to transmit to USB */
@@ -213,14 +212,9 @@ void traceswo_deinit(void)
 	usart_disable(SWO_UART);
 	/* Dump the buffered remains */
 	trace_buf_drain(usbdev, TRACE_ENDPOINT | USB_REQ_TYPE_IN);
-#ifdef TRACESWOASYNC_DEALLOCS
-	/* Release this chunk of precious SRAM. FIXME: does heap shrink after free/malloc_trim? */
+	/* Return this contiguous chunk of SRAM to unshrinkable heap */
 	if (trace_rx_buf != NULL) {
-		mallopt(M_TRIM_THRESHOLD, 4 * 1024);
 		free(trace_rx_buf);
 		trace_rx_buf = NULL;
-		/* Trim manually in case free() didn't. This returns 1 on newlib, or fails to link on newlib-nano. */
-		malloc_trim(0);
 	}
-#endif
 }
