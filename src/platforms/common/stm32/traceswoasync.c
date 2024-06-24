@@ -171,10 +171,12 @@ void SWO_DMA_ISR(void)
 void traceswo_init(uint32_t baudrate, uint32_t swo_chan_bitmask)
 {
 #ifdef TRACESWOASYNC_ALLOCS
+	/* Skip initial allocation on commands for mode change */
 	if (trace_rx_buf == NULL) {
-		uint8_t *newbuf = memalign(TRACE_ENDPOINT_SIZE, NUM_TRACE_PACKETS * TRACE_ENDPOINT_SIZE);
-		if (newbuf == NULL) {
-			DEBUG_ERROR("%s: memalign failed, errno=%d\n", __func__, errno);
+		/* Alignment (bytes): 1 for UART DMA, 2-4 for memcpy in usb code, 8 provided by malloc. Not 64 */
+		uint8_t *const newbuf = malloc(NUM_TRACE_PACKETS * TRACE_ENDPOINT_SIZE);
+		if (!newbuf) {
+			DEBUG_ERROR("malloc: failed in %s\n", __func__);
 			return;
 		}
 		trace_rx_buf = newbuf;
