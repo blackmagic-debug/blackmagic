@@ -29,9 +29,12 @@
 #include <libopencm3/cm3/scb.h>
 #include <libopencm3/cm3/nvic.h>
 #include <libopencm3/stm32/usart.h>
+#include <libopencm3/stm32/adc.h>
 #include <libopencm3/stm32/syscfg.h>
 #include <libopencm3/usb/usbd.h>
 #include <libopencm3/stm32/flash.h>
+
+static void adc_init(void);
 
 extern uint32_t _ebss; // NOLINT(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp)
 
@@ -94,6 +97,9 @@ void platform_init(void)
 	gpio_mode_setup(NRST_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, NRST_PIN);
 	gpio_set(NRST_PORT, NRST_PIN);
 	gpio_set_output_options(NRST_PORT, GPIO_OTYPE_OD, GPIO_OSPEED_2MHZ, NRST_PIN);
+
+	adc_init();
+
 	platform_timing_init();
 	/* Set up USB pins and alternate function */
 	gpio_mode_setup(GPIOA, GPIO_MODE_AF, GPIO_PUPD_NONE, GPIO11 | GPIO12);
@@ -112,9 +118,71 @@ bool platform_nrst_get_val(void)
 	return (gpio_get(NRST_PORT, NRST_PIN)) ? false : true;
 }
 
+
+static void adc_init(void)
+{
+
+	//ADC
+	rcc_periph_clock_enable(RCC_ADC12);
+	//ADC
+	gpio_mode_setup(VTREF_PORT, GPIO_MODE_ANALOG, GPIO_PUPD_NONE, VTREF_PIN);
+	//gpio_mode_setup(GPIOA, GPIO_MODE_ANALOG, GPIO_PUPD_NONE, GPIO1);
+	adc_power_off(ADC1);
+	adc_set_clk_prescale(ADC1, ADC_CCR_CKMODE_DIV2);
+	adc_set_single_conversion_mode(ADC1);
+	adc_disable_external_trigger_regular(ADC1);
+	adc_set_right_aligned(ADC1);
+	/* We want to read the temperature sensor, so we have to enable it. */
+	//adc_enable_temperature_sensor();
+	adc_set_sample_time_on_all_channels(ADC1, ADC_SMPR_SMP_601DOT5CYC);
+	uint8_t channel_array[] = { 1 }; /* ADC1_IN1 (PA0) */
+	adc_calibrate(ADC1);
+	adc_set_regular_sequence(ADC1, 1, channel_array);
+	adc_set_resolution(ADC1, ADC_CFGR1_RES_12_BIT);
+	adc_power_on(ADC1);
+
+	/* Wait for ADC starting up. */
+	int i;
+	for (i = 0; i < 800000; i++)
+		__asm__("nop");
+	
+
+
+}
+
+
+uint32_t platform_target_voltage_sense(void)
+{
+	/*
+	 * Returns the voltage in tenths of a volt (so 33 means 3.3V)
+	 */
+	adc_start_conversion_regular(ADC1);
+	while (!(adc_eoc(ADC1)))
+		continue;
+	uint32_t val=adc_read_regular(ADC1);
+	return (val * 99U) / 8191U;;
+	//return val;
+	
+	return 0;
+}
+
+
+
 const char *platform_target_voltage(void)
 {
-	return "ABSENT!";
+	static char ret[] = "0.0V";
+	uint32_t val = platform_target_voltage_sense();
+	ret[0] = '0' + val / 10U;
+	ret[2] = '0' + val % 10U;
+
+	/*static char ret[] = "0000000000";
+	uint32_t val = platform_target_voltage_sense();
+	for(uint8_t i =  10; i > 0; i--){
+		ret[i-1] = '0' + val % 10U;
+		val = val / 10;
+	}*/
+	
+	return ret;
 }
 
 #pragma GCC diagnostic push

@@ -7,9 +7,10 @@ For simpicity, the ST system bootloader is used. This saves additional 4 kB for 
 ## Connections
 
 * PA2: UART RX
-* PS3: UART TX
-* PA0: TDI
+* PA3: UART TX
+* PA0: VTref
 * PA1: TMS/SWDIO
+* PA4: TDI
 * PA7: TCK/SWCLK
 * PA6: TDO/TRACESWO
 * PA5: TRST
