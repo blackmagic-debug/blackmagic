@@ -37,10 +37,10 @@
 
 #define MSPM0_CONFIG_FLASH_DUMP_SUPPORT 0
 
-#define TI_DEVID_MSPM0C           0xBBA1U /* 110[34] */
-#define TI_DEVID_MSPM0L           0xBB82U /* 110[56], 13[04][456] */
-#define TI_DEVID_MSPM0L_1227_2228 0xBB9FU /* [12]22[78]*/
-#define TI_DEVID_MSPM0G           0xBB88U /* 310[567], 150[567], 350[567] */
+#define TI_DEVID_MSPM0C           0xbba1U /* MSPM0C110[34] */
+#define TI_DEVID_MSPM0L           0xbb82U /* MSPM0L110[56], MSPM0L13[04][456] */
+#define TI_DEVID_MSPM0L_1227_2228 0xbb9fU /* MSPM0L[12]22[78]*/
+#define TI_DEVID_MSPM0G           0xbb88U /* MSPM0G310[567], MSPM0G150[567], MSPM0G350[567] */
 
 #define MSPM0_SRAM_BASE       0x20000000U
 #define MSPM0_FLASH_MAIN      0x00000000U
@@ -163,7 +163,7 @@ static void mspm0_add_flash(target_s *const target, const uint32_t base, const s
 	target_add_flash(target, target_flash);
 }
 
-#define BIT_LMASK(T, bits) ((T) - 1) >> (sizeof(T) * __CHAR_BIT__ - (bits))
+#define BIT_LMASK(T, bits) ((T)-1) >> (sizeof(T) * __CHAR_BIT__ - (bits))
 #define BITS(h, l, x)      (uint32_t)((x >> l) & BIT_LMASK(uint32_t, h - l + 1))
 
 bool mspm0_probe(target_s *const target)
