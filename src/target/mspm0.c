@@ -36,7 +36,7 @@
     System PPB          0xe000.0000 0xe00f.ffff
 */
 
-#define MSPM0_CONFIG_FLASH_DUMP_SUPPORT 0
+#define MSPM0_CONFIG_FLASH_DUMP_SUPPORT (PC_HOSTED == 1 || ENABLE_DEBUG == 1)
 
 #define TI_DEVID_MSPM0C           0xbba1U /* MSPM0C110[34] */
 #define TI_DEVID_MSPM0L           0xbb82U /* MSPM0L110[56], MSPM0L13[04][456] */
@@ -48,35 +48,52 @@
 #define MSPM0_FLASH_NONMAIN   0x41c00000U /* One Sector, BANK0. Device boot configuration (BCR, BSL) */
 #define MSPM0_FLASH_FACTORY   0x41c40000U /* One Sector, BANK0. Non modifiable */
 #define MSPM0_FLASH_DATA      0x41d00000U
-#define MSPM0_FLASH_SECTOR_SZ 1024
+#define MSPM0_FLASH_SECTOR_SZ 1024U
 
-#define MSPM0_FLASHCTL_BASE              0x400cd000
-#define MSPM0_FLASHCTL_CMDEXEC           (MSPM0_FLASHCTL_BASE + 0x1100)
-#define MSPM0_FLASHCTL_CMDTYPE           (MSPM0_FLASHCTL_BASE + 0x1104)
-#define MSPM0_FLASHCTL_CMDCTL            (MSPM0_FLASHCTL_BASE + 0x1108)
-#define MSPM0_FLASHCTL_CMDADDR           (MSPM0_FLASHCTL_BASE + 0x1120)
-#define MSPM0_FLASHCTL_BYTEN             (MSPM0_FLASHCTL_BASE + 0x1124)
-#define MSPM0_FLASHCTL_CMDDATAIDX        (MSPM0_FLASHCTL_BASE + 0x112c)
-#define MSPM0_FLASHCTL_STATCMD           (MSPM0_FLASHCTL_BASE + 0x13d0)
-#define MSPM0_FLASHCTL_CMDDATA0          (MSPM0_FLASHCTL_BASE + 0x1130)
-#define MSPM0_FLASHCTL_CMDDATA1          (MSPM0_FLASHCTL_BASE + 0x1134)
-#define MSPM0_FLASHCTL_CMDDATA2          (MSPM0_FLASHCTL_BASE + 0x1138)
-#define MSPM0_FLASHCTL_CMDDATA3          (MSPM0_FLASHCTL_BASE + 0x113c)
-#define MSPM0_FLASHCTL_CMDWEPROTA        (MSPM0_FLASHCTL_BASE + 0x11d0)
-#define MSPM0_FLASHCTL_CMDWEPROTB        (MSPM0_FLASHCTL_BASE + 0x11d4)
-#define MSPM0_FLASHCTL_CMDWEPROTC        (MSPM0_FLASHCTL_BASE + 0x11d8)
-#define MSPM0_FLASHCTL_CMDWEPROTNM       (MSPM0_FLASHCTL_BASE + 0x1210)
+#define MSPM0_FACTORYREGION_DEVICEID  (MSPM0_FLASH_FACTORY + 0x4U)
+#define MSPM0_FACTORYREGION_SRAMFLASH (MSPM0_FLASH_FACTORY + 0x18U)
+
+#define MSPM0_DEVICEID_MANUFACTURER_MASK  0x00000ffeU
+#define MSPM0_DEVICEID_MANUFACTURER_SHIFT 1U
+#define MSPM0_DEVICEID_PARTNUM_MASK       0x0ffff000U
+#define MSPM0_DEVICEID_PARTNUM_SHIFT      12U
+
+#define MSPM0_FACTORYREGION_SRAMFLASH_MAINFLASH_SZ_MASK  0x00000fffU
+#define MSPM0_FACTORYREGION_SRAMFLASH_MAINFLASH_SZ_SHIFT 0U
+#define MSPM0_FACTORYREGION_SRAMFLASH_MAINNUMBANKS_MASK  0x00003000U
+#define MSPM0_FACTORYREGION_SRAMFLASH_MAINNUMBANKS_SHIFT 12U
+#define MSPM0_FACTORYREGION_SRAMFLASH_SRAM_SZ_MASK       0x03ff0000U
+#define MSPM0_FACTORYREGION_SRAMFLASH_SRAM_SZ_SHIFT      16U
+#define MSPM0_FACTORYREGION_SRAMFLASH_DATAFLASH_SZ_MASK  0xfc0000U
+#define MSPM0_FACTORYREGION_SRAMFLASH_DATAFLASH_SZ_SHIFT 26U
+
+#define MSPM0_FLASHCTL_BASE              0x400cd000U
+#define MSPM0_FLASHCTL_CMDEXEC           (MSPM0_FLASHCTL_BASE + 0x1100U)
+#define MSPM0_FLASHCTL_CMDTYPE           (MSPM0_FLASHCTL_BASE + 0x1104U)
+#define MSPM0_FLASHCTL_CMDCTL            (MSPM0_FLASHCTL_BASE + 0x1108U)
+#define MSPM0_FLASHCTL_CMDADDR           (MSPM0_FLASHCTL_BASE + 0x1120U)
+#define MSPM0_FLASHCTL_BYTEN             (MSPM0_FLASHCTL_BASE + 0x1124U)
+#define MSPM0_FLASHCTL_CMDDATAIDX        (MSPM0_FLASHCTL_BASE + 0x112cU)
+#define MSPM0_FLASHCTL_STATCMD           (MSPM0_FLASHCTL_BASE + 0x13d0U)
+#define MSPM0_FLASHCTL_CMDDATA0          (MSPM0_FLASHCTL_BASE + 0x1130U)
+#define MSPM0_FLASHCTL_CMDDATA1          (MSPM0_FLASHCTL_BASE + 0x1134U)
+#define MSPM0_FLASHCTL_CMDDATA2          (MSPM0_FLASHCTL_BASE + 0x1138U)
+#define MSPM0_FLASHCTL_CMDDATA3          (MSPM0_FLASHCTL_BASE + 0x113cU)
+#define MSPM0_FLASHCTL_CMDWEPROTA        (MSPM0_FLASHCTL_BASE + 0x11d0U)
+#define MSPM0_FLASHCTL_CMDWEPROTB        (MSPM0_FLASHCTL_BASE + 0x11d4U)
+#define MSPM0_FLASHCTL_CMDWEPROTC        (MSPM0_FLASHCTL_BASE + 0x11d8U)
+#define MSPM0_FLASHCTL_CMDWEPROTNM       (MSPM0_FLASHCTL_BASE + 0x1210U)
 #define MSPM0_FLASHCTL_CMDTYPE_NOOP      0U
 #define MSPM0_FLASHCTL_CMDTYPE_PROG      1U
 #define MSPM0_FLASHCTL_CMDTYPE_ERASE     2U
 #define MSPM0_FLASHCTL_CMDTYPE_RDVERIFY  3U
 #define MSPM0_FLASHCTL_CMDTYPE_BLVERIFY  6U
-#define MSPM0_FLASHCTL_CMDTYPE_SZ_1WORD  (0U << 4)
-#define MSPM0_FLASHCTL_CMDTYPE_SZ_2WORDS (1U << 4)
-#define MSPM0_FLASHCTL_CMDTYPE_SZ_4WORDS (2U << 4)
-#define MSPM0_FLASHCTL_CMDTYPE_SZ_8WORDS (3U << 4)
-#define MSPM0_FLASHCTL_CMDTYPE_SZ_SECTOR (4U << 4)
-#define MSPM0_FLASHCTL_CMDTYPE_SZ_BANK   (5U << 4)
+#define MSPM0_FLASHCTL_CMDTYPE_SZ_1WORD  (0U << 4U)
+#define MSPM0_FLASHCTL_CMDTYPE_SZ_2WORDS (1U << 4U)
+#define MSPM0_FLASHCTL_CMDTYPE_SZ_4WORDS (2U << 4U)
+#define MSPM0_FLASHCTL_CMDTYPE_SZ_8WORDS (3U << 4U)
+#define MSPM0_FLASHCTL_CMDTYPE_SZ_SECTOR (4U << 4U)
+#define MSPM0_FLASHCTL_CMDTYPE_SZ_BANK   (5U << 4U)
 #define MSPM0_FLASHCTL_CMDEXEC_EXEC      1U
 #define MSPM0_FLASHCTL_STAT_DONE         0x01U
 #define MSPM0_FLASHCTL_STAT_CMDPASS      0x02U
@@ -94,36 +111,70 @@ static bool mspm0_mass_erase(target_s *target);
 static bool mspm0_dump_factory_config(target_s *const target, const int argc, const char **const argv);
 static bool mspm0_dump_bcr_config(target_s *const target, const int argc, const char **const argv);
 
-static command_s mspm0_cmds_list[] = {{"dump_factory", mspm0_dump_factory_config, "Display FACTORY registers"},
+static command_s mspm0_cmds_list[] = {
+	{"dump_factory", mspm0_dump_factory_config, "Display FACTORY registers"},
 	{"dump_bcr", mspm0_dump_bcr_config, "Display NONMAIN (BCR/BSL) registers"},
 	/* {"write_nm", mspm0_write_non_main, "Write data to NONMAIN (configuration) flash. write_nm <address> <value>"}, */
-	{NULL, NULL, NULL}};
+	{NULL, NULL, NULL},
+};
 
 typedef struct conf_register {
-	uint16_t offset : 12;
-	uint16_t words : 4;
+	uint16_t reg_offset;
+	uint16_t size_words;
 	char const *id;
 } conf_register_s;
 
-static conf_register_s mspm0_factory_regs[] = {{0x00, 1, "TRACEID"}, {0x04, 1, "DEVICEID"}, {0x08, 1, "USERID"},
-	{0x0c, 1, "BSLPIN_UART"}, {0x10, 1, "BSLPIN_I2C"}, {0x14, 1, "BSLPIN_INVOKE"}, {0x18, 1, "SRAMFLASH"},
-	{0x3c, 1, "TEMP_SENSE0"}, {0x7c, 1, "BOOTCRC"}, {0, 0, NULL}};
+static conf_register_s mspm0_factory_regs[] = {
+	{0x00U, 1U, "TRACEID"},
+	{0x04U, 1U, "DEVICEID"},
+	{0x08U, 1U, "USERID"},
+	{0x0cU, 1U, "BSLPIN_UART"},
+	{0x10U, 1U, "BSLPIN_I2C"},
+	{0x14U, 1U, "BSLPIN_INVOKE"},
+	{0x18U, 1U, "SRAMFLASH"},
+	{0x3cU, 1U, "TEMP_SENSE0"},
+	{0x7cU, 1U, "BOOTCRC"},
+	{0U, 0U, NULL},
+};
 
-static conf_register_s mspm0_bcr_regs[] = {{0x00, 1, "BCRCONFIGID"}, {0x04, 1, "BOOTCFG0"}, {0x08, 1, "BOOTCFG1"},
-	{0x0c, 4, "PWDDEBUGLOCK"}, {0x1c, 4, "BOOTCFG2"}, {0x20, 1, "BOOTCFG3"}, {0x24, 4, "PWDMASSERASE"},
-	{0x34, 4, "PWDFACTORYRESET"}, {0x44, 1, "FLASHSWP0"}, {0x48, 1, "FLASHSWP1"}, {0x4c, 1, "BOOTCFG4"},
-	{0x50, 1, "APPCRCSTART"}, {0x54, 1, "APPCRCLENGTH"}, {0x58, 1, "APPCRC"}, {0x5c, 1, "BOOTCRC"},
-	{0x100, 1, "BSLCONFIGID"}, {0x104, 1, "BSLPINCFG0"}, {0x108, 1, "BSLPINCFG1"}, {0x10c, 1, "BSLCONFIG0"},
-	{0x110, 8, "BSLPW"}, {0x130, 1, "BSLPLUGINCFG"}, {0x134, 4, "BSLPLUGINHOOK"}, {0x144, 1, "PATCHHOOKID"},
-	{0x148, 1, "SBLADDRESS"}, {0x14c, 1, "BSLAPPVER"}, {0x150, 1, "BSLCONFIG1"}, {0x154, 1, "BSLCRC"}, {0, 0, NULL}};
+static conf_register_s mspm0_bcr_regs[] = {
+	{0x00U, 1U, "BCRCONFIGID"},
+	{0x04U, 1U, "BOOTCFG0"},
+	{0x08U, 1U, "BOOTCFG1"},
+	{0x0cU, 4U, "PWDDEBUGLOCK"},
+	{0x1cU, 4U, "BOOTCFG2"},
+	{0x20U, 1U, "BOOTCFG3"},
+	{0x24U, 4U, "PWDMASSERASE"},
+	{0x34U, 4U, "PWDFACTORYRESET"},
+	{0x44U, 1U, "FLASHSWP0"},
+	{0x48U, 1U, "FLASHSWP1"},
+	{0x4cU, 1U, "BOOTCFG4"},
+	{0x50U, 1U, "APPCRCSTART"},
+	{0x54U, 1U, "APPCRCLENGTH"},
+	{0x58U, 1U, "APPCRC"},
+	{0x5cU, 1U, "BOOTCRC"},
+	{0x100U, 1U, "BSLCONFIGID"},
+	{0x104U, 1U, "BSLPINCFG0"},
+	{0x108U, 1U, "BSLPINCFG1"},
+	{0x10cU, 1U, "BSLCONFIG0"},
+	{0x110U, 8U, "BSLPW"},
+	{0x130U, 1U, "BSLPLUGINCFG"},
+	{0x134U, 4U, "BSLPLUGINHOOK"},
+	{0x144U, 1U, "PATCHHOOKID"},
+	{0x148U, 1U, "SBLADDRESS"},
+	{0x14cU, 1U, "BSLAPPVER"},
+	{0x150U, 1U, "BSLCONFIG1"},
+	{0x154U, 1U, "BSLCRC"},
+	{0U, 0U, NULL},
+};
 
 static void mspm0_dump_regs(target_s *const target, const conf_register_s *regs, uint32_t base)
 {
 	for (conf_register_s const *r = regs; r->id; ++r) {
 		tc_printf(target, "%15s: ", r->id);
-		for (int q = 0; q < r->words; ++q) {
-			uint32_t value = target_mem32_read32(target, base + r->offset + q * 4);
-			tc_printf(target, "0x%08" PRIx32 "%s", value, q == r->words - 1 ? "\n" : " ");
+		for (size_t i = 0; i < r->size_words; ++i) {
+			uint32_t value = target_mem32_read32(target, base + r->reg_offset + i * 4U);
+			tc_printf(target, "0x%08" PRIx32 "%s", value, i == r->size_words - 1U ? "\n" : " ");
 		}
 	}
 }
@@ -161,42 +212,38 @@ static void mspm0_add_flash(target_s *const target, const uint32_t base, const s
 	target_flash->writesize = 8U;
 	target_flash->erase = mspm0_flash_erase;
 	target_flash->write = mspm0_flash_write;
-	target_flash->erased = 0xff;
+	target_flash->erased = 0xffU;
 	target_add_flash(target, target_flash);
 }
 
-#define BIT_LMASK(T, bits) ((T)-1) >> (sizeof(T) * CHAR_BIT - (bits))
-#define BITS(h, l, x)      (uint32_t)((x >> l) & BIT_LMASK(uint32_t, h - l + 1))
-
 bool mspm0_probe(target_s *const target)
 {
-	uint32_t const deviceid = target_mem32_read32(target, MSPM0_FLASH_FACTORY + 0x4U);
+	uint32_t const deviceid = target_mem32_read32(target, MSPM0_FACTORYREGION_DEVICEID);
 
-	uint32_t manufacturer = BITS(11, 1, deviceid);
+	uint32_t manufacturer = (deviceid & MSPM0_DEVICEID_MANUFACTURER_MASK) >> MSPM0_DEVICEID_MANUFACTURER_SHIFT;
 	if (manufacturer != JEP106_MANUFACTURER_TEXAS)
 		return false;
 
-	uint32_t partnum = BITS(27, 12, deviceid);
+	uint32_t partnum = (deviceid & MSPM0_DEVICEID_PARTNUM_MASK) >> MSPM0_DEVICEID_PARTNUM_SHIFT;
 	if (partnum != TI_DEVID_MSPM0C && partnum != TI_DEVID_MSPM0L && partnum != TI_DEVID_MSPM0L_1227_2228 &&
 		partnum != TI_DEVID_MSPM0G)
 		return false;
-
-	uint32_t const userid = target_mem32_read32(target, MSPM0_FLASH_FACTORY + 0x8U);
-	(void)userid;
-	DEBUG_TARGET("%s: DEVICEID Manufacturer %" PRIx32 " Partnum %" PRIx32 " Version %" PRIu32 ", USERID Part %" PRIu32
-				 " Variant %" PRIu32 " Ver %" PRIu32 ".%" PRIu32 "\n",
-		__func__, manufacturer, partnum, BITS(31, 28, deviceid), BITS(15, 0, userid), BITS(23, 16, userid),
-		BITS(30, 28, userid), BITS(27, 24, userid));
 
 	target->driver = "MSPM0";
 	target->target_options |= TOPT_INHIBIT_NRST;
 	target->mass_erase = mspm0_mass_erase;
 
-	uint32_t const sramflash = target_mem32_read32(target, MSPM0_FLASH_FACTORY + 0x18);
-	const uint32_t mainflash_size = BITS(11, 0, sramflash) * 1024;
-	const uint32_t main_num_banks = BITS(13, 12, sramflash);
-	const uint32_t sram_size = BITS(25, 16, sramflash) * 1024;
-	const uint32_t dataflash_size = BITS(31, 26, sramflash) * 1024;
+	uint32_t const sramflash = target_mem32_read32(target, MSPM0_FACTORYREGION_SRAMFLASH);
+	const uint32_t mainflash_size = 1024U *
+		((sramflash & MSPM0_FACTORYREGION_SRAMFLASH_MAINFLASH_SZ_MASK) >>
+			MSPM0_FACTORYREGION_SRAMFLASH_MAINFLASH_SZ_SHIFT);
+	const uint32_t main_num_banks = (sramflash & MSPM0_FACTORYREGION_SRAMFLASH_MAINNUMBANKS_MASK) >>
+		MSPM0_FACTORYREGION_SRAMFLASH_MAINNUMBANKS_SHIFT;
+	const uint32_t sram_size = 1024U *
+		((sramflash & MSPM0_FACTORYREGION_SRAMFLASH_SRAM_SZ_MASK) >> MSPM0_FACTORYREGION_SRAMFLASH_SRAM_SZ_SHIFT);
+	const uint32_t dataflash_size = 1024U *
+		((sramflash & MSPM0_FACTORYREGION_SRAMFLASH_DATAFLASH_SZ_MASK) >>
+			MSPM0_FACTORYREGION_SRAMFLASH_DATAFLASH_SZ_SHIFT);
 
 	target_add_ram32(target, MSPM0_SRAM_BASE, sram_size);
 	mspm0_add_flash(target, MSPM0_FLASH_MAIN, mainflash_size, main_num_banks);
@@ -210,7 +257,7 @@ bool mspm0_probe(target_s *const target)
 	return true;
 }
 
-/* Wait for flash command to finish and return the status word or -1 if timout */
+/* Wait for flash command to finish and return the status word or UINT32_MAX if timout */
 static uint32_t mspm0_flash_wait_done(target_s *const target)
 {
 	platform_timeout_s timeout;
@@ -222,7 +269,7 @@ static uint32_t mspm0_flash_wait_done(target_s *const target)
 		if (statcmd & MSPM0_FLASHCTL_STAT_DONE)
 			break;
 		if (platform_timeout_is_expired(&timeout))
-			return (uint32_t)-1;
+			return UINT32_MAX;
 	};
 
 	return statcmd;
@@ -240,17 +287,17 @@ static void mspm0_flash_unprotect_sector(target_flash_s *const target_flash, con
 	mspm0_flash_s *mspm0_flash = (mspm0_flash_s *)target_flash;
 	unsigned sector = (addr - target_flash->start) / MSPM0_FLASH_SECTOR_SZ;
 
-	if (sector < 32) {
-		uint32_t mask = ~(1u << sector);
+	if (sector < 32U) {
+		uint32_t mask = ~(1U << sector);
 		target_mem32_write32(target_flash->t, MSPM0_FLASHCTL_CMDWEPROTA, mask);
-	} else if (sector < 256) {
+	} else if (sector < 256U) {
 		/* Depending whether main flash is multibank or not, the first 4 bits of PROTB either
 		start at 32k or overlay over PROTA responsible range. */
-		unsigned start_protb_sector = mspm0_flash->banks <= 1 ? 32 : 0;
-		uint32_t mask = ~(1u << ((sector - start_protb_sector) >> 3));
+		unsigned start_protb_sector = mspm0_flash->banks <= 1 ? 32U : 0U;
+		uint32_t mask = ~(1U << ((sector - start_protb_sector) >> 3U));
 		target_mem32_write32(target_flash->t, MSPM0_FLASHCTL_CMDWEPROTB, mask);
 	} else {
-		uint32_t mask = ~(1u << ((sector - 256) >> 3));
+		uint32_t mask = ~(1U << ((sector - 256U) >> 3U));
 		target_mem32_write32(target_flash->t, MSPM0_FLASHCTL_CMDWEPROTC, mask);
 	}
 }
@@ -273,7 +320,7 @@ static bool mspm0_flash_erase(target_flash_s *const target_flash, const target_a
 	target_mem32_write32(target, MSPM0_FLASHCTL_CMDEXEC, MSPM0_FLASHCTL_CMDEXEC_EXEC);
 
 	uint32_t statcmd = mspm0_flash_wait_done(target);
-	if (statcmd == (uint32_t)-1 || !(statcmd & MSPM0_FLASHCTL_STAT_CMDPASS))
+	if (statcmd == UINT32_MAX || !(statcmd & MSPM0_FLASHCTL_STAT_CMDPASS))
 		DEBUG_TARGET("%s: Failed to erase flash, status %08" PRIx32 " addr %08" PRIx32 " length %08" PRIx32 "\n",
 			__func__, statcmd, addr, (uint32_t)length);
 
@@ -292,13 +339,13 @@ static bool mspm0_flash_write(
 	target_mem32_write32(target, MSPM0_FLASHCTL_CMDTYPE, MSPM0_FLASHCTL_CMDTYPE_PROG | MSPM0_FLASHCTL_CMDTYPE_SZ_1WORD);
 	target_mem32_write32(target, MSPM0_FLASHCTL_CMDCTL, 0U);
 	target_mem32_write32(target, MSPM0_FLASHCTL_CMDADDR, dest);
-	target_mem32_write32(target, MSPM0_FLASHCTL_BYTEN, 0xffffffff);
+	target_mem32_write32(target, MSPM0_FLASHCTL_BYTEN, 0xffffffffU);
 	target_mem32_write32(target, MSPM0_FLASHCTL_CMDDATA0, read_le4((const uint8_t *)src, 0U));
 	target_mem32_write32(target, MSPM0_FLASHCTL_CMDDATA1, read_le4((const uint8_t *)src, 4U));
 	target_mem32_write32(target, MSPM0_FLASHCTL_CMDEXEC, MSPM0_FLASHCTL_CMDEXEC_EXEC);
 
 	uint32_t statcmd = mspm0_flash_wait_done(target);
-	if (statcmd == (uint32_t)-1 || !(statcmd & MSPM0_FLASHCTL_STAT_CMDPASS))
+	if (statcmd == UINT32_MAX || !(statcmd & MSPM0_FLASHCTL_STAT_CMDPASS))
 		DEBUG_TARGET("%s: Failed to write to flash, status %08" PRIx32 " addr %08" PRIx32 " length %08" PRIx32 "\n",
 			__func__, statcmd, dest, (uint32_t)length);
 
