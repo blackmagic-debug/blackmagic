@@ -18,6 +18,7 @@
  */
 
 #include <assert.h>
+#include <limits.h>
 #include "general.h"
 #include "target.h"
 #include "target_internal.h"
@@ -76,6 +77,7 @@
 #define MSPM0_FLASHCTL_CMDTYPE_SZ_8WORDS (3U << 4)
 #define MSPM0_FLASHCTL_CMDTYPE_SZ_SECTOR (4U << 4)
 #define MSPM0_FLASHCTL_CMDTYPE_SZ_BANK   (5U << 4)
+#define MSPM0_FLASHCTL_CMDEXEC_EXEC      1U
 #define MSPM0_FLASHCTL_STAT_DONE         0x01U
 #define MSPM0_FLASHCTL_STAT_CMDPASS      0x02U
 
@@ -143,7 +145,7 @@ static bool mspm0_dump_bcr_config(target_s *const target, const int argc, const 
 }
 #endif
 
-static void mspm0_add_flash(target_s *const target, const uint32_t base, const size_t length, size_t banks)
+static void mspm0_add_flash(target_s *const target, const uint32_t base, const size_t length, uint32_t banks)
 {
 	mspm0_flash_s *const flash = calloc(1, sizeof(*flash));
 	if (flash == NULL) {
@@ -156,19 +158,19 @@ static void mspm0_add_flash(target_s *const target, const uint32_t base, const s
 	target_flash->start = base;
 	target_flash->length = length;
 	target_flash->blocksize = MSPM0_FLASH_SECTOR_SZ;
-	target_flash->writesize = 8;
+	target_flash->writesize = 8U;
 	target_flash->erase = mspm0_flash_erase;
 	target_flash->write = mspm0_flash_write;
 	target_flash->erased = 0xff;
 	target_add_flash(target, target_flash);
 }
 
-#define BIT_LMASK(T, bits) ((T)-1) >> (sizeof(T) * __CHAR_BIT__ - (bits))
+#define BIT_LMASK(T, bits) ((T)-1) >> (sizeof(T) * CHAR_BIT - (bits))
 #define BITS(h, l, x)      (uint32_t)((x >> l) & BIT_LMASK(uint32_t, h - l + 1))
 
 bool mspm0_probe(target_s *const target)
 {
-	uint32_t const deviceid = target_mem32_read32(target, MSPM0_FLASH_FACTORY + 0x4);
+	uint32_t const deviceid = target_mem32_read32(target, MSPM0_FLASH_FACTORY + 0x4U);
 
 	uint32_t manufacturer = BITS(11, 1, deviceid);
 	if (manufacturer != JEP106_MANUFACTURER_TEXAS)
@@ -179,7 +181,8 @@ bool mspm0_probe(target_s *const target)
 		partnum != TI_DEVID_MSPM0G)
 		return false;
 
-	uint32_t const userid __attribute__((unused)) = target_mem32_read32(target, MSPM0_FLASH_FACTORY + 0x8);
+	uint32_t const userid = target_mem32_read32(target, MSPM0_FLASH_FACTORY + 0x8U);
+	(void)userid;
 	DEBUG_TARGET("%s: DEVICEID Manufacturer %" PRIx32 " Partnum %" PRIx32 " Version %" PRIu32 ", USERID Part %" PRIu32
 				 " Variant %" PRIu32 " Ver %" PRIu32 ".%" PRIu32 "\n",
 		__func__, manufacturer, partnum, BITS(31, 28, deviceid), BITS(15, 0, userid), BITS(23, 16, userid),
@@ -198,7 +201,7 @@ bool mspm0_probe(target_s *const target)
 	target_add_ram32(target, MSPM0_SRAM_BASE, sram_size);
 	mspm0_add_flash(target, MSPM0_FLASH_MAIN, mainflash_size, main_num_banks);
 	if (dataflash_size != 0)
-		mspm0_add_flash(target, MSPM0_FLASH_DATA, dataflash_size, 1);
+		mspm0_add_flash(target, MSPM0_FLASH_DATA, dataflash_size, 1U);
 
 #if MSPM0_CONFIG_FLASH_DUMP_SUPPORT
 	target_add_commands(target, mspm0_cmds_list, "MSPM0");
@@ -211,7 +214,7 @@ bool mspm0_probe(target_s *const target)
 static uint32_t mspm0_flash_wait_done(target_s *const target)
 {
 	platform_timeout_s timeout;
-	platform_timeout_set(&timeout, 500);
+	platform_timeout_set(&timeout, 500U);
 
 	uint32_t statcmd;
 	while (true) {
@@ -227,9 +230,9 @@ static uint32_t mspm0_flash_wait_done(target_s *const target)
 
 static void mspm0_flash_unprotect(target_flash_s *const target_flash)
 {
-	target_mem32_write32(target_flash->t, MSPM0_FLASHCTL_CMDWEPROTA, 0);
-	target_mem32_write32(target_flash->t, MSPM0_FLASHCTL_CMDWEPROTB, 0);
-	target_mem32_write32(target_flash->t, MSPM0_FLASHCTL_CMDWEPROTC, 0);
+	target_mem32_write32(target_flash->t, MSPM0_FLASHCTL_CMDWEPROTA, 0U);
+	target_mem32_write32(target_flash->t, MSPM0_FLASHCTL_CMDWEPROTB, 0U);
+	target_mem32_write32(target_flash->t, MSPM0_FLASHCTL_CMDWEPROTC, 0U);
 }
 
 static void mspm0_flash_unprotect_sector(target_flash_s *const target_flash, const target_addr_t addr)
@@ -264,10 +267,10 @@ static bool mspm0_flash_erase(target_flash_s *const target_flash, const target_a
 	mspm0_flash_unprotect_sector(target_flash, addr);
 	target_mem32_write32(
 		target, MSPM0_FLASHCTL_CMDTYPE, MSPM0_FLASHCTL_CMDTYPE_SZ_SECTOR | MSPM0_FLASHCTL_CMDTYPE_ERASE);
-	target_mem32_write32(target, MSPM0_FLASHCTL_BYTEN, 0xffffffff);
-	target_mem32_write32(target, MSPM0_FLASHCTL_CMDCTL, 0);
+	target_mem32_write32(target, MSPM0_FLASHCTL_BYTEN, 0xffffffffU);
+	target_mem32_write32(target, MSPM0_FLASHCTL_CMDCTL, 0U);
 	target_mem32_write32(target, MSPM0_FLASHCTL_CMDADDR, addr);
-	target_mem32_write32(target, MSPM0_FLASHCTL_CMDEXEC, 1);
+	target_mem32_write32(target, MSPM0_FLASHCTL_CMDEXEC, MSPM0_FLASHCTL_CMDEXEC_EXEC);
 
 	uint32_t statcmd = mspm0_flash_wait_done(target);
 	if (statcmd == (uint32_t)-1 || !(statcmd & MSPM0_FLASHCTL_STAT_CMDPASS))
@@ -287,12 +290,12 @@ static bool mspm0_flash_write(
 
 	mspm0_flash_unprotect_sector(target_flash, dest);
 	target_mem32_write32(target, MSPM0_FLASHCTL_CMDTYPE, MSPM0_FLASHCTL_CMDTYPE_PROG | MSPM0_FLASHCTL_CMDTYPE_SZ_1WORD);
-	target_mem32_write32(target, MSPM0_FLASHCTL_CMDCTL, 0);
+	target_mem32_write32(target, MSPM0_FLASHCTL_CMDCTL, 0U);
 	target_mem32_write32(target, MSPM0_FLASHCTL_CMDADDR, dest);
 	target_mem32_write32(target, MSPM0_FLASHCTL_BYTEN, 0xffffffff);
-	target_mem32_write32(target, MSPM0_FLASHCTL_CMDDATA0, read_le4((const uint8_t *)src, 0));
-	target_mem32_write32(target, MSPM0_FLASHCTL_CMDDATA1, read_le4((const uint8_t *)src, 4));
-	target_mem32_write32(target, MSPM0_FLASHCTL_CMDEXEC, 1);
+	target_mem32_write32(target, MSPM0_FLASHCTL_CMDDATA0, read_le4((const uint8_t *)src, 0U));
+	target_mem32_write32(target, MSPM0_FLASHCTL_CMDDATA1, read_le4((const uint8_t *)src, 4U));
+	target_mem32_write32(target, MSPM0_FLASHCTL_CMDEXEC, MSPM0_FLASHCTL_CMDEXEC_EXEC);
 
 	uint32_t statcmd = mspm0_flash_wait_done(target);
 	if (statcmd == (uint32_t)-1 || !(statcmd & MSPM0_FLASHCTL_STAT_CMDPASS))
@@ -312,7 +315,7 @@ static bool mspm0_mass_erase(target_s *const target)
 		 flash = (mspm0_flash_s *)flash->target_flash.next) {
 		/* Assume banks are of same size */
 		uint32_t bank_size = flash->target_flash.length / flash->banks;
-		for (size_t bank = 0; bank < flash->banks; ++bank) {
+		for (uint32_t bank = 0U; bank < flash->banks; ++bank) {
 			uint32_t bank_offset = bank * bank_size;
 			uint32_t bank_address = flash->target_flash.start + bank_offset;
 			DEBUG_INFO("%s: Mass erase flash bank starting %08" PRIx32 " length %08" PRIx32 "\n", __func__,
@@ -321,9 +324,9 @@ static bool mspm0_mass_erase(target_s *const target)
 			mspm0_flash_unprotect(&flash->target_flash);
 			target_mem32_write32(
 				target, MSPM0_FLASHCTL_CMDTYPE, MSPM0_FLASHCTL_CMDTYPE_SZ_BANK | MSPM0_FLASHCTL_CMDTYPE_ERASE);
-			target_mem32_write32(target, MSPM0_FLASHCTL_CMDCTL, 0);
+			target_mem32_write32(target, MSPM0_FLASHCTL_CMDCTL, 0U);
 			target_mem32_write32(target, MSPM0_FLASHCTL_CMDADDR, bank_address);
-			target_mem32_write32(target, MSPM0_FLASHCTL_CMDEXEC, 1);
+			target_mem32_write32(target, MSPM0_FLASHCTL_CMDEXEC, MSPM0_FLASHCTL_CMDEXEC_EXEC);
 
 			uint32_t statcmd;
 			while (true) {
