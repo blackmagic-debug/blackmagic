@@ -304,6 +304,8 @@ static bool at32f43_flash_erase(target_flash_s *target_flash, target_addr_t addr
 	}
 
 	at32f43_flash_clear_eop(target, bank_reg_offset);
+	DEBUG_TARGET("%s: 0x%08" PRIX32 "+%" PRIu32 " reg_base 0x%08" PRIX32 "\n", __func__, addr, (uint32_t)len,
+		bank_reg_offset + AT32F43x_FLASH_REG_BASE);
 
 	/* Prepare for page/sector erase */
 	target_mem32_write32(target, AT32F43x_FLASH_CTRL + bank_reg_offset, AT32F43x_FLASH_CTRL_SECERS);
@@ -325,6 +327,8 @@ static bool at32f43_flash_write(target_flash_s *target_flash, target_addr_t dest
 	const align_e psize = ALIGN_32BIT;
 
 	at32f43_flash_clear_eop(target, bank_reg_offset);
+	DEBUG_TARGET("%s: 0x%08" PRIX32 "+%" PRIu32 " reg_base 0x%08" PRIX32 "\n", __func__, dest, (uint32_t)len,
+		bank_reg_offset + AT32F43x_FLASH_REG_BASE);
 
 	/* Write to bank corresponding to flash region */
 	target_mem32_write32(target, AT32F43x_FLASH_CTRL + bank_reg_offset, AT32F43x_FLASH_CTRL_FPRGM);
