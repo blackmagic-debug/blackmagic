@@ -754,8 +754,6 @@ adiv5_access_port_s *adiv5_new_ap(adiv5_debug_port_s *dp, uint8_t apsel)
 		/* This reads the lower half of BASE */
 		ap.base = adiv5_ap_read(&ap, ADIV5_AP_BASE_LOW);
 		const uint8_t base_flags = (uint8_t)ap.base & (ADIV5_AP_BASE_FORMAT | ADIV5_AP_BASE_PRESENT);
-		/* Make sure we only pay attention to the base address, not the presence and format bits */
-		ap.base &= ADIV5_AP_BASE_BASEADDR;
 		/* Check if this is a 64-bit AP */
 		if (cfg & ADIV5_AP_CFG_LARGE_ADDRESS) {
 			/* If this base value is invalid for a LPAE MEM-AP, bomb out here */
@@ -766,16 +764,25 @@ adiv5_access_port_s *adiv5_new_ap(adiv5_debug_port_s *dp, uint8_t apsel)
 			/* Otherwise note this is a 64-bit AP and read the high part */
 			ap.flags |= ADIV5_AP_FLAGS_64BIT;
 			ap.base |= (uint64_t)adiv5_ap_read(&ap, ADIV5_AP_BASE_HIGH) << 32U;
-		}
-		/* Check the Debug Base Address register for not-present. See ADIv5 Specification C2.6.1 */
-		if (!(ap.flags & ADIV5_AP_FLAGS_64BIT) && (uint32_t)ap.base == ADIV5_AP_BASE_NOT_PRESENT) {
-			/*
-			 * Debug Base Address not present in this MEM-AP
-			 * No debug entries... useless AP
-			 * AP0 on STM32MP157C reads 0x00000002
-			 */
+			/* Check the Debug Base Address register for not-present (legacy format). See ADIv5 Specification C2.6.1 */
+		} else if ((uint32_t)ap.base == ADIV5_AP_BASE_NOT_PRESENT) {
 			DEBUG_INFO(" -> Not Present\n");
 			return NULL;
+		}
+		/* Make sure we only pay attention to the base address, not the presence and format bits */
+		ap.base &= ADIV5_AP_BASE_BASEADDR;
+		/* Check for ADIv5 no-entry flag. */
+		if (base_flags == (ADIV5_AP_BASE_FORMAT_ADIV5 | ADIV5_AP_BASE_PRESENT_NO_ENTRY)) {
+			/*
+			* Debug Base Address not present in this MEM-AP
+			* No debug entries... useless AP
+			* AP0 on STM32MP157C reads 0x00000002
+			* Unless it's a TI MSPM0, which reads present flag as no entry while reporting a ROM table
+			*/
+			if (!(dp->target_designer_code == JEP106_MANUFACTURER_TEXAS && ap.base != 0U)) {
+				DEBUG_INFO(" -> Not Present\n");
+				return NULL;
+			}
 		}
 
 		/* Check if the AP is disabled, skipping it if that is the case */
