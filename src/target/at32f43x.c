@@ -438,6 +438,7 @@ static bool at32f43_option_write(target_s *const target, const uint32_t addr, co
 	if (index > ob_count - 1U)
 		return false;
 
+	bool erase_needed = false;
 	uint16_t opt_val[ob_count]; // FIXME: big VLA, replace with malloc+check
 	/* Save current values */
 	for (size_t i = 0U; i < ob_count * 2U; i += 4U) {
@@ -452,11 +453,19 @@ static bool at32f43_option_write(target_s *const target, const uint32_t addr, co
 		return true;
 
 	/* Check whether erase is needed */
-	if (opt_val[index] != 0xffffU && !at32f43_option_erase(target))
-		return false;
+	if (opt_val[index] != 0xffffU)
+		erase_needed = true;
+
 	/* Update requested entry locally */
 	opt_val[index] = value;
 
+	/* Flip single pair-of-bytes from 0xffff to desired value and exit */
+	if (!erase_needed)
+		return at32f43_option_write_erased(target, index, value);
+
+	/* Wipe everything and write back. Writing matching values without an erase raises a PRGMERR. */
+	if (!at32f43_option_erase(target))
+		return false;
 	/* Write changed values using 16-bit accesses. */
 	for (size_t i = 0U; i < ob_count; ++i) {
 		if (!at32f43_option_write_erased(target, i, opt_val[i]))
