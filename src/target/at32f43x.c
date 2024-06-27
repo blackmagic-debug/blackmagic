@@ -83,7 +83,8 @@ static bool at32f43_mass_erase(target_s *target);
 #define AT32F43x_USD_BASE 0x1fffc000U
 /* First option byte value for disabled read protection: 0x00a5 */
 #define AT32F43x_USD_RDP_KEY 0x5aa5U
-#define AT32F43x_OB_COUNT    256U
+#define AT32F43x_2K_OB_COUNT 256U
+#define AT32F43x_4K_OB_COUNT 2048U
 
 #define DBGMCU_IDCODE 0xe0042000U
 
@@ -430,8 +431,9 @@ static bool at32f43_option_write_erased(target_s *const target, const size_t off
 
 static bool at32f43_option_write(target_s *const target, const uint32_t addr, const uint16_t value)
 {
-	/* Arterytek F435/F437 has 256 option byte halfwords (512 bytes) */
-	const uint16_t ob_count = AT32F43x_OB_COUNT;
+	/* Arterytek F435/F437 has either 512 bytes or 4 KiB worth of USD */
+	const target_flash_s *target_flash = target->flash;
+	const uint16_t ob_count = target_flash->blocksize == 4096U ? AT32F43x_4K_OB_COUNT : AT32F43x_2K_OB_COUNT;
 
 	const uint32_t index = (addr - AT32F43x_USD_BASE) >> 1U;
 	/* If this underflows, then address is out of USD range */
@@ -439,7 +441,24 @@ static bool at32f43_option_write(target_s *const target, const uint32_t addr, co
 		return false;
 
 	bool erase_needed = false;
-	uint16_t opt_val[ob_count]; // FIXME: big VLA, replace with malloc+check
+	uint16_t opt_val_single = target_mem32_read16(target, addr);
+	/* No change pending */
+	if (opt_val_single == value)
+		return true;
+	/* Check whether erase is needed */
+	if (opt_val_single != 0xffffU)
+		erase_needed = true;
+	/* Flip single pair-of-bytes from 0xffff to desired value and exit */
+	if (!erase_needed)
+		return at32f43_option_write_erased(target, index, value);
+
+	uint16_t *const opt_val = calloc(ob_count, sizeof(uint16_t));
+	if (!opt_val) {
+		DEBUG_ERROR("calloc: failed in %s\n", __func__);
+		return false;
+	}
+	DEBUG_TARGET("%s: full overwrite triggered\n", __func__);
+
 	/* Save current values */
 	for (size_t i = 0U; i < ob_count * 2U; i += 4U) {
 		const size_t offset = i >> 1U;
@@ -447,32 +466,27 @@ static bool at32f43_option_write(target_s *const target, const uint32_t addr, co
 		opt_val[offset] = val & 0xffffU;
 		opt_val[offset + 1U] = val >> 16U;
 	}
-
-	/* No change pending */
-	if (opt_val[index] == value)
-		return true;
-
-	/* Check whether erase is needed */
-	if (opt_val[index] != 0xffffU)
-		erase_needed = true;
-
 	/* Update requested entry locally */
 	opt_val[index] = value;
 
-	/* Flip single pair-of-bytes from 0xffff to desired value and exit */
-	if (!erase_needed)
-		return at32f43_option_write_erased(target, index, value);
-
 	/* Wipe everything and write back. Writing matching values without an erase raises a PRGMERR. */
-	if (!at32f43_option_erase(target))
-		return false;
-	/* Write changed values using 16-bit accesses. */
-	for (size_t i = 0U; i < ob_count; ++i) {
-		if (!at32f43_option_write_erased(target, i, opt_val[i]))
-			return false;
-	}
+	bool result = true;
+	do {
+		if (!at32f43_option_erase(target)) {
+			result = false;
+			break;
+		}
+		/* Write changed values using 16-bit accesses. */
+		for (size_t i = 0U; i < ob_count; ++i) {
+			if (!at32f43_option_write_erased(target, i, opt_val[i])) {
+				result = false;
+				break;
+			}
+		}
+	} while (false);
 
-	return true;
+	free(opt_val);
+	return result;
 }
 
 static bool at32f43_cmd_option(target_s *target, int argc, const char **argv)
@@ -505,15 +519,22 @@ static bool at32f43_cmd_option(target_s *target, int argc, const char **argv)
 		/* Try and program the new option value to the requested option byte */
 		if (!at32f43_option_write(target, addr, val))
 			return false;
+		/* Display only changes */
+		const uint16_t val_new = target_mem32_read16(target, addr);
+		tc_printf(target, "0x%08" PRIX32 ": 0x%04X\n", addr, val_new);
+		return true;
 	} else
 		tc_printf(target, "usage: monitor option erase\nusage: monitor option <addr> <value>\n");
 
 	/* When all gets said and done, display the current option bytes values */
-	for (size_t i = 0U; i < AT32F43x_OB_COUNT * 2U; i += 4U) {
+	const target_flash_s *target_flash = target->flash;
+	const uint16_t ob_count = target_flash->blocksize == 4096U ? AT32F43x_4K_OB_COUNT : AT32F43x_2K_OB_COUNT;
+	uint16_t values[8] = {0};
+	for (size_t i = 0U; i < ob_count * 2U; i += 16U) {
 		const uint32_t addr = AT32F43x_USD_BASE + i;
-		const uint32_t val = target_mem32_read32(target, addr);
-		tc_printf(target, "0x%08X: 0x%04X\n", addr, val & 0xffffU);
-		tc_printf(target, "0x%08X: 0x%04X\n", addr + 2U, val >> 16U);
+		target_mem32_read(target, values, addr, 8 * sizeof(uint16_t));
+		tc_printf(target, "0x%08" PRIX32 ": 0x%04X 0x%04X 0x%04X 0x%04X 0x%04X 0x%04X 0x%04X 0x%04X\n", addr, values[0],
+			values[1], values[2], values[3], values[4], values[5], values[6], values[7]);
 	}
 
 	return true;
