@@ -38,6 +38,7 @@
 #include <libopencm3/cm3/systick.h>
 #include <libopencm3/cm3/cortex.h>
 #include <libopencm3/usb/dwc/otg_fs.h>
+#include <libopencm3/stm32/f4/flash.h>
 
 static void adc_init(void)
 {
@@ -110,12 +111,9 @@ void platform_init(void)
 	//
 	gpio_mode_setup(SWITCH_PORT, GPIO_MODE_INPUT, GPIO_PUPD_PULLUP, SW_BOOTLOADER_PIN);
 	/*
-	Check the Bootloader button, not sure this is needed fro the native-derived hardware, need to check if
-	this switch is looked at in the DFU bootloader
+		Check the Bootloader button
 	*/
-	if (!(gpio_get(SWITCH_PORT,
-			SW_BOOTLOADER_PIN))) // SJP - 0118_2016, changed to use defs in platform.h and the switch is active low!
-	{
+	if (!(gpio_get(SWITCH_PORT, SW_BOOTLOADER_PIN))) {
 		platform_request_boot(); // Does not return from this call
 	}
 
@@ -223,7 +221,45 @@ const char *platform_target_voltage(void)
 
 void platform_request_boot(void)
 {
-	scb_reset_system();
+	typedef void (*pFunction)(void);
+	const uint32_t ApplicationAddress = 0x1FFF0000;
+	register uint32_t JumpAddress = 0;
+	register uint32_t addr = 0;
+	static pFunction Jump_To_Application;
+
+	/* We start here */
+	cm_disable_interrupts();
+	uint32_t value = 0 - 1;
+	NVIC_ICER(0) = value;
+	NVIC_ICER(1) = value;
+	NVIC_ICER(2) = value;
+	NVIC_ICPR(0) = value;
+	NVIC_ICPR(1) = value;
+	NVIC_ICPR(2) = value;
+
+	STK_CSR = 0;
+	/* Reset the RCC clock configuration to the default reset state ------------*/
+	/* Reset value of 0x83 includes Set HSION bit */
+	RCC_CR |= (uint32_t)0x00000082;
+	/* Reset CFGR register */
+	RCC_CFGR = 0x00000000;
+
+	/* Disable all interrupts */
+	RCC_CIR = 0x00000000;
+
+	FLASH_ACR = 0;
+	__asm volatile("isb");
+	__asm volatile("dsb");
+	cm_enable_interrupts();
+	addr = *((uint32_t *)ApplicationAddress);
+	JumpAddress = *((uint32_t *)(ApplicationAddress + 4));
+	Jump_To_Application = (pFunction)JumpAddress;
+	/*
+	set up the stack for the bootloader
+	*/
+	__asm__("mov sp,%[v]" : : [v] "r"(addr));
+
+	Jump_To_Application();
 }
 
 #pragma GCC diagnostic pop
