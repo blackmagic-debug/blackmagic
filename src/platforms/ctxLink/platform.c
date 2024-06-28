@@ -130,11 +130,11 @@ void platform_init(void)
 		
 		this is what the native BMP does, don't really know why
 	*/
-	gpio_port_write (GPIOA, 0xA102);
-	gpio_port_write (GPIOB, 0x0000);
+	gpio_port_write(GPIOA, 0xA102);
+	gpio_port_write(GPIOB, 0x0000);
 
-	gpio_port_write (GPIOA, 0xA182);
-	gpio_port_write (GPIOB, 0x0002);
+	gpio_port_write(GPIOA, 0xA182);
+	gpio_port_write(GPIOB, 0x0002);
 
 	/*
 	 * Set up USB Pins and alternate function
@@ -148,8 +148,7 @@ void platform_init(void)
 	 * USB DM & DP pins
 	 */
 	gpio_mode_setup(GPIOA, GPIO_MODE_ANALOG, GPIO_PUPD_NONE, GPIO9);
-	gpio_mode_setup(GPIOA, GPIO_MODE_AF, GPIO_PUPD_NONE,
-		GPIO11 | GPIO12);
+	gpio_mode_setup(GPIOA, GPIO_MODE_AF, GPIO_PUPD_NONE, GPIO11 | GPIO12);
 	gpio_set_af(GPIOA, GPIO_AF10, GPIO9 | GPIO11 | GPIO12);
 	//
 	// SJP - 0119_2016
@@ -158,26 +157,16 @@ void platform_init(void)
 	//
 	// See the spreadsheet "SWD Port speed bits - OneNote"
 	//
-	GPIOA_OSPEEDR &=~(TCK_PIN |TMS_PIN | TDI_PIN) ;	// Clear the speed bits for TCK, TMS, & TDI
-	GPIOA_OSPEEDR |= (TCK_PIN | TMS_PIN | TDI_PIN);	// Set TCK, TMS,& TDI to "Fast speed"
-	gpio_mode_setup(JTAG_PORT, GPIO_MODE_OUTPUT,
-			GPIO_PUPD_NONE,
-			TMS_DIR_PIN | TMS_PIN | TCK_PIN | TDI_PIN);
+	GPIOA_OSPEEDR &= ~(TCK_PIN | TMS_PIN | TDI_PIN); // Clear the speed bits for TCK, TMS, & TDI
+	GPIOA_OSPEEDR |= (TCK_PIN | TMS_PIN | TDI_PIN);  // Set TCK, TMS,& TDI to "Fast speed"
+	gpio_mode_setup(JTAG_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, TMS_DIR_PIN | TMS_PIN | TCK_PIN | TDI_PIN);
 
-	gpio_mode_setup(TDO_PORT, GPIO_MODE_INPUT,
-			GPIO_PUPD_NONE,
-			TDO_PIN);
+	gpio_mode_setup(TDO_PORT, GPIO_MODE_INPUT, GPIO_PUPD_NONE, TDO_PIN);
 	//
 	// Initialize the LED ports
 	//
-	gpio_mode_setup(LED_PORT,
-		GPIO_MODE_OUTPUT,
-		GPIO_PUPD_NONE,
-		LED_IDLE_RUN | LED_ERROR | LED_MODE);
-	gpio_mode_setup(LED_PORT_UART,
-		GPIO_MODE_OUTPUT,
-		GPIO_PUPD_NONE,
-		LED_UART);
+	gpio_mode_setup(LED_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, LED_IDLE_RUN | LED_ERROR | LED_MODE);
+	gpio_mode_setup(LED_PORT_UART, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, LED_UART);
 	//
 	// Setup RST_SENSE as input
 	//
@@ -201,7 +190,7 @@ void platform_init(void)
 	gpio_set(PWR_BR_PORT, PWR_BR_PIN);
 	gpio_mode_setup(PWR_BR_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, PWR_BR_PIN);
 	gpio_set_output_options(GPIOB, GPIO_OTYPE_OD, GPIO_OSPEED_50MHZ, PWR_BR_PIN);
-	
+
 	platform_timing_init();
 	adc_init();
 	blackmagic_usb_init();
