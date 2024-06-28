@@ -128,10 +128,10 @@ void platform_init(void)
 		
 		this is what the native BMP does, don't really know why
 	*/
-	gpio_port_write(GPIOA, 0xA102);
+	gpio_port_write(GPIOA, 0xa102);
 	gpio_port_write(GPIOB, 0x0000);
 
-	gpio_port_write(GPIOA, 0xA182);
+	gpio_port_write(GPIOA, 0xa182);
 	gpio_port_write(GPIOB, 0x0002);
 
 	/*
@@ -222,7 +222,7 @@ const char *platform_target_voltage(void)
 void platform_request_boot(void)
 {
 	typedef void (*pFunction)(void);
-	const uint32_t ApplicationAddress = 0x1FFF0000;
+	const uint32_t ApplicationAddress = 0x1fff0000;
 	register uint32_t JumpAddress = 0;
 	register uint32_t addr = 0;
 	static pFunction Jump_To_Application;
