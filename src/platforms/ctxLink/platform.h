@@ -77,10 +77,10 @@
 #define SWCLK_PIN      TCK_PIN
 #define SWDIO_DIR_PIN  TMS_DIR_PIN
 
-#define TRST_PORT GPIOA
-#define TRST_PIN  GPIO2
-#define NRST_PORT GPIOA
-#define NRST_PIN  GPIO2
+#define TRST_PORT       GPIOA
+#define TRST_PIN        GPIO2
+#define NRST_PORT       GPIOA
+#define NRST_PIN        GPIO2
 #define NRST_SENSE_PORT GPIOA
 #define NRST_SENSE_PIN  GPIO7
 
