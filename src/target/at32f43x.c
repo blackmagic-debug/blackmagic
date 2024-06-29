@@ -394,6 +394,7 @@ static bool at32f43_option_erase(target_s *target)
 {
 	/* bank_reg_offset is 0, option bytes belong to first bank */
 	at32f43_flash_clear_eop(target, 0);
+	DEBUG_TARGET("%s\n", __func__);
 
 	/* Wipe User System Data */
 	target_mem32_write32(target, AT32F43x_FLASH_CTRL, AT32F43x_FLASH_CTRL_USDERS | AT32F43x_FLASH_CTRL_USDULKS);
@@ -414,6 +415,7 @@ static bool at32f43_option_write_erased(target_s *const target, const size_t off
 	target_mem32_write32(target, AT32F43x_FLASH_CTRL, AT32F43x_FLASH_CTRL_USDPRGM | AT32F43x_FLASH_CTRL_USDULKS);
 
 	const uint32_t addr = AT32F43x_USD_BASE + (offset * 2U);
+	DEBUG_TARGET("%s: 0x%08" PRIX32 " <- 0x%04X\n", __func__, addr, value);
 	target_mem32_write16(target, addr, value);
 
 	const bool result = at32f43_flash_busy_wait(target, 0, NULL);
