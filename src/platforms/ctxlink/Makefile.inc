@@ -10,7 +10,7 @@ CFLAGS += -Istm32/include -mcpu=cortex-m4 -mthumb \
 
 LDFLAGS_BOOT = -lopencm3_stm32f4 \
 	-Tctxlink.ld -nostartfiles -lc -lnosys \
-	-Lplatforms/ctxLink \
+	-Lplatforms/ctxlink \
 	-Wl,-Map=mapfile -mthumb -mcpu=cortex-m4 -Wl,-gc-sections \
 	-mfloat-abi=hard -mfpu=fpv4-sp-d16 \
 	-L../deps/libopencm3/lib
