@@ -32,8 +32,6 @@ probe_ctxlink_includes = include_directories('.')
 
 probe_ctxlink_sources = files('platform.c')
 
-probe_ctxlink_dfu_sources = files('usbdfu.c')
-
 bmd_bootloader = get_option('bmd_bootloader')
 
 probe_ctxlink_dfu_serial_length = bmd_bootloader ? '9' : '13'
@@ -58,14 +56,6 @@ probe_host = declare_dependency(
 	compile_args: probe_ctxlink_args,
 	link_args: probe_ctxlink_commonn_link_args + probe_ctxlink_link_args,
 	dependencies: [platform_common, platform_stm32f4, fixme_platform_stm32_traceswo],
-)
-
-probe_bootloader = declare_dependency(
-	include_directories: [platform_common_includes, probe_ctxlink_includes],
-	sources: probe_ctxlink_dfu_sources,
-	compile_args: probe_ctxlink_args,
-	link_args: probe_ctxlink_commonn_link_args,
-	dependencies: platform_stm32f4_dfu,
 )
 
 summary(
