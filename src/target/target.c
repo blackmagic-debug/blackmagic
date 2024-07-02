@@ -112,11 +112,19 @@ void target_mem_map_free(target_s *target)
 
 void target_list_free(void)
 {
-	target_s *target = target_list;
+	target_s *volatile target = target_list;
 	while (target) {
 		target_s *next_target = target->next;
-		if (target->attached)
-			target->detach(target);
+		TRY (EXCEPTION_ALL) {
+			if (target->attached)
+				target->detach(target);
+		}
+		CATCH () {
+		default:
+			DEBUG_ERROR("Exception caught while detaching from target: %s\n", exception_frame.msg);
+			target->attached = false;
+			break;
+		}
 		if (target->tc && target->tc->destroy_callback)
 			target->tc->destroy_callback(target->tc, target);
 		if (target->priv)
