@@ -238,6 +238,10 @@ uint8_t riscv_mem_access_width(const riscv_hart_s *hart, target_addr_t address, 
 void riscv32_unpack_data(void *dest, uint32_t data, uint8_t access_width);
 uint32_t riscv32_pack_data(const void *src, uint8_t access_width);
 
+void riscv_halt_request(target_s *target);
+void riscv_halt_resume(target_s *target, bool step);
+target_halt_reason_e riscv_halt_poll(target_s *target, target_addr_t *watch);
+
 void riscv32_mem_read(target_s *target, void *dest, target_addr64_t src, size_t len);
 void riscv32_mem_write(target_s *target, target_addr64_t dest, const void *src, size_t len);
 
