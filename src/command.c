@@ -105,8 +105,8 @@ const command_s cmd_list[] = {
 #endif
 #ifdef ENABLE_RTT
 	{"rtt", cmd_rtt,
-		"[enable|disable|status|channel [0..15 ...]|ident [STR]|cblock|ram [RAM_START RAM_END]|poll [MAXMS MINMS "
-		"MAXERR]]"},
+		"[enable|disable|status|channel [0..15 ...]|ident [STR]|send [STR]|cblock|ram [RAM_START RAM_END]|"
+		"poll [MAXMS MINMS MAXERR]]"},
 #endif
 #ifdef PLATFORM_HAS_TRACESWO
 #if defined TRACESWO_PROTOCOL && TRACESWO_PROTOCOL == 2
@@ -568,6 +568,9 @@ static bool cmd_rtt(target_s *t, int argc, const char **argv)
 			if (rtt_ident[i] == '_')
 				rtt_ident[i] = ' ';
 		}
+	} else if (argc == 3 && strncmp(argv[1], "send", command_len) == 0) {
+		size_t len = strlen(argv[2]);
+		rtt_load_recv_buf(argv[2], len);
 	} else if (argc == 2 && strncmp(argv[1], "ram", command_len) == 0)
 		rtt_flag_ram = false;
 	else if (argc == 4 && strncmp(argv[1], "ram", command_len) == 0) {
