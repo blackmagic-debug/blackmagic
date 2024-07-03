@@ -83,6 +83,9 @@ static bool at32f43_mass_erase(target_s *target);
 #define AT32F43x_USD_BASE 0x1fffc000U
 /* First option byte value for disabled read protection: 0x00a5 */
 #define AT32F43x_USD_RDP_KEY 0x5aa5U
+/* Extended Option Byte 0 default value for "On-chip 384 KB SRAM+256 KB zero-wait-state Flash" */
+#define AT32F43x_USD_EOPB0_DEFAULT 0x05faU
+
 #define AT32F43x_2K_OB_COUNT 256U
 #define AT32F43x_4K_OB_COUNT 2048U
 
@@ -510,8 +513,15 @@ static bool at32f43_cmd_option(target_s *target, int argc, const char **argv)
 		/* When the user asks us to erase the option bytes, kick off an erase */
 		if (!at32f43_option_erase(target))
 			return false;
-		/* Write the option bytes Flash readable key */
+		/*
+		 * Write the option bytes Flash readable key.
+		 * FIXME: this transaction only completes after typ. 15 seconds (mass erase of both banks of 4032 KiB chip)
+		 * and if BMD ABORTs it after 250 ms, then chip considers erase as incomplete and stays read-protected.
+		 */
 		if (!at32f43_option_write_erased(target, 0U, AT32F43x_USD_RDP_KEY))
+			return false;
+		/* Set EOPB0 to default 0b010 for 384 KB SRAM */
+		if (!at32f43_option_write_erased(target, 8U, AT32F43x_USD_EOPB0_DEFAULT))
 			return false;
 	} else if (argc == 3) {
 		/* If 3 arguments are given, assume the second is an address, and the third a value */
