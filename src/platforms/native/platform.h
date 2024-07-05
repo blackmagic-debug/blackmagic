@@ -38,11 +38,12 @@ extern bool debug_bmp;
 #define PLATFORM_IDENT   ""
 #define UPD_IFACE_STRING "@Internal Flash   /0x08000000/8*001Kg"
 
+extern int hwversion;
 /*
  * Hardware version switcher helper - when the hardware
  * version is smaller than ver it outputs opt1, otherwise opt2
  */
-#define HW_SWITCH(ver, opt1, opt2) (platform_hwversion() < (ver) ? (opt1) : (opt2))
+#define HW_SWITCH(ver, opt1, opt2) (hwversion < (ver) ? (opt1) : (opt2))
 
 /*
  * Important pin mappings for native implementation:

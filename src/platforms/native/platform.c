@@ -60,6 +60,8 @@ static void setup_vbus_irq(void);
  */
 #define BMP_HWVERSION_BYTE FLASH_OPTION_BYTE_2
 
+int hwversion = -1;
+
 /*
  * Pins PB[7:5] are used to detect hardware revision.
  * User option byte Data1 is used starting with hardware revision 4.
@@ -82,7 +84,6 @@ static void setup_vbus_irq(void);
  */
 int platform_hwversion(void)
 {
-	static int hwversion = -1;
 	uint16_t hwversion_pins = GPIO7 | GPIO6 | GPIO5;
 	uint16_t unused_pins = hwversion_pins ^ 0xffffU;
 
