@@ -1091,7 +1091,7 @@ void adiv5_dp_init(adiv5_debug_port_s *const dp)
 		DEBUG_INFO("TARGETID 0x%08" PRIx32 " designer 0x%x partno 0x%x\n", targetid, dp->target_designer_code,
 			dp->target_partno);
 
-		dp->targetsel = dp->dev_index << ADIV5_DP_TARGETSEL_TINSTANCE_OFFSET |
+		dp->targetsel = ((uint32_t)dp->dev_index << ADIV5_DP_TARGETSEL_TINSTANCE_OFFSET) |
 			(targetid & (ADIV5_DP_TARGETID_TDESIGNER_MASK | ADIV5_DP_TARGETID_TPARTNO_MASK)) | 1U;
 	}
 
