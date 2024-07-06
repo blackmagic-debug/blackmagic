@@ -95,6 +95,18 @@ static void aux_serial_set_baudrate(const uint32_t baud_rate)
 }
 
 #if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4) || defined(STM32F7)
+uint32_t usart_get_baudrate(uint32_t usart)
+{
+	uint32_t clock = rcc_get_usart_clk_freq(usart);
+	const uint32_t regval = USART_BRR(usart);
+	return clock / regval;
+}
+#elif defined(LM4F)
+/* See tm4c/traceswo.c */
+uint32_t usart_get_baudrate(uint32_t uart);
+#endif
+
+#if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4) || defined(STM32F7)
 void aux_serial_init(void)
 {
 	/* Enable clocks */
@@ -267,7 +279,7 @@ void aux_serial_set_encoding(const usb_cdc_line_coding_s *const coding)
 
 void aux_serial_get_encoding(usb_cdc_line_coding_s *const coding)
 {
-	coding->dwDTERate = aux_serial_active_baud_rate;
+	coding->dwDTERate = usart_get_baudrate(USBUSART);
 
 	switch (usart_get_stopbits(USBUSART)) {
 	case USART_STOPBITS_1:
