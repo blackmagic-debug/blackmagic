@@ -87,6 +87,11 @@ void traceswo_baud(unsigned int baud)
 	uart_set_databits(TRACEUART, 8);
 }
 
+uint32_t traceswo_get_baudrate(void)
+{
+	return uart_get_baudrate(TRACEUART);
+}
+
 #define FIFO_SIZE 256U
 
 /* RX Fifo buffer */
