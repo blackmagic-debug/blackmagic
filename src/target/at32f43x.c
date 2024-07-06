@@ -420,9 +420,14 @@ static bool at32f43_option_write_erased(target_s *const target, const size_t off
 
 	const uint32_t addr = AT32F43x_USD_BASE + (offset * 2U);
 	DEBUG_TARGET("%s: 0x%08" PRIX32 " <- 0x%04X\n", __func__, addr, value);
+	const uint32_t time_start = platform_time_ms();
 	target_mem32_write16(target, addr, value);
 
 	const bool result = at32f43_flash_busy_wait(target, 0, NULL);
+	const uint32_t time_end = platform_time_ms();
+	const uint32_t time_spent = time_end - time_start;
+	if (time_spent > 20U)
+		DEBUG_TARGET("%s: took %" PRIu32 " ms\n", __func__, time_spent);
 	if (result || offset != 0U)
 		return result;
 
