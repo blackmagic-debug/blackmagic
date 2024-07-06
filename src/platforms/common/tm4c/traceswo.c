@@ -100,6 +100,11 @@ static uint32_t uart_get_baudrate(uint32_t uart)
 	return 4U * clock / div;
 }
 
+uint32_t traceswo_get_baudrate(void)
+{
+	return uart_get_baudrate(TRACEUART);
+}
+
 uint32_t usart_get_baudrate(uint32_t uart)
 {
 	return uart_get_baudrate(uart);

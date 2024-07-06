@@ -28,6 +28,8 @@
 #define SWO_DEFAULT_BAUD 2250000U
 void traceswo_init(uint32_t baudrate, uint32_t swo_chan_bitmask);
 void traceswo_deinit(void);
+uint32_t traceswo_get_baudrate(void);
+uint32_t usart_get_baudrate(uint32_t usart);
 #else
 void traceswo_init(uint32_t swo_chan_bitmask);
 #endif
