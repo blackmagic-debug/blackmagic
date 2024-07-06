@@ -70,6 +70,7 @@ if is_firmware_build
 		'cortexm': 'Cortex-M support',
 		'riscv32': 'RISC-V 32-bit support',
 		'riscv64': 'RISC-V 64-bit support',
+		'at32f4': 'Arterytek parts',
 		'ch579': 'CH579',
 		'efm': 'Energy Micro parts',
 		'hc32': 'HC32 parts',
@@ -242,7 +243,6 @@ endif
 
 target_stm = declare_dependency(
 	sources: files(
-		'at32f43x.c',
 		'ch32f1.c',
 		'stm32f1.c',
 		'stm32f4.c',
@@ -255,6 +255,13 @@ target_stm = declare_dependency(
 		'stm32_common.c',
 	),
 	dependencies: target_stm_deps,
+)
+
+target_at32f4 = declare_dependency(
+	sources: files(
+		'at32f43x.c',
+	),
+	dependencies: target_cortexm,
 )
 
 target_ti = declare_dependency(
@@ -296,6 +303,7 @@ libbmd_target_deps = [
 	target_riscv32,
 	target_riscv64,
 	# Enable all targets for libbmd
+	target_at32f4,
 	target_ch579,
 	target_efm,
 	target_hc32,
