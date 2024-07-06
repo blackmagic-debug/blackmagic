@@ -605,12 +605,10 @@ static bool cmd_rtt(target_s *t, int argc, const char **argv)
 #ifdef PLATFORM_HAS_TRACESWO
 static bool cmd_traceswo_enable(int argc, const char **argv)
 {
-#if TRACESWO_PROTOCOL == 2
-	uint32_t baudrate = SWO_DEFAULT_BAUD;
-#endif
 	uint32_t swo_channelmask = 0; /* swo decoding off */
 	uint8_t decode_arg = 1;
 #if TRACESWO_PROTOCOL == 2
+	uint32_t baudrate = SWO_DEFAULT_BAUD;
 	/* argument: optional baud rate for async mode */
 	if (argc > 1 && argv[1][0] >= '0' && argv[1][0] <= '9') {
 		baudrate = strtoul(argv[1], NULL, 0);
@@ -634,7 +632,10 @@ static bool cmd_traceswo_enable(int argc, const char **argv)
 	}
 
 #if TRACESWO_PROTOCOL == 2
-	gdb_outf("Baudrate: %lu ", baudrate);
+	traceswo_init(baudrate, swo_channelmask);
+	gdb_outf("Baudrate: %lu ", traceswo_get_baudrate());
+#else
+	traceswo_init(swo_channelmask);
 #endif
 	gdb_outf("Channel mask: ");
 	for (size_t i = 0; i < 32U; ++i) {
@@ -642,12 +643,6 @@ static bool cmd_traceswo_enable(int argc, const char **argv)
 		gdb_outf("%" PRIu32, bit);
 	}
 	gdb_outf("\n");
-
-#if TRACESWO_PROTOCOL == 2
-	traceswo_init(baudrate, swo_channelmask);
-#else
-	traceswo_init(swo_channelmask);
-#endif
 
 	gdb_outf("Trace enabled for BMP serial %s, USB EP %u\n", serial_no, TRACE_ENDPOINT);
 	return true;
