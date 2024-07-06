@@ -76,7 +76,7 @@ void traceswo_init(void)
 	nvic_enable_irq(TRACEUART_IRQ);
 
 	/* Un-stall USB endpoint */
-	usbd_ep_stall_set(usbdev, 0x85, 0);
+	usbd_ep_stall_set(usbdev, USB_REQ_TYPE_IN | TRACE_ENDPOINT, 0);
 
 	gpio_mode_setup(GPIOD, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO3);
 }
@@ -111,7 +111,7 @@ void trace_buf_push(void)
 	if (len > 64U)
 		len = 64;
 
-	if (usbd_ep_write_packet(usbdev, 0x85, (uint8_t *)&buf_rx[buf_rx_out], len) == len) {
+	if (usbd_ep_write_packet(usbdev, USB_REQ_TYPE_IN | TRACE_ENDPOINT, (uint8_t *)&buf_rx[buf_rx_out], len) == len) {
 		buf_rx_out += len;
 		buf_rx_out %= FIFO_SIZE;
 	}
