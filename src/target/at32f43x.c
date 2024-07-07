@@ -429,6 +429,20 @@ static bool at32f43_option_write_erased(target_s *const target, const size_t off
 	return status == AT32F43x_FLASH_STS_PRGMERR;
 }
 
+static bool at32f43_option_overwrite(target_s *const target, const uint16_t *const opt_val, const uint16_t ob_count)
+{
+	if (!at32f43_option_erase(target))
+		return false;
+
+	/* Write changed values using 16-bit accesses. */
+	for (size_t i = 0U; i < ob_count; ++i) {
+		if (!at32f43_option_write_erased(target, i, opt_val[i]))
+			return false;
+	}
+
+	return true;
+}
+
 static bool at32f43_option_write(target_s *const target, const uint32_t addr, const uint16_t value)
 {
 	/* Arterytek F435/F437 has either 512 bytes or 4 KiB worth of USD */
@@ -470,20 +484,7 @@ static bool at32f43_option_write(target_s *const target, const uint32_t addr, co
 	opt_val[index] = value;
 
 	/* Wipe everything and write back. Writing matching values without an erase raises a PRGMERR. */
-	bool result = true;
-	do {
-		if (!at32f43_option_erase(target)) {
-			result = false;
-			break;
-		}
-		/* Write changed values using 16-bit accesses. */
-		for (size_t i = 0U; i < ob_count; ++i) {
-			if (!at32f43_option_write_erased(target, i, opt_val[i])) {
-				result = false;
-				break;
-			}
-		}
-	} while (false);
+	const bool result = at32f43_option_overwrite(target, opt_val, ob_count);
 
 	free(opt_val);
 	return result;
