@@ -4,6 +4,7 @@ VPATH += $(PLATFORM_DIR) target
 ENABLE_DEBUG ?= 0
 ENABLE_CORTEXAR ?= 0
 ENABLE_RISCV ?= 0
+ENABLE_CH579 ?= 0
 ENABLE_PUYA ?= 0
 ENABLE_XILINX ?= 0
 
@@ -42,7 +43,6 @@ SRC =              \
 	cortex.c       \
 	cortexm.c      \
 	crc32.c        \
-	ch579.c        \
 	efm32.c        \
 	exception.c    \
 	gdb_if.c       \
@@ -104,6 +104,11 @@ endif
 ifeq ($(ENABLE_PUYA), 1)
 SRC +=     \
 	puya.c
+endif
+
+ifeq ($(ENABLE_CH579), 1)
+SRC +=     \
+	ch579.c
 endif
 
 ifeq ($(ENABLE_CORTEXAR), 1)

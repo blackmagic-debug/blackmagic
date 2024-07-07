@@ -9,6 +9,7 @@ CFLAGS +=-I ./target
 ENABLE_CORTEXAR := 1
 ENABLE_RISCV := 1
 # Target enables
+ENABLE_CH579 := 1
 ENABLE_PUYA := 1
 ENABLE_XILINX := 1
 
