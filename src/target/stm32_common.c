@@ -51,6 +51,11 @@ bool stm32_uid(target_s *const target, const target_addr_t uid_base)
 	uid.wafer_ycoord = read_le2(uid_bytes, 2);
 	uid.wafer_number = uid_bytes[4];
 	memcpy(uid.lot_number, &uid_bytes[5], 7);
+	/* Avoid decoding as non-printable characters */
+	for (size_t j = 5U; j < 12U; j++) {
+		if (uid_bytes[j] < 0x20U || uid_bytes[j] >= 0x7fU)
+			return true;
+	}
 
 	tc_printf(target, "Wafer coords X=%u, Y=%u, number %u; Lot number %.7s\n", uid.wafer_xcoord, uid.wafer_ycoord,
 		uid.wafer_number, uid.lot_number);
