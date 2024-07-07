@@ -90,6 +90,8 @@ static void gdb_if_update_buf(void)
 #else
 	cm_disable_interrupts();
 	__asm__ volatile("isb");
+	/* count_new will become 0 by the time of decision to WFI, so save a copy at entry */
+	const uint32_t count_new_saved = count_new;
 	if (count_new) {
 		memcpy(buffer_out, double_buffer_out, count_new);
 		count_out = count_new;
@@ -99,7 +101,8 @@ static void gdb_if_update_buf(void)
 	}
 	cm_enable_interrupts();
 	__asm__ volatile("isb");
-	if (!count_new)
+	/* Wait for Host OUT packets (count_new is 0 by now, so use the copy saved at entry) */
+	if (!count_new_saved)
 		__WFI();
 #endif
 	if (!count_out)
