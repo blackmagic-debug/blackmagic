@@ -4,6 +4,7 @@ VPATH += $(PLATFORM_DIR) target
 ENABLE_DEBUG ?= 0
 ENABLE_CORTEXAR ?= 0
 ENABLE_RISCV ?= 0
+ENABLE_ARTERY ?= 0
 ENABLE_CH579 ?= 0
 ENABLE_PUYA ?= 0
 ENABLE_XILINX ?= 0
@@ -38,7 +39,6 @@ SRC =              \
 	adiv5.c        \
 	adiv5_jtag.c   \
 	adiv5_swd.c    \
-	at32f43x.c     \
 	command.c      \
 	cortex.c       \
 	cortexm.c      \
@@ -109,6 +109,11 @@ endif
 ifeq ($(ENABLE_CH579), 1)
 SRC +=     \
 	ch579.c
+endif
+
+ifeq ($(ENABLE_ARTERY), 1)
+SRC +=     \
+	at32f43x.c
 endif
 
 ifeq ($(ENABLE_CORTEXAR), 1)
