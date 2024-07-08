@@ -195,8 +195,12 @@ void usb_serial_set_config(usbd_device *dev, uint16_t value)
 #endif
 
 	/* Serial interface */
-	usbd_ep_setup(
-		dev, CDCACM_UART_ENDPOINT, USB_ENDPOINT_ATTR_BULK, CDCACM_PACKET_SIZE / 2U, debug_serial_receive_callback);
+#if defined(USB_HS)
+	const uint16_t uart_epout_size = CDCACM_PACKET_SIZE;
+#else
+	const uint16_t uart_epout_size = CDCACM_PACKET_SIZE / 2U;
+#endif
+	usbd_ep_setup(dev, CDCACM_UART_ENDPOINT, USB_ENDPOINT_ATTR_BULK, uart_epout_size, debug_serial_receive_callback);
 	usbd_ep_setup(dev, CDCACM_UART_ENDPOINT | USB_REQ_TYPE_IN, USB_ENDPOINT_ATTR_BULK, CDCACM_PACKET_SIZE,
 		debug_serial_send_callback);
 #if defined(STM32F4) && CDCACM_UART_NOTIF_ENDPOINT >= 4
