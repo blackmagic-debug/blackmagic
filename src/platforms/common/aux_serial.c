@@ -40,14 +40,14 @@ static uint32_t aux_serial_active_baud_rate;
 
 static char aux_serial_receive_buffer[AUX_UART_BUFFER_SIZE];
 /* Fifo in pointer, writes assumed to be atomic, should be only incremented within RX ISR */
-static uint8_t aux_serial_receive_write_index = 0;
+static uint16_t aux_serial_receive_write_index = 0;
 /* Fifo out pointer, writes assumed to be atomic, should be only incremented outside RX ISR */
-static uint8_t aux_serial_receive_read_index = 0;
+static uint16_t aux_serial_receive_read_index = 0;
 
 #if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4) || defined(STM32F7)
 static char aux_serial_transmit_buffer[2U][AUX_UART_BUFFER_SIZE];
-static uint8_t aux_serial_transmit_buffer_index = 0;
-static uint8_t aux_serial_transmit_buffer_consumed = 0;
+static uint16_t aux_serial_transmit_buffer_index = 0;
+static uint16_t aux_serial_transmit_buffer_consumed = 0;
 static bool aux_serial_transmit_complete = true;
 
 static volatile uint8_t aux_serial_led_state = 0;
