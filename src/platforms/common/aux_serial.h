@@ -27,11 +27,14 @@
 
 #if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4) || defined(STM32F7)
 /* XXX: Does the st_usbfs_v2_usb_driver work on F3 with 128 byte buffers? */
-#if defined(STM32F1) || defined(STM32F3) || defined(STM32F4) || defined(STM32F7)
+#if defined(STM32F1) || defined(STM32F3) || defined(STM32F4)
 #define USART_DMA_BUF_SHIFT 7U
 #elif defined(STM32F0)
 /* The st_usbfs_v2_usb_driver only works with up to 64-byte buffers on the F0 parts */
 #define USART_DMA_BUF_SHIFT 6U
+#elif defined(STM32F7)
+/* HS bulk packets are 512 bytes, use 2x that */
+#define USART_DMA_BUF_SHIFT 10U
 #endif
 
 #define USART_DMA_BUF_SIZE   (1U << USART_DMA_BUF_SHIFT)
