@@ -187,7 +187,7 @@ typedef struct stm32h7_flash {
 } stm32h7_flash_s;
 
 typedef struct stm32h7_priv {
-	uint32_t dbg_cr;
+	uint32_t dbgmcu_config;
 	char name[STM32H7_NAME_MAX_LENGTH];
 } stm32h7_priv_s;
 
@@ -244,7 +244,7 @@ static void stm32h7_add_flash(target_s *target, uint32_t addr, size_t length, si
 	target_add_flash(target, target_flash);
 }
 
-void stm32h7_configure_wdts(target_s *const target)
+static void stm32h7_configure_wdts(target_s *const target)
 {
 	/*
 	 * Feed the watchdogs to ensure things are stable - though note that the DBGMCU writes
@@ -277,7 +277,7 @@ bool stm32h7_probe(target_s *target)
 		DEBUG_ERROR("calloc: failed in %s\n", __func__);
 		return false;
 	}
-	priv_storage->dbg_cr = target_mem32_read32(target, DBGMCU_CONFIG);
+	priv_storage->dbgmcu_config = target_mem32_read32(target, DBGMCU_CONFIG);
 	target->target_storage = priv_storage;
 
 	memcpy(priv_storage->name, "STM32", 5U);
@@ -311,8 +311,8 @@ bool stm32h7_probe(target_s *target)
 	 * debugging through sleep, stop and standby states for domain D1
 	 */
 	target_mem32_write32(target, DBGMCU_CONFIG,
-		DBGMCU_CONFIG_DBGSLEEP_D1 | DBGMCU_CONFIG_DBGSTOP_D1 | DBGMCU_CONFIG_DBGSTBY_D1 | DBGMCU_CONFIG_D1DBGCKEN |
-			DBGMCU_CONFIG_D3DBGCKEN);
+		priv_storage->dbgmcu_config | DBGMCU_CONFIG_DBGSLEEP_D1 | DBGMCU_CONFIG_DBGSTOP_D1 | DBGMCU_CONFIG_DBGSTBY_D1 |
+			DBGMCU_CONFIG_D1DBGCKEN | DBGMCU_CONFIG_D3DBGCKEN);
 	stm32h7_configure_wdts(target);
 
 	/* Build the RAM map */
@@ -421,8 +421,8 @@ static bool stm32h7_attach(target_s *target)
 
 static void stm32h7_detach(target_s *target)
 {
-	stm32h7_priv_s *ps = (stm32h7_priv_s *)target->target_storage;
-	target_mem32_write32(target, DBGMCU_CONFIG, ps->dbg_cr);
+	stm32h7_priv_s *priv = (stm32h7_priv_s *)target->target_storage;
+	target_mem32_write32(target, DBGMCU_CONFIG, priv->dbgmcu_config);
 	cortexm_detach(target);
 }
 
