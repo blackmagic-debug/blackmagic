@@ -115,6 +115,10 @@ static bool stm32f1_mass_erase(target_s *target);
 #define DBGMCU_IDCODE_MM32L0 0x40013400U
 #define DBGMCU_IDCODE_MM32F3 0x40007080U
 
+#define STM32F1_FLASH_BANK1_BASE 0x08000000U
+#define STM32F1_FLASH_BANK2_BASE 0x08080000U
+#define STM32F1_SRAM_BASE        0x20000000U
+
 #define STM32F1_TOPT_32BIT_WRITES (1U << 8U)
 
 static void stm32f1_add_flash(target_s *target, uint32_t addr, size_t length, size_t erasesize)
@@ -519,46 +523,43 @@ bool stm32f1_probe(target_s *target)
 {
 	const uint16_t device_id = stm32f1_read_idcode(target);
 
-	target->mass_erase = stm32f1_mass_erase;
+	uint32_t ram_size = 0;
 	size_t flash_size = 0;
-	size_t block_size = 0x400;
+	size_t block_size = 0;
 
 	switch (device_id) {
 	case 0x29bU: /* CS clone */
 	case 0x410U: /* Medium density */
 	case 0x412U: /* Low density */
 	case 0x420U: /* Value Line, Low-/Medium density */
-		target_add_ram32(target, 0x20000000, 0x5000);
-		stm32f1_add_flash(target, 0x8000000, 0x20000, 0x400);
-		target_add_commands(target, stm32f1_cmd_list, "STM32 LD/MD/VL-LD/VL-MD");
-		/* Test for clone parts with Core rev 2*/
+		ram_size = 0x5000;
+		flash_size = 0x20000;
+		block_size = 0x400;
+		/* Test for clone parts with Core rev 2 */
 		adiv5_access_port_s *ap = cortex_ap(target);
 		if ((ap->idr >> 28U) > 1U) {
-			target->driver = "STM32F1 (clone) medium density";
+			target->driver = "Clone STM32F1 medium density";
 			DEBUG_WARN("Detected clone STM32F1\n");
 		} else
-			target->driver = "STM32F1 medium density";
-		target->part_id = device_id;
-		return true;
+			target->driver = "STM32F1 L/M density";
+		break;
 
 	case 0x414U: /* High density */
 	case 0x418U: /* Connectivity Line */
 	case 0x428U: /* Value Line, High Density */
-		target->driver = "STM32F1  VL density";
-		target->part_id = device_id;
-		target_add_ram32(target, 0x20000000, 0x10000);
-		stm32f1_add_flash(target, 0x8000000, 0x80000, 0x800);
-		target_add_commands(target, stm32f1_cmd_list, "STM32 HF/CL/VL-HD");
-		return true;
+		target->driver = "STM32F1 VL density";
+		ram_size = 0x10000;
+		flash_size = 0x80000;
+		block_size = 0x800;
+		break;
 
 	case 0x430U: /* XL-density */
-		target->driver = "STM32F1  XL density";
-		target->part_id = device_id;
-		target_add_ram32(target, 0x20000000, 0x18000);
-		stm32f1_add_flash(target, 0x8000000, 0x80000, 0x800);
-		stm32f1_add_flash(target, 0x8080000, 0x80000, 0x800);
-		target_add_commands(target, stm32f1_cmd_list, "STM32 XL/VL-XL");
-		return true;
+		target->driver = "STM32F1 XL density";
+		ram_size = 0x18000;
+		flash_size = 0x80000;
+		block_size = 0x800;
+		stm32f1_add_flash(target, STM32F1_FLASH_BANK2_BASE, flash_size, block_size);
+		break;
 
 	case 0x438U: /* STM32F303x6/8 and STM32F328 */
 	case 0x422U: /* STM32F30x */
@@ -569,48 +570,56 @@ bool stm32f1_probe(target_s *target)
 	case 0x432U: /* STM32F37x */
 	case 0x439U: /* STM32F302C8 */
 		target->driver = "STM32F3";
-		target->part_id = device_id;
-		target_add_ram32(target, 0x20000000, 0x10000);
-		stm32f1_add_flash(target, 0x8000000, 0x80000, 0x800);
+		ram_size = 0x10000;
+		flash_size = 0x80000;
+		block_size = 0x800;
 		target_add_commands(target, stm32f1_cmd_list, "STM32F3");
-		return true;
+		break;
 
 	case 0x444U: /* STM32F03 RM0091 Rev. 7, STM32F030x[4|6] RM0360 Rev. 4 */
 		target->driver = "STM32F03";
+		ram_size = 0x5000;
 		flash_size = 0x8000;
+		block_size = 0x400;
 		break;
 
 	case 0x445U: /* STM32F04 RM0091 Rev. 7, STM32F070x6 RM0360 Rev. 4 */
 		target->driver = "STM32F04/F070x6";
+		ram_size = 0x5000;
 		flash_size = 0x8000;
+		block_size = 0x400;
 		break;
 
 	case 0x440U: /* STM32F05 RM0091 Rev. 7, STM32F030x8 RM0360 Rev. 4 */
 		target->driver = "STM32F05/F030x8";
+		ram_size = 0x5000;
 		flash_size = 0x10000;
+		block_size = 0x400;
 		break;
 
 	case 0x448U: /* STM32F07 RM0091 Rev. 7, STM32F070xb RM0360 Rev. 4 */
 		target->driver = "STM32F07";
+		ram_size = 0x5000;
 		flash_size = 0x20000;
 		block_size = 0x800;
 		break;
 
 	case 0x442U: /* STM32F09 RM0091 Rev. 7, STM32F030xc RM0360 Rev. 4 */
 		target->driver = "STM32F09/F030xc";
+		ram_size = 0x5000;
 		flash_size = 0x40000;
 		block_size = 0x800;
 		break;
 
 	default: /* NONE */
-		target->mass_erase = NULL;
 		return false;
 	}
 
+	target->mass_erase = stm32f1_mass_erase;
 	target->part_id = device_id;
-	target_add_ram32(target, 0x20000000, 0x5000);
-	stm32f1_add_flash(target, 0x8000000, flash_size, block_size);
-	target_add_commands(target, stm32f1_cmd_list, "STM32F0");
+	target_add_ram32(target, STM32F1_SRAM_BASE, ram_size);
+	stm32f1_add_flash(target, STM32F1_FLASH_BANK1_BASE, flash_size, block_size);
+	target_add_commands(target, stm32f1_cmd_list, target->driver);
 	return true;
 }
 
