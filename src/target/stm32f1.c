@@ -107,8 +107,11 @@ static bool stm32f1_mass_erase(target_s *target);
 #define STM32F1_DBGMCU_CONFIG_IWDG_STOP   (1U << 8U)
 #define STM32F1_DBGMCU_CONFIG_WWDG_STOP   (1U << 9U)
 
-#define DBGMCU_IDCODE_F0     0x40015800U
-#define DBGMCU_IDCODE_GD32E5 0xe0044000U
+#define DBGMCU_IDCODE_F0 0x40015800U
+
+#define GD32E5_DBGMCU_BASE   0xe0044000U
+#define GD32E5_DBGMCU_IDCODE (GD32E5_DBGMCU_BASE + 0x000U)
+#define GD32E5_DBGMCU_CONFIG (GD32E5_DBGMCU_BASE + 0x004U)
 
 #define STM32F3_UID_BASE 0x1ffff7acU
 #define STM32F1_UID_BASE 0x1ffff7e8U
@@ -159,9 +162,10 @@ static uint16_t stm32f1_read_idcode(target_s *const target, target_addr32_t *con
 		(target->cpuid & CORTEX_CPUID_PARTNO_MASK) == CORTEX_M23) {
 		return target_mem32_read32(target, DBGMCU_IDCODE_F0) & 0xfffU;
 	}
-	/* Is this a Cortex-M33 core with STM32F1-style peripherals? (GD32E50x) */
+	/* Is this a Cortex-M33 core with STM32F1-style peripherals? (GD32E50x, GD32E51x) */
 	if ((target->cpuid & CORTEX_CPUID_PARTNO_MASK) == CORTEX_M33) {
-		return target_mem32_read32(target, DBGMCU_IDCODE_GD32E5) & 0xfffU;
+		*config_taddr = GD32E5_DBGMCU_CONFIG;
+		return target_mem32_read32(target, GD32E5_DBGMCU_IDCODE) & 0xfffU;
 	}
 
 	*config_taddr = STM32F1_DBGMCU_CONFIG;
