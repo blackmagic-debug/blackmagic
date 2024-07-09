@@ -276,15 +276,15 @@ bool gd32f1_probe(target_s *target)
 	 */
 	if (flash_size > 512U) {
 		const uint16_t flash_size_bank1 = flash_size - 512U;
-		stm32f1_add_flash(target, 0x8000000, 512U * 1024U, block_size);
-		stm32f1_add_flash(target, 0x8080000, flash_size_bank1 * 1024U, 0x1000U);
+		stm32f1_add_flash(target, STM32F1_FLASH_BANK1_BASE, 512U * 1024U, block_size);
+		stm32f1_add_flash(target, STM32F1_FLASH_BANK2_BASE, flash_size_bank1 * 1024U, 0x1000U);
 	} else
-		stm32f1_add_flash(target, 0x8000000, (size_t)flash_size * 1024U, block_size);
+		stm32f1_add_flash(target, STM32F1_FLASH_BANK1_BASE, (size_t)flash_size * 1024U, block_size);
 
 	target->part_id = device_id;
 	target->target_options |= STM32F1_TOPT_32BIT_WRITES;
 	target->mass_erase = stm32f1_mass_erase;
-	target_add_ram32(target, 0x20000000, ram_size * 1024U);
+	target_add_ram32(target, STM32F1_SRAM_BASE, ram_size * 1024U);
 	target_add_commands(target, stm32f1_cmd_list, target->driver);
 
 	/* Now we have a stable debug environment, make sure the WDTs + WFI and WFE instructions can't cause problems */
@@ -314,8 +314,8 @@ bool gd32vf1_probe(target_s *const target)
 
 	target->part_id = device_id;
 	target->mass_erase = stm32f1_mass_erase;
-	target_add_ram32(target, 0x20000000, ram_size * 1024U);
-	stm32f1_add_flash(target, 0x8000000, (size_t)flash_size * 1024U, 0x400U);
+	target_add_ram32(target, STM32F1_SRAM_BASE, ram_size * 1024U);
+	stm32f1_add_flash(target, STM32F1_FLASH_BANK1_BASE, (size_t)flash_size * 1024U, 0x400U);
 	target_add_commands(target, stm32f1_cmd_list, target->driver);
 
 	/* Now we have a stable debug environment, make sure the WDTs + sleep instructions can't cause problems */
@@ -352,7 +352,7 @@ static bool at32f40_detect(target_s *target, const uint16_t part_id)
 	case 0x024aU: // AT32F407RCT7 / LQFP64
 	case 0x0254U: // AT32F407AVCT7 / LQFP100
 		// Flash (C): 256 KiB / 2 KiB per block
-		stm32f1_add_flash(target, 0x08000000, 256U * 1024U, 2U * 1024U);
+		stm32f1_add_flash(target, STM32F1_FLASH_BANK1_BASE, 256U * 1024U, 2U * 1024U);
 		break;
 	case 0x02cdU: // AT32F403AVET7 / LQFP100
 	case 0x02ceU: // AT32F403ARET7 / LQFP64
@@ -361,19 +361,19 @@ static bool at32f40_detect(target_s *target, const uint16_t part_id)
 	case 0x02d1U: // AT32F407VET7 / LQFP100
 	case 0x02d2U: // AT32F407RET7 / LQFP64
 		// Flash (E): 512 KiB / 2 KiB per block
-		stm32f1_add_flash(target, 0x08000000, 512U * 1024U, 2U * 1024U);
+		stm32f1_add_flash(target, STM32F1_FLASH_BANK1_BASE, 512U * 1024U, 2U * 1024U);
 		break;
 	default:
 		if (at32f40_is_dual_bank(part_id)) {
 			// Flash (G): 1024 KiB / 2 KiB per block, dual-bank
-			stm32f1_add_flash(target, 0x08000000, 512U * 1024U, 2U * 1024U);
-			stm32f1_add_flash(target, 0x08080000, 512U * 1024U, 2U * 1024U);
+			stm32f1_add_flash(target, STM32F1_FLASH_BANK1_BASE, 512U * 1024U, 2U * 1024U);
+			stm32f1_add_flash(target, STM32F1_FLASH_BANK2_BASE, 512U * 1024U, 2U * 1024U);
 			break;
 		} else // Unknown/undocumented
 			return false;
 	}
 	// All parts have 96 KiB SRAM
-	target_add_ram32(target, 0x20000000, 96U * 1024U);
+	target_add_ram32(target, STM32F1_SRAM_BASE, 96U * 1024U);
 	target->driver = "AT32F403A/407";
 	target->part_id = part_id;
 	target->target_options |= STM32F1_TOPT_32BIT_WRITES;
@@ -392,7 +392,7 @@ static bool at32f41_detect(target_s *target, const uint16_t part_id)
 	case 0x0243U: // LQFP64_7x7
 	case 0x024cU: // QFN48_6x6
 		// Flash (C): 256 KiB / 2 KiB per block
-		stm32f1_add_flash(target, 0x08000000, 256U * 1024U, 2U * 1024U);
+		stm32f1_add_flash(target, STM32F1_FLASH_BANK1_BASE, 256U * 1024U, 2U * 1024U);
 		break;
 	case 0x01c4U: // LQFP64_10x10
 	case 0x01c5U: // LQFP48_7x7
@@ -400,20 +400,20 @@ static bool at32f41_detect(target_s *target, const uint16_t part_id)
 	case 0x01c7U: // LQFP64_7x7
 	case 0x01cdU: // QFN48_6x6
 		// Flash (B): 128 KiB / 2 KiB per block
-		stm32f1_add_flash(target, 0x08000000, 128U * 1024U, 2U * 1024U);
+		stm32f1_add_flash(target, STM32F1_FLASH_BANK1_BASE, 128U * 1024U, 2U * 1024U);
 		break;
 	case 0x0108U: // LQFP64_10x10
 	case 0x0109U: // LQFP48_7x7
 	case 0x010aU: // QFN32_4x4
 		// Flash (8): 64 KiB / 2 KiB per block
-		stm32f1_add_flash(target, 0x08000000, 64U * 1024U, 2U * 1024U);
+		stm32f1_add_flash(target, STM32F1_FLASH_BANK1_BASE, 64U * 1024U, 2U * 1024U);
 		break;
 	// Unknown/undocumented
 	default:
 		return false;
 	}
 	// All parts have 32 KiB SRAM
-	target_add_ram32(target, 0x20000000, 32U * 1024U);
+	target_add_ram32(target, STM32F1_SRAM_BASE, 32U * 1024U);
 	target->driver = "AT32F415";
 	target->part_id = part_id;
 	target->target_options |= STM32F1_TOPT_32BIT_WRITES;
@@ -511,7 +511,6 @@ void mm32l0_mem_write_sized(adiv5_access_port_s *ap, target_addr64_t dest, const
 }
 
 /* Identify MM32 devices (Cortex-M0) */
-
 bool mm32l0xx_probe(target_s *target)
 {
 	const char *name;
@@ -550,8 +549,8 @@ bool mm32l0xx_probe(target_s *target)
 	target->part_id = mm32_id & 0xfffU;
 	target->driver = name;
 	target->mass_erase = stm32f1_mass_erase;
-	target_add_ram32(target, 0x20000000U, ram_kbyte * 1024U);
-	stm32f1_add_flash(target, 0x08000000U, flash_kbyte * 1024U, block_size);
+	target_add_ram32(target, STM32F1_SRAM_BASE, ram_kbyte * 1024U);
+	stm32f1_add_flash(target, STM32F1_FLASH_BANK1_BASE, flash_kbyte * 1024U, block_size);
 	target_add_commands(target, stm32f1_cmd_list, name);
 	cortex_ap(target)->dp->mem_write = mm32l0_mem_write_sized;
 	return true;
@@ -594,10 +593,10 @@ bool mm32f3xx_probe(target_s *target)
 	target->driver = name;
 	target->mass_erase = stm32f1_mass_erase;
 	if (ram1_kbyte != 0)
-		target_add_ram32(target, 0x20000000U, ram1_kbyte * 1024U);
+		target_add_ram32(target, STM32F1_SRAM_BASE, ram1_kbyte * 1024U);
 	if (ram2_kbyte != 0)
 		target_add_ram32(target, 0x30000000U, ram2_kbyte * 1024U);
-	stm32f1_add_flash(target, 0x08000000U, flash_kbyte * 1024U, block_size);
+	stm32f1_add_flash(target, STM32F1_FLASH_BANK1_BASE, flash_kbyte * 1024U, block_size);
 	target_add_commands(target, stm32f1_cmd_list, name);
 	return true;
 }
