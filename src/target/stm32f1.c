@@ -44,19 +44,6 @@
 #include "jep106.h"
 #include "stm32_common.h"
 
-static bool stm32f1_cmd_option(target_s *target, int argc, const char **argv);
-static bool stm32f1_cmd_uid(target_s *target, int argc, const char **argv);
-
-const command_s stm32f1_cmd_list[] = {
-	{"option", stm32f1_cmd_option, "Manipulate option bytes"},
-	{"uid", stm32f1_cmd_uid, "Print unique device ID"},
-	{NULL, NULL, NULL},
-};
-
-static bool stm32f1_flash_erase(target_flash_s *flash, target_addr_t addr, size_t len);
-static bool stm32f1_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t len);
-static bool stm32f1_mass_erase(target_s *target);
-
 /* Flash Program ad Erase Controller Register Map */
 #define FPEC_BASE     0x40022000U
 #define FLASH_ACR     (FPEC_BASE + 0x00U)
@@ -147,6 +134,21 @@ typedef struct stm32f1_priv {
 	uint32_t dbgmcu_config;
 } stm32f1_priv_s;
 
+static bool stm32f1_cmd_option(target_s *target, int argc, const char **argv);
+static bool stm32f1_cmd_uid(target_s *target, int argc, const char **argv);
+
+const command_s stm32f1_cmd_list[] = {
+	{"option", stm32f1_cmd_option, "Manipulate option bytes"},
+	{"uid", stm32f1_cmd_uid, "Print unique device ID"},
+	{NULL, NULL, NULL},
+};
+
+static bool stm32f1_attach(target_s *target);
+static void stm32f1_detach(target_s *target);
+static bool stm32f1_flash_erase(target_flash_s *flash, target_addr_t addr, size_t len);
+static bool stm32f1_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t len);
+static bool stm32f1_mass_erase(target_s *target);
+
 static void stm32f1_add_flash(target_s *target, uint32_t addr, size_t length, size_t erasesize)
 {
 	target_flash_s *flash = calloc(1, sizeof(*flash));
@@ -196,6 +198,9 @@ static bool stm32f1_configure_dbgmcu(target_s *const target, const target_addr32
 		/* Get the current value of the debug config register (and store it for later) */
 		priv_storage->dbgmcu_config = target_mem32_read32(target, dbgmcu_config);
 		target->target_storage = priv_storage;
+
+		target->attach = stm32f1_attach;
+		target->detach = stm32f1_detach;
 	}
 
 	const stm32f1_priv_s *const priv = (stm32f1_priv_s *)target->target_storage;
@@ -694,6 +699,24 @@ bool stm32f1_probe(target_s *target)
 
 	/* Now we have a stable debug environment, make sure the WDTs + WFI and WFE instructions can't cause problems */
 	return stm32f1_configure_dbgmcu(target, dbgmcu_config_taddr);
+}
+
+static bool stm32f1_attach(target_s *const target)
+{
+	/*
+	 * Try to attach to the part, and then ensure that the WDTs + WFI and WFE
+	 * instructions can't cause problems (this is duplicated as it's undone by detach.)
+	 */
+	return cortexm_attach(target) && stm32f1_configure_dbgmcu(target, 0U);
+}
+
+static void stm32f1_detach(target_s *const target)
+{
+	const stm32f1_priv_s *const priv = (stm32f1_priv_s *)target->target_storage;
+	/* Reverse all changes to the DBGMCU config register */
+	target_mem32_write32(target, priv->dbgmcu_config_taddr, priv->dbgmcu_config);
+	/* Now defer to the normal Cortex-M detach routine to complete the detach */
+	cortexm_detach(target);
 }
 
 static bool stm32f1_flash_unlock(target_s *target, uint32_t bank_offset)
