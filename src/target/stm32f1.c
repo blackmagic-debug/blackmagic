@@ -39,6 +39,8 @@
  *   https://www.gigadevice.com.cn/Public/Uploads/uploadfile/files/20240611/GD32E51x_User_Manual_Rev1.2.pdf
  * GD32VF103 RISC-V 32-bit MCU User Manual, Rev. 1.5
  *   https://www.gigadevice.com.cn/Public/Uploads/uploadfile/files/20240407/GD32VF103_User_Manual_Rev1.5.pdf
+ * MM32L0xx 32-bit Microcontroller Based on ARM Cortex M0 Core, Version 1.15_n
+ *   https://www.mindmotion.com.cn/download/products/UM_MM32L0xx_n_EN.pdf
  */
 
 #include "general.h"
@@ -113,6 +115,10 @@
 #define GD32E5_DBGMCU_IDCODE (GD32E5_DBGMCU_BASE + 0x000U)
 #define GD32E5_DBGMCU_CONFIG (GD32E5_DBGMCU_BASE + 0x004U)
 
+#define MM32L0_DBGMCU_BASE   0x40013400U
+#define MM32L0_DBGMCU_IDCODE (MM32L0_DBGMCU_BASE + 0x000U)
+#define MM32L0_DBGMCU_CONFIG (MM32L0_DBGMCU_BASE + 0x004U)
+
 #define STM32F3_UID_BASE 0x1ffff7acU
 #define STM32F1_UID_BASE 0x1ffff7e8U
 
@@ -124,7 +130,6 @@
 #define AT32F41_SERIES             0x70030000U
 #define AT32F40_SERIES             0x70050000U
 
-#define DBGMCU_IDCODE_MM32L0 0x40013400U
 #define DBGMCU_IDCODE_MM32F3 0x40007080U
 
 #define STM32F1_FLASH_BANK1_BASE 0x08000000U
@@ -513,29 +518,28 @@ void mm32l0_mem_write_sized(adiv5_access_port_s *ap, target_addr64_t dest, const
 /* Identify MM32 devices (Cortex-M0) */
 bool mm32l0xx_probe(target_s *target)
 {
-	const char *name;
 	size_t flash_kbyte = 0;
 	size_t ram_kbyte = 0;
 	size_t block_size = 0x400U;
 
-	const uint32_t mm32_id = target_mem32_read32(target, DBGMCU_IDCODE_MM32L0);
+	const uint32_t mm32_id = target_mem32_read32(target, MM32L0_DBGMCU_IDCODE);
 	if (target_check_error(target)) {
-		DEBUG_ERROR("%s: read error at 0x%" PRIx32 "\n", __func__, (uint32_t)DBGMCU_IDCODE_MM32L0);
+		DEBUG_ERROR("%s: read error at 0x%" PRIx32 "\n", __func__, (uint32_t)MM32L0_DBGMCU_IDCODE);
 		return false;
 	}
 	switch (mm32_id) {
 	case 0xcc568091U:
-		name = "MM32L07x";
+		target->driver = "MM32L07x";
 		flash_kbyte = 128;
 		ram_kbyte = 8;
 		break;
 	case 0xcc4460b1:
-		name = "MM32SPIN05";
+		target->driver = "MM32SPIN05";
 		flash_kbyte = 32;
 		ram_kbyte = 4;
 		break;
 	case 0xcc56a097U:
-		name = "MM32SPIN27";
+		target->driver = "MM32SPIN27";
 		flash_kbyte = 128;
 		ram_kbyte = 12;
 		break;
@@ -547,13 +551,14 @@ bool mm32l0xx_probe(target_s *target)
 		return false;
 	}
 	target->part_id = mm32_id & 0xfffU;
-	target->driver = name;
 	target->mass_erase = stm32f1_mass_erase;
 	target_add_ram32(target, STM32F1_SRAM_BASE, ram_kbyte * 1024U);
 	stm32f1_add_flash(target, STM32F1_FLASH_BANK1_BASE, flash_kbyte * 1024U, block_size);
-	target_add_commands(target, stm32f1_cmd_list, name);
+	target_add_commands(target, stm32f1_cmd_list, target->driver);
 	cortex_ap(target)->dp->mem_write = mm32l0_mem_write_sized;
-	return true;
+
+	/* Now we have a stable debug environment, make sure the WDTs + WFI and WFE instructions can't cause problems */
+	return stm32f1_configure_dbgmcu(target, MM32L0_DBGMCU_CONFIG);
 }
 
 /* Identify MM32 devices (Cortex-M3, Star-MC1) */
