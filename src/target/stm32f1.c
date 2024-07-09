@@ -107,7 +107,16 @@ static bool stm32f1_mass_erase(target_s *target);
 #define STM32F1_DBGMCU_CONFIG_IWDG_STOP   (1U << 8U)
 #define STM32F1_DBGMCU_CONFIG_WWDG_STOP   (1U << 9U)
 
-#define DBGMCU_IDCODE_F0 0x40015800U
+#define STM32F0_DBGMCU_BASE       0x40015800U
+#define STM32F0_DBGMCU_IDCODE     (STM32F0_DBGMCU_BASE + 0x000U)
+#define STM32F0_DBGMCU_CONFIG     (STM32F0_DBGMCU_BASE + 0x004U)
+#define STM32F0_DBGMCU_APB1FREEZE (STM32F0_DBGMCU_BASE + 0x008U)
+#define STM32F0_DBGMCU_APB2FREEZE (STM32F0_DBGMCU_BASE + 0x00cU)
+
+#define STM32F0_DBGMCU_CONFIG_DBG_STOP    (1U << 1U)
+#define STM32F0_DBGMCU_CONFIG_DBG_STANDBY (1U << 2U)
+#define STM32F0_DBGMCU_APB1FREEZE_WWDG    (1U << 11U)
+#define STM32F0_DBGMCU_APB1FREEZE_IWDG    (1U << 12U)
 
 #define GD32E5_DBGMCU_BASE   0xe0044000U
 #define GD32E5_DBGMCU_IDCODE (GD32E5_DBGMCU_BASE + 0x000U)
@@ -160,7 +169,8 @@ static uint16_t stm32f1_read_idcode(target_s *const target, target_addr32_t *con
 {
 	if ((target->cpuid & CORTEX_CPUID_PARTNO_MASK) == CORTEX_M0 ||
 		(target->cpuid & CORTEX_CPUID_PARTNO_MASK) == CORTEX_M23) {
-		return target_mem32_read32(target, DBGMCU_IDCODE_F0) & 0xfffU;
+		*config_taddr = STM32F0_DBGMCU_CONFIG;
+		return target_mem32_read32(target, STM32F0_DBGMCU_IDCODE) & 0xfffU;
 	}
 	/* Is this a Cortex-M33 core with STM32F1-style peripherals? (GD32E50x, GD32E51x) */
 	if ((target->cpuid & CORTEX_CPUID_PARTNO_MASK) == CORTEX_M33) {
@@ -170,6 +180,28 @@ static uint16_t stm32f1_read_idcode(target_s *const target, target_addr32_t *con
 
 	*config_taddr = STM32F1_DBGMCU_CONFIG;
 	return target_mem32_read32(target, STM32F1_DBGMCU_IDCODE) & 0xfffU;
+}
+
+static void stm32f1_configure_dbgmcu(target_s *const target)
+{
+	const stm32f1_priv_s *const priv = (stm32f1_priv_s *)target->target_storage;
+	const target_addr32_t dbgmcu_config_taddr = priv->dbgmcu_config_taddr;
+	/* Figure out which style of DBGMCU we're working with */
+	if (dbgmcu_config_taddr == STM32F0_DBGMCU_CONFIG) {
+		/* Now we have a stable debug environment, make sure the WDTs can't bonk the processor out from under us */
+		target_mem32_write32(
+			target, STM32F0_DBGMCU_APB1FREEZE, STM32F0_DBGMCU_APB1FREEZE_IWDG | STM32F0_DBGMCU_APB1FREEZE_WWDG);
+		/* Then Reconfigure the config register to prevent WFI/WFE from cutting debug access */
+		target_mem32_write32(
+			target, STM32F0_DBGMCU_CONFIG, STM32F0_DBGMCU_CONFIG_DBG_STANDBY | STM32F0_DBGMCU_CONFIG_DBG_STOP);
+	} else
+		/*
+		 * Reconfigure the DBGMCU to prevent the WDTs causing havoc and problems
+		 * and WFI/WFE from cutting debug access too
+		 */
+		target_mem32_write32(target, dbgmcu_config_taddr,
+			priv->dbgmcu_config | STM32F1_DBGMCU_CONFIG_WWDG_STOP | STM32F1_DBGMCU_CONFIG_IWDG_STOP |
+				STM32F1_DBGMCU_CONFIG_DBG_STANDBY | STM32F1_DBGMCU_CONFIG_DBG_STOP | STM32F1_DBGMCU_CONFIG_DBG_SLEEP);
 }
 
 /* Identify GD32F1, GD32F2 and GD32F3 chips */
@@ -656,9 +688,7 @@ bool stm32f1_probe(target_s *target)
 	target_add_commands(target, stm32f1_cmd_list, target->driver);
 
 	/* Now we have a stable debug environment, make sure the WDTs can't bonk the processor out from under us */
-	target_mem32_write32(target, dbgmcu_config_taddr,
-		priv_storage->dbgmcu_config | STM32F1_DBGMCU_CONFIG_WWDG_STOP | STM32F1_DBGMCU_CONFIG_IWDG_STOP |
-			STM32F1_DBGMCU_CONFIG_DBG_STANDBY | STM32F1_DBGMCU_CONFIG_DBG_STOP | STM32F1_DBGMCU_CONFIG_DBG_SLEEP);
+	stm32f1_configure_dbgmcu(target);
 	return true;
 }
 
