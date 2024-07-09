@@ -21,20 +21,20 @@
  */
 
 /*
- * This file implements STM32 target specific functions for detecting
+ * This file implements STM32F0/F1 + clones, and GF32E5 target specific functions for detecting
  * the device, providing the XML memory map and Flash memory programming.
  *
  * References:
- * ST doc - RM0008
- *   Reference manual - STM32F101xx, STM32F102xx, STM32F103xx, STM32F105xx
- *   and STM32F107xx advanced ARM-based 32-bit MCUs
- * ST doc - RM0091
- *   Reference manual - STM32F0x1/STM32F0x2/STM32F0x8
- *   advanced ARM®-based 32-bit MCUs
- * ST doc - RM0360
- *   Reference manual - STM32F030x4/x6/x8/xC and STM32F070x6/xB
- * ST doc - PM0075
- *   Programming manual - STM32F10xxx Flash memory microcontrollers
+ * RM0008 - STM32F101xx, STM32F102xx, STM32F103xx, STM32F105xx and STM32F107xx advanced Arm®-based 32-bit MCUs, Rev. 21
+ *   https://www.st.com/resource/en/reference_manual/rm0008-stm32f101xx-stm32f102xx-stm32f103xx-stm32f105xx-and-stm32f107xx-advanced-armbased-32bit-mcus-stmicroelectronics.pdf
+ * RM0091 - STM32F0x1/STM32F0x2/STM32F0x8 advanced ARM®-based 32-bit MCUs
+ *   https://www.st.com/resource/en/reference_manual/rm0091-stm32f0x1stm32f0x2stm32f0x8-advanced-armbased-32bit-mcus-stmicroelectronics.pdf
+ * RM0360 - STM32F030x4/x6/x8/xC and STM32F070x6/xB
+ *   https://www.st.com/resource/en/reference_manual/rm0360-stm32f030x4x6x8xc-and-stm32f070x6xb-advanced-armbased-32bit-mcus-stmicroelectronics.pdf
+ * PM0075 - STM32F10xxx Flash memory microcontrollers
+ *   https://www.st.com/resource/en/programming_manual/pm0075-stm32f10xxx-flash-memory-microcontrollers-stmicroelectronics.pdf
+ * GD32E51x Arm® Cortex®-M33 32-bit MCU User Manual, Rev. 1.2
+ *   https://www.gigadevice.com.cn/Public/Uploads/uploadfile/files/20240611/GD32E51x_User_Manual_Rev1.2.pdf
  */
 
 #include "general.h"
