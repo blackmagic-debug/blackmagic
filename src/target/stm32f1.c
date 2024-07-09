@@ -378,7 +378,9 @@ static bool at32f40_detect(target_s *target, const uint16_t part_id)
 	target->part_id = part_id;
 	target->target_options |= STM32F1_TOPT_32BIT_WRITES;
 	target->mass_erase = stm32f1_mass_erase;
-	return true;
+
+	/* Now we have a stable debug environment, make sure the WDTs + WFI and WFE instructions can't cause problems */
+	return stm32f1_configure_dbgmcu(target, STM32F1_DBGMCU_CONFIG);
 }
 
 static bool at32f41_detect(target_s *target, const uint16_t part_id)
@@ -416,7 +418,9 @@ static bool at32f41_detect(target_s *target, const uint16_t part_id)
 	target->part_id = part_id;
 	target->target_options |= STM32F1_TOPT_32BIT_WRITES;
 	target->mass_erase = stm32f1_mass_erase;
-	return true;
+
+	/* Now we have a stable debug environment, make sure the WDTs + WFI and WFE instructions can't cause problems */
+	return stm32f1_configure_dbgmcu(target, STM32F1_DBGMCU_CONFIG);
 }
 
 /* Identify AT32F40x "Mainstream" line devices (Cortex-M4) */
