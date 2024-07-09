@@ -33,8 +33,12 @@
  *   https://www.st.com/resource/en/reference_manual/rm0360-stm32f030x4x6x8xc-and-stm32f070x6xb-advanced-armbased-32bit-mcus-stmicroelectronics.pdf
  * PM0075 - STM32F10xxx Flash memory microcontrollers
  *   https://www.st.com/resource/en/programming_manual/pm0075-stm32f10xxx-flash-memory-microcontrollers-stmicroelectronics.pdf
+ * GD32E50x Arm® Cortex®-M33 32-bit MCU User Manual, Rev. 1.8
+ *   https://www.gigadevice.com.cn/Public/Uploads/uploadfile/files/20240407/GD32E50x_User_Manual_Rev1.8.pdf
  * GD32E51x Arm® Cortex®-M33 32-bit MCU User Manual, Rev. 1.2
  *   https://www.gigadevice.com.cn/Public/Uploads/uploadfile/files/20240611/GD32E51x_User_Manual_Rev1.2.pdf
+ * GD32VF103 RISC-V 32-bit MCU User Manual, Rev. 1.5
+ *   https://www.gigadevice.com.cn/Public/Uploads/uploadfile/files/20240407/GD32VF103_User_Manual_Rev1.5.pdf
  */
 
 #include "general.h"
@@ -224,7 +228,7 @@ static bool stm32f1_configure_dbgmcu(target_s *const target, const target_addr32
 	return true;
 }
 
-/* Identify GD32F1, GD32F2 and GD32F3 chips */
+/* Identify GD32F1, GD32F2, GD32F3, GD32E230 and GD32E5 chips */
 bool gd32f1_probe(target_s *target)
 {
 	target_addr32_t dbgmcu_config_taddr;
@@ -314,7 +318,8 @@ bool gd32vf1_probe(target_s *const target)
 	stm32f1_add_flash(target, 0x8000000, (size_t)flash_size * 1024U, 0x400U);
 	target_add_commands(target, stm32f1_cmd_list, target->driver);
 
-	return true;
+	/* Now we have a stable debug environment, make sure the WDTs + sleep instructions can't cause problems */
+	return stm32f1_configure_dbgmcu(target, STM32F1_DBGMCU_CONFIG);
 }
 #endif
 
