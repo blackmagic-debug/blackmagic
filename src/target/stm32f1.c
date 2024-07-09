@@ -41,6 +41,10 @@
  *   https://www.gigadevice.com.cn/Public/Uploads/uploadfile/files/20240407/GD32VF103_User_Manual_Rev1.5.pdf
  * MM32L0xx 32-bit Microcontroller Based on ARM Cortex M0 Core, Version 1.15_n
  *   https://www.mindmotion.com.cn/download/products/UM_MM32L0xx_n_EN.pdf
+ * MM32F3270 32-bit Microcontroller Based on Arm®Cortex®-M3 Core, Version 1.04
+ *   https://www.mindmotion.com.cn/download/products/UM_MM32F3270_EN.pdf
+ * MM32F5270/MM32F5280 32-bit Microcontrollers based on Arm China STAR-MC1, Version 0.9
+ *   https://www.mindmotion.com.cn/download/products/UM_MM32F5270_MM32F5280_EN.pdf
  */
 
 #include "general.h"
@@ -119,6 +123,10 @@
 #define MM32L0_DBGMCU_IDCODE (MM32L0_DBGMCU_BASE + 0x000U)
 #define MM32L0_DBGMCU_CONFIG (MM32L0_DBGMCU_BASE + 0x004U)
 
+#define MM32F3_DBGMCU_BASE   0x40007080U
+#define MM32F3_DBGMCU_IDCODE (MM32F3_DBGMCU_BASE + 0x000U)
+#define MM32F3_DBGMCU_CONFIG (MM32F3_DBGMCU_BASE + 0x004U)
+
 #define STM32F3_UID_BASE 0x1ffff7acU
 #define STM32F1_UID_BASE 0x1ffff7e8U
 
@@ -129,8 +137,6 @@
 #define AT32F4x_IDCODE_PART_MASK   0x00000fffU
 #define AT32F41_SERIES             0x70030000U
 #define AT32F40_SERIES             0x70050000U
-
-#define DBGMCU_IDCODE_MM32F3 0x40007080U
 
 #define STM32F1_FLASH_BANK1_BASE 0x08000000U
 #define STM32F1_FLASH_BANK2_BASE 0x08080000U
@@ -564,25 +570,24 @@ bool mm32l0xx_probe(target_s *target)
 /* Identify MM32 devices (Cortex-M3, Star-MC1) */
 bool mm32f3xx_probe(target_s *target)
 {
-	const char *name;
 	size_t flash_kbyte = 0;
 	size_t ram1_kbyte = 0; /* ram at 0x20000000 */
 	size_t ram2_kbyte = 0; /* ram at 0x30000000 */
 	size_t block_size = 0x400U;
 
-	const uint32_t mm32_id = target_mem32_read32(target, DBGMCU_IDCODE_MM32F3);
+	const uint32_t mm32_id = target_mem32_read32(target, MM32F3_DBGMCU_IDCODE);
 	if (target_check_error(target)) {
-		DEBUG_ERROR("%s: read error at 0x%" PRIx32 "\n", __func__, (uint32_t)DBGMCU_IDCODE_MM32F3);
+		DEBUG_ERROR("%s: read error at 0x%" PRIx32 "\n", __func__, (uint32_t)MM32F3_DBGMCU_IDCODE);
 		return false;
 	}
 	switch (mm32_id) {
 	case 0xcc9aa0e7U:
-		name = "MM32F3273";
+		target->driver = "MM32F327";
 		flash_kbyte = 512;
 		ram1_kbyte = 128;
 		break;
 	case 0x4d4d0800U:
-		name = "MM32F5277";
+		target->driver = "MM32F52";
 		flash_kbyte = 256;
 		ram1_kbyte = 32;
 		ram2_kbyte = 128;
@@ -594,16 +599,18 @@ bool mm32f3xx_probe(target_s *target)
 		DEBUG_WARN("%s: unknown mm32 ID code 0x%" PRIx32 "\n", __func__, mm32_id);
 		return false;
 	}
+
 	target->part_id = mm32_id & 0xfffU;
-	target->driver = name;
 	target->mass_erase = stm32f1_mass_erase;
 	if (ram1_kbyte != 0)
 		target_add_ram32(target, STM32F1_SRAM_BASE, ram1_kbyte * 1024U);
 	if (ram2_kbyte != 0)
 		target_add_ram32(target, 0x30000000U, ram2_kbyte * 1024U);
 	stm32f1_add_flash(target, STM32F1_FLASH_BANK1_BASE, flash_kbyte * 1024U, block_size);
-	target_add_commands(target, stm32f1_cmd_list, name);
-	return true;
+	target_add_commands(target, stm32f1_cmd_list, target->driver);
+
+	/* Now we have a stable debug environment, make sure the WDTs + WFI and WFE instructions can't cause problems */
+	return stm32f1_configure_dbgmcu(target, MM32F3_DBGMCU_CONFIG);
 }
 
 /* Identify real STM32F0/F1/F3 devices */
