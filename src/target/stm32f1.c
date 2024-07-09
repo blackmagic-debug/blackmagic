@@ -97,7 +97,16 @@ static bool stm32f1_mass_erase(target_s *target);
 #define SR_PROG_ERROR 0x04U
 #define SR_EOP        0x20U
 
-#define DBGMCU_IDCODE        0xe0042000U
+#define STM32F1_DBGMCU_BASE   0xe0042000U
+#define STM32F1_DBGMCU_IDCODE (STM32F1_DBGMCU_BASE + 0x000U)
+#define STM32F1_DBGMCU_CONFIG (STM32F1_DBGMCU_BASE + 0x004U)
+
+#define STM32F1_DBGMCU_CONFIG_DBG_SLEEP   (1U << 0U)
+#define STM32F1_DBGMCU_CONFIG_DBG_STOP    (1U << 1U)
+#define STM32F1_DBGMCU_CONFIG_DBG_STANDBY (1U << 2U)
+#define STM32F1_DBGMCU_CONFIG_IWDG_STOP   (1U << 8U)
+#define STM32F1_DBGMCU_CONFIG_WWDG_STOP   (1U << 9U)
+
 #define DBGMCU_IDCODE_F0     0x40015800U
 #define DBGMCU_IDCODE_GD32E5 0xe0044000U
 
@@ -121,6 +130,11 @@ static bool stm32f1_mass_erase(target_s *target);
 
 #define STM32F1_TOPT_32BIT_WRITES (1U << 8U)
 
+typedef struct stm32f1_priv {
+	target_addr32_t dbgmcu_config_taddr;
+	uint32_t dbgmcu_config;
+} stm32f1_priv_s;
+
 static void stm32f1_add_flash(target_s *target, uint32_t addr, size_t length, size_t erasesize)
 {
 	target_flash_s *flash = calloc(1, sizeof(*flash));
@@ -139,22 +153,26 @@ static void stm32f1_add_flash(target_s *target, uint32_t addr, size_t length, si
 	target_add_flash(target, flash);
 }
 
-static uint16_t stm32f1_read_idcode(target_s *const target)
+static uint16_t stm32f1_read_idcode(target_s *const target, target_addr32_t *const config_taddr)
 {
 	if ((target->cpuid & CORTEX_CPUID_PARTNO_MASK) == CORTEX_M0 ||
-		(target->cpuid & CORTEX_CPUID_PARTNO_MASK) == CORTEX_M23)
+		(target->cpuid & CORTEX_CPUID_PARTNO_MASK) == CORTEX_M23) {
 		return target_mem32_read32(target, DBGMCU_IDCODE_F0) & 0xfffU;
+	}
 	/* Is this a Cortex-M33 core with STM32F1-style peripherals? (GD32E50x) */
-	if ((target->cpuid & CORTEX_CPUID_PARTNO_MASK) == CORTEX_M33)
+	if ((target->cpuid & CORTEX_CPUID_PARTNO_MASK) == CORTEX_M33) {
 		return target_mem32_read32(target, DBGMCU_IDCODE_GD32E5) & 0xfffU;
+	}
 
-	return target_mem32_read32(target, DBGMCU_IDCODE) & 0xfffU;
+	*config_taddr = STM32F1_DBGMCU_CONFIG;
+	return target_mem32_read32(target, STM32F1_DBGMCU_IDCODE) & 0xfffU;
 }
 
 /* Identify GD32F1, GD32F2 and GD32F3 chips */
 bool gd32f1_probe(target_s *target)
 {
-	const uint16_t device_id = stm32f1_read_idcode(target);
+	target_addr32_t dbgmcu_config_taddr;
+	const uint16_t device_id = stm32f1_read_idcode(target, &dbgmcu_config_taddr);
 	size_t block_size = 0x400;
 
 	switch (device_id) {
@@ -220,7 +238,7 @@ bool gd32vf1_probe(target_s *const target)
 	if (target->cpuid != 0x80000022U)
 		return false;
 	/* Then read out the device ID */
-	const uint16_t device_id = target_mem32_read32(target, DBGMCU_IDCODE) & 0xfffU;
+	const uint16_t device_id = target_mem32_read32(target, STM32F1_DBGMCU_IDCODE) & 0xfffU;
 	switch (device_id) {
 	case 0x410U: /* GD32VF103 */
 		target->driver = "GD32VF1";
@@ -347,7 +365,7 @@ bool at32f40x_probe(target_s *target)
 		return false;
 
 	// Artery chips use the complete idcode word for identification
-	const uint32_t idcode = target_mem32_read32(target, DBGMCU_IDCODE);
+	const uint32_t idcode = target_mem32_read32(target, STM32F1_DBGMCU_IDCODE);
 	const uint32_t series = idcode & AT32F4x_IDCODE_SERIES_MASK;
 	const uint16_t part_id = idcode & AT32F4x_IDCODE_PART_MASK;
 
@@ -521,7 +539,8 @@ bool mm32f3xx_probe(target_s *target)
 /* Identify real STM32F0/F1/F3 devices */
 bool stm32f1_probe(target_s *target)
 {
-	const uint16_t device_id = stm32f1_read_idcode(target);
+	target_addr32_t dbgmcu_config_taddr;
+	const uint16_t device_id = stm32f1_read_idcode(target, &dbgmcu_config_taddr);
 
 	uint32_t ram_size = 0;
 	size_t flash_size = 0;
@@ -615,11 +634,27 @@ bool stm32f1_probe(target_s *target)
 		return false;
 	}
 
-	target->mass_erase = stm32f1_mass_erase;
 	target->part_id = device_id;
+
+	/* Allocate and save private storage */
+	stm32f1_priv_s *priv_storage = calloc(1, sizeof(*priv_storage));
+	if (!priv_storage) { /* calloc failed: heap exhaustion */
+		DEBUG_ERROR("calloc: failed in %s\n", __func__);
+		return false;
+	}
+	priv_storage->dbgmcu_config_taddr = dbgmcu_config_taddr;
+	priv_storage->dbgmcu_config = target_mem32_read32(target, dbgmcu_config_taddr);
+	target->target_storage = priv_storage;
+
+	target->mass_erase = stm32f1_mass_erase;
 	target_add_ram32(target, STM32F1_SRAM_BASE, ram_size);
 	stm32f1_add_flash(target, STM32F1_FLASH_BANK1_BASE, flash_size, block_size);
 	target_add_commands(target, stm32f1_cmd_list, target->driver);
+
+	/* Now we have a stable debug environment, make sure the WDTs can't bonk the processor out from under us */
+	target_mem32_write32(target, dbgmcu_config_taddr,
+		priv_storage->dbgmcu_config | STM32F1_DBGMCU_CONFIG_WWDG_STOP | STM32F1_DBGMCU_CONFIG_IWDG_STOP |
+			STM32F1_DBGMCU_CONFIG_DBG_STANDBY | STM32F1_DBGMCU_CONFIG_DBG_STOP | STM32F1_DBGMCU_CONFIG_DBG_SLEEP);
 	return true;
 }
 
