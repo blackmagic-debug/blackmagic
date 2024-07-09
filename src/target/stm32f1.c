@@ -182,8 +182,22 @@ static uint16_t stm32f1_read_idcode(target_s *const target, target_addr32_t *con
 	return target_mem32_read32(target, STM32F1_DBGMCU_IDCODE) & 0xfffU;
 }
 
-static void stm32f1_configure_dbgmcu(target_s *const target)
+static bool stm32f1_configure_dbgmcu(target_s *const target, const target_addr32_t dbgmcu_config)
 {
+	/* If we're in the probe phase */
+	if (target->target_storage == NULL) {
+		/* Allocate and save private storage */
+		stm32f1_priv_s *const priv_storage = calloc(1, sizeof(*priv_storage));
+		if (!priv_storage) { /* calloc failed: heap exhaustion */
+			DEBUG_ERROR("calloc: failed in %s\n", __func__);
+			return false;
+		}
+		priv_storage->dbgmcu_config_taddr = dbgmcu_config;
+		/* Get the current value of the debug config register (and store it for later) */
+		priv_storage->dbgmcu_config = target_mem32_read32(target, dbgmcu_config);
+		target->target_storage = priv_storage;
+	}
+
 	const stm32f1_priv_s *const priv = (stm32f1_priv_s *)target->target_storage;
 	const target_addr32_t dbgmcu_config_taddr = priv->dbgmcu_config_taddr;
 	/* Figure out which style of DBGMCU we're working with */
@@ -202,6 +216,7 @@ static void stm32f1_configure_dbgmcu(target_s *const target)
 		target_mem32_write32(target, dbgmcu_config_taddr,
 			priv->dbgmcu_config | STM32F1_DBGMCU_CONFIG_WWDG_STOP | STM32F1_DBGMCU_CONFIG_IWDG_STOP |
 				STM32F1_DBGMCU_CONFIG_DBG_STANDBY | STM32F1_DBGMCU_CONFIG_DBG_STOP | STM32F1_DBGMCU_CONFIG_DBG_SLEEP);
+	return true;
 }
 
 /* Identify GD32F1, GD32F2 and GD32F3 chips */
@@ -263,7 +278,8 @@ bool gd32f1_probe(target_s *target)
 	target_add_ram32(target, 0x20000000, ram_size * 1024U);
 	target_add_commands(target, stm32f1_cmd_list, target->driver);
 
-	return true;
+	/* Now we have a stable debug environment, make sure the WDTs + WFI and WFE instructions can't cause problems */
+	return stm32f1_configure_dbgmcu(target, dbgmcu_config_taddr);
 }
 
 #ifdef ENABLE_RISCV
@@ -671,25 +687,13 @@ bool stm32f1_probe(target_s *target)
 	}
 
 	target->part_id = device_id;
-
-	/* Allocate and save private storage */
-	stm32f1_priv_s *priv_storage = calloc(1, sizeof(*priv_storage));
-	if (!priv_storage) { /* calloc failed: heap exhaustion */
-		DEBUG_ERROR("calloc: failed in %s\n", __func__);
-		return false;
-	}
-	priv_storage->dbgmcu_config_taddr = dbgmcu_config_taddr;
-	priv_storage->dbgmcu_config = target_mem32_read32(target, dbgmcu_config_taddr);
-	target->target_storage = priv_storage;
-
 	target->mass_erase = stm32f1_mass_erase;
 	target_add_ram32(target, STM32F1_SRAM_BASE, ram_size);
 	stm32f1_add_flash(target, STM32F1_FLASH_BANK1_BASE, flash_size, block_size);
 	target_add_commands(target, stm32f1_cmd_list, target->driver);
 
-	/* Now we have a stable debug environment, make sure the WDTs can't bonk the processor out from under us */
-	stm32f1_configure_dbgmcu(target);
-	return true;
+	/* Now we have a stable debug environment, make sure the WDTs + WFI and WFE instructions can't cause problems */
+	return stm32f1_configure_dbgmcu(target, dbgmcu_config_taddr);
 }
 
 static bool stm32f1_flash_unlock(target_s *target, uint32_t bank_offset)
