@@ -277,6 +277,12 @@ bool stm32h7_probe(target_s *target)
 		write_be4((uint8_t *)priv_storage->name, 5U, target_mem32_read32(target, STM32H7_CHIP_IDENT));
 		priv_storage->name[9] = '\0';
 		break;
+	case ID_STM32H74x:
+		memcpy(priv_storage->name + 5U, "H74x", 5U); /* H742/H743/H753/H750 */
+		break;
+	case ID_STM32H7Bx:
+		memcpy(priv_storage->name + 5U, "H7Bx", 5U); /* H7A3/H7B3/H7B0 */
+		break;
 	default:
 		memcpy(priv_storage->name + 5U, "H7", 3U);
 		break;
