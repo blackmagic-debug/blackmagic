@@ -27,9 +27,11 @@
  *
  * References:
  * RM0090 - STM32F405/415, STM32F407/417, STM32F427/437 and STM32F429/439 advanced Arm®-based 32-bit MCUs, Rev. 20
- * https://www.st.com/resource/en/reference_manual/rm0090-stm32f405415-stm32f407417-stm32f427437-and-stm32f429439-advanced-armbased-32bit-mcus-stmicroelectronics.pdf
- * RM0401 - STM32F410 advanced Arm®-based 32-bit MCUs
- * https://www.st.com/resource/en/reference_manual/rm0401-stm32f410-advanced-armbased-32bit-mcus-stmicroelectronics.pdf
+ *   https://www.st.com/resource/en/reference_manual/rm0090-stm32f405415-stm32f407417-stm32f427437-and-stm32f429439-advanced-armbased-32bit-mcus-stmicroelectronics.pdf
+ * RM0401 - STM32F410 advanced Arm®-based 32-bit MCUs, Rev. 3
+ *   https://www.st.com/resource/en/reference_manual/rm0401-stm32f410-advanced-armbased-32bit-mcus-stmicroelectronics.pdf
+ * GD32F4xx Arm® Cortex®-M4 32-bit MCU User Manual, Rev. 3.0
+ *   https://www.gigadevice.com.cn/Public/Uploads/uploadfile/files/20240407/GD32F4xx_User_Manual_Rev3.0.pdf
  */
 
 #include "general.h"
@@ -37,23 +39,6 @@
 #include "target_internal.h"
 #include "cortexm.h"
 #include "stm32_common.h"
-
-static bool stm32f4_cmd_option(target_s *target, int argc, const char **argv);
-static bool stm32f4_cmd_psize(target_s *target, int argc, const char **argv);
-static bool stm32f4_cmd_uid(target_s *target, int argc, const char **argv);
-
-const command_s stm32f4_cmd_list[] = {
-	{"option", stm32f4_cmd_option, "Manipulate option bytes"},
-	{"psize", stm32f4_cmd_psize, "Configure flash write parallelism: (x8|x16|x32(default)|x64)"},
-	{"uid", stm32f4_cmd_uid, "Print unique device ID"},
-	{NULL, NULL, NULL},
-};
-
-static bool stm32f4_attach(target_s *target);
-static void stm32f4_detach(target_s *target);
-static bool stm32f4_flash_erase(target_flash_s *target_flash, target_addr_t addr, size_t len);
-static bool stm32f4_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t len);
-static bool stm32f4_mass_erase(target_s *target);
 
 /* Flash Program and Erase Controller Register Map */
 #define FPEC_BASE     0x40023c00U
@@ -120,17 +105,6 @@ static bool stm32f4_mass_erase(target_s *target);
 #define STM32F4_DBGMCU_APB1FREEZE_WWDG  (1U << 11U)
 #define STM32F4_DBGMCU_APB1FREEZE_IWDG  (1U << 12U)
 
-typedef struct stm32f4_flash {
-	target_flash_s flash;
-	uint8_t base_sector;
-	uint8_t bank_split;
-} stm32f4_flash_s;
-
-typedef struct stm32f4_priv {
-	uint32_t dbgmcu_cr;
-	align_e psize;
-} stm32f4_priv_s;
-
 #define ID_STM32F20X  0x411U
 #define ID_STM32F40X  0x413U
 #define ID_STM32F42X  0x419U
@@ -148,6 +122,35 @@ typedef struct stm32f4_priv {
 #define ID_GD32F450   0x2b3U
 #define ID_GD32F470   0xa2eU
 #define ID_GD32F405   0xfa4U
+
+typedef struct stm32f4_flash {
+	target_flash_s flash;
+	uint8_t base_sector;
+	uint8_t bank_split;
+} stm32f4_flash_s;
+
+typedef struct stm32f4_priv {
+	uint32_t dbgmcu_cr;
+	align_e psize;
+} stm32f4_priv_s;
+
+static bool stm32f4_cmd_option(target_s *target, int argc, const char **argv);
+static bool stm32f4_cmd_psize(target_s *target, int argc, const char **argv);
+static bool stm32f4_cmd_uid(target_s *target, int argc, const char **argv);
+
+const command_s stm32f4_cmd_list[] = {
+	{"option", stm32f4_cmd_option, "Manipulate option bytes"},
+	{"psize", stm32f4_cmd_psize, "Configure flash write parallelism: (x8|x16|x32(default)|x64)"},
+	{"uid", stm32f4_cmd_uid, "Print unique device ID"},
+	{NULL, NULL, NULL},
+};
+
+static bool stm32f4_attach(target_s *target);
+static bool gd32f4_attach(target_s *target);
+static void stm32f4_detach(target_s *target);
+static bool stm32f4_flash_erase(target_flash_s *target_flash, target_addr_t addr, size_t len);
+static bool stm32f4_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t len);
+static bool stm32f4_mass_erase(target_s *target);
 
 static void stm32f4_add_flash(target_s *const target, const uint32_t addr, const size_t length, const size_t blocksize,
 	const uint8_t base_sector, const uint8_t split)
@@ -303,18 +306,18 @@ bool gd32f4_probe(target_s *target)
 
 	/* TODO implement DBS mode */
 	const uint8_t split = 12;
-	/* Bank 1*/
-	stm32f4_add_flash(target, 0x8000000, 0x10000, 0x4000, 0, split);  /* 4 16K */
-	stm32f4_add_flash(target, 0x8010000, 0x10000, 0x10000, 4, split); /* 1 64K */
-	stm32f4_add_flash(target, 0x8020000, 0xe0000, 0x20000, 5, split); /* 7 128K */
+	/* Bank 1 */
+	stm32f4_add_flash(target, 0x08000000, 0x10000, 0x4000, 0, split);  /* 4 16K */
+	stm32f4_add_flash(target, 0x08010000, 0x10000, 0x10000, 4, split); /* 1 64K */
+	stm32f4_add_flash(target, 0x08020000, 0xe0000, 0x20000, 5, split); /* 7 128K */
 
 	/* Bank 2 */
-	stm32f4_add_flash(target, 0x8100000, 0x10000, 0x4000, 16, split);  /* 4 16K */
-	stm32f4_add_flash(target, 0x8110000, 0x10000, 0x10000, 20, split); /* 1 64K */
-	stm32f4_add_flash(target, 0x8120000, 0xe0000, 0x20000, 21, split); /* 7 128K */
+	stm32f4_add_flash(target, 0x08100000, 0x10000, 0x4000, 16, split);  /* 4 16K */
+	stm32f4_add_flash(target, 0x08110000, 0x10000, 0x10000, 20, split); /* 1 64K */
+	stm32f4_add_flash(target, 0x08120000, 0xe0000, 0x20000, 21, split); /* 7 128K */
 
 	/* Third MB composed of 4 256 KB sectors, and uses sector values 12-15 */
-	stm32f4_add_flash(target, 0x8200000, 0x100000, 0x40000, 12, split);
+	stm32f4_add_flash(target, 0x08200000, 0x100000, 0x40000, 12, split);
 
 	return true;
 }
