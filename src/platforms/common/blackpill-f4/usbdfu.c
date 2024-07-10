@@ -23,6 +23,7 @@
 #include <libopencm3/cm3/scb.h>
 #include <libopencm3/stm32/rcc.h>
 #include <libopencm3/stm32/gpio.h>
+#include <libopencm3/stm32/syscfg.h>
 #include <libopencm3/usb/dwc/otg_fs.h>
 
 #include "usbdfu.h"
@@ -53,6 +54,11 @@ int main(void)
 		magic[1] = 0;
 	} else
 		dfu_jump_app_if_valid();
+
+	/* Unmap ST MaskROM and map back Internal Flash */
+	rcc_periph_clock_enable(RCC_SYSCFG);
+	if ((SYSCFG_MEMRM & 3U) == 1U)
+		SYSCFG_MEMRM &= ~3U;
 
 	rcc_clock_setup_pll(&rcc_hse_25mhz_3v3[PLATFORM_CLOCK_FREQ]);
 
