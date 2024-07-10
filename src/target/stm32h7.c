@@ -260,6 +260,15 @@ bool stm32h7_probe(target_s *target)
 	/* Use the partno from the AP always to handle the difference between JTAG and SWD */
 	if (ap->partno != ID_STM32H72x && ap->partno != ID_STM32H74x && ap->partno != ID_STM32H7Bx)
 		return false;
+
+	/* By now it's established that this is likely an H7, but check that it's not an MP15x_CM4 with an errata in AP part code */
+	const uint32_t idcode = target_mem32_read32(target, DBGMCU_IDCODE);
+	const uint16_t dev_id = idcode & STM32H7_DBGMCU_IDCODE_DEV_MASK;
+	DEBUG_TARGET("%s: looking at device ID 0x%03x at 0x%08" PRIx32 "\n", __func__, dev_id, DBGMCU_IDCODE);
+	/* MP15x_CM4 errata: has a partno of 0x450. SoC DBGMCU says 0x500. */
+	if (dev_id != ID_STM32H72x && dev_id != ID_STM32H74x && dev_id != ID_STM32H7Bx)
+		return false;
+
 	target->part_id = ap->partno;
 
 	/* Save private storage */

@@ -91,6 +91,15 @@ static bool stm32mp15_ident(target_s *const target, const bool cortexm)
 		if (!cortexm || ap->partno != ID_STM32MP15x_ERRATA)
 			return false;
 	}
+
+	/* By now it's established that this is likely an MP15x_CM4, but check that it's not an H74x */
+	const uint32_t idcode = target_mem32_read32(target, DBGMCU_IDCODE);
+	const uint16_t dev_id = idcode & STM32MP15_DBGMCU_IDCODE_DEV_MASK;
+	DEBUG_TARGET("%s: looking at device ID 0x%03x at 0x%08" PRIx32 "\n", __func__, dev_id, DBGMCU_IDCODE);
+	/* If this probe routine ever runs ahead of stm32h7_probe, skip the H74x. */
+	if (dev_id != ID_STM32MP15x)
+		return false;
+
 	/*
 	 * We now know the part is either a Cortex-M core with the errata code, or matched the main ID code.
 	 * Copy the correct (AP) part number over to the target structure to handle the difference between
