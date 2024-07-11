@@ -29,20 +29,16 @@
  * the device, providing the XML memory map and Flash memory programming.
  *
  * References:
- * RM0454 - Rev 5 (Value line)
- *   Reference manual - STM32G0x0 advanced ARM(R)-based 32-bit MCUs
- *                      (STM32G030/STM32G050/STM32G070/STM32G0B0)
- * RM0444 - Rev 5 (Access line)
- *   Reference manual - STM32G0x1 advanced ARM(R)-based 32-bit MCUs
- *                      (STM32G031/STM32G041/STM32G051/STM32G061/
- *                       STM32G071/STM32G081/STM32G0B1/STM32G0C1)
- * RM0490 - Rev 3
- *   Reference manual - STM32C0x1 advanced ARM(R)-based 32-bit MCUs
- *                      (STM32C011/STM32C031)
- * STM32C0 shares the same technological platform as STM32G0.
- * PM0223 - Rev 6
- *   Programming manual - Cortex(R)-M0+ programming manual for STM32L0, STM32G0,
- *                        STM32C0, STM32WL and STM32WB Series
+ * RM0454 - STM32G0x0 advanced Arm®-based 32-bit MCUs, Rev. 5
+ *   https://www.st.com/resource/en/reference_manual/rm0454-stm32g0x0-advanced-armbased-32bit-mcus-stmicroelectronics.pdf
+ * RM0444 - STM32G0x1 advanced Arm®-based 32-bit MCUs, Rev. 5
+ *   https://www.st.com/resource/en/reference_manual/rm0444-stm32g0x1-advanced-armbased-32bit-mcus-stmicroelectronics.pdf
+ * RM0490 - STM32C0x1 advanced Arm®-based 32-bit MCUs, Rev. 3
+ *   https://www.st.com/resource/en/reference_manual/rm0490-stm32c0x1-advanced-armbased-32bit-mcus-stmicroelectronics.pdf
+ * PM0223 - STM32 Cortex®-M0+ MCUs programming manual, Rev 6
+ *   https://www.st.com/resource/en/programming_manual/pm0223-stm32-cortexm0-mcus-programming-manual-stmicroelectronics.pdf
+ *
+ * Note: The STM32C0 series shares the same technological platform as the STM32G0 series.
  */
 
 #include "general.h"
@@ -52,7 +48,6 @@
 #include "command.h"
 #include "stm32_common.h"
 
-/* Flash */
 #define FLASH_START            0x08000000U
 #define FLASH_MEMORY_SIZE      0x1fff75e0U
 #define FLASH_PAGE_SIZE        0x800U
@@ -127,7 +122,6 @@
 #define FLASH_PCROP2BER     (G0_FLASH_BASE + 0x058U)
 #define FLASH_SECR          (G0_FLASH_BASE + 0x080U)
 
-/* RAM */
 #define RAM_START      0x20000000U
 #define RAM_SIZE_G03_4 (8U * 1024U)   // 8kiB
 #define RAM_SIZE_G05_6 (18U * 1024U)  // 18kiB
@@ -137,12 +131,10 @@
 #define RAM_SIZE_C01 (6U * 1024U)  // 6kiB
 #define RAM_SIZE_C03 (12U * 1024U) // 12kiB
 
-/* RCC */
 #define G0_RCC_BASE       0x40021000U
 #define RCC_APBENR1       (G0_RCC_BASE + 0x3cU)
 #define RCC_APBENR1_DBGEN (1U << 27U)
 
-/* DBG */
 #define DBG_BASE                  0x40015800U
 #define DBG_IDCODE                (DBG_BASE + 0x00U)
 #define DBG_CR                    (DBG_BASE + 0x04U)
