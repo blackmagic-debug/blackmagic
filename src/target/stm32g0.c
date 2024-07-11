@@ -50,6 +50,7 @@
 #include "target_internal.h"
 #include "cortexm.h"
 #include "command.h"
+#include "stm32_common.h"
 
 /* Flash */
 #define FLASH_START            0x08000000U
@@ -151,6 +152,9 @@
 #define DBG_APB_FZ1_DBG_IWDG_STOP (1U << 12U)
 #define DBG_APB_FZ1_DBG_WWDG_STOP (1U << 11U)
 
+#define STM32C0_UID_BASE 0x1fff7550U
+#define STM32G0_UID_BASE 0x1fff7590U
+
 /*
  * The underscores in these definitions represent /'s, this means
  * that STM32G03_4 is supposed to refer to the G03/4 aka the G03 and G04.
@@ -183,11 +187,13 @@ static bool stm32g0_mass_erase(target_s *t);
 static bool stm32g0_cmd_erase_bank(target_s *t, int argc, const char **argv);
 static bool stm32g0_cmd_option(target_s *t, int argc, const char **argv);
 static bool stm32g0_cmd_irreversible(target_s *t, int argc, const char **argv);
+static bool stm32g0_cmd_uid(target_s *t, int argc, const char **argv);
 
 const command_s stm32g0_cmd_list[] = {
 	{"erase_bank 1|2", stm32g0_cmd_erase_bank, "Erase specified Flash bank"},
 	{"option", stm32g0_cmd_option, "Manipulate option bytes"},
 	{"irreversible", stm32g0_cmd_irreversible, "Allow irreversible operations: (enable|disable)"},
+	{"uid", stm32g0_cmd_uid, "Print unique device ID"},
 	{NULL, NULL, NULL},
 };
 
@@ -721,4 +727,14 @@ static bool stm32g0_cmd_irreversible(target_s *t, int argc, const char **argv)
 	const bool ret = argc != 2 || parse_enable_or_disable(argv[1], &ps->irreversible_enabled);
 	tc_printf(t, "Irreversible operations: %s\n", ps->irreversible_enabled ? "enabled" : "disabled");
 	return ret;
+}
+
+static bool stm32g0_cmd_uid(target_s *t, int argc, const char **argv)
+{
+	(void)argc;
+	(void)argv;
+	target_addr_t uid_base = STM32G0_UID_BASE;
+	if (t->part_id == STM32C011 || t->part_id == STM32C031)
+		uid_base = STM32C0_UID_BASE;
+	return stm32_uid(t, uid_base);
 }
