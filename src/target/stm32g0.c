@@ -151,12 +151,12 @@
  * The underscores in these definitions represent /'s, this means
  * that STM32G03_4 is supposed to refer to the G03/4 aka the G03 and G04.
  */
-#define STM32C011  0x443U
-#define STM32C031  0x453U
-#define STM32G03_4 0x466U
-#define STM32G05_6 0x456U
-#define STM32G07_8 0x460U
-#define STM32G0B_C 0x467U
+#define ID_STM32C011  0x443U
+#define ID_STM32C031  0x453U
+#define ID_STM32G03_4 0x466U
+#define ID_STM32G05_6 0x456U
+#define ID_STM32G07_8 0x460U
+#define ID_STM32G0B_C 0x467U
 
 typedef struct stm32g0_saved_regs {
 	uint32_t rcc_apbenr1;
@@ -219,22 +219,22 @@ bool stm32g0_probe(target_s *t)
 	size_t flash_size = 0U;
 
 	switch (t->part_id) {
-	case STM32G03_4:;
+	case ID_STM32G03_4:;
 		const uint16_t dev_id = target_mem32_read32(t, DBG_IDCODE) & 0xfffU;
 		switch (dev_id) {
-		case STM32G03_4:
+		case ID_STM32G03_4:
 			/* SRAM 8kiB, Flash up to 64kiB */
 			ram_size = RAM_SIZE_G03_4;
 			flash_size = FLASH_SIZE_MAX_G03_4;
 			t->driver = "STM32G03/4";
 			break;
-		case STM32C011:
+		case ID_STM32C011:
 			/* SRAM 6kiB, Flash up to 32kiB */
 			ram_size = RAM_SIZE_C01;
 			flash_size = FLASH_SIZE_MAX_C01;
 			t->driver = "STM32C011";
 			break;
-		case STM32C031:
+		case ID_STM32C031:
 			/* SRAM 12kiB, Flash up to 32kiB */
 			ram_size = RAM_SIZE_C03;
 			flash_size = FLASH_SIZE_MAX_C03;
@@ -245,19 +245,19 @@ bool stm32g0_probe(target_s *t)
 		}
 		t->part_id = dev_id;
 		break;
-	case STM32G05_6:
+	case ID_STM32G05_6:
 		/* SRAM 18kiB, Flash up to 64kiB */
 		ram_size = RAM_SIZE_G05_6;
 		flash_size = FLASH_SIZE_MAX_G05_6;
 		t->driver = "STM32G05/6";
 		break;
-	case STM32G07_8:
+	case ID_STM32G07_8:
 		/* SRAM 36kiB, Flash up to 128kiB */
 		ram_size = RAM_SIZE_G07_8;
 		flash_size = FLASH_SIZE_MAX_G07_8;
 		t->driver = "STM32G07/8";
 		break;
-	case STM32G0B_C:
+	case ID_STM32G0B_C:
 		/* SRAM 144kiB, Flash up to 512kiB */
 		ram_size = RAM_SIZE_G0B_C;
 		flash_size = target_mem32_read16(t, FLASH_MEMORY_SIZE) * 1024U;
@@ -374,7 +374,7 @@ static size_t stm32g0_bank1_end_page(target_flash_s *f)
 {
 	target_s *const t = f->t;
 	/* If the part is dual banked, compute the end of the first bank */
-	if (t->part_id == STM32G0B_C)
+	if (t->part_id == ID_STM32G0B_C)
 		return ((f->length / 2U) - 1U) / f->blocksize;
 	/* Single banked devices have a fixed bank end */
 	return FLASH_BANK2_START_PAGE - 1U;
@@ -692,7 +692,7 @@ static bool stm32g0_cmd_option(target_s *t, int argc, const char **argv)
 	option_register_s options_req[OPT_REG_COUNT] = {{0}};
 
 	if (argc == 2 && strcasecmp(argv[1], "erase") == 0) {
-		if (t->part_id == STM32C011 || t->part_id == STM32C031)
+		if (t->part_id == ID_STM32C011 || t->part_id == ID_STM32C031)
 			options_def[OPT_REG_OPTR].val = FLASH_OPTR_C0x1_DEF;
 		if (!stm32g0_option_write(t, options_def))
 			goto exit_error;
@@ -726,7 +726,7 @@ static bool stm32g0_cmd_uid(target_s *t, int argc, const char **argv)
 	(void)argc;
 	(void)argv;
 	target_addr_t uid_base = STM32G0_UID_BASE;
-	if (t->part_id == STM32C011 || t->part_id == STM32C031)
+	if (t->part_id == ID_STM32C011 || t->part_id == ID_STM32C031)
 		uid_base = STM32C0_UID_BASE;
 	return stm32_uid(t, uid_base);
 }
