@@ -135,14 +135,15 @@
 #define RCC_APBENR1       (G0_RCC_BASE + 0x3cU)
 #define RCC_APBENR1_DBGEN (1U << 27U)
 
-#define DBG_BASE                  0x40015800U
-#define DBG_IDCODE                (DBG_BASE + 0x00U)
-#define DBG_CR                    (DBG_BASE + 0x04U)
-#define DBG_CR_DBG_STANDBY        (1U << 2U)
-#define DBG_CR_DBG_STOP           (1U << 1U)
-#define DBG_APB_FZ1               (DBG_BASE + 0x08U)
-#define DBG_APB_FZ1_DBG_IWDG_STOP (1U << 12U)
-#define DBG_APB_FZ1_DBG_WWDG_STOP (1U << 11U)
+#define STM32G0_DBGMCU_BASE       0x40015800U
+#define STM32G0_DBGMCU_IDCODE     (STM32G0_DBGMCU_BASE + 0x000U)
+#define STM32G0_DBGMCU_CONFIG     (STM32G0_DBGMCU_BASE + 0x004U)
+#define STM32G0_DBGMCU_APBFREEZE1 (STM32G0_DBGMCU_BASE + 0x008U)
+
+#define STM32G0_DBGMCU_CONFIG_STOP     (1U << 1U)
+#define STM32G0_DBGMCU_CONFIG_STANDBY  (1U << 2U)
+#define STM32G0_DBGMCU_APBFREEZE1_WWDG (1U << 11U)
+#define STM32G0_DBGMCU_APBFREEZE1_IWDG (1U << 12U)
 
 #define STM32C0_UID_BASE 0x1fff7550U
 #define STM32G0_UID_BASE 0x1fff7590U
@@ -158,14 +159,8 @@
 #define ID_STM32G07_8 0x460U
 #define ID_STM32G0B_C 0x467U
 
-typedef struct stm32g0_saved_regs {
-	uint32_t rcc_apbenr1;
-	uint32_t dbg_cr;
-	uint32_t dbg_apb_fz1;
-} stm32g0_saved_regs_s;
-
 typedef struct stm32g0_priv {
-	stm32g0_saved_regs_s saved_regs;
+	uint32_t dbgmcu_config;
 	bool irreversible_enabled;
 } stm32g0_priv_s;
 
@@ -207,6 +202,38 @@ static void stm32g0_add_flash(target_s *target, uint32_t addr, size_t length, si
 	target_add_flash(target, flash);
 }
 
+static bool stm32g0_configure_dbgmcu(target_s *const target)
+{
+	/* If we're in the probe phase */
+	if (target->target_storage == NULL) {
+		/* Allocate target-specific storage */
+		stm32g0_priv_s *const priv_storage = calloc(1, sizeof(*priv_storage));
+		if (!priv_storage) { /* calloc failed: heap exhaustion */
+			DEBUG_ERROR("calloc: failed in %s\n", __func__);
+			return false;
+		}
+		target->target_storage = priv_storage;
+		/* Get the current value of the debug control register (and store it for later) */
+		priv_storage->dbgmcu_config = target_mem32_read32(target, STM32G0_DBGMCU_CONFIG);
+		/* Mark irriversible operations disabled */
+		priv_storage->irreversible_enabled = false;
+
+		target->attach = stm32g0_attach;
+		target->detach = stm32g0_detach;
+	}
+
+	const stm32g0_priv_s *const priv = (stm32g0_priv_s *)target->target_storage;
+	/* Enable the clock for the DBGMCU if it's not already */
+	target_mem32_write32(target, RCC_APBENR1, target_mem32_read32(target, RCC_APBENR1) | RCC_APBENR1_DBGEN);
+	/* Enable debugging during all low power modes */
+	target_mem32_write32(target, STM32G0_DBGMCU_CONFIG,
+		priv->dbgmcu_config | (STM32G0_DBGMCU_CONFIG_STANDBY | STM32G0_DBGMCU_CONFIG_STOP));
+	/* And make sure the WDTs stay synchronised to the run state of the processor */
+	target_mem32_write32(
+		target, STM32G0_DBGMCU_APBFREEZE1, STM32G0_DBGMCU_APBFREEZE1_IWDG | STM32G0_DBGMCU_APBFREEZE1_WWDG);
+	return true;
+}
+
 /*
  * Probe for a known STM32G0 series part.
  * Populate the memory map and add custom commands.
@@ -220,7 +247,7 @@ bool stm32g0_probe(target_s *target)
 
 	switch (target->part_id) {
 	case ID_STM32G03_4:;
-		const uint16_t dev_id = target_mem32_read32(target, DBG_IDCODE) & 0xfffU;
+		const uint16_t dev_id = target_mem32_read32(target, STM32G0_DBGMCU_IDCODE) & 0xfffU;
 		switch (dev_id) {
 		case ID_STM32G03_4:
 			/* SRAM 8kiB, Flash up to 64kiB */
@@ -267,75 +294,43 @@ bool stm32g0_probe(target_s *target)
 		return false;
 	}
 
+	/* Now we have a stable debug environment, make sure the WDTs + WFI and WFE instructions can't cause problems */
+	if (!stm32g0_configure_dbgmcu(target))
+		return false;
+
 	target_add_ram32(target, RAM_START, ram_size);
 	/* Even dual Flash bank devices have a contiguous Flash memory space */
 	stm32g0_add_flash(target, FLASH_START, flash_size, FLASH_PAGE_SIZE);
 
-	target->attach = stm32g0_attach;
-	target->detach = stm32g0_detach;
 	target->mass_erase = stm32g0_mass_erase;
 	target_add_commands(target, stm32g0_cmd_list, target->driver);
-
-	/* Save private storage */
-	stm32g0_priv_s *priv_storage = calloc(1, sizeof(*priv_storage));
-	if (!priv_storage) { /* calloc failed: heap exhaustion */
-		DEBUG_ERROR("calloc: failed in %s\n", __func__);
-		return false;
-	}
-	target->target_storage = priv_storage;
-	priv_storage->irreversible_enabled = false;
 
 	/* OTP Flash area */
 	stm32g0_add_flash(target, FLASH_OTP_START, FLASH_OTP_SIZE, FLASH_OTP_BLOCKSIZE);
 	return true;
 }
 
-/*
- * In addition to attaching the debug core with cortexm_attach(), this function
- * keeps the FCLK and HCLK clocks running in Standby and Stop modes while
- * debugging.
- * The watchdogs (IWDG and WWDG) are stopped when the core is halted. This
- * allows basic Flash operations (erase/write) if the watchdog is started by
- * hardware or by a previous program without prior power cycle.
- */
 static bool stm32g0_attach(target_s *target)
 {
-	stm32g0_priv_s *priv = (stm32g0_priv_s *)target->target_storage;
-
-	if (!cortexm_attach(target))
-		return false;
-
-	priv->saved_regs.rcc_apbenr1 = target_mem32_read32(target, RCC_APBENR1);
-	target_mem32_write32(target, RCC_APBENR1, priv->saved_regs.rcc_apbenr1 | RCC_APBENR1_DBGEN);
-	priv->saved_regs.dbg_cr = target_mem32_read32(t, DBG_CR);
-	target_mem32_write32(target, DBG_CR, priv->saved_regs.dbg_cr | (DBG_CR_DBG_STANDBY | DBG_CR_DBG_STOP));
-	priv->saved_regs.dbg_apb_fz1 = target_mem32_read32(t, DBG_APB_FZ1);
-	target_mem32_write32(
-		target, DBG_APB_FZ1, priv->saved_regs.dbg_apb_fz1 | (DBG_APB_FZ1_DBG_IWDG_STOP | DBG_APB_FZ1_DBG_WWDG_STOP));
-
-	return true;
+	/*
+	 * Try to attach to the part, and then ensure that the WDTs + WFI and WFE
+	 * instructions can't cause problems (this is duplicated as it's undone by detach.)
+	 */
+	return cortexm_attach(target) && stm32g0_configure_dbgmcu(target);
 }
 
-/*
- * Restore the modified registers and detach the debug core.
- * The registers are restored as is to leave the target in the same state as
- * before attachment.
- */
 static void stm32g0_detach(target_s *target)
 {
-	stm32g0_priv_s *priv = (stm32g0_priv_s *)target->target_storage;
-
-	/*
-	 * First re-enable DBGEN clock, in case it got disabled in the meantime
-	 * (happens during flash), so that writes to DBG_* registers below succeed.
-	 */
-	target_mem32_write32(target, RCC_APBENR1, priv->saved_regs.rcc_apbenr1 | RCC_APBENR1_DBGEN);
-
-	/* Then restore the DBG_* registers and clock settings. */
-	target_mem32_write32(target, DBG_APB_FZ1, priv->saved_regs.dbg_apb_fz1);
-	target_mem32_write32(target, DBG_CR, priv->saved_regs.dbg_cr);
-	target_mem32_write32(target, RCC_APBENR1, priv->saved_regs.rcc_apbenr1);
-
+	const stm32g0_priv_s *const priv = (stm32g0_priv_s *)target->target_storage;
+	/* Grab the current state of the clock enables */
+	const uint32_t apb_en1 = target_mem32_read32(target, RCC_APBENR1) & ~RCC_APBENR1_DBGEN;
+	/* Ensure that the DBGMCU is still clocked enabled */
+	target_mem32_write32(target, RCC_APBENR1, apb_en1 | RCC_APBENR1_DBGEN);
+	/* Reverse all changes to STM32F4_DBGMCU_CONFIG */
+	target_mem32_write32(target, STM32G0_DBGMCU_CONFIG, priv->dbgmcu_config);
+	/* Disable the DBGMCU clock */
+	target_mem32_write32(target, RCC_APBENR1, apb_en1);
+	/* Now defer to the normal Cortex-M detach routine to complete the detach */
 	cortexm_detach(target);
 }
 
