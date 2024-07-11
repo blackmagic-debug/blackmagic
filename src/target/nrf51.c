@@ -54,7 +54,7 @@ const command_s nrf51_read_cmd_list[] = {
 	{"help", nrf51_cmd_read_help, "Display help for read commands"},
 	{"hwid", nrf51_cmd_read_hwid, "Read hardware identification number"},
 	{"fwid", nrf51_cmd_read_fwid, "Read pre-loaded firmware ID"},
-	{"deviceid", nrf51_cmd_read_deviceid, "Read unique device ID"},
+	{"deviceid", nrf51_cmd_read_deviceid, "Print unique device ID"},
 	{"deviceaddr", nrf51_cmd_read_deviceaddr, "Read device address"},
 	{"deviceinfo", nrf51_cmd_read_deviceinfo, "Read device information"},
 	{NULL, NULL, NULL},
