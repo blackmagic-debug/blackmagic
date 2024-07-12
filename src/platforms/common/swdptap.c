@@ -101,6 +101,11 @@ static uint32_t swdptap_seq_in_clk_delay(const size_t clock_cycles)
 	uint32_t value = 0;
 	if (!clock_cycles)
 		return 0;
+	/*
+	 * Count down instead of up, because with an up-count, some ARM-GCC
+	 * versions use an explicit CMP, missing the optimization of converting
+	 * to a faster down-count that uses SUBS followed by BCS/BCC.
+	 */
 	for (size_t cycle = clock_cycles; cycle--;) {
 		for (volatile uint32_t counter = target_clk_divider; counter > 0; --counter)
 			continue;
@@ -127,6 +132,11 @@ static uint32_t swdptap_seq_in_no_delay(const size_t clock_cycles)
 	if (!clock_cycles)
 		return 0;
 	uint32_t value = 0;
+	/*
+	 * Count down instead of up, because with an up-count, some ARM-GCC
+	 * versions use an explicit CMP, missing the optimization of converting
+	 * to a faster down-count that uses SUBS followed by BCS/BCC.
+	 */
 	for (size_t cycle = clock_cycles; cycle--;) {
 		/* Reordering barrier */
 		__asm__("" ::: "memory");
@@ -183,6 +193,11 @@ static void swdptap_seq_out_clk_delay(const uint32_t tms_states, const size_t cl
 	bool bit = value & 1U;
 	if (!clock_cycles)
 		return;
+	/*
+	 * Count down instead of up, because with an up-count, some ARM-GCC
+	 * versions use an explicit CMP, missing the optimization of converting
+	 * to a faster down-count that uses SUBS followed by BCS/BCC.
+	 */
 	for (size_t cycle = clock_cycles; cycle--;) {
 		/* Reordering barrier */
 		__asm__("" ::: "memory");
@@ -209,6 +224,11 @@ static void swdptap_seq_out_no_delay(const uint32_t tms_states, const size_t clo
 	bool bit = value & 1U;
 	if (!clock_cycles)
 		return;
+	/*
+	 * Count down instead of up, because with an up-count, some ARM-GCC
+	 * versions use an explicit CMP, missing the optimization of converting
+	 * to a faster down-count that uses SUBS followed by BCS/BCC.
+	 */
 	for (size_t cycle = clock_cycles; cycle--;) {
 		/* Reordering barrier */
 		__asm__("" ::: "memory");
