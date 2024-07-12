@@ -104,7 +104,7 @@ static uint32_t swdptap_seq_in_clk_delay(const size_t clock_cycles)
 	for (size_t cycle = clock_cycles; cycle--;) {
 		for (volatile uint32_t counter = target_clk_divider; counter > 0; --counter)
 			continue;
-		bool bit = gpio_get(SWDIO_IN_PORT, SWDIO_IN_PIN);
+		const bool bit = gpio_get(SWDIO_IN_PORT, SWDIO_IN_PIN);
 		gpio_set(SWCLK_PORT, SWCLK_PIN);
 		for (volatile uint32_t counter = target_clk_divider; counter > 0; --counter)
 			continue;
@@ -180,7 +180,7 @@ static void swdptap_seq_out_clk_delay(uint32_t tms_states, size_t clock_cycles) 
 static void swdptap_seq_out_clk_delay(const uint32_t tms_states, const size_t clock_cycles)
 {
 	uint32_t value = tms_states;
-	bool bit = value & 1;
+	bool bit = value & 1U;
 	if (!clock_cycles)
 		return;
 	for (size_t cycle = clock_cycles; cycle--;) {
@@ -194,7 +194,7 @@ static void swdptap_seq_out_clk_delay(const uint32_t tms_states, const size_t cl
 			continue;
 		__asm__("nop" ::: "memory");
 		value >>= 1U;
-		bit = value & 1;
+		bit = value & 1U;
 		/* Reordering barrier */
 		__asm__("" ::: "memory");
 		gpio_clear(SWCLK_PORT, SWCLK_PIN);
@@ -206,7 +206,7 @@ static void swdptap_seq_out_no_delay(uint32_t tms_states, size_t clock_cycles) _
 static void swdptap_seq_out_no_delay(const uint32_t tms_states, const size_t clock_cycles)
 {
 	uint32_t value = tms_states;
-	bool bit = value & 1;
+	bool bit = value & 1U;
 	if (!clock_cycles)
 		return;
 	for (size_t cycle = clock_cycles; cycle--;) {
@@ -217,7 +217,7 @@ static void swdptap_seq_out_no_delay(const uint32_t tms_states, const size_t clo
 		gpio_set(SWCLK_PORT, SWCLK_PIN);
 		__asm__("nop" ::: "memory");
 		value >>= 1U;
-		bit = value & 1;
+		bit = value & 1U;
 		/* Reordering barrier */
 		__asm__("" ::: "memory");
 	}
