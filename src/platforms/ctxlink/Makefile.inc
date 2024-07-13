@@ -5,7 +5,7 @@ OBJCOPY = $(CROSS_COMPILE)objcopy
 
 CFLAGS += -Istm32/include -mcpu=cortex-m4 -mthumb \
 	-mfloat-abi=hard -mfpu=fpv4-sp-d16 \
-	-DSTM32F4 -I../deps/libopencm3/include \
+	-DSTM32F4 -DCTX_LINK -I../deps/libopencm3/include \
 	-Iplatforms/common/stm32
 
 LINKER_SCRIPT=platforms/ctxlink/ctxlink.ld
