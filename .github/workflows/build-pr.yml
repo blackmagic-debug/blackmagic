@@ -302,6 +302,7 @@ jobs:
         probe:
           - '96b_carbon'
           - 'bluepill'
+          - 'ctxlink'
           - 'f072'
           - 'f3'
           - 'f4discovery'
