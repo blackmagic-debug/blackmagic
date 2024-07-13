@@ -47,30 +47,31 @@ int platform_hwversion(void)
 
 void platform_init(void)
 {
-	volatile uint32_t *magic = &_ebss;
 	/* Enable GPIO peripherals */
 	rcc_periph_clock_enable(RCC_GPIOA);
+	rcc_periph_clock_enable(RCC_GPIOB);
 	rcc_periph_clock_enable(RCC_GPIOC);
 	rcc_periph_clock_enable(RCC_GPIOD);
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Warray-bounds"
-	/* Check the USER button */
-	if (gpio_get(GPIOA, GPIO0) || (magic[0] == BOOTMAGIC0 && magic[1] == BOOTMAGIC1)) {
-		magic[0] = 0;
-		magic[1] = 0;
-		/* Assert blue LED as indicator we are in the firmware */
-		gpio_mode_setup(LED_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, LED_BOOTLOADER);
-		gpio_set(LED_PORT, LED_BOOTLOADER);
-		/*
-		 * Jump to the built in bootloader by mapping System flash.
-		 * As we just come out of reset, no other deinit is needed!
-		 */
-		rcc_periph_clock_enable(RCC_SYSCFG);
-		SYSCFG_MEMRM &= ~3U;
-		SYSCFG_MEMRM |= 1U;
-		scb_reset_core();
+	//
+	// Initialize the "Bootloader" input, it is used in
+	// normal running mode as the WPS selector switch
+	// The switch is active low and therefore needs
+	// a pullup
+	//
+	gpio_mode_setup(SWITCH_PORT, GPIO_MODE_INPUT, GPIO_PUPD_PULLUP, SW_BOOTLOADER_PIN);
+	/*
+	Check the Bootloader button, not sure this is needed fro the native-derived hardware, need to check if
+	this switch is looked at in the DFU bootloader
+	*/
+	if (!(gpio_get(SWITCH_PORT,
+			SW_BOOTLOADER_PIN))) // SJP - 0118_2016, changed to use defs in platform.h and the switch is active low!
+	{
+		platform_request_boot(); // Does not return from this call
 	}
+
 #pragma GCC diagnostic pop
 	rcc_clock_setup_pll(&rcc_hse_8mhz_3v3[RCC_CLOCK_3V3_168MHZ]);
 
@@ -91,7 +92,7 @@ void platform_init(void)
 	gpio_mode_setup(TDO_PORT, GPIO_MODE_INPUT, GPIO_PUPD_NONE, TDO_PIN);
 	gpio_set_output_options(TDO_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_2MHZ, TDO_PIN | TMS_PIN);
 
-	gpio_mode_setup(LED_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, LED_IDLE_RUN | LED_ERROR | LED_BOOTLOADER);
+	gpio_mode_setup(LED_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, LED_IDLE_RUN | LED_ERROR | LED_MODE);
 
 	gpio_mode_setup(LED_PORT_UART, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, LED_UART);
 
@@ -125,9 +126,6 @@ const char *platform_target_voltage(void)
 
 void platform_request_boot(void)
 {
-	uint32_t *magic = (uint32_t *)&_ebss;
-	magic[0] = BOOTMAGIC0;
-	magic[1] = BOOTMAGIC1;
 	scb_reset_system();
 }
 
