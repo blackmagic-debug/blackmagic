@@ -47,7 +47,6 @@
  * TMS =      PA4	(input/output for SWDIO)
  * TCK =      PA5	(output SWCLK)
  * TDO =      PC6	(input)
- *
  * TMS_DIR = PA1	(output) controls target buffer direction
  * TPWR =	 PB0		(analog input)
  * VBAT =	 PA0		(analog input)
@@ -75,10 +74,12 @@
 #define SWCLK_PIN      TCK_PIN
 #define SWDIO_DIR_PIN  TMS_DIR_PIN
 
-#define TRST_PORT GPIOA
-#define TRST_PIN  GPIO2
-#define NRST_PORT GPIOA
-#define NRST_PIN  GPIO2
+#define TRST_PORT       GPIOA
+#define TRST_PIN        GPIO2
+#define NRST_PORT       GPIOA
+#define NRST_PIN        GPIO2
+#define NRST_SENSE_PORT GPIOA
+#define NRST_SENSE_PIN  GPIO7
 
 #define LED_PORT      GPIOC
 #define LED_PORT_UART GPIOB
@@ -96,6 +97,13 @@
 #define VBAT_PIN    GPIO0
 #define PWR_BR_PORT GPIOB
 #define PWR_BR_PIN  GPIO1
+
+/* USB pin definitions */
+#define USB_PU_PORT GPIOA
+#define USB_PORT    GPIOA
+#define USB_PU_PIN  GPIO8
+#define USB_DP_PIN  GPIO12
+#define USB_DM_PIN  GPIO11
 
 #define USBUSART               USART1
 #define USBUSART_CR1           USART1_CR1
