@@ -28,6 +28,8 @@
 #include "timing_stm32.h"
 
 #define PLATFORM_HAS_TRACESWO
+#define PLATFORM_HAS_POWER_SWITCH
+
 #define PLATFORM_IDENT "(ctxLink) "
 
 /*
@@ -80,8 +82,15 @@
 #define LED_ERROR     GPIO8
 #define LED_MODE      GPIO9
 
-#define SWITCH_PORT	GPIOB
-#define SW_BOOTLOADER_PIN	GPIO12
+#define SWITCH_PORT       GPIOB
+#define SW_BOOTLOADER_PIN GPIO12
+
+#define TPWR_PORT   GPIOB
+#define TPWR_PIN    GPIO0
+#define VBAT_PORT   GPIOA
+#define VBAT_PIN    GPIO0
+#define PWR_BR_PORT GPIOB
+#define PWR_BR_PIN  GPIO1
 
 #define USBUSART               USART1
 #define USBUSART_CR1           USART1_CR1

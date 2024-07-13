@@ -32,14 +32,59 @@
 #include <libopencm3/cm3/nvic.h>
 #include <libopencm3/stm32/exti.h>
 #include <libopencm3/stm32/usart.h>
+#include <libopencm3/stm32/adc.h>
 #include <libopencm3/stm32/syscfg.h>
 #include <libopencm3/usb/usbd.h>
 #include <libopencm3/cm3/systick.h>
 #include <libopencm3/cm3/cortex.h>
 #include <libopencm3/usb/dwc/otg_fs.h>
 
-jmp_buf fatal_error_jmpbuf;
-extern uint32_t _ebss; // NOLINT(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp)
+#define CTXLINK_BATTERY_INPUT        0 // ADC Channel for battery input
+#define CTXLINK_TARGET_VOLTAGE_INPUT 8 // ADC Chanmel for target voltage
+
+#define CTXLINK_ADC_BATTERY 0
+#define CTXLINK_ADC_TARGET  1
+
+static uint32_t input_voltages[2] = {0};
+static uint8_t adc_channels[] = {CTXLINK_BATTERY_INPUT, CTXLINK_TARGET_VOLTAGE_INPUT}; /// ADC channels used by ctxLink
+
+static void adc_init(void)
+{
+	rcc_periph_clock_enable(RCC_ADC1);
+	gpio_mode_setup(TPWR_PORT, GPIO_MODE_ANALOG, GPIO_PUPD_NONE, TPWR_PIN); // Target voltage monitor input
+	gpio_mode_setup(VBAT_PORT, GPIO_MODE_ANALOG, GPIO_PUPD_NONE, VBAT_PIN); // Battery voltage monitor input
+
+	adc_power_off(ADC1);
+	adc_disable_scan_mode(ADC1);
+	adc_set_sample_time_on_all_channels(ADC1, ADC_SMPR_SMP_480CYC);
+
+	adc_power_on(ADC1);
+	/* Wait for ADC starting up. */
+	for (volatile size_t i = 0; i < 800000; i++) /* Wait a bit. */
+		__asm__("nop");
+}
+
+void platform_adc_read(void)
+{
+	adc_set_regular_sequence(ADC1, 1, &adc_channels[CTXLINK_ADC_BATTERY]);
+	adc_start_conversion_regular(ADC1);
+	/* Wait for end of conversion. */
+	while (!adc_eoc(ADC1))
+		continue;
+	input_voltages[CTXLINK_ADC_BATTERY] = adc_read_regular(ADC1);
+	adc_set_regular_sequence(ADC1, 1, &adc_channels[CTXLINK_ADC_TARGET]);
+	adc_start_conversion_regular(ADC1);
+	/* Wait for end of conversion. */
+	while (!adc_eoc(ADC1))
+		continue;
+	input_voltages[CTXLINK_ADC_TARGET] = adc_read_regular(ADC1);
+}
+
+// TODO Fix this to return the target voltage
+uint32_t platform_target_voltage_sense(void)
+{
+	return 0;
+}
 
 int platform_hwversion(void)
 {
@@ -103,6 +148,7 @@ void platform_init(void)
 #endif
 
 	platform_timing_init();
+	adc_init();
 	blackmagic_usb_init();
 	aux_serial_init();
 
