@@ -8,6 +8,7 @@ option(
 		'blackpill-f401ce',
 		'blackpill-f411ce',
 		'bluepill',
+		'ctxlink',
 		'f072',
 		'f3',
 		'f4discovery',
@@ -58,22 +59,41 @@ option(
 	value: false,
 	description: 'Enable debug output (for debugging the BMD stack, not debug targets)'
 )
-option('rtt_support', type: 'boolean', value: true, description: 'Enable RTT (Real Time Transfer) support')
-option('rtt_ident', type: 'string', description: 'RTT (Real Time Transfer) identifier string')
+option(
+	'rtt_support',
+	type: 'boolean',
+	value: true,
+	description: 'Enable RTT (Real Time Transfer) support'
+)
+option(
+	'rtt_ident',
+	type: 'string',
+	description: 'RTT (Real Time Transfer) identifier string'
+)
 option(
 	'no_own_ll',
 	type: 'boolean',
 	value: false,
 	description: 'Use generic interface routines (for when low level routines are not available)'
 )
-option('bmd_bootloader', type: 'boolean', value: true, description: 'Use the BMD bootloader (not always applicable)')
+option(
+	'bmd_bootloader',
+	type: 'boolean',
+	value: true,
+	description: 'Use the BMD bootloader (not always applicable)'
+)
 option(
 	'stlink_swim_nrst_as_uart',
 	type: 'boolean',
 	value: false,
-	description: 'Repurpose the SWIM and NRST pins as the UART RX and TX (only applicable to stlink)'
+	description: 'Repurpose the SWIM pins as the UART (only applicable to stlink)'
 )
-option('serialno', type: 'string', value: '1', description: 'Serial number to report (only applicable to some probes)')
+option(
+	'serialno',
+	type: 'string',
+	value: '1',
+	description: 'Serial number to report (only applicable to some probes)'
+)
 option(
 	'advertise_noackmode',
 	type: 'boolean',
