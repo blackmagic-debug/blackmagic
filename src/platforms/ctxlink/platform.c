@@ -36,6 +36,7 @@
 #include <libopencm3/usb/usbd.h>
 #include <libopencm3/cm3/systick.h>
 #include <libopencm3/cm3/cortex.h>
+#include <libopencm3/usb/dwc/otg_fs.h>
 
 jmp_buf fatal_error_jmpbuf;
 extern uint32_t _ebss; // NOLINT(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp)
@@ -104,6 +105,12 @@ void platform_init(void)
 	platform_timing_init();
 	blackmagic_usb_init();
 	aux_serial_init();
+
+	/* https://github.com/libopencm3/libopencm3/pull/1256#issuecomment-779424001 */
+	OTG_FS_GCCFG |= OTG_GCCFG_NOVBUSSENS | OTG_GCCFG_PWRDWN;
+	OTG_FS_GCCFG &= ~(OTG_GCCFG_VBUSBSEN | OTG_GCCFG_VBUSASEN);
+
+	/* By default, do not drive the SWD bus too fast. */
 }
 
 void platform_nrst_set_val(bool assert)
