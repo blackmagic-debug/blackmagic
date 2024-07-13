@@ -89,7 +89,14 @@ static bool at32f43_mass_erase(target_s *target);
 #define AT32F43x_2K_OB_COUNT 256U
 #define AT32F43x_4K_OB_COUNT 2048U
 
-#define DBGMCU_IDCODE 0xe0042000U
+#define AT32F43x_DEBUG            0xe0042000U
+#define DBGMCU_IDCODE             (AT32F43x_DEBUG + 0U)
+#define AT32F43x_DEBUG_CTRL       (AT32F43x_DEBUG + 4U)
+#define AT32F43x_DEBUG_APB1_PAUSE (AT32F43x_DEBUG + 8U)
+
+#define AT32F43x_DEBUG_CTRL_SLEEP      0x7U
+#define AT32F43x_DEBUG_APB1_PAUSE_WWDT (1U << 11U)
+#define AT32F43x_DEBUG_APB1_PAUSE_WDT  (1U << 12U)
 
 #define AT32F4x_IDCODE_SERIES_MASK 0xfffff000U
 #define AT32F4x_IDCODE_PART_MASK   0x00000fffU
@@ -127,6 +134,40 @@ static void at32f43_add_flash(target_s *const target, const target_addr_t addr, 
 	flash->bank_split = bank_split;
 	flash->bank_reg_offset = bank_reg_offset;
 	target_add_flash(target, target_flash);
+}
+
+static bool at32f43_attach(target_s *target)
+{
+	if (!cortexm_attach(target))
+		return false;
+
+	/*
+	 * Save previous configuration (to restore on detach)
+	 * then enable sleep state emulation (clocks fed by HICK)
+	 * and make both watchdogs pause during core halts so that they
+	 * don't issue extra resets when we're doing e.g. flash reprogramming
+	 */
+	uint32_t debug_ctrl = target_mem32_read32(target, AT32F43x_DEBUG_CTRL);
+	debug_ctrl |= AT32F43x_DEBUG_CTRL_SLEEP;
+	uint32_t debug_apb1_pause = target_mem32_read32(target, AT32F43x_DEBUG_APB1_PAUSE);
+	debug_apb1_pause |= AT32F43x_DEBUG_APB1_PAUSE_WWDT | AT32F43x_DEBUG_APB1_PAUSE_WDT;
+
+	bool result = true;
+	result |= target_mem32_write32(target, AT32F43x_DEBUG_CTRL, debug_ctrl);
+	result |= target_mem32_write32(target, AT32F43x_DEBUG_APB1_PAUSE, debug_apb1_pause);
+	return result;
+}
+
+static void at32f43_detach(target_s *target)
+{
+	uint32_t debug_ctrl = target_mem32_read32(target, AT32F43x_DEBUG_CTRL);
+	debug_ctrl &= ~AT32F43x_DEBUG_CTRL_SLEEP;
+	uint32_t debug_apb1_pause = target_mem32_read32(target, AT32F43x_DEBUG_APB1_PAUSE);
+	debug_apb1_pause &= ~(AT32F43x_DEBUG_APB1_PAUSE_WWDT | AT32F43x_DEBUG_APB1_PAUSE_WDT);
+	target_mem32_write32(target, AT32F43x_DEBUG_CTRL, debug_ctrl);
+	target_mem32_write32(target, AT32F43x_DEBUG_APB1_PAUSE, debug_apb1_pause);
+
+	cortexm_detach(target);
 }
 
 static bool at32f43_detect(target_s *target, const uint16_t part_id)
@@ -224,6 +265,8 @@ static bool at32f43_detect(target_s *target, const uint16_t part_id)
 	target->driver = "AT32F435";
 	target->mass_erase = at32f43_mass_erase;
 	target_add_commands(target, at32f43_cmd_list, target->driver);
+	target->attach = at32f43_attach;
+	target->detach = at32f43_detach;
 	return true;
 }
 
