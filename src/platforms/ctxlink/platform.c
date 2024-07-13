@@ -128,10 +128,10 @@ void platform_init(void)
 
 		this is what the native BMP does, don't really know why
 	*/
-	gpio_port_write(GPIOA, 0xA102);
+	gpio_port_write(GPIOA, 0xa102);
 	gpio_port_write(GPIOB, 0x0000);
 
-	gpio_port_write(GPIOA, 0xA182);
+	gpio_port_write(GPIOA, 0xa182);
 	gpio_port_write(GPIOB, 0x0002);
 
 	/*
