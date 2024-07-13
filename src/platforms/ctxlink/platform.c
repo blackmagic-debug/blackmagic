@@ -263,7 +263,6 @@ void platform_request_boot(void)
 
 #pragma GCC diagnostic pop
 
-#ifdef PLATFORM_HAS_POWER_SWITCH
 bool platform_target_get_power(void)
 {
 	return !gpio_get(PWR_BR_PORT, PWR_BR_PIN);
@@ -274,7 +273,6 @@ bool platform_target_set_power(const bool power)
 	gpio_set_val(PWR_BR_PORT, PWR_BR_PIN, !power);
 	return true;
 }
-#endif
 
 void platform_target_clk_output_enable(bool enable)
 {
