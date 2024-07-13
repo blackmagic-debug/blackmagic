@@ -42,7 +42,7 @@
  *
  * nRST		= A2	(output)
  * PWR_BR	= PB1	(output) - supply power to the target, active low
- * 
+ *
  * TDI =      PA3	(output)
  * TMS =      PA4	(input/output for SWDIO)
  * TCK =      PA5	(output SWCLK)
@@ -51,7 +51,7 @@
  * TMS_DIR = PA1	(output) controls target buffer direction
  * TPWR =	 PB0		(analog input)
  * VBAT =	 PA0		(analog input)
- * 
+ *
  * SW_BOOTLOADER	PB12	(input) System Bootloader button
  */
 
@@ -117,10 +117,32 @@
 /* For STM32F4 DMA trigger source must be specified */
 #define USBUSART_DMA_TRG DMA_SxCR_CHSEL_4
 
-#define TMS_SET_MODE()     gpio_mode_setup(TMS_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, TMS_PIN);
-#define SWDIO_MODE_FLOAT() gpio_mode_setup(SWDIO_PORT, GPIO_MODE_INPUT, GPIO_PUPD_NONE, SWDIO_PIN);
+#define SWD_CR       GPIO_MODER(SWDIO_PORT)
+#define SWD_CR_SHIFT (0x4U << 0x1U)
 
-#define SWDIO_MODE_DRIVE() gpio_mode_setup(SWDIO_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, SWDIO_PIN);
+#define TMS_SET_MODE()                                                        \
+	do {                                                                      \
+		gpio_set(TMS_DIR_PORT, TMS_DIR_PIN);                                  \
+		gpio_mode_setup(TMS_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, TMS_PIN); \
+	} while (0)
+
+#define SWDIO_MODE_FLOAT()                                \
+	do {                                                  \
+		uint32_t cr = SWD_CR;                             \
+		cr &= ~(0x3U << SWD_CR_SHIFT);                    \
+		GPIO_BSRR(SWDIO_DIR_PORT) = SWDIO_DIR_PIN << 16U; \
+		SWD_CR = cr;                                      \
+	} while (0)
+
+#define SWDIO_MODE_DRIVE()                         \
+	do {                                           \
+		uint32_t cr = SWD_CR;                      \
+		cr &= ~(0x3U << SWD_CR_SHIFT);             \
+		cr |= (0x1U << SWD_CR_SHIFT);              \
+		GPIO_BSRR(SWDIO_DIR_PORT) = SWDIO_DIR_PIN; \
+		SWD_CR = cr;                               \
+	} while (0)
+
 #define UART_PIN_SETUP()                                                                            \
 	do {                                                                                            \
 		gpio_mode_setup(USBUSART_PORT, GPIO_MODE_AF, GPIO_PUPD_NONE, USBUSART_TX_PIN);              \
