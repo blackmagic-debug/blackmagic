@@ -8,10 +8,9 @@ CFLAGS += -Istm32/include -mcpu=cortex-m4 -mthumb \
 	-DSTM32F4 -DCTX_LINK -I../deps/libopencm3/include \
 	-Iplatforms/common/stm32
 
-LINKER_SCRIPT=platforms/ctxlink/ctxlink.ld
-
 LDFLAGS_BOOT = -lopencm3_stm32f4 \
-	-Wl,-T,$(LINKER_SCRIPT) -nostartfiles -lc -lnosys \
+	-Tctxlink.ld -nostartfiles -lc -lnosys \
+	-Lplatforms/ctxLink \
 	-Wl,-Map=mapfile -mthumb -mcpu=cortex-m4 -Wl,-gc-sections \
 	-mfloat-abi=hard -mfpu=fpv4-sp-d16 \
 	-L../deps/libopencm3/lib
@@ -33,8 +32,7 @@ SRC +=               \
 	traceswo.c	\
 	serialno.c	\
 	timing.c	\
-	timing_stm32.c	\
-	ctxLink_gdb_if.c
+	timing_stm32.c
 
 ifneq ($(BMP_BOOTLOADER), 1)
 all:	blackmagic.bin
