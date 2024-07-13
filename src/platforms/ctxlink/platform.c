@@ -38,6 +38,7 @@
 #include <libopencm3/cm3/systick.h>
 #include <libopencm3/cm3/cortex.h>
 #include <libopencm3/usb/dwc/otg_fs.h>
+#include <libopencm3/stm32/f4/flash.h>
 
 #define CTXLINK_BATTERY_INPUT        0 // ADC Channel for battery input
 #define CTXLINK_TARGET_VOLTAGE_INPUT 8 // ADC Chanmel for target voltage
@@ -47,6 +48,8 @@
 
 static uint32_t input_voltages[2] = {0};
 static uint8_t adc_channels[] = {CTXLINK_BATTERY_INPUT, CTXLINK_TARGET_VOLTAGE_INPUT}; /// ADC channels used by ctxLink
+
+typedef void (*irq_function_t)(void);
 
 static void adc_init(void)
 {
@@ -109,14 +112,10 @@ void platform_init(void)
 	//
 	gpio_mode_setup(SWITCH_PORT, GPIO_MODE_INPUT, GPIO_PUPD_PULLUP, SW_BOOTLOADER_PIN);
 	/*
-	Check the Bootloader button, not sure this is needed fro the native-derived hardware, need to check if
-	this switch is looked at in the DFU bootloader
+		Check the Bootloader button
 	*/
-	if (!(gpio_get(SWITCH_PORT,
-			SW_BOOTLOADER_PIN))) // SJP - 0118_2016, changed to use defs in platform.h and the switch is active low!
-	{
+	if (!gpio_get(SWITCH_PORT, SW_BOOTLOADER_PIN))
 		platform_request_boot(); // Does not return from this call
-	}
 
 #pragma GCC diagnostic pop
 	rcc_clock_setup_pll(&rcc_hse_8mhz_3v3[RCC_CLOCK_3V3_84MHZ]);
@@ -126,7 +125,7 @@ void platform_init(void)
 	rcc_periph_clock_enable(RCC_CRC);
 	/*
 		toggle the PWR_BR and SRST pins
-		
+
 		this is what the native BMP does, don't really know why
 	*/
 	gpio_port_write(GPIOA, 0xA102);
@@ -137,9 +136,9 @@ void platform_init(void)
 
 	/*
 	 * Set up USB Pins and alternate function
-	 * 
+	 *
 	 * Setup REN output
-	 * 
+	 *
 	 */
 	gpio_clear(USB_PU_PORT, USB_PU_PIN);
 	gpio_mode_setup(USB_PU_PORT, GPIO_MODE_INPUT, GPIO_PUPD_NONE, USB_PU_PIN);
@@ -182,9 +181,9 @@ void platform_init(void)
 	// setup the iRSTR pin
 	//
 	gpio_mode_setup(NRST_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_PULLUP, NRST_PIN);
-	/* 
+	/*
 	 * Enable internal pull-up on PWR_BR so that we don't drive
-	 * TPWR locally or inadvertently supply power to the target. 
+	 * TPWR locally or inadvertently supply power to the target.
 	 */
 	gpio_set(PWR_BR_PORT, PWR_BR_PIN);
 	gpio_mode_setup(PWR_BR_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, PWR_BR_PIN);
@@ -222,7 +221,44 @@ const char *platform_target_voltage(void)
 
 void platform_request_boot(void)
 {
-	scb_reset_system();
+	const uint32_t application_address = 0x1fff0000;
+	register uint32_t jump_address = 0;
+	register uint32_t addr = 0;
+	register irq_function_t jump_to_application;
+
+	/* We start here */
+	cm_disable_interrupts();
+	uint32_t value = UINT32_MAX;
+	NVIC_ICER(0) = value;
+	NVIC_ICER(1) = value;
+	NVIC_ICER(2) = value;
+	NVIC_ICPR(0) = value;
+	NVIC_ICPR(1) = value;
+	NVIC_ICPR(2) = value;
+
+	STK_CSR = 0;
+	/* Reset the RCC clock configuration to the default reset state ------------*/
+	/* Reset value of 0x83 includes Set HSION bit */
+	RCC_CR |= (uint32_t)0x00000082;
+	/* Reset CFGR register */
+	RCC_CFGR = 0x00000000;
+
+	/* Disable all interrupts */
+	RCC_CIR = 0x00000000;
+
+	FLASH_ACR = 0;
+	__asm__ volatile("isb");
+	__asm__ volatile("dsb");
+	cm_enable_interrupts();
+	addr = *((uint32_t *)application_address);
+	jump_address = *((uint32_t *)(application_address + 4));
+	jump_to_application = (irq_function_t)jump_address;
+	/*
+	set up the stack for the bootloader
+	*/
+	__asm__("mov sp,%[v]" : : [v] "r"(addr));
+
+	jump_to_application();
 }
 
 #pragma GCC diagnostic pop
