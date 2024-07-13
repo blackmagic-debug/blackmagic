@@ -24,6 +24,6 @@ MEMORY
 	ram (rwx) : ORIGIN = 0x20000000, LENGTH = 96K
 }
 
-/* Include the common ld script from libopenstm32. */
-INCLUDE cortex-m-generic.ld
+/* Include the platform common linker script. */
+INCLUDE ../common/blackmagic.ld
 
