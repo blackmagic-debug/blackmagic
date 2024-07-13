@@ -45,7 +45,6 @@ SRC =              \
 	crc32.c        \
 	efm32.c        \
 	exception.c    \
-	gdb_if.c       \
 	gdb_main.c     \
 	gdb_packet.c   \
 	gdb_reg.c      \
@@ -96,6 +95,10 @@ SRC =              \
 	target.c       \
 	target_flash.c \
 	target_probe.c
+
+ifneq ($(PROBE_HOST), ctxLink)
+	SRC += gdb_if.c
+endif
 
 ifeq (,$(filter all_platforms,$(MAKECMDGOALS)))
 include $(PLATFORM_DIR)/Makefile.inc
