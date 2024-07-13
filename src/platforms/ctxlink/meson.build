@@ -28,38 +28,41 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-probe_native_includes = include_directories('.')
+probe_ctxlink_includes = include_directories('.')
 
-probe_native_sources = files('platform.c')
+probe_ctxlink_sources = files('platform.c')
 
-probe_native_args = [
-	'-DDFU_SERIAL_LENGTH=9',
-	'-DBLACKMAGIC',
+bmd_bootloader = get_option('bmd_bootloader')
+
+probe_ctxlink_dfu_serial_length = bmd_bootloader ? '9' : '13'
+
+probe_ctxlink_args = [
+	f'-DDFU_SERIAL_LENGTH=@probe_ctxlink_dfu_serial_length@',
 ]
 
-probe_native_common_link_args = [
+probe_ctxlink_commonn_link_args = [
 	'-L@0@'.format(meson.current_source_dir()),
-	'-T@0@'.format('native.ld'),
+	'-T@0@'.format('ctxlink.ld'),
 ]
 
-probe_native_link_args = [
-	'-Wl,-Ttext=0x8002000',
-]
+probe_ctxlink_link_args = []
+if bmd_bootloader
+	probe_ctxlink_link_args += ['-Wl,-Ttext=0x8004000']
+endif
 
 probe_host = declare_dependency(
-	include_directories: probe_native_includes,
-	sources: probe_native_sources,
-	compile_args: probe_native_args,
-	link_args: probe_native_common_link_args + probe_native_link_args,
-	dependencies: [platform_common, platform_stm32f1, fixme_platform_stm32_traceswo],
+	include_directories: probe_ctxlink_includes,
+	sources: probe_ctxlink_sources,
+	compile_args: probe_ctxlink_args,
+	link_args: probe_ctxlink_commonn_link_args + probe_ctxlink_link_args,
+	dependencies: [platform_common, platform_stm32f4, fixme_platform_stm32_traceswo],
 )
 
 summary(
 	{
-		'Name': 'Black Magic Probe (native)',
-		'Platform': 'STM32F1',
-		'Bootloader': 'Black Magic Debug Bootloader',
-		'Load Address': '0x8002000',
+		'Name': 'ctxLink',
+		'Platform': 'STM32F4',
+		'Bootloader': bmd_bootloader ? 'Black Magic Debug Bootloader' : 'OEM ST Bootloader',
 	},
 	section: 'Probe',
 )
