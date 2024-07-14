@@ -127,20 +127,28 @@ const command_s stm32l4_cmd_list[] = {
 
 #define SR_ERROR_MASK 0xf2U
 
-/* Used in STM32L47*/
+/* Used in STM32L47 */
 #define OR_DUALBANK (1U << 21U)
-/* Used in STM32L47R*/
+/* Used in STM32L47R */
 #define OR_DB1M (1U << 21U)
-/* Used in STM32L47R, STM32G47 and STM32L55*/
+/* Used in STM32L47R, STM32G47 and STM32L55 */
 #define OR_DBANK (1U << 22U)
 
-#define DBGMCU_CR(reg_base)   ((reg_base) + 0x04U)
-#define DBGMCU_CR_DBG_SLEEP   (1U << 0U)
-#define DBGMCU_CR_DBG_STOP    (1U << 1U)
-#define DBGMCU_CR_DBG_STANDBY (1U << 2U)
+#define STM32L4_DBGMCU_BASE        0xe0042000U
+#define STM32L4_DBGMCU_IDCODE      (STM32L4_DBGMCU_BASE + 0x000U)
+#define STM32L4_DBGMCU_CONFIG      (STM32L4_DBGMCU_BASE + 0x004U)
+#define STM32L4_DBGMCU_APB1FREEZE1 (STM32L4_DBGMCU_BASE + 0x008U)
 
-#define STM32L4_DBGMCU_IDCODE_PHYS 0xe0042000U
-#define STM32L5_DBGMCU_IDCODE_PHYS 0xe0044000U
+#define STM32L5_DBGMCU_BASE        0xe0044000U
+#define STM32L5_DBGMCU_IDCODE      (STM32L5_DBGMCU_BASE + 0x000U)
+#define STM32L5_DBGMCU_CONFIG      (STM32L5_DBGMCU_BASE + 0x004U)
+#define STM32L5_DBGMCU_APB1FREEZE1 (STM32L5_DBGMCU_BASE + 0x008U)
+
+#define STM32L4_DBGMCU_CONFIG_DBG_SLEEP   (1U << 0U)
+#define STM32L4_DBGMCU_CONFIG_DBG_STOP    (1U << 1U)
+#define STM32L4_DBGMCU_CONFIG_DBG_STANDBY (1U << 2U)
+#define STM32L4_DBGMCU_APB1FREEZE1_WWDG   (1U << 11U)
+#define STM32L4_DBGMCU_APB1FREEZE1_IWDG   (1U << 12U)
 
 #define STM32L4_UID_BASE       0x1fff7590U
 #define STM32L4_FLASH_SIZE_REG 0x1fff75e0U
@@ -220,7 +228,7 @@ typedef struct stm32l4_flash {
 
 typedef struct stm32l4_priv {
 	const stm32l4_device_info_s *device;
-	uint32_t dbgmcu_cr;
+	uint32_t dbgmcu_config;
 } stm32l4_priv_s;
 
 typedef struct stm32l4_option_bytes_info {
@@ -557,17 +565,6 @@ static void stm32l5_flash_enable(target_s *const target)
 	target_mem32_write32(target, STM32L5_PWR_CR1, pwr_ctrl1);
 }
 
-static uint32_t stm32l4_idcode_reg_address(target_s *const target)
-{
-	const stm32l4_priv_s *const priv = (const stm32l4_priv_s *)target->target_storage;
-	const stm32l4_device_info_s *const device = priv->device;
-	if (device->family == STM32L4_FAMILY_L55x) {
-		stm32l5_flash_enable(target);
-		return STM32L5_DBGMCU_IDCODE_PHYS;
-	}
-	return STM32L4_DBGMCU_IDCODE_PHYS;
-}
-
 static uint32_t stm32l4_main_sram_length(const target_s *const target)
 {
 	const stm32l4_priv_s *const priv = (const stm32l4_priv_s *)target->target_storage;
@@ -578,24 +575,64 @@ static uint32_t stm32l4_main_sram_length(const target_s *const target)
 	return (device->sram1 + device->sram2 + device->sram3) * 1024U;
 }
 
+static bool stm32l4_configure_dbgmcu(target_s *const target, const stm32l4_device_info_s *device)
+{
+	/* If we're in the probe phase */
+	if (target->target_storage == NULL) {
+		/* Allocate and save private storage */
+		stm32l4_priv_s *const priv_storage = calloc(1, sizeof(*priv_storage));
+		if (!priv_storage) { /* calloc failed: heap exhaustion */
+			DEBUG_ERROR("calloc: failed in %s\n", __func__);
+			return false;
+		}
+		/* Save the device we're configuring for */
+		priv_storage->device = device;
+		/* Get the current value of the debug config register (and store it for later) */
+		const target_addr32_t dbgmcu_config_taddr =
+			device->family == STM32L4_FAMILY_L55x ? STM32L5_DBGMCU_CONFIG : STM32L4_DBGMCU_CONFIG;
+		priv_storage->dbgmcu_config = target_mem32_read32(target, dbgmcu_config_taddr);
+		target->target_storage = priv_storage;
+
+		target->attach = stm32l4_attach;
+		target->detach = stm32l4_detach;
+	}
+
+	const stm32l4_priv_s *const priv = (stm32l4_priv_s *)target->target_storage;
+	/*
+	 * Now we have a stable debug environment, make sure the WDTs can't bonk the processor out from under us,
+	 * then Reconfigure the config register to prevent WFI/WFE from cutting debug access
+	 */
+	if (device->family == STM32L4_FAMILY_L55x) {
+		target_mem32_write32(
+			target, STM32L5_DBGMCU_APB1FREEZE1, STM32L4_DBGMCU_APB1FREEZE1_IWDG | STM32L4_DBGMCU_APB1FREEZE1_WWDG);
+		target_mem32_write32(target, STM32L5_DBGMCU_CONFIG,
+			priv->dbgmcu_config | STM32L4_DBGMCU_CONFIG_DBG_STANDBY | STM32L4_DBGMCU_CONFIG_DBG_STOP);
+	} else {
+		target_mem32_write32(
+			target, STM32L4_DBGMCU_APB1FREEZE1, STM32L4_DBGMCU_APB1FREEZE1_IWDG | STM32L4_DBGMCU_APB1FREEZE1_WWDG);
+		target_mem32_write32(target, STM32L4_DBGMCU_CONFIG,
+			priv->dbgmcu_config | STM32L4_DBGMCU_CONFIG_DBG_STANDBY | STM32L4_DBGMCU_CONFIG_DBG_STOP |
+				STM32L4_DBGMCU_CONFIG_DBG_SLEEP);
+	}
+	return true;
+}
+
 bool stm32l4_probe(target_s *const target)
 {
-	adiv5_access_port_s *ap = cortex_ap(target);
+	adiv5_access_port_s *const ap = cortex_ap(target);
 	uint32_t device_id = ap->dp->version >= 2U ? ap->dp->target_partno : ap->partno;
 	/* If the part is DPv0 or DPv1, we must use the L4 ID register, except if we've already identified an L5 part */
 	if (ap->dp->version < 2U && device_id != ID_STM32L55)
-		device_id = target_mem32_read32(target, STM32L4_DBGMCU_IDCODE_PHYS) & 0xfffU;
+		device_id = target_mem32_read32(target, STM32L4_DBGMCU_IDCODE) & 0xfffU;
 	DEBUG_INFO("ID Code: %08" PRIx32 "\n", device_id);
 
 	const stm32l4_device_info_s *device = stm32l4_get_device_info(device_id);
-	/* If the call returned the sentinel, it's not a supported L4 device */
-	if (!device->device_id)
+	/*
+	 * If the call returned the sentinel, it's not a supported L4 device.
+	 * Now we have a stable debug environment, make sure the WDTs + WFI and WFE instructions can't cause problems
+	 */
+	if (!device->device_id || !stm32l4_configure_dbgmcu(target, device))
 		return false;
-
-	/* Save private storage */
-	stm32l4_priv_s *priv_storage = calloc(1, sizeof(*priv_storage));
-	priv_storage->device = device;
-	target->target_storage = (void *)priv_storage;
 
 	target->driver = device->designator;
 	switch (device_id) {
@@ -623,29 +660,25 @@ bool stm32l4_probe(target_s *const target)
 			break;
 		}
 	}
+
 	target->mass_erase = stm32l4_mass_erase;
-	target->attach = stm32l4_attach;
-	target->detach = stm32l4_detach;
 	target_add_commands(target, stm32l4_cmd_list, device->designator);
 	return true;
 }
 
 static bool stm32l4_attach(target_s *const target)
 {
-	if (!cortexm_attach(target))
+	/*
+	 * Try to attach to the part, and then ensure that the WDTs + WFI and WFE
+	 * instructions can't cause problems (this is duplicated as it's undone by detach.)
+	 */
+	if (!cortexm_attach(target) || !stm32l4_configure_dbgmcu(target, NULL))
 		return false;
 
 	/* Retrieve device information, and locate the device ID register */
 	const stm32l4_device_info_s *device = stm32l4_get_device_info(target->part_id);
-	const uint32_t idcode_addr = stm32l4_idcode_reg_address(target);
-
-	/* Save DBGMCU_CR to restore it when detaching */
-	stm32l4_priv_s *const priv_storage = (stm32l4_priv_s *)target->target_storage;
-	priv_storage->dbgmcu_cr = target_mem32_read32(target, DBGMCU_CR(idcode_addr));
-
-	/* Enable debugging during all low power modes */
-	target_mem32_write32(
-		target, DBGMCU_CR(idcode_addr), DBGMCU_CR_DBG_SLEEP | DBGMCU_CR_DBG_STANDBY | DBGMCU_CR_DBG_STOP);
+	if (device->family == STM32L4_FAMILY_L55x)
+		stm32l5_flash_enable(target);
 
 	/* Free any previously built memory map */
 	target_mem_map_free(target);
@@ -734,9 +767,11 @@ static bool stm32l4_attach(target_s *const target)
 static void stm32l4_detach(target_s *const target)
 {
 	const stm32l4_priv_s *const priv = (stm32l4_priv_s *)target->target_storage;
+	const stm32l4_device_info_s *const device = priv->device;
 
 	/*reverse all changes to DBGMCU_CR*/
-	target_mem32_write32(target, DBGMCU_CR(STM32L4_DBGMCU_IDCODE_PHYS), priv->dbgmcu_cr);
+	target_mem32_write32(target, device->family == STM32L4_FAMILY_L55x ? STM32L5_DBGMCU_CONFIG : STM32L4_DBGMCU_CONFIG,
+		priv->dbgmcu_config);
 	cortexm_detach(target);
 }
 
