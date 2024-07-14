@@ -23,9 +23,7 @@ After build:
 1) `apt install dfu-util`
 2) Force ctxLink into system bootloader mode by holding down the Mode switch while
    pressing reset. Release reset followed by Mode. System bootloader should appear.
-3) `dfu-util -a 0 --dfuse-address 0x08000000 -D blackmagic_ctxlink_firmware.bin`
-
-To exit from DFU mode press and release Reset on ctxLink.
+3) `dfu-util -a 0 --dfuse-address 0x08000000:leave -D blackmagic_ctxlink_firmware.bin`
 
 ## 10 pin male from pins
 

@@ -221,44 +221,10 @@ const char *platform_target_voltage(void)
 
 void platform_request_boot(void)
 {
-	const uint32_t application_address = 0x1fff0000;
-	register uint32_t jump_address = 0;
-	register uint32_t addr = 0;
-	register irq_function_t jump_to_application;
-
-	/* We start here */
-	cm_disable_interrupts();
-	uint32_t value = UINT32_MAX;
-	NVIC_ICER(0) = value;
-	NVIC_ICER(1) = value;
-	NVIC_ICER(2) = value;
-	NVIC_ICPR(0) = value;
-	NVIC_ICPR(1) = value;
-	NVIC_ICPR(2) = value;
-
-	STK_CSR = 0;
-	/* Reset the RCC clock configuration to the default reset state ------------*/
-	/* Reset value of 0x83 includes Set HSION bit */
-	RCC_CR |= (uint32_t)0x00000082;
-	/* Reset CFGR register */
-	RCC_CFGR = 0x00000000;
-
-	/* Disable all interrupts */
-	RCC_CIR = 0x00000000;
-
-	FLASH_ACR = 0;
-	__asm__ volatile("isb");
-	__asm__ volatile("dsb");
-	cm_enable_interrupts();
-	addr = *((uint32_t *)application_address);
-	jump_address = *((uint32_t *)(application_address + 4));
-	jump_to_application = (irq_function_t)jump_address;
-	/*
-	set up the stack for the bootloader
-	*/
-	__asm__("mov sp,%[v]" : : [v] "r"(addr));
-
-	jump_to_application();
+	/* Switch mapping at 0x0 from internal Flash to MaskROM and reboot CM4 into it */
+	rcc_periph_clock_enable(RCC_SYSCFG);
+	SYSCFG_MEMRM = (SYSCFG_MEMRM & ~3U) | 1U;
+	scb_reset_core();
 }
 
 #pragma GCC diagnostic pop
