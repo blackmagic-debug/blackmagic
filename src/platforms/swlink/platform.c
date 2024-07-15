@@ -172,7 +172,7 @@ const char *platform_target_voltage(void)
 		ret[2] = '0' + value % 10U;
 		return ret;
 	}
-	return NULL;
+	return "Unknown";
 }
 
 void set_idle_state(int state)

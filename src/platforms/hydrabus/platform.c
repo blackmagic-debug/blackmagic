@@ -89,7 +89,7 @@ bool platform_nrst_get_val(void)
 
 const char *platform_target_voltage(void)
 {
-	return NULL;
+	return "Unknown";
 }
 
 void platform_request_boot(void)
