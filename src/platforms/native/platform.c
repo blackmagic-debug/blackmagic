@@ -406,7 +406,7 @@ uint32_t platform_target_voltage_sense(void)
 const char *platform_target_voltage(void)
 {
 	if (hwversion == 0)
-		return gpio_get(GPIOB, GPIO0) ? "OK" : "ABSENT!";
+		return gpio_get(GPIOB, GPIO0) ? "Present" : "Absent";
 
 	static char ret[] = "0.0V";
 	uint32_t val = platform_target_voltage_sense();
