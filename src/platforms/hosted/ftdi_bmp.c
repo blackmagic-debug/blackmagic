@@ -823,7 +823,7 @@ const char *ftdi_target_voltage(void)
 			return "Present";
 		return "Absent";
 	}
-	return NULL;
+	return "Unknown";
 }
 
 static uint16_t divisor;
