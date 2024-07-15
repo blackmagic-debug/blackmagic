@@ -82,8 +82,8 @@ static bool debug_serial_send_complete = true;
 void initialise_monitor_handles(void);
 
 static char debug_serial_debug_buffer[AUX_UART_BUFFER_SIZE];
-static uint8_t debug_serial_debug_write_index;
-static uint8_t debug_serial_debug_read_index;
+static uint16_t debug_serial_debug_write_index;
+static uint16_t debug_serial_debug_read_index;
 #endif
 
 static usbd_request_return_codes_e gdb_serial_control_request(usbd_device *dev, usb_setup_data_s *req, uint8_t **buf,
