@@ -106,7 +106,7 @@ bool platform_nrst_get_val(void)
 
 const char *platform_target_voltage(void)
 {
-	return "ABSENT!";
+	return "Unknown";
 }
 
 #pragma GCC diagnostic push
