@@ -212,8 +212,10 @@ static bool cmd_jtag_scan(target_s *target, int argc, const char **argv)
 	(void)argc;
 	(void)argv;
 
-	if (platform_target_voltage())
-		gdb_outf("Target voltage: %s\n", platform_target_voltage());
+	/* Call the sampling function only once, check for NULL, check for unimplemented and suppress the output */
+	const char *const target_voltage = platform_target_voltage();
+	if (target_voltage && strcmp(target_voltage, "Unknown") != 0)
+		gdb_outf("Target voltage: %s\n", target_voltage);
 
 	if (connect_assert_nrst)
 		platform_nrst_set_val(true); /* will be deasserted after attach */
@@ -254,8 +256,10 @@ bool cmd_swd_scan(target_s *target, int argc, const char **argv)
 	volatile uint32_t targetid = 0;
 	if (argc > 1)
 		targetid = strtoul(argv[1], NULL, 0);
-	if (platform_target_voltage())
-		gdb_outf("Target voltage: %s\n", platform_target_voltage());
+	/* Call the sampling function only once, check for NULL, check for unimplemented and suppress the output */
+	const char *const target_voltage = platform_target_voltage();
+	if (target_voltage && strcmp(target_voltage, "Unknown") != 0)
+		gdb_outf("Target voltage: %s\n", target_voltage);
 
 	if (connect_assert_nrst)
 		platform_nrst_set_val(true); /* will be deasserted after attach */
@@ -296,8 +300,11 @@ bool cmd_auto_scan(target_s *t, int argc, const char **argv)
 	(void)argc;
 	(void)argv;
 
-	if (platform_target_voltage())
-		gdb_outf("Target voltage: %s\n", platform_target_voltage());
+	/* Call the sampling function only once, check for NULL, check for unimplemented and suppress the output */
+	const char *const target_voltage = platform_target_voltage();
+	if (target_voltage && strcmp(target_voltage, "Unknown") != 0)
+		gdb_outf("Target voltage: %s\n", target_voltage);
+
 	if (connect_assert_nrst)
 		platform_nrst_set_val(true); /* will be deasserted after attach */
 

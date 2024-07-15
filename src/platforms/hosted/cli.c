@@ -480,7 +480,10 @@ int cl_execute(bmda_cli_options_s *opt)
 	platform_nrst_set_val(opt->opt_connect_under_reset);
 	if (opt->opt_mode == BMP_MODE_TEST)
 		DEBUG_INFO("Running in Test Mode\n");
-	DEBUG_INFO("Target voltage: %s Volt\n", platform_target_voltage());
+	/* Call the sampling function only once, check for NULL, check for unimplemented and suppress the output */
+	const char *const target_voltage = platform_target_voltage();
+	if (target_voltage && strcmp(target_voltage, "Unknown") != 0)
+		DEBUG_INFO("Target voltage: %s\n", target_voltage);
 
 	if (!scan_for_targets(opt)) {
 		DEBUG_ERROR("No target found\n");
