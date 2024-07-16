@@ -37,8 +37,9 @@
  * LED1 = 	PB6	(Orange LED : Idle)
  * LED2 = 	PB7	(Red LED    : Error)
  *
- * TDI = 	PA0
+ * VTref =  PA0 
  * TMS = 	PA1 (input for SWDP)
+ * TDI = 	PA4
  * TCK = 	PA7/SWCLK
  * TDO = 	PA6 (input for TRACESWO
  * nRST =	PA5
@@ -48,11 +49,13 @@
 
 /* Hardware definitions... */
 #define JTAG_PORT GPIOA
+#define VTREF_PORT  JTAG_PORT
 #define TDI_PORT  JTAG_PORT
 #define TMS_PORT  JTAG_PORT
 #define TCK_PORT  JTAG_PORT
 #define TDO_PORT  JTAG_PORT
-#define TDI_PIN   GPIO0
+#define VTREF_PIN GPIO0
+#define TDI_PIN   GPIO4
 #define TMS_PIN   GPIO1
 #define TCK_PIN   GPIO7
 #define TDO_PIN   GPIO6
