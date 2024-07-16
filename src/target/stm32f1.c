@@ -51,6 +51,9 @@
 #include "target.h"
 #include "target_internal.h"
 #include "cortexm.h"
+#ifdef ENABLE_RISCV
+#include "riscv_debug.h"
+#endif
 #include "jep106.h"
 #include "stm32_common.h"
 
@@ -303,6 +306,9 @@ bool gd32f1_probe(target_s *target)
 }
 
 #ifdef ENABLE_RISCV
+static bool gd32vf1_attach(target_s *target);
+static void gd32vf1_detach(target_s *target);
+
 /* Identify RISC-V GD32VF1 chips */
 bool gd32vf1_probe(target_s *const target)
 {
@@ -330,7 +336,28 @@ bool gd32vf1_probe(target_s *const target)
 	target_add_commands(target, stm32f1_cmd_list, target->driver);
 
 	/* Now we have a stable debug environment, make sure the WDTs + sleep instructions can't cause problems */
-	return stm32f1_configure_dbgmcu(target, STM32F1_DBGMCU_CONFIG);
+	const bool result = stm32f1_configure_dbgmcu(target, STM32F1_DBGMCU_CONFIG);
+	target->attach = gd32vf1_attach;
+	target->detach = gd32vf1_detach;
+	return result;
+}
+
+static bool gd32vf1_attach(target_s *const target)
+{
+	/*
+	 * Try to attach to the part, and then ensure that the WDTs + WFI and WFE
+	 * instructions can't cause problems (this is duplicated as it's undone by detach.)
+	 */
+	return riscv_attach(target) && stm32f1_configure_dbgmcu(target, 0U);
+}
+
+static void gd32vf1_detach(target_s *const target)
+{
+	const stm32f1_priv_s *const priv = (stm32f1_priv_s *)target->target_storage;
+	/* Reverse all changes to the DBGMCU config register */
+	target_mem32_write32(target, priv->dbgmcu_config_taddr, priv->dbgmcu_config);
+	/* Now defer to the normal Cortex-M detach routine to complete the detach */
+	riscv_detach(target);
 }
 #endif
 
