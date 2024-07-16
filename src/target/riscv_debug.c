@@ -142,6 +142,7 @@ static const char *const riscv_gpr_names[RV_GPRS_COUNT] = {
 };
 
 // clang-format on
+
 typedef struct riscv_csr_descriptor {
 	const char *name;
 	const uint32_t csr_number; // fits in 16 bits actually (?)
@@ -256,9 +257,6 @@ static riscv_debug_version_e riscv_dm_version(uint32_t status);
 static uint32_t riscv_hart_discover_isa(riscv_hart_s *hart);
 static void riscv_hart_discover_triggers(riscv_hart_s *hart);
 static void riscv_hart_memory_access_type(riscv_hart_s *hart);
-
-static bool riscv_attach(target_s *target);
-static void riscv_detach(target_s *target);
 
 static const char *riscv_target_description(target_s *target);
 
@@ -811,7 +809,7 @@ bool riscv_config_trigger(riscv_hart_s *const hart, const uint32_t trigger, cons
 	return result;
 }
 
-static bool riscv_attach(target_s *const target)
+bool riscv_attach(target_s *const target)
 {
 	riscv_hart_s *const hart = riscv_hart_struct(target);
 	/* If the DMI requires special preparation, do that first */
@@ -825,7 +823,7 @@ static bool riscv_attach(target_s *const target)
 	return true;
 }
 
-static void riscv_detach(target_s *const target)
+void riscv_detach(target_s *const target)
 {
 	riscv_hart_s *const hart = riscv_hart_struct(target);
 	/* Once we get done and the user's asked us to detach, we need to resume the hart */
