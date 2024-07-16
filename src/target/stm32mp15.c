@@ -1,7 +1,7 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
- * Copyright (C) 2023 1BitSquared <info@1bitsquared.com>
+ * Copyright (C) 2023-2024 1BitSquared <info@1bitsquared.com>
  * Written by ALTracer <tolstov_den@mail.ru>
  * Modified by Rachel Mant <git@dragonmux.network>
  *
@@ -51,11 +51,12 @@
 #define STM32MP15_DBGMCU_BASE 0x50081000U
 #define STM32MP15_UID_BASE    0x5c005234U
 
-#define DBGMCU_IDCODE        (STM32MP15_DBGMCU_BASE + 0x000U)
-#define DBGMCU_CTRL          (STM32MP15_DBGMCU_BASE + 0x004U)
-#define DBGMCU_CTRL_DBGSLEEP (1U << 0U)
-#define DBGMCU_CTRL_DBGSTOP  (1U << 1U)
-#define DBGMCU_CTRL_DBGSTBY  (1U << 2U)
+#define STM32MP15_DBGMCU_IDCODE      (STM32MP15_DBGMCU_BASE + 0x000U)
+#define STM32MP15_DBGMCU_CONFIG      (STM32MP15_DBGMCU_BASE + 0x004U)
+
+#define STM32MP15_DBGMCU_CONFIG_DBGSLEEP (1U << 0U)
+#define STM32MP15_DBGMCU_CONFIG_DBGSTOP  (1U << 1U)
+#define STM32MP15_DBGMCU_CONFIG_DBGSTBY  (1U << 2U)
 
 #define STM32MP15_DBGMCU_IDCODE_DEV_MASK  0x00000fffU
 #define STM32MP15_DBGMCU_IDCODE_REV_SHIFT 16U
@@ -67,7 +68,7 @@
 #define ID_STM32MP15x_ERRATA 0x450U
 
 typedef struct stm32mp15_priv {
-	uint32_t dbgmcu_ctrl;
+	uint32_t dbgmcu_config;
 } stm32mp15_priv_s;
 
 static bool stm32mp15_uid(target_s *target, int argc, const char **argv);
@@ -93,9 +94,9 @@ static bool stm32mp15_ident(target_s *const target, const bool cortexm)
 	}
 
 	/* By now it's established that this is likely an MP15x_CM4, but check that it's not an H74x */
-	const uint32_t idcode = target_mem32_read32(target, DBGMCU_IDCODE);
+	const uint32_t idcode = target_mem32_read32(target, STM32MP15_DBGMCU_IDCODE);
 	const uint16_t dev_id = idcode & STM32MP15_DBGMCU_IDCODE_DEV_MASK;
-	DEBUG_TARGET("%s: looking at device ID 0x%03x at 0x%08" PRIx32 "\n", __func__, dev_id, DBGMCU_IDCODE);
+	DEBUG_TARGET("%s: looking at device ID 0x%03x at 0x%08" PRIx32 "\n", __func__, dev_id, STM32MP15_DBGMCU_IDCODE);
 	/* If this probe routine ever runs ahead of stm32h7_probe, skip the H74x. */
 	if (dev_id != ID_STM32MP15x)
 		return false;
@@ -165,10 +166,11 @@ static bool stm32mp15_attach(target_s *const target)
 
 	/* Save DBGMCU_CR to restore it when detaching */
 	stm32mp15_priv_s *const priv = (stm32mp15_priv_s *)target->target_storage;
-	priv->dbgmcu_ctrl = target_mem32_read32(target, DBGMCU_CTRL);
+	priv->dbgmcu_config = target_mem32_read32(target, STM32MP15_DBGMCU_CONFIG);
 
 	/* Disable C-Sleep, C-Stop, C-Standby for debugging */
-	target_mem32_write32(target, DBGMCU_CTRL, DBGMCU_CTRL_DBGSLEEP | DBGMCU_CTRL_DBGSTOP | DBGMCU_CTRL_DBGSTBY);
+	target_mem32_write32(target, STM32MP15_DBGMCU_CONFIG,
+		STM32MP15_DBGMCU_CONFIG_DBGSLEEP | STM32MP15_DBGMCU_CONFIG_DBGSTOP | STM32MP15_DBGMCU_CONFIG_DBGSTBY);
 
 	return true;
 }
@@ -176,7 +178,7 @@ static bool stm32mp15_attach(target_s *const target)
 static void stm32mp15_detach(target_s *const target)
 {
 	stm32mp15_priv_s *priv = (stm32mp15_priv_s *)target->target_storage;
-	target_mem32_write32(target, DBGMCU_CTRL, priv->dbgmcu_ctrl);
+	target_mem32_write32(target, STM32MP15_DBGMCU_CONFIG, priv->dbgmcu_config);
 	cortexm_detach(target);
 }
 
@@ -200,7 +202,7 @@ static bool stm32mp15_cmd_rev(target_s *const target, const int argc, const char
 	(void)argc;
 	(void)argv;
 	/* DBGMCU identity code register */
-	const uint32_t dbgmcu_idcode = target_mem32_read32(target, DBGMCU_IDCODE);
+	const uint32_t dbgmcu_idcode = target_mem32_read32(target, STM32MP15_DBGMCU_IDCODE);
 	const uint16_t rev_id = dbgmcu_idcode >> STM32MP15_DBGMCU_IDCODE_REV_SHIFT;
 	const uint16_t dev_id = dbgmcu_idcode & STM32MP15_DBGMCU_IDCODE_DEV_MASK;
 
