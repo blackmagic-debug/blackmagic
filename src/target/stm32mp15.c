@@ -53,10 +53,17 @@
 
 #define STM32MP15_DBGMCU_IDCODE      (STM32MP15_DBGMCU_BASE + 0x000U)
 #define STM32MP15_DBGMCU_CONFIG      (STM32MP15_DBGMCU_BASE + 0x004U)
+#define STM32MP15_DBGMCU_APB1FREEZE1 (STM32MP15_DBGMCU_BASE + 0x034U)
+#define STM32MP15_DBGMCU_APB1FREEZE2 (STM32MP15_DBGMCU_BASE + 0x038U)
 
-#define STM32MP15_DBGMCU_CONFIG_DBGSLEEP (1U << 0U)
-#define STM32MP15_DBGMCU_CONFIG_DBGSTOP  (1U << 1U)
-#define STM32MP15_DBGMCU_CONFIG_DBGSTBY  (1U << 2U)
+#define STM32MP15_DBGMCU_CONFIG_DBGSLEEP         (1U << 0U)
+#define STM32MP15_DBGMCU_CONFIG_DBGSTOP          (1U << 1U)
+#define STM32MP15_DBGMCU_CONFIG_DBGSTBY          (1U << 2U)
+#define STM32MP15_DBGMCU_CONFIG_IWDG1_FREEZE_AND (1U << 24U)
+// Freeze for WWDG1 when debugging the Cortex-A7 core
+#define STM32MP15_DBGMCU_APB1FREEZE1_WWDG1 (1U << 10U)
+// Freeze for WWDG1 when debugging the Cortex-M4 core
+#define STM32MP15_DBGMCU_APB1FREEZE2_WWDG1 (1U << 10U)
 
 #define STM32MP15_DBGMCU_IDCODE_DEV_MASK  0x00000fffU
 #define STM32MP15_DBGMCU_IDCODE_REV_SHIFT 16U
@@ -110,28 +117,51 @@ static bool stm32mp15_ident(target_s *const target, const bool cortexm)
 	return true;
 }
 
+static bool stm32mp15_cm4_configure_dbgmcu(target_s *const target)
+{
+	/* If we're in the probe phase */
+	if (target->target_storage == NULL) {
+		/* Allocate target-specific storage */
+		stm32mp15_priv_s *const priv_storage = calloc(1, sizeof(*priv_storage));
+		if (!priv_storage) { /* calloc failed: heap exhaustion */
+			DEBUG_ERROR("calloc: failed in %s\n", __func__);
+			return false;
+		}
+		target->target_storage = priv_storage;
+		/* Get the current value of the debug control register (and store it for later) */
+		priv_storage->dbgmcu_config = target_mem32_read32(target, STM32MP15_DBGMCU_CONFIG);
+
+		/* Finally set up the attach/detach functions needed */
+		target->attach = stm32mp15_cm4_attach;
+		target->detach = stm32mp15_cm4_detach;
+	}
+
+	const stm32mp15_priv_s *const priv = (stm32mp15_priv_s *)target->target_storage;
+	/* Disable C-Sleep, C-Stop, C-Standby for debugging, and make sure IWDG1 freezes when any core is halted */
+	target_mem32_write32(target, STM32MP15_DBGMCU_CONFIG,
+		(priv->dbgmcu_config & ~STM32MP15_DBGMCU_CONFIG_IWDG1_FREEZE_AND) | STM32MP15_DBGMCU_CONFIG_DBGSLEEP |
+			STM32MP15_DBGMCU_CONFIG_DBGSTOP | STM32MP15_DBGMCU_CONFIG_DBGSTBY);
+	/* And make sure the WDTs stay synchronised to the run state of the processor */
+	target_mem32_write32(target, STM32MP15_DBGMCU_APB1FREEZE2, STM32MP15_DBGMCU_APB1FREEZE2_WWDG1);
+	return true;
+}
+
 bool stm32mp15_cm4_probe(target_s *const target)
 {
+	/* Try to identify the part */
 	if (!stm32mp15_ident(target, true))
 		return false;
 
-	target->driver = "STM32MP15";
-	target->attach = stm32mp15_cm4_attach;
-	target->detach = stm32mp15_cm4_detach;
-	target_add_commands(target, stm32mp15_cmd_list, target->driver);
-
-	/* Allocate private storage */
-	stm32mp15_priv_s *priv = calloc(1, sizeof(*priv));
-	if (!priv) { /* calloc failed: heap exhaustion */
-		DEBUG_ERROR("calloc: failed in %s\n", __func__);
+	/* Now we have a stable debug environment, make sure the WDTs + WFI and WFE instructions can't cause problems */
+	if (!stm32mp15_cm4_configure_dbgmcu(target))
 		return false;
-	}
-	target->target_storage = priv;
+
+	target->driver = "STM32MP15";
+	target_add_commands(target, stm32mp15_cmd_list, target->driver);
 
 	/* Figure 4. Memory map from §2.5.2 in RM0436 rev 6, pg158 */
 	target_add_ram32(target, STM32MP15_CM4_RETRAM_BASE, STM32MP15_RETRAM_SIZE);
 	target_add_ram32(target, STM32MP15_AHBSRAM_BASE, STM32MP15_AHBSRAM_SIZE);
-
 	return true;
 }
 
@@ -161,24 +191,19 @@ bool stm32mp15_ca7_probe(target_s *const target)
 
 static bool stm32mp15_cm4_attach(target_s *const target)
 {
-	if (!cortexm_attach(target))
-		return false;
-
-	/* Save DBGMCU_CR to restore it when detaching */
-	stm32mp15_priv_s *const priv = (stm32mp15_priv_s *)target->target_storage;
-	priv->dbgmcu_config = target_mem32_read32(target, STM32MP15_DBGMCU_CONFIG);
-
-	/* Disable C-Sleep, C-Stop, C-Standby for debugging */
-	target_mem32_write32(target, STM32MP15_DBGMCU_CONFIG,
-		STM32MP15_DBGMCU_CONFIG_DBGSLEEP | STM32MP15_DBGMCU_CONFIG_DBGSTOP | STM32MP15_DBGMCU_CONFIG_DBGSTBY);
-
-	return true;
+	/*
+	 * Try to attach to the part, and then ensure that the WDTs + WFI and WFE
+	 * instructions can't cause problems (this is duplicated as it's undone by detach.)
+	 */
+	return cortexm_attach(target) && stm32mp15_cm4_configure_dbgmcu(target);
 }
 
 static void stm32mp15_cm4_detach(target_s *const target)
 {
 	stm32mp15_priv_s *priv = (stm32mp15_priv_s *)target->target_storage;
+	/* Reverse all changes to the DBGMCU config register */
 	target_mem32_write32(target, STM32MP15_DBGMCU_CONFIG, priv->dbgmcu_config);
+	/* Now defer to the normal Cortex-M detach routine to complete the detach */
 	cortexm_detach(target);
 }
 
