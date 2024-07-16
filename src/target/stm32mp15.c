@@ -80,8 +80,8 @@ const command_s stm32mp15_cmd_list[] = {
 	{NULL, NULL, NULL},
 };
 
-static bool stm32mp15_attach(target_s *target);
-static void stm32mp15_detach(target_s *target);
+static bool stm32mp15_cm4_attach(target_s *target);
+static void stm32mp15_cm4_detach(target_s *target);
 
 static bool stm32mp15_ident(target_s *const target, const bool cortexm)
 {
@@ -116,8 +116,8 @@ bool stm32mp15_cm4_probe(target_s *const target)
 		return false;
 
 	target->driver = "STM32MP15";
-	target->attach = stm32mp15_attach;
-	target->detach = stm32mp15_detach;
+	target->attach = stm32mp15_cm4_attach;
+	target->detach = stm32mp15_cm4_detach;
 	target_add_commands(target, stm32mp15_cmd_list, target->driver);
 
 	/* Allocate private storage */
@@ -159,7 +159,7 @@ bool stm32mp15_ca7_probe(target_s *const target)
 }
 #endif
 
-static bool stm32mp15_attach(target_s *const target)
+static bool stm32mp15_cm4_attach(target_s *const target)
 {
 	if (!cortexm_attach(target))
 		return false;
@@ -175,7 +175,7 @@ static bool stm32mp15_attach(target_s *const target)
 	return true;
 }
 
-static void stm32mp15_detach(target_s *const target)
+static void stm32mp15_cm4_detach(target_s *const target)
 {
 	stm32mp15_priv_s *priv = (stm32mp15_priv_s *)target->target_storage;
 	target_mem32_write32(target, STM32MP15_DBGMCU_CONFIG, priv->dbgmcu_config);
