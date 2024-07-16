@@ -167,7 +167,7 @@ static bool dap_swd_seq_in_parity(uint32_t *const result, const size_t clock_cyc
 
 	uint32_t data = 0;
 	for (size_t offset = 0; offset < clock_cycles; offset += 8U)
-		data |= sequence.data[offset >> 3U] << offset;
+		data |= (uint32_t)sequence.data[offset >> 3U] << offset;
 	*result = data;
 	uint8_t parity = calculate_odd_parity(data);
 	return parity == (sequence.data[4] & 1U);
