@@ -399,7 +399,7 @@ const char *platform_target_voltage(void)
 #endif
 
 	default:
-		return NULL;
+		return "Unknown";
 	}
 }
 
