@@ -121,6 +121,12 @@
 #define STM32L0_DBGMCU_BASE UINT32_C(0x40015800)
 #define STM32L1_DBGMCU_BASE UINT32_C(0xe0042000)
 
+/* Taken from DBGMCU_IDCODE in §27.4.1 in RM0377 rev 10, pg820 */
+#define ID_STM32L01x 0x457U /* Category 1 */
+#define ID_STM32L03x 0x425U /* Category 2 */
+#define ID_STM32L05x 0x417U /* Category 3 */
+#define ID_STM32L07x 0x447U /* Category 5 */
+
 static bool stm32lx_cmd_option(target_s *target, int argc, const char **argv);
 static bool stm32lx_cmd_eeprom(target_s *target, int argc, const char **argv);
 
@@ -225,19 +231,19 @@ bool stm32l0_probe(target_s *const target)
 		target_add_ram32(target, STM32Lx_SRAM_BASE, 0x14000);
 		stm32l_add_flash(target, STM32Lx_FLASH_BANK1_BASE, 0x80000, 0x100);
 		//stm32l_add_eeprom(t, STM32Lx_EEPROM_BASE, 0x4000);
-		target_add_commands(target, stm32lx_cmd_list, "STM32L1x");
+		target_add_commands(target, stm32lx_cmd_list, target->driver);
 		break;
-	case 0x457U: /* STM32L0xx Cat1 */
-	case 0x425U: /* STM32L0xx Cat2 */
-	case 0x417U: /* STM32L0xx Cat3 */
-	case 0x447U: /* STM32L0xx Cat5 */
-		target->driver = "STM32L0x";
+	case ID_STM32L01x:
+	case ID_STM32L03x:
+	case ID_STM32L05x:
+	case ID_STM32L07x:
+		target->driver = "STM32L0";
 		target_add_ram32(target, STM32Lx_SRAM_BASE, STM32L0_SRAM_SIZE);
 		stm32l_add_flash(target, STM32Lx_FLASH_BANK1_BASE, STM32L0_FLASH_BANK_SIZE, 0x80);
 		stm32l_add_flash(target, STM32Lx_FLASH_BANK2_BASE, STM32L0_FLASH_BANK_SIZE, 0x80);
 		stm32l_add_flash(target, STM32Lx_FLASH_BANK3_BASE, STM32L0_FLASH_BANK_SIZE, 0x80);
 		stm32l_add_eeprom(target, STM32Lx_EEPROM_BASE, 0x1800);
-		target_add_commands(target, stm32lx_cmd_list, "STM32L0x");
+		target_add_commands(target, stm32lx_cmd_list, target->driver);
 		break;
 	default:
 		return false;
