@@ -46,6 +46,14 @@
 #include "cortexm.h"
 #include "stm32_common.h"
 
+#define STM32Lx_FLASH_BANK1_BASE 0x08000000U
+#define STM32Lx_FLASH_BANK2_BASE 0x08010000U
+#define STM32Lx_FLASH_BANK3_BASE 0x08020000U
+#define STM32L0_FLASH_BANK_SIZE  0x00010000U
+#define STM32Lx_EEPROM_BASE      0x08080000U
+#define STM32Lx_SRAM_BASE        0x20000000U
+#define STM32L0_SRAM_SIZE        0x00005000U
+
 #define STM32Lx_FLASH_PECR(flash_base)    ((flash_base) + 0x04U)
 #define STM32Lx_FLASH_PEKEYR(flash_base)  ((flash_base) + 0x0cU)
 #define STM32Lx_FLASH_PRGKEYR(flash_base) ((flash_base) + 0x10U)
@@ -214,9 +222,9 @@ bool stm32l0_probe(target_s *const target)
 	case 0x436U: /* CAT. 4 device */
 	case 0x437U: /* CAT. 5 device  */
 		target->driver = "STM32L1x";
-		target_add_ram32(target, 0x20000000, 0x14000);
-		stm32l_add_flash(target, 0x8000000, 0x80000, 0x100);
-		//stm32l_add_eeprom(t, 0x8080000, 0x4000);
+		target_add_ram32(target, STM32Lx_SRAM_BASE, 0x14000);
+		stm32l_add_flash(target, STM32Lx_FLASH_BANK1_BASE, 0x80000, 0x100);
+		//stm32l_add_eeprom(t, STM32Lx_EEPROM_BASE, 0x4000);
 		target_add_commands(target, stm32lx_cmd_list, "STM32L1x");
 		break;
 	case 0x457U: /* STM32L0xx Cat1 */
@@ -224,11 +232,11 @@ bool stm32l0_probe(target_s *const target)
 	case 0x417U: /* STM32L0xx Cat3 */
 	case 0x447U: /* STM32L0xx Cat5 */
 		target->driver = "STM32L0x";
-		target_add_ram32(target, 0x20000000, 0x5000);
-		stm32l_add_flash(target, 0x8000000, 0x10000, 0x80);
-		stm32l_add_flash(target, 0x8010000, 0x10000, 0x80);
-		stm32l_add_flash(target, 0x8020000, 0x10000, 0x80);
-		stm32l_add_eeprom(target, 0x8080000, 0x1800);
+		target_add_ram32(target, STM32Lx_SRAM_BASE, STM32L0_SRAM_SIZE);
+		stm32l_add_flash(target, STM32Lx_FLASH_BANK1_BASE, STM32L0_FLASH_BANK_SIZE, 0x80);
+		stm32l_add_flash(target, STM32Lx_FLASH_BANK2_BASE, STM32L0_FLASH_BANK_SIZE, 0x80);
+		stm32l_add_flash(target, STM32Lx_FLASH_BANK3_BASE, STM32L0_FLASH_BANK_SIZE, 0x80);
+		stm32l_add_eeprom(target, STM32Lx_EEPROM_BASE, 0x1800);
 		target_add_commands(target, stm32lx_cmd_list, "STM32L0x");
 		break;
 	default:
