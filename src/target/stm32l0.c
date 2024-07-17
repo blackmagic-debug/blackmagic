@@ -2,6 +2,9 @@
  * This file is part of the Black Magic Debug project.
  *
  * Copyright (C) 2014,2015 Marc Singer <elf@woollysoft.com>
+ * Copyright (C) 2022-2024 1BitSquared <info@1bitsquared.com>
+ * Written by Marc Singer <elf@woollysoft.com>
+ * Modified by Rachel Mant <git@dragonmux.network>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,39 +21,24 @@
  */
 
 /*
-	Description
-	-----------
-
-	This is an implementation of the target-specific functions for the
-	STM32L0x[1] and STM32L1x[2] families of ST Microelectronics MCUs,
-	Cortex M0+ SOCs.  The NVM interface is substantially similar to the
-	STM32L1x parts.  This module is written to better generalize the
-	NVM interface and to provide more features.
-
-	[1] ST Microelectronics Document RM0377 (DocID025942), "Reference
-		manual for Ultra-low-power STM32L0x1 advanced ARM-based 32-bit
-		MCUs," April 2014.
-		(https://www.st.com/resource/en/reference_manual/rm0377-ultralowpower-stm32l0x1-advanced-armbased-32bit-mcus-stmicroelectronics.pdf)
-
-	[2] ST Microelectronics Document RM0038 (DocID15965, "..."Reference
-		manual for STM32L100xx, STM32L151xx, STM32L152xx and STM32L162xx
-		advanced ARM®-based 32-bit MCUs, " July 2014
-		(https://www.st.com/resource/en/reference_manual/rm0038-stm32l100xx-stm32l151xx-stm32l152xx-and-stm32l162xx-advanced-armbased-32bit-mcus-stmicroelectronics.pdf)
-
-	NOTES
-	=====
-
-	o Errors.  We probably should clear SR errors immediately after
-		detecting them.  If we don't then we always must wait for the NVM
-		module to complete the last operation before we can start another.
-
-	o There are minor inconsistencies between the stm32l0 and the
-		stm32l1 in when handling NVM operations.
-
-	o On the STM32L1xx, PECR can only be changed when the NVM
-		hardware is idle.  The STM32L0xx allows the PECR to be updated
-		while an operation is in progress.
-*/
+ * This file implements STM32L0 and STM32L1 target specific functions for detecting
+ * the device, providing the XML memory map and Flash memory programming.
+ *
+ * References:
+ * RM0377 - Ultra-low-power STM32L0x1 advanced Arm®-based 32-bit MCUs, Rev. 10
+ * - https://www.st.com/resource/en/reference_manual/rm0377-ultralowpower-stm32l0x1-advanced-armbased-32bit-mcus-stmicroelectronics.pdf
+ * RM0038 - STM32L100xx, STM32L151xx, STM32L152xx and STM32L162xx advanced Arm®-based 32-bit MCUs, Rev. 17
+ * - https://www.st.com/resource/en/reference_manual/rm0038-stm32l100xx-stm32l151xx-stm32l152xx-and-stm32l162xx-advanced-armbased-32bit-mcus-stmicroelectronics.pdf
+ *
+ * Note:
+ * This implementation has a few known defficiencies and quirks, these are:
+ * - Error handling -> We should probably clear Flash controller statusu register errors
+ *   immediately after detecting them. If we don't then we must always wait for the controller
+ *   to complete the previous operatioon before starting the next.
+ * - Minor inconsistencies between the STM32L0 and STM32L1 Flash controllers that should be handled
+ * - On the STM32L1, the Flash controller PECR can only be changed when the controller is
+ *   idle, while on the STM32L0 it may be updated while an operation is in progress
+ */
 
 #include "general.h"
 #include "target.h"
