@@ -46,13 +46,12 @@
 #include "cortexm.h"
 #include "stm32_common.h"
 
-#define STM32Lx_FLASH_BANK1_BASE 0x08000000U
-#define STM32Lx_FLASH_BANK2_BASE 0x08010000U
-#define STM32Lx_FLASH_BANK3_BASE 0x08020000U
-#define STM32L0_FLASH_BANK_SIZE  0x00010000U
-#define STM32Lx_EEPROM_BASE      0x08080000U
-#define STM32Lx_SRAM_BASE        0x20000000U
-#define STM32L0_SRAM_SIZE        0x00005000U
+#define STM32Lx_FLASH_BANK_BASE 0x08000000U
+#define STM32L0_FLASH_BANK_SIZE 0x00010000U
+#define STM32L0_FLASH_PAGE_SIZE 0x00000080U
+#define STM32Lx_EEPROM_BASE     0x08080000U
+#define STM32Lx_SRAM_BASE       0x20000000U
+#define STM32L0_SRAM_SIZE       0x00005000U
 
 #define STM32Lx_FLASH_PECR(flash_base)    ((flash_base) + 0x04U)
 #define STM32Lx_FLASH_PEKEYR(flash_base)  ((flash_base) + 0x0cU)
@@ -118,7 +117,10 @@
 #define STM32L1_FLASH_OPTR_BOR_LEV_MASK  0xfU
 #define STM32L1_FLASH_OPTR_SPRMOD        (1U << 8U)
 
-#define STM32L0_DBGMCU_BASE UINT32_C(0x40015800)
+#define STM32L0_DBGMCU_BASE    UINT32_C(0x40015800)
+#define STM32L0_UID_BASE       0x1ff80050U
+#define STM32L0_UID_FLASH_SIZE 0x1ff8007cU
+
 #define STM32L1_DBGMCU_BASE UINT32_C(0xe0042000)
 
 /* Taken from DBGMCU_IDCODE in §27.4.1 in RM0377 rev 10, pg820 */
@@ -218,36 +220,65 @@ static void stm32l_add_eeprom(target_s *const target, const uint32_t addr, const
 	target_add_flash(target, flash);
 }
 
-/* Probe for STM32L0xx and STM32L1xx parts. */
 bool stm32l0_probe(target_s *const target)
 {
+	/* Try to identify the part, make sure it's a STM32L0 */
+	if (target->part_id != ID_STM32L01x && target->part_id != ID_STM32L03x && target->part_id != ID_STM32L05x &&
+		target->part_id != ID_STM32L07x)
+		return false;
+
+	target->driver = "STM32L0";
+	target->mass_erase = stm32lx_mass_erase;
+	target_add_commands(target, stm32lx_cmd_list, target->driver);
+
+	/* Having identified that it's a STM32L0 of some sort, read out how much Flash it has */
+	const uint32_t flash_size = target_mem32_read16(target, STM32L0_UID_FLASH_SIZE) * 1024U;
+	/* There's no good way to tell how much RAM a part has, so use a one-size map */
+	target_add_ram32(target, STM32Lx_SRAM_BASE, STM32L0_SRAM_SIZE);
+
+	/* Now fill in the Flash map based on the part category */
 	switch (target->part_id) {
+	case ID_STM32L01x:
+	case ID_STM32L03x:
+	case ID_STM32L05x:
+		/* Category 1, 2 and 3 only have one bank */
+		stm32l_add_flash(target, STM32Lx_FLASH_BANK_BASE, flash_size, STM32L0_FLASH_PAGE_SIZE);
+		break;
+	case ID_STM32L07x: {
+		/* Category 5 parts have 2 banks, split 50:50 on the total size of the Flash */
+		const size_t bank_size = flash_size >> 1U;
+		const target_addr32_t bank2_base = STM32Lx_FLASH_BANK_BASE + bank_size;
+		stm32l_add_flash(target, STM32Lx_FLASH_BANK_BASE, bank_size, STM32L0_FLASH_PAGE_SIZE);
+		stm32l_add_flash(target, bank2_base, bank_size, STM32L0_FLASH_PAGE_SIZE);
+		break;
+	}
+	}
+	/* There's also no good way to know how much EEPROM the part has, so define a one-size map for that too */
+	stm32l_add_eeprom(target, STM32Lx_EEPROM_BASE, 0x1800);
+
+	return true;
+}
+
+bool stm32l1_probe(target_s *const target)
+{
+	const adiv5_access_port_s *const ap = cortex_ap(target);
+	/* Use the partno from the AP always to handle the difference between JTAG and SWD */
+	switch (ap->partno) {
 	case 0x416U: /* CAT. 1 device */
 	case 0x429U: /* CAT. 2 device */
 	case 0x427U: /* CAT. 3 device */
 	case 0x436U: /* CAT. 4 device */
 	case 0x437U: /* CAT. 5 device  */
-		target->driver = "STM32L1x";
+		target->driver = "STM32L1";
 		target_add_ram32(target, STM32Lx_SRAM_BASE, 0x14000);
-		stm32l_add_flash(target, STM32Lx_FLASH_BANK1_BASE, 0x80000, 0x100);
+		stm32l_add_flash(target, STM32Lx_FLASH_BANK_BASE, 0x80000, 0x100);
 		//stm32l_add_eeprom(t, STM32Lx_EEPROM_BASE, 0x4000);
-		target_add_commands(target, stm32lx_cmd_list, target->driver);
-		break;
-	case ID_STM32L01x:
-	case ID_STM32L03x:
-	case ID_STM32L05x:
-	case ID_STM32L07x:
-		target->driver = "STM32L0";
-		target_add_ram32(target, STM32Lx_SRAM_BASE, STM32L0_SRAM_SIZE);
-		stm32l_add_flash(target, STM32Lx_FLASH_BANK1_BASE, STM32L0_FLASH_BANK_SIZE, 0x80);
-		stm32l_add_flash(target, STM32Lx_FLASH_BANK2_BASE, STM32L0_FLASH_BANK_SIZE, 0x80);
-		stm32l_add_flash(target, STM32Lx_FLASH_BANK3_BASE, STM32L0_FLASH_BANK_SIZE, 0x80);
-		stm32l_add_eeprom(target, STM32Lx_EEPROM_BASE, 0x1800);
 		target_add_commands(target, stm32lx_cmd_list, target->driver);
 		break;
 	default:
 		return false;
 	}
+	target->part_id = ap->partno;
 
 	stm32l_priv_t *priv_storage = calloc(1, sizeof(*priv_storage));
 	if (!priv_storage) {
