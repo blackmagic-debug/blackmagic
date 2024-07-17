@@ -27,23 +27,23 @@
  * On L4, flash and options are written in DWORDs (8-Byte) only.
  *
  * References:
- * RM0351 STM32L4x5 and STM32L4x6 advanced ARM®-based 32-bit MCUs Rev 9
+ * RM0351 - STM32L4x5 and STM32L4x6 advanced ARM®-based 32-bit MCUs Rev 9
  * - https://www.st.com/resource/en/reference_manual/rm0351-stm32l47xxx-stm32l48xxx-stm32l49xxx-and-stm32l4axxx-advanced-armbased-32bit-mcus-stmicroelectronics.pdf
- * RM0394 STM32L43xxx STM32L44xxx STM32L45xxx STM32L46xxxx advanced ARM®-based 32-bit MCUs Rev.4
+ * RM0394 - STM32L43xxx STM32L44xxx STM32L45xxx STM32L46xxxx advanced ARM®-based 32-bit MCUs Rev.4
  * - https://www.st.com/resource/en/reference_manual/dm00151940-stm32l41xxx42xxx43xxx44xxx45xxx46xxx-advanced-armbased-32bit-mcus-stmicroelectronics.pdf
- * RM0432 STM32L4Rxxx and STM32L4Sxxx advanced Arm®-based 32-bit MCU. Rev 9
+ * RM0432 - STM32L4Rxxx and STM32L4Sxxx advanced Arm®-based 32-bit MCU. Rev 9
  * - https://www.st.com/resource/en/reference_manual/rm0432-stm32l4-series-advanced-armbased-32bit-mcus-stmicroelectronics.pdf
- * RM0440 STM32G4 Series advanced Arm®-based 32-bit MCU. Rev 7
+ * RM0440 - STM32G4 Series advanced Arm®-based 32-bit MCU. Rev 7
  * - https://www.st.com/resource/en/reference_manual/rm0440-stm32g4-series-advanced-armbased-32bit-mcus-stmicroelectronics.pdf
- * RM0438 STM32L552xx and STM32L562xx advanced Arm®-based 32-bit MCUs Rev 7
+ * RM0438 - STM32L552xx and STM32L562xx advanced Arm®-based 32-bit MCUs Rev 7
  * - https://www.st.com/resource/en/reference_manual/dm00346336-stm32l552xx-and-stm32l562xx-advanced-arm-based-32-bit-mcus-stmicroelectronics.pdf
- * RM0456 STM32U5 Series Arm®-based 32-bit MCUs - Reference manual Rev 4
+ * RM0456 - STM32U5 Series Arm®-based 32-bit MCUs - Reference manual Rev 4
  * - https://www.st.com/resource/en/reference_manual/rm0456-stm32u5-series-armbased-32bit-mcus-stmicroelectronics.pdf
- * RM0453 STM32WL5x advanced Arm®-based 32-bit MCUs with sub-GHz radio solution Rev 3
+ * RM0453 - STM32WL5x advanced Arm®-based 32-bit MCUs with sub-GHz radio solution Rev 3
  * - https://www.st.com/resource/en/reference_manual/rm0453-stm32wl5x-advanced-armbased-32bit-mcus-with-subghz-radio-solution-stmicroelectronics.pdf
- * RM0461 STM32WLEx advanced Arm®-based 32-bit MCUs with sub-GHz radio solution Rev 5
+ * RM0461 - STM32WLEx advanced Arm®-based 32-bit MCUs with sub-GHz radio solution Rev 5
  * - https://www.st.com/resource/en/reference_manual/rm0461-stm32wlex-advanced-armbased-32bit-mcus-with-subghz-radio-solution-stmicroelectronics.pdf
- * RM0434 Multiprotocol wireless 32-bit MCU Arm®-based Cortex®-M4 with
+ * RM0434 - Multiprotocol wireless 32-bit MCU Arm®-based Cortex®-M4 with
  *        FPU, Bluetooth® Low-Energy and 802.15.4 radio solution Rev 10
  * - https://www.st.com/resource/en/reference_manual/rm0434-multiprotocol-wireless-32bit-mcu-armbased-cortexm4-with-fpu-bluetooth-lowenergy-and-802154-radio-solution-stmicroelectronics.pdf
  */
