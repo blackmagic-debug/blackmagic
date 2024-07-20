@@ -117,11 +117,20 @@
 #define STM32L1_FLASH_OPTR_BOR_LEV_MASK  0xfU
 #define STM32L1_FLASH_OPTR_SPRMOD        (1U << 8U)
 
-#define STM32L0_DBGMCU_BASE    UINT32_C(0x40015800)
-#define STM32L0_UID_BASE       0x1ff80050U
-#define STM32L0_UID_FLASH_SIZE 0x1ff8007cU
+#define STM32L0_DBGMCU_BASE       UINT32_C(0x40015800)
+#define STM32L0_DBGMCU_IDCODE     (STM32L0_DBGMCU_BASE + 0x000U)
+#define STM32L0_DBGMCU_CONFIG     (STM32L0_DBGMCU_BASE + 0x004U)
+#define STM32L0_DBGMCU_APB1FREEZE (STM32L0_DBGMCU_BASE + 0x008U)
+#define STM32L0_UID_BASE          0x1ff80050U
+#define STM32L0_UID_FLASH_SIZE    0x1ff8007cU
 
 #define STM32L1_DBGMCU_BASE UINT32_C(0xe0042000)
+
+#define STM32Lx_DBGMCU_CONFIG_DBG_SLEEP   (1U << 0U)
+#define STM32Lx_DBGMCU_CONFIG_DBG_STOP    (1U << 1U)
+#define STM32Lx_DBGMCU_CONFIG_DBG_STANDBY (1U << 2U)
+#define STM32Lx_DBGMCU_APB1FREEZE_WWDG    (1U << 11U)
+#define STM32Lx_DBGMCU_APB1FREEZE_IWDG    (1U << 12U)
 
 /* Taken from DBGMCU_IDCODE in §27.4.1 in RM0377 rev 10, pg820 */
 #define ID_STM32L01x 0x457U /* Category 1 */
@@ -138,6 +147,8 @@ static const command_s stm32lx_cmd_list[] = {
 	{NULL, NULL, NULL},
 };
 
+static bool stm32l0_attach(target_s *target);
+static void stm32l0_detach(target_s *target);
 static bool stm32lx_flash_erase(target_flash_s *flash, target_addr_t addr, size_t length);
 static bool stm32lx_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t length);
 static bool stm32lx_eeprom_erase(target_flash_s *flash, target_addr_t addr, size_t length);
@@ -220,6 +231,16 @@ static void stm32l_add_eeprom(target_s *const target, const uint32_t addr, const
 	target_add_flash(target, flash);
 }
 
+static void stm32l0_configure_dbgmcu(target_s *const target)
+{
+	/* Enable debugging during all low power modes */
+	target_mem32_write32(target, STM32L0_DBGMCU_CONFIG,
+		STM32Lx_DBGMCU_CONFIG_DBG_SLEEP | STM32Lx_DBGMCU_CONFIG_DBG_STANDBY | STM32Lx_DBGMCU_CONFIG_DBG_STOP);
+	/* And make sure the WDTs stay synchronised to the run state of the processor */
+	target_mem32_write32(
+		target, STM32L0_DBGMCU_APB1FREEZE, STM32Lx_DBGMCU_APB1FREEZE_WWDG | STM32Lx_DBGMCU_APB1FREEZE_IWDG);
+}
+
 bool stm32l0_probe(target_s *const target)
 {
 	/* Try to identify the part, make sure it's a STM32L0 */
@@ -227,7 +248,12 @@ bool stm32l0_probe(target_s *const target)
 		target->part_id != ID_STM32L07x)
 		return false;
 
+	/* Now we have a stable debug environment, make sure the WDTs + WFI and WFE instructions can't cause problems */
+	stm32l0_configure_dbgmcu(target);
+
 	target->driver = "STM32L0";
+	target->attach = stm32l0_attach;
+	target->detach = stm32l0_detach;
 	target->mass_erase = stm32lx_mass_erase;
 	target_add_commands(target, stm32lx_cmd_list, target->driver);
 
@@ -301,6 +327,26 @@ bool stm32l1_probe(target_s *const target)
 		target->mass_erase = stm32lx_mass_erase;
 
 	return true;
+}
+
+static bool stm32l0_attach(target_s *const target)
+{
+	/*
+	 * Try to attach to the part, and then ensure that the WDTs + WFI and WFE
+	 * instructions can't cause problems (this is duplicated as it's undone by detach.)
+	 */
+	if (!cortexm_attach(target))
+		return false;
+	stm32l0_configure_dbgmcu(target);
+	return true;
+}
+
+static void stm32l0_detach(target_s *target)
+{
+	/* Reverse all changes to STM32L0_DBGMCU_CONFIG */
+	target_mem32_write32(target, STM32L0_DBGMCU_CONFIG, 0U);
+	/* Now defer to the normal Cortex-M detach routine to complete the detach */
+	cortexm_detach(target);
 }
 
 /* Lock the FLASH control registers preventing writes or erases. */
