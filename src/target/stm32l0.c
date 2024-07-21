@@ -176,9 +176,6 @@ static bool stm32lx_eeprom_erase(target_flash_s *flash, target_addr_t addr, size
 static bool stm32lx_eeprom_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t length);
 static bool stm32lx_mass_erase(target_s *target);
 
-static bool stm32lx_protected_attach(target_s *target);
-static bool stm32lx_protected_mass_erase(target_s *target);
-
 typedef struct stm32l_priv {
 	target_addr32_t uid_taddr;
 	uint32_t dbgmcu_config;
@@ -583,35 +580,6 @@ static bool stm32lx_eeprom_write(
 	stm32lx_nvm_lock(target, flash_base);
 	/* Wait for completion or an error */
 	return stm32lx_nvm_busy_wait(target, flash_base, NULL);
-}
-
-static bool stm32lx_protected_attach(target_s *const target)
-{
-	tc_printf(target, "Attached in protected mode, please issue 'monitor erase_mass' to regain chip access\n");
-	target->attach = cortexm_attach;
-	return true;
-}
-
-static bool stm32lx_protected_mass_erase(target_s *const target)
-{
-	const target_addr32_t flash_base = stm32lx_flash_base(target);
-	if (!stm32lx_nvm_opt_unlock(target, flash_base))
-		return false;
-
-	target_mem32_write32(target, STM32Lx_FLASH_OPT_BASE, 0xffff0000U);
-	target_mem32_write32(target, STM32Lx_FLASH_PECR(flash_base), STM32Lx_FLASH_PECR_OBL_LAUNCH);
-	target_mem32_write32(target, STM32Lx_FLASH_OPT_BASE, 0xff5500aaU);
-	target_mem32_write32(target, STM32Lx_FLASH_PECR(flash_base), STM32Lx_FLASH_PECR_OBL_LAUNCH);
-
-	platform_timeout_s timeout;
-	platform_timeout_set(&timeout, 500);
-
-	while (target_mem32_read32(target, STM32Lx_FLASH_SR(flash_base)) & STM32Lx_FLASH_SR_BSY)
-		target_print_progress(&timeout);
-
-	/* Disable further programming by locking PECR */
-	stm32lx_nvm_lock(target, flash_base);
-	return true;
 }
 
 static bool stm32lx_mass_erase(target_s *const target)
