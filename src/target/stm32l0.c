@@ -164,8 +164,8 @@ typedef struct stm32l_priv_s {
 
 static bool stm32lx_is_stm32l1(const target_s *const target)
 {
-	return target->part_id != 0x457U /* STM32L0xx Cat1 */ && target->part_id != 0x425U /* STM32L0xx Cat2 */ &&
-		target->part_id != 0x417U /* STM32L0xx Cat3 */ && target->part_id != 0x447U /* STM32L0xx Cat5 */;
+	return target->part_id != ID_STM32L01x && target->part_id != ID_STM32L03x && target->part_id != ID_STM32L05x &&
+		target->part_id != ID_STM32L07x;
 }
 
 static uint32_t stm32lx_nvm_eeprom_size(const target_s *const target)
