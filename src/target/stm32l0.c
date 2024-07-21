@@ -180,6 +180,7 @@ static bool stm32lx_protected_attach(target_s *target);
 static bool stm32lx_protected_mass_erase(target_s *target);
 
 typedef struct stm32l_priv {
+	target_addr32_t uid_taddr;
 	uint32_t dbgmcu_config;
 	char stm32l_variant[21];
 } stm32l_priv_s;
@@ -343,6 +344,33 @@ bool stm32l1_probe(target_s *const target)
 	/* There's no good way to tell how much RAM a part has, so use a one-size map */
 	target_add_ram32(target, STM32Lx_SRAM_BASE, STM32L1_SRAM_SIZE);
 
+	/* Having identified that it's a STM32L1 of some sort, dispatch Flash map setup based on the category */
+	target_addr32_t flash_size_taddr = 0U;
+	stm32l_priv_s *const priv = (stm32l_priv_s *)target->target_storage;
+	switch (target->part_id) {
+	case ID_STM32L1xxxB:
+	case ID_STM32L1xxxBxA:
+		flash_size_taddr = STM32L1xxxB_UID_FLASH_SIZE;
+		priv->uid_taddr = STM32L1xxxB_UID_BASE;
+		break;
+	case ID_STM32L1xxxC:
+	case ID_STM32L1xxxD:
+	case ID_STM32L1xxxE:
+		flash_size_taddr = STM32L1xxxx_UID_FLASH_SIZE;
+		priv->uid_taddr = STM32L1xxxx_UID_BASE;
+		break;
+	}
+	/* Read out the appropriate Flash size register value */
+	uint32_t flash_size = target_mem32_read16(target, flash_size_taddr);
+	/* Having read out the Flash size register, deal with two special cases before converting to an actual Flash size */
+	if (target->part_id == ID_STM32L1xxxBxA)
+		/* Only the lowest byte is valid on category 2 parts */
+		flash_size &= 0xffU;
+	else if (target->part_id == ID_STM32L1xxxD)
+		/* Cat 3/4 parts have values of 0 or 1, convert to actual Flash sizes for these parts (384KiB or 256KiB) */
+		flash_size = flash_size == 0U ? 384U : 256U;
+	/* Finally, now all that's done.. convert the Flash size value to bytes */
+	flash_size *= 1024U;
 
 	return true;
 }
