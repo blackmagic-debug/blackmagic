@@ -52,6 +52,7 @@
 #define STM32Lx_EEPROM_BASE     0x08080000U
 #define STM32Lx_SRAM_BASE       0x20000000U
 #define STM32L0_SRAM_SIZE       0x00005000U
+#define STM32L1_SRAM_SIZE       0x00014000U
 
 #define STM32Lx_FLASH_PECR(flash_base)    ((flash_base) + 0x04U)
 #define STM32Lx_FLASH_PEKEYR(flash_base)  ((flash_base) + 0x0cU)
@@ -124,7 +125,20 @@
 #define STM32L0_UID_BASE          0x1ff80050U
 #define STM32L0_UID_FLASH_SIZE    0x1ff8007cU
 
-#define STM32L1_DBGMCU_BASE UINT32_C(0xe0042000)
+/*
+ * NB: The L1 has two different UID and Flash size register base addresses!
+ * The L1xxxB ones are for Category 1 & 2 devices only. The L1xxxx ones
+ * are for Category 3, 4, 5 and 6 as the devices have two different memory maps
+ * that depend on the category code.
+ */
+#define STM32L1_DBGMCU_BASE        UINT32_C(0xe0042000)
+#define STM32L1_DBGMCU_IDCODE      (STM32L1_DBGMCU_BASE + 0x000U)
+#define STM32L1_DBGMCU_CONFIG      (STM32L1_DBGMCU_BASE + 0x004U)
+#define STM32L1_DBGMCU_APB1FREEZE  (STM32L1_DBGMCU_BASE + 0x008U)
+#define STM32L1xxxB_UID_BASE       0x1ff80050U
+#define STM32L1xxxB_UID_FLASH_SIZE 0x1ff8004cU
+#define STM32L1xxxx_UID_BASE       0x1ff800d0U
+#define STM32L1xxxx_UID_FLASH_SIZE 0x1ff800ccU
 
 #define STM32Lx_DBGMCU_CONFIG_DBG_SLEEP   (1U << 0U)
 #define STM32Lx_DBGMCU_CONFIG_DBG_STOP    (1U << 1U)
@@ -137,6 +151,13 @@
 #define ID_STM32L03x 0x425U /* Category 2 */
 #define ID_STM32L05x 0x417U /* Category 3 */
 #define ID_STM32L07x 0x447U /* Category 5 */
+
+/* Taken from DBGMCU_IDCODE in §30.6.1 in RM0038 rev 17, pg861 */
+#define ID_STM32L1xxxB   0x416U /* Category 1 */
+#define ID_STM32L1xxxBxA 0x429U /* Category 2 */
+#define ID_STM32L1xxxC   0x427U /* Category 3 */
+#define ID_STM32L1xxxD   0x436U /* Category 3/4 */
+#define ID_STM32L1xxxE   0x437U /* Category 5/6 */
 
 static bool stm32lx_cmd_option(target_s *target, int argc, const char **argv);
 static bool stm32lx_cmd_eeprom(target_s *target, int argc, const char **argv);
@@ -158,9 +179,10 @@ static bool stm32lx_mass_erase(target_s *target);
 static bool stm32lx_protected_attach(target_s *target);
 static bool stm32lx_protected_mass_erase(target_s *target);
 
-typedef struct stm32l_priv_s {
+typedef struct stm32l_priv {
+	uint32_t dbgmcu_config;
 	char stm32l_variant[21];
-} stm32l_priv_t;
+} stm32l_priv_s;
 
 static bool stm32lx_is_stm32l1(const target_s *const target)
 {
@@ -285,46 +307,42 @@ bool stm32l0_probe(target_s *const target)
 	return true;
 }
 
+static bool stm32l1_configure_dbgmcu(target_s *const target)
+{
+	/* If we're in the probe phase */
+	if (target->target_storage == NULL) {
+		/* Allocate and save private storage */
+		stm32l_priv_s *const priv_storage = calloc(1, sizeof(*priv_storage));
+		if (!priv_storage) { /* calloc failed: heap exhaustion */
+			DEBUG_ERROR("calloc: failed in %s\n", __func__);
+			return false;
+		}
+		/* Get the current value of the debug config register (and store it for later) */
+		priv_storage->dbgmcu_config = target_mem32_read32(target, STM32L1_DBGMCU_CONFIG);
+		target->target_storage = priv_storage;
+	}
+	return true;
+}
+
 bool stm32l1_probe(target_s *const target)
 {
+	/* Try to identify the part, make sure it's a STM32L1 */
 	const adiv5_access_port_s *const ap = cortex_ap(target);
 	/* Use the partno from the AP always to handle the difference between JTAG and SWD */
-	switch (ap->partno) {
-	case 0x416U: /* CAT. 1 device */
-	case 0x429U: /* CAT. 2 device */
-	case 0x427U: /* CAT. 3 device */
-	case 0x436U: /* CAT. 4 device */
-	case 0x437U: /* CAT. 5 device  */
-		target->driver = "STM32L1";
-		target_add_ram32(target, STM32Lx_SRAM_BASE, 0x14000);
-		stm32l_add_flash(target, STM32Lx_FLASH_BANK_BASE, 0x80000, 0x100);
-		//stm32l_add_eeprom(t, STM32Lx_EEPROM_BASE, 0x4000);
-		target_add_commands(target, stm32lx_cmd_list, target->driver);
-		break;
-	default:
+	if (ap->partno != ID_STM32L1xxxB && ap->partno != ID_STM32L1xxxBxA && ap->partno != ID_STM32L1xxxC &&
+		ap->partno != ID_STM32L1xxxD && ap->partno != ID_STM32L1xxxE)
 		return false;
-	}
 	target->part_id = ap->partno;
 
-	stm32l_priv_t *priv_storage = calloc(1, sizeof(*priv_storage));
-	if (!priv_storage) {
-		DEBUG_ERROR("calloc: failed in %s\n", __func__);
-		return false;
-	}
-	target->target_storage = (void *)priv_storage;
+	/* Now we have a stable debug environment, make sure the WDTs + WFI and WFE instructions can't cause problems */
+	stm32l1_configure_dbgmcu(target);
 
-	const target_addr32_t flash_base = stm32lx_flash_base(target);
-	const bool protected = (target_mem32_read32(target, STM32Lx_FLASH_OPTR(flash_base)) &
-							   STM32Lx_FLASH_OPTR_RDPROT_MASK) != STM32Lx_FLASH_OPTR_RDPROT_0;
-	snprintf(priv_storage->stm32l_variant, sizeof(priv_storage->stm32l_variant), "%s%s", target->driver,
-		protected ? " (protected)" : "");
-	target->driver = priv_storage->stm32l_variant;
+	target->driver = "STM32L1";
+	target->mass_erase = stm32lx_mass_erase;
+	target_add_commands(target, stm32lx_cmd_list, target->driver);
+	/* There's no good way to tell how much RAM a part has, so use a one-size map */
+	target_add_ram32(target, STM32Lx_SRAM_BASE, STM32L1_SRAM_SIZE);
 
-	if (protected) {
-		target->attach = stm32lx_protected_attach;
-		target->mass_erase = stm32lx_protected_mass_erase;
-	} else
-		target->mass_erase = stm32lx_mass_erase;
 
 	return true;
 }
