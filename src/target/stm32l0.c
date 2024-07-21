@@ -169,7 +169,9 @@ static const command_s stm32lx_cmd_list[] = {
 };
 
 static bool stm32l0_attach(target_s *target);
+static bool stm32l1_attach(target_s *target);
 static void stm32l0_detach(target_s *target);
+static void stm32l1_detach(target_s *target);
 static bool stm32lx_flash_erase(target_flash_s *flash, target_addr_t addr, size_t length);
 static bool stm32lx_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t length);
 static bool stm32lx_eeprom_erase(target_flash_s *flash, target_addr_t addr, size_t length);
@@ -318,6 +320,9 @@ static bool stm32l1_configure_dbgmcu(target_s *const target)
 		/* Get the current value of the debug config register (and store it for later) */
 		priv_storage->dbgmcu_config = target_mem32_read32(target, STM32L1_DBGMCU_CONFIG);
 		target->target_storage = priv_storage;
+
+		target->attach = stm32l1_attach;
+		target->detach = stm32l1_detach;
 	}
 
 	const stm32l_priv_s *const priv = (stm32l_priv_s *)target->target_storage;
@@ -397,6 +402,24 @@ static void stm32l0_detach(target_s *target)
 {
 	/* Reverse all changes to STM32L0_DBGMCU_CONFIG */
 	target_mem32_write32(target, STM32L0_DBGMCU_CONFIG, 0U);
+	/* Now defer to the normal Cortex-M detach routine to complete the detach */
+	cortexm_detach(target);
+}
+
+static bool stm32l1_attach(target_s *const target)
+{
+	/*
+	 * Try to attach to the part, and then ensure that the WDTs + WFI and WFE
+	 * instructions can't cause problems (this is duplicated as it's undone by detach.)
+	 */
+	return cortexm_attach(target) && stm32l1_configure_dbgmcu(target);
+}
+
+static void stm32l1_detach(target_s *target)
+{
+	const stm32l_priv_s *const priv = (stm32l_priv_s *)target->target_storage;
+	/* Reverse all changes to STM32L1_DBGMCU_CONFIG */
+	target_mem32_write32(target, STM32L1_DBGMCU_CONFIG, priv->dbgmcu_config);
 	/* Now defer to the normal Cortex-M detach routine to complete the detach */
 	cortexm_detach(target);
 }
