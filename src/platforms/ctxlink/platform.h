@@ -114,14 +114,14 @@
 #define USBUSART_TX_PIN        GPIO6
 #define USBUSART_RX_PIN        GPIO7
 #define USBUSART_ISR(x)        usart1_isr(x)
-#define USBUSART_DMA_BUS       DMA1
-#define USBUSART_DMA_CLK       RCC_DMA1
-#define USBUSART_DMA_TX_CHAN   DMA_STREAM3
-#define USBUSART_DMA_TX_IRQ    NVIC_DMA1_STREAM3_IRQ
-#define USBUSART_DMA_TX_ISR(x) dma1_stream3_isr(x)
-#define USBUSART_DMA_RX_CHAN   DMA_STREAM1
-#define USBUSART_DMA_RX_IRQ    NVIC_DMA1_STREAM1_IRQ
-#define USBUSART_DMA_RX_ISR(x) dma1_stream1_isr(x)
+#define USBUSART_DMA_BUS       DMA2
+#define USBUSART_DMA_CLK       RCC_DMA2
+#define USBUSART_DMA_TX_CHAN   DMA_STREAM7
+#define USBUSART_DMA_TX_IRQ    NVIC_DMA2_STREAM7_IRQ
+#define USBUSART_DMA_TX_ISR(x) dma2_stream7_isr(x)
+#define USBUSART_DMA_RX_CHAN   DMA_STREAM2
+#define USBUSART_DMA_RX_IRQ    NVIC_DMA2_STREAM2_IRQ
+#define USBUSART_DMA_RX_ISR(x) dma2_stream2_isr(x)
 /* For STM32F4 DMA trigger source must be specified */
 #define USBUSART_DMA_TRG DMA_SxCR_CHSEL_4
 
