@@ -322,6 +322,15 @@ static bool stm32l1_configure_dbgmcu(target_s *const target)
 		priv_storage->dbgmcu_config = target_mem32_read32(target, STM32L1_DBGMCU_CONFIG);
 		target->target_storage = priv_storage;
 	}
+
+	const stm32l_priv_s *const priv = (stm32l_priv_s *)target->target_storage;
+	/* Now we have a stable debug environment, make sure the WDTs can't bonk the processor out from under us */
+	target_mem32_write32(
+		target, STM32L1_DBGMCU_APB1FREEZE, STM32Lx_DBGMCU_APB1FREEZE_WWDG | STM32Lx_DBGMCU_APB1FREEZE_IWDG);
+	/* Then Reconfigure the config register to prevent WFI/WFE from cutting debug access */
+	target_mem32_write32(target, STM32L1_DBGMCU_CONFIG,
+		priv->dbgmcu_config | STM32Lx_DBGMCU_CONFIG_DBG_SLEEP | STM32Lx_DBGMCU_CONFIG_DBG_STANDBY |
+			STM32Lx_DBGMCU_CONFIG_DBG_STOP);
 	return true;
 }
 
