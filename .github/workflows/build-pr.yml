@@ -151,7 +151,6 @@ jobs:
     strategy:
       matrix:
         os:
-          - windows-2019
           - windows-2022
       fail-fast: false
 
@@ -276,8 +275,7 @@ jobs:
       # Install the dependencies needed for a full BMDA build
       - name: Install BMDA dependencies
         run: |
-          pacman --noconfirm -S mingw-w64-${{matrix.sys.env}}-libusb mingw-w64-${{matrix.sys.env}}-libftdi \
-            mingw-w64-${{matrix.sys.env}}-hidapi
+          pacman --noconfirm -S mingw-w64-${{matrix.sys.env}}-libusb mingw-w64-${{matrix.sys.env}}-hidapi
 
       # And build that full binary
       - name: Build full BMDA
