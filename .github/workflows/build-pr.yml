@@ -379,7 +379,7 @@ jobs:
       matrix:
         os:
           - macos-latest
-          - macos-11
+          - macos-12
       fail-fast: false
 
     # Steps represent a sequence of tasks that will be executed as part of the job
