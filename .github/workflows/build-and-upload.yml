@@ -99,6 +99,15 @@ jobs:
           path: src/artefacts/*
           if-no-files-found: error
 
+      # Package and upload logs if the build fails so we can dissect why
+      - name: Upload failure logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: logs-firmware-${{ matrix.probe }}
+          path: ${{ github.workspace }}/build/meson-logs/*
+          retention-days: 5
+
   package-firmware:
     runs-on: ubuntu-latest
     needs: build-firmware
@@ -209,6 +218,15 @@ jobs:
           path: src/artefacts/*
           if-no-files-found: error
 
+      # Package and upload logs if the build fails so we can dissect why
+      - name: Upload failure logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: logs-linux-${{ matrix.os.id }}-${{ matrix.compiler }}
+          path: ${{ github.workspace }}/build/meson-logs/*
+          retention-days: 5
+
   build-windows-mingw:
     # Name the job more appropriately so we can tell which windows and which MinGW ABI is in use
     name: 'build-mingw (${{ matrix.os }}, ${{ matrix.sys.abi }})'
@@ -297,6 +315,15 @@ jobs:
           path: src/artefacts/*
           if-no-files-found: error
 
+      # Package and upload logs if the build fails so we can dissect why
+      - name: Upload failure logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: logs-${{ matrix.os }}-${{ matrix.sys.abi }}-${{ matrix.sys.compiler }}
+          path: ${{ github.workspace }}/build/meson-logs/*
+          retention-days: 5
+
   build-macos:
     # Name the job more appropriately so we can tell which Xcode/macOS version is in use
     name: 'build-macos (${{ matrix.os.id }})'
@@ -360,3 +387,12 @@ jobs:
           name: blackmagic_macos-${{ matrix.os.name }}
           path: src/artefacts/*
           if-no-files-found: error
+
+      # Package and upload logs if the build fails so we can dissect why
+      - name: Upload failure logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: logs-macos-${{ matrix.os.name }}
+          path: ${{ github.workspace }}/build/meson-logs/*
+          retention-days: 5
