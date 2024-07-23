@@ -26,12 +26,12 @@ jobs:
     strategy:
       matrix:
         os:
-          - {id: ubuntu-20.04, name: focal}
+          - {id: ubuntu-22.04, name: jammy}
         compiler:
-          - 'clang-9'
-          - 'clang-15'
-          - 'gcc-9'
-          - 'gcc-11'
+          - 'clang-13' # Native Clang compiler for the CI image
+          - 'clang-18' # Latest Clang compiler from the apt mirror
+          - 'gcc-11' # Native GCC compiler for the CI image
+          - 'gcc-13' # Latest GCC compiler from the toolchain PPA
         arm-compiler:
           - '12.2.Rel1'
       fail-fast: false
