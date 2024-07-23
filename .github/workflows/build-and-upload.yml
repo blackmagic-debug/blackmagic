@@ -34,10 +34,6 @@ jobs:
           - 'gcc-11'
         arm-compiler:
           - '12.2.Rel1'
-        include:
-          - os: {id: ubuntu-20.04, name: focal}
-            compiler: gcc-9
-            arm-compiler: '10-2020-q4'
       fail-fast: false
 
     # Steps represent a sequence of tasks that will be executed as part of the job
