@@ -32,8 +32,6 @@ jobs:
           - 'clang-18' # Latest Clang compiler from the apt mirror
           - 'gcc-11' # Native GCC compiler for the CI image
           - 'gcc-13' # Latest GCC compiler from the toolchain PPA
-        arm-compiler:
-          - '12.2.Rel1'
       fail-fast: false
 
     # Steps represent a sequence of tasks that will be executed as part of the job
@@ -58,6 +56,7 @@ jobs:
           sudo apt-get install $CC $CXX
           echo "CC=$CC" >> $GITHUB_ENV
           echo "CXX=$CXX" >> $GITHUB_ENV
+          echo "BUILD_OPTS=" >> $GITHUB_ENV
         env:
           CC: ${{ matrix.compiler }}
       - name: Setup system Clang
@@ -73,44 +72,48 @@ jobs:
           CXX=${CC/#clang/clang++}
           echo "CC=$CC" >> $GITHUB_ENV
           echo "CXX=$CXX" >> $GITHUB_ENV
+          echo "BUILD_OPTS=-Dhidapi:b_lto=false -Dlibusb:b_lto=false" >> $GITHUB_ENV
         env:
           CC: ${{ matrix.compiler }}
         working-directory: ${{ runner.temp }}
 
       # Install the dependencies needed for a full BMDA build
-      - name: Install BMDA dependencies
-        run: sudo apt-get -y install libc6-dev-i386 libusb-dev libftdi1-dev libhidapi-dev
+      - name: Install dependencies
+        run: sudo apt-get -y install libudev-dev
 
-      # Setup and use a suitable ARM GCC for the firmware
-      - name: Setup ARM GCC
-        uses: carlosperate/arm-none-eabi-gcc-action@v1
-        with:
-          release: ${{ matrix.arm-compiler }}
+      # Install and setup a suitable Meson + Ninja
+      - name: Setup Meson + Ninja
+        run: |
+          sudo python3 -m pip install --upgrade pip setuptools wheel
+          sudo python3 -m pip install meson ninja
+        working-directory: ${{ runner.temp }}
 
       # Record the versions of all the tools used in the build
       - name: Version tools
         shell: bash
         run: |
           $CC --version
-          arm-none-eabi-gcc --version
-          make --version
+          meson --version
+          ninja --version
 
       # Checkout the repository and branch to build under the default location
       - name: Checkout
         uses: actions/checkout@v4
 
-      # Build the firmware for all platform variants and full BMDA
-      - name: Build all platform variants firmware and Linux BMDA
+      # Build BMDA for Linux
+      - name: Build Linux BMDA
         run: |
-          make all_platforms
-          mv src/artifacts/blackmagic-{hosted,bmda}
+          meson setup build $BUILD_OPTS
+          meson compile -C build
+          mkdir src/artefacts
+          mv build/blackmagic src/artefacts/blackmagic-bmda
 
-      # Package up all the artefacts and upload them
-      - name: Archive firmware build artifacts as a zip
-        uses: actions/upload-artifact@v3
+      # Package up the artefact and upload it
+      - name: Archive
+        uses: actions/upload-artifact@v4
         with:
-          name: blackmagic-linux_${{ matrix.os.name }}-${{ matrix.compiler }}+arm-${{ matrix.arm-compiler }}
-          path: src/artifacts/*
+          name: blackmagic_linux-${{ matrix.os.id }}-${{ matrix.compiler }}
+          path: src/artefacts/*
           if-no-files-found: error
 
   build-windows-mingw:
