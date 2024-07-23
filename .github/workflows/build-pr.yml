@@ -212,6 +212,7 @@ jobs:
         os:
           - windows-2022
         sys:
+          - {abi: mingw64, env: x86_64, compiler: gcc}
           - {abi: ucrt64, env: ucrt-x86_64, compiler: gcc}
           - {abi: clang64, env: clang-x86_64, compiler: clang}
       fail-fast: false
