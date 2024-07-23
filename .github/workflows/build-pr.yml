@@ -437,7 +437,8 @@ jobs:
         compiler:
           - gcc@11
           - gcc@12
-          - gcc@13 # Don't use 'gcc', the symlink is versioned -- see below
+          - gcc@13
+          - gcc@14 # Don't use 'gcc', the symlink is versioned -- see below
         exclude:
           # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=114007
           # Fix was backported to GCC 13, but there's no release available yet
