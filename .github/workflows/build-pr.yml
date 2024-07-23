@@ -226,8 +226,8 @@ jobs:
           msystem: ${{matrix.sys.abi}}
           update: true
           path-type: inherit
-          install: >-
-            mingw-w64-${{matrix.sys.env}}-toolchain
+          pacboy: >-
+            toolchain:p
 
       # Build a suitable runtime environment
       - name: Runtime environment
