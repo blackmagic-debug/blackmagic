@@ -170,6 +170,7 @@ if build_machine.system() == 'linux'
 		fallback: ['hidapi', 'hidapi_hidraw_dep'],
 		native: is_cross_build,
 		default_options: [
+			'c_std=gnu99',
 			'default_library=static',
 			'install_targets=false',
 			'with_libusb=false',
@@ -185,6 +186,7 @@ else
 		fallback: 'hidapi',
 		native: is_cross_build,
 		default_options: [
+			'c_std=c99',
 			'default_library=static',
 			'install_targets=false',
 			'build_native=true',
