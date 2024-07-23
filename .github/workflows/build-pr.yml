@@ -27,10 +27,10 @@ jobs:
     strategy:
       matrix:
         os:
-          - {id: ubuntu-20.04, name: focal}
+          - {id: ubuntu-22.04, name: jammy}
         compiler:
-          - 'clang-15'
-          - 'gcc-11'
+          - 'clang-18'
+          - 'gcc-13'
         arm-compiler:
           - '12.2.Rel1'
       fail-fast: false
@@ -296,7 +296,7 @@ jobs:
     strategy:
       matrix:
         os:
-          - {id: ubuntu-20.04, name: focal}
+          - {id: ubuntu-22.04, name: jammy}
         arm-compiler:
           - '12.2.Rel1'
         probe:
@@ -345,6 +345,7 @@ jobs:
       # Record the versions of all the tools used in the build
       - name: Version tools
         run: |
+          cc --version
           arm-none-eabi-gcc --version
           meson --version
           ninja --version
@@ -503,7 +504,7 @@ jobs:
           meson compile -C build
 
   size-diff:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
 
     steps:
       # Setup and use a suitable ARM GCC for the firmware
