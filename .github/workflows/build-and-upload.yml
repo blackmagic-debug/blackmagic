@@ -225,12 +225,9 @@ jobs:
     strategy:
       matrix:
         os:
-          - windows-2019
           - windows-2022
         sys:
-          - {abi: mingw64, env: x86_64, compiler: gcc}
           - {abi: ucrt64, env: ucrt-x86_64, compiler: gcc}
-          - {abi: clang64, env: clang-x86_64, compiler: clang}
       fail-fast: false
 
     # Steps represent a sequence of tasks that will be executed as part of the job
@@ -242,8 +239,9 @@ jobs:
           msystem: ${{matrix.sys.abi}}
           update: true
           path-type: inherit
-          install: >-
-            mingw-w64-${{matrix.sys.env}}-toolchain
+          pacboy: >-
+            toolchain:p
+            meson:p
 
       # Build a suitable runtime environment
       - name: Runtime environment
@@ -271,43 +269,30 @@ jobs:
         env:
           CC: ${{ matrix.sys.compiler }}
 
-      # Install the dependencies needed for a full BMDA build
-      - name: Install BMDA dependencies
-        run: |
-          pacman --noconfirm -S mingw-w64-${{matrix.sys.env}}-libusb mingw-w64-${{matrix.sys.env}}-libftdi \
-            mingw-w64-${{matrix.sys.env}}-hidapi
-
-      # Setup and use a suitable ARM GCC for the firmware
-      - name: Setup ARM GCC
-        uses: carlosperate/arm-none-eabi-gcc-action@v1
-        with:
-          release: '12.2.Rel1'
-
       # Record the versions of all the tools used in the build
       - name: Version tools
-        shell: bash
         run: |
           $CC --version
-          arm-none-eabi-gcc --version
-          make --version
+          meson --version
+          ninja --version
 
       # Checkout the repository and branch to build under the default location
       - name: Checkout
         uses: actions/checkout@v4
 
-      # Build the firmware for all platform variants and full BMDA
-      - name: Build all platform variants firmware and Windows BMDA
+      # Build the default BMDA configuration
+      - name: Build full BMDA
         run: |
-          make all_platforms
-          make -C src clean
-          make PROBE_HOST=hosted HOSTED_BMP_ONLY=0
-          mv src/artifacts/blackmagic-{hosted,bmda-bmp-only}.exe
-          mv src/blackmagic.exe src/artifacts/blackmagic-bmda-full.exe
+          meson setup build
+          meson compile -C build
+          mkdir src/artefacts
+          mv build/blackmagic.exe src/artefacts/blackmagic-bmda.exe
+          mv build/ftd2xx.dll src/artefacts
 
       # Package up all the artefacts and upload them
-      - name: Archive firmware build artifacts as a zip
-        uses: actions/upload-artifact@v3
+      - name: Archive firmware build artefacts as a zip
+        uses: actions/upload-artifact@v4
         with:
-          name: blackmagic-windows_${{ matrix.os }}-${{ matrix.sys.abi }}-${{ matrix.sys.compiler }}
-          path: src/artifacts/*
+          name: blackmagic_${{ matrix.os }}-${{ matrix.sys.abi }}-${{ matrix.sys.compiler }}
+          path: src/artefacts/*
           if-no-files-found: error
