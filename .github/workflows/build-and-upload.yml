@@ -296,3 +296,67 @@ jobs:
           name: blackmagic_${{ matrix.os }}-${{ matrix.sys.abi }}-${{ matrix.sys.compiler }}
           path: src/artefacts/*
           if-no-files-found: error
+
+  build-macos:
+    # Name the job more appropriately so we can tell which Xcode/macOS version is in use
+    name: 'build-macos (${{ matrix.os.id }})'
+    # The type of runner that the job will run on
+    runs-on: ${{ matrix.os.id }}
+
+    # Set the shell so run steps will execute inside the native environment
+    defaults:
+      run:
+        shell: bash
+
+    # We define a matrix of compilers and OS versions to build against so we can cover a variety of
+    # suitable compilation environments and early discover issues. The `build-and-upload`
+    # workflow contains an extended set.
+    strategy:
+      matrix:
+        os:
+          - {id: macos-12, name: '12'}
+          - {id: macos-13, name: '13'}
+      fail-fast: false
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Build a suitable runtime environment
+      - name: Runtime environment
+        env:
+          WORKSPACE: ${{ github.workspace }}
+        # The GITHUB_WORKSPACE step here fixes https://github.com/actions/runner/issues/2058 which is an ongoing issue.
+        run: |
+          echo "GITHUB_WORKSPACE=`pwd`" >> $GITHUB_ENV
+
+      # Install and setup a suitable Meson + Ninja
+      - name: Setup Meson + Ninja
+        run: |
+          brew install meson ninja
+
+      # Record the versions of all the tools used in the build
+      - name: Version tools
+        run: |
+          cc --version  || true
+          ld --version || true
+          meson --version
+          ninja --version
+
+      # Checkout the repository and branch to build under the default location
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Build the default BMDA configuration
+      - name: Build full BMDA
+        run: |
+          meson setup build
+          meson compile -C build
+          mkdir src/artefacts
+          mv build/blackmagic src/artefacts/blackmagic-bmda
+
+      # Package up the artefact and upload it
+      - name: Archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: blackmagic_macos-${{ matrix.os.name }}
+          path: src/artefacts/*
+          if-no-files-found: error
