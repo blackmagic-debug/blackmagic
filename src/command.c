@@ -125,6 +125,10 @@ const command_s cmd_list[] = {
 	{NULL, NULL, NULL},
 };
 
+#ifdef PLATFORM_HAS_CUSTOM_COMMANDS
+extern const command_s platform_cmd_list[];
+#endif
+
 bool connect_assert_nrst;
 #if defined(PLATFORM_HAS_DEBUG) && PC_HOSTED == 0
 bool debug_bmp;
@@ -160,6 +164,13 @@ int command_process(target_s *const t, char *const cmd_buffer)
 		if ((argc == 0) || !strncmp(argv[0], cmd->cmd, strlen(argv[0])))
 			return !cmd->handler(t, argc, argv);
 	}
+
+#ifdef PLATFORM_HAS_CUSTOM_COMMANDS
+	for (const command_s *cmd = platform_cmd_list; cmd->cmd; ++cmd) {
+		if ((argc == 0) || !strncmp(argv[0], cmd->cmd, strlen(argv[0])))
+			return !cmd->handler(t, argc, argv);
+	}
+#endif
 
 	if (!t)
 		return -1;
@@ -198,6 +209,10 @@ bool cmd_help(target_s *t, int argc, const char **argv)
 		gdb_out("General commands:\n");
 		for (const command_s *cmd = cmd_list; cmd->cmd; cmd++)
 			gdb_outf("\t%s -- %s\n", cmd->cmd, cmd->help);
+#ifdef PLATFORM_HAS_CUSTOM_COMMANDS
+		for (const command_s *cmd = platform_cmd_list; cmd->cmd; ++cmd)
+			gdb_outf("\t%s -- %s\n", cmd->cmd, cmd->help);
+#endif
 		if (!t)
 			return true;
 	}
