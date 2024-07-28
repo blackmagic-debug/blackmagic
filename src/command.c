@@ -126,7 +126,7 @@ const command_s cmd_list[] = {
 };
 
 #ifdef PLATFORM_HAS_CUSTOM_COMMANDS
-extern const command_s platform_cmd_list[];
+extern const command_s *platform_cmd_list;
 #endif
 
 bool connect_assert_nrst;
@@ -167,7 +167,7 @@ int command_process(target_s *const t, char *const cmd_buffer)
 
 #ifdef PLATFORM_HAS_CUSTOM_COMMANDS
 	for (const command_s *cmd = platform_cmd_list; cmd->cmd; ++cmd) {
-		if ((argc == 0) || !strncmp(argv[0], cmd->cmd, strlen(argv[0])))
+		if (!strncmp(argv[0], cmd->cmd, strlen(argv[0])))
 			return !cmd->handler(t, argc, argv);
 	}
 #endif
