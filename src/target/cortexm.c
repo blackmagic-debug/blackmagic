@@ -565,6 +565,8 @@ bool cortexm_probe(adiv5_access_port_s *ap)
 	if (conn_reset)
 		target_mem32_write32(target, CORTEXM_DEMCR, 0);
 
+	DEBUG_TARGET("%s: Examining Part ID 0x%04x, AP Part ID: 0x%04x\n", __func__, target->part_id, ap->partno);
+
 	switch (target->designer_code) {
 	case JEP106_MANUFACTURER_FREESCALE:
 		PROBE(imxrt_probe);
