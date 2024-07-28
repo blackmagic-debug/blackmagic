@@ -49,6 +49,7 @@
 #define STM32Lx_FLASH_BANK_BASE 0x08000000U
 #define STM32L0_FLASH_BANK_SIZE 0x00010000U
 #define STM32L0_FLASH_PAGE_SIZE 0x00000080U
+#define STM32L1_FLASH_PAGE_SIZE 0x00000100U
 #define STM32Lx_EEPROM_BASE     0x08080000U
 #define STM32Lx_SRAM_BASE       0x20000000U
 #define STM32L0_SRAM_SIZE       0x00005000U
@@ -382,6 +383,59 @@ bool stm32l1_probe(target_s *const target)
 		flash_size = flash_size == 0U ? 384U : 256U;
 	/* Finally, now all that's done.. convert the Flash size value to bytes */
 	flash_size *= 1024U;
+
+	/* Dispatch again on the category to complete Flash map setup */
+	switch (target->part_id) {
+	case ID_STM32L1xxxB:
+	case ID_STM32L1xxxBxA:
+	case ID_STM32L1xxxC:
+	case ID_STM32L1xxxD: {
+		/*
+		 * Category 1, 2, and 3 only have one bank. This bank is split into up-to 64 4KiB sectors of 256 byte pages.
+		 * Sectors are the write protection primitive, pages are the erase size primitive. The manual displays these
+		 * as split with 1KiB of 256 byte pages, 3KiB of 1KiB pages, up to 124KiB of 4KiB pages, and then finally
+		 * the rest of the Flash as 64KiB pages. However this is inaccurate.
+		 * Category 4 has 2 banks but the first bank is laid out exactly the same as the first 3 categories.
+		 * Category 4's second bank starts at the 192KiB mark and looks like it extends with a 128KiB page and a
+		 * 64KiB page for another 192KiB for 384KiB of Flash. This bank, however, works the same as the first.
+		 * This is documented in §3.2, tables 8, 9, and 10 on pg53 of RM0038, rev 17
+		 */
+		const bool category4 = flash_size == 0x00060000U;
+		/*
+		 * Determine bank 1's size. Category 4 parts have their 384KiB of Flash split evenly between the two
+		 * banks, while the others all have their entire Flash on the first bank only.
+		 */
+		const uint32_t bank_size = category4 ? flash_size >> 1U : flash_size;
+		stm32l_add_flash(target, STM32Lx_FLASH_BANK_BASE, bank_size, STM32L1_FLASH_PAGE_SIZE);
+		/* Now deal with the second bank on Category 4 parts */
+		if (category4)
+			stm32l_add_flash(target, STM32Lx_FLASH_BANK_BASE + 0x00030000U, bank_size, STM32L1_FLASH_PAGE_SIZE);
+		break;
+	}
+	case ID_STM32L1xxxE: {
+		/*
+		 * Category 5 has 2 banks, documented in §3.2, table 11 on pg56 of RM0038, rev 17.
+		 * These banks are split up into sectors and pages the same as any other for the L1 series.
+		 * The manual displays this as first bank being split into 1KiB of 256 byte pages, 3KiB of 1KiB pages,
+		 * 124KiB of 4KiB pages, and a 128KiB page for 256KiB. It then shows the second bank is split into two
+		 * 128KiB pages for a second 256KiB.  However this is inaccurate.
+		 * This gives a total of 512KiB of Flash, which is the only way to tell these parts apart from category 6.
+		 *
+		 * Category 6 has 2 banks as well, documented in §3.2, table 12 on pg58 of RM0038, rev 17.
+		 * The manual displays this as the first bank starting the same as a Category 5 device, right up until 128KiB
+		 * in, after which it shows the bank being concluded by a single 64KiB page for 192KiB. Bank 2 is then shown as
+		 * 1 128KiB page and one 64KiB page for another 192KiB, giving a total of 384KiB of Flash same as Category 4
+		 * parts. While the total amount is accurate, this is an inaccurate representation. These too use
+		 * the same sectors and pages arrangements as the other L1 parts, however the bank split location for
+		 * the Category 5 and 6 parts is the same 256KiB mark, causing the Category 6 parts to have a small hole
+		 * between the two banks, unlike Category 4 where the banks are contiguous.
+		 */
+		const uint32_t bank_size = flash_size >> 1U;
+		stm32l_add_flash(target, STM32Lx_FLASH_BANK_BASE, bank_size, STM32L1_FLASH_PAGE_SIZE);
+		stm32l_add_flash(target, STM32Lx_FLASH_BANK_BASE + 0x00040000U, bank_size, STM32L1_FLASH_PAGE_SIZE);
+		break;
+	}
+	}
 
 	return true;
 }
