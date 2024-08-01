@@ -186,12 +186,12 @@ typedef enum stm32l4_device_id {
 	 * The references after the values are the sections to look at in the respective reference manuals.
 	 */
 	ID_STM32U535 = 0x4550U, /* STM32U535/545 from RM0456, Rev.4 $75.3.3 DP_TARGETIDR pg.3497 Not Tested */
-	ID_STM32U5FX = 0x4760U, /* STM32U5Fx/5Gx from RM0456, Rev.4 $75.3.3 DP_TARGETIDR pg.3497 Not Tested */
-	ID_STM32U59X = 0x4810U, /* STM32U59x/5Ax from RM0456, Rev.4 $75.3.3 DP_TARGETIDR pg.3497 Not Tested */
+	ID_STM32U5Fx = 0x4760U, /* STM32U5Fx/5Gx from RM0456, Rev.4 $75.3.3 DP_TARGETIDR pg.3497 Not Tested */
+	ID_STM32U59x = 0x4810U, /* STM32U59x/5Ax from RM0456, Rev.4 $75.3.3 DP_TARGETIDR pg.3497 Not Tested */
 	ID_STM32U575 = 0x4820U, /* STM32U575/585 from RM0456, Rev.4 $75.3.3 DP_TARGETIDR pg.3497 Tested on U575 */
-	ID_STM32WLXX = 0x4970U, /* from RM0461, Rev.5 §36.4.5, and RM0453, Rev.3 §38.4.5 */
-	ID_STM32WBXX = 0x4950U, /* from RM0434, Rev.10 §41.4.8 */
-	ID_STM32WB1X = 0x4940U, /* from RM0473, Rev.7 §33.4.8 and RM0478 Rev.5 §31.4.8 */
+	ID_STM32WLxx = 0x4970U, /* from RM0461, Rev.5 §36.4.5, and RM0453, Rev.3 §38.4.5 */
+	ID_STM32WBxx = 0x4950U, /* from RM0434, Rev.10 §41.4.8 */
+	ID_STM32WB1x = 0x4940U, /* from RM0473, Rev.7 §33.4.8 and RM0478 Rev.5 §31.4.8 */
 } stm32l4_device_id_e;
 
 typedef enum stm32l4_family {
@@ -398,7 +398,7 @@ static stm32l4_device_info_s const stm32l4_device_info[] = {
 		.flash_size_reg = STM32U5_FLASH_SIZE_REG,
 	},
 	{
-		.device_id = ID_STM32U59X,
+		.device_id = ID_STM32U59x,
 		.family = STM32L4_FAMILY_U5xx,
 		.designator = "STM32U59x/5Ax",
 		.sram1 = 786U + 64U + 832U + 832U, /* SRAM1+2+3+5 continuous */
@@ -407,7 +407,7 @@ static stm32l4_device_info_s const stm32l4_device_info[] = {
 		.flash_size_reg = STM32U5_FLASH_SIZE_REG,
 	},
 	{
-		.device_id = ID_STM32U5FX,
+		.device_id = ID_STM32U5Fx,
 		.family = STM32L4_FAMILY_U5xx,
 		.designator = "STM32U5Fx/5Gx",
 		.sram1 = 786U + 64U + 832U + 832U + 512U, /* SRAM1+2+3+5+6 continuous */
@@ -416,7 +416,7 @@ static stm32l4_device_info_s const stm32l4_device_info[] = {
 		.flash_size_reg = STM32U5_FLASH_SIZE_REG,
 	},
 	{
-		.device_id = ID_STM32WLXX,
+		.device_id = ID_STM32WLxx,
 		.family = STM32L4_FAMILY_WLxx,
 		.designator = "STM32WLxx",
 		.sram1 = 32U,
@@ -426,7 +426,7 @@ static stm32l4_device_info_s const stm32l4_device_info[] = {
 		.flash_size_reg = STM32L4_FLASH_SIZE_REG,
 	},
 	{
-		.device_id = ID_STM32WBXX,
+		.device_id = ID_STM32WBxx,
 		.family = STM32L4_FAMILY_WBxx,
 		.designator = "STM32WBxx",
 		.sram1 = 192U,
@@ -436,7 +436,7 @@ static stm32l4_device_info_s const stm32l4_device_info[] = {
 		.flash_size_reg = STM32L4_FLASH_SIZE_REG,
 	},
 	{
-		.device_id = ID_STM32WB1X,
+		.device_id = ID_STM32WB1x,
 		.family = STM32L4_FAMILY_WBxx,
 		.designator = "STM32WB1x",
 		.sram1 = 12U,
@@ -636,12 +636,12 @@ bool stm32l4_probe(target_s *const target)
 
 	target->driver = device->designator;
 	switch (device_id) {
-	case ID_STM32WLXX:
-	case ID_STM32WBXX:
-	case ID_STM32WB1X:
+	case ID_STM32WLxx:
+	case ID_STM32WBxx:
+	case ID_STM32WB1x:
 		if ((stm32l4_flash_read32(target, FLASH_OPTR)) & FLASH_OPTR_ESE) {
 			DEBUG_WARN("STM32W security enabled\n");
-			target->driver = device_id == ID_STM32WLXX ? "STM32WLxx (secure)" : "STM32WBxx (secure)";
+			target->driver = device_id == ID_STM32WLxx ? "STM32WLxx (secure)" : "STM32WBxx (secure)";
 		}
 		if (ap->apsel == 0) {
 			/*
@@ -694,7 +694,7 @@ static bool stm32l4_attach(target_s *const target)
 
 	/* Now we have a base RAM map, rebuild the Flash map */
 	if (device->family == STM32L4_FAMILY_WBxx) {
-		if (device->device_id == ID_STM32WB1X)
+		if (device->device_id == ID_STM32WB1x)
 			stm32l4_add_flash(target, STM32L4_FLASH_BANK_1_BASE, flash_len * 1024U, 0x0800, UINT32_MAX);
 		else
 			stm32l4_add_flash(target, STM32L4_FLASH_BANK_1_BASE, flash_len * 1024U, 0x1000, UINT32_MAX);
@@ -912,7 +912,7 @@ static bool stm32l4_option_write(target_s *const target, const uint32_t *const v
 
 static uint32_t stm32l4_fpec_base_addr(const target_s *const target)
 {
-	if (target->part_id == ID_STM32WLXX)
+	if (target->part_id == ID_STM32WLxx)
 		return STM32WL_FPEC_BASE;
 	return STM32L4_FPEC_BASE;
 }
@@ -939,7 +939,7 @@ static stm32l4_option_bytes_info_s stm32l4_get_opt_bytes_info(const uint16_t par
 			.offsets = stm32g4_opt_reg_offsets,
 			.default_values = stm32g4_default_options_values,
 		};
-	case ID_STM32WLXX:
+	case ID_STM32WLxx:
 		return (stm32l4_option_bytes_info_s){
 			.word_count = ARRAY_LENGTH(stm32wl_default_options_values),
 			.offsets = stm32wl_opt_reg_offsets,
@@ -977,11 +977,11 @@ static bool stm32l4_cmd_option(target_s *target, int argc, const char **argv)
 		tc_printf(target, "%s options not implemented!\n", "STM32L5");
 		return false;
 	}
-	if (target->part_id == ID_STM32WBXX || target->part_id == ID_STM32WB1X) {
+	if (target->part_id == ID_STM32WBxx || target->part_id == ID_STM32WB1x) {
 		tc_printf(target, "%s options not implemented!\n", "STM32WBxx");
 		return false;
 	}
-	if (target->part_id == ID_STM32WLXX) {
+	if (target->part_id == ID_STM32WLxx) {
 		tc_printf(target, "%s options not implemented!\n", "STM32WLxx");
 		return false;
 	}
