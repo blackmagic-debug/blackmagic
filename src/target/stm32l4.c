@@ -589,7 +589,8 @@ static bool stm32l4_configure_dbgmcu(target_s *const target, const stm32l4_devic
 		priv_storage->device = device;
 		/* Get the current value of the debug config register (and store it for later) */
 		const target_addr32_t dbgmcu_config_taddr =
-			device->family == STM32L4_FAMILY_L55x ? STM32L5_DBGMCU_CONFIG : STM32L4_DBGMCU_CONFIG;
+			(device->family == STM32L4_FAMILY_L55x || device->family == STM32L4_FAMILY_U5xx) ? STM32L5_DBGMCU_CONFIG :
+																							   STM32L4_DBGMCU_CONFIG;
 		priv_storage->dbgmcu_config = target_mem32_read32(target, dbgmcu_config_taddr);
 		target->target_storage = priv_storage;
 
@@ -602,7 +603,7 @@ static bool stm32l4_configure_dbgmcu(target_s *const target, const stm32l4_devic
 	 * Now we have a stable debug environment, make sure the WDTs can't bonk the processor out from under us,
 	 * then Reconfigure the config register to prevent WFI/WFE from cutting debug access
 	 */
-	if (device->family == STM32L4_FAMILY_L55x) {
+	if (device->family == STM32L4_FAMILY_L55x || device->family == STM32L4_FAMILY_U5xx) {
 		target_mem32_write32(
 			target, STM32L5_DBGMCU_APB1FREEZE1, STM32L4_DBGMCU_APB1FREEZE1_IWDG | STM32L4_DBGMCU_APB1FREEZE1_WWDG);
 		target_mem32_write32(target, STM32L5_DBGMCU_CONFIG,
@@ -773,8 +774,10 @@ static void stm32l4_detach(target_s *const target)
 	const stm32l4_priv_s *const priv = (stm32l4_priv_s *)target->target_storage;
 	const stm32l4_device_info_s *const device = priv->device;
 
-	/*reverse all changes to DBGMCU_CR*/
-	target_mem32_write32(target, device->family == STM32L4_FAMILY_L55x ? STM32L5_DBGMCU_CONFIG : STM32L4_DBGMCU_CONFIG,
+	/* Reverse all changes to the appropriate STM32Lx_DBGMCU_CONFIG */
+	target_mem32_write32(target,
+		device->family == STM32L4_FAMILY_L55x || device->family == STM32L4_FAMILY_U5xx ? STM32L5_DBGMCU_CONFIG :
+																						 STM32L4_DBGMCU_CONFIG,
 		priv->dbgmcu_config);
 	cortexm_detach(target);
 }
