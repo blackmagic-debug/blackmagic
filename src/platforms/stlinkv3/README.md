@@ -47,6 +47,13 @@ meson setup build --cross-file=cross-file/stlinkv3.ini
 meson compile -C build
 ```
 
+If you are building for bootloader you need to add option `-Dbmd_bootloader=true`
+```sh
+meson setup build --cross-file=cross-file/stlinkv3.ini -Dbmd_bootloader=true
+meson compile -C build
+```
+
+
 ## Flashing
 Easiest is using the BMP bootloader. Load the BMP firmware easiest with
 scripts/stm32mem.py  or dfu-utils. BMP bootloader must be flashed with SWD
@@ -64,6 +71,9 @@ make and use like
 Revert to original ST firmware with
 `java -jar STLinkUpgrade.jar`
 Try to use old version that do not disable SWD access. Expect newer ST firmware even to be more restrictive.
+
+If you did not build with bootloader option enabled flashing this firmware will "soft" brick stlink. While the stlink v3 is plugged into usb
+use tweezers to short CN4 (2 pins next to the USB connector) this will force bootloader mode. On STLINK-V3MINIE version its TP1 and TP2 on the bottom.
 
 ## What remains to be done?
 
