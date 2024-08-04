@@ -105,6 +105,18 @@ bool remote_v4_adiv5_init(adiv5_debug_port_s *const dp)
 
 bool remote_v4_riscv_jtag_init(riscv_dmi_s *const dmi)
 {
+	/* Format the RISC-V JTAG DTM init request into a new buffer and send it to the probe */
+	char buffer[REMOTE_MAX_MSG_SIZE];
+	ssize_t length = snprintf(buffer, REMOTE_MAX_MSG_SIZE, REMOTE_RISCV_INIT_STR, REMOTE_RISCV_JTAG);
+	platform_buffer_write(buffer, length);
+
+	/* Read back the answer and check for errors */
+	length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
+	if (length < 1 || buffer[0U] != REMOTE_RESP_OK) {
+		DEBUG_ERROR("%s failed, error %s\n", __func__, length ? buffer + 1 : "with communication");
+		return false;
+	}
+
 	dmi->read = remote_v4_riscv_jtag_dmi_read;
 	dmi->write = remote_v4_riscv_jtag_dmi_write;
 	return true;
