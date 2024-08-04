@@ -211,6 +211,11 @@ void remote_adiv5_dp_init(adiv5_debug_port_s *const dp)
 	remote_funcs.adiv5_init(dp);
 }
 
+void remote_riscv_jtag_dtm_init(riscv_dmi_s *dmi)
+{
+	(void)dmi;
+}
+
 void remote_add_jtag_dev(uint32_t dev_index, const jtag_dev_s *jtag_dev)
 {
 	if (remote_funcs.add_jtag_dev)

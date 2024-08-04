@@ -225,6 +225,11 @@ void riscv_jtag_dtm_handler(uint8_t dev_index);
 void riscv_dmi_init(riscv_dmi_s *dmi);
 riscv_hart_s *riscv_hart_struct(target_s *target);
 
+#if PC_HOSTED == 1
+/* BMDA interposition functions for DP setup */
+void bmda_riscv_jtag_dtm_init(riscv_dmi_s *dmi);
+#endif
+
 bool riscv_dm_read(riscv_dm_s *dbg_module, uint8_t address, uint32_t *value);
 bool riscv_dm_write(riscv_dm_s *dbg_module, uint8_t address, uint32_t value);
 bool riscv_command_wait_complete(riscv_hart_s *hart);
