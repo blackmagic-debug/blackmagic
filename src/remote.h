@@ -3,7 +3,7 @@
  *
  * Copyright (C) 2019  Black Sphere Technologies Ltd.
  * Written by Dave Marples <dave@marples.net>
- * Copyright (C) 2022-2023 1BitSquared <info@1bitsquared.com>
+ * Copyright (C) 2022-2024 1BitSquared <info@1bitsquared.com>
  * Modified by Rachel Mant <git@dragonmux.network>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -252,7 +252,7 @@
 #define REMOTE_ACCEL_CORTEX_AR (1U << 1U)
 #define REMOTE_ACCEL_RISCV     (1U << 2U)
 
-/* ADIv5 protocol elements */
+/* ADIv5 accleration protocol elements */
 #define REMOTE_ADIV5_PACKET     'A'
 #define REMOTE_DP_READ          'd'
 #define REMOTE_AP_READ          'a'
@@ -316,6 +316,27 @@
  * 16 for the address and 8 for the count and one trailer gives 42U
  */
 #define REMOTE_ADIV5_MEM_WRITE_LENGTH 42U
+
+/* RISC-V acceleration protocol elements */
+#define REMOTE_RISCV_PACKET    'R'
+#define REMOTE_RISCV_PROTOCOLS 'P'
+
+#define REMOTE_RISCV_PROTOCOLS_STR                                             \
+	(char[])                                                                   \
+	{                                                                          \
+		REMOTE_SOM, REMOTE_RISCV_PACKET, REMOTE_RISCV_PROTOCOLS, REMOTE_EOM, 0 \
+	}
+#define REMOTE_RISCV_INIT_STR                                                 \
+	(char[])                                                                  \
+	{                                                                         \
+		REMOTE_SOM, REMOTE_RISCV_PACKET, REMOTE_INIT, '%', 'c', REMOTE_EOM, 0 \
+	}
+
+/* Supported RISC-V DTM protocols (for init command) */
+#define REMOTE_RISCV_JTAG 'J'
+
+/* Remote protocol enabled RISC-V protocols bit values */
+#define REMOTE_RISCV_PROTOCOL_JTAG (1U << 0U)
 
 /* SPI protocol elements */
 #define REMOTE_SPI_PACKET      's'
