@@ -85,4 +85,28 @@
  */
 #define REMOTE_ADIV5_MEM_WRITE_LENGTH 42U
 
+/* This version of the protocol introduces an optional RISC-V acceleration protocol */
+#define REMOTE_RISCV_PACKET    'R'
+#define REMOTE_RISCV_PROTOCOLS 'P'
+
+#define REMOTE_RISCV_PROTOCOL '%', 'c'
+
+/* RISC-V remote protocol messages */
+#define REMOTE_RISCV_PROTOCOLS_STR                                             \
+	(char[])                                                                   \
+	{                                                                          \
+		REMOTE_SOM, REMOTE_RISCV_PACKET, REMOTE_RISCV_PROTOCOLS, REMOTE_EOM, 0 \
+	}
+#define REMOTE_RISCV_INIT_STR                                                              \
+	(char[])                                                                               \
+	{                                                                                      \
+		REMOTE_SOM, REMOTE_RISCV_PACKET, REMOTE_INIT, REMOTE_RISCV_PROTOCOL, REMOTE_EOM, 0 \
+	}
+
+/* Supported RISC-V DTM protocols (for init command) */
+#define REMOTE_RISCV_JTAG 'J'
+
+/* Remote protocol enabled RISC-V protocols bit values */
+#define REMOTE_RISCV_PROTOCOL_JTAG (1U << 0U)
+
 #endif /*PLATFORMS_HOSTED_REMOTE_PROTOCOL_V4_DEFS_H*/
