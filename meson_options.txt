@@ -112,3 +112,9 @@ option(
 	type: 'feature',
 	value: 'auto'
 )
+option(
+	'enable_riscv_accel',
+	type: 'boolean',
+	value: false,
+	description: 'Enable firmware-side protocol acceleration of RISC-V Debug'
+)

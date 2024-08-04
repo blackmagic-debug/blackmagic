@@ -1,7 +1,8 @@
 # This file is part of the Black Magic Debug project.
 #
-# Copyright (C) 2023 1BitSquared <info@1bitsquared.com>
+# Copyright (C) 2023-2024 1BitSquared <info@1bitsquared.com>
 # Written by Rafael Silva <perigoso@riseup.net>
+# Modified by Rachel Mant <git@dragonmux.network>
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -130,12 +131,18 @@ target_cortexm = declare_dependency(
 	dependencies: target_cortex,
 )
 
+riscv_jtag_dtm = declare_dependency(
+	sources: files(
+		'riscv_jtag_dtm.c',
+	),
+)
+
 target_riscv = declare_dependency(
 	sources: files(
 		'riscv_debug.c',
-		'riscv_jtag_dtm.c',
 	),
 	compile_args: ['-DENABLE_RISCV=1'],
+	dependencies: riscv_jtag_dtm,
 )
 
 target_riscv32 = declare_dependency(
@@ -287,6 +294,14 @@ if is_firmware_build
 	foreach target : enabled_targets
 		enabled_target_deps += get_variable(f'target_@target@')
 	endforeach
+
+	# Check if we should enable the RISC-V Debug remote protocol acceleration and do so if required
+	if get_option('enable_riscv_accel')
+		enabled_target_deps += declare_dependency(
+			compile_args: ['-DENABLE_RISCV_ACCEL=1'],
+			dependencies: riscv_jtag_dtm,
+		)
+	endif
 
 	# BMD target dependency
 	bmd_targets = declare_dependency(
