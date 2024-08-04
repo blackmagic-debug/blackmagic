@@ -58,6 +58,7 @@
 #define RV_DMI_FAILURE  2U
 #define RV_DMI_TOO_SOON 3U
 
+#ifdef ENABLE_RISCV
 static void riscv_jtag_dtm_init(riscv_dmi_s *dmi);
 static uint32_t riscv_shift_dtmcs(const riscv_dmi_s *dmi, uint32_t control);
 static riscv_debug_version_e riscv_dtmcs_version(uint32_t dtmcs);
@@ -111,9 +112,10 @@ static void riscv_jtag_dtm_init(riscv_dmi_s *const dmi)
 
 	riscv_dmi_init(dmi);
 }
+#endif
 
 /* Shift (read + write) the Debug Transport Module Control/Status (DTMCS) register */
-uint32_t riscv_shift_dtmcs(const riscv_dmi_s *const dmi, const uint32_t control)
+static uint32_t riscv_shift_dtmcs(const riscv_dmi_s *const dmi, const uint32_t control)
 {
 	jtag_dev_write_ir(dmi->dev_index, IR_DTMCS);
 	uint32_t status = 0;
@@ -212,6 +214,7 @@ bool riscv_jtag_dmi_write(riscv_dmi_s *const dmi, const uint32_t address, const 
 	return result;
 }
 
+#ifdef ENABLE_RISCV
 static riscv_debug_version_e riscv_dtmcs_version(const uint32_t dtmcs)
 {
 	uint8_t version = dtmcs & RV_STATUS_VERSION_MASK;
@@ -235,3 +238,4 @@ static void riscv_jtag_prepare(target_s *const target)
 	/* We put the TAP into bypass at the end of the JTAG handler, so put it back into DMI */
 	jtag_dev_write_ir(hart->dbg_module->dmi_bus->dev_index, IR_DMI);
 }
+#endif

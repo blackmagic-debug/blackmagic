@@ -222,7 +222,9 @@ typedef struct riscv_hart {
 #define RV_FPU_GDB_CSR_OFFSET 66
 
 /* JTAG DTM function declarations */
+#ifdef ENABLE_RISCV
 void riscv_jtag_dtm_handler(uint8_t dev_index);
+#endif
 bool riscv_jtag_dmi_read(riscv_dmi_s *dmi, uint32_t address, uint32_t *value);
 bool riscv_jtag_dmi_write(riscv_dmi_s *dmi, uint32_t address, uint32_t value);
 
