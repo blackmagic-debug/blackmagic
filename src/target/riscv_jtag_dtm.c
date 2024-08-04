@@ -60,8 +60,6 @@
 
 static void riscv_jtag_dtm_init(riscv_dmi_s *dmi);
 static uint32_t riscv_shift_dtmcs(const riscv_dmi_s *dmi, uint32_t control);
-static bool riscv_jtag_dmi_read(riscv_dmi_s *dmi, uint32_t address, uint32_t *value);
-static bool riscv_jtag_dmi_write(riscv_dmi_s *dmi, uint32_t address, uint32_t value);
 static riscv_debug_version_e riscv_dtmcs_version(uint32_t dtmcs);
 
 static void riscv_jtag_prepare(target_s *target);
@@ -182,7 +180,7 @@ static bool riscv_dmi_transfer(riscv_dmi_s *const dmi, const uint8_t operation, 
 	return status == RV_DMI_SUCCESS;
 }
 
-static bool riscv_jtag_dmi_read(riscv_dmi_s *const dmi, const uint32_t address, uint32_t *const value)
+bool riscv_jtag_dmi_read(riscv_dmi_s *const dmi, const uint32_t address, uint32_t *const value)
 {
 	bool result = true;
 	do {
@@ -198,7 +196,7 @@ static bool riscv_jtag_dmi_read(riscv_dmi_s *const dmi, const uint32_t address, 
 	return result;
 }
 
-static bool riscv_jtag_dmi_write(riscv_dmi_s *const dmi, const uint32_t address, const uint32_t value)
+bool riscv_jtag_dmi_write(riscv_dmi_s *const dmi, const uint32_t address, const uint32_t value)
 {
 	bool result = true;
 	do {

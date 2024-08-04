@@ -34,6 +34,9 @@
 #include "sfdp.h"
 #include "target.h"
 #include "adiv5.h"
+#if defined(ENABLE_RISCV_ACCEL) && ENABLE_RISCV_ACCEL == 1
+#include "riscv_debug.h"
+#endif
 #include "version.h"
 #include "exception.h"
 #include "hex_utils.h"
@@ -345,7 +348,12 @@ static void remote_packet_process_high_level(const char *packet, const size_t pa
 
 	case REMOTE_HL_ACCEL: { /* HA = request what accelerations are available */
 		/* Build a response value that depends on what things are built into the firmare */
-		remote_respond(REMOTE_RESP_OK, REMOTE_ACCEL_ADIV5);
+		remote_respond(REMOTE_RESP_OK,
+			REMOTE_ACCEL_ADIV5
+#if defined(ENABLE_RISCV_ACCEL) && ENABLE_RISCV_ACCEL == 1
+				| REMOTE_ACCEL_RISCV
+#endif
+		);
 		break;
 	}
 
@@ -474,6 +482,90 @@ static void remote_packet_process_adiv5(const char *const packet, const size_t p
 	}
 	SET_IDLE_STATE(1);
 }
+
+#if defined(ENABLE_RISCV_ACCEL) && ENABLE_RISCV_ACCEL == 1
+/*
+ * This faked RISC-V DMI structure holds the currently used low-level implementation functions and basic DMI
+ * state for remote protocol requests made. This is for use by remote_packet_process_riscv() so it can do the right
+ * thing.
+ *
+ * REMOTE_INIT for RISC-V Debug rewrite the read and write function pointers to reconfigure this structure appropriately.
+ */
+static riscv_dmi_s remote_dmi = {
+	.read = NULL,
+	.write = NULL,
+};
+
+void remote_packet_process_riscv(const char *const packet, const size_t packet_len)
+{
+	/* Check for and handle the protocols packet */
+	if (packet_len == 2U && packet[1U] == REMOTE_RISCV_PROTOCOLS) {
+		remote_respond(REMOTE_RESP_OK, REMOTE_RISCV_PROTOCOL_JTAG);
+		return;
+	}
+	/* Check for and handle the initialisation packet */
+	if (packet_len == 3U && packet[1U] == REMOTE_INIT) {
+		switch (packet[2U]) {
+		case REMOTE_RISCV_JTAG:
+			remote_dmi.read = riscv_jtag_dmi_read;
+			remote_dmi.write = riscv_jtag_dmi_write;
+			remote_respond(REMOTE_RESP_OK, 0);
+			break;
+		/* If the protocol requested is not supported, bubble that up to the host */
+		default:
+			remote_respond(REMOTE_RESP_PARERR, REMOTE_ERROR_UNRECOGNISED);
+			break;
+		}
+		return;
+	}
+	/* Our shortest RISC-V protocol packet is 16 bytes long, check that we have at least that */
+	else if (packet_len < 16U) {
+		remote_respond(REMOTE_RESP_PARERR, 0);
+		return;
+	}
+
+	/* Having dealt with the other requests, set up the fake DMI structure to perform the access with */
+	remote_dmi.dev_index = hex_string_to_num(2, packet + 2);
+	remote_dmi.idle_cycles = hex_string_to_num(2, packet + 4);
+	remote_dmi.address_width = hex_string_to_num(2, packet + 6);
+	remote_dmi.fault = 0U;
+
+	switch (packet[1U]) {
+	case REMOTE_RISCV_DMI_READ: {
+		/* Grab the DMI address to read from and try to perform the access */
+		const uint32_t addr = hex_string_to_num(8, packet + 8);
+		uint32_t value = 0;
+		if (!remote_dmi.read(&remote_dmi, addr, &value))
+			/* If the request didn't work, and caused a fault, tell the host */
+			remote_respond(REMOTE_RESP_ERR, REMOTE_ERROR_FAULT | ((uint16_t)remote_dmi.fault << 8U));
+		else
+			/* Otherwise reply back with the read data */
+			remote_respond_buf(REMOTE_RESP_OK, &value, 4U);
+		break;
+	}
+	case REMOTE_RISCV_DMI_WRITE: {
+		/* Write packets are 24 bytes long, verify we have enough bytes */
+		if (packet_len != 24U) {
+			remote_respond(REMOTE_RESP_PARERR, 0);
+			break;
+		}
+		/* Grab the DMI address to write to and the data to write then try to perform the access */
+		const uint32_t addr = hex_string_to_num(8, packet + 8);
+		const uint32_t value = hex_string_to_num(8, packet + 16);
+		if (!remote_dmi.write(&remote_dmi, addr, value))
+			/* If the request didn't work, and caused a fault, tell the host */
+			remote_respond(REMOTE_RESP_ERR, REMOTE_ERROR_FAULT | ((uint16_t)remote_dmi.fault << 8U));
+		else
+			/* Otherwise inform the host the request succeeded */
+			remote_respond(REMOTE_RESP_OK, 0);
+		break;
+	}
+	default:
+		remote_respond(REMOTE_RESP_ERR, REMOTE_ERROR_UNRECOGNISED);
+		break;
+	}
+}
+#endif
 
 static void remote_spi_respond(const bool result)
 {
@@ -620,6 +712,12 @@ void remote_packet_process(char *const packet, const size_t packet_length)
 		}
 		break;
 	}
+
+#if defined(ENABLE_RISCV_ACCEL) && ENABLE_RISCV_ACCEL == 1
+	case REMOTE_RISCV_PACKET:
+		remote_packet_process_riscv(packet, packet_length);
+		break;
+#endif
 
 	case REMOTE_SPI_PACKET:
 		remote_packet_process_spi(packet, packet_length);
