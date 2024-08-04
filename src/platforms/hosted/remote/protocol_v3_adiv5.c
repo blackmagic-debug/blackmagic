@@ -79,7 +79,6 @@ bool remote_v3_adiv5_check_error(
 uint32_t remote_v3_adiv5_raw_access(
 	adiv5_debug_port_s *const dp, const uint8_t rnw, const uint16_t addr, const uint32_t request_value)
 {
-	(void)dp;
 	char buffer[REMOTE_MAX_MSG_SIZE];
 	/* Create the request and send it to the remote */
 	ssize_t length =
@@ -101,7 +100,6 @@ uint32_t remote_v3_adiv5_raw_access(
 
 uint32_t remote_v3_adiv5_dp_read(adiv5_debug_port_s *const dp, const uint16_t addr)
 {
-	(void)dp;
 	char buffer[REMOTE_MAX_MSG_SIZE];
 	/* Create the request and send it to the remote */
 	ssize_t length = snprintf(buffer, REMOTE_MAX_MSG_SIZE, REMOTE_DP_READ_STR, dp->dev_index, addr);
