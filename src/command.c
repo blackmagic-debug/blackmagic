@@ -126,7 +126,7 @@ const command_s cmd_list[] = {
 };
 
 #ifdef PLATFORM_HAS_CUSTOM_COMMANDS
-extern const command_s *platform_cmd_list;
+extern const command_s platform_cmd_list[];
 #endif
 
 bool connect_assert_nrst;
