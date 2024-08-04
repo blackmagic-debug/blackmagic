@@ -130,7 +130,7 @@ SRC += timing.c cli.c utils.c probe_info.c debug.c
 SRC += protocol_v0.c protocol_v0_swd.c protocol_v0_jtag.c protocol_v0_adiv5.c
 SRC += protocol_v1.c protocol_v1_adiv5.c protocol_v2.c
 SRC += protocol_v3.c protocol_v3_adiv5.c
-SRC += protocol_v4.c protocol_v4_adiv5.c
+SRC += protocol_v4.c protocol_v4_adiv5.c protocol_v4_riscv.c
 SRC += bmp_remote.c
 ifneq ($(HOSTED_BMP_ONLY), 1)
     ifeq ($(OS), Windows_NT)

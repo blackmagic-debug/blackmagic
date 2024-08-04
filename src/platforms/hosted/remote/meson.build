@@ -40,4 +40,5 @@ bmda_sources += files(
 	'protocol_v3_adiv5.c',
 	'protocol_v4.c',
 	'protocol_v4_adiv5.c',
+	'protocol_v4_riscv.c',
 )

@@ -88,8 +88,18 @@
 /* This version of the protocol introduces an optional RISC-V acceleration protocol */
 #define REMOTE_RISCV_PACKET    'R'
 #define REMOTE_RISCV_PROTOCOLS 'P'
+#define REMOTE_RISCV_DMI_READ  'd'
+#define REMOTE_RISCV_DMI_WRITE 'D'
 
-#define REMOTE_RISCV_PROTOCOL '%', 'c'
+/* Supported RISC-V DTM protocols */
+#define REMOTE_RISCV_JTAG 'J'
+
+#define REMOTE_RISCV_PROTOCOL    '%', 'c'
+#define REMOTE_RISCV_DEV_INDEX   REMOTE_UINT8
+#define REMOTE_RISCV_IDLE_CYCLES REMOTE_UINT8
+#define REMOTE_RISCV_ADDR_WIDTH  REMOTE_UINT8
+#define REMOTE_RISCV_ADDR32      REMOTE_UINT32
+#define REMOTE_RISCV_DATA        REMOTE_UINT32
 
 /* RISC-V remote protocol messages */
 #define REMOTE_RISCV_PROTOCOLS_STR                                             \
@@ -102,9 +112,18 @@
 	{                                                                                      \
 		REMOTE_SOM, REMOTE_RISCV_PACKET, REMOTE_INIT, REMOTE_RISCV_PROTOCOL, REMOTE_EOM, 0 \
 	}
-
-/* Supported RISC-V DTM protocols (for init command) */
-#define REMOTE_RISCV_JTAG 'J'
+#define REMOTE_RISCV_DMI_READ_STR                                                                                 \
+	(char[])                                                                                                      \
+	{                                                                                                             \
+		REMOTE_SOM, REMOTE_RISCV_PACKET, REMOTE_RISCV_DMI_READ, REMOTE_RISCV_DEV_INDEX, REMOTE_RISCV_IDLE_CYCLES, \
+			REMOTE_RISCV_ADDR_WIDTH, REMOTE_RISCV_ADDR32, REMOTE_EOM, 0                                           \
+	}
+#define REMOTE_RISCV_DMI_WRITE_STR                                                                                 \
+	(char[])                                                                                                       \
+	{                                                                                                              \
+		REMOTE_SOM, REMOTE_RISCV_PACKET, REMOTE_RISCV_DMI_WRITE, REMOTE_RISCV_DEV_INDEX, REMOTE_RISCV_IDLE_CYCLES, \
+			REMOTE_RISCV_ADDR_WIDTH, REMOTE_RISCV_ADDR32, REMOTE_RISCV_DATA, REMOTE_EOM, 0                         \
+	}
 
 /* Remote protocol enabled RISC-V protocols bit values */
 #define REMOTE_RISCV_PROTOCOL_JTAG (1U << 0U)

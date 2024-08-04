@@ -42,6 +42,7 @@
 #include "protocol_v4.h"
 #include "protocol_v4_defs.h"
 #include "protocol_v4_adiv5.h"
+#include "protocol_v4_riscv.h"
 
 bool remote_v4_init(void)
 {
@@ -104,6 +105,7 @@ bool remote_v4_adiv5_init(adiv5_debug_port_s *const dp)
 
 bool remote_v4_riscv_jtag_init(riscv_dmi_s *const dmi)
 {
-	(void)dmi;
+	dmi->read = remote_v4_riscv_jtag_dmi_read;
+	dmi->write = remote_v4_riscv_jtag_dmi_write;
 	return true;
 }
