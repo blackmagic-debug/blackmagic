@@ -1,7 +1,7 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
- * Copyright (C) 2023 1BitSquared <info@1bitsquared.com>
+ * Copyright (C) 2023-2024 1BitSquared <info@1bitsquared.com>
  * Written by Rachel Mant <git@dragonmux.network>
  * All rights reserved.
  *
@@ -65,7 +65,6 @@ static bool riscv_jtag_dmi_write(riscv_dmi_s *dmi, uint32_t address, uint32_t va
 static riscv_debug_version_e riscv_dtmcs_version(uint32_t dtmcs);
 
 static void riscv_jtag_prepare(target_s *target);
-static void riscv_jtag_quiesce(target_s *target);
 
 void riscv_jtag_dtm_handler(const uint8_t dev_index)
 {
@@ -92,9 +91,6 @@ void riscv_jtag_dtm_handler(const uint8_t dev_index)
 	/* If we failed to find any DMs or Harts, free the structure */
 	if (!dmi->ref_count)
 		free(dmi);
-
-	/* Reset the JTAG machinery back to bypass to scan the next device in the chain */
-	jtag_dev_write_ir(dev_index, IR_BYPASS);
 }
 
 static void riscv_jtag_dtm_init(riscv_dmi_s *const dmi)
@@ -109,7 +105,6 @@ static void riscv_jtag_dtm_init(riscv_dmi_s *const dmi)
 	jtag_dev_write_ir(dmi->dev_index, IR_DMI);
 
 	dmi->prepare = riscv_jtag_prepare;
-	dmi->quiesce = riscv_jtag_quiesce;
 	dmi->read = riscv_jtag_dmi_read;
 	dmi->write = riscv_jtag_dmi_write;
 
@@ -238,11 +233,4 @@ static void riscv_jtag_prepare(target_s *const target)
 	riscv_hart_s *const hart = riscv_hart_struct(target);
 	/* We put the TAP into bypass at the end of the JTAG handler, so put it back into DMI */
 	jtag_dev_write_ir(hart->dbg_module->dmi_bus->dev_index, IR_DMI);
-}
-
-static void riscv_jtag_quiesce(target_s *const target)
-{
-	riscv_hart_s *const hart = riscv_hart_struct(target);
-	/* On detaching, stick the TAP back into bypass */
-	jtag_dev_write_ir(hart->dbg_module->dmi_bus->dev_index, IR_BYPASS);
 }
