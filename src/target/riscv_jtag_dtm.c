@@ -119,7 +119,7 @@ static uint32_t riscv_shift_dtmcs(const riscv_dmi_s *const dmi, const uint32_t c
 {
 	jtag_dev_write_ir(dmi->dev_index, IR_DTMCS);
 	uint32_t status = 0;
-	jtag_dev_shift_dr(dmi->dev_index, (uint8_t *)&status, (const uint8_t *)&control, 32);
+	jtag_dev_shift_dr(dmi->dev_index, (uint8_t *)&status, (const uint8_t *)&control, 32U);
 	return status;
 }
 
@@ -137,12 +137,12 @@ static uint8_t riscv_shift_dmi(riscv_dmi_s *const dmi, const uint8_t operation, 
 	jtag_proc.jtagtap_tdi_seq(false, ones, device->dr_prescan);
 	/* Shift out the 2 bits for the operation, and get the status bits for the previous back */
 	uint8_t status = 0;
-	jtag_proc.jtagtap_tdi_tdo_seq(&status, false, &operation, 2);
+	jtag_proc.jtagtap_tdi_tdo_seq(&status, false, &operation, 2U);
 	/* Then the data component */
 	if (data_out)
-		jtag_proc.jtagtap_tdi_tdo_seq((uint8_t *)data_out, false, (const uint8_t *)&data_in, 32);
+		jtag_proc.jtagtap_tdi_tdo_seq((uint8_t *)data_out, false, (const uint8_t *)&data_in, 32U);
 	else
-		jtag_proc.jtagtap_tdi_seq(false, (const uint8_t *)&data_in, 32);
+		jtag_proc.jtagtap_tdi_seq(false, (const uint8_t *)&data_in, 32U);
 	/* And finally the address component */
 	jtag_proc.jtagtap_tdi_seq(!device->dr_postscan, (const uint8_t *)&address, dmi->address_width);
 	jtag_proc.jtagtap_tdi_seq(true, ones, device->dr_postscan);
@@ -163,7 +163,7 @@ static bool riscv_dmi_transfer(riscv_dmi_s *const dmi, const uint8_t operation, 
 	if (status == RV_DMI_TOO_SOON) {
 		/*
 		 * If we got RV_DMI_TOO_SOON and we're under 8 idle cycles, increase the number
-		 * of idle cycles used to compensate and have the outer code re-run the transnfers
+		 * of idle cycles used to compensate and have the outer code re-run the transfers
 		 */
 		if (dmi->idle_cycles < 8)
 			++dmi->idle_cycles;
@@ -187,10 +187,10 @@ bool riscv_jtag_dmi_read(riscv_dmi_s *const dmi, const uint32_t address, uint32_
 	bool result = true;
 	do {
 		/* Setup the location to read from */
-		result = riscv_dmi_transfer(dmi, RV_DMI_READ, address, 0, NULL);
+		result = riscv_dmi_transfer(dmi, RV_DMI_READ, address, 0U, NULL);
 		if (result)
 			/* If that worked, read back the value and check the operation status */
-			result = riscv_dmi_transfer(dmi, RV_DMI_NOOP, 0, 0, value);
+			result = riscv_dmi_transfer(dmi, RV_DMI_NOOP, 0U, 0U, value);
 	} while (dmi->fault == RV_DMI_TOO_SOON);
 
 	if (!result)
@@ -206,7 +206,7 @@ bool riscv_jtag_dmi_write(riscv_dmi_s *const dmi, const uint32_t address, const 
 		result = riscv_dmi_transfer(dmi, RV_DMI_WRITE, address, value, NULL);
 		if (result)
 			/* If that worked, read back the operation status to ensure the write actually worked */
-			result = riscv_dmi_transfer(dmi, RV_DMI_NOOP, 0, 0, NULL);
+			result = riscv_dmi_transfer(dmi, RV_DMI_NOOP, 0U, 0U, NULL);
 	} while (dmi->fault == RV_DMI_TOO_SOON);
 
 	if (!result)
