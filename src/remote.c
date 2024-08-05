@@ -498,13 +498,30 @@ static riscv_dmi_s remote_dmi = {
 
 void remote_packet_process_riscv(const char *const packet, const size_t packet_len)
 {
+	/* Our shortest RISC-V Debug protocol packet is 2 bytes long, check that we have at least that */
+	if (packet_len < 2U) {
+		remote_respond(REMOTE_RESP_PARERR, 0);
+		return;
+	}
+
 	/* Check for and handle the protocols packet */
-	if (packet_len == 2U && packet[1U] == REMOTE_RISCV_PROTOCOLS) {
-		remote_respond(REMOTE_RESP_OK, REMOTE_RISCV_PROTOCOL_JTAG);
+	if (packet[1U] == REMOTE_RISCV_PROTOCOLS) {
+		/* Validate the length of the packet, then handle it if that checks out */
+		if (packet_len != 2U)
+			remote_respond(REMOTE_RESP_PARERR, 0);
+		else
+			remote_respond(REMOTE_RESP_OK, REMOTE_RISCV_PROTOCOL_JTAG);
 		return;
 	}
 	/* Check for and handle the initialisation packet */
-	if (packet_len == 3U && packet[1U] == REMOTE_INIT) {
+	else if (packet[1U] == REMOTE_INIT) {
+		/* Check the length of the packet */
+		if (packet_len != 3U) {
+			remote_respond(REMOTE_RESP_PARERR, 0);
+			return;
+		}
+
+		/* We got a good packet, so handle initialisation accordingly */
 		switch (packet[2U]) {
 		case REMOTE_RISCV_JTAG:
 			remote_dmi.read = riscv_jtag_dmi_read;
