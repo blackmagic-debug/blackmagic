@@ -33,7 +33,13 @@ endif
 ifeq ($(SWIM_NRST_AS_UART), 1)
 CFLAGS += -DSWIM_NRST_AS_UART=1
 else
+ifeq ($(TRACESWO_PROTOCOL), 1)
+SRC += traceswo.c
+CFLAGS += -DTRACESWO_PROTOCOL=1
+else
 SRC += traceswoasync.c
+CFLAGS += -DTRACESWO_PROTOCOL=2
+endif
 endif
 
 ifeq ($(BLUEPILL), 1)
