@@ -984,7 +984,7 @@ static bool stm32l4_cmd_option(target_s *t, int argc, const char **argv)
 	for (size_t i = 0; i < word_count; ++i) {
 		const uint32_t addr = fpec_base + opt_reg_offsets[i];
 		const uint32_t val = target_mem32_read32(t, fpec_base + opt_reg_offsets[i]);
-		tc_printf(t, "0x%08X: 0x%08X\n", addr, val);
+		tc_printf(t, "0x%08" PRIX32 ": 0x%08" PRIX32 "\n", addr, val);
 	}
 	return true;
 }

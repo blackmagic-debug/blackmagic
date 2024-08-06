@@ -277,7 +277,7 @@ static bool nrf51_cmd_read_hwid(target_s *t, int argc, const char **argv)
 	(void)argc;
 	(void)argv;
 	uint32_t hwid = target_mem32_read32(t, NRF51_FICR_CONFIGID) & 0xffffU;
-	tc_printf(t, "Hardware ID: 0x%04X\n", hwid);
+	tc_printf(t, "Hardware ID: 0x%04" PRIX32 "\n", hwid);
 
 	return true;
 }
@@ -287,7 +287,7 @@ static bool nrf51_cmd_read_fwid(target_s *t, int argc, const char **argv)
 	(void)argc;
 	(void)argv;
 	uint32_t fwid = (target_mem32_read32(t, NRF51_FICR_CONFIGID) >> 16U) & 0xffffU;
-	tc_printf(t, "Firmware ID: 0x%04X\n", fwid);
+	tc_printf(t, "Firmware ID: 0x%04" PRIX32 "\n", fwid);
 
 	return true;
 }
@@ -299,7 +299,7 @@ static bool nrf51_cmd_read_deviceid(target_s *t, int argc, const char **argv)
 	uint32_t deviceid_low = target_mem32_read32(t, NRF51_FICR_DEVICEID_LOW);
 	uint32_t deviceid_high = target_mem32_read32(t, NRF51_FICR_DEVICEID_HIGH);
 
-	tc_printf(t, "Device ID: 0x%08X%08X\n", deviceid_high, deviceid_low);
+	tc_printf(t, "Device ID: 0x%08" PRIX32 "%08" PRIX32 "\n", deviceid_high, deviceid_low);
 
 	return true;
 }
@@ -328,7 +328,7 @@ static bool nrf51_cmd_read_deviceinfo(target_s *t, int argc, const char **argv)
 	di.flash = target_mem32_read32(t, NRF51_FICR_DEVICE_INFO_FLASH);
 	di.variant.f = target_mem32_read32(t, NRF51_FICR_DEVICE_INFO_VARIANT);
 
-	tc_printf(t, "Part:\t\tNRF%X\n", di.part);
+	tc_printf(t, "Part:\t\tNRF%" PRIX32 "\n", di.part);
 	tc_printf(t, "Variant:\t%c%c%c%c\n", di.variant.c[3], di.variant.c[2], di.variant.c[1], di.variant.c[0]);
 	tc_printf(t, "Package:\t");
 	switch (di.package) {
@@ -345,12 +345,12 @@ static bool nrf51_cmd_read_deviceinfo(target_s *t, int argc, const char **argv)
 		tc_printf(t, "QIxx\n");
 		break;
 	default:
-		tc_printf(t, "Unknown (Code %X)\n", di.package);
+		tc_printf(t, "Unknown (Code %" PRIX32 ")\n", di.package);
 		break;
 	}
 
-	tc_printf(t, "Ram:\t\t%ukiB\n", di.ram);
-	tc_printf(t, "Flash:\t\t%ukiB\n", di.flash);
+	tc_printf(t, "Ram:\t\t%" PRIu32 "kiB\n", di.ram);
+	tc_printf(t, "Flash:\t\t%" PRIu32 "kiB\n", di.flash);
 	return true;
 }
 
@@ -363,9 +363,9 @@ static bool nrf51_cmd_read_deviceaddr(target_s *t, int argc, const char **argv)
 	uint32_t addr_high = target_mem32_read32(t, NRF51_FICR_DEVICEADDR_HIGH) & 0xffffU;
 
 	if (!(addr_type & 1U))
-		tc_printf(t, "Publicly Listed Address: 0x%04X%08X\n", addr_high, addr_low);
+		tc_printf(t, "Publicly Listed Address: 0x%04" PRIX32 "%08" PRIX32 "\n", addr_high, addr_low);
 	else
-		tc_printf(t, "Randomly Assigned Address: 0x%04X%08X\n", addr_high, addr_low);
+		tc_printf(t, "Randomly Assigned Address: 0x%04" PRIX32 "%08" PRIX32 "\n", addr_high, addr_low);
 
 	return true;
 }
