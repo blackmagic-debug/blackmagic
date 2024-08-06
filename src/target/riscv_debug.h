@@ -221,6 +221,14 @@ typedef struct riscv_hart {
 #define RV_FPU_GDB_OFFSET     33
 #define RV_FPU_GDB_CSR_OFFSET 66
 
+// General purpose registers
+#define RISCV_REG_A0 10
+#define RISCV_REG_A1 11
+#define RISCV_REG_A2 12
+#define RISCV_REG_A3 13
+#define RISCV_REG_PC 32
+#define RISCV_REG_SP 2
+
 void riscv_jtag_dtm_handler(uint8_t dev_index);
 void riscv_dmi_init(riscv_dmi_s *dmi);
 riscv_hart_s *riscv_hart_struct(target_s *target);
@@ -243,5 +251,16 @@ uint32_t riscv32_pack_data(const void *src, uint8_t access_width);
 
 void riscv32_mem_read(target_s *target, void *dest, target_addr64_t src, size_t len);
 void riscv32_mem_write(target_s *target, target_addr64_t dest, const void *src, size_t len);
+
+/*
+ *   Execute code on the target with the signature void stub_function(a,b,c,d)
+ *       - codexec is the address the code to run is located at
+ *       - param1/2/3/4 will end up as the 4 parameters of the stub function
+ *       
+ *   The flashstub must not use the stack at all.
+ *   The flashstub must return 0 on success, not 0 on error
+ *   There is a built-in timeout of 10 seconds
+ */
+bool riscv32_run_stub(target_s *target, uint32_t loadaddr, uint32_t a0, uint32_t a1, uint32_t a2, uint32_t a3);
 
 #endif /*TARGET_RISCV_DEBUG_H*/
