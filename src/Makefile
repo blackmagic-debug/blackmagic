@@ -8,6 +8,7 @@ ENABLE_ARTERY ?= 0
 ENABLE_CH579 ?= 0
 ENABLE_PUYA ?= 0
 ENABLE_XILINX ?= 0
+ENABLE_RISCV_ACCEL ?= 0
 
 SYS = $(shell $(CC) -dumpmachine)
 
@@ -120,24 +121,28 @@ SRC +=     \
 endif
 
 ifeq ($(ENABLE_CORTEXAR), 1)
-CFLAGS += -DENABLE_CORTEXAR
+CFLAGS += -DENABLE_CORTEXAR=1
 SRC +=           \
 	cortexar.c   \
 	renesas_rz.c
 
 ifeq ($(ENABLE_XILINX), 1)
-CFLAGS += -DENABLE_XILINX
+CFLAGS += -DENABLE_XILINX=1
 SRC +=         \
 	zynq7000.c
 endif
 endif
 
 ifeq ($(ENABLE_RISCV), 1)
-CFLAGS += -DENABLE_RISCV
+CFLAGS += -DENABLE_RISCV=1
 SRC +=               \
 	riscv32.c        \
 	riscv64.c        \
 	riscv_debug.c    \
+	riscv_jtag_dtm.c
+else ifeq ($(ENABLE_RISCV_ACCEL), 1)
+CFLAGS == -DENABLE_RISCV_ACCEL=1
+SRC +=               \
 	riscv_jtag_dtm.c
 endif
 
