@@ -103,7 +103,8 @@ static bool stm32mp15_ident(target_s *const target, const bool cortexm)
 	/* By now it's established that this is likely an MP15x_CM4, but check that it's not an H74x */
 	const uint32_t idcode = target_mem32_read32(target, STM32MP15_DBGMCU_IDCODE);
 	const uint16_t dev_id = idcode & STM32MP15_DBGMCU_IDCODE_DEV_MASK;
-	DEBUG_TARGET("%s: looking at device ID 0x%03x at 0x%08" PRIx32 "\n", __func__, dev_id, STM32MP15_DBGMCU_IDCODE);
+	DEBUG_TARGET(
+		"%s: looking at device ID 0x%03x at 0x%08" PRIx32 "\n", __func__, dev_id, (uint32_t)STM32MP15_DBGMCU_IDCODE);
 	/* If this probe routine ever runs ahead of stm32h7_probe, skip the H74x. */
 	if (dev_id != ID_STM32MP15x)
 		return false;
