@@ -76,7 +76,7 @@ void traceswo_init(void)
 	nvic_enable_irq(TRACEUART_IRQ);
 
 	/* Un-stall USB endpoint */
-	usbd_ep_stall_set(usbdev, 0x85, 0);
+	usbd_ep_stall_set(usbdev, USB_REQ_TYPE_IN | TRACE_ENDPOINT, 0);
 
 	gpio_mode_setup(GPIOD, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO3);
 }
@@ -85,6 +85,29 @@ void traceswo_baud(unsigned int baud)
 {
 	uart_set_baudrate(TRACEUART, baud);
 	uart_set_databits(TRACEUART, 8);
+}
+
+static uint32_t uart_get_baudrate(uint32_t uart)
+{
+	/* Are we running off the internal clock or system clock? */
+	const uint32_t clock = UART_CC(uart) == UART_CC_CS_PIOSC ? 16000000 : rcc_get_system_clock_frequency();
+
+	/* Read back divisor parts. Baudrate = clock/16 / (ibrd+fbrd/64). */
+	const uint16_t ibrd = UART_IBRD(uart);
+	const uint16_t fbrd = UART_FBRD(uart);
+	uint32_t div = ibrd * 64U + fbrd;
+	/* Recalculate the actual baudrate. Note that 4 comes from 1/(16/64). */
+	return 4U * clock / div;
+}
+
+uint32_t traceswo_get_baudrate(void)
+{
+	return uart_get_baudrate(TRACEUART);
+}
+
+uint32_t usart_get_baudrate(uint32_t uart)
+{
+	return uart_get_baudrate(uart);
 }
 
 #define FIFO_SIZE 256U
@@ -111,7 +134,7 @@ void trace_buf_push(void)
 	if (len > 64U)
 		len = 64;
 
-	if (usbd_ep_write_packet(usbdev, 0x85, (uint8_t *)&buf_rx[buf_rx_out], len) == len) {
+	if (usbd_ep_write_packet(usbdev, USB_REQ_TYPE_IN | TRACE_ENDPOINT, (uint8_t *)&buf_rx[buf_rx_out], len) == len) {
 		buf_rx_out += len;
 		buf_rx_out %= FIFO_SIZE;
 	}
