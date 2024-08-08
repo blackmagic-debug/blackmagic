@@ -265,7 +265,7 @@ bool stm32h7_probe(target_s *target)
 	const uint32_t idcode = target_mem32_read32(target, STM32H7_DBGMCU_IDCODE);
 	const uint16_t dev_id = idcode & STM32H7_DBGMCU_IDCODE_DEV_MASK;
 	DEBUG_TARGET(
-		"%s: looking at device ID 0x%03x at 0x%08" PRIu32 "\n", __func__, dev_id, (uint32_t)STM32H7_DBGMCU_IDCODE);
+		"%s: looking at device ID 0x%03x at 0x%08" PRIx32 "\n", __func__, dev_id, (uint32_t)STM32H7_DBGMCU_IDCODE);
 	/* MP15x_CM4 errata: has a partno of 0x450. SoC DBGMCU says 0x500. */
 	if (dev_id != ID_STM32H72x && dev_id != ID_STM32H74x && dev_id != ID_STM32H7Bx)
 		return false;
