@@ -74,6 +74,7 @@ if is_firmware_build
 		'at32f4': 'Arterytek parts',
 		'ch579': 'CH579',
 		'efm': 'Energy Micro parts',
+		'esp32': 'Espressif parts',
 		'hc32': 'HC32 parts',
 		'lpc': 'LPC series parts',
 		'nrf': 'nRF series parts',
@@ -163,6 +164,11 @@ target_ch579 = declare_dependency(
 target_efm = declare_dependency(
 	sources: files('efm32.c'),
 	dependencies: target_cortexm,
+)
+
+target_esp32 = declare_dependency(
+	sources: files('esp32c3.c'),
+	dependencies: target_riscv32,
 )
 
 target_hc32 = declare_dependency(
@@ -321,6 +327,7 @@ libbmd_target_deps = [
 	target_at32f4,
 	target_ch579,
 	target_efm,
+	target_esp32,
 	target_hc32,
 	target_lpc,
 	target_nrf,

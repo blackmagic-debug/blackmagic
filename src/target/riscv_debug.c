@@ -261,9 +261,6 @@ static void riscv_hart_memory_access_type(riscv_hart_s *hart);
 static const char *riscv_target_description(target_s *target);
 
 static bool riscv_check_error(target_s *target);
-static void riscv_halt_request(target_s *target);
-static void riscv_halt_resume(target_s *target, bool step);
-static target_halt_reason_e riscv_halt_poll(target_s *target, target_addr_t *watch);
 static void riscv_reset(target_s *target);
 
 void riscv_dmi_init(riscv_dmi_s *const dmi)
@@ -429,6 +426,12 @@ static bool riscv_hart_init(riscv_hart_s *const hart)
 	target->designer_code = hart->vendorid ? hart->vendorid : hart->dbg_module->dmi_bus->designer_code;
 	target->cpuid = hart->archid;
 
+	/*
+	 * Now we've identified the target, and before we can do things like trigger discovery
+	 * we need to first run any target-specific setup (eg, halting the WDTs on the ESP32-C3)
+	 * so the next steps won't get screwed up by them.
+	 */
+	esp32c3_target_prepare(target);
 	/* Now we're in a safe environment, leasurely read out the triggers, etc. */
 	riscv_hart_discover_triggers(hart);
 
@@ -851,7 +854,7 @@ static bool riscv_dm_poll_state(riscv_dm_s *const dbg_module, const uint32_t sta
 	return true;
 }
 
-static void riscv_halt_request(target_s *const target)
+void riscv_halt_request(target_s *const target)
 {
 	riscv_hart_s *const hart = riscv_hart_struct(target);
 	/* Request the hart to halt */
@@ -864,7 +867,7 @@ static void riscv_halt_request(target_s *const target)
 	(void)riscv_dm_write(hart->dbg_module, RV_DM_CONTROL, hart->hartsel);
 }
 
-static void riscv_halt_resume(target_s *target, const bool step)
+void riscv_halt_resume(target_s *const target, const bool step)
 {
 	riscv_hart_s *const hart = riscv_hart_struct(target);
 	/* Configure the debug controller for single-stepping as appropriate */
@@ -889,7 +892,7 @@ static void riscv_halt_resume(target_s *target, const bool step)
 	(void)riscv_dm_write(hart->dbg_module, RV_DM_CONTROL, hart->hartsel);
 }
 
-static target_halt_reason_e riscv_halt_poll(target_s *const target, target_addr_t *const watch)
+target_halt_reason_e riscv_halt_poll(target_s *const target, target_addr_t *const watch)
 {
 	(void)watch;
 	riscv_hart_s *const hart = riscv_hart_struct(target);
