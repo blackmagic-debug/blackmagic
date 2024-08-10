@@ -98,6 +98,7 @@ bool stm32l1_probe(target_s *target);
 bool stm32l4_probe(target_s *target);
 bool stm32mp15_ca7_probe(target_s *target);
 bool stm32mp15_cm4_probe(target_s *target);
+bool stm32wb0_probe(target_s *target);
 bool zynq7_probe(target_s *target);
 
 void lpc55_dp_prepare(adiv5_debug_port_s *dp);

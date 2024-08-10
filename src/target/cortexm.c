@@ -376,6 +376,7 @@ bool cortexm_probe(adiv5_access_port_s *ap)
 		PROBE(stm32l1_probe);
 		PROBE(stm32l4_probe);
 		PROBE(stm32g0_probe);
+		PROBE(stm32wb0_probe);
 		break;
 	case JEP106_MANUFACTURER_CYPRESS:
 		DEBUG_WARN("Unhandled Cypress device\n");
