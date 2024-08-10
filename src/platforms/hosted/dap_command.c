@@ -48,6 +48,8 @@
 #define DAP_JTAG_TMS_CLEAR   (0U << 6U)
 #define DAP_JTAG_TDO_CAPTURE (1U << 7U)
 
+#define DAP_TRANSFER_STATUS_MASK (0x7U)
+
 static size_t dap_encode_transfer(
 	const dap_transfer_request_s *const transfer, uint8_t *const buffer, const size_t offset)
 {
@@ -63,19 +65,19 @@ static size_t dap_encode_transfer(
 
 static void dap_dispatch_status(adiv5_debug_port_s *const dp, const dap_transfer_status_e status)
 {
-	switch (status) {
+	switch (status & DAP_TRANSFER_STATUS_MASK) {
 	case DAP_TRANSFER_OK:
 		break;
 	case DAP_TRANSFER_WAIT:
-		dp->fault = status;
+		dp->fault = status & DAP_TRANSFER_STATUS_MASK;
 		break;
 	case DAP_TRANSFER_FAULT:
 		DEBUG_ERROR("Access resulted in fault\n");
-		dp->fault = status;
+		dp->fault = status & DAP_TRANSFER_STATUS_MASK;
 		break;
 	case DAP_TRANSFER_NO_RESPONSE:
 		DEBUG_ERROR("Access resulted in no response\n");
-		dp->fault = status;
+		dp->fault = status & DAP_TRANSFER_STATUS_MASK;
 		/* If we got no-response, handle the case where the adaptor fails to issue the data phase */
 		if (dap_mode == DAP_CAP_SWD && (dap_quirks & DAP_QUIRK_BAD_SWD_NO_RESP_DATA_PHASE)) {
 			uint32_t response;
@@ -117,7 +119,7 @@ bool perform_dap_transfer(adiv5_debug_port_s *const target_dp, const dap_transfe
 	}
 
 	/* Look at the response and decipher what went on */
-	if (response.processed == requests && response.status == DAP_TRANSFER_OK) {
+	if (response.processed == requests && (response.status & DAP_TRANSFER_STATUS_MASK) == DAP_TRANSFER_OK) {
 		for (size_t i = 0; i < responses; ++i)
 			response_data[i] = read_le4(response.data[i], 0);
 		return true;
@@ -165,13 +167,13 @@ bool perform_dap_transfer_block_read(
 
 	/* Check the response over */
 	const uint16_t blocks_read = read_le2(response.count, 0);
-	if (blocks_read == block_count && response.status == DAP_TRANSFER_OK) {
+	if (blocks_read == block_count && (response.status & DAP_TRANSFER_STATUS_MASK) == DAP_TRANSFER_OK) {
 		for (size_t i = 0; i < block_count; ++i)
 			blocks[i] = read_le4(response.data[i], 0);
 		return true;
 	}
-	if (response.status != DAP_TRANSFER_OK)
-		target_dp->fault = response.status;
+	if ((response.status & DAP_TRANSFER_STATUS_MASK) != DAP_TRANSFER_OK)
+		target_dp->fault = response.status & DAP_TRANSFER_STATUS_MASK;
 	else
 		target_dp->fault = 0;
 
@@ -203,10 +205,10 @@ bool perform_dap_transfer_block_write(
 
 	/* Check the response over */
 	const uint16_t blocks_written = read_le2(response.count, 0);
-	if (blocks_written == block_count && response.status == DAP_TRANSFER_OK)
+	if (blocks_written == block_count && (response.status & DAP_TRANSFER_STATUS_MASK) == DAP_TRANSFER_OK)
 		return true;
-	if (response.status != DAP_TRANSFER_OK)
-		target_dp->fault = response.status;
+	if ((response.status & DAP_TRANSFER_STATUS_MASK) != DAP_TRANSFER_OK)
+		target_dp->fault = response.status & DAP_TRANSFER_STATUS_MASK;
 	else
 		target_dp->fault = 0;
 
