@@ -55,6 +55,11 @@
 #define STM32WB0_FLASH_BASE       0x40001000U
 #define STM32WB0_FLASH_FLASH_SIZE (STM32WB0_FLASH_BASE + 0x014U)
 
+#define STM32WB0_PWRC_BASE 0x48500000U
+#define STM32WB0_PWRC_DBGR (STM32WB0_PWRC_BASE + 0x084U)
+
+#define STM32WB0_PWRC_DBGR_DEEPSTOP2 (1U << 0U)
+
 #define ID_STM32WB0 0x01eU
 
 static void stm32wb0_add_flash(target_s *const target, const size_t length)
@@ -94,6 +99,9 @@ bool stm32wb0_probe(target_s *const target)
 	if (ap->partno != ID_STM32WB0)
 		return false;
 	target->part_id = ap->partno;
+
+	/* Prevent deep sleeping from taking the debug link out */
+	target_mem32_write16(target, STM32WB0_PWRC_DBGR, STM32WB0_PWRC_DBGR_DEEPSTOP2);
 
 	target->driver = "STM32WB0";
 
