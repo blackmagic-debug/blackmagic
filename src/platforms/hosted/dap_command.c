@@ -48,7 +48,7 @@
 #define DAP_JTAG_TMS_CLEAR   (0U << 6U)
 #define DAP_JTAG_TDO_CAPTURE (1U << 7U)
 
-#define DAP_TRANSFER_STATUS_MASK (0x7U)
+#define DAP_TRANSFER_STATUS_MASK 0x7U
 
 static size_t dap_encode_transfer(
 	const dap_transfer_request_s *const transfer, uint8_t *const buffer, const size_t offset)
