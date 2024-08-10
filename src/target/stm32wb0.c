@@ -82,6 +82,7 @@
 static bool stm32wb0_enter_flash_mode(target_s *target);
 static bool stm32wb0_flash_erase(target_flash_s *flash, target_addr_t addr, size_t len);
 static bool stm32wb0_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t len);
+static bool stm32wb0_mass_erase(target_s *target);
 
 static void stm32wb0_add_flash(target_s *const target, const size_t length)
 {
@@ -129,6 +130,7 @@ bool stm32wb0_probe(target_s *const target)
 	target_mem32_write16(target, STM32WB0_PWRC_DBGR, STM32WB0_PWRC_DBGR_DEEPSTOP2);
 
 	target->driver = "STM32WB0";
+	target->mass_erase = stm32wb0_mass_erase;
 	target->enter_flash_mode = stm32wb0_enter_flash_mode;
 
 	const uint32_t signature = target_mem32_read32(target, STM32WB0_FLASH_FLASH_SIZE);
@@ -204,4 +206,18 @@ static bool stm32wb0_flash_write(
 			return false;
 	}
 	return true;
+}
+
+static bool stm32wb0_mass_erase(target_s *const target)
+{
+	/* To start the mass erase, prep the controller */
+	if (!stm32wb0_enter_flash_mode(target))
+		return false;
+
+	platform_timeout_s timeout;
+	platform_timeout_set(&timeout, 500U);
+	/* Set up and run the mass erase */
+	target_mem32_write32(target, STM32WB0_FLASH_COMMAND, STM32WB0_FLASH_COMMAND_MASS_ERASE);
+	/* Then wait for the erase to complete and report any errors */
+	return stm32wb0_flash_wait_complete(target, &timeout);
 }
