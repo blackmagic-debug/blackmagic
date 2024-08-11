@@ -188,7 +188,7 @@ static void stm32f723_ep_setup(usbd_device *usbd_dev, uint8_t addr, uint8_t type
 		OTG_HS_DIEPCTL0 |= OTG_DIEPCTL0_SNAK;
 
 		/* Configure OUT part. */
-		usbd_dev->doeptsiz[0] = OTG_DIEPSIZ0_STUPCNT_1 | OTG_DIEPSIZ0_PKTCNT | (max_size & OTG_DIEPSIZ0_XFRSIZ_MASK);
+		usbd_dev->doeptsiz[0] = OTG_DOEPSIZ0_STUPCNT_1 | OTG_DIEPSIZ0_PKTCNT | (max_size & OTG_DIEPSIZ0_XFRSIZ_MASK);
 		OTG_HS_DOEPTSIZ(0) = usbd_dev->doeptsiz[0];
 		OTG_HS_DOEPCTL(0) |= OTG_DOEPCTL0_EPENA | OTG_DIEPCTL0_SNAK;
 
