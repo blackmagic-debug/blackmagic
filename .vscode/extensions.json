@@ -1,6 +1,5 @@
 {
 	"recommendations": [
-		"ms-vscode.cpptools",
-		"notskm.clang-tidy"
+		"ms-vscode.cpptools"
 	]
 }
