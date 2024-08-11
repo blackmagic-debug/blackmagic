@@ -2,7 +2,7 @@
 Checks: 'bugprone-*,cert-*,clang-analyzer-*,misc-*,modernize-*,portability-*,performance-*,readability-*,-readability-magic-numbers,-readability-braces-around-statements,-clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling,-modernize-macro-to-enum,-bugprone-easily-swappable-parameters,-misc-include-cleaner'
 FormatStyle: 'none'
 HeaderFilterRegex: '(src|upgrade)/.+'
-AnalyzeTemporaryDtors: false
+#AnalyzeTemporaryDtors: false
 CheckOptions:
   - key:   cert-dcl16-c.NewSuffixes
     value: 'L;LL;UL;ULL'
