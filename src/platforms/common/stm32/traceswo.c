@@ -1,8 +1,11 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
- * Copyright (C) 2012  Black Sphere Technologies Ltd.
+ * Copyright (C) 2012 Black Sphere Technologies Ltd.
  * Written by Gareth McMullin <gareth@blacksphere.co.nz>
+ * Modified by Uwe Bonnes <bon@elektron.ikp.physik.tu-darmstadt.de>
+ * Copyright (C) 2024 1BitSquared <info@1bitsquared.com>
+ * Modified by Rachel Mant <git@dragonmux.network>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,19 +21,22 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* This file implements capture of the TRACESWO output.
+/*
+ * This file implements capture of Machester SWO trace output
  *
- * ARM DDI 0403D - ARMv7M Architecture Reference Manual
- * ARM DDI 0337I - Cortex-M3 Technical Reference Manual
- * ARM DDI 0314H - CoreSight Components Technical Reference Manual
+ * References:
+ * DDI0403 - ARMv7-M Architecture Reference Manual, version E.e
+ * - https://developer.arm.com/documentation/ddi0403/latest/
+ * DDI0314 - CoreSight Components Technical Reference Manual, version 1.0, rev. H
+ * - https://developer.arm.com/documentation/ddi0314/latest/
+ *
+ * The basic idea is that SWO comes in on a pin connected to a timer block,
+ * and because Manchester coding is self-clocking we can determine the timing
+ * for that input signal when it's active, so: use the timer to capture edge
+ * transition timings; fire an interrupt each complete cycle; and then use some
+ * timing analysis on the CPU to extract the SWO data sequence.
  */
 
-/* TDO/TRACESWO signal comes into pin PA6/TIM3_CH1
- * Manchester coding is assumed on TRACESWO, so bit timing can be detected.
- * The idea is to use TIM3 input capture modes to capture pulse timings.
- * These can be capture directly to RAM by DMA.
- * The core can then process the buffer to extract the frame.
- */
 #include "general.h"
 #include "platform.h"
 #include "usb.h"
