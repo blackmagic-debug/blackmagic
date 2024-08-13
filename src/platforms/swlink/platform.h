@@ -52,6 +52,9 @@ extern bool debug_bmp;
 #define SWDIO_PIN  TMS_PIN
 #define SWCLK_PIN  TCK_PIN
 
+#define SWO_PORT GPIOB
+#define SWO_PIN  GPIO3
+
 /* Use PC14 for a "dummy" UART LED so we can observere at least with scope */
 #define LED_PORT_UART GPIOC
 #define LED_UART      GPIO14
@@ -125,13 +128,20 @@ extern bool debug_bmp;
 #if TRACESWO_PROTOCOL == 1
 
 /* Use TIM2 Input 2 (from PB3/TDO with Remap) */
-#define TRACE_TIM          TIM2
-#define TRACE_TIM_CLK_EN() rcc_periph_clock_enable(RCC_TIM2)
-#define TRACE_IRQ          NVIC_TIM2_IRQ
-#define TRACE_ISR(x)       tim2_isr(x)
-#define TRACE_IC_IN        TIM_IC_IN_TI2
-#define TRACE_TRIG_IN      TIM_SMCR_TS_TI2FP2
-/* was TIM_SMCR_TS_IT1FP2 from 2010 API */
+#define TRACE_TIM             TIM2
+#define TRACE_TIM_CLK_EN()    rcc_periph_clock_enable(RCC_TIM2)
+#define TRACE_IRQ             NVIC_TIM2_IRQ
+#define TRACE_ISR(x)          tim2_isr(x)
+#define TRACE_IC_IN           TIM_IC_IN_TI2
+#define TRACE_IC_RISING       TIM_IC1
+#define TRACE_CC_RISING       TIM3_CCR1
+#define TRACE_ITR_RISING      TIM_DIER_CC1IE
+#define TRACE_STATUS_RISING   TIM_SR_CC1IF
+#define TRACE_IC_FALLING      TIM_IC2
+#define TRACE_CC_FALLING      TIM3_CCR2
+#define TRACE_STATUS_FALLING  TIM_SR_CC2IF
+#define TRACE_STATUS_OVERFLOW (TIM_SR_CC1OF | TIM_SR_CC2OF)
+#define TRACE_TRIG_IN         TIM_SMCR_TS_TI2FP2
 
 #elif TRACESWO_PROTOCOL == 2
 

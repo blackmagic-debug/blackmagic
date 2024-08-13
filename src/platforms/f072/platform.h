@@ -38,9 +38,9 @@
  * LED2 = 	PB7	(Red LED    : Error)
  *
  * TDI = 	PA0
- * TMS = 	PA1 (input for SWDP)
+ * TMS = 	PA1 (input/output SWDIO)
  * TCK = 	PA7/SWCLK
- * TDO = 	PA6 (input for TRACESWO
+ * TDO = 	PA6 (input SWO)
  * nRST =	PA5
  *
  * Force DFU mode button: BOOT0
@@ -64,6 +64,9 @@
 
 #define NRST_PORT GPIOA
 #define NRST_PIN  GPIO5
+
+#define SWO_PORT GPIOA
+#define SWO_PIN  GPIO6
 
 #define LED_PORT      GPIOB
 #define LED_PORT_UART GPIOB
@@ -128,13 +131,22 @@
 		USART2_CR2 |= USART_CR2_SWAP;                                                                      \
 	} while (0)
 
-#define TRACE_TIM          TIM3
-#define TRACE_TIM_CLK_EN() rcc_periph_clock_enable(RCC_TIM3)
-#define TRACE_IRQ          NVIC_TIM3_IRQ
-#define TRACE_ISR          tim3_isr
-#define TRACE_IC_IN        TIM_IC_IN_TI1
-#define TRACE_TRIG_IN      TIM_SMCR_TS_TI1FP1
-#define TRACE_TIM_PIN_AF   GPIO_AF1
+/* Use TIM3 Input 1 (from PA6/TDO on AF1) */
+#define TRACE_TIM             TIM3
+#define TRACE_TIM_CLK_EN()    rcc_periph_clock_enable(RCC_TIM3)
+#define TRACE_IRQ             NVIC_TIM3_IRQ
+#define TRACE_ISR             tim3_isr
+#define TRACE_IC_IN           TIM_IC_IN_TI1
+#define TRACE_IC_RISING       TIM_IC1
+#define TRACE_CC_RISING       TIM3_CCR1
+#define TRACE_ITR_RISING      TIM_DIER_CC1IE
+#define TRACE_STATUS_RISING   TIM_SR_CC1IF
+#define TRACE_IC_FALLING      TIM_IC2
+#define TRACE_CC_FALLING      TIM3_CCR2
+#define TRACE_STATUS_FALLING  TIM_SR_CC2IF
+#define TRACE_STATUS_OVERFLOW (TIM_SR_CC1OF | TIM_SR_CC2OF)
+#define TRACE_TRIG_IN         TIM_SMCR_TS_TI1FP1
+#define TRACE_TIM_PIN_AF      GPIO_AF1
 
 #if ENABLE_DEBUG == 1
 extern bool debug_bmp;

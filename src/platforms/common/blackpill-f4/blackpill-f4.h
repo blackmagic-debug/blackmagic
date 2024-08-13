@@ -64,6 +64,8 @@ extern bool debug_bmp;
 #if ALTERNATIVE_PINOUT < 1 || ALTERNATIVE_PINOUT > 3
 #error "Invalid value for ALTERNATIVE_PINOUT. Value is smaller than 1, or larger than 3. Value must be between 1 and 3"
 #endif
+#else
+#define ALTERNATIVE_PINOUT 0
 #endif /* ALTERNATIVE_PINOUT */
 
 /*
@@ -77,21 +79,21 @@ extern bool debug_bmp;
  * The maximum number of input arguments is 4.
  * The 3rd and 4th arguments to this function are optional.
  */
-#ifndef ALTERNATIVE_PINOUT              // if ALTERNATIVE_PINOUT is not defined
-#define PINOUT_SWITCH(opt0, ...) (opt0) // select the first argument
+#if ALTERNATIVE_PINOUT == 0
+#define PINOUT_SWITCH(opt0, ...) (opt0) // Select the first argument
 #elif ALTERNATIVE_PINOUT == 1
-#define PINOUT_SWITCH(opt0, opt1, ...) (opt1) // select the second argument
+#define PINOUT_SWITCH(opt0, opt1, ...) (opt1) // Select the second argument
 #elif ALTERNATIVE_PINOUT == 2
-#define PINOUT_SWITCH(opt0, opt1, opt2, ...) (opt2) // select the third argument
+#define PINOUT_SWITCH(opt0, opt1, opt2, ...) (opt2) // Select the third argument
 #elif ALTERNATIVE_PINOUT == 3
-#define PINOUT_SWITCH(opt0, opt1, opt2, opt3, ...) (opt3) // select the fourth argument
-#endif                                                    /* ALTERNATIVE_PINOUT */
+#define PINOUT_SWITCH(opt0, opt1, opt2, opt3, ...) (opt3) // Select the fourth argument
+#endif
 
 /*
  * Important pin mappings for STM32 implementation:
  *   * JTAG/SWD
  *     * PB6 or PB5: TDI
- *     * PB7 or PB6: TDO/TRACESWO
+ *     * PB7 or PB6: TDO/SWO
  *     * PB8 or PB7: TCK/SWCLK
  *     * PB9 or PB8: TMS/SWDIO
  *     * PA6 or PB3: TRST
@@ -153,6 +155,10 @@ extern bool debug_bmp;
 
 #define NRST_PORT PINOUT_SWITCH(GPIOA, GPIOB)
 #define NRST_PIN  PINOUT_SWITCH(GPIO5, GPIO4)
+
+/* SWO comes in on the same pin as TDO */
+#define SWO_PORT GPIOB
+#define SWO_PIN  PINOUT_SWITCH(GPIO7, GPIO6)
 
 #define PWR_BR_PORT PINOUT_SWITCH(GPIOA, GPIOB)
 #define PWR_BR_PIN  PINOUT_SWITCH(GPIO1, GPIO9)
@@ -283,18 +289,25 @@ extern bool debug_bmp;
 
 #define PLATFORM_HAS_TRACESWO
 #define NUM_TRACE_PACKETS 256U /* 16K buffer */
-//#define TRACESWO_PROTOCOL 2U   /* 1 = RZ/Manchester, 2 = NRZ/async/uart */
 
 #if TRACESWO_PROTOCOL == 1
 
-/* Use TIM4 Input 2 (from PB7/TDO) or Input 1 (from PB6/TDO), AF2, trigger on Rising Edge */
-#define TRACE_TIM          TIM4
-#define TRACE_TIM_CLK_EN() rcc_periph_clock_enable(RCC_TIM4)
-#define TRACE_IRQ          NVIC_TIM4_IRQ
-#define TRACE_ISR(x)       tim4_isr(x)
-#define TRACE_IC_IN        PINOUT_SWITCH(TIM_IC_IN_TI2, TIM_IC_IN_TI1)
-#define TRACE_TRIG_IN      TIM_SMCR_TS_TI1FP1
-#define TRACE_TIM_PIN_AF   GPIO_AF2
+/* Use TIM4 Input 2 (from PB7/TDO) or Input 1 (from PB6/TDO), AF2, triggered on rising edge */
+#define TRACE_TIM             TIM4
+#define TRACE_TIM_CLK_EN()    rcc_periph_clock_enable(RCC_TIM4)
+#define TRACE_IRQ             NVIC_TIM4_IRQ
+#define TRACE_ISR(x)          tim4_isr(x)
+#define TRACE_IC_IN           PINOUT_SWITCH(TIM_IC_IN_TI2, TIM_IC_IN_TI1)
+#define TRACE_IC_RISING       TIM_IC1
+#define TRACE_CC_RISING       TIM3_CCR1
+#define TRACE_ITR_RISING      TIM_DIER_CC1IE
+#define TRACE_STATUS_RISING   TIM_SR_CC1IF
+#define TRACE_IC_FALLING      TIM_IC2
+#define TRACE_CC_FALLING      TIM3_CCR2
+#define TRACE_STATUS_FALLING  TIM_SR_CC2IF
+#define TRACE_STATUS_OVERFLOW (TIM_SR_CC1OF | TIM_SR_CC2OF)
+#define TRACE_TRIG_IN         PINOUT_SWITCH(TIM_SMCR_TS_TI2FP2, TIM_SMCR_TS_TI1FP1)
+#define TRACE_TIM_PIN_AF      GPIO_AF2
 
 #elif TRACESWO_PROTOCOL == 2
 

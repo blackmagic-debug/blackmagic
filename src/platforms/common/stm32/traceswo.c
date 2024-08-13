@@ -35,6 +35,9 @@
  * for that input signal when it's active, so: use the timer to capture edge
  * transition timings; fire an interrupt each complete cycle; and then use some
  * timing analysis on the CPU to extract the SWO data sequence.
+ *
+ * We use the first capture channel of a pair to capture the cycle time and
+ * thee second to capture the high time (mark period).
  */
 
 #include "general.h"
@@ -54,26 +57,27 @@ static uint8_t trace_usb_buf_size;
 
 void traceswo_init(const uint32_t swo_chan_bitmask)
 {
+	/* Make sure the timer block is clocked on platforms that don't do this in their `platform_init()` */
 	TRACE_TIM_CLK_EN();
+	/* Then make sure the IO pin used is properly set up as an input routed to the timer */
+	gpio_set_mode(SWO_PORT, GPIO_MODE_INPUT, GPIO_CNF_INPUT_FLOAT, SWO_PIN);
 
-	/* Refer to ST doc RM0008 - STM32F10xx Reference Manual.
-	 * Section 14.3.4 - 14.3.6 (General Purpose Timer - Input Capture)
-	 *
-	 * CCR1 captures cycle time, CCR2 captures high time
+	/*
+	 * Start setting the timer block up by picking a pair of cross-linked capture channels suitable for the input,
+	 * and configure them to consume the input channel for the SWO pin. We use one in rising edge mode and the
+	 * other in falling to get the mark period and cycle period - together these define all elements of a wiggle.
+	 * NB: "TRACE_IC" here refers to the Input Capture channels being used
 	 */
+	timer_ic_set_input(TRACE_TIM, TRACE_IC_RISING, TRACE_IC_IN);
+	timer_ic_set_polarity(TRACE_TIM, TRACE_IC_RISING, TIM_IC_RISING);
+	timer_ic_set_input(TRACE_TIM, TRACE_IC_FALLING, TRACE_IC_IN);
+	timer_ic_set_polarity(TRACE_TIM, TRACE_IC_FALLING, TIM_IC_FALLING);
 
-	/* Use TI1 as capture input for CH1 and CH2 */
-	timer_ic_set_input(TRACE_TIM, TIM_IC1, TRACE_IC_IN);
-	timer_ic_set_input(TRACE_TIM, TIM_IC2, TRACE_IC_IN);
-
-	/* Capture CH1 on rising edge, CH2 on falling edge */
-	timer_ic_set_polarity(TRACE_TIM, TIM_IC1, TIM_IC_RISING);
-	timer_ic_set_polarity(TRACE_TIM, TIM_IC2, TIM_IC_FALLING);
-
-	/* Trigger on Filtered Timer Input 1 (TI1FP1) */
+	/*
+	 * Use reset mode to trigger the timer, which makes the counter reset and start counting anew
+	 * when a rising edge is detected on the input pin via the filtered input channel as a trigger source
+	 */
 	timer_slave_set_trigger(TRACE_TIM, TRACE_TRIG_IN);
-
-	/* Slave reset mode: reset counter on trigger */
 	timer_slave_set_mode(TRACE_TIM, TIM_SMCR_SMS_RM);
 
 	/* Enable capture interrupt */
@@ -82,8 +86,8 @@ void traceswo_init(const uint32_t swo_chan_bitmask)
 	timer_enable_irq(TRACE_TIM, TIM_DIER_CC1IE);
 
 	/* Enable the capture channels */
-	timer_ic_enable(TRACE_TIM, TIM_IC1);
-	timer_ic_enable(TRACE_TIM, TIM_IC2);
+	timer_ic_enable(TRACE_TIM, TRACE_IC_RISING);
+	timer_ic_enable(TRACE_TIM, TRACE_IC_FALLING);
 
 	timer_enable_counter(TRACE_TIM);
 

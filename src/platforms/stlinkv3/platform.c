@@ -1,8 +1,9 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
- * Copyright (C) 2022-2023 1BitSquared  <info@1bitsquared.com>
+ * Copyright (C) 2022-2024 1BitSquared <info@1bitsquared.com>
  * Portions (C) 2020-2021 Stoyan Shopov <stoyan.shopov@gmail.com>
+ * Modified by Rachel Mant <git@dragonmux.network>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,8 +19,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* This file provides the platform specific functions for the STLINK-V3
- * implementation.
+/*
+ * This file provides the platform specific functions for the ST-Link v3 implementation.
  */
 
 #include "general.h"
@@ -114,7 +115,7 @@ int platform_hwversion(void)
 
 void platform_nrst_set_val(bool assert)
 {
-	gpio_set_val(SRST_PORT, SRST_PIN, !assert);
+	gpio_set_val(NRST_PORT, NRST_PIN, !assert);
 	if (assert) {
 		for (volatile size_t i = 0; i < 10000; i++)
 			continue;
@@ -123,7 +124,7 @@ void platform_nrst_set_val(bool assert)
 
 bool platform_nrst_get_val()
 {
-	return gpio_get(SRST_PORT, SRST_PIN) == 0;
+	return gpio_get(NRST_PORT, NRST_PIN) == 0;
 }
 
 const char *platform_target_voltage(void)
@@ -182,9 +183,9 @@ void platform_init(void)
 	adc_power_on(ADC1);
 
 	/* Configure srst pin. */
-	gpio_set_output_options(SRST_PORT, GPIO_OTYPE_OD, GPIO_OSPEED_2MHZ, SRST_PIN);
-	gpio_mode_setup(SRST_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_PULLUP, SRST_PIN);
-	gpio_set(SRST_PORT, SRST_PIN);
+	gpio_set_output_options(NRST_PORT, GPIO_OTYPE_OD, GPIO_OSPEED_2MHZ, NRST_PIN);
+	gpio_mode_setup(NRST_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_PULLUP, NRST_PIN);
+	gpio_set(NRST_PORT, NRST_PIN);
 
 	gpio_mode_setup(TMS_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, TMS_PIN);
 	gpio_set_output_options(TMS_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_2MHZ, TMS_PIN);

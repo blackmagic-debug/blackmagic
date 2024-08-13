@@ -135,6 +135,14 @@ extern int hwversion;
 #define NRST_SENSE_PIN  HW_SWITCH(6, GPIO7, GPIO13)
 
 /*
+ * SWO comes in on PB7 (TIM4 CH2) before HW6, and PA10 (TIM1 CH3) after -
+ * however, because of Shenanigans™ with timers and other pins, this has to
+ * reuse TDO (PA6, TIM3 CH1) to not wind up clobbering timers and timer pins
+ */
+#define SWO_PORT GPIOA
+#define SWO_PIN  GPIO6
+
+/*
  * These are the control output pin definitions for TPWR.
  * TPWR is sensed via PB0 by sampling ADC1's channel 8.
  */
@@ -288,14 +296,16 @@ extern int hwversion;
 #define USBUSART2_DMA_RX_IRQ    NVIC_DMA1_CHANNEL6_IRQ
 #define USBUSART2_DMA_RX_ISR(x) dma1_channel6_isr(x)
 
-#if TRACESWO_PROTOCOL == 1
+#if TRACESWO_PROTOCOL == 1U
 /* Use TIM3 Input 1 (from PA6/TDO) */
-#define TRACE_TIM          TIM3
-#define TRACE_TIM_CLK_EN() rcc_periph_clock_enable(RCC_TIM3)
-#define TRACE_IRQ          NVIC_TIM3_IRQ
-#define TRACE_ISR(x)       tim3_isr(x)
-#define TRACE_IC_IN        TIM_IC_IN_TI1
-#define TRACE_TRIG_IN      TIM_SMCR_TS_TI1FP1
+#define TRACE_TIM TIM3
+#define TRACE_TIM_CLK_EN()
+#define TRACE_IRQ        NVIC_TIM3_IRQ
+#define TRACE_ISR(x)     tim3_isr(x)
+#define TRACE_IC_IN      TIM_IC_IN_TI1
+#define TRACE_IC_RISING  TIM_IC1
+#define TRACE_IC_FALLING TIM_IC2
+#define TRACE_TRIG_IN    TIM_SMCR_TS_TI1FP1
 #endif
 
 #define SET_RUN_STATE(state)   running_status = (state)

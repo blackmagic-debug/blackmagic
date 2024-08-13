@@ -46,7 +46,7 @@
  * TDI =      PA3	(output)
  * TMS =      PA4	(input/output for SWDIO)
  * TCK =      PA5	(output SWCLK)
- * TDO =      PC6	(input)
+ * TDO =      PC7	(input SWO)
  * TMS_DIR = PA1	(output) controls target buffer direction
  * TPWR =	 PB0		(analog input)
  * VBAT =	 PA0		(analog input)
@@ -80,6 +80,9 @@
 #define NRST_PIN        GPIO2
 #define NRST_SENSE_PORT GPIOA
 #define NRST_SENSE_PIN  GPIO7
+
+#define SWO_PORT GPIOC
+#define SWO_PIN  GPIO7
 
 #define LED_PORT      GPIOC
 #define LED_PORT_UART GPIOB
@@ -185,12 +188,12 @@
 
 #if TRACESWO_PROTOCOL == 1
 
-/* Use TIM3 Input 2 from PC7/TDO, AF2, trigger on Rising Edge */
+/* Use TIM3 Input 2 from PC7/TDO, AF2, trigger on rising edge */
 #define TRACE_TIM TIM3
 #define TRACE_TIM_CLK_EN()
 #define TRACE_IRQ             NVIC_TIM3_IRQ
 #define TRACE_ISR(x)          tim3_isr(x)
-#define TRACE_IC_IN           TIM_IC_IN_TI1
+#define TRACE_IC_IN           TIM_IC_IN_TI2
 #define TRACE_IC_RISING       TIM_IC1
 #define TRACE_CC_RISING       TIM3_CCR1
 #define TRACE_ITR_RISING      TIM_DIER_CC1IE
@@ -199,7 +202,8 @@
 #define TRACE_CC_FALLING      TIM3_CCR2
 #define TRACE_STATUS_FALLING  TIM_SR_CC2IF
 #define TRACE_STATUS_OVERFLOW (TIM_SR_CC1OF | TIM_SR_CC2OF)
-#define TRACE_TRIG_IN         TIM_SMCR_TS_TI1FP1
+#define TRACE_TRIG_IN         TIM_SMCR_TS_TI2FP2
+#define SWO_TIM_PIN_AF        GPIO_AF2
 
 #elif TRACESWO_PROTOCOL == 2
 

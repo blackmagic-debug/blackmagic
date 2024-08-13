@@ -28,7 +28,7 @@
 #include "timing_stm32.h"
 #include "version.h"
 
-#define PLATFORM_IDENT "(Carbon)"
+#define PLATFORM_IDENT "(96b Carbon) "
 
 /*
  * Important pin mappings for Carbon implementation:

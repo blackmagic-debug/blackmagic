@@ -67,6 +67,9 @@ extern bool debug_bmp;
 #define NRST_PIN_CLONE GPIO6
 #endif
 
+#define SWO_PORT GPIOA
+#define SWO_PIN  GPIO6
+
 #ifdef BLUEPILL
 #define LED_PORT GPIOC
 #else
@@ -175,12 +178,20 @@ extern bool debug_bmp;
 #if TRACESWO_PROTOCOL == 1
 
 /* Use TIM3 Input 1 (from PA6/TDO) */
-#define TRACE_TIM          TIM3
-#define TRACE_TIM_CLK_EN() rcc_periph_clock_enable(RCC_TIM3)
-#define TRACE_IRQ          NVIC_TIM3_IRQ
-#define TRACE_ISR(x)       tim3_isr(x)
-#define TRACE_IC_IN        TIM_IC_IN_TI1
-#define TRACE_TRIG_IN      TIM_SMCR_TS_TI1FP1
+#define TRACE_TIM             TIM3
+#define TRACE_TIM_CLK_EN()    rcc_periph_clock_enable(RCC_TIM3)
+#define TRACE_IRQ             NVIC_TIM3_IRQ
+#define TRACE_ISR(x)          tim3_isr(x)
+#define TRACE_IC_IN           TIM_IC_IN_TI1
+#define TRACE_IC_RISING       TIM_IC1
+#define TRACE_CC_RISING       TIM3_CCR1
+#define TRACE_ITR_RISING      TIM_DIER_CC1IE
+#define TRACE_STATUS_RISING   TIM_SR_CC1IF
+#define TRACE_IC_FALLING      TIM_IC2
+#define TRACE_CC_FALLING      TIM3_CCR2
+#define TRACE_STATUS_FALLING  TIM_SR_CC2IF
+#define TRACE_STATUS_OVERFLOW (TIM_SR_CC1OF | TIM_SR_CC2OF)
+#define TRACE_TRIG_IN         TIM_SMCR_TS_TI1FP1
 
 #elif TRACESWO_PROTOCOL == 2
 
