@@ -194,6 +194,9 @@ typedef struct cortexar_priv {
 #define CORTEXAR_CPSR_MODE_SYS  0x0000001fU
 #define CORTEXAR_CPSR_THUMB     (1U << 5U)
 
+/* CPSR remap position for GDB XML mapping */
+#define CORTEXAR_CPSR_GDB_REMAP_POS 25U
+
 /* Banked register offsets for when using using the DB{0,3} interface */
 enum {
 	CORTEXAR_BANKED_DTRTX,
@@ -1257,7 +1260,7 @@ static void *cortexar_reg_ptr(target_s *const target, const size_t reg)
 	if (reg < 16U)
 		return &priv->core_regs.r[reg];
 	/* cpsr */
-	if (reg == 16U)
+	if (reg == CORTEXAR_CPSR_GDB_REMAP_POS)
 		return &priv->core_regs.cpsr;
 	/* Check if the core has a FPU first */
 	if (!(target->target_options & TOPT_FLAVOUR_FLOAT))
@@ -1274,7 +1277,7 @@ static void *cortexar_reg_ptr(target_s *const target, const size_t reg)
 static size_t cortexar_reg_width(const size_t reg)
 {
 	/* r0-r15, cpsr, fpcsr */
-	if (reg < CORTEXAR_GENERAL_REG_COUNT || reg == 33U)
+	if (reg < CORTEXAR_GENERAL_REG_COUNT || reg == CORTEXAR_CPSR_GDB_REMAP_POS || reg == 33U)
 		return 4U;
 	/* d0-d15 */
 	return 8U;
@@ -1758,6 +1761,11 @@ static size_t cortexar_build_target_description(char *const buffer, size_t max_l
 		const char *const name = cortexr_spr_names[i];
 		const gdb_reg_type_e type = cortexr_spr_types[i];
 
+		/*
+		 * Create tag for each register In the case of CPSR, remap it to 25 so it aligns
+		 * with the target description XML string above. CORTEXAR_CPSR_GDB_REMAP_POS is
+		 * used for this mapping elsewhere in the logic.
+		 */
 		offset += snprintf(buffer + offset, print_size, "<reg name=\"%s\" bitsize=\"32\"%s%s/>", name,
 			gdb_reg_type_strings[type], i == 3U ? " regnum=\"25\"" : "");
 	}
