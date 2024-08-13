@@ -49,6 +49,9 @@
 #include <libopencm3/stm32/timer.h>
 #include <libopencm3/stm32/rcc.h>
 
+/* How many timer clock cycles the half period of a cycle of the SWO signal is allowed to be off by */
+#define ALLOWED_PERIOD_ERROR 5U
+
 /* SWO decoding */
 static bool decoding = false;
 
@@ -134,17 +137,15 @@ void trace_buf_drain(usbd_device *dev, uint8_t ep)
 	trace_usb_buf_size = 0;
 }
 
-#define ALLOWED_DUTY_ERROR 5
-
 void TRACE_ISR(void)
 {
-	uint16_t status = TIM_SR(TRACE_TIM);
-	static uint16_t bt;
+	static uint16_t bit_time = 0U;
 	static uint8_t lastbit;
-	static uint8_t decbuf[17];
+	static uint8_t decbuf[16U];
 	static uint8_t decbuf_pos;
-	static uint8_t halfbit;
-	static uint8_t notstart;
+	static bool halfbit = false;
+	static bool notstart = false;
+	const uint16_t status = TIM_SR(TRACE_TIM);
 
 	/* Reset decoder state if capture overflowed */
 	if (status & (TIM_SR_CC1OF | TIM_SR_UIF)) {
@@ -153,52 +154,73 @@ void TRACE_ISR(void)
 			goto flush_and_reset;
 	}
 
-	const uint16_t cycle = TIM_CCR1(TRACE_TIM);
-	uint16_t duty = TIM_CCR2(TRACE_TIM);
+	const uint32_t cycle_period = TRACE_CC_RISING;
+	const uint32_t mark_period = TRACE_CC_FALLING;
 
 	/* Reset decoder state if crazy things happened */
-	if ((bt && (duty / bt > 2U || duty / bt == 0)) || duty == 0)
+	if ((bit_time && (mark_period / bit_time > 2U || mark_period / bit_time == 0)) || mark_period == 0)
 		goto flush_and_reset;
 
 	if (!(status & TIM_SR_CC1IF))
-		notstart = 1;
+		notstart = true;
 
-	if (!bt) {
+	/* If the bit time is not yet known */
+	if (bit_time == 0U) {
+		/* Are we here because we got an interrupt but not for the rising edge capture channel? */
 		if (notstart) {
-			notstart = 0;
+			/* We're are, so leave early */
+			notstart = false;
 			return;
 		}
-		/* First bit, sync decoder */
-		duty -= ALLOWED_DUTY_ERROR;
-		const uint16_t duty_cycle = cycle / duty;
-		if (duty_cycle != 2U && duty_cycle != 3U)
+		/*
+		 * We're here because of the rising edge, so we've got our first bit.
+		 * Calculate the ratio of the mark period to the space period within a cycle
+		 */
+		const uint32_t duty_ratio = cycle_period / (mark_period - ALLOWED_PERIOD_ERROR);
+		/*
+		 * Check that the duty cycle ratio is between 2:1 and 3:1, indicating an
+		 * aproximately even mark-to-space ratio
+		 */
+		if (duty_ratio < 2U || duty_ratio > 3U)
 			return;
-		bt = duty;
+		/*
+		 * Now we've established a valid duty cycle ratio, store the mark period as the bit timing and
+		 * initialise the capture engine: start with the last bit we decoded as a 1, that we're not dealing
+		 * with a half bit (such as one caused by a stop bit), and configure the timer maximum period
+		 * to 3x the current max bit period, enabling overflow checking now we have an overflow target for
+		 * the timer
+		 */
+		bit_time = mark_period - ALLOWED_PERIOD_ERROR;
 		lastbit = 1;
-		halfbit = 0;
-		timer_set_period(TRACE_TIM, duty * 6U);
+		halfbit = false;
+		timer_set_period(TRACE_TIM, cycle_period * 3U);
 		timer_clear_flag(TRACE_TIM, TIM_SR_UIF);
 		timer_enable_irq(TRACE_TIM, TIM_DIER_UIE);
 	} else {
-		/* If high time is extended we need to flip the bit */
-		if (duty / bt > 1U) {
-			if (!halfbit) /* lost sync somehow */
+		/*
+		 * We know the period of a half cycle, so check that the half period of the new bit isn't too long.
+		 * If it is, then this was a bit flip (representing either a 0 -> 1, or 1 -> 0 transition).
+		 */
+		if (mark_period >= bit_time * 2U) {
+			/* If we're processing a half bit, then this probably actually means we lost sync */
+			if (!halfbit)
 				goto flush_and_reset;
-			halfbit = 0;
+			halfbit = false;
 			lastbit ^= 1U;
 		}
+		/* Store the new bit in the buffer and move along */
 		decbuf[decbuf_pos >> 3U] |= lastbit << (decbuf_pos & 7U);
 		++decbuf_pos;
 	}
 
-	if (!(status & TIM_SR_CC1IF) || (cycle - duty) / bt > 2)
+	if (!(status & TIM_SR_CC1IF) || (cycle_period - mark_period) / bit_time > 2)
 		goto flush_and_reset;
 
-	if ((cycle - duty) / bt > 1) {
+	if ((cycle_period - mark_period) / bit_time > 1) {
 		/* If low time extended we need to pack another bit. */
 		if (halfbit) /* this is a valid stop-bit or we lost sync */
 			goto flush_and_reset;
-		halfbit = 1;
+		halfbit = true;
 		lastbit ^= 1U;
 		decbuf[decbuf_pos >> 3U] |= lastbit << (decbuf_pos & 7U);
 		++decbuf_pos;
@@ -211,7 +233,7 @@ flush_and_reset:
 	timer_set_period(TRACE_TIM, -1);
 	timer_disable_irq(TRACE_TIM, TIM_DIER_UIE);
 	trace_buf_push(decbuf, decbuf_pos >> 3U);
-	bt = 0;
+	bit_time = 0;
 	decbuf_pos = 0;
 	memset(decbuf, 0, sizeof(decbuf));
 }
