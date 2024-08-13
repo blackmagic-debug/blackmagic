@@ -650,14 +650,9 @@ static bool cmd_traceswo_enable(int argc, const char **argv)
 
 static bool cmd_traceswo_disable(void)
 {
-#if TRACESWO_PROTOCOL == 2
 	traceswo_deinit();
 	gdb_out("Trace disabled\n");
 	return true;
-#else
-	gdb_out("Not implemented\n");
-	return false;
-#endif
 }
 
 static bool cmd_traceswo(target_s *t, int argc, const char **argv)

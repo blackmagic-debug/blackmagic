@@ -52,7 +52,7 @@ static bool decoding = false;
 static uint8_t trace_usb_buf[64];
 static uint8_t trace_usb_buf_size;
 
-void traceswo_init(uint32_t swo_chan_bitmask)
+void traceswo_init(const uint32_t swo_chan_bitmask)
 {
 	TRACE_TIM_CLK_EN();
 
@@ -94,7 +94,12 @@ void traceswo_init(uint32_t swo_chan_bitmask)
 #endif
 
 	traceswo_setmask(swo_chan_bitmask);
-	decoding = (swo_chan_bitmask != 0);
+	decoding = swo_chan_bitmask != 0;
+}
+
+void traceswo_deinit(void)
+{
+	timer_disable_counter(TRACE_TIM);
 }
 
 void trace_buf_push(uint8_t *buf, int len)

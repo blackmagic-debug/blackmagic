@@ -1,8 +1,10 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
- * Copyright (C) 2012  Black Sphere Technologies Ltd.
+ * Copyright (C) 2012 Black Sphere Technologies Ltd.
  * Written by Gareth McMullin <gareth@blacksphere.co.nz>
+ * Copyright (C) 2024 1BitSquared <info@1bitsquared.com>
+ * Modified by Rachel Mant <git@dragonmux.network>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,12 +29,12 @@
 /* Default line rate, used as default for a request without baudrate */
 #define SWO_DEFAULT_BAUD 2250000U
 void traceswo_init(uint32_t baudrate, uint32_t swo_chan_bitmask);
-void traceswo_deinit(void);
 uint32_t traceswo_get_baudrate(void);
 void bmd_usart_set_baudrate(uint32_t usart, uint32_t baud_rate);
 #else
 void traceswo_init(uint32_t swo_chan_bitmask);
 #endif
+void traceswo_deinit(void);
 
 void trace_buf_drain(usbd_device *dev, uint8_t ep);
 
