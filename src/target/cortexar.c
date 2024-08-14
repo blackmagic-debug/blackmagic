@@ -1642,7 +1642,15 @@ static int cortexar_breakwatch_set(target_s *const target, breakwatch_s *const b
 {
 	cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
 
-	switch (breakwatch->type) {
+	/* 
+	 * Redirect soft to hard breakpoints (until soft breakpoints are working?)
+	 * GDB automatically selects soft breakpoints when an address is in RAM. This
+	 * code is needed to allow breakpoints to work when the break type can't be
+	 * configured in a GDB frontend (eg: in cortex-debug for VSCode).
+	 */
+	target_breakwatch_e bw_type = breakwatch->type == TARGET_BREAK_SOFT ? TARGET_BREAK_HARD : breakwatch->type;
+
+	switch (bw_type) {
 	case TARGET_BREAK_HARD: {
 		/* First try and find a unused breakpoint slot */
 		size_t breakpoint = 0;
@@ -1694,7 +1702,15 @@ static int cortexar_breakwatch_clear(target_s *const target, breakwatch_s *const
 {
 	cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
 
-	switch (breakwatch->type) {
+	/* 
+	 * Redirect soft to hard breakpoints (until soft breakpoints are working?)
+	 * GDB automatically selects soft breakpoints when an address is in RAM. This
+	 * code is needed to allow breakpoints to work when the break type can't be
+	 * configured in a GDB frontend (eg: in cortex-debug for VSCode).
+	 */
+	target_breakwatch_e bw_type = breakwatch->type == TARGET_BREAK_SOFT ? TARGET_BREAK_HARD : breakwatch->type;
+
+	switch (bw_type) {
 	case TARGET_BREAK_HARD: {
 		/* Clear the breakpoint slot this used */
 		const size_t breakpoint = breakwatch->reserved[0];
