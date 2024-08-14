@@ -55,8 +55,15 @@
 /* SWO decoding */
 static bool decoding = false;
 
-static uint8_t trace_usb_buf[64];
+/* Buffer and fill level for USB */
+static uint8_t trace_usb_buf[64U];
 static uint8_t trace_usb_buf_size;
+
+/* Manchester bit capture buffer and current bit index */
+static uint8_t trace_data[16U];
+static uint8_t trace_data_bit_index = 0;
+/* Number of timer clock cycles that describe half a bit period as detected */
+static uint32_t trace_half_bit_period = 0U;
 
 void traceswo_init(const uint32_t swo_chan_bitmask)
 {
@@ -86,7 +93,7 @@ void traceswo_init(const uint32_t swo_chan_bitmask)
 	/* Enable capture interrupt */
 	nvic_set_priority(TRACE_IRQ, IRQ_PRI_TRACE);
 	nvic_enable_irq(TRACE_IRQ);
-	timer_enable_irq(TRACE_TIM, TIM_DIER_CC1IE);
+	timer_enable_irq(TRACE_TIM, TRACE_ITR_RISING);
 
 	/* Enable the capture channels */
 	timer_ic_enable(TRACE_TIM, TRACE_IC_RISING);
@@ -106,7 +113,13 @@ void traceswo_init(const uint32_t swo_chan_bitmask)
 
 void traceswo_deinit(void)
 {
+	/* Disable the timer capturing the incomming data stream */
 	timer_disable_counter(TRACE_TIM);
+	timer_slave_set_mode(TRACE_TIM, TIM_SMCR_SMS_OFF);
+
+	/* Reset state so that when init is called we wind up in a fresh capture state */
+	trace_data_bit_index = 0U;
+	trace_half_bit_period = 0U;
 }
 
 void trace_buf_push(uint8_t *buf, int len)
@@ -139,18 +152,15 @@ void trace_buf_drain(usbd_device *dev, uint8_t ep)
 
 void TRACE_ISR(void)
 {
-	static uint16_t bit_time = 0U;
 	static uint8_t lastbit;
-	static uint8_t decbuf[16U];
-	static uint8_t decbuf_pos;
 	static bool halfbit = false;
 	static bool notstart = false;
 	const uint16_t status = TIM_SR(TRACE_TIM);
 
 	/* Reset decoder state if capture overflowed */
-	if (status & (TIM_SR_CC1OF | TIM_SR_UIF)) {
-		timer_clear_flag(TRACE_TIM, TIM_SR_CC1OF | TIM_SR_UIF);
-		if (!(status & (TIM_SR_CC2IF | TIM_SR_CC1IF)))
+	if (status & (TRACE_STATUS_OVERFLOW | TIM_SR_UIF)) {
+		timer_clear_flag(TRACE_TIM, TRACE_STATUS_OVERFLOW | TIM_SR_UIF);
+		if (!(status & (TRACE_STATUS_RISING | TRACE_STATUS_FALLING)))
 			goto flush_and_reset;
 	}
 
@@ -158,14 +168,17 @@ void TRACE_ISR(void)
 	const uint32_t mark_period = TRACE_CC_FALLING;
 
 	/* Reset decoder state if crazy things happened */
-	if ((bit_time && (mark_period / bit_time > 2U || mark_period / bit_time == 0)) || mark_period == 0)
+	if ((trace_half_bit_period &&
+			(mark_period / trace_half_bit_period > 2U || mark_period / trace_half_bit_period == 0)) ||
+		mark_period == 0)
 		goto flush_and_reset;
 
-	if (!(status & TIM_SR_CC1IF))
+	/* Check if we're here for a reason other than a valid cycle capture */
+	if (!(status & TRACE_STATUS_RISING))
 		notstart = true;
 
 	/* If the bit time is not yet known */
-	if (bit_time == 0U) {
+	if (trace_half_bit_period == 0U) {
 		/* Are we here because we got an interrupt but not for the rising edge capture channel? */
 		if (notstart) {
 			/* We're are, so leave early */
@@ -173,13 +186,19 @@ void TRACE_ISR(void)
 			return;
 		}
 		/*
-		 * We're here because of the rising edge, so we've got our first bit.
+		 * We're here because of the rising edge, so we've got our first (start) bit.
 		 * Calculate the ratio of the mark period to the space period within a cycle
+		 *
+		 * At this point, the waveform for what's come in should look something like one of these two options:
+		 * ▁▁┊╱▔╲▁┊╱▔  ▁▁┊╱▔╲▁┊▁▁╱▔
+		 * The first sequence is the start bit followed by a 1, and the second is followed instead by a 0
 		 */
-		const uint32_t duty_ratio = cycle_period / (mark_period - ALLOWED_PERIOD_ERROR);
+		const uint32_t adjusted_mark_period = mark_period - ALLOWED_PERIOD_ERROR;
+		const uint32_t duty_ratio = cycle_period / adjusted_mark_period;
 		/*
 		 * Check that the duty cycle ratio is between 2:1 and 3:1, indicating an
-		 * aproximately even mark-to-space ratio
+		 * aproximately even mark-to-space ratio, taking into account the possibility of
+		 * the double space bit time caused by start + 0
 		 */
 		if (duty_ratio < 2U || duty_ratio > 3U)
 			return;
@@ -187,53 +206,59 @@ void TRACE_ISR(void)
 		 * Now we've established a valid duty cycle ratio, store the mark period as the bit timing and
 		 * initialise the capture engine: start with the last bit we decoded as a 1, that we're not dealing
 		 * with a half bit (such as one caused by a stop bit), and configure the timer maximum period
-		 * to 3x the current max bit period, enabling overflow checking now we have an overflow target for
+		 * to 6x the current max half bit period, enabling overflow checking now we have an overflow target for
 		 * the timer
 		 */
-		bit_time = mark_period - ALLOWED_PERIOD_ERROR;
+		trace_half_bit_period = adjusted_mark_period;
 		lastbit = 1;
 		halfbit = false;
-		timer_set_period(TRACE_TIM, cycle_period * 3U);
+		/* XXX: Need to make sure that this isn't setting a value outside the range of the timer */
+		timer_set_period(TRACE_TIM, mark_period * 6U);
 		timer_clear_flag(TRACE_TIM, TIM_SR_UIF);
 		timer_enable_irq(TRACE_TIM, TIM_DIER_UIE);
 	} else {
 		/*
 		 * We know the period of a half cycle, so check that the half period of the new bit isn't too long.
 		 * If it is, then this was a bit flip (representing either a 0 -> 1, or 1 -> 0 transition).
+		 *
+		 * 0 -> 1 transition: ▁▁╱▔┊▔▔╲▁
+		 * 1 -> 0 transition: ▔▔╲▁┊▁▁╱▔
 		 */
-		if (mark_period >= bit_time * 2U) {
+		if (mark_period >= trace_half_bit_period * 2U) {
 			/* If we're processing a half bit, then this probably actually means we lost sync */
 			if (!halfbit)
 				goto flush_and_reset;
 			halfbit = false;
 			lastbit ^= 1U;
 		}
+		/* If this would start a new byte in the data buffer, zero it to start with */
+		if ((trace_data_bit_index & 7U) == 0U)
+			trace_data[trace_data_bit_index >> 3U] = 0U;
 		/* Store the new bit in the buffer and move along */
-		decbuf[decbuf_pos >> 3U] |= lastbit << (decbuf_pos & 7U);
-		++decbuf_pos;
+		trace_data[trace_data_bit_index >> 3U] |= lastbit << (trace_data_bit_index & 7U);
+		++trace_data_bit_index;
 	}
 
-	if (!(status & TIM_SR_CC1IF) || (cycle_period - mark_period) / bit_time > 2)
+	if (!(status & TRACE_STATUS_RISING) || (cycle_period - mark_period) / trace_half_bit_period > 2)
 		goto flush_and_reset;
 
-	if ((cycle_period - mark_period) / bit_time > 1) {
+	if ((cycle_period - mark_period) / trace_half_bit_period > 1) {
 		/* If low time extended we need to pack another bit. */
 		if (halfbit) /* this is a valid stop-bit or we lost sync */
 			goto flush_and_reset;
 		halfbit = true;
 		lastbit ^= 1U;
-		decbuf[decbuf_pos >> 3U] |= lastbit << (decbuf_pos & 7U);
-		++decbuf_pos;
+		trace_data[trace_data_bit_index >> 3U] |= lastbit << (trace_data_bit_index & 7U);
+		++trace_data_bit_index;
 	}
 
-	if (decbuf_pos < 128U)
+	if (trace_data_bit_index < 128U)
 		return;
 
 flush_and_reset:
 	timer_set_period(TRACE_TIM, -1);
 	timer_disable_irq(TRACE_TIM, TIM_DIER_UIE);
-	trace_buf_push(decbuf, decbuf_pos >> 3U);
-	bit_time = 0;
-	decbuf_pos = 0;
-	memset(decbuf, 0, sizeof(decbuf));
+	trace_buf_push(trace_data, trace_data_bit_index >> 3U);
+	trace_data_bit_index = 0;
+	trace_half_bit_period = 0;
 }
