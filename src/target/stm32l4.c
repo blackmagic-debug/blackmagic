@@ -575,7 +575,7 @@ static uint32_t stm32l4_main_sram_length(const target_s *const target)
 	return (device->sram1 + device->sram2 + device->sram3) * 1024U;
 }
 
-static bool stm32l4_configure_dbgmcu(target_s *const target, const stm32l4_device_info_s *device)
+static bool stm32l4_configure_dbgmcu(target_s *const target, const stm32l4_device_info_s *const device)
 {
 	/* If we're in the probe phase */
 	if (target->target_storage == NULL) {
@@ -603,7 +603,7 @@ static bool stm32l4_configure_dbgmcu(target_s *const target, const stm32l4_devic
 	 * Now we have a stable debug environment, make sure the WDTs can't bonk the processor out from under us,
 	 * then Reconfigure the config register to prevent WFI/WFE from cutting debug access
 	 */
-	if (device->family == STM32L4_FAMILY_L55x || device->family == STM32L4_FAMILY_U5xx) {
+	if (priv->device->family == STM32L4_FAMILY_L55x || priv->device->family == STM32L4_FAMILY_U5xx) {
 		target_mem32_write32(
 			target, STM32L5_DBGMCU_APB1FREEZE1, STM32L4_DBGMCU_APB1FREEZE1_IWDG | STM32L4_DBGMCU_APB1FREEZE1_WWDG);
 		target_mem32_write32(target, STM32L5_DBGMCU_CONFIG,
