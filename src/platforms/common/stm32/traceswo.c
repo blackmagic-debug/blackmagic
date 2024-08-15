@@ -105,6 +105,8 @@ void traceswo_init(const uint32_t swo_chan_bitmask)
 	/* Enable the capture channels */
 	timer_ic_enable(TRACE_TIM, TRACE_IC_RISING);
 	timer_ic_enable(TRACE_TIM, TRACE_IC_FALLING);
+	/* Set the period to an improbable value */
+	timer_set_period(TRACE_TIM, UINT32_MAX);
 
 	/* Configure the capture decoder and state, then enable the timer */
 	traceswo_setmask(swo_chan_bitmask);
@@ -160,9 +162,7 @@ void trace_buf_drain(usbd_device *dev, uint8_t ep)
 
 void TRACE_ISR(void)
 {
-	static uint8_t lastbit;
-	static bool halfbit = false;
-	static bool notstart = false;
+	static uint8_t bit_value;
 	const uint16_t status = TIM_SR(TRACE_TIM);
 
 	/* Reset decoder state if capture overflowed */
@@ -174,6 +174,7 @@ void TRACE_ISR(void)
 
 	const uint32_t cycle_period = TRACE_CC_RISING;
 	const uint32_t mark_period = TRACE_CC_FALLING;
+	const uint32_t space_period = cycle_period - mark_period;
 
 	/* Reset decoder state if crazy things happened */
 	if ((trace_half_bit_period &&
@@ -181,18 +182,12 @@ void TRACE_ISR(void)
 		mark_period == 0)
 		goto flush_and_reset;
 
-	/* Check if we're here for a reason other than a valid cycle capture */
-	if (!(status & TRACE_STATUS_RISING))
-		notstart = true;
-
 	/* If the bit time is not yet known */
 	if (trace_half_bit_period == 0U) {
 		/* Are we here because we got an interrupt but not for the rising edge capture channel? */
-		if (notstart) {
+		if (!(status & TRACE_STATUS_RISING))
 			/* We're are, so leave early */
-			notstart = false;
 			return;
-		}
 		/*
 		 * We're here because of the rising edge, so we've got our first (start) bit.
 		 * Calculate the ratio of the mark period to the space period within a cycle
@@ -212,59 +207,101 @@ void TRACE_ISR(void)
 			return;
 		/*
 		 * Now we've established a valid duty cycle ratio, store the mark period as the bit timing and
-		 * initialise the capture engine: start with the last bit we decoded as a 1, that we're not dealing
-		 * with a half bit (such as one caused by a stop bit), and configure the timer maximum period
-		 * to 6x the current max half bit period, enabling overflow checking now we have an overflow target for
-		 * the timer
+		 * initialise the capture engine: check whether we captured, the start of a 0 bit to set the next
+		 * bit value, and configure the timer maximum period to 6x the current max half bit period, enabling
+		 * overflow checking now we have an overflow target for the timer
 		 */
 		trace_half_bit_period = adjusted_mark_period;
-		lastbit = 1;
-		halfbit = false;
+		bit_value = space_period >= trace_half_bit_period * 2U ? 0U : 1U;
 		/* XXX: Need to make sure that this isn't setting a value outside the range of the timer */
 		timer_set_period(TRACE_TIM, mark_period * 6U);
-		timer_clear_flag(TRACE_TIM, TIM_SR_UIF);
+		timer_clear_flag(TRACE_TIM, TIM_SR_UIF | TRACE_STATUS_OVERFLOW);
 		timer_enable_irq(TRACE_TIM, TIM_DIER_UIE);
 	} else {
 		/*
-		 * We know the period of a half cycle, so check that the half period of the new bit isn't too long.
-		 * If it is, then this was a bit flip (representing either a 0 -> 1, or 1 -> 0 transition).
+		 * We start off needing to store a newly captured bit - the value of which is determined in the *previous*
+		 * traversal of this function. We don't yet worry about whether we're starting half way through a bit or not.
 		 *
-		 * 0 -> 1 transition: ▁▁╱▔┊▔▔╲▁
-		 * 1 -> 0 transition: ▔▔╲▁┊▁▁╱▔
+		 * If this would start a new byte in the data buffer, zero it to start with
 		 */
-		if (mark_period >= trace_half_bit_period * 2U) {
-			/* If we're processing a half bit, then this probably actually means we lost sync */
-			if (!halfbit)
-				goto flush_and_reset;
-			halfbit = false;
-			lastbit ^= 1U;
-		}
-		/* If this would start a new byte in the data buffer, zero it to start with */
 		if ((trace_data_bit_index & 7U) == 0U)
 			trace_data[trace_data_bit_index >> 3U] = 0U;
 		/* Store the new bit in the buffer and move along */
-		trace_data[trace_data_bit_index >> 3U] |= lastbit << (trace_data_bit_index & 7U);
+		trace_data[trace_data_bit_index >> 3U] |= bit_value << (trace_data_bit_index & 7U);
 		++trace_data_bit_index;
+
+		/*
+		 * Having stored a bit, check if we've got a long cycle period - this can happen due to any sequence
+		 * involving at least one bit transition (0 -> 1, 1 -> 0), or a 1 -> STOP sequence:
+		 * 0 -> 1:    ▁▁╱▔┊▔▔╲▁
+		 * 1 -> 0:    ▔▔╲▁┊▁▁╱▔
+		 * 1 -> STOP: ▔▔╲▁┊▁▁▁▁
+		 *
+		 * An even longer non-stop cycle time occurs when a 0 -> 1 -> 0 sequence is encountered:
+		 * ▁▁╱▔┊▔▔╲▁┊▁▁╱▔
+		 *
+		 * All of these cases need special handling and can appear to this decoder as part of one of the following:
+		 * 0 -> 1 -> 0:    ▁▁╱▔┊▔▔╲▁┊▁▁╱▔ (4x half bit periods)
+		 * 0 -> 1 -> 1:    ▁▁╱▔┊▔▔╲▁┊╱▔╲▁ (3x half bit periods)
+		 * 0 -> 1 -> STOP: ▁▁╱▔┊▔▔╲▁┊▁▁▁▁
+		 * 1 -> 1 -> 0:    ▔▔╲▁┊╱▔╲▁┊▁▁╱▔ (3x half bit periods)
+		 * 1 -> 1 -> STOP: ▔▔╲▁┊╱▔╲▁┊▁▁▁▁
+		 * 1 -> 0 -> STOP: ▔▔╲▁┊▁▁╱▔┊╲▁▁▁
+		 *
+		 * The bit write that has already occured deals with the lead-in part of all of these.
+		 */
+		if (cycle_period >= trace_half_bit_period * 3U) {
+			/*
+			 * Having determined that we're in a long cycle, we need to figure out which kind.
+			 * If the mark period is short, then whether we're starting half way into a bit determines
+			 * if the next is a 1 (not half way in) or a 0 (half way in). This copies the current bit value.
+			 * If the mark period is long, then this can only occur from a 0 -> 1 transition where we're
+			 * half way into the cycle. Anything else indicates a fault occured.
+			 */
+			if (mark_period >= trace_half_bit_period * 2U) {
+				if (bit_value == 1U)
+					goto flush_and_reset; /* Something bad happened and we lost sync */
+				bit_value = 1U;
+			}
+
+			/*
+			 * We now know the value of the extra bit, if it's from anything other than a short mark, long space,
+			 * then we need to store that next bit.
+			 */
+			if (mark_period >= trace_half_bit_period * 2U || space_period < trace_half_bit_period * 2U) {
+				/* If this would overflow the buffer, then do nothing */
+				if (trace_data_bit_index < 128U) {
+					/* If this would start a new byte in the data buffer, zero it to start with */
+					if ((trace_data_bit_index & 7U) == 0U)
+						trace_data[trace_data_bit_index >> 3U] = 0U;
+					/* Store the new bit in the buffer and move along */
+					trace_data[trace_data_bit_index >> 3U] |= bit_value << (trace_data_bit_index & 7U);
+					++trace_data_bit_index;
+				}
+			}
+			/* If it's a long space, we just saw a 1 -> 0 transition */
+			if (space_period >= trace_half_bit_period * 2U) {
+				/* Unless of course this was acompanied by a short mark period, in which case it's a STOP bit */
+				if (bit_value == 0U)
+					goto flush_and_reset;
+				bit_value = 0U;
+			}
+
+			/*
+			 * We've now written enough data to the buffer, so we have one final check:
+			 * If the cycle has a long space, we need to determine how long to check for STOP bits.
+			 */
+			if (space_period >= trace_half_bit_period * 3U)
+				goto flush_and_reset;
+		}
 	}
 
-	if (!(status & TRACE_STATUS_RISING) || (cycle_period - mark_period) / trace_half_bit_period > 2)
-		goto flush_and_reset;
-
-	if ((cycle_period - mark_period) / trace_half_bit_period > 1) {
-		/* If low time extended we need to pack another bit. */
-		if (halfbit) /* this is a valid stop-bit or we lost sync */
-			goto flush_and_reset;
-		halfbit = true;
-		lastbit ^= 1U;
-		trace_data[trace_data_bit_index >> 3U] |= lastbit << (trace_data_bit_index & 7U);
-		++trace_data_bit_index;
-	}
-
+	/* If the buffer is not full, and we haven't encountered a STOP bit, we're done here */
 	if (trace_data_bit_index < 128U)
 		return;
 
 flush_and_reset:
-	timer_set_period(TRACE_TIM, -1);
+	timer_set_period(TRACE_TIM, UINT32_MAX);
 	timer_disable_irq(TRACE_TIM, TIM_DIER_UIE);
 	trace_buf_push(trace_data, trace_data_bit_index >> 3U);
 	trace_data_bit_index = 0;
