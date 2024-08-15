@@ -77,6 +77,7 @@
 #define RENESAS_OCRAM_BASE        0x20000000U
 #define RENESAS_OCRAM_MIRROR_BASE 0x60000000U
 #define RENESAS_OCRAM_SIZE        0x00200000U
+#define RENESAS_OCRAM_SIZE_A1L    0x00300000U
 /* Base address and max size for the SPI Flash XIP region */
 #define RENESAS_SPI_FLASH_BASE 0x18000000U
 #define RENESAS_SPI_FLASH_SIZE 0x04000000U
@@ -139,6 +140,7 @@
 #define ID_RZ_A1 0x012U
 
 static const char *renesas_rz_part_name(uint32_t part_id);
+static uint32_t renesas_rz_ram_size(const uint32_t part_id);
 static bool renesas_rz_flash_prepare(target_s *target);
 static bool renesas_rz_flash_resume(target_s *target);
 static void renesas_rz_spi_read(target_s *target, uint16_t command, target_addr_t address, void *buffer, size_t length);
@@ -183,8 +185,8 @@ bool renesas_rz_probe(target_s *const target)
 	if (boot_mode == RENESAS_BSCAN_BOOT_MODE_SPI)
 		renesas_rz_add_flash(target);
 
-	target_add_ram32(target, RENESAS_OCRAM_BASE, RENESAS_OCRAM_SIZE);
-	target_add_ram32(target, RENESAS_OCRAM_MIRROR_BASE, RENESAS_OCRAM_SIZE);
+	target_add_ram32(target, RENESAS_OCRAM_BASE, renesas_rz_ram_size(part_id));
+	target_add_ram32(target, RENESAS_OCRAM_MIRROR_BASE, renesas_rz_ram_size(part_id));
 	return true;
 }
 
@@ -200,6 +202,17 @@ static const char *renesas_rz_part_name(const uint32_t part_id)
 		return "RZ/A1";
 	}
 	return "Unknown";
+}
+
+static uint32_t renesas_rz_ram_size(const uint32_t part_id)
+{
+	switch (part_id) {
+	case RENESAS_BSCAN_BSID_RZ_A1L:
+		return RENESAS_OCRAM_SIZE_A1L;
+	case RENESAS_BSCAN_BSID_RZ_A1LU:
+		return RENESAS_OCRAM_SIZE_A1L;
+	}
+	return RENESAS_OCRAM_SIZE;
 }
 
 static bool renesas_rz_flash_prepare(target_s *const target)
