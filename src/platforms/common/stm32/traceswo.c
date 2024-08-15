@@ -69,8 +69,15 @@ void traceswo_init(const uint32_t swo_chan_bitmask)
 {
 	/* Make sure the timer block is clocked on platforms that don't do this in their `platform_init()` */
 	TRACE_TIM_CLK_EN();
+
+#if defined(STM32F4) || defined(STM32F0) || defined(STM32F3)
+	/* Set any required pin alt-function configuration - TIM3/TIM4/TIM5 are AF2 */
+	gpio_mode_setup(SWO_PORT, GPIO_MODE_AF, GPIO_PUPD_NONE, SWO_PIN);
+	gpio_set_af(SWO_PORT, SWO_TIM_PIN_AF, SWO_PIN);
+#else
 	/* Then make sure the IO pin used is properly set up as an input routed to the timer */
 	gpio_set_mode(SWO_PORT, GPIO_MODE_INPUT, GPIO_CNF_INPUT_FLOAT, SWO_PIN);
+#endif
 
 	/*
 	 * Start setting the timer block up by picking a pair of cross-linked capture channels suitable for the input,
@@ -99,16 +106,10 @@ void traceswo_init(const uint32_t swo_chan_bitmask)
 	timer_ic_enable(TRACE_TIM, TRACE_IC_RISING);
 	timer_ic_enable(TRACE_TIM, TRACE_IC_FALLING);
 
-	timer_enable_counter(TRACE_TIM);
-
-#if defined(STM32F4) || defined(STM32F0) || defined(STM32F3)
-	/* AF2: TIM3/TIM4/TIM5 */
-	gpio_mode_setup(TDO_PORT, GPIO_MODE_AF, GPIO_PUPD_NONE, TDO_PIN);
-	gpio_set_af(TDO_PORT, TRACE_TIM_PIN_AF, TDO_PIN);
-#endif
-
+	/* Configure the capture decoder and state, then enable the timer */
 	traceswo_setmask(swo_chan_bitmask);
 	decoding = swo_chan_bitmask != 0;
+	timer_enable_counter(TRACE_TIM);
 }
 
 void traceswo_deinit(void)
@@ -120,6 +121,13 @@ void traceswo_deinit(void)
 	/* Reset state so that when init is called we wind up in a fresh capture state */
 	trace_data_bit_index = 0U;
 	trace_half_bit_period = 0U;
+
+#if defined(STM32F4) || defined(STM32F0) || defined(STM32F3)
+	gpio_mode_setup(SWO_PORT, GPIO_MODE_INPUT, GPIO_PUPD_NONE, SWO_PIN);
+#else
+	/* Put the GPIO back into normal service as TDO */
+	gpio_set_mode(SWO_PORT, GPIO_MODE_INPUT, GPIO_CNF_INPUT_FLOAT, SWO_PIN);
+#endif
 }
 
 void trace_buf_push(uint8_t *buf, int len)
