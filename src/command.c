@@ -210,6 +210,7 @@ bool cmd_help(target_s *t, int argc, const char **argv)
 		for (const command_s *cmd = cmd_list; cmd->cmd; cmd++)
 			gdb_outf("\t%s -- %s\n", cmd->cmd, cmd->help);
 #ifdef PLATFORM_HAS_CUSTOM_COMMANDS
+		gdb_out("Platform commands:\n");
 		for (const command_s *cmd = platform_cmd_list; cmd->cmd; ++cmd)
 			gdb_outf("\t%s -- %s\n", cmd->cmd, cmd->help);
 #endif
