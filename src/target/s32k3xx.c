@@ -23,8 +23,6 @@
  * the XML memory map and Flash memory programming.
  */
 
-#include <assert.h>
-
 #include "command.h"
 #include "general.h"
 #include "target.h"
@@ -250,8 +248,6 @@ static bool s32k3xx_flash_erase(target_flash_s *const flash, target_addr_t addr,
 
 static bool s32k3xx_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t len)
 {
-	assert(len == flash->writesize);
-
 	const uint32_t *const s_data = src;
 	s32k3xx_flash_prepare(flash);
 	target_mem32_write32(flash->t, PFCPGM_PEADR_L, dest);
