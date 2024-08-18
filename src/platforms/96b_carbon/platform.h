@@ -28,7 +28,6 @@
 #include "timing_stm32.h"
 #include "version.h"
 
-#define PLATFORM_HAS_TRACESWO
 #define PLATFORM_IDENT "(Carbon)"
 
 /*
@@ -86,14 +85,12 @@
 #define USB_ISR    otg_fs_isr
 /*
  * Interrupt priorities. Low numbers are high priority.
- * TIM3 is used for traceswo capture and must be highest priority.
  * USBUSART can be lowest priority as it is using DMA to transfer
  * data to the buffer and thus is less critical than USB.
  */
 #define IRQ_PRI_USB          (1U << 4U)
 #define IRQ_PRI_USBUSART     (2U << 4U)
 #define IRQ_PRI_USBUSART_DMA (2U << 4U)
-#define IRQ_PRI_TRACE        (0U << 4U)
 
 #define USBUSART               USART2
 #define USBUSART_CR1           USART2_CR1
@@ -122,11 +119,6 @@
 		gpio_set_af(USBUSART_TX_PORT, GPIO_AF7, USBUSART_TX_PIN);                         \
 		gpio_set_af(USBUSART_RX_PORT, GPIO_AF7, USBUSART_RX_PIN);                         \
 	} while (0)
-
-#define TRACE_TIM          TIM3
-#define TRACE_TIM_CLK_EN() rcc_periph_clock_enable(RCC_TIM3)
-#define TRACE_IRQ          NVIC_TIM3_IRQ
-#define TRACE_ISR(x)       tim3_isr(x)
 
 #define DEBUG(...) \
 	do {           \

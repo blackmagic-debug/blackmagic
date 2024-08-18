@@ -17,8 +17,6 @@ VPATH += platforms/common/stm32
 
 SRC +=               \
 	platform.c \
-	traceswodecode.c \
-	traceswo.c	\
 	serialno.c	\
 	timing.c	\
 	timing_stm32.c
