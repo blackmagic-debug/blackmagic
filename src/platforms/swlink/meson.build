@@ -42,6 +42,7 @@ probe_swlink_dfu_sources = files(
 
 probe_swlink_args = [
 	'-DDFU_SERIAL_LENGTH=9',
+	'-DTRACESWO_PROTOCOL=2',
 ]
 
 probe_swlink_common_link_args = [

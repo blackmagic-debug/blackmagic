@@ -53,6 +53,7 @@ probe_blackpill_load_address = bmd_bootloader ? '0x08004000' : '0x08000000'
 probe_blackpill_args = [
 	f'-DDFU_SERIAL_LENGTH=@probe_blackpill_dfu_serial_length@',
 	f'-DAPP_START=@probe_blackpill_load_address@',
+	'-DTRACESWO_PROTOCOL=2',
 ]
 
 blackpill_alternative_pinout = get_option('alternative_pinout')

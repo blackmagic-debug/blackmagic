@@ -71,8 +71,11 @@ stlink_swim_nrst_as_uart = get_option('stlink_swim_nrst_as_uart')
 
 if probe == 'stlink' and stlink_swim_nrst_as_uart
 	probe_stlink_args += ['-DSWIM_NRST_AS_UART=1']
+	probe_stlink_dependencies += fixme_platform_stm32_traceswo
+	probe_stlink_args += ['-DTRACESWO_PROTOCOL=1']
 else
 	probe_stlink_dependencies += fixme_platform_stm32_traceswoasync
+	probe_stlink_args += ['-DTRACESWO_PROTOCOL=2']
 endif
 
 probe_host = declare_dependency(
