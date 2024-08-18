@@ -173,10 +173,14 @@
 #define IRQ_PRI_USBUSART_DMA (2U << 4U)
 #define IRQ_PRI_TRACE        (0U << 4U)
 
+/* Use TIM3 Input 2 (from PC7/TDO) AF2, trigger on Rising Edge */
 #define TRACE_TIM          TIM3
 #define TRACE_TIM_CLK_EN() rcc_periph_clock_enable(RCC_TIM3)
 #define TRACE_IRQ          NVIC_TIM3_IRQ
 #define TRACE_ISR(x)       tim3_isr(x)
+#define TRACE_IC_IN        TIM_IC_IN_TI2
+#define TRACE_TRIG_IN      TIM_SMCR_TS_TI1FP1
+#define TRACE_TIM_PIN_AF   GPIO_AF2
 
 #define SET_RUN_STATE(state)      \
 	{                             \
