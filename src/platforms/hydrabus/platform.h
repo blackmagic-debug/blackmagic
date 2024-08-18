@@ -124,10 +124,14 @@
 /* For STM32F4 DMA trigger source must be specified */
 #define USBUSART_DMA_TRG DMA_SxCR_CHSEL_4
 
+/* Use TIM3 Input 1 (from PC6), AF2, trigger on Rising Edge. FIXME: TDO is on PC2. */
 #define TRACE_TIM          TIM3
 #define TRACE_TIM_CLK_EN() rcc_periph_clock_enable(RCC_TIM3)
 #define TRACE_IRQ          NVIC_TIM3_IRQ
 #define TRACE_ISR(x)       tim3_isr(x)
+#define TRACE_IC_IN        TIM_IC_IN_TI1
+#define TRACE_TRIG_IN      TIM_SMCR_TS_TI1FP1
+#define TRACE_TIM_PIN_AF   GPIO_AF2
 
 #define SET_RUN_STATE(state)      \
 	{                             \
