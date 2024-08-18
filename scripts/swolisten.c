@@ -40,8 +40,7 @@
 
 #define VID       (0x1d50)
 #define PID       (0x6018)
-#define INTERFACE (5)
-#define ENDPOINT  (0x85)
+#define IFACE_STR "Black Magic Trace Capture"
 
 #define TRANSFER_SIZE (64)
 #define NUM_FIFOS     32
@@ -417,6 +416,7 @@ int usbFeeder(void)
   unsigned char cbw[TRANSFER_SIZE];
   libusb_device_handle *handle;
   libusb_device *dev;
+  struct libusb_config_descriptor *config;
   int size;
 
   while (1)
@@ -435,10 +435,36 @@ int usbFeeder(void)
       if (!(dev = libusb_get_device(handle)))
 	continue;
 
-      if (libusb_claim_interface (handle, INTERFACE)<0)
+      uint8_t bmp_interface = 0;
+      uint8_t bmp_endpoint = 0;
+
+      if (libusb_get_active_config_descriptor(dev, &config) < 0)
 	continue;
 
-      while (0==libusb_bulk_transfer(handle, ENDPOINT, cbw, TRANSFER_SIZE, &size, 10))
+      int interface_found = 0;
+      for (uint8_t if_num = 0; if_num < config->bNumInterfaces && !interface_found; if_num++) {
+	  for (int alt_num = 0; alt_num < config->interface[if_num].num_altsetting && !interface_found; alt_num++) {
+	    const struct libusb_interface_descriptor *i = &config->interface[if_num].altsetting[alt_num];
+	    char itfString[256] = {0};
+
+	    int ret = libusb_get_string_descriptor_ascii(handle, i->iInterface, (unsigned char*)itfString, 256);
+	    if (ret < 0)
+	      continue;
+	    if (strcmp (itfString, IFACE_STR) != 0)
+	      continue;
+
+	    bmp_interface = i->bInterfaceNumber;
+	    bmp_endpoint = i->endpoint[0].bEndpointAddress;
+	    interface_found = 1;
+	  }
+      }
+
+      libusb_free_config_descriptor(config);
+
+      if (libusb_claim_interface (handle, bmp_interface)<0)
+	continue;
+
+      while (0==libusb_bulk_transfer(handle, bmp_endpoint, cbw, TRANSFER_SIZE, &size, 10))
 	{
 	  unsigned char *c=cbw;
           if (options.dump)
