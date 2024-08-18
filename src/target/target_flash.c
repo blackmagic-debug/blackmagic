@@ -300,7 +300,7 @@ bool target_flash_write(target_s *target, target_addr_t dest, const void *src, s
 
 bool target_flash_complete(target_s *target)
 {
-	if (!target->flash_mode)
+	if (!target || !target->flash_mode)
 		return false;
 
 	bool result = true; /* Catch false returns with &= */
