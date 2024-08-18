@@ -125,6 +125,9 @@
 #define TRACE_TIM_CLK_EN() rcc_periph_clock_enable(RCC_TIM3)
 #define TRACE_IRQ          NVIC_TIM3_IRQ
 #define TRACE_ISR          tim3_isr
+#define TRACE_IC_IN        TIM_IC_IN_TI1
+#define TRACE_TRIG_IN      TIM_SMCR_TS_TI1FP1
+#define TRACE_TIM_PIN_AF   GPIO_AF2
 
 #if ENABLE_DEBUG == 1
 extern bool debug_bmp;
