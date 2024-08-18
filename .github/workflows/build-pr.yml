@@ -97,7 +97,7 @@ jobs:
 
       # Build the firmware for all platform variants and BMDA in BMP-only mode
       - name: Build all platform variants firmware and BMP only BMDA
-        run: make all_platforms HOSTED_BMP_ONLY=1
+        run: make all_platforms HOSTED_BMP_ONLY=1 -j$(nproc) -Otarget
 
       - name: Clean
         run: make clean
@@ -105,23 +105,23 @@ jobs:
       # Build all the firmware variants that have more than 128kiB of Flash, with RTT enabled
       - name: Build firmware with RTT
         run: |
-          make PROBE_HOST=96b_carbon ENABLE_RTT=1
+          make PROBE_HOST=96b_carbon ENABLE_RTT=1 -j$(nproc) -Otarget
           make -C src clean
-          make PROBE_HOST=blackpill-f401cc ENABLE_RTT=1
+          make PROBE_HOST=blackpill-f401cc ENABLE_RTT=1 -j$(nproc) -Otarget
           make -C src clean
-          make PROBE_HOST=blackpill-f401ce ENABLE_RTT=1
+          make PROBE_HOST=blackpill-f401ce ENABLE_RTT=1 -j$(nproc) -Otarget
           make -C src clean
-          make PROBE_HOST=blackpill-f411ce ENABLE_RTT=1
+          make PROBE_HOST=blackpill-f411ce ENABLE_RTT=1 -j$(nproc) -Otarget
           make -C src clean
-          make PROBE_HOST=f3 ENABLE_RTT=1
+          make PROBE_HOST=f3 ENABLE_RTT=1 -j$(nproc) -Otarget
           make -C src clean
-          make PROBE_HOST=f4discovery ENABLE_RTT=1
+          make PROBE_HOST=f4discovery ENABLE_RTT=1 -j$(nproc) -Otarget
           make -C src clean
-          make PROBE_HOST=hydrabus ENABLE_RTT=1
+          make PROBE_HOST=hydrabus ENABLE_RTT=1 -j$(nproc) -Otarget
           make -C src clean
-          make PROBE_HOST=launchpad-icdi ENABLE_RTT=1
+          make PROBE_HOST=launchpad-icdi ENABLE_RTT=1 -j$(nproc) -Otarget
           make -C src clean
-          make PROBE_HOST=stlinkv3 ENABLE_RTT=1
+          make PROBE_HOST=stlinkv3 ENABLE_RTT=1 -j$(nproc) -Otarget
 
       - name: Clean
         run: make clean
@@ -132,7 +132,7 @@ jobs:
 
       # And build that full binary
       - name: Build full BMDA binary
-        run: make PROBE_HOST=hosted HOSTED_BMP_ONLY=0
+        run: make PROBE_HOST=hosted HOSTED_BMP_ONLY=0 -j$(nproc) -Otarget
 
   build-windows-msvc:
     # Name the job more appropriately so we can tell which VS version is in use
