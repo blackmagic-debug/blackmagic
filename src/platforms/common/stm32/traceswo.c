@@ -52,6 +52,10 @@
 /* How many timer clock cycles the half period of a cycle of the SWO signal is allowed to be off by */
 #define ALLOWED_PERIOD_ERROR 5U
 
+#define TIM_SR_MASK                                                                                       \
+	(TIM_SR_UIF | TIM_SR_CC1IF | TIM_SR_CC2IF | TIM_SR_CC3IF | TIM_SR_CC4IF | TIM_SR_TIF | TIM_SR_CC1OF | \
+		TIM_SR_CC2OF | TIM_SR_CC3OF | TIM_SR_CC4OF)
+
 /* SWO decoding */
 static bool decoding = false;
 
@@ -105,6 +109,8 @@ void traceswo_init(const uint32_t swo_chan_bitmask)
 	/* Enable the capture channels */
 	timer_ic_enable(TRACE_TIM, TRACE_IC_RISING);
 	timer_ic_enable(TRACE_TIM, TRACE_IC_FALLING);
+	/* Make sure all the status register bits are cleared prior to enabling the counter */
+	timer_clear_flag(TRACE_TIM, TIM_SR_MASK);
 	/* Set the period to an improbable value */
 	timer_set_period(TRACE_TIM, UINT32_MAX);
 
@@ -165,21 +171,22 @@ void TRACE_ISR(void)
 	static uint8_t bit_value;
 	const uint16_t status = TIM_SR(TRACE_TIM);
 
-	/* Reset decoder state if capture overflowed */
-	if (status & (TRACE_STATUS_OVERFLOW | TIM_SR_UIF)) {
-		timer_clear_flag(TRACE_TIM, TRACE_STATUS_OVERFLOW | TIM_SR_UIF);
-		if (!(status & (TRACE_STATUS_RISING | TRACE_STATUS_FALLING)))
-			goto flush_and_reset;
+	const uint32_t cycle_period = TRACE_CC_RISING;
+	/* Check that we entered the handler because of a fresh trigger but have not yet had a chance to capture data */
+	if ((status & TRACE_STATUS_RISING) && cycle_period == 0U) {
+		/* Clear the rising edge flag and wait for it to set again */
+		timer_clear_flag(TRACE_TIM, TRACE_STATUS_RISING | TRACE_STATUS_FALLING | TRACE_STATUS_OVERFLOW);
+		return;
 	}
 
-	const uint32_t cycle_period = TRACE_CC_RISING;
+	timer_clear_flag(TRACE_TIM, TRACE_STATUS_RISING | TRACE_STATUS_FALLING | TRACE_STATUS_OVERFLOW | TIM_SR_UIF);
+
 	const uint32_t mark_period = TRACE_CC_FALLING;
 	const uint32_t space_period = cycle_period - mark_period;
 
 	/* Reset decoder state if crazy things happened */
-	if ((trace_half_bit_period &&
-			(mark_period / trace_half_bit_period > 2U || mark_period / trace_half_bit_period == 0)) ||
-		mark_period == 0)
+	if (cycle_period <= mark_period || (trace_half_bit_period && mark_period < trace_half_bit_period) ||
+		mark_period == 0U)
 		goto flush_and_reset;
 
 	/* If the bit time is not yet known */
