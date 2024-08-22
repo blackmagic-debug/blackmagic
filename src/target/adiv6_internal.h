@@ -36,6 +36,16 @@
 
 #include "adiv5_internal.h"
 
+#define ADIV6_AP_REG(x) ADIV5_AP_REG(((x) & 0x00ffU) | (((x) & 0x0f00U) << 4U))
+
+/* CoreSight ROM registers */
+#define CORESIGHT_ROM_DEVID ADIV6_AP_REG(0x0fc8U)
+
+#define CORESIGHT_ROM_DEVID_FORMAT       (0xfU << 0U)
+#define CORESIGHT_ROM_DEVID_FORMAT_32BIT 0U
+#define CORESIGHT_ROM_DEVID_FORMAT_64BIT 1U
+#define CORESIGHT_ROM_DEVID_SYSMEM       (1U << 4U)
+
 typedef struct adiv6_access_port {
 	adiv5_access_port_s base;
 	target_addr64_t ap_address;

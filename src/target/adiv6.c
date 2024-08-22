@@ -115,6 +115,32 @@ static uint64_t adiv6_dp_read_pidr(adiv6_access_port_s *const ap)
 	return ((uint64_t)pidr_upper << 32U) | (uint64_t)pidr_lower;
 }
 
+static bool adiv6_parse_coresight_v0_rom_table(
+	adiv6_access_port_s *const base_ap, const target_addr64_t base_address, const uint64_t pidr)
+{
+#ifdef DEBUG_INFO_IS_NOOP
+	(void)pidr;
+#else
+	/* Extract the designer code and part number from the part ID register */
+	const uint16_t designer_code = adiv5_designer_from_pidr(pidr);
+	const uint16_t part_number = pidr & PIDR_PN_MASK;
+#endif
+
+	/* Now we know we're in a CoreSight v0 ROM table, read out the device ID field and set up the memory flag on the AP */
+	const uint32_t dev_id = adiv5_ap_read(&base_ap->base, CORESIGHT_ROM_DEVID);
+	if (dev_id & CORESIGHT_ROM_DEVID_SYSMEM)
+		base_ap->base.flags |= ADIV5_AP_FLAGS_HAS_MEM;
+	const bool rom_format = dev_id & CORESIGHT_ROM_DEVID_FORMAT;
+
+	DEBUG_INFO("ROM Table: BASE=0x%" PRIx32 "%08" PRIx32 " SYSMEM=%u, Manufacturer %03x Partno %03x (PIDR = "
+			   "0x%02" PRIx32 "%08" PRIx32 ")\n",
+		(uint32_t)(base_address >> 32U), (uint32_t)base_address, 0U, designer_code, part_number,
+		(uint32_t)(pidr >> 32U), (uint32_t)pidr);
+
+	DEBUG_INFO("ROM Table: END\n");
+	return true;
+}
+
 static bool adiv6_component_probe(
 	adiv5_debug_port_s *const dp, const target_addr64_t base_address, const uint32_t entry_number)
 {
@@ -135,16 +161,41 @@ static bool adiv6_component_probe(
 	/* Extract Component ID class nibble */
 	const uint32_t cid_class = (cidr & CID_CLASS_MASK) >> CID_CLASS_SHIFT;
 
-	/* Extract the designer code and part number from the part ID register */
+	/* Read out the peripheral ID register */
 	const uint64_t pidr = adiv6_dp_read_pidr(&base_ap);
-	const uint16_t designer_code = adiv5_designer_from_pidr(pidr);
-	const uint16_t part_number = pidr & PIDR_PN_MASK;
 
-	DEBUG_INFO("ROM: Table BASE=0x%" PRIx32 "%08" PRIx32 " SYSMEM=%u, Manufacturer %03x Partno %03x (PIDR = "
-			   "0x%02" PRIx32 "%08" PRIx32 ")\n",
-		(uint32_t)(base_address >> 32U), (uint32_t)base_address, 0U, designer_code, part_number,
-		(uint32_t)(pidr >> 32U), (uint32_t)pidr);
+	/* Check if this is a legacy ROM table */
+	if (cid_class == cidc_romtab) {
+		/* Validate that the SIZE field is 0 per the spec */
+		if (pidr & PIDR_SIZE_MASK) {
+			DEBUG_ERROR("Fault reading ROM table\n");
+			return false;
+		}
+	} else {
+		/* Extract the designer code from the part ID register */
+		const uint16_t designer_code = adiv5_designer_from_pidr(pidr);
 
+		/* Check if this is a CoreSight component */
+		uint16_t arch_id = 0U;
+		uint8_t dev_type = 0U;
+		if (cid_class == cidc_dc) {
+			/* Read out the component's identification information */
+			const uint32_t dev_arch = adiv5_ap_read(&base_ap.base, ADIV6_AP_REG(DEVARCH_OFFSET));
+			dev_type = adiv5_ap_read(&base_ap.base, ADIV6_AP_REG(DEVTYPE_OFFSET)) & DEVTYPE_MASK;
+
+			if (dev_arch & DEVARCH_PRESENT)
+				arch_id = dev_arch & DEVARCH_ARCHID_MASK;
+		}
+
+		/* Check if this is a CoreSight component ROM table */
+		if (cid_class == cidc_dc && arch_id == DEVARCH_ARCHID_ROMTABLE_V0) {
+			if (pidr & PIDR_SIZE_MASK) {
+				DEBUG_ERROR("Fault reading ROM table\n");
+				return false;
+			}
+			return adiv6_parse_coresight_v0_rom_table(&base_ap, base_address, pidr);
+		}
+	}
 	return false;
 }
 
