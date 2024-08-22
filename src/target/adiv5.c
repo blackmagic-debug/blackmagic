@@ -55,31 +55,6 @@
  */
 #define ARM_AP_TYPE_AHB3 1U
 
-/* ROM table CIDR values */
-#define CIDR0_OFFSET 0xff0U /* DBGCID0 */
-#define CIDR1_OFFSET 0xff4U /* DBGCID1 */
-#define CIDR2_OFFSET 0xff8U /* DBGCID2 */
-#define CIDR3_OFFSET 0xffcU /* DBGCID3 */
-
-/*
- * Component class ID register can be broken down into the following logical
- * interpretation of the 32bit value consisting of the least significant bytes
- * of the 4 CID registers:
- * |7   ID3 reg   0|7   ID2 reg   0|7   ID1 reg   0|7   ID0 reg   0|
- * |1|0|1|1|0|0|0|1|0|0|0|0|0|1|0|1| | | | |0|0|0|0|0|0|0|0|1|1|0|1|
- * |31           24|23           16|15   12|11     |              0|
- * \_______________ ______________/\___ __/\___________ ___________/
- *                 V                   V               V
- *             Preamble            Component       Preamble
- *                                   Class
- * \_______________________________ _______________________________/
- *                                 V
- *                           Component ID
- */
-#define CID_PREAMBLE    UINT32_C(0xb105000d)
-#define CID_CLASS_MASK  UINT32_C(0x0000f000)
-#define CID_CLASS_SHIFT 12U
-
 /* The following enum is based on the Component Class value table 13-3 of the ADIv5 specification. */
 typedef enum cid_class {
 	cidc_gvc = 0x0,     /* Generic verification component*/
@@ -548,7 +523,7 @@ static void adiv5_component_probe(
 	(void)num_entry;
 #endif
 
-	const volatile uint32_t cidr = adiv5_ap_read_id(ap, addr + CIDR0_OFFSET);
+	const uint32_t cidr = adiv5_ap_read_id(ap, addr + CIDR0_OFFSET);
 	if (ap->dp->fault) {
 		DEBUG_ERROR("Error reading CIDR on AP%u: %u\n", ap->apsel, ap->dp->fault);
 		return;

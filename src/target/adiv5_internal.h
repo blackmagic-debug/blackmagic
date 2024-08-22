@@ -88,6 +88,31 @@
 #define ADIV5_AP_BASE_LOW  ADIV5_AP_REG(0xd0f8U)
 #define ADIV5_AP_IDR       ADIV5_AP_REG(0xd0fcU)
 
+/*
+ * Component class ID register can be broken down into the following logical
+ * interpretation of the 32bit value consisting of the least significant bytes
+ * of the 4 CID registers:
+ * |7   ID3 reg   0|7   ID2 reg   0|7   ID1 reg   0|7   ID0 reg   0|
+ * |1|0|1|1|0|0|0|1|0|0|0|0|0|1|0|1| | | | |0|0|0|0|0|0|0|0|1|1|0|1|
+ * |31           24|23           16|15   12|11     |              0|
+ * \_______________ ______________/\___ __/\___________ ___________/
+ *                 V                   V               V
+ *             Preamble            Component       Preamble
+ *                                   Class
+ * \_______________________________ _______________________________/
+ *                                 V
+ *                           Component ID
+ */
+#define CID_PREAMBLE    UINT32_C(0xb105000d)
+#define CID_CLASS_MASK  UINT32_C(0x0000f000)
+#define CID_CLASS_SHIFT 12U
+
+/* ROM table CIDR values */
+#define CIDR0_OFFSET 0xff0U /* DBGCID0 */
+#define CIDR1_OFFSET 0xff4U /* DBGCID1 */
+#define CIDR2_OFFSET 0xff8U /* DBGCID2 */
+#define CIDR3_OFFSET 0xffcU /* DBGCID3 */
+
 #define SWDP_ACK_OK          0x01U
 #define SWDP_ACK_WAIT        0x02U
 #define SWDP_ACK_FAULT       0x04U
