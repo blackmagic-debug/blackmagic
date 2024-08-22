@@ -209,6 +209,8 @@ static const struct {
 	{0xfff, 0x00, 0, aa_end, cidc_unknown, ARM_COMPONENT_STR("end", "end")},
 };
 
+static void adiv5_component_probe(adiv5_access_port_s *ap, target_addr_t addr, size_t recursion, uint32_t num_entry);
+
 #if ENABLE_DEBUG == 1
 static const char *adiv5_arm_ap_type_string(const uint8_t ap_type, const uint8_t ap_class)
 {
@@ -496,6 +498,67 @@ uint16_t adiv5_designer_from_pidr(const uint64_t pidr)
 	return designer_code;
 }
 
+static void adiv5_parse_adi_rom_table(adiv5_access_port_s *const ap, const target_addr32_t base_address,
+	const size_t recursion_depth, const char *const indent, const uint64_t pidr)
+{
+#if defined(DEBUG_WARN_IS_NOOP) && defined(DEBUG_ERROR_IS_NOOP)
+	(void)indent;
+#endif
+
+	/* Extract the designer code and part number from the part ID register */
+	const uint16_t designer_code = adiv5_designer_from_pidr(pidr);
+	const uint16_t part_number = pidr & PIDR_PN_MASK;
+
+	if (recursion_depth == 0) {
+		ap->designer_code = designer_code;
+		ap->partno = part_number;
+
+		if (ap->designer_code == JEP106_MANUFACTURER_ATMEL && ap->partno == 0xcd0U) {
+			uint32_t ctrlstat = adiv5_mem_read32(ap, SAMX5X_DSU_CTRLSTAT);
+			if (ctrlstat & SAMX5X_STATUSB_PROT) {
+				/* A protected SAMx5x device is found.
+					 * Handle it here, as access only to limited memory region
+					 * is allowed
+					 */
+				cortexm_probe(ap);
+				return;
+			}
+		}
+	}
+
+	/* Check SYSMEM bit */
+	const bool memtype = adiv5_mem_read32(ap, base_address + ADIV5_ROM_MEMTYPE) & ADIV5_ROM_MEMTYPE_SYSMEM;
+	if (adiv5_dp_error(ap->dp))
+		DEBUG_ERROR("Fault reading ROM table entry\n");
+	else if (memtype)
+		ap->flags |= ADIV5_AP_FLAGS_HAS_MEM;
+	DEBUG_INFO("ROM Table: BASE=0x%" PRIx32 " SYSMEM=%u, Manufacturer %03x Partno %03x (PIDR = 0x%02" PRIx32
+			   "%08" PRIx32 ")\n",
+		base_address, memtype, designer_code, part_number, (uint32_t)(pidr >> 32U), (uint32_t)pidr);
+
+	for (uint32_t i = 0; i < 960U; i++) {
+		adiv5_dp_error(ap->dp);
+
+		uint32_t entry = adiv5_mem_read32(ap, base_address + i * 4U);
+		if (adiv5_dp_error(ap->dp)) {
+			DEBUG_ERROR("%sFault reading ROM table entry %" PRIu32 "\n", indent, i);
+			break;
+		}
+
+		if (entry == 0)
+			break;
+
+		if (!(entry & ADIV5_ROM_ROMENTRY_PRESENT)) {
+			DEBUG_INFO("%s%" PRIu32 " Entry 0x%" PRIx32 " -> Not present\n", indent, i, entry);
+			continue;
+		}
+
+		/* Probe recursively */
+		adiv5_component_probe(ap, base_address + (entry & ADIV5_ROM_ROMENTRY_OFFSET), recursion_depth + 1U, i);
+	}
+	DEBUG_INFO("%sROM Table: END\n", indent);
+}
+
 /*
  * Return true if we find a debuggable device.
  * NOLINTNEXTLINE(misc-no-recursion)
@@ -514,11 +577,13 @@ static void adiv5_component_probe(
 	}
 
 #if ENABLE_DEBUG == 1
-	char *indent = alloca(recursion + 1U);
+	char *const indent = alloca(recursion + 1U);
 
 	for (size_t i = 0; i < recursion; i++)
 		indent[i] = ' ';
 	indent[recursion] = 0;
+#else
+	const char *const indent = " ";
 #endif
 
 	if (adiv5_dp_error(ap->dp)) {
@@ -534,66 +599,27 @@ static void adiv5_component_probe(
 	}
 
 	/* Extract Component ID class nibble */
-	const uint32_t cid_class = (cidr & CID_CLASS_MASK) >> CID_CLASS_SHIFT;
+	const uint8_t cid_class = (cidr & CID_CLASS_MASK) >> CID_CLASS_SHIFT;
 
-	/* Extract the designer code and part number from the part ID register */
+	/* Read out the peripheral ID register */
 	const uint64_t pidr = adiv5_ap_read_pidr(ap, addr);
-	const uint16_t designer_code = adiv5_designer_from_pidr(pidr);
-	const uint16_t part_number = pidr & PIDR_PN_MASK;
 
 	/* ROM table */
 	if (cid_class == cidc_romtab) {
-		if (recursion == 0) {
-			ap->designer_code = designer_code;
-			ap->partno = part_number;
-
-			if (ap->designer_code == JEP106_MANUFACTURER_ATMEL && ap->partno == 0xcd0U) {
-				uint32_t ctrlstat = adiv5_mem_read32(ap, SAMX5X_DSU_CTRLSTAT);
-				if (ctrlstat & SAMX5X_STATUSB_PROT) {
-					/* A protected SAMx5x device is found.
-					 * Handle it here, as access only to limited memory region
-					 * is allowed
-					 */
-					cortexm_probe(ap);
-					return;
-				}
-			}
+		/* Validate that the SIZE field is 0 per the spec */
+		if (pidr & PIDR_SIZE_MASK) {
+			DEBUG_ERROR("Fault reading ROM table\n");
+			return;
 		}
-
-		/* Check SYSMEM bit */
-		const bool memtype = adiv5_mem_read32(ap, addr | ADIV5_ROM_MEMTYPE) & ADIV5_ROM_MEMTYPE_SYSMEM;
-		if (adiv5_dp_error(ap->dp))
-			DEBUG_ERROR("Fault reading ROM table entry\n");
-		else if (memtype)
-			ap->flags |= ADIV5_AP_FLAGS_HAS_MEM;
-		DEBUG_INFO("ROM: Table BASE=0x%" PRIx32 " SYSMEM=%u, Manufacturer %03x Partno %03x (PIDR = 0x%02" PRIx32
-				   "%08" PRIx32 ")\n",
-			addr, memtype, designer_code, part_number, (uint32_t)(pidr >> 32U), (uint32_t)pidr);
-
-		for (uint32_t i = 0; i < 960U; i++) {
-			adiv5_dp_error(ap->dp);
-
-			uint32_t entry = adiv5_mem_read32(ap, addr + i * 4U);
-			if (adiv5_dp_error(ap->dp)) {
-				DEBUG_ERROR("%sFault reading ROM table entry %" PRIu32 "\n", indent, i);
-				break;
-			}
-
-			if (entry == 0)
-				break;
-
-			if (!(entry & ADIV5_ROM_ROMENTRY_PRESENT)) {
-				DEBUG_INFO("%s%" PRIu32 " Entry 0x%" PRIx32 " -> Not present\n", indent, i, entry);
-				continue;
-			}
-
-			/* Probe recursively */
-			adiv5_component_probe(ap, addr + (entry & ADIV5_ROM_ROMENTRY_OFFSET), recursion + 1U, i);
-		}
-		DEBUG_INFO("%sROM: Table END\n", indent);
-
+		adiv5_parse_adi_rom_table(ap, addr, recursion, indent, pidr);
 	} else {
+		/* Extract the designer code from the part ID register */
+		const uint16_t designer_code = adiv5_designer_from_pidr(pidr);
+
 		if (designer_code != JEP106_MANUFACTURER_ARM && designer_code != JEP106_MANUFACTURER_ARM_CHINA) {
+#ifndef DEBUG_TARGET_IS_NOOP
+			const uint16_t part_number = pidr & PIDR_PN_MASK;
+#endif
 			/* non-ARM components are not supported currently */
 			DEBUG_WARN("%s%" PRIu32 " 0x%" PRIx32 ": 0x%02" PRIx32 "%08" PRIx32 " Non-ARM component ignored\n",
 				indent + 1, num_entry, addr, (uint32_t)(pidr >> 32U), (uint32_t)pidr);
@@ -601,13 +627,13 @@ static void adiv5_component_probe(
 			return;
 		}
 
-		/* ADIv5: For CoreSight components, read DEVTYPE and ARCHID */
-		uint16_t arch_id = 0;
+		/* Check if this is a CoreSight component */
 		uint8_t dev_type = 0;
+		uint16_t arch_id = 0;
 		if (cid_class == cidc_dc) {
+			/* Read out the component's identification information */
+			const uint32_t devarch = adiv5_mem_read32(ap, addr + DEVARCH_OFFSET);
 			dev_type = adiv5_mem_read32(ap, addr + DEVTYPE_OFFSET) & DEVTYPE_MASK;
-
-			uint32_t devarch = adiv5_mem_read32(ap, addr + DEVARCH_OFFSET);
 
 			if (devarch & DEVARCH_PRESENT)
 				arch_id = devarch & DEVARCH_ARCHID_MASK;
