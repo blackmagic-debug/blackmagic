@@ -588,9 +588,9 @@ static void adiv5_component_probe(
 			DEBUG_ERROR("Fault reading ROM table entry\n");
 		else if (memtype)
 			ap->flags |= ADIV5_AP_FLAGS_HAS_MEM;
-		DEBUG_INFO("ROM: Table BASE=0x%" PRIx32 " SYSMEM=%u, Manufacturer %03x Partno %03x (PIDR = 0x%08" PRIx32
+		DEBUG_INFO("ROM: Table BASE=0x%" PRIx32 " SYSMEM=%u, Manufacturer %03x Partno %03x (PIDR = 0x%02" PRIx32
 				   "%08" PRIx32 ")\n",
-			addr, memtype, designer_code, part_number, (uint32_t)(pidr >> 32), (uint32_t)pidr);
+			addr, memtype, designer_code, part_number, (uint32_t)(pidr >> 32U), (uint32_t)pidr);
 
 		for (uint32_t i = 0; i < 960U; i++) {
 			adiv5_dp_error(ap->dp);
@@ -617,7 +617,7 @@ static void adiv5_component_probe(
 	} else {
 		if (designer_code != JEP106_MANUFACTURER_ARM && designer_code != JEP106_MANUFACTURER_ARM_CHINA) {
 			/* non-ARM components are not supported currently */
-			DEBUG_WARN("%s%" PRIu32 " 0x%" PRIx32 ": 0x%08" PRIx32 "%08" PRIx32 " Non-ARM component ignored\n",
+			DEBUG_WARN("%s%" PRIu32 " 0x%" PRIx32 ": 0x%02" PRIx32 "%08" PRIx32 " Non-ARM component ignored\n",
 				indent + 1, num_entry, addr, (uint32_t)(pidr >> 32U), (uint32_t)pidr);
 			DEBUG_TARGET("%s -> designer: %x, part no: %x\n", indent, designer_code, part_number);
 			return;

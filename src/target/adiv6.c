@@ -108,6 +108,13 @@ static uint32_t adiv6_dp_read_id(adiv6_access_port_s *const ap, const uint16_t a
 	return result;
 }
 
+static uint64_t adiv6_dp_read_pidr(adiv6_access_port_s *const ap)
+{
+	const uint32_t pidr_upper = adiv6_dp_read_id(ap, PIDR4_OFFSET);
+	const uint32_t pidr_lower = adiv6_dp_read_id(ap, PIDR0_OFFSET);
+	return ((uint64_t)pidr_upper << 32U) | (uint64_t)pidr_lower;
+}
+
 static bool adiv6_component_probe(
 	adiv5_debug_port_s *const dp, const target_addr64_t base_address, const uint32_t entry_number)
 {
@@ -127,6 +134,16 @@ static bool adiv6_component_probe(
 	}
 	/* Extract Component ID class nibble */
 	const uint32_t cid_class = (cidr & CID_CLASS_MASK) >> CID_CLASS_SHIFT;
+
+	/* Extract the designer code and part number from the part ID register */
+	const uint64_t pidr = adiv6_dp_read_pidr(&base_ap);
+	const uint16_t designer_code = adiv5_designer_from_pidr(pidr);
+	const uint16_t part_number = pidr & PIDR_PN_MASK;
+
+	DEBUG_INFO("ROM: Table BASE=0x%" PRIx32 "%08" PRIx32 " SYSMEM=%u, Manufacturer %03x Partno %03x (PIDR = "
+			   "0x%02" PRIx32 "%08" PRIx32 ")\n",
+		(uint32_t)(base_address >> 32U), (uint32_t)base_address, 0U, designer_code, part_number,
+		(uint32_t)(pidr >> 32U), (uint32_t)pidr);
 
 	return false;
 }
