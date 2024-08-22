@@ -55,13 +55,6 @@
  */
 #define ARM_AP_TYPE_AHB3 1U
 
-#define DEVTYPE_OFFSET 0xfccU /* CoreSight Device Type Register */
-#define DEVARCH_OFFSET 0xfbcU /* CoreSight Device Architecture Register */
-
-#define DEVTYPE_MASK        0x000000ffU
-#define DEVARCH_PRESENT     (1U << 20U)
-#define DEVARCH_ARCHID_MASK 0x0000ffffU
-
 typedef enum arm_arch {
 	aa_nosupport,
 	aa_cortexm,

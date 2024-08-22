@@ -88,6 +88,24 @@
 #define ADIV5_AP_BASE_LOW  ADIV5_AP_REG(0xd0f8U)
 #define ADIV5_AP_IDR       ADIV5_AP_REG(0xd0fcU)
 
+/* ROM table CIDR values */
+#define CIDR0_OFFSET 0xff0U /* DBGCID0 */
+#define CIDR1_OFFSET 0xff4U /* DBGCID1 */
+#define CIDR2_OFFSET 0xff8U /* DBGCID2 */
+#define CIDR3_OFFSET 0xffcU /* DBGCID3 */
+
+#define PIDR0_OFFSET 0xfe0U /* DBGPID0 */
+#define PIDR1_OFFSET 0xfe4U /* DBGPID1 */
+#define PIDR2_OFFSET 0xfe8U /* DBGPID2 */
+#define PIDR3_OFFSET 0xfecU /* DBGPID3 */
+#define PIDR4_OFFSET 0xfd0U /* DBGPID4 */
+#define PIDR5_OFFSET 0xfd4U /* DBGPID5 (Reserved) */
+#define PIDR6_OFFSET 0xfd8U /* DBGPID6 (Reserved) */
+#define PIDR7_OFFSET 0xfdcU /* DBGPID7 (Reserved) */
+
+#define DEVTYPE_OFFSET 0xfccU /* CoreSight Device Type Register */
+#define DEVARCH_OFFSET 0xfbcU /* CoreSight Device Architecture Register */
+
 /*
  * Component class ID register can be broken down into the following logical
  * interpretation of the 32bit value consisting of the least significant bytes
@@ -107,21 +125,6 @@
 #define CID_CLASS_MASK  UINT32_C(0x0000f000)
 #define CID_CLASS_SHIFT 12U
 
-/* ROM table CIDR values */
-#define CIDR0_OFFSET 0xff0U /* DBGCID0 */
-#define CIDR1_OFFSET 0xff4U /* DBGCID1 */
-#define CIDR2_OFFSET 0xff8U /* DBGCID2 */
-#define CIDR3_OFFSET 0xffcU /* DBGCID3 */
-
-#define PIDR0_OFFSET 0xfe0U /* DBGPID0 */
-#define PIDR1_OFFSET 0xfe4U /* DBGPID1 */
-#define PIDR2_OFFSET 0xfe8U /* DBGPID2 */
-#define PIDR3_OFFSET 0xfecU /* DBGPID3 */
-#define PIDR4_OFFSET 0xfd0U /* DBGPID4 */
-#define PIDR5_OFFSET 0xfd4U /* DBGPID5 (Reserved) */
-#define PIDR6_OFFSET 0xfd8U /* DBGPID6 (Reserved) */
-#define PIDR7_OFFSET 0xfdcU /* DBGPID7 (Reserved) */
-
 #define PIDR_JEP106_CONT_OFFSET 32U                                         /*JEP-106 Continuation Code offset */
 #define PIDR_JEP106_CONT_MASK   (UINT64_C(0xf) << PIDR_JEP106_CONT_OFFSET)  /*JEP-106 Continuation Code mask */
 #define PIDR_REV_OFFSET         20U                                         /* Revision bits offset */
@@ -131,6 +134,13 @@
 #define PIDR_JEP106_CODE_OFFSET 12U                                         /* JEP-106 code offset */
 #define PIDR_JEP106_CODE_MASK   (UINT64_C(0x7f) << PIDR_JEP106_CODE_OFFSET) /* JEP-106 code mask */
 #define PIDR_PN_MASK            UINT64_C(0xfff)                             /* Part number */
+#define PIDR_SIZE_OFFSET        36U
+#define PIDR_SIZE_MASK          (UINT64_C(0xf) << PIDR_SIZE_OFFSET)
+
+#define DEVTYPE_MASK               0x000000ffU
+#define DEVARCH_ARCHID_MASK        0xffffU
+#define DEVARCH_ARCHID_ROMTABLE_V0 0x0af7U
+#define DEVARCH_PRESENT            (1U << 20U)
 
 #define SWDP_ACK_OK          0x01U
 #define SWDP_ACK_WAIT        0x02U
