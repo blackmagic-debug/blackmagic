@@ -33,6 +33,7 @@
 
 /* ADIv5 DP Register addresses */
 #define ADIV5_DP_DPIDR     ADIV5_DP_REG(0x0U)
+#define ADIV5_DP_DPIDR1    ADIV5_DP_REG(0x0U)
 #define ADIV5_DP_ABORT     ADIV5_DP_REG(0x0U)
 #define ADIV5_DP_CTRLSTAT  ADIV5_DP_REG(0x4U)
 #define ADIV5_DP_TARGETID  ADIV5_DP_REG(0x4U) /* ADIV5_DP_BANK2 */
@@ -128,9 +129,12 @@ struct adiv5_debug_port {
 	uint16_t designer_code;
 	uint16_t partno;
 
-	/* TARGETID designer and partno, present on DPv2 */
+	/* TARGETID designer and partno, present on DPv2+ */
 	uint16_t target_designer_code;
 	uint16_t target_partno;
+
+	/* DPv3+ bus address width */
+	uint8_t address_width;
 };
 
 struct adiv5_access_port {

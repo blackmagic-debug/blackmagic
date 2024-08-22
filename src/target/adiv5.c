@@ -1095,6 +1095,17 @@ void adiv5_dp_init(adiv5_debug_port_s *const dp)
 			(targetid & (ADIV5_DP_TARGETID_TDESIGNER_MASK | ADIV5_DP_TARGETID_TPARTNO_MASK)) | 1U;
 	}
 
+	/* If this is a DPv3+ device, read the other DPIDR and figure out the DP bus address width  */
+	if (dp->version >= 3U) {
+		/* DPIDR1 is on bank 1 */
+		adiv5_dp_write(dp, ADIV5_DP_SELECT, ADIV5_DP_BANK1);
+		const uint32_t dpidr1 = adiv5_dp_read(dp, ADIV5_DP_DPIDR1);
+		adiv5_dp_write(dp, ADIV5_DP_SELECT, ADIV5_DP_BANK0);
+		dp->address_width = dpidr1 & ADIV5_DP_DPIDR1_ASIZE_MASK;
+
+		DEBUG_INFO("DP DPIDR1 0x%08" PRIx32 " %u-bit addressing\n", dpidr1, dp->address_width);
+	}
+
 	if (dp->designer_code == JEP106_MANUFACTURER_RASPBERRY && dp->partno == 0x2U) {
 		rp_rescue_setup(dp);
 		return;
