@@ -42,7 +42,7 @@
 #include "general.h"
 #include "adiv6.h"
 
-target_addr64_t adiv6_dp_read_base_address(adiv5_debug_port_s *const dp)
+static target_addr64_t adiv6_dp_read_base_address(adiv5_debug_port_s *const dp)
 {
 	/* BASEPTR0 is on bank 2 */
 	adiv5_dp_write(dp, ADIV5_DP_SELECT, ADIV5_DP_BANK2);
@@ -76,7 +76,7 @@ bool adiv6_dp_init(adiv5_debug_port_s *const dp)
 			(uint32_t)base_address);
 		return false;
 	}
-	base_address &= ~ADIV6_DP_BASEPTR0_VALID;
+	base_address &= ADIV6_DP_BASE_ADDRESS_MASK;
 	DEBUG_INFO("Inspecting resource address 0x%" PRIx32 "%08" PRIx32 "\n", (uint32_t)(base_address >> 32U),
 		(uint32_t)base_address);
 
