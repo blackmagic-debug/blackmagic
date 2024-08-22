@@ -31,22 +31,23 @@
 #include "target.h"
 #include "target_internal.h"
 
-uint8_t make_packet_request(uint8_t rnw, uint16_t addr)
+uint8_t make_packet_request(const uint8_t rnw, const uint16_t addr)
 {
-	bool is_ap = addr & ADIV5_APnDP;
+	/* Start out with the park and start bits in the request byte */
+	uint8_t request = 0x81U;
 
-	addr &= 0xffU;
-
-	uint8_t request = 0x81U; /* Park and Startbit */
-
-	if (is_ap)
+	/* If we're wanting to talk with an AP, set the APnDP bit and parity */
+	if (addr & ADIV5_APnDP)
 		request ^= 0x22U;
+	/* If we're making a read request, set the RnW bit and flip the parity */
 	if (rnw)
 		request ^= 0x24U;
 
-	addr &= 0xcU;
-	request |= (addr << 1U) & 0x18U;
-	if (addr == 4U || addr == 8U)
+	/* Now grab A[2:3] and encode those */
+	const uint8_t reg = addr & 0x0cU;
+	request |= (reg << 1U) & 0x18U;
+	/* Then adjust the parity again accordingly */
+	if (reg == 4U || reg == 8U)
 		request ^= 0x20U;
 
 	return request;
