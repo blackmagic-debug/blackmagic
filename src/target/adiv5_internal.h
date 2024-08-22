@@ -209,4 +209,7 @@ struct adiv5_access_port {
 /* Helper for building an ADIv5 request */
 uint8_t make_packet_request(uint8_t rnw, uint16_t addr);
 
+/* Helper for disassembling PIDRs */
+uint16_t adiv5_designer_from_pidr(const uint64_t pidr);
+
 #endif /* TARGET_ADIV5_INTERNAL_H */
