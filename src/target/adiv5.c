@@ -70,25 +70,6 @@ typedef enum cid_class {
 	cidc_unknown = 0x10 /* Not a valid component class */
 } cid_class_e;
 
-#define PIDR0_OFFSET 0xfe0U /* DBGPID0 */
-#define PIDR1_OFFSET 0xfe4U /* DBGPID1 */
-#define PIDR2_OFFSET 0xfe8U /* DBGPID2 */
-#define PIDR3_OFFSET 0xfecU /* DBGPID3 */
-#define PIDR4_OFFSET 0xfd0U /* DBGPID4 */
-#define PIDR5_OFFSET 0xfd4U /* DBGPID5 (Reserved) */
-#define PIDR6_OFFSET 0xfd8U /* DBGPID6 (Reserved) */
-#define PIDR7_OFFSET 0xfdcU /* DBGPID7 (Reserved) */
-
-#define PIDR_JEP106_CONT_OFFSET 32U                                         /*JEP-106 Continuation Code offset */
-#define PIDR_JEP106_CONT_MASK   (UINT64_C(0xf) << PIDR_JEP106_CONT_OFFSET)  /*JEP-106 Continuation Code mask */
-#define PIDR_REV_OFFSET         20U                                         /* Revision bits offset */
-#define PIDR_REV_MASK           (UINT64_C(0xfff) << PIDR_REV_OFFSET)        /* Revision bits mask */
-#define PIDR_JEP106_USED_OFFSET 19U                                         /* JEP-106 code used flag offset */
-#define PIDR_JEP106_USED        (UINT64_C(1) << PIDR_JEP106_USED_OFFSET)    /* JEP-106 code used flag */
-#define PIDR_JEP106_CODE_OFFSET 12U                                         /* JEP-106 code offset */
-#define PIDR_JEP106_CODE_MASK   (UINT64_C(0x7f) << PIDR_JEP106_CODE_OFFSET) /* JEP-106 code mask */
-#define PIDR_PN_MASK            UINT64_C(0xfff)                             /* Part number */
-
 #define DEVTYPE_OFFSET 0xfccU /* CoreSight Device Type Register */
 #define DEVARCH_OFFSET 0xfbcU /* CoreSight Device Architecture Register */
 
@@ -357,9 +338,9 @@ static uint32_t adiv5_ap_read_id(adiv5_access_port_s *ap, uint32_t addr)
 
 static uint64_t adiv5_ap_read_pidr(adiv5_access_port_s *ap, uint32_t addr)
 {
-	uint64_t pidr = adiv5_ap_read_id(ap, addr + PIDR4_OFFSET);
-	pidr = pidr << 32U | adiv5_ap_read_id(ap, addr + PIDR0_OFFSET);
-	return pidr;
+	const uint32_t pidr_upper = adiv5_ap_read_id(ap, addr + PIDR4_OFFSET);
+	const uint32_t pidr_lower = adiv5_ap_read_id(ap, addr + PIDR0_OFFSET);
+	return ((uint64_t)pidr_upper << 32U) | (uint64_t)pidr_lower;
 }
 
 /*

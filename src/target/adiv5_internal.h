@@ -113,6 +113,25 @@
 #define CIDR2_OFFSET 0xff8U /* DBGCID2 */
 #define CIDR3_OFFSET 0xffcU /* DBGCID3 */
 
+#define PIDR0_OFFSET 0xfe0U /* DBGPID0 */
+#define PIDR1_OFFSET 0xfe4U /* DBGPID1 */
+#define PIDR2_OFFSET 0xfe8U /* DBGPID2 */
+#define PIDR3_OFFSET 0xfecU /* DBGPID3 */
+#define PIDR4_OFFSET 0xfd0U /* DBGPID4 */
+#define PIDR5_OFFSET 0xfd4U /* DBGPID5 (Reserved) */
+#define PIDR6_OFFSET 0xfd8U /* DBGPID6 (Reserved) */
+#define PIDR7_OFFSET 0xfdcU /* DBGPID7 (Reserved) */
+
+#define PIDR_JEP106_CONT_OFFSET 32U                                         /*JEP-106 Continuation Code offset */
+#define PIDR_JEP106_CONT_MASK   (UINT64_C(0xf) << PIDR_JEP106_CONT_OFFSET)  /*JEP-106 Continuation Code mask */
+#define PIDR_REV_OFFSET         20U                                         /* Revision bits offset */
+#define PIDR_REV_MASK           (UINT64_C(0xfff) << PIDR_REV_OFFSET)        /* Revision bits mask */
+#define PIDR_JEP106_USED_OFFSET 19U                                         /* JEP-106 code used flag offset */
+#define PIDR_JEP106_USED        (UINT64_C(1) << PIDR_JEP106_USED_OFFSET)    /* JEP-106 code used flag */
+#define PIDR_JEP106_CODE_OFFSET 12U                                         /* JEP-106 code offset */
+#define PIDR_JEP106_CODE_MASK   (UINT64_C(0x7f) << PIDR_JEP106_CODE_OFFSET) /* JEP-106 code mask */
+#define PIDR_PN_MASK            UINT64_C(0xfff)                             /* Part number */
+
 #define SWDP_ACK_OK          0x01U
 #define SWDP_ACK_WAIT        0x02U
 #define SWDP_ACK_FAULT       0x04U
