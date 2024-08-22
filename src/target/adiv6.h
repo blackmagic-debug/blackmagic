@@ -37,12 +37,17 @@
 #include "general.h"
 #include "adiv5.h"
 
-#define ADIV6_DP_DPIDR1 ADIV5_DP_REG(0x0U)
+#define ADIV6_DP_DPIDR1   ADIV5_DP_REG(0x0U)
+#define ADIV6_DP_BASEPTR0 ADIV5_DP_REG(0x0U)
+#define ADIV6_DP_BASEPTR1 ADIV5_DP_REG(0x0U)
 
 /* DP DPIDR1 */
 #define ADIV6_DP_DPIDR1_ASIZE_MASK     (0x7fU)
 #define ADIV6_DP_DPIDR1_ERRMODE_OFFSET 7U
 #define ADIV6_DP_DPIDR1_ERRMODE_MASK   (1U << ADIv5_DP_DPIDR1_ERRMODE_OFFSET)
+
+/* DP BASEPTR0 */
+#define ADIV6_DP_BASEPTR0_VALID (1U << 0U)
 
 /* DP and AP discovery functions */
 bool adiv6_dp_init(adiv5_debug_port_s *dp);

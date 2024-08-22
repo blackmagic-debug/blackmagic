@@ -42,16 +42,43 @@
 #include "general.h"
 #include "adiv6.h"
 
+target_addr64_t adiv6_dp_read_base_address(adiv5_debug_port_s *const dp)
+{
+	/* BASEPTR0 is on bank 2 */
+	adiv5_dp_write(dp, ADIV5_DP_SELECT, ADIV5_DP_BANK2);
+	const uint32_t baseptr0 = adiv5_dp_read(dp, ADIV6_DP_BASEPTR0);
+	/* BASEPTR1 is on bank 3 */
+	adiv5_dp_write(dp, ADIV5_DP_SELECT, ADIV5_DP_BANK3);
+	const uint32_t baseptr1 = adiv5_dp_read(dp, ADIV6_DP_BASEPTR1);
+	adiv5_dp_write(dp, ADIV5_DP_SELECT, ADIV5_DP_BANK0);
+	/* Now re-combine the values and return */
+	return baseptr0 | ((uint64_t)baseptr1 << 32U);
+}
+
 bool adiv6_dp_init(adiv5_debug_port_s *const dp)
 {
 	/* DPIDR1 is on bank 1 */
 	adiv5_dp_write(dp, ADIV5_DP_SELECT, ADIV5_DP_BANK1);
 	/* Read the other DPIDR and figure out the DP bus address width */
 	const uint32_t dpidr1 = adiv5_dp_read(dp, ADIV6_DP_DPIDR1);
-	adiv5_dp_write(dp, ADIV5_DP_SELECT, ADIV5_DP_BANK0);
 	dp->address_width = dpidr1 & ADIV6_DP_DPIDR1_ASIZE_MASK;
 
 	DEBUG_INFO("DP DPIDR1 0x%08" PRIx32 " %u-bit addressing\n", dpidr1, dp->address_width);
+
+	/* Now we know how wide the DP bus addresses are, read out the base pointers and validate them */
+	target_addr64_t base_address = adiv6_dp_read_base_address(dp);
+	if (!(base_address & ADIV6_DP_BASEPTR0_VALID)) {
+		DEBUG_INFO("No valid base address on DP\n");
+		return false;
+	}
+	if ((base_address & ((UINT64_C(1) << dp->address_width) - 1U)) != base_address) {
+		DEBUG_INFO("Bad base address %" PRIx32 "%08" PRIx32 "on DP\n", (uint32_t)(base_address >> 32U),
+			(uint32_t)base_address);
+		return false;
+	}
+	base_address &= ~ADIV6_DP_BASEPTR0_VALID;
+	DEBUG_INFO("Inspecting resource address 0x%" PRIx32 "%08" PRIx32 "\n", (uint32_t)(base_address >> 32U),
+		(uint32_t)base_address);
 
 	return false;
 }
