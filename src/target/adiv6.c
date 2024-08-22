@@ -43,6 +43,7 @@
 #include "adiv6.h"
 #include "adiv6_internal.h"
 
+static bool adiv6_component_probe(adiv5_debug_port_s *dp, target_addr64_t base_address, uint32_t entry_number);
 static uint32_t adiv6_ap_reg_read(adiv5_access_port_s *base_ap, uint16_t addr);
 static void adiv6_ap_reg_write(adiv5_access_port_s *base_ap, uint16_t addr, uint32_t value);
 
@@ -54,7 +55,6 @@ static target_addr64_t adiv6_dp_read_base_address(adiv5_debug_port_s *const dp)
 	/* BASEPTR1 is on bank 3 */
 	adiv5_dp_write(dp, ADIV5_DP_SELECT, ADIV5_DP_BANK3);
 	const uint32_t baseptr1 = adiv5_dp_read(dp, ADIV6_DP_BASEPTR1);
-	adiv5_dp_write(dp, ADIV5_DP_SELECT, ADIV5_DP_BANK0);
 	/* Now re-combine the values and return */
 	return baseptr0 | ((uint64_t)baseptr1 << 32U);
 }
@@ -84,8 +84,49 @@ bool adiv6_dp_init(adiv5_debug_port_s *const dp)
 		return false;
 	}
 	base_address &= ADIV6_DP_BASE_ADDRESS_MASK;
-	DEBUG_INFO("Inspecting resource address 0x%" PRIx32 "%08" PRIx32 "\n", (uint32_t)(base_address >> 32U),
-		(uint32_t)base_address);
+
+	return adiv6_component_probe(dp, base_address, 0U);
+}
+
+static uint32_t adiv6_dp_read_id(adiv6_access_port_s *const ap, const uint16_t addr)
+{
+	/*
+	 * Set up the DP resource bus to do the reads.
+	 * Set SELECT1 in the DP up first
+	 */
+	adiv5_dp_write(ap->base.dp, ADIV5_DP_SELECT, ADIV5_DP_BANK5);
+	adiv5_dp_write(ap->base.dp, ADIV6_DP_SELECT1, (uint32_t)(ap->ap_address >> 32U));
+	/* Now set up SELECT in the DP */
+	adiv5_dp_write(ap->base.dp, ADIV5_DP_SELECT, (uint32_t)ap->ap_address | (addr & 0x0ff0U));
+
+	uint32_t result = 0;
+	/* Loop through each CIDR register location and read it, pulling out only the relevant byte */
+	for (size_t i = 0; i < 4U; ++i) {
+		const uint32_t value = adiv5_dp_read(ap->base.dp, ADIV5_APnDP | (i << 2U));
+		result |= (value & 0xffU) << (i * 8U);
+	}
+	return result;
+}
+
+static bool adiv6_component_probe(
+	adiv5_debug_port_s *const dp, const target_addr64_t base_address, const uint32_t entry_number)
+{
+	/* Start out by making a fake AP to use for all the reads */
+	adiv6_access_port_s base_ap = {
+		.base.dp = dp,
+		.ap_address = base_address,
+	};
+
+	const uint32_t cidr = adiv6_dp_read_id(&base_ap, CIDR0_OFFSET);
+	/* CIDR preamble sanity check */
+	if ((cidr & ~CID_CLASS_MASK) != CID_PREAMBLE) {
+		DEBUG_WARN("%" PRIu32 " 0x%" PRIx32 "%08" PRIx32 ": 0x%08" PRIx32 " <- does not match preamble (0x%08" PRIx32
+				   ")\n",
+			entry_number, (uint32_t)(base_address >> 32U), (uint32_t)base_address, cidr, CID_PREAMBLE);
+		return false;
+	}
+	/* Extract Component ID class nibble */
+	const uint32_t cid_class = (cidr & CID_CLASS_MASK) >> CID_CLASS_SHIFT;
 
 	return false;
 }
