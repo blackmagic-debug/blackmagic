@@ -55,21 +55,6 @@
  */
 #define ARM_AP_TYPE_AHB3 1U
 
-/* The following enum is based on the Component Class value table 13-3 of the ADIv5 specification. */
-typedef enum cid_class {
-	cidc_gvc = 0x0,     /* Generic verification component*/
-	cidc_romtab = 0x1,  /* ROM Table, std. layout (ADIv5 Chapter 14) */
-	/* 0x2 - 0x8 */     /* Reserved */
-	cidc_dc = 0x9,      /* Debug component, std. layout (CoreSight Arch. Spec.) */
-	/* 0xa */           /* Reserved */
-	cidc_ptb = 0xb,     /* Peripheral Test Block (PTB) */
-	/* 0xc */           /* Reserved */
-	cidc_dess = 0xd,    /* OptimoDE Data Engine SubSystem (DESS) component */
-	cidc_gipc = 0xe,    /* Generic IP Component */
-	cidc_sys = 0xf,     /* CoreLink, PrimeCell, or other system component with no standard register layout */
-	cidc_unknown = 0x10 /* Not a valid component class */
-} cid_class_e;
-
 #define DEVTYPE_OFFSET 0xfccU /* CoreSight Device Type Register */
 #define DEVARCH_OFFSET 0xfbcU /* CoreSight Device Architecture Register */
 
