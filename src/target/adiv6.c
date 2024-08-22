@@ -41,6 +41,10 @@
 
 #include "general.h"
 #include "adiv6.h"
+#include "adiv6_internal.h"
+
+static uint32_t adiv6_ap_reg_read(adiv5_access_port_s *base_ap, uint16_t addr);
+static void adiv6_ap_reg_write(adiv5_access_port_s *base_ap, uint16_t addr, uint32_t value);
 
 static target_addr64_t adiv6_dp_read_base_address(adiv5_debug_port_s *const dp)
 {
@@ -57,6 +61,9 @@ static target_addr64_t adiv6_dp_read_base_address(adiv5_debug_port_s *const dp)
 
 bool adiv6_dp_init(adiv5_debug_port_s *const dp)
 {
+	dp->ap_read = adiv6_ap_reg_read;
+	dp->ap_write = adiv6_ap_reg_write;
+
 	/* DPIDR1 is on bank 1 */
 	adiv5_dp_write(dp, ADIV5_DP_SELECT, ADIV5_DP_BANK1);
 	/* Read the other DPIDR and figure out the DP bus address width */
@@ -81,4 +88,26 @@ bool adiv6_dp_init(adiv5_debug_port_s *const dp)
 		(uint32_t)base_address);
 
 	return false;
+}
+
+static uint32_t adiv6_ap_reg_read(adiv5_access_port_s *const base_ap, const uint16_t addr)
+{
+	adiv6_access_port_s *const ap = (adiv6_access_port_s *)base_ap;
+	/* Set SELECT1 in the DP up first */
+	adiv5_dp_write(base_ap->dp, ADIV5_DP_SELECT, ADIV5_DP_BANK5);
+	adiv5_dp_write(base_ap->dp, ADIV6_DP_SELECT1, (uint32_t)(ap->ap_address >> 32U));
+	/* Now set up SELECT in the DP */
+	adiv5_dp_write(base_ap->dp, ADIV5_DP_SELECT, (uint32_t)ap->ap_address | addr);
+	return adiv5_dp_read(base_ap->dp, addr);
+}
+
+static void adiv6_ap_reg_write(adiv5_access_port_s *const base_ap, const uint16_t addr, const uint32_t value)
+{
+	adiv6_access_port_s *const ap = (adiv6_access_port_s *)base_ap;
+	/* Set SELECT1 in the DP up first */
+	adiv5_dp_write(base_ap->dp, ADIV5_DP_SELECT, ADIV5_DP_BANK5);
+	adiv5_dp_write(base_ap->dp, ADIV6_DP_SELECT1, (uint32_t)(ap->ap_address >> 32U));
+	/* Now set up SELECT in the DP */
+	adiv5_dp_write(base_ap->dp, ADIV5_DP_SELECT, (uint32_t)ap->ap_address | addr);
+	adiv5_dp_write(base_ap->dp, addr, value);
 }

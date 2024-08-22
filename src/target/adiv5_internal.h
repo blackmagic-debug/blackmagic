@@ -65,6 +65,7 @@
 #define ADIV5_DP_BANK2 2U
 #define ADIV5_DP_BANK3 3U
 #define ADIV5_DP_BANK4 4U
+#define ADIV5_DP_BANK5 5U
 
 /* ADIv5 MEM-AP Registers */
 #define ADIV5_AP_CSW      ADIV5_AP_REG(0x00U)
