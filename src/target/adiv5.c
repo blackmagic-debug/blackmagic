@@ -25,14 +25,17 @@
  * This file implements transport generic ADIv5 functions.
  *
  * See the following ARM Reference Documents:
- * - ARM Debug Interface v5 Architecture Specification, ARM IHI 0031E
+ * ARM Debug Interface v5 Architecture Specification, IHI0031 ver. g
+ * - https://developer.arm.com/documentation/ihi0031/latest/
  */
+
 #include "general.h"
 #include "target.h"
 #include "target_internal.h"
 #include "target_probe.h"
 #include "jep106.h"
 #include "adiv5.h"
+#include "adiv6.h"
 #include "cortexm.h"
 #include "cortex_internal.h"
 #include "exception.h"
@@ -1095,15 +1098,12 @@ void adiv5_dp_init(adiv5_debug_port_s *const dp)
 			(targetid & (ADIV5_DP_TARGETID_TDESIGNER_MASK | ADIV5_DP_TARGETID_TPARTNO_MASK)) | 1U;
 	}
 
-	/* If this is a DPv3+ device, read the other DPIDR and figure out the DP bus address width  */
+	/* If this is a DPv3+ device, switch to ADIv6 DP initialisation */
 	if (dp->version >= 3U) {
-		/* DPIDR1 is on bank 1 */
-		adiv5_dp_write(dp, ADIV5_DP_SELECT, ADIV5_DP_BANK1);
-		const uint32_t dpidr1 = adiv5_dp_read(dp, ADIV5_DP_DPIDR1);
-		adiv5_dp_write(dp, ADIV5_DP_SELECT, ADIV5_DP_BANK0);
-		dp->address_width = dpidr1 & ADIV5_DP_DPIDR1_ASIZE_MASK;
-
-		DEBUG_INFO("DP DPIDR1 0x%08" PRIx32 " %u-bit addressing\n", dpidr1, dp->address_width);
+		++dp->refcnt;
+		if (!adiv6_dp_init(dp))
+			adiv5_dp_unref(dp);
+		return;
 	}
 
 	if (dp->designer_code == JEP106_MANUFACTURER_RASPBERRY && dp->partno == 0x2U) {

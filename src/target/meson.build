@@ -35,6 +35,7 @@ target_common_sources = files(
 	'adiv5.c',
 	'adiv5_jtag.c',
 	'adiv5_swd.c',
+	'adiv6.c',
 	'gdb_reg.c',
 	'jtag_devs.c',
 	'jtag_scan.c',
