@@ -67,18 +67,26 @@
 #define ADIV5_DP_BANK4 4U
 #define ADIV5_DP_BANK5 5U
 
-/* ADIv5 MEM-AP Registers */
-#define ADIV5_AP_CSW      ADIV5_AP_REG(0x00U)
-#define ADIV5_AP_TAR_LOW  ADIV5_AP_REG(0x04U)
-#define ADIV5_AP_TAR_HIGH ADIV5_AP_REG(0x08U)
+/*
+ * ADIv5 MEM-AP Registers
+ *
+ * The upper 4 bits of the uint16_t are used to encode A[11:8] for ADIv6.
+ * XXX: We would use the form <0b000 APnDP A[11:0]> instead of <A[11:8] 0b000 APnDP A[7:0]>,
+ * however this would be incompatible with older firmware and the remote protocol.
+ * This should be adjusted because we can do some encoding shenanigans to make that work
+ * in BMDA, but this has been chosen to make something work in the immediate present.
+ */
+#define ADIV5_AP_CSW      ADIV5_AP_REG(0xd000U)
+#define ADIV5_AP_TAR_LOW  ADIV5_AP_REG(0xd004U)
+#define ADIV5_AP_TAR_HIGH ADIV5_AP_REG(0xd008U)
 /* 0x08 - Reserved */
-#define ADIV5_AP_DRW   ADIV5_AP_REG(0x0cU)
-#define ADIV5_AP_DB(x) ADIV5_AP_REG(0x10U + (4U * (x)))
+#define ADIV5_AP_DRW   ADIV5_AP_REG(0xd00cU)
+#define ADIV5_AP_DB(x) ADIV5_AP_REG(0xd010U + (4U * (x)))
 /* 0x20:0xec - Reserved */
-#define ADIV5_AP_BASE_HIGH ADIV5_AP_REG(0xf0U)
-#define ADIV5_AP_CFG       ADIV5_AP_REG(0xf4U)
-#define ADIV5_AP_BASE_LOW  ADIV5_AP_REG(0xf8U)
-#define ADIV5_AP_IDR       ADIV5_AP_REG(0xfcU)
+#define ADIV5_AP_BASE_HIGH ADIV5_AP_REG(0xd0f0U)
+#define ADIV5_AP_CFG       ADIV5_AP_REG(0xd0f4U)
+#define ADIV5_AP_BASE_LOW  ADIV5_AP_REG(0xd0f8U)
+#define ADIV5_AP_IDR       ADIV5_AP_REG(0xd0fcU)
 
 #define SWDP_ACK_OK          0x01U
 #define SWDP_ACK_WAIT        0x02U
