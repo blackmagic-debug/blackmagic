@@ -117,8 +117,7 @@ static const arm_coresight_component_s arm_component_lut[] = {
 	{0x4c0, 0x00, 0, aa_nosupport, cidc_unknown, ARM_COMPONENT_STR("Cortex-M0+ ROM", "(Cortex-M0+ ROM)")},
 	{0x4c3, 0x00, 0, aa_nosupport, cidc_unknown, ARM_COMPONENT_STR("Cortex-M3 ROM", "(Cortex-M3 ROM)")},
 	{0x4c4, 0x00, 0, aa_nosupport, cidc_unknown, ARM_COMPONENT_STR("Cortex-M4 ROM", "(Cortex-M4 ROM)")},
-	{0x4c7, 0x00, 0, aa_nosupport, cidc_unknown,
-		ARM_COMPONENT_STR("Cortex-M7 PPB", "(Cortex-M7 Private Peripheral Bus ROM Table)")},
+	{0x4c7, 0x00, 0, aa_nosupport, cidc_unknown, ARM_COMPONENT_STR("Cortex-M7 PPB", "(Cortex-M7 PPB ROM Table)")},
 	{0x4c8, 0x00, 0, aa_nosupport, cidc_unknown, ARM_COMPONENT_STR("Cortex-M7 ROM", "(Cortex-M7 ROM)")},
 	{0x906, 0x14, 0, aa_nosupport, cidc_unknown, ARM_COMPONENT_STR("CoreSight CTI", "(Cross Trigger)")},
 	{0x907, 0x21, 0, aa_nosupport, cidc_unknown, ARM_COMPONENT_STR("CoreSight ETB", "(Trace Buffer)")},
@@ -189,6 +188,9 @@ static const arm_coresight_component_s arm_component_lut[] = {
 	{0x132, 0x11, 0, aa_nosupport, cidc_dc, ARM_COMPONENT_STR("STAR-MC1 TPIU", "(Trace Port Interface Unit)")},
 	{0x9a3, 0x13, 0, aa_nosupport, cidc_dc, ARM_COMPONENT_STR("nRF NTB", "(Nordic Trace Buffer)")},
 	{0x9e3, 0x00, 0x0a17, aa_access_port, cidc_dc, ARM_COMPONENT_STR("ADIv6 MEM-APv2", "(Memory Access Port)")},
+	{0x193, 0x00, 0x0000, aa_nosupport, cidc_sys, ARM_COMPONENT_STR("CoreSight TSG", "(Timestamp Generator)")},
+	{0x9e7, 0x11, 0x0000, aa_nosupport, cidc_dc, ARM_COMPONENT_STR("CoreSight TPIU", "(Trace Port Interface Unit)")},
+	{0x9eb, 0x12, 0x0000, aa_nosupport, cidc_dc, ARM_COMPONENT_STR("CoreSight ATBF", "(ATB Funnel)")},
 	{0x9ed, 0x14, 0x1a14, aa_nosupport, cidc_dc, ARM_COMPONENT_STR("CoreSight CTI", "(Cross Trigger Interface)")},
 	{0xfff, 0x00, 0, aa_end, cidc_unknown, ARM_COMPONENT_STR("end", "end")},
 };
@@ -640,7 +642,7 @@ void adiv5_component_probe(
 #endif
 			/* non-ARM components are not supported currently */
 			DEBUG_WARN("%s%" PRIu32 " 0x%" PRIx32 "%08" PRIx32 ": 0x%02" PRIx32 "%08" PRIx32 " Non-ARM component "
-			                                                                                 "ignored\n",
+					   "ignored\n",
 				indent + 1, entry_number, (uint32_t)(base_address >> 32U), (uint32_t)base_address,
 				(uint32_t)(pidr >> 32U), (uint32_t)pidr);
 			DEBUG_TARGET("%s -> designer: %x, part no: %x\n", indent, designer_code, part_number);
