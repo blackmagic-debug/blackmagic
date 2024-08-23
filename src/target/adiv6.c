@@ -146,8 +146,18 @@ static bool adiv6_reset_resources(adiv6_access_port_s *const rom_table)
 	return true;
 }
 
+static uint64_t adiv6_read_coresight_rom_entry(
+	adiv6_access_port_s *const rom_table, const uint8_t rom_format, const uint16_t entry_offset)
+{
+	const uint32_t entry_lower = adiv5_ap_read(&rom_table->base, ADIV6_AP_REG(entry_offset));
+	if (rom_format == CORESIGHT_ROM_DEVID_FORMAT_32BIT)
+		return entry_lower;
+	const uint32_t entry_upper = adiv5_ap_read(&rom_table->base, ADIV6_AP_REG(entry_offset + 4U));
+	return ((uint64_t)entry_upper << 32U) | (uint64_t)entry_lower;
+}
+
 static bool adiv6_parse_coresight_v0_rom_table(
-	adiv6_access_port_s *const base_ap, const target_addr64_t base_address, const uint64_t pidr)
+	adiv6_access_port_s *const rom_table, const target_addr64_t base_address, const uint64_t pidr)
 {
 #ifdef DEBUG_INFO_IS_NOOP
 	(void)pidr;
@@ -158,13 +168,13 @@ static bool adiv6_parse_coresight_v0_rom_table(
 #endif
 
 	/* Now we know we're in a CoreSight v0 ROM table, read out the device ID field and set up the memory flag on the AP */
-	const uint8_t dev_id = adiv5_ap_read(&base_ap->base, CORESIGHT_ROM_DEVID) & 0x7fU;
+	const uint8_t dev_id = adiv5_ap_read(&rom_table->base, CORESIGHT_ROM_DEVID) & 0x7fU;
 	if (dev_id & CORESIGHT_ROM_DEVID_SYSMEM)
-		base_ap->base.flags |= ADIV5_AP_FLAGS_HAS_MEM;
-	const bool rom_format = dev_id & CORESIGHT_ROM_DEVID_FORMAT;
+		rom_table->base.flags |= ADIV5_AP_FLAGS_HAS_MEM;
+	const uint8_t rom_format = dev_id & CORESIGHT_ROM_DEVID_FORMAT;
 
 	/* Check if the power control registers are available, and if they are try to reset all debug resources */
-	if ((dev_id & CORESIGHT_ROM_DEVID_HAS_POWERREQ) && !adiv6_reset_resources(base_ap))
+	if ((dev_id & CORESIGHT_ROM_DEVID_HAS_POWERREQ) && !adiv6_reset_resources(rom_table))
 		return false;
 
 	DEBUG_INFO("ROM Table: BASE=0x%" PRIx32 "%08" PRIx32 " SYSMEM=%u, Manufacturer %03x Partno %03x (PIDR = "
@@ -172,8 +182,42 @@ static bool adiv6_parse_coresight_v0_rom_table(
 		(uint32_t)(base_address >> 32U), (uint32_t)base_address, 0U, designer_code, part_number,
 		(uint32_t)(pidr >> 32U), (uint32_t)pidr);
 
+	bool result = true;
+
+	/* ROM table has at most 512 entries when 32-bit and 256 entries when 64-bit */
+	const uint32_t max_entries = rom_format == CORESIGHT_ROM_DEVID_FORMAT_32BIT ? 512U : 256U;
+	const size_t entry_shift = rom_format == CORESIGHT_ROM_DEVID_FORMAT_32BIT ? 2U : 3U;
+	for (uint32_t index = 0; index < max_entries; ++index) {
+		/* Start by reading out the entry */
+		const uint64_t entry = adiv6_read_coresight_rom_entry(rom_table, rom_format, (uint16_t)(index << entry_shift));
+		const uint8_t presence = entry & CORESIGHT_ROM_ROMENTRY_ENTRY_MASK;
+		/* Check if the entry is valid */
+		if (presence == CORESIGHT_ROM_ROMENTRY_ENTRY_FINAL)
+			break;
+		/* Check for an entry to skip */
+		if (presence == CORESIGHT_ROM_ROMENTRY_ENTRY_NOT_PRESENT) {
+			DEBUG_INFO("%" PRIu32 " Entry 0x%" PRIx32 "%08" PRIx32 " -> Not present\n", index, (uint32_t)(entry >> 32U),
+				(uint32_t)entry);
+			continue;
+		}
+		/* Check that the entry isn't invalid */
+		if (presence == CORESIGHT_ROM_ROMENTRY_ENTRY_INVALID) {
+			DEBUG_INFO("%" PRIu32 " Entry invalid\n", index);
+			continue;
+		}
+		/* Got a good entry? great! Figure out if it has a power domain to cycle and what the address offset is */
+		const target_addr64_t offset = entry & CORESIGHT_ROM_ROMENTRY_OFFSET_MASK;
+		if ((rom_table->base.flags & ADIV6_DP_FLAGS_HAS_PWRCTRL) & entry & CORESIGHT_ROM_ROMENTRY_POWERID_VALID) {
+			const uint8_t power_id =
+				(entry & CORESIGHT_ROM_ROMENTRY_POWERID_MASK) >> CORESIGHT_ROM_ROMENTRY_POWERID_SHIFT;
+		}
+
+		/* Now recursively probe the component */
+		result &= adiv6_component_probe(rom_table->base.dp, base_address + offset, index);
+	}
+
 	DEBUG_INFO("ROM Table: END\n");
-	return true;
+	return result;
 }
 
 static bool adiv6_component_probe(
@@ -231,7 +275,7 @@ static bool adiv6_component_probe(
 			return adiv6_parse_coresight_v0_rom_table(&base_ap, base_address, pidr);
 		}
 	}
-	return false;
+	return true;
 }
 
 static uint32_t adiv6_ap_reg_read(adiv5_access_port_s *const base_ap, const uint16_t addr)
