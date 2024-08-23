@@ -188,6 +188,8 @@ static const arm_coresight_component_s arm_component_lut[] = {
 	{0x132, 0x13, 0x4a13, aa_nosupport, cidc_dc, ARM_COMPONENT_STR("STAR-MC1 ETM", "(Embedded Trace)")},
 	{0x132, 0x11, 0, aa_nosupport, cidc_dc, ARM_COMPONENT_STR("STAR-MC1 TPIU", "(Trace Port Interface Unit)")},
 	{0x9a3, 0x13, 0, aa_nosupport, cidc_dc, ARM_COMPONENT_STR("nRF NTB", "(Nordic Trace Buffer)")},
+	{0x9e3, 0x00, 0x0a17, aa_access_port, cidc_dc, ARM_COMPONENT_STR("ADIv6 MEM-APv2", "(Memory Access Port)")},
+	{0x9ed, 0x14, 0x1a14, aa_nosupport, cidc_dc, ARM_COMPONENT_STR("CoreSight CTI", "(Cross Trigger Interface)")},
 	{0xfff, 0x00, 0, aa_end, cidc_unknown, ARM_COMPONENT_STR("end", "end")},
 };
 
