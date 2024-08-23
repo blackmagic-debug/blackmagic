@@ -549,7 +549,7 @@ static void adiv5_parse_adi_rom_table(adiv5_access_port_s *const ap, const targe
 			break;
 
 		if (!(entry & ADIV5_ROM_ROMENTRY_PRESENT)) {
-			DEBUG_INFO("%s%" PRIu32 " Entry 0x%" PRIx32 " -> Not present\n", indent, i, entry);
+			DEBUG_INFO("%s%" PRIu32 " Entry 0x%08" PRIx32 " -> Not present\n", indent, i, entry);
 			continue;
 		}
 
@@ -1067,7 +1067,8 @@ void adiv5_dp_init(adiv5_debug_port_s *const dp)
 	if (dp->version >= 3U) {
 		++dp->refcnt;
 		if (!adiv6_dp_init(dp))
-			adiv5_dp_unref(dp);
+			DEBUG_ERROR("Error while discovering ADIv6 DP\n");
+		adiv5_dp_unref(dp);
 		return;
 	}
 
