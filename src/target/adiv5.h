@@ -181,8 +181,11 @@
 
 #define ADIV5_AP_CFG_LARGE_ADDRESS (1U << 1U)
 
-#define ADIV5_AP_FLAGS_64BIT   (1U << 0U)
-#define ADIV5_AP_FLAGS_HAS_MEM (1U << 1U)
+/* Flags values for the AP's flags field */
+#define ADIV5_AP_FLAGS_64BIT           (1U << 0U)
+#define ADIV5_AP_FLAGS_HAS_MEM         (1U << 1U)
+#define ADIV6_DP_FLAGS_HAS_PWRCTRL     (1U << 2U)
+#define ADIV6_DP_FLAGS_HAS_SYSRESETREQ (1U << 3U)
 
 /* ADIv5 Class 0x1 ROM Table Registers */
 #define ADIV5_ROM_MEMTYPE          0xfccU

@@ -115,6 +115,37 @@ static uint64_t adiv6_dp_read_pidr(adiv6_access_port_s *const ap)
 	return ((uint64_t)pidr_upper << 32U) | (uint64_t)pidr_lower;
 }
 
+static bool adiv6_reset_resources(adiv6_access_port_s *const rom_table)
+{
+	/* Read out power request ID register 0 and check if power control is actually implemented */
+	const uint8_t pridr0 = adiv5_ap_read(&rom_table->base, CORESIGHT_ROM_PRIDR0) & 0x3fU;
+	if ((pridr0 & CORESIGHT_ROM_PRIDR0_VERSION_MASK) != CORESIGHT_ROM_PRIDR0_VERSION_NOT_IMPL)
+		rom_table->base.flags |= ADIV6_DP_FLAGS_HAS_PWRCTRL;
+	/* Now try and perform a debug reset request */
+	if (pridr0 & CORESIGHT_ROM_PRIDR0_HAS_DBG_RESET_REQ) {
+		platform_timeout_s timeout;
+		platform_timeout_set(&timeout, 250);
+
+		adiv5_ap_write(&rom_table->base, CORESIGHT_ROM_DBGRSTRR, CORESIGHT_ROM_DBGRST_REQ);
+		/* While the reset request is in progress */
+		while (adiv5_ap_read(&rom_table->base, CORESIGHT_ROM_DBGRSTRR) & CORESIGHT_ROM_DBGRST_REQ) {
+			/* Check if it's been acknowledge, and if it has, deassert the request */
+			if (adiv5_ap_read(&rom_table->base, CORESIGHT_ROM_DBGRSTAR) & CORESIGHT_ROM_DBGRST_REQ)
+				adiv5_ap_write(&rom_table->base, CORESIGHT_ROM_DBGRSTRR, 0U);
+			/* Check if the reset has timed out */
+			if (platform_timeout_is_expired(&timeout)) {
+				DEBUG_WARN("adiv6: debug reset failed\n");
+				adiv5_ap_write(&rom_table->base, CORESIGHT_ROM_DBGRSTRR, 0U);
+				break;
+			}
+		}
+	}
+	/* Regardless of what happened, extract whether system reset is supported this way */
+	if (pridr0 & CORESIGHT_ROM_PRIDR0_HAS_SYS_RESET_REQ)
+		rom_table->base.flags |= ADIV6_DP_FLAGS_HAS_SYSRESETREQ;
+	return true;
+}
+
 static bool adiv6_parse_coresight_v0_rom_table(
 	adiv6_access_port_s *const base_ap, const target_addr64_t base_address, const uint64_t pidr)
 {
@@ -127,10 +158,14 @@ static bool adiv6_parse_coresight_v0_rom_table(
 #endif
 
 	/* Now we know we're in a CoreSight v0 ROM table, read out the device ID field and set up the memory flag on the AP */
-	const uint32_t dev_id = adiv5_ap_read(&base_ap->base, CORESIGHT_ROM_DEVID);
+	const uint8_t dev_id = adiv5_ap_read(&base_ap->base, CORESIGHT_ROM_DEVID) & 0x7fU;
 	if (dev_id & CORESIGHT_ROM_DEVID_SYSMEM)
 		base_ap->base.flags |= ADIV5_AP_FLAGS_HAS_MEM;
 	const bool rom_format = dev_id & CORESIGHT_ROM_DEVID_FORMAT;
+
+	/* Check if the power control registers are available, and if they are try to reset all debug resources */
+	if ((dev_id & CORESIGHT_ROM_DEVID_HAS_POWERREQ) && !adiv6_reset_resources(base_ap))
+		return false;
 
 	DEBUG_INFO("ROM Table: BASE=0x%" PRIx32 "%08" PRIx32 " SYSMEM=%u, Manufacturer %03x Partno %03x (PIDR = "
 			   "0x%02" PRIx32 "%08" PRIx32 ")\n",
