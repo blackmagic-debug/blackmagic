@@ -238,6 +238,30 @@ static bool adiv6_parse_coresight_v0_rom_table(
 	return result;
 }
 
+static adiv6_access_port_s *adiv6_new_ap(
+	adiv5_debug_port_s *const dp, const target_addr64_t base_address, const uint32_t entry_number)
+{
+	adiv6_access_port_s ap = {
+		.base.dp = dp,
+		.base.apsel = entry_number & 0xffU,
+		.ap_address = base_address,
+	};
+	/* Try to configure the AP for use */
+	if (!adiv5_configure_ap(&ap.base))
+		return NULL;
+
+	/* It's valid to so create a heap copy */
+	adiv6_access_port_s *result = malloc(sizeof(*result));
+	if (!result) { /* malloc failed: heap exhaustion */
+		DEBUG_ERROR("malloc: failed in %s\n", __func__);
+		return NULL;
+	}
+	/* Copy the new AP into place and ref it */
+	memcpy(result, &ap, sizeof(*result));
+	adiv5_ap_ref(&result->base);
+	return result;
+}
+
 static bool adiv6_component_probe(
 	adiv5_debug_port_s *const dp, const target_addr64_t base_address, const uint32_t entry_number)
 {
@@ -297,6 +321,20 @@ static bool adiv6_component_probe(
 		if (designer_code == JEP106_MANUFACTURER_ARM) {
 			const arm_coresight_component_s *const component =
 				adiv5_lookup_component(base_address, entry_number, " ", cid_class, pidr, dev_type, arch_id);
+			if (component == NULL)
+				return true;
+
+			switch (component->arch) {
+			case aa_access_port: {
+				adiv6_access_port_s *ap = adiv6_new_ap(dp, base_address, entry_number);
+				if (ap == NULL)
+					break;
+				adiv5_ap_unref(&ap->base);
+				break;
+			}
+			default:
+				break;
+			}
 		}
 	}
 	return true;
