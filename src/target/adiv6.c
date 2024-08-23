@@ -209,8 +209,25 @@ static bool adiv6_parse_coresight_v0_rom_table(
 		/* Got a good entry? great! Figure out if it has a power domain to cycle and what the address offset is */
 		const target_addr64_t offset = entry & CORESIGHT_ROM_ROMENTRY_OFFSET_MASK;
 		if ((rom_table->base.flags & ADIV6_DP_FLAGS_HAS_PWRCTRL) & entry & CORESIGHT_ROM_ROMENTRY_POWERID_VALID) {
-			const uint8_t power_id =
-				(entry & CORESIGHT_ROM_ROMENTRY_POWERID_MASK) >> CORESIGHT_ROM_ROMENTRY_POWERID_SHIFT;
+			const uint8_t power_domain_offset =
+				((entry & CORESIGHT_ROM_ROMENTRY_POWERID_MASK) >> CORESIGHT_ROM_ROMENTRY_POWERID_SHIFT) << 2U;
+			/* Check if the power control register for this domain is present */
+			if (adiv5_ap_read(&rom_table->base, CORESIGHT_ROM_DBGPCR_BASE + power_domain_offset) &
+				CORESIGHT_ROM_DBGPCR_PRESENT) {
+				/* And if it is, ask the domain to power up */
+				adiv5_ap_write(
+					&rom_table->base, CORESIGHT_ROM_DBGPCR_BASE + power_domain_offset, CORESIGHT_ROM_DBGPCR_PWRREQ);
+				/* Then spin for a little waiting for the domain to become powered usefully */
+				platform_timeout_s timeout;
+				platform_timeout_set(&timeout, 250);
+				while (!(adiv5_ap_read(&rom_table->base, CORESIGHT_ROM_DBGPSR_BASE + power_domain_offset) &
+					CORESIGHT_ROM_DBGPSR_STATUS_ON)) {
+					if (platform_timeout_is_expired(&timeout)) {
+						DEBUG_WARN("adiv6: power-up failed\n");
+						return false;
+					}
+				}
+			}
 		}
 
 		/* Now recursively probe the component */
