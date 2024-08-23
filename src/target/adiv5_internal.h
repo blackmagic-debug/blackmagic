@@ -231,6 +231,28 @@ typedef enum cid_class {
 	cidc_unknown = 0x10 /* Not a valid component class */
 } cid_class_e;
 
+/* Enumeration of CoreSight component architectures */
+typedef enum arm_arch {
+	aa_nosupport,
+	aa_cortexm,
+	aa_cortexa,
+	aa_cortexr,
+	aa_end
+} arm_arch_e;
+
+/* Structure defining an ARM CoreSight component of some kind */
+typedef struct arm_coresight_component {
+	uint16_t part_number;
+	uint8_t dev_type;
+	uint16_t arch_id;
+	arm_arch_e arch;
+	cid_class_e cidc;
+#if ENABLE_DEBUG == 1
+	const char *type;
+	const char *full;
+#endif
+} arm_coresight_component_s;
+
 /* Helper for building an ADIv5 request */
 uint8_t make_packet_request(uint8_t rnw, uint16_t addr);
 

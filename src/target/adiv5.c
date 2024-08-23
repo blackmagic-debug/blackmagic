@@ -55,14 +55,6 @@
  */
 #define ARM_AP_TYPE_AHB3 1U
 
-typedef enum arm_arch {
-	aa_nosupport,
-	aa_cortexm,
-	aa_cortexa,
-	aa_cortexr,
-	aa_end
-} arm_arch_e;
-
 #if ENABLE_DEBUG == 1
 #define ARM_COMPONENT_STR(...) __VA_ARGS__
 #else
@@ -108,17 +100,7 @@ typedef enum arm_arch {
  * Additional reference on the DEVTYPE and DEVARCH registers can be found in the
  * ARM CoreSight Architecture Specification v3.0, sections B2.3.4 and B2.3.8.
  */
-static const struct {
-	uint16_t part_number;
-	uint8_t dev_type;
-	uint16_t arch_id;
-	arm_arch_e arch;
-	cid_class_e cidc;
-#if ENABLE_DEBUG == 1
-	const char *type;
-	const char *full;
-#endif
-} arm_component_lut[] = {
+static const arm_coresight_component_s arm_component_lut[] = {
 	{0x000, 0x00, 0, aa_cortexm, cidc_gipc, ARM_COMPONENT_STR("Cortex-M3 SCS", "(System Control Space)")},
 	{0x001, 0x00, 0, aa_nosupport, cidc_unknown, ARM_COMPONENT_STR("Cortex-M3 ITM", "(Instrumentation Trace Module)")},
 	{0x002, 0x00, 0, aa_nosupport, cidc_unknown, ARM_COMPONENT_STR("Cortex-M3 DWT", "(Data Watchpoint and Trace)")},
