@@ -326,9 +326,12 @@ static bool adiv6_component_probe(
 
 			switch (component->arch) {
 			case aa_access_port: {
+				/* We've got an ADIv6 APv2, so try and set up to use it */
 				adiv6_access_port_s *ap = adiv6_new_ap(dp, base_address, entry_number);
 				if (ap == NULL)
 					break;
+				/* Now we can use it, see what's on it and try to create debug targets */
+				adiv5_component_probe(&ap->base, ap->base.base, 1U, 0U);
 				adiv5_ap_unref(&ap->base);
 				break;
 			}
