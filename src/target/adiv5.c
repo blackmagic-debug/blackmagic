@@ -541,6 +541,44 @@ static void adiv5_parse_adi_rom_table(adiv5_access_port_s *const ap, const targe
 	DEBUG_INFO("%sROM Table: END\n", indent);
 }
 
+const arm_coresight_component_s *adiv5_lookup_component(const target_addr64_t base_address, const uint32_t entry_number,
+	const char *const indent, const uint8_t cid_class, const uint64_t pidr, const uint8_t dev_type,
+	const uint16_t arch_id)
+{
+#if defined(DEBUG_WARN_IS_NOOP) && defined(DEBUG_ERROR_IS_NOOP)
+	(void)indent;
+	(void)base_address;
+	(void)entry_number;
+#endif
+
+	const uint16_t part_number = pidr & PIDR_PN_MASK;
+	for (size_t index = 0; arm_component_lut[index].arch != aa_end; ++index) {
+		if (arm_component_lut[index].part_number != part_number || arm_component_lut[index].dev_type != dev_type ||
+			arm_component_lut[index].arch_id != arch_id)
+			continue;
+
+		DEBUG_INFO("%s%" PRIu32 " 0x%" PRIx32 "%08" PRIx32 ": %s - %s %s (PIDR = 0x%02" PRIx32 "%08" PRIx32 " DEVTYPE "
+				   "= 0x%02x "
+				   "ARCHID = 0x%04x)\n",
+			indent + 1, entry_number, (uint32_t)(base_address >> 32U), (uint32_t)base_address,
+			adiv5_cid_class_string(cid_class), arm_component_lut[index].type, arm_component_lut[index].full,
+			(uint32_t)(pidr >> 32U), (uint32_t)pidr, dev_type, arch_id);
+
+		const cid_class_e adjusted_class = adiv5_class_from_cid(part_number, arch_id, cid_class);
+		/* Perform sanity check, if we know what to expect as * component ID class. */
+		if (arm_component_lut[index].cidc != cidc_unknown && adjusted_class != arm_component_lut[index].cidc)
+			DEBUG_WARN("%s\"%s\" expected, got \"%s\"\n", indent + 1,
+				adiv5_cid_class_string(arm_component_lut[index].cidc), adiv5_cid_class_string(adjusted_class));
+		return &arm_component_lut[index];
+	}
+
+	DEBUG_WARN("%s%" PRIu32 " 0x%" PRIx32 "%08" PRIx32 ": %s - Unknown (PIDR = 0x%02" PRIx32 "%08" PRIx32 " DEVTYPE = "
+			   "0x%02x ARCHID = 0x%04x)\n",
+		indent, entry_number, (uint32_t)(base_address >> 32U), (uint32_t)base_address,
+		adiv5_cid_class_string(cid_class), (uint32_t)(pidr >> 32U), (uint32_t)pidr, dev_type, arch_id);
+	return NULL;
+}
+
 /*
  * Return true if we find a debuggable device.
  * NOLINTNEXTLINE(misc-no-recursion)
@@ -621,25 +659,12 @@ static void adiv5_component_probe(
 				arch_id = devarch & DEVARCH_ARCHID_MASK;
 		}
 
-		/* Find the part number in our part list and run the appropriate probe routine if applicable. */
-		size_t i;
-		for (i = 0; arm_component_lut[i].arch != aa_end; i++) {
-			if (arm_component_lut[i].part_number != part_number || arm_component_lut[i].dev_type != dev_type ||
-				arm_component_lut[i].arch_id != arch_id)
-				continue;
+		/* Look the component up and dispatch to a probe routine accordingly */
+		const arm_coresight_component_s *const component =
+			adiv5_lookup_component(addr, num_entry, indent, cid_class, pidr, dev_type, arch_id);
 
-			DEBUG_INFO("%s%" PRIu32 " 0x%" PRIx32 ": %s - %s %s (PIDR = 0x%08" PRIx32 "%08" PRIx32 " DEVTYPE = 0x%02x "
-					   "ARCHID = 0x%04x)\n",
-				indent + 1, num_entry, addr, adiv5_cid_class_string(cid_class), arm_component_lut[i].type,
-				arm_component_lut[i].full, (uint32_t)(pidr >> 32U), (uint32_t)pidr, dev_type, arch_id);
-
-			const cid_class_e adjusted_class = adiv5_class_from_cid(part_number, arch_id, cid_class);
-			/* Perform sanity check, if we know what to expect as * component ID class. */
-			if (arm_component_lut[i].cidc != cidc_unknown && adjusted_class != arm_component_lut[i].cidc)
-				DEBUG_WARN("%s\"%s\" expected, got \"%s\"\n", indent + 1,
-					adiv5_cid_class_string(arm_component_lut[i].cidc), adiv5_cid_class_string(adjusted_class));
-
-			switch (arm_component_lut[i].arch) {
+		if (component) {
+			switch (component->arch) {
 			case aa_cortexm:
 				DEBUG_INFO("%s-> cortexm_probe\n", indent + 1);
 				cortexm_probe(ap);
@@ -655,13 +680,6 @@ static void adiv5_component_probe(
 			default:
 				break;
 			}
-			break;
-		}
-		if (arm_component_lut[i].arch == aa_end) {
-			DEBUG_WARN("%s%" PRIu32 " 0x%" PRIx32 ": %s - Unknown (PIDR = 0x%08" PRIx32 "%08" PRIx32 " DEVTYPE = "
-					   "0x%02x ARCHID = 0x%04x)\n",
-				indent, num_entry, addr, adiv5_cid_class_string(cid_class), (uint32_t)(pidr >> 32U), (uint32_t)pidr,
-				dev_type, arch_id);
 		}
 	}
 }

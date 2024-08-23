@@ -258,5 +258,8 @@ uint8_t make_packet_request(uint8_t rnw, uint16_t addr);
 
 /* Helper for disassembling PIDRs */
 uint16_t adiv5_designer_from_pidr(const uint64_t pidr);
+/* Helper for looking up components in the component LUT */
+const arm_coresight_component_s *adiv5_lookup_component(target_addr64_t base_address, uint32_t entry_number,
+	const char *indent, uint8_t cid_class, uint64_t pidr, uint8_t dev_type, uint16_t arch_id);
 
 #endif /* TARGET_ADIV5_INTERNAL_H */
