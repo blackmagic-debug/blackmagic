@@ -40,6 +40,7 @@
  */
 
 #include "general.h"
+#include "jep106.h"
 #include "adiv6.h"
 #include "adiv6_internal.h"
 
@@ -273,6 +274,12 @@ static bool adiv6_component_probe(
 				return false;
 			}
 			return adiv6_parse_coresight_v0_rom_table(&base_ap, base_address, pidr);
+		}
+
+		/* If it's an ARM component of some kind, look it up in the ARM component table */
+		if (designer_code == JEP106_MANUFACTURER_ARM) {
+			const arm_coresight_component_s *const component =
+				adiv5_lookup_component(base_address, entry_number, " ", cid_class, pidr, dev_type, arch_id);
 		}
 	}
 	return true;
