@@ -701,125 +701,134 @@ static void adiv5_display_ap(const adiv5_access_port_s *const ap)
 #endif
 }
 
-adiv5_access_port_s *adiv5_new_ap(adiv5_debug_port_s *dp, uint8_t apsel)
+bool adiv5_configure_ap(adiv5_access_port_s *const ap)
 {
-	adiv5_access_port_s ap = {0};
-	/* Assume valid and try to read IDR */
-	ap.dp = dp;
-	ap.apsel = apsel;
 	/* Grab the ID register and make sure the value is sane (non-zero) */
-	ap.idr = adiv5_ap_read(&ap, ADIV5_AP_IDR);
-	if (!ap.idr)
-		return NULL;
-	const uint8_t ap_type = ADIV5_AP_IDR_TYPE(ap.idr);
-	const uint8_t ap_class = ADIV5_AP_IDR_CLASS(ap.idr);
-	DEBUG_INFO("AP %3u: IDR=%08" PRIx32, apsel, ap.idr);
+	ap->idr = adiv5_ap_read(ap, ADIV5_AP_IDR);
+	if (!ap->idr)
+		return false;
+	const uint8_t ap_type = ADIV5_AP_IDR_TYPE(ap->idr);
+	const uint8_t ap_class = ADIV5_AP_IDR_CLASS(ap->idr);
+	DEBUG_INFO("AP %3u: IDR=%08" PRIx32, ap->apsel, ap->idr);
 	/* If this is a MEM-AP */
 	if (ap_class == ADIV5_AP_IDR_CLASS_MEM && ap_type >= 1U && ap_type <= 8U) {
 		/* Grab the config, base and CSW registers */
-		const uint32_t cfg = adiv5_ap_read(&ap, ADIV5_AP_CFG);
-		ap.csw = adiv5_ap_read(&ap, ADIV5_AP_CSW);
+		const uint32_t cfg = adiv5_ap_read(ap, ADIV5_AP_CFG);
+		ap->csw = adiv5_ap_read(ap, ADIV5_AP_CSW);
 		/* This reads the lower half of BASE */
-		ap.base = adiv5_ap_read(&ap, ADIV5_AP_BASE_LOW);
-		const uint8_t base_flags = (uint8_t)ap.base & (ADIV5_AP_BASE_FORMAT | ADIV5_AP_BASE_PRESENT);
+		ap->base = adiv5_ap_read(ap, ADIV5_AP_BASE_LOW);
+		const uint8_t base_flags = (uint8_t)ap->base & (ADIV5_AP_BASE_FORMAT | ADIV5_AP_BASE_PRESENT);
 		/* Make sure we only pay attention to the base address, not the presence and format bits */
-		ap.base &= ADIV5_AP_BASE_BASEADDR;
+		ap->base &= ADIV5_AP_BASE_BASEADDR;
 		/* Check if this is a 64-bit AP */
 		if (cfg & ADIV5_AP_CFG_LARGE_ADDRESS) {
 			/* If this base value is invalid for a LPAE MEM-AP, bomb out here */
 			if (base_flags == (ADIV5_AP_BASE_FORMAT_LEGACY | ADIV5_AP_BASE_PRESENT_NO_ENTRY)) {
 				DEBUG_INFO(" -> Invalid\n");
-				return NULL;
+				return false;
 			}
 			/* Otherwise note this is a 64-bit AP and read the high part */
-			ap.flags |= ADIV5_AP_FLAGS_64BIT;
-			ap.base |= (uint64_t)adiv5_ap_read(&ap, ADIV5_AP_BASE_HIGH) << 32U;
+			ap->flags |= ADIV5_AP_FLAGS_64BIT;
+			ap->base |= (uint64_t)adiv5_ap_read(ap, ADIV5_AP_BASE_HIGH) << 32U;
 		}
 		/* Check the Debug Base Address register for not-present. See ADIv5 Specification C2.6.1 */
 		if (base_flags == (ADIV5_AP_BASE_FORMAT_ADIV5 | ADIV5_AP_BASE_PRESENT_NO_ENTRY) ||
-			(!(ap.flags & ADIV5_AP_FLAGS_64BIT) && (uint32_t)ap.base == ADIV5_AP_BASE_NOT_PRESENT)) {
+			(!(ap->flags & ADIV5_AP_FLAGS_64BIT) && (uint32_t)ap->base == ADIV5_AP_BASE_NOT_PRESENT)) {
 			/*
 			 * Debug Base Address not present in this MEM-AP
 			 * No debug entries... useless AP
 			 * AP0 on STM32MP157C reads 0x00000002
 			 */
 			DEBUG_INFO(" -> Not Present\n");
-			return NULL;
+			return false;
 		}
 		/* Check if the AP is disabled, skipping it if that is the case */
-		if ((ap.csw & ADIV5_AP_CSW_AP_ENABLED) == 0U) {
+		if ((ap->csw & ADIV5_AP_CSW_AP_ENABLED) == 0U) {
 			DEBUG_INFO(" -> Disabled\n");
-			return NULL;
+			return false;
 		}
 
 		/* Apply bus-common fixups to the CSW value */
-		ap.csw &= ~(ADIV5_AP_CSW_SIZE_MASK | ADIV5_AP_CSW_ADDRINC_MASK);
-		ap.csw |= ADIV5_AP_CSW_DBGSWENABLE;
+		ap->csw &= ~(ADIV5_AP_CSW_SIZE_MASK | ADIV5_AP_CSW_ADDRINC_MASK);
+		ap->csw |= ADIV5_AP_CSW_DBGSWENABLE;
 
 		switch (ap_type) {
 		case ADIV5_AP_IDR_TYPE_AXI3_4:
 			/* XXX: Handle AXI4 w/ ACE-Lite which makes Mode and Type do ~things~™ (§E1.3.1, pg237) */
 			/* Clear any existing prot modes and disable memory tagging */
-			ap.csw &= ~(ADIV5_AP_CSW_AXI3_4_PROT_MASK | ADIV5_AP_CSW_AXI_MTE);
+			ap->csw &= ~(ADIV5_AP_CSW_AXI3_4_PROT_MASK | ADIV5_AP_CSW_AXI_MTE);
 			/* Check if secure access is allowed and enable it if so */
-			if (ap.csw & ADIV5_AP_CSW_SPIDEN)
-				ap.csw &= ~ADIV5_AP_CSW_AXI_PROT_NS;
+			if (ap->csw & ADIV5_AP_CSW_SPIDEN)
+				ap->csw &= ~ADIV5_AP_CSW_AXI_PROT_NS;
 			else
-				ap.csw |= ADIV5_AP_CSW_AXI_PROT_NS;
+				ap->csw |= ADIV5_AP_CSW_AXI_PROT_NS;
 			/* Always privileged accesses */
-			ap.csw |= ADIV5_AP_CSW_AXI_PROT_PRIV;
+			ap->csw |= ADIV5_AP_CSW_AXI_PROT_PRIV;
 			break;
 		case ADIV5_AP_IDR_TYPE_AXI5:
 			/* Clear any existing prot modes and disable memory tagging */
-			ap.csw &= ~(ADIV5_AP_CSW_AXI5_PROT_MASK | ADIV5_AP_CSW_AXI_MTE);
+			ap->csw &= ~(ADIV5_AP_CSW_AXI5_PROT_MASK | ADIV5_AP_CSW_AXI_MTE);
 			/* Check if secure access is allowed and enable it if so */
-			if (ap.csw & ADIV5_AP_CSW_SPIDEN)
-				ap.csw &= ~ADIV5_AP_CSW_AXI_PROT_NS;
+			if (ap->csw & ADIV5_AP_CSW_SPIDEN)
+				ap->csw &= ~ADIV5_AP_CSW_AXI_PROT_NS;
 			else
-				ap.csw |= ADIV5_AP_CSW_AXI_PROT_NS;
+				ap->csw |= ADIV5_AP_CSW_AXI_PROT_NS;
 			/* Always privileged accesses */
-			ap.csw |= ADIV5_AP_CSW_AXI_PROT_PRIV;
+			ap->csw |= ADIV5_AP_CSW_AXI_PROT_PRIV;
 			break;
 		case ADIV5_AP_IDR_TYPE_AHB3:
 		case ADIV5_AP_IDR_TYPE_AHB5:
 			/* Clear any existing HPROT modes */
-			ap.csw &= ~ADIV5_AP_CSW_AHB_HPROT_MASK;
+			ap->csw &= ~ADIV5_AP_CSW_AHB_HPROT_MASK;
 			/*
 			 * Ensure that MasterType is set to generate transactions as requested from the AHB-AP,
 			 * and that we generate privileged data requests via the HPROT bits
 			 */
-			ap.csw |= ADIV5_AP_CSW_AHB_MASTERTYPE | ADIV5_AP_CSW_AHB_HPROT_DATA | ADIV5_AP_CSW_AHB_HPROT_PRIV;
+			ap->csw |= ADIV5_AP_CSW_AHB_MASTERTYPE | ADIV5_AP_CSW_AHB_HPROT_DATA | ADIV5_AP_CSW_AHB_HPROT_PRIV;
 			/* Check to see if secure access is supported and allowed */
-			if (ap.csw & ADIV5_AP_CSW_SPIDEN)
-				ap.csw &= ~ADIV5_AP_CSW_AHB_HNONSEC;
+			if (ap->csw & ADIV5_AP_CSW_SPIDEN)
+				ap->csw &= ~ADIV5_AP_CSW_AHB_HNONSEC;
 			else
-				ap.csw |= ADIV5_AP_CSW_AHB_HNONSEC;
+				ap->csw |= ADIV5_AP_CSW_AHB_HNONSEC;
 			break;
 		case ADIV5_AP_IDR_TYPE_APB4_5:
 			/* Clear any existing prot modes and disable memory tagging */
-			ap.csw &= ~ADIV5_AP_CSW_APB_PPROT_MASK;
+			ap->csw &= ~ADIV5_AP_CSW_APB_PPROT_MASK;
 			/* Check if secure access is allowed and enable it if so */
-			if (ap.csw & ADIV5_AP_CSW_SPIDEN)
-				ap.csw &= ~ADIV5_AP_CSW_APB_PPROT_NS;
+			if (ap->csw & ADIV5_AP_CSW_SPIDEN)
+				ap->csw &= ~ADIV5_AP_CSW_APB_PPROT_NS;
 			else
-				ap.csw |= ADIV5_AP_CSW_APB_PPROT_NS;
-			ap.csw |= ADIV5_AP_CSW_APB_PPROT_PRIV;
+				ap->csw |= ADIV5_AP_CSW_APB_PPROT_NS;
+			ap->csw |= ADIV5_AP_CSW_APB_PPROT_PRIV;
 			break;
 		}
 
 		if (cfg & ADIV5_AP_CFG_LARGE_ADDRESS)
 			DEBUG_INFO(" CFG=%08" PRIx32 " BASE=%08" PRIx32 "%08" PRIx32 " CSW=%08" PRIx32, cfg,
-				(uint32_t)(ap.base >> 32U), (uint32_t)ap.base, ap.csw);
+				(uint32_t)(ap->base >> 32U), (uint32_t)ap->base, ap->csw);
 		else
-			DEBUG_INFO(" CFG=%08" PRIx32 " BASE=%08" PRIx32 " CSW=%08" PRIx32, cfg, (uint32_t)ap.base, ap.csw);
+			DEBUG_INFO(" CFG=%08" PRIx32 " BASE=%08" PRIx32 " CSW=%08" PRIx32, cfg, (uint32_t)ap->base, ap->csw);
 
-		if (ap.csw & ADIV5_AP_CSW_TRINPROG) {
-			DEBUG_ERROR("AP %3u: Transaction in progress. AP is not usable!\n", apsel);
-			return NULL;
+		if (ap->csw & ADIV5_AP_CSW_TRINPROG) {
+			DEBUG_ERROR("AP %3u: Transaction in progress. AP is not usable!\n", ap->apsel);
+			return false;
 		}
 	}
 
-	adiv5_display_ap(&ap);
+	adiv5_display_ap(ap);
+	return true;
+}
+
+adiv5_access_port_s *adiv5_new_ap(adiv5_debug_port_s *const dp, const uint8_t apsel)
+{
+	adiv5_access_port_s ap = {
+		.dp = dp,
+		.apsel = apsel,
+	};
+	/* Try to configure the AP for use */
+	if (!adiv5_configure_ap(&ap))
+		return NULL;
+
 	/* It's valid to so create a heap copy */
 	adiv5_access_port_s *result = malloc(sizeof(*result));
 	if (!result) { /* malloc failed: heap exhaustion */
