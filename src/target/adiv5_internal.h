@@ -264,5 +264,8 @@ const arm_coresight_component_s *adiv5_lookup_component(target_addr64_t base_add
 	const char *indent, uint8_t cid_class, uint64_t pidr, uint8_t dev_type, uint16_t arch_id);
 /* Helper for figuring out what an AP is and configuring it for use */
 bool adiv5_configure_ap(adiv5_access_port_s *ap);
+/* Helper for probing a CoreSight debug component */
+void adiv5_component_probe(
+	adiv5_access_port_s *ap, target_addr64_t base_address, size_t recursion, uint32_t entry_number);
 
 #endif /* TARGET_ADIV5_INTERNAL_H */

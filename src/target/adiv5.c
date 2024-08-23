@@ -193,8 +193,6 @@ static const arm_coresight_component_s arm_component_lut[] = {
 	{0xfff, 0x00, 0, aa_end, cidc_unknown, ARM_COMPONENT_STR("end", "end")},
 };
 
-static void adiv5_component_probe(adiv5_access_port_s *ap, target_addr_t addr, size_t recursion, uint32_t num_entry);
-
 #if ENABLE_DEBUG == 1
 static const char *adiv5_arm_ap_type_string(const uint8_t ap_type, const uint8_t ap_class)
 {
@@ -581,18 +579,15 @@ const arm_coresight_component_s *adiv5_lookup_component(const target_addr64_t ba
 	return NULL;
 }
 
-/*
- * Return true if we find a debuggable device.
- * NOLINTNEXTLINE(misc-no-recursion)
- */
-static void adiv5_component_probe(
-	adiv5_access_port_s *ap, target_addr_t addr, const size_t recursion, const uint32_t num_entry)
+/* Return true if we find a debuggable device. */
+void adiv5_component_probe(
+	adiv5_access_port_s *ap, target_addr64_t base_address, const size_t recursion, const uint32_t entry_number)
 {
 #ifdef DEBUG_WARN_IS_NOOP
-	(void)num_entry;
+	(void)entry_number;
 #endif
 
-	const uint32_t cidr = adiv5_ap_read_id(ap, addr + CIDR0_OFFSET);
+	const uint32_t cidr = adiv5_ap_read_id(ap, base_address + CIDR0_OFFSET);
 	if (ap->dp->fault) {
 		DEBUG_ERROR("Error reading CIDR on AP%u: %u\n", ap->apsel, ap->dp->fault);
 		return;
@@ -615,8 +610,9 @@ static void adiv5_component_probe(
 
 	/* CIDR preamble sanity check */
 	if ((cidr & ~CID_CLASS_MASK) != CID_PREAMBLE) {
-		DEBUG_WARN("%s%" PRIu32 " 0x%08" PRIx32 ": 0x%08" PRIx32 " <- does not match preamble (0x%08" PRIx32 ")\n",
-			indent, num_entry, addr, cidr, CID_PREAMBLE);
+		DEBUG_WARN("%s%" PRIu32 " 0x%" PRIx32 "%08" PRIx32 ": 0x%08" PRIx32 " <- does not match preamble (0x%08" PRIx32
+				   ")\n",
+			indent, entry_number, (uint32_t)(base_address >> 32U), (uint32_t)base_address, cidr, CID_PREAMBLE);
 		return;
 	}
 
@@ -624,7 +620,7 @@ static void adiv5_component_probe(
 	const uint8_t cid_class = (cidr & CID_CLASS_MASK) >> CID_CLASS_SHIFT;
 
 	/* Read out the peripheral ID register */
-	const uint64_t pidr = adiv5_ap_read_pidr(ap, addr);
+	const uint64_t pidr = adiv5_ap_read_pidr(ap, base_address);
 
 	/* ROM table */
 	if (cid_class == cidc_romtab) {
@@ -633,7 +629,7 @@ static void adiv5_component_probe(
 			DEBUG_ERROR("Fault reading ROM table\n");
 			return;
 		}
-		adiv5_parse_adi_rom_table(ap, addr, recursion, indent, pidr);
+		adiv5_parse_adi_rom_table(ap, base_address, recursion, indent, pidr);
 	} else {
 		/* Extract the designer code from the part ID register */
 		const uint16_t designer_code = adiv5_designer_from_pidr(pidr);
@@ -643,8 +639,10 @@ static void adiv5_component_probe(
 			const uint16_t part_number = pidr & PIDR_PN_MASK;
 #endif
 			/* non-ARM components are not supported currently */
-			DEBUG_WARN("%s%" PRIu32 " 0x%" PRIx32 ": 0x%02" PRIx32 "%08" PRIx32 " Non-ARM component ignored\n",
-				indent + 1, num_entry, addr, (uint32_t)(pidr >> 32U), (uint32_t)pidr);
+			DEBUG_WARN("%s%" PRIu32 " 0x%" PRIx32 "%08" PRIx32 ": 0x%02" PRIx32 "%08" PRIx32 " Non-ARM component "
+			                                                                                 "ignored\n",
+				indent + 1, entry_number, (uint32_t)(base_address >> 32U), (uint32_t)base_address,
+				(uint32_t)(pidr >> 32U), (uint32_t)pidr);
 			DEBUG_TARGET("%s -> designer: %x, part no: %x\n", indent, designer_code, part_number);
 			return;
 		}
@@ -654,8 +652,8 @@ static void adiv5_component_probe(
 		uint16_t arch_id = 0;
 		if (cid_class == cidc_dc) {
 			/* Read out the component's identification information */
-			const uint32_t devarch = adiv5_mem_read32(ap, addr + DEVARCH_OFFSET);
-			dev_type = adiv5_mem_read32(ap, addr + DEVTYPE_OFFSET) & DEVTYPE_MASK;
+			const uint32_t devarch = adiv5_mem_read32(ap, base_address + DEVARCH_OFFSET);
+			dev_type = adiv5_mem_read32(ap, base_address + DEVTYPE_OFFSET) & DEVTYPE_MASK;
 
 			if (devarch & DEVARCH_PRESENT)
 				arch_id = devarch & DEVARCH_ARCHID_MASK;
@@ -663,7 +661,7 @@ static void adiv5_component_probe(
 
 		/* Look the component up and dispatch to a probe routine accordingly */
 		const arm_coresight_component_s *const component =
-			adiv5_lookup_component(addr, num_entry, indent, cid_class, pidr, dev_type, arch_id);
+			adiv5_lookup_component(base_address, entry_number, indent, cid_class, pidr, dev_type, arch_id);
 
 		if (component) {
 			switch (component->arch) {
@@ -673,11 +671,11 @@ static void adiv5_component_probe(
 				break;
 			case aa_cortexa:
 				DEBUG_INFO("%s-> cortexa_probe\n", indent + 1);
-				cortexa_probe(ap, addr);
+				cortexa_probe(ap, base_address);
 				break;
 			case aa_cortexr:
 				DEBUG_INFO("%s-> cortexr_probe\n", indent + 1);
-				cortexr_probe(ap, addr);
+				cortexr_probe(ap, base_address);
 				break;
 			default:
 				break;
