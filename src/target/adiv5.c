@@ -462,12 +462,12 @@ uint16_t adiv5_designer_from_pidr(const uint64_t pidr)
 	uint16_t designer_code;
 	if (pidr & PIDR_JEP106_USED) {
 		/* (OFFSET - 8) because we want it on bits 11:8 of new code, see "JEP-106 code list" */
-		designer_code = (pidr & PIDR_JEP106_CONT_MASK) >> (PIDR_JEP106_CONT_OFFSET - 8U) |
-			(pidr & PIDR_JEP106_CODE_MASK) >> PIDR_JEP106_CODE_OFFSET;
+		designer_code = ((pidr & PIDR_JEP106_CONT_MASK) >> (PIDR_JEP106_CONT_OFFSET - 8U)) |
+			((pidr & PIDR_JEP106_CODE_MASK) >> PIDR_JEP106_CODE_OFFSET);
 
 	} else {
 		/* legacy ascii code */
-		designer_code = (pidr & PIDR_JEP106_CODE_MASK) >> PIDR_JEP106_CODE_OFFSET | ASCII_CODE_FLAG;
+		designer_code = ((pidr & PIDR_JEP106_CODE_MASK) >> PIDR_JEP106_CODE_OFFSET) | ASCII_CODE_FLAG;
 	}
 
 	if (designer_code == JEP106_MANUFACTURER_ERRATA_STM32WX || designer_code == JEP106_MANUFACTURER_ERRATA_CS ||
@@ -493,7 +493,7 @@ static void adiv5_parse_adi_rom_table(adiv5_access_port_s *const ap, const targe
 	const uint16_t designer_code = adiv5_designer_from_pidr(pidr);
 	const uint16_t part_number = pidr & PIDR_PN_MASK;
 
-	if (recursion_depth == 0) {
+	if (recursion_depth == 0U) {
 		ap->designer_code = designer_code;
 		ap->partno = part_number;
 
@@ -1186,7 +1186,7 @@ void adiv5_mem_access_setup(adiv5_access_port_s *const ap, const target_addr64_t
 	adiv5_ap_write(ap, ADIV5_AP_CSW, csw);
 	/* Then write TAR which is in the same AP bank */
 	if (ap->flags & ADIV5_AP_FLAGS_64BIT)
-		adiv5_dp_write(ap->dp, ADIV5_AP_TAR_HIGH, (uint32_t)(addr >> 32));
+		adiv5_dp_write(ap->dp, ADIV5_AP_TAR_HIGH, (uint32_t)(addr >> 32U));
 	adiv5_dp_write(ap->dp, ADIV5_AP_TAR_LOW, (uint32_t)addr);
 }
 
