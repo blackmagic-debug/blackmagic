@@ -162,6 +162,8 @@
 #define MAX_FLASH                (16U * 1024U * 1024U)
 #define MAX_WRITE_CHUNK          0x1000U
 
+#define ID_RP2040 0x1002U
+
 typedef struct rp_priv {
 	uint16_t rom_reset_usb_boot;
 	uint32_t ssi_enabled;
@@ -220,8 +222,12 @@ static void rp_add_flash(target_s *target)
 	rp_flash_enter_xip(target);
 }
 
-bool rp2040_probe(target_s *target)
+bool rp2040_probe(target_s *const target)
 {
+	/* Check that the target has the right part number */
+	if (target->part_id != ID_RP2040)
+		return false;
+
 	/* Check bootrom magic*/
 	uint32_t boot_magic = target_mem32_read32(target, BOOTROM_MAGIC_ADDR);
 	if ((boot_magic & BOOTROM_MAGIC_MASK) != BOOTROM_MAGIC) {
