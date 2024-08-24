@@ -518,6 +518,23 @@ static void remote_packet_process_adiv6(const char *const packet, const size_t p
 
 	SET_IDLE_STATE(0);
 	switch (packet[2]) {
+	/* AP access commands */
+	case REMOTE_AP_READ: { /* A6a = Read from APv2 register */
+		/* Grab the AP address to read from and try to perform the access */
+		const uint16_t addr = hex_string_to_num(4, packet + 21);
+		const uint32_t data = adiv5_ap_read(&remote_ap.base, addr);
+		remote_adiv5_respond(&data, 4U);
+		break;
+	}
+	case REMOTE_AP_WRITE: { /* A6A = Write to APv2 register */
+		/* Grab the AP address to write to and the data to write then try to perform the access */
+		const uint16_t addr = hex_string_to_num(4, packet + 21);
+		const uint32_t value = hex_string_to_num(8, packet + 25);
+		adiv5_ap_write(&remote_ap.base, addr, value);
+		remote_adiv5_respond(NULL, 0U);
+		break;
+	}
+
 	default:
 		remote_respond(REMOTE_RESP_ERR, REMOTE_ERROR_UNRECOGNISED);
 		break;

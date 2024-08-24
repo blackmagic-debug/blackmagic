@@ -321,6 +321,19 @@
 /* ADIv6 acceleration protocol elements */
 #define REMOTE_ADIV6_PACKET '6'
 
+#define REMOTE_ADIV6_AP_READ_STR                                                                      \
+	(char[])                                                                                          \
+	{                                                                                                 \
+		REMOTE_SOM, REMOTE_ADIV5_PACKET, REMOTE_ADIV6_PACKET, REMOTE_AP_READ, REMOTE_ADIV5_DEV_INDEX, \
+			REMOTE_ADIV5_ADDR64, REMOTE_ADIV5_ADDR16, REMOTE_EOM, 0                                   \
+	}
+#define REMOTE_ADIV6_AP_WRITE_STR                                                                      \
+	(char[])                                                                                           \
+	{                                                                                                  \
+		REMOTE_SOM, REMOTE_ADIV5_PACKET, REMOTE_ADIV6_PACKET, REMOTE_AP_WRITE, REMOTE_ADIV5_DEV_INDEX, \
+			REMOTE_ADIV5_ADDR64, REMOTE_ADIV5_ADDR16, REMOTE_ADIV5_DATA, REMOTE_EOM, 0                 \
+	}
+
 /* RISC-V acceleration protocol elements */
 #define REMOTE_RISCV_PACKET    'R'
 #define REMOTE_RISCV_PROTOCOLS 'P'
