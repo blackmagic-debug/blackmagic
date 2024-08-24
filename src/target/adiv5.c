@@ -559,7 +559,7 @@ const arm_coresight_component_s *adiv5_lookup_component(const target_addr64_t ba
 			arm_component_lut[index].arch_id != arch_id)
 			continue;
 
-		DEBUG_INFO("%s%" PRIu32 " 0x%" PRIx32 "%08" PRIx32 ": %s - %s %s (PIDR = 0x%02" PRIx32 "%08" PRIx32 " DEVTYPE "
+		DEBUG_INFO("%s%" PRIu32 " 0x%0" PRIx32 "%08" PRIx32 ": %s - %s %s (PIDR = 0x%02" PRIx32 "%08" PRIx32 " DEVTYPE "
 				   "= 0x%02x "
 				   "ARCHID = 0x%04x)\n",
 			indent + 1, entry_number, (uint32_t)(base_address >> 32U), (uint32_t)base_address,
@@ -574,7 +574,7 @@ const arm_coresight_component_s *adiv5_lookup_component(const target_addr64_t ba
 		return &arm_component_lut[index];
 	}
 
-	DEBUG_WARN("%s%" PRIu32 " 0x%" PRIx32 "%08" PRIx32 ": %s - Unknown (PIDR = 0x%02" PRIx32 "%08" PRIx32 " DEVTYPE = "
+	DEBUG_WARN("%s%" PRIu32 " 0x%0" PRIx32 "%08" PRIx32 ": %s - Unknown (PIDR = 0x%02" PRIx32 "%08" PRIx32 " DEVTYPE = "
 			   "0x%02x ARCHID = 0x%04x)\n",
 		indent, entry_number, (uint32_t)(base_address >> 32U), (uint32_t)base_address,
 		adiv5_cid_class_string(cid_class), (uint32_t)(pidr >> 32U), (uint32_t)pidr, dev_type, arch_id);
@@ -612,7 +612,7 @@ void adiv5_component_probe(
 
 	/* CIDR preamble sanity check */
 	if ((cidr & ~CID_CLASS_MASK) != CID_PREAMBLE) {
-		DEBUG_WARN("%s%" PRIu32 " 0x%" PRIx32 "%08" PRIx32 ": 0x%08" PRIx32 " <- does not match preamble (0x%08" PRIx32
+		DEBUG_WARN("%s%" PRIu32 " 0x%0" PRIx32 "%08" PRIx32 ": 0x%08" PRIx32 " <- does not match preamble (0x%08" PRIx32
 				   ")\n",
 			indent, entry_number, (uint32_t)(base_address >> 32U), (uint32_t)base_address, cidr, CID_PREAMBLE);
 		return;
@@ -641,7 +641,7 @@ void adiv5_component_probe(
 			const uint16_t part_number = pidr & PIDR_PN_MASK;
 #endif
 			/* non-ARM components are not supported currently */
-			DEBUG_WARN("%s%" PRIu32 " 0x%" PRIx32 "%08" PRIx32 ": 0x%02" PRIx32 "%08" PRIx32 " Non-ARM component "
+			DEBUG_WARN("%s%" PRIu32 " 0x%0" PRIx32 "%08" PRIx32 ": 0x%02" PRIx32 "%08" PRIx32 " Non-ARM component "
 					   "ignored\n",
 				indent + 1, entry_number, (uint32_t)(base_address >> 32U), (uint32_t)base_address,
 				(uint32_t)(pidr >> 32U), (uint32_t)pidr);

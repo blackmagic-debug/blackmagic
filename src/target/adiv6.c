@@ -83,7 +83,7 @@ bool adiv6_dp_init(adiv5_debug_port_s *const dp)
 		return false;
 	}
 	if ((base_address & ((UINT64_C(1) << dp->address_width) - 1U)) != base_address) {
-		DEBUG_INFO("Bad base address %" PRIx32 "%08" PRIx32 "on DP\n", (uint32_t)(base_address >> 32U),
+		DEBUG_INFO("Bad base address %0" PRIx32 "%08" PRIx32 "on DP\n", (uint32_t)(base_address >> 32U),
 			(uint32_t)base_address);
 		return false;
 	}
@@ -178,7 +178,7 @@ static bool adiv6_parse_coresight_v0_rom_table(
 	if ((dev_id & CORESIGHT_ROM_DEVID_HAS_POWERREQ) && !adiv6_reset_resources(rom_table))
 		return false;
 
-	DEBUG_INFO("ROM Table: BASE=0x%" PRIx32 "%08" PRIx32 " SYSMEM=%u, Manufacturer %03x Partno %03x (PIDR = "
+	DEBUG_INFO("ROM Table: BASE=0x%0" PRIx32 "%08" PRIx32 " SYSMEM=%u, Manufacturer %03x Partno %03x (PIDR = "
 			   "0x%02" PRIx32 "%08" PRIx32 ")\n",
 		(uint32_t)(base_address >> 32U), (uint32_t)base_address, 0U, designer_code, part_number,
 		(uint32_t)(pidr >> 32U), (uint32_t)pidr);
@@ -197,8 +197,8 @@ static bool adiv6_parse_coresight_v0_rom_table(
 			break;
 		/* Check for an entry to skip */
 		if (presence == CORESIGHT_ROM_ROMENTRY_ENTRY_NOT_PRESENT) {
-			DEBUG_INFO("%" PRIu32 " Entry 0x%" PRIx32 "%08" PRIx32 " -> Not present\n", index, (uint32_t)(entry >> 32U),
-				(uint32_t)entry);
+			DEBUG_INFO("%" PRIu32 " Entry 0x%0" PRIx32 "%08" PRIx32 " -> Not present\n", index,
+				(uint32_t)(entry >> 32U), (uint32_t)entry);
 			continue;
 		}
 		/* Check that the entry isn't invalid */
@@ -274,7 +274,7 @@ static bool adiv6_component_probe(adiv5_debug_port_s *const dp, const target_add
 	const uint32_t cidr = adiv6_dp_read_id(&base_ap, CIDR0_OFFSET);
 	/* CIDR preamble sanity check */
 	if ((cidr & ~CID_CLASS_MASK) != CID_PREAMBLE) {
-		DEBUG_WARN("%" PRIu32 " 0x%" PRIx32 "%08" PRIx32 ": 0x%08" PRIx32 " <- does not match preamble (0x%08" PRIx32
+		DEBUG_WARN("%" PRIu32 " 0x%0" PRIx32 "%08" PRIx32 ": 0x%08" PRIx32 " <- does not match preamble (0x%08" PRIx32
 				   ")\n",
 			entry_number, (uint32_t)(base_address >> 32U), (uint32_t)base_address, cidr, CID_PREAMBLE);
 		return false;
