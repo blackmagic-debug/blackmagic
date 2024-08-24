@@ -214,8 +214,14 @@ void remote_adiv5_dp_init(adiv5_debug_port_s *const dp)
 
 void remote_adiv6_dp_init(adiv5_debug_port_s *const dp)
 {
-	dp->mem_read = advi5_mem_read_bytes;
-	dp->mem_write = adiv5_mem_write_bytes;
+	/* Try to initialise ADIv6 acceleration */
+	if (remote_funcs.adiv6_init)
+		remote_funcs.adiv6_init(dp);
+	/* If we cannot, but we did initialise ADIv5, adjust the memory I/O functions so the ADIv6 APs work */
+	else if (remote_funcs.adiv5_init) {
+		dp->mem_read = advi5_mem_read_bytes;
+		dp->mem_write = adiv5_mem_write_bytes;
+	}
 }
 
 void remote_riscv_jtag_dtm_init(riscv_dmi_s *const dmi)

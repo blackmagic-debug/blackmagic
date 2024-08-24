@@ -251,6 +251,7 @@
 #define REMOTE_ACCEL_ADIV5     (1U << 0U)
 #define REMOTE_ACCEL_CORTEX_AR (1U << 1U)
 #define REMOTE_ACCEL_RISCV     (1U << 2U)
+#define REMOTE_ACCEL_ADIV6     (1U << 3U)
 
 /* ADIv5 accleration protocol elements */
 #define REMOTE_ADIV5_PACKET     'A'

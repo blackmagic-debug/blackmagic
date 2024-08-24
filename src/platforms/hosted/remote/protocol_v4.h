@@ -41,6 +41,7 @@
 bool remote_v4_init(void);
 
 bool remote_v4_adiv5_init(adiv5_debug_port_s *dp);
+bool remote_v4_adiv6_init(adiv5_debug_port_s *dp);
 bool remote_v4_riscv_jtag_init(riscv_dmi_s *dmi);
 
 #endif /*PLATFORMS_HOSTED_REMOTE_PROTOCOL_V4_H*/

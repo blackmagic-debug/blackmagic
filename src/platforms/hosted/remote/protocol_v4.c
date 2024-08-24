@@ -72,6 +72,8 @@ bool remote_v4_init(void)
 	/* Now fill in acceleration-specific functions */
 	if (accelerations & REMOTE_ACCEL_ADIV5)
 		remote_funcs.adiv5_init = remote_v4_adiv5_init;
+	if (accelerations & REMOTE_ACCEL_ADIV6)
+		remote_funcs.adiv6_init = remote_v4_adiv6_init;
 	if (accelerations & REMOTE_ACCEL_RISCV) {
 		/* For RISC-V we have to ask the acceleration backend what protocols it supports */
 		platform_buffer_write(REMOTE_RISCV_PROTOCOLS_STR, sizeof(REMOTE_RISCV_PROTOCOLS_STR));
@@ -100,6 +102,11 @@ bool remote_v4_adiv5_init(adiv5_debug_port_s *const dp)
 	dp->ap_write = remote_v3_adiv5_ap_write;
 	dp->mem_read = remote_v4_adiv5_mem_read_bytes;
 	dp->mem_write = remote_v4_adiv5_mem_write_bytes;
+	return true;
+}
+
+bool remote_v4_adiv6_init(adiv5_debug_port_s *dp)
+{
 	return true;
 }
 

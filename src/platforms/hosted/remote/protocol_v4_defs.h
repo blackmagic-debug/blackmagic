@@ -56,6 +56,7 @@
 #define REMOTE_ACCEL_ADIV5     (1U << 0U)
 #define REMOTE_ACCEL_CORTEX_AR (1U << 1U)
 #define REMOTE_ACCEL_RISCV     (1U << 2U)
+#define REMOTE_ACCEL_ADIV6     (1U << 3U)
 
 /* This version of the protocol introduces 64-bit support for the ADIv5 acceleration protocol */
 #define REMOTE_UINT64       '%', '0', '1', '6', 'l', 'l', 'x'
