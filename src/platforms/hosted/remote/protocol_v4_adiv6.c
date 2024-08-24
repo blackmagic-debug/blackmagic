@@ -33,17 +33,42 @@
 
 #include <assert.h>
 #include "bmp_remote.h"
+#include "protocol_v3_adiv5.h"
 #include "protocol_v4_defs.h"
 #include "protocol_v4_adiv6.h"
 #include "hex_utils.h"
 #include "exception.h"
 
-uint32_t remote_v4_adiv6_ap_read(adiv5_access_port_s *ap, uint16_t addr)
+uint32_t remote_v4_adiv6_ap_read(adiv5_access_port_s *base_ap, uint16_t addr)
 {
-	return adiv6_ap_reg_read(ap, addr);
+	adiv6_access_port_s *const ap = (adiv6_access_port_s *)base_ap;
+	char buffer[REMOTE_MAX_MSG_SIZE];
+	/* Create the request and send it to the remote */
+	ssize_t length =
+		snprintf(buffer, REMOTE_MAX_MSG_SIZE, REMOTE_ADIV6_AP_READ_STR, ap->base.dp->dev_index, ap->ap_address, addr);
+	platform_buffer_write(buffer, length);
+	/* Read back the answer and check for errors */
+	length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
+	if (!remote_v3_adiv5_check_error(__func__, ap->base.dp, buffer, length))
+		return 0U;
+	/* If the response indicates all's OK, decode the data read and return it */
+	uint32_t value = 0U;
+	unhexify(&value, buffer + 1, 4);
+	DEBUG_PROBE("%s: addr %04x -> %08" PRIx32 "\n", __func__, addr, value);
+	return value;
 }
 
-void remote_v4_adiv6_ap_write(adiv5_access_port_s *ap, uint16_t addr, uint32_t value)
+void remote_v4_adiv6_ap_write(adiv5_access_port_s *base_ap, uint16_t addr, uint32_t value)
 {
-	adiv6_ap_reg_write(ap, addr, value);
+	adiv6_access_port_s *const ap = (adiv6_access_port_s *)base_ap;
+	char buffer[REMOTE_MAX_MSG_SIZE];
+	/* Create the request and send it to the remote */
+	ssize_t length = snprintf(
+		buffer, REMOTE_MAX_MSG_SIZE, REMOTE_ADIV6_AP_WRITE_STR, ap->base.dp->dev_index, ap->ap_address, addr, value);
+	platform_buffer_write(buffer, length);
+	/* Read back the answer and check for errors */
+	length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
+	if (!remote_v3_adiv5_check_error(__func__, ap->base.dp, buffer, length))
+		return;
+	DEBUG_PROBE("%s: addr %04x <- %08" PRIx32 "\n", __func__, addr, value);
 }
