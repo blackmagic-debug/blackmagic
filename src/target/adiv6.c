@@ -65,8 +65,9 @@ bool adiv6_dp_init(adiv5_debug_port_s *const dp)
 {
 	dp->ap_read = adiv6_ap_reg_read;
 	dp->ap_write = adiv6_ap_reg_write;
-	dp->mem_read = advi5_mem_read_bytes;
-	dp->mem_write = adiv5_mem_write_bytes;
+#if PC_HOSTED == 1
+	bmda_adiv6_dp_init(dp);
+#endif
 
 	/* DPIDR1 is on bank 1 */
 	adiv5_dp_write(dp, ADIV5_DP_SELECT, ADIV5_DP_BANK1);

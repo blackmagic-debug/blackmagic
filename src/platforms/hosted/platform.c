@@ -335,7 +335,23 @@ void bmda_adiv5_dp_init(adiv5_debug_port_s *const dp)
 	}
 }
 
-void bmda_jtag_dp_init(adiv5_debug_port_s *dp)
+void bmda_adiv6_dp_init(adiv5_debug_port_s *const dp)
+{
+	switch (bmda_probe_info.type) {
+	case PROBE_TYPE_BMP:
+		if (cl_opts.opt_no_hl) {
+			DEBUG_WARN("Not using ADIv6 acceleration commands\n");
+			break;
+		}
+		remote_adiv6_dp_init(dp);
+		break;
+
+	default:
+		break;
+	}
+}
+
+void bmda_jtag_dp_init(adiv5_debug_port_s *const dp)
 {
 #if HOSTED_BMP_ONLY == 0
 	switch (bmda_probe_info.type) {

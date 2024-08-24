@@ -56,4 +56,9 @@
 /* DP and AP discovery functions */
 bool adiv6_dp_init(adiv5_debug_port_s *dp);
 
+#if PC_HOSTED == 1
+/* BMDA interposition functions for DP setup */
+void bmda_adiv6_dp_init(adiv5_debug_port_s *dp);
+#endif
+
 #endif /* TARGET_ADIV6_H */

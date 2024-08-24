@@ -212,7 +212,13 @@ void remote_adiv5_dp_init(adiv5_debug_port_s *const dp)
 		remote_funcs.adiv5_init(dp);
 }
 
-void remote_riscv_jtag_dtm_init(riscv_dmi_s *dmi)
+void remote_adiv6_dp_init(adiv5_debug_port_s *const dp)
+{
+	dp->mem_read = advi5_mem_read_bytes;
+	dp->mem_write = adiv5_mem_write_bytes;
+}
+
+void remote_riscv_jtag_dtm_init(riscv_dmi_s *const dmi)
 {
 	if (remote_funcs.riscv_jtag_init)
 		remote_funcs.riscv_jtag_init(dmi);
