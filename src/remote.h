@@ -271,19 +271,19 @@
 #define REMOTE_ADIV5_ALIGNMENT REMOTE_UINT8
 #define REMOTE_ADIV5_COUNT     REMOTE_UINT32
 
-#define REMOTE_DP_READ_STR                                                                                      \
+#define REMOTE_ADIV5_DP_READ_STR                                                                                \
 	(char[])                                                                                                    \
 	{                                                                                                           \
 		REMOTE_SOM, REMOTE_ADIV5_PACKET, REMOTE_DP_READ, REMOTE_ADIV5_DEV_INDEX, 'f', 'f', REMOTE_ADIV5_ADDR16, \
 			REMOTE_EOM, 0                                                                                       \
 	}
-#define REMOTE_AP_READ_STR                                                                            \
+#define REMOTE_ADIV5_AP_READ_STR                                                                      \
 	(char[])                                                                                          \
 	{                                                                                                 \
 		REMOTE_SOM, REMOTE_ADIV5_PACKET, REMOTE_AP_READ, REMOTE_ADIV5_DEV_INDEX, REMOTE_ADIV5_AP_SEL, \
 			REMOTE_ADIV5_ADDR16, REMOTE_EOM, 0                                                        \
 	}
-#define REMOTE_AP_WRITE_STR                                                                            \
+#define REMOTE_ADIV5_AP_WRITE_STR                                                                      \
 	(char[])                                                                                           \
 	{                                                                                                  \
 		REMOTE_SOM, REMOTE_ADIV5_PACKET, REMOTE_AP_WRITE, REMOTE_ADIV5_DEV_INDEX, REMOTE_ADIV5_AP_SEL, \
@@ -317,6 +317,9 @@
  * 16 for the address and 8 for the count and one trailer gives 42U
  */
 #define REMOTE_ADIV5_MEM_WRITE_LENGTH 42U
+
+/* ADIv6 acceleration protocol elements */
+#define REMOTE_ADIV6_PACKET '6'
 
 /* RISC-V acceleration protocol elements */
 #define REMOTE_RISCV_PACKET    'R'

@@ -34,6 +34,7 @@
 #include "sfdp.h"
 #include "target.h"
 #include "adiv5.h"
+#include "adiv6.h"
 #if defined(ENABLE_RISCV_ACCEL) && ENABLE_RISCV_ACCEL == 1
 #include "riscv_debug.h"
 #endif
@@ -42,6 +43,8 @@
 #include "hex_utils.h"
 
 #if PC_HOSTED == 0
+static void remote_packet_process_adiv6(const char *packet, size_t packet_len);
+
 /* hex-ify and send a buffer of data */
 static void remote_send_buf(const void *const buffer, const size_t len)
 {
@@ -386,6 +389,12 @@ static void remote_packet_process_adiv5(const char *const packet, const size_t p
 		return;
 	}
 
+	/* Check if this is actually an ADIv6 acceleration packet and dispatch */
+	if (packet[1] == REMOTE_ADIV6_PACKET) {
+		remote_packet_process_adiv6(packet, packet_len);
+		return;
+	}
+
 	/* Set up the DP and a fake AP structure to perform the access with */
 	remote_dp.dev_index = hex_string_to_num(2, packet + 2);
 	remote_dp.fault = 0U;
@@ -480,6 +489,40 @@ static void remote_packet_process_adiv5(const char *const packet, const size_t p
 		remote_respond(REMOTE_RESP_ERR, REMOTE_ERROR_UNRECOGNISED);
 		break;
 	}
+	SET_IDLE_STATE(1);
+}
+
+static void remote_packet_process_adiv6(const char *const packet, const size_t packet_len)
+{
+	/* Our shortest ADIv5 packet is 15 bytes long, check that we have at least that */
+	if (packet_len < 15U) {
+		remote_respond(REMOTE_RESP_PARERR, 0);
+		return;
+	}
+
+	/*
+	 * This faked ADIv6 DP structure holds the currently used low-level implementation functions (SWD vs JTAG)
+	 * and basic DP state for remote protocol requests made. This mirrors the ADIv5 version of this structure
+	 * so our faked AP can do the right thing.
+	 */
+	adiv5_debug_port_s dp = remote_dp;
+	dp.ap_read = adiv6_ap_reg_read;
+	dp.ap_write = adiv6_ap_reg_write;
+
+	/* Set up the DP and a fake AP structure to perform the access with */
+	remote_dp.dev_index = hex_string_to_num(2, packet + 3);
+	remote_dp.fault = 0U;
+	adiv6_access_port_s remote_ap;
+	remote_ap.ap_address = hex_string_to_num(16, packet + 5);
+	remote_ap.base.dp = &dp;
+
+	SET_IDLE_STATE(0);
+	switch (packet[2]) {
+	default:
+		remote_respond(REMOTE_RESP_ERR, REMOTE_ERROR_UNRECOGNISED);
+		break;
+	}
+
 	SET_IDLE_STATE(1);
 }
 
