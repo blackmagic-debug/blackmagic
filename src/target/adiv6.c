@@ -64,6 +64,8 @@ bool adiv6_dp_init(adiv5_debug_port_s *const dp)
 {
 	dp->ap_read = adiv6_ap_reg_read;
 	dp->ap_write = adiv6_ap_reg_write;
+	dp->mem_read = advi5_mem_read_bytes;
+	dp->mem_write = adiv5_mem_write_bytes;
 
 	/* DPIDR1 is on bank 1 */
 	adiv5_dp_write(dp, ADIV5_DP_SELECT, ADIV5_DP_BANK1);
@@ -353,7 +355,7 @@ static uint32_t adiv6_ap_reg_read(adiv5_access_port_s *const base_ap, const uint
 	/* Now set up SELECT in the DP */
 	const uint16_t bank = addr & ADIV6_AP_BANK_MASK;
 	adiv5_dp_write(base_ap->dp, ADIV5_DP_SELECT, (uint32_t)ap->ap_address | ((bank & 0xf000U) >> 4U) | (bank & 0xf0U));
-	return adiv5_dp_read(base_ap->dp, addr);
+	return base_ap->dp->dp_read(base_ap->dp, addr);
 }
 
 static void adiv6_ap_reg_write(adiv5_access_port_s *const base_ap, const uint16_t addr, const uint32_t value)
@@ -365,5 +367,5 @@ static void adiv6_ap_reg_write(adiv5_access_port_s *const base_ap, const uint16_
 	/* Now set up SELECT in the DP */
 	const uint16_t bank = addr & ADIV6_AP_BANK_MASK;
 	adiv5_dp_write(base_ap->dp, ADIV5_DP_SELECT, (uint32_t)ap->ap_address | ((bank & 0xf000U) >> 4U) | (bank & 0xf0U));
-	adiv5_dp_write(base_ap->dp, addr, value);
+	base_ap->dp->low_access(base_ap->dp, ADIV5_LOW_WRITE, addr, value);
 }
