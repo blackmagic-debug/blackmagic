@@ -42,6 +42,7 @@
 #include "protocol_v4.h"
 #include "protocol_v4_defs.h"
 #include "protocol_v4_adiv5.h"
+#include "protocol_v4_adiv6.h"
 #include "protocol_v4_riscv.h"
 
 bool remote_v4_init(void)
@@ -107,6 +108,10 @@ bool remote_v4_adiv5_init(adiv5_debug_port_s *const dp)
 
 bool remote_v4_adiv6_init(adiv5_debug_port_s *dp)
 {
+	dp->ap_read = remote_v4_adiv6_ap_read;
+	dp->ap_write = remote_v4_adiv6_ap_write;
+	dp->mem_read = advi5_mem_read_bytes;
+	dp->mem_write = adiv5_mem_write_bytes;
 	return true;
 }
 
