@@ -44,7 +44,8 @@
 #include "adiv6.h"
 #include "adiv6_internal.h"
 
-static bool adiv6_component_probe(adiv5_debug_port_s *dp, target_addr64_t base_address, uint32_t entry_number);
+static bool adiv6_component_probe(adiv5_debug_port_s *dp, target_addr64_t base_address, uint32_t entry_number,
+	uint16_t rom_designer_code, uint16_t rom_part_number);
 static uint32_t adiv6_ap_reg_read(adiv5_access_port_s *base_ap, uint16_t addr);
 static void adiv6_ap_reg_write(adiv5_access_port_s *base_ap, uint16_t addr, uint32_t value);
 
@@ -88,7 +89,7 @@ bool adiv6_dp_init(adiv5_debug_port_s *const dp)
 	}
 	base_address &= ADIV6_DP_BASE_ADDRESS_MASK;
 
-	return adiv6_component_probe(dp, base_address, 0U);
+	return adiv6_component_probe(dp, base_address, 0U, dp->designer_code, dp->partno);
 }
 
 static uint32_t adiv6_dp_read_id(adiv6_access_port_s *const ap, const uint16_t addr)
@@ -163,13 +164,9 @@ static uint64_t adiv6_read_coresight_rom_entry(
 static bool adiv6_parse_coresight_v0_rom_table(
 	adiv6_access_port_s *const rom_table, const target_addr64_t base_address, const uint64_t pidr)
 {
-#ifdef DEBUG_INFO_IS_NOOP
-	(void)pidr;
-#else
 	/* Extract the designer code and part number from the part ID register */
 	const uint16_t designer_code = adiv5_designer_from_pidr(pidr);
 	const uint16_t part_number = pidr & PIDR_PN_MASK;
-#endif
 
 	/* Now we know we're in a CoreSight v0 ROM table, read out the device ID field and set up the memory flag on the AP */
 	const uint8_t dev_id = adiv5_ap_read(&rom_table->base, CORESIGHT_ROM_DEVID) & 0x7fU;
@@ -234,7 +231,7 @@ static bool adiv6_parse_coresight_v0_rom_table(
 		}
 
 		/* Now recursively probe the component */
-		result &= adiv6_component_probe(rom_table->base.dp, base_address + offset, index);
+		result &= adiv6_component_probe(rom_table->base.dp, base_address + offset, index, designer_code, part_number);
 	}
 
 	DEBUG_INFO("ROM Table: END\n");
@@ -265,8 +262,8 @@ static adiv6_access_port_s *adiv6_new_ap(
 	return result;
 }
 
-static bool adiv6_component_probe(
-	adiv5_debug_port_s *const dp, const target_addr64_t base_address, const uint32_t entry_number)
+static bool adiv6_component_probe(adiv5_debug_port_s *const dp, const target_addr64_t base_address,
+	const uint32_t entry_number, const uint16_t rom_designer_code, const uint16_t rom_part_number)
 {
 	/* Start out by making a fake AP to use for all the reads */
 	adiv6_access_port_s base_ap = {
@@ -333,6 +330,11 @@ static bool adiv6_component_probe(
 				adiv6_access_port_s *ap = adiv6_new_ap(dp, base_address, entry_number);
 				if (ap == NULL)
 					break;
+
+				/* Copy the AP's designer and part code information in from this layer */
+				ap->base.designer_code = rom_designer_code;
+				ap->base.partno = rom_part_number;
+
 				/* Now we can use it, see what's on it and try to create debug targets */
 				adiv5_component_probe(&ap->base, ap->base.base, 1U, 0U);
 				adiv5_ap_unref(&ap->base);
