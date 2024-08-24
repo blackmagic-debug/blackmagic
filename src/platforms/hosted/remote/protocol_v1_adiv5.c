@@ -89,7 +89,7 @@ uint32_t remote_v1_adiv5_dp_read(adiv5_debug_port_s *const dp, const uint16_t ad
 	const uint16_t ap_reg = (addr & ADIV5_APnDP ? REMOTE_ADIV5_APnDP : 0U) | (addr & 0x00ffU);
 	char buffer[REMOTE_MAX_MSG_SIZE];
 	/* Create the request and send it to the remote */
-	ssize_t length = snprintf(buffer, REMOTE_MAX_MSG_SIZE, REMOTE_DP_READ_STR, dp->dev_index, ap_reg);
+	ssize_t length = snprintf(buffer, REMOTE_MAX_MSG_SIZE, REMOTE_ADIV5_DP_READ_STR, dp->dev_index, ap_reg);
 	platform_buffer_write(buffer, length);
 	/* Read back the answer and check for errors */
 	length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
@@ -108,7 +108,8 @@ uint32_t remote_v1_adiv5_ap_read(adiv5_access_port_s *const ap, const uint16_t a
 	const uint16_t ap_reg = (addr & ADIV5_APnDP ? REMOTE_ADIV5_APnDP : 0U) | (addr & 0x00ffU);
 	char buffer[REMOTE_MAX_MSG_SIZE];
 	/* Create the request and send it to the remote */
-	ssize_t length = snprintf(buffer, REMOTE_MAX_MSG_SIZE, REMOTE_AP_READ_STR, ap->dp->dev_index, ap->apsel, ap_reg);
+	ssize_t length =
+		snprintf(buffer, REMOTE_MAX_MSG_SIZE, REMOTE_ADIV5_AP_READ_STR, ap->dp->dev_index, ap->apsel, ap_reg);
 	platform_buffer_write(buffer, length);
 	/* Read back the answer and check for errors */
 	length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
@@ -128,7 +129,7 @@ void remote_v1_adiv5_ap_write(adiv5_access_port_s *const ap, const uint16_t addr
 	char buffer[REMOTE_MAX_MSG_SIZE];
 	/* Create the request and send it to the remote */
 	ssize_t length =
-		snprintf(buffer, REMOTE_MAX_MSG_SIZE, REMOTE_AP_WRITE_STR, ap->dp->dev_index, ap->apsel, ap_reg, value);
+		snprintf(buffer, REMOTE_MAX_MSG_SIZE, REMOTE_ADIV5_AP_WRITE_STR, ap->dp->dev_index, ap->apsel, ap_reg, value);
 	platform_buffer_write(buffer, length);
 	/* Read back the answer and check for errors */
 	length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);

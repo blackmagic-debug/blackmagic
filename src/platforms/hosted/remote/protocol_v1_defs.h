@@ -38,9 +38,9 @@
 #include "protocol_v0_defs.h"
 
 #undef REMOTE_ADIV5_RAW_ACCESS_STR
-#undef REMOTE_DP_READ_STR
-#undef REMOTE_AP_READ_STR
-#undef REMOTE_AP_WRITE_STR
+#undef REMOTE_ADIV5_DP_READ_STR
+#undef REMOTE_ADIV5_AP_READ_STR
+#undef REMOTE_ADIV5_AP_WRITE_STR
 #undef REMOTE_ADIV5_MEM_READ_STR
 #undef REMOTE_ADIV5_MEM_READ_LENGTH
 #undef REMOTE_ADIV5_MEM_WRITE_STR
@@ -73,19 +73,19 @@
 		REMOTE_SOM, REMOTE_ADIV5_PACKET, REMOTE_ADIV5_RAW_ACCESS, REMOTE_ADIV5_DEV_INDEX, REMOTE_ADIV5_AP_SEL, \
 			REMOTE_ADIV5_ADDR16, REMOTE_ADIV5_DATA, REMOTE_EOM, 0                                              \
 	}
-#define REMOTE_DP_READ_STR                                                                                      \
+#define REMOTE_ADIV5_DP_READ_STR                                                                                \
 	(char[])                                                                                                    \
 	{                                                                                                           \
 		REMOTE_SOM, REMOTE_ADIV5_PACKET, REMOTE_DP_READ, REMOTE_ADIV5_DEV_INDEX, 'f', 'f', REMOTE_ADIV5_ADDR16, \
 			REMOTE_EOM, 0                                                                                       \
 	}
-#define REMOTE_AP_READ_STR                                                                            \
+#define REMOTE_ADIV5_AP_READ_STR                                                                      \
 	(char[])                                                                                          \
 	{                                                                                                 \
 		REMOTE_SOM, REMOTE_ADIV5_PACKET, REMOTE_AP_READ, REMOTE_ADIV5_DEV_INDEX, REMOTE_ADIV5_AP_SEL, \
 			REMOTE_ADIV5_ADDR16, REMOTE_EOM, 0                                                        \
 	}
-#define REMOTE_AP_WRITE_STR                                                                            \
+#define REMOTE_ADIV5_AP_WRITE_STR                                                                      \
 	(char[])                                                                                           \
 	{                                                                                                  \
 		REMOTE_SOM, REMOTE_ADIV5_PACKET, REMOTE_AP_WRITE, REMOTE_ADIV5_DEV_INDEX, REMOTE_ADIV5_AP_SEL, \
