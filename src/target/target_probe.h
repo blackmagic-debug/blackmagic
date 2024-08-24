@@ -81,7 +81,7 @@ bool nrf91_probe(target_s *target);
 bool puya_probe(target_s *target);
 bool renesas_ra_probe(target_s *target);
 bool renesas_rz_probe(target_s *target);
-bool rp_probe(target_s *target);
+bool rp2040_probe(target_s *target);
 bool s32k3xx_probe(target_s *target);
 bool sam3x_probe(target_s *target);
 bool sam4l_probe(target_s *target);

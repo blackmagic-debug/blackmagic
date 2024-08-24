@@ -220,7 +220,7 @@ static void rp_add_flash(target_s *target)
 	rp_flash_enter_xip(target);
 }
 
-bool rp_probe(target_s *target)
+bool rp2040_probe(target_s *target)
 {
 	/* Check bootrom magic*/
 	uint32_t boot_magic = target_mem32_read32(target, BOOTROM_MAGIC_ADDR);
@@ -242,7 +242,7 @@ bool rp_probe(target_s *target)
 	target->target_storage = (void *)priv_storage;
 
 	target->mass_erase = bmp_spi_mass_erase;
-	target->driver = "Raspberry RP2040";
+	target->driver = "RP2040";
 	target->target_options |= TOPT_INHIBIT_NRST;
 	target->attach = rp_attach;
 	target->enter_flash_mode = rp_flash_prepare;
