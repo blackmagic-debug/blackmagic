@@ -76,7 +76,7 @@ SRC =              \
 	nrf91.c        \
 	nxpke04.c      \
 	remote.c       \
-	rp.c           \
+	rp2040.c       \
 	sam3x.c        \
 	sam4l.c        \
 	samd.c         \
