@@ -1356,7 +1356,25 @@ static void decode_dp_access(const uint8_t addr, const uint8_t rnw, const uint32
 	/* Try to decode the requested address */
 	switch (addr) {
 	case 0x00U:
-		reg = rnw ? "DPIDR" : "ABORT";
+		/* If it's a read, it depends on the bank */
+		if (rnw) {
+			switch (dp_bank) {
+			case 0:
+				reg = "DPIDR";
+				break;
+			case 1:
+				reg = "DPIDR1";
+				break;
+			case 2:
+				reg = "BASEPTR0";
+				break;
+			case 3:
+				reg = "BASEPTR1";
+				break;
+			}
+		} else
+			/* Otherwise it must be a write to ABORT */
+			reg = "ABORT";
 		break;
 	case 0x04U:
 		switch (dp_bank) {
@@ -1374,6 +1392,10 @@ static void decode_dp_access(const uint8_t addr, const uint8_t rnw, const uint32
 			break;
 		case 4:
 			reg = "EVENTSTAT";
+			break;
+		case 5:
+			if (!rnw)
+				reg = "SELECT1";
 			break;
 		}
 		break;
@@ -1393,48 +1415,93 @@ static void decode_dp_access(const uint8_t addr, const uint8_t rnw, const uint32
 		DEBUG_PROTO("Unknown DP register %02x: ", addr);
 }
 
-static void decode_ap_access(const uint8_t ap, const uint8_t addr)
+static void decode_ap_access(const uint8_t ap, const uint16_t addr)
 {
 	DEBUG_PROTO("AP %u ", ap);
 
 	const char *reg = NULL;
 	switch (addr) {
-	case 0x00U:
+	case 0xd00U:
 		reg = "CSW";
 		break;
-	case 0x04U:
+	case 0xd04U:
 		reg = "TAR";
 		break;
-	case 0x0cU:
+	case 0xd0cU:
 		reg = "DRW";
 		break;
-	case 0x10U:
+	case 0xd10U:
 		reg = "DB0";
 		break;
-	case 0x14U:
+	case 0xd14U:
 		reg = "DB1";
 		break;
-	case 0x18U:
+	case 0xd18U:
 		reg = "DB2";
 		break;
-	case 0x1cU:
+	case 0xd1cU:
 		reg = "DB3";
 		break;
-	case 0xf8U:
+	case 0xdf8U:
 		reg = "BASE";
 		break;
-	case 0xf4U:
+	case 0xdf4U:
 		reg = "CFG";
 		break;
-	case 0xfcU:
+	case 0xdfcU:
 		reg = "IDR";
+		break;
+	case 0xfbc:
+		reg = "DEVARCH";
+		break;
+	case 0xfc8:
+		reg = "DEVID";
+		break;
+	case 0xfcc:
+		reg = "DEVTYPE";
+		break;
+	case 0xfd0:
+		reg = "PIDR4";
+		break;
+	case 0xfd4:
+		reg = "PIDR5";
+		break;
+	case 0xfd8:
+		reg = "PIDR6";
+		break;
+	case 0xfdc:
+		reg = "PIDR7";
+		break;
+	case 0xfe0:
+		reg = "PIDR0";
+		break;
+	case 0xfe4:
+		reg = "PIDR1";
+		break;
+	case 0xfe8:
+		reg = "PIDR2";
+		break;
+	case 0xfec:
+		reg = "PIDR3";
+		break;
+	case 0xff0:
+		reg = "CIDR0";
+		break;
+	case 0xff4:
+		reg = "CIDR1";
+		break;
+	case 0xff8:
+		reg = "CIDR2";
+		break;
+	case 0xffc:
+		reg = "CIDR3";
 		break;
 	}
 
 	if (reg)
 		DEBUG_PROTO("%s: ", reg);
 	else
-		DEBUG_PROTO("Reserved(%02x): ", addr);
+		DEBUG_PROTO("Reserved(%03x): ", addr);
 }
 
 void decode_access(const uint16_t addr, const uint8_t rnw, const uint8_t apsel, const uint32_t value)
@@ -1444,9 +1511,10 @@ void decode_access(const uint16_t addr, const uint8_t rnw, const uint8_t apsel, 
 	else
 		DEBUG_PROTO("Write ");
 
-	if (addr & ADIV5_APnDP)
-		decode_ap_access(apsel, addr & 0xffU);
-	else
+	if (addr & ADIV5_APnDP) {
+		const uint16_t ap_reg = ((addr & 0xf000U) >> 4U) | (addr & 0x00ffU);
+		decode_ap_access(apsel, ap_reg);
+	} else
 		decode_dp_access(addr & 0xffU, rnw, value);
 }
 #endif

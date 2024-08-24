@@ -99,11 +99,12 @@ static uint32_t adiv6_dp_read_id(adiv6_access_port_s *const ap, const uint16_t a
 	adiv5_dp_write(ap->base.dp, ADIV6_DP_SELECT1, (uint32_t)(ap->ap_address >> 32U));
 	/* Now set up SELECT in the DP */
 	adiv5_dp_write(ap->base.dp, ADIV5_DP_SELECT, (uint32_t)ap->ap_address | (addr & 0x0ff0U));
+	const uint16_t ap_reg_base = ADIV5_APnDP | ((addr & 0x0f00U) << 4U) | (addr & 0x00f0U);
 
 	uint32_t result = 0;
-	/* Loop through each CIDR register location and read it, pulling out only the relevant byte */
+	/* Loop through each register location and read it, pulling out only the relevant byte */
 	for (size_t i = 0; i < 4U; ++i) {
-		const uint32_t value = adiv5_dp_read(ap->base.dp, ADIV5_APnDP | (i << 2U));
+		const uint32_t value = adiv5_dp_read(ap->base.dp, ap_reg_base | (i << 2U));
 		result |= (value & 0xffU) << (i * 8U);
 	}
 	return result;
