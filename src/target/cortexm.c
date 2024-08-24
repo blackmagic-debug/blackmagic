@@ -405,6 +405,7 @@ bool cortexm_probe(adiv5_access_port_s *ap)
 		break;
 	case JEP106_MANUFACTURER_RASPBERRY:
 		PROBE(rp2040_probe);
+		PROBE(rp2350_probe);
 		break;
 	case JEP106_MANUFACTURER_RENESAS:
 		PROBE(renesas_ra_probe);

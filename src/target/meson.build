@@ -236,7 +236,10 @@ target_renesas = target_renesas_ra
 endif
 
 target_rp = declare_dependency(
-	sources: files('rp2040.c'),
+	sources: files(
+		'rp2040.c',
+		'rp2350.c',
+	),
 	dependencies: target_cortexm,
 )
 
