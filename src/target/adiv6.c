@@ -46,8 +46,6 @@
 
 static bool adiv6_component_probe(adiv5_debug_port_s *dp, target_addr64_t base_address, uint32_t entry_number,
 	uint16_t rom_designer_code, uint16_t rom_part_number);
-static uint32_t adiv6_ap_reg_read(adiv5_access_port_s *base_ap, uint16_t addr);
-static void adiv6_ap_reg_write(adiv5_access_port_s *base_ap, uint16_t addr, uint32_t value);
 
 static target_addr64_t adiv6_dp_read_base_address(adiv5_debug_port_s *const dp)
 {
@@ -349,7 +347,7 @@ static bool adiv6_component_probe(adiv5_debug_port_s *const dp, const target_add
 	return true;
 }
 
-static uint32_t adiv6_ap_reg_read(adiv5_access_port_s *const base_ap, const uint16_t addr)
+uint32_t adiv6_ap_reg_read(adiv5_access_port_s *const base_ap, const uint16_t addr)
 {
 	adiv6_access_port_s *const ap = (adiv6_access_port_s *)base_ap;
 	/* Set SELECT1 in the DP up first */
@@ -361,7 +359,7 @@ static uint32_t adiv6_ap_reg_read(adiv5_access_port_s *const base_ap, const uint
 	return base_ap->dp->dp_read(base_ap->dp, addr);
 }
 
-static void adiv6_ap_reg_write(adiv5_access_port_s *const base_ap, const uint16_t addr, const uint32_t value)
+void adiv6_ap_reg_write(adiv5_access_port_s *const base_ap, const uint16_t addr, const uint32_t value)
 {
 	adiv6_access_port_s *const ap = (adiv6_access_port_s *)base_ap;
 	/* Set SELECT1 in the DP up first */

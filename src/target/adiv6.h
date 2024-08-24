@@ -36,6 +36,7 @@
 
 #include "general.h"
 #include "adiv5.h"
+#include "adiv6_internal.h"
 
 #define ADIV6_DP_DPIDR1   ADIV5_DP_REG(0x0U) /* Bank 1 */
 #define ADIV6_DP_BASEPTR0 ADIV5_DP_REG(0x0U) /* Bank 2 */
@@ -60,5 +61,9 @@ bool adiv6_dp_init(adiv5_debug_port_s *dp);
 /* BMDA interposition functions for DP setup */
 void bmda_adiv6_dp_init(adiv5_debug_port_s *dp);
 #endif
+
+/* ADIv6 logical operation functions for AP register I/O */
+uint32_t adiv6_ap_reg_read(adiv5_access_port_s *ap, uint16_t addr);
+void adiv6_ap_reg_write(adiv5_access_port_s *ap, uint16_t addr, uint32_t value);
 
 #endif /* TARGET_ADIV6_H */
