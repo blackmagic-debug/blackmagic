@@ -873,6 +873,8 @@ static void adiv5_dp_clear_sticky_errors(adiv5_debug_port_s *dp)
 /* Keep the TRY/CATCH funkiness contained to avoid clobbering and reduce the need for volatiles */
 uint32_t adiv5_dp_read_dpidr(adiv5_debug_port_s *const dp)
 {
+	if (dp->read_no_check)
+		return adiv5_read_no_check(dp, ADIV5_DP_DPIDR);
 	volatile uint32_t dpidr = 0;
 	TRY (EXCEPTION_ALL) {
 		dpidr = adiv5_dp_low_access(dp, ADIV5_LOW_READ, ADIV5_DP_DPIDR, 0U);
