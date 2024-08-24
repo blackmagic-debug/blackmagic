@@ -364,7 +364,7 @@ uint32_t dap_ap_read(adiv5_access_port_s *const target_ap, const uint16_t addr)
 	requests[0].request = SWD_DP_W_SELECT;
 	requests[0].data = SWD_DP_REG(addr & 0xf0U, target_ap->apsel);
 	/* Read the register */
-	requests[1].request = (addr & 0x0cU) | DAP_TRANSFER_RnW | (addr & 0x100U ? DAP_TRANSFER_APnDP : 0);
+	requests[1].request = (addr & 0x0cU) | DAP_TRANSFER_RnW | (addr & ADIV5_APnDP ? DAP_TRANSFER_APnDP : 0);
 	uint32_t result = 0;
 	adiv5_debug_port_s *const target_dp = target_ap->dp;
 	if (!perform_dap_transfer(target_dp, requests, 2U, &result, 1U)) {
@@ -382,7 +382,7 @@ void dap_ap_write(adiv5_access_port_s *const target_ap, const uint16_t addr, con
 	requests[0].request = SWD_DP_W_SELECT;
 	requests[0].data = SWD_DP_REG(addr & 0xf0U, target_ap->apsel);
 	/* Write the register */
-	requests[1].request = (addr & 0x0cU) | (addr & 0x100U ? DAP_TRANSFER_APnDP : 0);
+	requests[1].request = (addr & 0x0cU) | (addr & ADIV5_APnDP ? DAP_TRANSFER_APnDP : 0);
 	requests[1].data = value;
 	adiv5_debug_port_s *const target_dp = target_ap->dp;
 	if (!perform_dap_transfer(target_dp, requests, 2U, NULL, 0U))

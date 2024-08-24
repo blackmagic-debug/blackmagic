@@ -271,6 +271,8 @@
 #define REMOTE_ADIV5_ALIGNMENT REMOTE_UINT8
 #define REMOTE_ADIV5_COUNT     REMOTE_UINT32
 
+#define REMOTE_ADIV5_APnDP 0x0100U
+
 #define REMOTE_ADIV5_DP_READ_STR                                                                                \
 	(char[])                                                                                                    \
 	{                                                                                                           \

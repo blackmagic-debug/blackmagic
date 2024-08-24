@@ -27,7 +27,7 @@
 #include <stddef.h>
 #include "adiv5.h"
 
-#define ADIV5_APnDP     0x100U
+#define ADIV5_APnDP     0x1000U
 #define ADIV5_DP_REG(x) (x)
 #define ADIV5_AP_REG(x) (ADIV5_APnDP | (x))
 
@@ -76,17 +76,17 @@
  * This should be adjusted because we can do some encoding shenanigans to make that work
  * in BMDA, but this has been chosen to make something work in the immediate present.
  */
-#define ADIV5_AP_CSW      ADIV5_AP_REG(0xd000U)
-#define ADIV5_AP_TAR_LOW  ADIV5_AP_REG(0xd004U)
-#define ADIV5_AP_TAR_HIGH ADIV5_AP_REG(0xd008U)
+#define ADIV5_AP_CSW      ADIV5_AP_REG(0xd00U)
+#define ADIV5_AP_TAR_LOW  ADIV5_AP_REG(0xd04U)
+#define ADIV5_AP_TAR_HIGH ADIV5_AP_REG(0xd08U)
 /* 0x08 - Reserved */
-#define ADIV5_AP_DRW   ADIV5_AP_REG(0xd00cU)
-#define ADIV5_AP_DB(x) ADIV5_AP_REG(0xd010U + (4U * (x)))
+#define ADIV5_AP_DRW   ADIV5_AP_REG(0xd0cU)
+#define ADIV5_AP_DB(x) ADIV5_AP_REG(0xd10U + (4U * (x)))
 /* 0x20:0xec - Reserved */
-#define ADIV5_AP_BASE_HIGH ADIV5_AP_REG(0xd0f0U)
-#define ADIV5_AP_CFG       ADIV5_AP_REG(0xd0f4U)
-#define ADIV5_AP_BASE_LOW  ADIV5_AP_REG(0xd0f8U)
-#define ADIV5_AP_IDR       ADIV5_AP_REG(0xd0fcU)
+#define ADIV5_AP_BASE_HIGH ADIV5_AP_REG(0xdf0U)
+#define ADIV5_AP_CFG       ADIV5_AP_REG(0xdf4U)
+#define ADIV5_AP_BASE_LOW  ADIV5_AP_REG(0xdf8U)
+#define ADIV5_AP_IDR       ADIV5_AP_REG(0xdfcU)
 
 /* ROM table CIDR values */
 #define CIDR0_OFFSET 0xff0U /* DBGCID0 */

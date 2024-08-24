@@ -1513,10 +1513,9 @@ void decode_access(const uint16_t addr, const uint8_t rnw, const uint8_t apsel, 
 	else
 		DEBUG_PROTO("Write ");
 
-	if (addr & ADIV5_APnDP) {
-		const uint16_t ap_reg = ((addr & 0xf000U) >> 4U) | (addr & 0x00ffU);
-		decode_ap_access(apsel, ap_reg);
-	} else
+	if (addr & ADIV5_APnDP)
+		decode_ap_access(apsel, addr & 0x0fffU);
+	else
 		decode_dp_access(addr & 0xffU, rnw, value);
 }
 #endif

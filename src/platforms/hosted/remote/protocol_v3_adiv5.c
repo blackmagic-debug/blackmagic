@@ -79,10 +79,12 @@ bool remote_v3_adiv5_check_error(
 uint32_t remote_v3_adiv5_raw_access(
 	adiv5_debug_port_s *const dp, const uint8_t rnw, const uint16_t addr, const uint32_t request_value)
 {
+	/* Remap the access from our current format to the remote v3 register address format */
+	const uint16_t ap_reg = (addr & ADIV5_APnDP ? REMOTE_ADIV5_APnDP : 0U) | (addr & 0x00ffU);
 	char buffer[REMOTE_MAX_MSG_SIZE];
 	/* Create the request and send it to the remote */
 	ssize_t length =
-		snprintf(buffer, REMOTE_MAX_MSG_SIZE, REMOTE_ADIV5_RAW_ACCESS_STR, dp->dev_index, rnw, addr, request_value);
+		snprintf(buffer, REMOTE_MAX_MSG_SIZE, REMOTE_ADIV5_RAW_ACCESS_STR, dp->dev_index, rnw, ap_reg, request_value);
 	platform_buffer_write(buffer, length);
 	/* Read back the answer and check for errors */
 	length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
@@ -91,7 +93,7 @@ uint32_t remote_v3_adiv5_raw_access(
 	/* If the response indicates all's OK, decode the data read and return it */
 	uint32_t result_value = 0U;
 	unhexify(&result_value, buffer + 1, 4);
-	DEBUG_PROBE("%s: addr %04x %s %08" PRIx32, __func__, addr, rnw ? "->" : "<-", rnw ? result_value : request_value);
+	DEBUG_PROBE("%s: addr %04x %s %08" PRIx32, __func__, ap_reg, rnw ? "->" : "<-", rnw ? result_value : request_value);
 	if (!rnw)
 		DEBUG_PROBE(" -> %08" PRIx32, result_value);
 	DEBUG_PROBE("\n");
@@ -100,9 +102,11 @@ uint32_t remote_v3_adiv5_raw_access(
 
 uint32_t remote_v3_adiv5_dp_read(adiv5_debug_port_s *const dp, const uint16_t addr)
 {
+	/* Remap the access from our current format to the remote v3 register address format */
+	const uint16_t ap_reg = (addr & ADIV5_APnDP ? REMOTE_ADIV5_APnDP : 0U) | (addr & 0x00ffU);
 	char buffer[REMOTE_MAX_MSG_SIZE];
 	/* Create the request and send it to the remote */
-	ssize_t length = snprintf(buffer, REMOTE_MAX_MSG_SIZE, REMOTE_DP_READ_STR, dp->dev_index, addr);
+	ssize_t length = snprintf(buffer, REMOTE_MAX_MSG_SIZE, REMOTE_DP_READ_STR, dp->dev_index, ap_reg);
 	platform_buffer_write(buffer, length);
 	/* Read back the answer and check for errors */
 	length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
@@ -111,15 +115,17 @@ uint32_t remote_v3_adiv5_dp_read(adiv5_debug_port_s *const dp, const uint16_t ad
 	/* If the response indicates all's OK, decode the data read and return it */
 	uint32_t value = 0U;
 	unhexify(&value, buffer + 1, 4);
-	DEBUG_PROBE("%s: addr %04x -> %08" PRIx32 "\n", __func__, addr, value);
+	DEBUG_PROBE("%s: addr %04x -> %08" PRIx32 "\n", __func__, ap_reg, value);
 	return value;
 }
 
 uint32_t remote_v3_adiv5_ap_read(adiv5_access_port_s *const ap, const uint16_t addr)
 {
+	/* Remap the access from our current format to the remote v3 register address format */
+	const uint16_t ap_reg = (addr & ADIV5_APnDP ? REMOTE_ADIV5_APnDP : 0U) | (addr & 0x00ffU);
 	char buffer[REMOTE_MAX_MSG_SIZE];
 	/* Create the request and send it to the remote */
-	ssize_t length = snprintf(buffer, REMOTE_MAX_MSG_SIZE, REMOTE_AP_READ_STR, ap->dp->dev_index, ap->apsel, addr);
+	ssize_t length = snprintf(buffer, REMOTE_MAX_MSG_SIZE, REMOTE_AP_READ_STR, ap->dp->dev_index, ap->apsel, ap_reg);
 	platform_buffer_write(buffer, length);
 	/* Read back the answer and check for errors */
 	length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
@@ -128,22 +134,24 @@ uint32_t remote_v3_adiv5_ap_read(adiv5_access_port_s *const ap, const uint16_t a
 	/* If the response indicates all's OK, decode the data read and return it */
 	uint32_t value = 0U;
 	unhexify(&value, buffer + 1, 4);
-	DEBUG_PROBE("%s: addr %04x -> %08" PRIx32 "\n", __func__, addr, value);
+	DEBUG_PROBE("%s: addr %04x -> %08" PRIx32 "\n", __func__, ap_reg, value);
 	return value;
 }
 
 void remote_v3_adiv5_ap_write(adiv5_access_port_s *const ap, const uint16_t addr, const uint32_t value)
 {
+	/* Remap the access from our current format to the remote v3 register address format */
+	const uint16_t ap_reg = (addr & ADIV5_APnDP ? REMOTE_ADIV5_APnDP : 0U) | (addr & 0x00ffU);
 	char buffer[REMOTE_MAX_MSG_SIZE];
 	/* Create the request and send it to the remote */
 	ssize_t length =
-		snprintf(buffer, REMOTE_MAX_MSG_SIZE, REMOTE_AP_WRITE_STR, ap->dp->dev_index, ap->apsel, addr, value);
+		snprintf(buffer, REMOTE_MAX_MSG_SIZE, REMOTE_AP_WRITE_STR, ap->dp->dev_index, ap->apsel, ap_reg, value);
 	platform_buffer_write(buffer, length);
 	/* Read back the answer and check for errors */
 	length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
 	if (!remote_v3_adiv5_check_error(__func__, ap->dp, buffer, length))
 		return;
-	DEBUG_PROBE("%s: addr %04x <- %08" PRIx32 "\n", __func__, addr, value);
+	DEBUG_PROBE("%s: addr %04x <- %08" PRIx32 "\n", __func__, ap_reg, value);
 }
 
 void remote_v3_adiv5_mem_read_bytes(

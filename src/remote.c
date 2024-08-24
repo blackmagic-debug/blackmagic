@@ -352,7 +352,7 @@ static void remote_packet_process_high_level(const char *packet, const size_t pa
 	case REMOTE_HL_ACCEL: { /* HA = request what accelerations are available */
 		/* Build a response value that depends on what things are built into the firmare */
 		remote_respond(REMOTE_RESP_OK,
-			REMOTE_ACCEL_ADIV5
+			REMOTE_ACCEL_ADIV5 | REMOTE_ACCEL_ADIV6
 #if defined(ENABLE_RISCV_ACCEL) && ENABLE_RISCV_ACCEL == 1
 				| REMOTE_ACCEL_RISCV
 #endif
@@ -408,7 +408,8 @@ static void remote_packet_process_adiv5(const char *const packet, const size_t p
 	case REMOTE_DP_READ: { /* Ad = Read from DP register */
 		/* Grab the address to read from and try to perform the access */
 		const uint16_t addr = hex_string_to_num(4, packet + 6);
-		const uint32_t data = adiv5_dp_read(&remote_dp, addr);
+		const uint32_t data =
+			adiv5_dp_read(&remote_dp, (addr & REMOTE_ADIV5_APnDP ? ADIV5_APnDP : 0U) | (addr & 0x00ffU));
 		remote_adiv5_respond(&data, 4U);
 		break;
 	}
@@ -418,7 +419,8 @@ static void remote_packet_process_adiv5(const char *const packet, const size_t p
 		const uint16_t addr = hex_string_to_num(4, packet + 6);
 		const uint32_t value = hex_string_to_num(8, packet + 10);
 		/* Try to perform the access using the AP selection value as R/!W */
-		const uint32_t data = adiv5_dp_low_access(&remote_dp, remote_ap.apsel, addr, value);
+		const uint32_t data = adiv5_dp_low_access(
+			&remote_dp, remote_ap.apsel, (addr & REMOTE_ADIV5_APnDP ? ADIV5_APnDP : 0U) | (addr & 0x00ffU), value);
 		remote_adiv5_respond(&data, 4U);
 		break;
 	}
@@ -426,7 +428,8 @@ static void remote_packet_process_adiv5(const char *const packet, const size_t p
 	case REMOTE_AP_READ: { /* Aa = Read from AP register */
 		/* Grab the AP address to read from and try to perform the access */
 		const uint16_t addr = hex_string_to_num(4, packet + 6);
-		const uint32_t data = adiv5_ap_read(&remote_ap, addr);
+		const uint32_t data =
+			adiv5_ap_read(&remote_ap, (addr & REMOTE_ADIV5_APnDP ? ADIV5_APnDP : 0U) | (addr & 0x00ffU));
 		remote_adiv5_respond(&data, 4U);
 		break;
 	}
@@ -434,7 +437,7 @@ static void remote_packet_process_adiv5(const char *const packet, const size_t p
 		/* Grab the AP address to write to and the data to write then try to perform the access */
 		const uint16_t addr = hex_string_to_num(4, packet + 6);
 		const uint32_t value = hex_string_to_num(8, packet + 10);
-		adiv5_ap_write(&remote_ap, addr, value);
+		adiv5_ap_write(&remote_ap, (addr & REMOTE_ADIV5_APnDP ? ADIV5_APnDP : 0U) | (addr & 0x00ffU), value);
 		remote_adiv5_respond(NULL, 0U);
 		break;
 	}

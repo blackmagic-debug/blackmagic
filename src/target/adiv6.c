@@ -100,8 +100,8 @@ static uint32_t adiv6_dp_read_id(adiv6_access_port_s *const ap, const uint16_t a
 	adiv5_dp_write(ap->base.dp, ADIV5_DP_SELECT, ADIV5_DP_BANK5);
 	adiv5_dp_write(ap->base.dp, ADIV6_DP_SELECT1, (uint32_t)(ap->ap_address >> 32U));
 	/* Now set up SELECT in the DP */
-	adiv5_dp_write(ap->base.dp, ADIV5_DP_SELECT, (uint32_t)ap->ap_address | (addr & 0x0ff0U));
-	const uint16_t ap_reg_base = ADIV5_APnDP | ((addr & 0x0f00U) << 4U) | (addr & 0x00f0U);
+	adiv5_dp_write(ap->base.dp, ADIV5_DP_SELECT, (uint32_t)ap->ap_address | (addr & ADIV6_AP_BANK_MASK));
+	const uint16_t ap_reg_base = ADIV5_APnDP | (addr & ADIV6_AP_BANK_MASK);
 
 	uint32_t result = 0;
 	/* Loop through each register location and read it, pulling out only the relevant byte */
@@ -153,10 +153,10 @@ static bool adiv6_reset_resources(adiv6_access_port_s *const rom_table)
 static uint64_t adiv6_read_coresight_rom_entry(
 	adiv6_access_port_s *const rom_table, const uint8_t rom_format, const uint16_t entry_offset)
 {
-	const uint32_t entry_lower = adiv5_ap_read(&rom_table->base, ADIV6_AP_REG(entry_offset));
+	const uint32_t entry_lower = adiv5_ap_read(&rom_table->base, ADIV5_AP_REG(entry_offset));
 	if (rom_format == CORESIGHT_ROM_DEVID_FORMAT_32BIT)
 		return entry_lower;
-	const uint32_t entry_upper = adiv5_ap_read(&rom_table->base, ADIV6_AP_REG(entry_offset + 4U));
+	const uint32_t entry_upper = adiv5_ap_read(&rom_table->base, ADIV5_AP_REG(entry_offset + 4U));
 	return ((uint64_t)entry_upper << 32U) | (uint64_t)entry_lower;
 }
 
@@ -300,8 +300,8 @@ static bool adiv6_component_probe(adiv5_debug_port_s *const dp, const target_add
 		uint8_t dev_type = 0U;
 		if (cid_class == cidc_dc) {
 			/* Read out the component's identification information */
-			const uint32_t dev_arch = adiv5_ap_read(&base_ap.base, ADIV6_AP_REG(DEVARCH_OFFSET));
-			dev_type = adiv5_ap_read(&base_ap.base, ADIV6_AP_REG(DEVTYPE_OFFSET)) & DEVTYPE_MASK;
+			const uint32_t dev_arch = adiv5_ap_read(&base_ap.base, ADIV5_AP_REG(DEVARCH_OFFSET));
+			dev_type = adiv5_ap_read(&base_ap.base, ADIV5_AP_REG(DEVTYPE_OFFSET)) & DEVTYPE_MASK;
 
 			if (dev_arch & DEVARCH_PRESENT)
 				arch_id = dev_arch & DEVARCH_ARCHID_MASK;
@@ -354,8 +354,7 @@ uint32_t adiv6_ap_reg_read(adiv5_access_port_s *const base_ap, const uint16_t ad
 	adiv5_dp_write(base_ap->dp, ADIV5_DP_SELECT, ADIV5_DP_BANK5);
 	adiv5_dp_write(base_ap->dp, ADIV6_DP_SELECT1, (uint32_t)(ap->ap_address >> 32U));
 	/* Now set up SELECT in the DP */
-	const uint16_t bank = addr & ADIV6_AP_BANK_MASK;
-	adiv5_dp_write(base_ap->dp, ADIV5_DP_SELECT, (uint32_t)ap->ap_address | ((bank & 0xf000U) >> 4U) | (bank & 0xf0U));
+	adiv5_dp_write(base_ap->dp, ADIV5_DP_SELECT, (uint32_t)ap->ap_address | (addr & ADIV6_AP_BANK_MASK));
 	return base_ap->dp->dp_read(base_ap->dp, addr);
 }
 
@@ -366,7 +365,6 @@ void adiv6_ap_reg_write(adiv5_access_port_s *const base_ap, const uint16_t addr,
 	adiv5_dp_write(base_ap->dp, ADIV5_DP_SELECT, ADIV5_DP_BANK5);
 	adiv5_dp_write(base_ap->dp, ADIV6_DP_SELECT1, (uint32_t)(ap->ap_address >> 32U));
 	/* Now set up SELECT in the DP */
-	const uint16_t bank = addr & ADIV6_AP_BANK_MASK;
-	adiv5_dp_write(base_ap->dp, ADIV5_DP_SELECT, (uint32_t)ap->ap_address | ((bank & 0xf000U) >> 4U) | (bank & 0xf0U));
+	adiv5_dp_write(base_ap->dp, ADIV5_DP_SELECT, (uint32_t)ap->ap_address | (addr & ADIV6_AP_BANK_MASK));
 	base_ap->dp->low_access(base_ap->dp, ADIV5_LOW_WRITE, addr, value);
 }

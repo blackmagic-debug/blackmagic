@@ -52,7 +52,7 @@
 #define ADIV6_DP_BASEPTR0_VALID    (1U << 0U)
 #define ADIV6_DP_BASE_ADDRESS_MASK UINT64_C(0xfffffffffffff000)
 
-#define ADIV6_AP_BANK_MASK 0xf0f0U
+#define ADIV6_AP_BANK_MASK 0x0ff0U
 
 /* DP and AP discovery functions */
 bool adiv6_dp_init(adiv5_debug_port_s *dp);
