@@ -547,10 +547,10 @@ bool dap_run_cmd(const void *const request_data, const size_t request_length, vo
 
 static void dap_adiv5_mem_read(adiv5_access_port_s *ap, void *dest, target_addr64_t src, size_t len)
 {
-	if (len == 0)
+	if (len == 0U)
 		return;
 	const align_e align = MIN_ALIGN(src, len);
-	DEBUG_PROBE("dap_mem_read @ %" PRIx64 " len %zu, align %d\n", src, len, align);
+	DEBUG_PROBE("%s @%08" PRIx64 "+%zu, alignment %u\n", __func__, src, len, align);
 	/* If the read can be done in a single transaction, use the dap_adiv5_mem_read_single() fast-path */
 	if ((1U << align) == len) {
 		dap_adiv5_mem_read_single(ap, dest, src, align);
@@ -574,21 +574,21 @@ static void dap_adiv5_mem_read(adiv5_access_port_s *ap, void *dest, target_addr6
 			/* blocks - i gives how many blocks are left to transfer in this 1024 byte chunk */
 			const size_t transfer_length = MIN(blocks - i, blocks_per_transfer) << align;
 			if (!dap_mem_read_block(ap, data + offset, src + offset, transfer_length, align)) {
-				DEBUG_WIRE("dap_mem_read failed: %u\n", ap->dp->fault);
+				DEBUG_WIRE("%s failed: %u\n", __func__, ap->dp->fault);
 				return;
 			}
 			offset += transfer_length;
 		}
 	}
-	DEBUG_WIRE("dap_mem_read transferred %zu blocks\n", len >> align);
+	DEBUG_WIRE("%s transferred %zu blocks\n", __func__, len >> align);
 }
 
 static void dap_adiv5_mem_write(
 	adiv5_access_port_s *ap, target_addr64_t dest, const void *src, size_t len, align_e align)
 {
-	if (len == 0)
+	if (len == 0U)
 		return;
-	DEBUG_PROBE("dap_mem_write @ %" PRIx64 " len %zu, align %d\n", dest, len, align);
+	DEBUG_PROBE("%s @%08" PRIx64 "+%zu, alignment %u\n", __func__, dest, len, align);
 	/* If the write can be done in a single transaction, use the dap_adiv5_mem_write_single() fast-path */
 	if ((1U << align) == len) {
 		dap_adiv5_mem_write_single(ap, dest, src, align);
@@ -612,13 +612,13 @@ static void dap_adiv5_mem_write(
 			/* blocks - i gives how many blocks are left to transfer in this 1024 byte chunk */
 			const size_t transfer_length = MIN(blocks - i, blocks_per_transfer) << align;
 			if (!dap_mem_write_block(ap, dest + offset, data + offset, transfer_length, align)) {
-				DEBUG_WIRE("dap_mem_write failed: %u\n", ap->dp->fault);
+				DEBUG_WIRE("%s failed: %u\n", __func__, ap->dp->fault);
 				return;
 			}
 			offset += transfer_length;
 		}
 	}
-	DEBUG_WIRE("dap_dap_mem_write transferred %zu blocks\n", len >> align);
+	DEBUG_WIRE("%s transferred %zu blocks\n", __func__, len >> align);
 
 	/* Make sure this write is complete by doing a dummy read */
 	adiv5_dp_read(ap->dp, ADIV5_DP_RDBUFF);
