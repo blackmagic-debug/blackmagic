@@ -690,43 +690,43 @@ static bool rp_cmd_reset_usb_boot(target_s *t, int argc, const char **argv)
 	return true;
 }
 
-static bool rp_rescue_do_reset(target_s *t)
+static bool rp2040_rescue_do_reset(target_s *target)
 {
-	adiv5_access_port_s *ap = (adiv5_access_port_s *)t->priv;
-	uint32_t ctrlstat = ap->dp->low_access(ap->dp, ADIV5_LOW_READ, ADIV5_DP_CTRLSTAT, 0);
-	ap->dp->low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_DP_CTRLSTAT, ctrlstat | ADIV5_DP_CTRLSTAT_CDBGPWRUPREQ);
+	adiv5_access_port_s *ap = (adiv5_access_port_s *)target->priv;
+	const uint32_t ctrl = adiv5_dp_read(ap->dp, ADIV5_DP_CTRLSTAT);
+	adiv5_dp_write(ap->dp, ADIV5_DP_CTRLSTAT, ctrl | ADIV5_DP_CTRLSTAT_CDBGPWRUPREQ);
 	platform_timeout_s timeout;
 	platform_timeout_set(&timeout, 100);
 	while (true) {
-		ctrlstat = ap->dp->low_access(ap->dp, ADIV5_LOW_READ, ADIV5_DP_CTRLSTAT, 0);
-		if (!(ctrlstat & ADIV5_DP_CTRLSTAT_CDBGRSTACK)) {
-			DEBUG_INFO("RP RESCUE succeeded.\n");
+		const uint32_t status = adiv5_dp_read(ap->dp, ADIV5_DP_CTRLSTAT);
+		if (!(status & ADIV5_DP_CTRLSTAT_CDBGRSTACK)) {
+			DEBUG_INFO("RP2040 Rescue success\n");
 			break;
 		}
 		if (platform_timeout_is_expired(&timeout)) {
-			DEBUG_INFO("RP RESCUE failed\n");
+			DEBUG_INFO("RP2040 Rescue failed\n");
 			break;
 		}
 	}
 	return false;
 }
 
-/* The RP Pico rescue DP provides no AP, so we need special handling
+/*
+ * The RP2040 rescue DP provides no AP, so we need special handling
  *
  * Attach to this DP will do the reset, but will fail to attach!
  */
-bool rp_rescue_probe(adiv5_access_port_s *ap)
+bool rp2040_rescue_probe(adiv5_access_port_s *ap)
 {
-	target_s *t = target_new();
-	if (!t) {
+	target_s *target = target_new();
+	if (!target)
 		return false;
-	}
 
 	adiv5_ap_ref(ap);
-	t->attach = (void *)rp_rescue_do_reset;
-	t->priv = ap;
-	t->priv_free = (void *)adiv5_ap_unref;
-	t->driver = "Raspberry RP2040 Rescue (Attach to reset!)";
+	target->attach = rp2040_rescue_do_reset;
+	target->priv = ap;
+	target->priv_free = (void (*)(void *))adiv5_ap_unref;
+	target->driver = "RP2040 Rescue (Attach to reset)";
 
 	return true;
 }

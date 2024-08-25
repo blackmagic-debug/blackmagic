@@ -236,7 +236,7 @@ adiv5_access_port_s *adiv5_new_ap(adiv5_debug_port_s *const dp, const uint8_t ap
 }
 
 /* No real AP on RP2040. Special setup.*/
-static void rp_rescue_setup(adiv5_debug_port_s *dp)
+static void rp2040_rescue_setup(adiv5_debug_port_s *dp)
 {
 	adiv5_access_port_s *ap = calloc(1, sizeof(*ap));
 	if (!ap) { /* calloc failed: heap exhaustion */
@@ -245,7 +245,7 @@ static void rp_rescue_setup(adiv5_debug_port_s *dp)
 	}
 	ap->dp = dp;
 
-	rp_rescue_probe(ap);
+	rp2040_rescue_probe(ap);
 }
 
 static void adiv5_dp_clear_sticky_errors(adiv5_debug_port_s *dp)
@@ -455,7 +455,7 @@ void adiv5_dp_init(adiv5_debug_port_s *const dp)
 	}
 
 	if (dp->designer_code == JEP106_MANUFACTURER_RASPBERRY && dp->partno == 0x2U) {
-		rp_rescue_setup(dp);
+		rp2040_rescue_setup(dp);
 		return;
 	}
 
@@ -479,7 +479,7 @@ void adiv5_dp_init(adiv5_debug_port_s *const dp)
 		lpc55_dp_prepare(dp);
 
 	/* Probe for APs on this DP */
-	size_t invalid_aps = 0;
+	size_t invalid_aps = 0U;
 	dp->refcnt++;
 
 	if (dp->target_designer_code == JEP106_MANUFACTURER_FREESCALE) {

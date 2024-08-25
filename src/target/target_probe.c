@@ -98,7 +98,7 @@ CORTEXM_PROBE_WEAK_NOP(efm32_aap_probe)
 CORTEXM_PROBE_WEAK_NOP(kinetis_mdm_probe)
 CORTEXM_PROBE_WEAK_NOP(lpc55_dmap_probe)
 CORTEXM_PROBE_WEAK_NOP(nrf51_mdm_probe)
-CORTEXM_PROBE_WEAK_NOP(rp_rescue_probe)
+CORTEXM_PROBE_WEAK_NOP(rp2040_rescue_probe)
 
 TARGET_PROBE_WEAK_NOP(apollo_3_probe)
 TARGET_PROBE_WEAK_NOP(at32f40x_probe)
