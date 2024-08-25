@@ -537,6 +537,54 @@ static void remote_packet_process_adiv6(const char *const packet, const size_t p
 		remote_adiv5_respond(NULL, 0U);
 		break;
 	}
+	/* Memory access commands */
+	case REMOTE_MEM_READ: { /* Am = Read from memory */
+		/* Grab the CSW value to use in the access */
+		remote_ap.base.csw = hex_string_to_num(8, packet + 21);
+		/* Grab the start address for the read */
+		const target_addr64_t address = hex_string_to_num(16, packet + 29U);
+		/* And how many bytes to read, validating it for buffer overflows */
+		const uint32_t length = hex_string_to_num(8, packet + 45U);
+		/* NB: Hex encoding on the response data halfs the available buffer capacity */
+		if (length > (GDB_PACKET_BUFFER_SIZE - REMOTE_ADIV6_MEM_READ_LENGTH) >> 1U) {
+			remote_respond(REMOTE_RESP_PARERR, 0);
+			break;
+		}
+		/* Get the aligned packet buffer to reuse for the data read */
+		void *data = gdb_packet_buffer();
+		/* Perform the read and send back the results */
+		adiv5_mem_read(&remote_ap.base, data, address, length);
+		remote_adiv5_respond(data, length);
+		break;
+	}
+	case REMOTE_MEM_WRITE: { /* AM = Write to memory */
+		/* Grab the CSW value to use in the access */
+		remote_ap.base.csw = hex_string_to_num(8, packet + 21);
+		/* Grab the alignment for the access */
+		const align_e align = hex_string_to_num(2, packet + 29U);
+		/* Grab the start address for the write */
+		const target_addr64_t address = hex_string_to_num(16, packet + 31U);
+		/* And how many bytes to read, validating it for buffer overflows */
+		const uint32_t length = hex_string_to_num(8, packet + 47U);
+		/* NB: Hex encoding on the request data halfs the available buffer capacity */
+		if (length > (GDB_PACKET_BUFFER_SIZE - REMOTE_ADIV5_MEM_WRITE_LENGTH) >> 1U) {
+			remote_respond(REMOTE_RESP_PARERR, 0);
+			break;
+		}
+		/* Validate the alignment is suitable */
+		if (length & ((1U << align) - 1U)) {
+			remote_respond(REMOTE_RESP_PARERR, 0);
+			break;
+		}
+		/* Get the aligned packet buffer to reuse for the data to write */
+		void *data = gdb_packet_buffer();
+		/* And decode the data from the packet into it */
+		unhexify(data, packet + 55U, length);
+		/* Perform the write and report success/failures */
+		adiv5_mem_write_aligned(&remote_ap.base, address, data, length, align);
+		remote_adiv5_respond(NULL, 0);
+		break;
+	}
 
 	default:
 		remote_respond(REMOTE_RESP_ERR, REMOTE_ERROR_UNRECOGNISED);
