@@ -356,10 +356,10 @@ void dap_ap_mem_access_setup(adiv5_access_port_s *const target_ap, const target_
 	}
 }
 
-uint32_t dap_ap_read(adiv5_access_port_s *const target_ap, const uint16_t addr)
+uint32_t dap_adiv5_ap_read(adiv5_access_port_s *const target_ap, const uint16_t addr)
 {
 	dap_transfer_request_s requests[2];
-	DEBUG_PROBE("dap_ap_read addr %x\n", addr);
+	DEBUG_PROBE("%s addr %x\n", __func__, addr);
 	/* Select the bank for the register */
 	requests[0].request = SWD_DP_W_SELECT;
 	requests[0].data = SWD_DP_REG(addr & 0xf0U, target_ap->apsel);
@@ -368,16 +368,16 @@ uint32_t dap_ap_read(adiv5_access_port_s *const target_ap, const uint16_t addr)
 	uint32_t result = 0;
 	adiv5_debug_port_s *const target_dp = target_ap->dp;
 	if (!perform_dap_transfer(target_dp, requests, 2U, &result, 1U)) {
-		DEBUG_ERROR("dap_ap_read failed (fault = %u)\n", target_dp->fault);
+		DEBUG_ERROR("%s failed (fault = %u)\n", __func__, target_dp->fault);
 		return 0U;
 	}
 	return result;
 }
 
-void dap_ap_write(adiv5_access_port_s *const target_ap, const uint16_t addr, const uint32_t value)
+void dap_adiv5_ap_write(adiv5_access_port_s *const target_ap, const uint16_t addr, const uint32_t value)
 {
 	dap_transfer_request_s requests[2];
-	DEBUG_PROBE("dap_ap_write addr %04x value %08" PRIx32 "\n", addr, value);
+	DEBUG_PROBE("%s addr %04x value %08" PRIx32 "\n", __func__, addr, value);
 	/* Select the bank for the register */
 	requests[0].request = SWD_DP_W_SELECT;
 	requests[0].data = SWD_DP_REG(addr & 0xf0U, target_ap->apsel);
@@ -386,7 +386,7 @@ void dap_ap_write(adiv5_access_port_s *const target_ap, const uint16_t addr, con
 	requests[1].data = value;
 	adiv5_debug_port_s *const target_dp = target_ap->dp;
 	if (!perform_dap_transfer(target_dp, requests, 2U, NULL, 0U))
-		DEBUG_ERROR("dap_ap_write failed (fault = %u)\n", target_dp->fault);
+		DEBUG_ERROR("%s failed (fault = %u)\n", __func__, target_dp->fault);
 }
 
 void dap_read_single(

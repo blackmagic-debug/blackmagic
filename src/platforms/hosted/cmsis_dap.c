@@ -407,7 +407,7 @@ uint32_t dap_dp_raw_access(
 {
 	const bool APnDP = addr & ADIV5_APnDP;
 	uint32_t res = 0;
-	const uint8_t reg = (addr & 0xcU) | (APnDP ? 1 : 0);
+	const uint8_t reg = (addr & 0xcU) | (APnDP ? 1U : 0U);
 	if (rnw)
 		res = dap_read_reg(target_dp, reg);
 	else
@@ -626,8 +626,8 @@ static void dap_mem_write(adiv5_access_port_s *ap, target_addr64_t dest, const v
 void dap_adiv5_dp_init(adiv5_debug_port_s *target_dp)
 {
 	/* Setup the access functions for this adaptor */
-	target_dp->ap_read = dap_ap_read;
-	target_dp->ap_write = dap_ap_write;
+	target_dp->ap_read = dap_adiv5_ap_read;
+	target_dp->ap_write = dap_adiv5_ap_write;
 	target_dp->mem_read = dap_mem_read;
 	target_dp->mem_write = dap_mem_write;
 }
