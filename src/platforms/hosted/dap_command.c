@@ -367,12 +367,12 @@ static size_t dap_encode_swd_sequence(
 
 bool perform_dap_swd_sequences(dap_swd_sequence_s *const sequences, const uint8_t sequence_count)
 {
-	if (sequence_count > 4)
+	if (sequence_count > 5U)
 		return false;
 
 	DEBUG_PROBE("-> dap_swd_sequence (%u sequences)\n", sequence_count);
-	/* 38 is 2 + (4 * 9) where 9 is the max length of each sequence request */
-	uint8_t request[38] = {
+	/* 47 is 2 + (5 * 9) where 9 is the max length of each sequence request */
+	uint8_t request[47] = {
 		DAP_SWD_SEQUENCE,
 		sequence_count,
 	};
@@ -391,7 +391,7 @@ bool perform_dap_swd_sequences(dap_swd_sequence_s *const sequences, const uint8_
 			result_length += (sequence->cycles + 7U) >> 3U;
 	}
 
-	uint8_t response[33] = {DAP_RESPONSE_OK};
+	uint8_t response[41] = {DAP_RESPONSE_OK};
 	/* Run the request having set up the request buffer */
 	if (!dap_run_cmd(request, offset, response, 1U + result_length)) {
 		DEBUG_PROBE("-> sequence failed with %u\n", response[0]);

@@ -77,12 +77,14 @@ bool dap_swd_init(adiv5_debug_port_s *target_dp)
 	swd_proc.seq_out_parity = dap_swd_seq_out_parity;
 
 	/* If we have SWD sequences available, make use of them */
-	if (dap_has_swd_sequence)
+	if (dap_has_swd_sequence) {
 		target_dp->write_no_check = dap_write_reg_no_check;
-	else
+		target_dp->read_no_check = dap_read_reg_no_check;
+	} else {
 		target_dp->write_no_check = NULL;
+		target_dp->read_no_check = NULL;
+	}
 	/* Set up the accelerated SWD functions for basic target operations */
-	target_dp->read_no_check = dap_read_reg_no_check;
 	target_dp->dp_read = dap_dp_read_reg;
 	target_dp->low_access = dap_dp_raw_access;
 	target_dp->abort = dap_dp_abort;
@@ -177,7 +179,7 @@ static bool dap_write_reg_no_check(const uint16_t addr, const uint32_t data)
 {
 	DEBUG_PROBE("dap_write_reg_no_check %04x <- %08" PRIx32 "\n", addr, data);
 	/* Setup the sequences */
-	dap_swd_sequence_s sequences[4] = {
+	dap_swd_sequence_s sequences[5] = {
 		/* Write the 8 byte request */
 		{
 			8U,
@@ -195,22 +197,45 @@ static bool dap_write_reg_no_check(const uint16_t addr, const uint32_t data)
 			/* The 4 data bytes are filled in below with write_le4() */
 			{0U, 0U, 0U, 0U, calculate_odd_parity(data)},
 		},
+		/* Finished up by performing a sequence of 8 idle bits */
+		{8U, DAP_SWD_OUT_SEQUENCE, {0U}},
 	};
 	write_le4(sequences[3].data, 0, data);
 	/* Now perform the sequences */
-	if (!perform_dap_swd_sequences(sequences, 4U)) {
+	if (!perform_dap_swd_sequences(sequences, 5U)) {
 		DEBUG_ERROR("dap_write_reg_no_check failed\n");
 		return false;
 	}
 	/* Check the ack state */
-	const uint8_t ack = (sequences[1].data[0] >> 1U) & 7U;
+	const uint8_t ack = sequences[1].data[0] & 7U;
 	return ack != SWDP_ACK_OK;
 }
 
-/* This is a wrapper around dap_read_reg() for use by target_dp as the read_no_check function */
-uint32_t dap_read_reg_no_check(const uint16_t addr)
+static uint32_t dap_read_reg_no_check(const uint16_t addr)
 {
-	/* Create a dummy DP, the only use for it is to pass the DAP Index to perform_dap_transfer which is ignored for SWD transfers, and return the fault code, which we don't care about */
-	adiv5_debug_port_s dummy_dp = {0};
-	return dap_read_reg(&dummy_dp, addr);
+	/* Setup the sequences */
+	dap_swd_sequence_s sequences[4] = {
+		/* Write the 8 byte request */
+		{
+			8U,
+			DAP_SWD_OUT_SEQUENCE,
+			{make_packet_request(ADIV5_LOW_READ, addr)},
+		},
+		/* Perform one turn-around cycle then read the 3 bit ACK */
+		{3U, DAP_SWD_IN_SEQUENCE},
+		/* Perform a read for the 32b of data and the 1b of parity */
+		{33U, DAP_SWD_IN_SEQUENCE},
+		/* Finished up by performing a sequence of 8 idle bits */
+		{8U, DAP_SWD_OUT_SEQUENCE, {0U}},
+	};
+	/* Now perform the sequences */
+	if (!perform_dap_swd_sequences(sequences, 4U)) {
+		DEBUG_ERROR("dap_read_reg_no_check failed\n");
+		return false;
+	}
+	const uint32_t data = read_le4(sequences[2].data, 0);
+	DEBUG_PROBE("dap_read_reg_no_check %04x -> %08" PRIx32 "\n", addr, data);
+	/* Check the ack state */
+	const uint8_t ack = sequences[1].data[0] & 7U;
+	return ack == SWDP_ACK_OK ? data : 0;
 }
