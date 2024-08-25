@@ -658,6 +658,42 @@ static void dap_adiv6_mem_read(
 	DEBUG_WIRE("%s transferred %zu blocks\n", __func__, len >> align);
 }
 
+static void dap_adiv6_mem_write(
+	adiv5_access_port_s *base_ap, target_addr64_t dest, const void *src, size_t len, align_e align)
+{
+	if (len == 0U)
+		return;
+	adiv6_access_port_s *const ap = (adiv6_access_port_s *)base_ap;
+	DEBUG_PROBE("%s @%08" PRIx64 "+%zu, alignment %u\n", __func__, dest, len, align);
+	const size_t blocks_per_transfer = dap_max_transfer_data(DAP_CMD_BLOCK_WRITE_HDR_LEN) >> 2U;
+	const uint8_t *const data = (const uint8_t *)src;
+	for (size_t offset = 0; offset < len;) {
+		/* Setup AP_TAR every loop as failing to do so results in it wrapping */
+		dap_adiv6_mem_access_setup(ap, dest + offset, align);
+		/*
+		 * dest can start out unaligned to a 1024 byte chunk size,
+		 * so we have to calculate how much is left of the chunk.
+		 * We also have to take into account how much of the chunk the caller
+		 * has requested we fill.
+		 */
+		const size_t chunk_remaining = MIN(1024 - ((dest + offset) & 0x3ffU), len - offset);
+		const size_t blocks = chunk_remaining >> align;
+		for (size_t i = 0; i < blocks; i += blocks_per_transfer) {
+			/* blocks - i gives how many blocks are left to transfer in this 1024 byte chunk */
+			const size_t transfer_length = MIN(blocks - i, blocks_per_transfer) << align;
+			if (!dap_mem_write_block(&ap->base, dest + offset, data + offset, transfer_length, align)) {
+				DEBUG_WIRE("%s failed: %u\n", __func__, ap->base.dp->fault);
+				return;
+			}
+			offset += transfer_length;
+		}
+	}
+	DEBUG_WIRE("%s transferred %zu blocks\n", __func__, len >> align);
+
+	/* Make sure this write is complete by doing a dummy read */
+	adiv5_dp_read(ap->base.dp, ADIV5_DP_RDBUFF);
+}
+
 void dap_adiv5_dp_init(adiv5_debug_port_s *target_dp)
 {
 	/* Setup the access functions for this adaptor */
@@ -673,4 +709,5 @@ void dap_adiv6_dp_init(adiv5_debug_port_s *target_dp)
 	target_dp->ap_read = dap_adiv6_ap_read;
 	target_dp->ap_write = dap_adiv6_ap_write;
 	target_dp->mem_read = dap_adiv6_mem_read;
+	target_dp->mem_write = dap_adiv6_mem_write;
 }
