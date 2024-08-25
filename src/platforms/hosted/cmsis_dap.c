@@ -624,6 +624,40 @@ static void dap_adiv5_mem_write(
 	adiv5_dp_read(ap->dp, ADIV5_DP_RDBUFF);
 }
 
+static void dap_adiv6_mem_read(
+	adiv5_access_port_s *const base_ap, void *const dest, const target_addr64_t src, const size_t len)
+{
+	if (len == 0U)
+		return;
+	adiv6_access_port_s *const ap = (adiv6_access_port_s *)base_ap;
+	const align_e align = MIN_ALIGN(src, len);
+	DEBUG_PROBE("%s @%08" PRIx64 "+%zu, alignment %u\n", __func__, src, len, align);
+	const size_t blocks_per_transfer = dap_max_transfer_data(DAP_CMD_BLOCK_READ_HDR_LEN) >> 2U;
+	uint8_t *const data = (uint8_t *)dest;
+	for (size_t offset = 0; offset < len;) {
+		/* Setup AP_TAR every loop as failing to do so results in it wrapping */
+		dap_adiv6_mem_access_setup(ap, src + offset, align);
+		/*
+		 * src can start out unaligned to a 1024 byte chunk size,
+		 * so we have to calculate how much is left of the chunk.
+		 * We also have to take into account how much of the chunk the caller
+		 * has requested we fill.
+		 */
+		const size_t chunk_remaining = MIN(1024 - ((src + offset) & 0x3ffU), len - offset);
+		const size_t blocks = chunk_remaining >> align;
+		for (size_t i = 0; i < blocks; i += blocks_per_transfer) {
+			/* blocks - i gives how many blocks are left to transfer in this 1024 byte chunk */
+			const size_t transfer_length = MIN(blocks - i, blocks_per_transfer) << align;
+			if (!dap_mem_read_block(&ap->base, data + offset, src + offset, transfer_length, align)) {
+				DEBUG_WIRE("%s failed: %u\n", __func__, ap->base.dp->fault);
+				return;
+			}
+			offset += transfer_length;
+		}
+	}
+	DEBUG_WIRE("%s transferred %zu blocks\n", __func__, len >> align);
+}
+
 void dap_adiv5_dp_init(adiv5_debug_port_s *target_dp)
 {
 	/* Setup the access functions for this adaptor */
@@ -638,4 +672,5 @@ void dap_adiv6_dp_init(adiv5_debug_port_s *target_dp)
 	/* Setup the access functions for this adaptor */
 	target_dp->ap_read = dap_adiv6_ap_read;
 	target_dp->ap_write = dap_adiv6_ap_write;
+	target_dp->mem_read = dap_adiv6_mem_read;
 }

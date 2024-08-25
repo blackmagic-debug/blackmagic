@@ -357,6 +357,64 @@ void dap_adiv5_mem_access_setup(adiv5_access_port_s *const target_ap, const targ
 	}
 }
 
+static size_t dap_adiv6_mem_access_build(const adiv6_access_port_s *const target_ap,
+	dap_transfer_request_s *const transfer_requests, const target_addr64_t addr, const align_e align)
+{
+	uint32_t csw = target_ap->base.csw | ADIV5_AP_CSW_ADDRINC_SINGLE;
+	switch (align) {
+	case ALIGN_8BIT:
+		csw |= ADIV5_AP_CSW_SIZE_BYTE;
+		break;
+	case ALIGN_16BIT:
+		csw |= ADIV5_AP_CSW_SIZE_HALFWORD;
+		break;
+	case ALIGN_64BIT:
+	case ALIGN_32BIT:
+		csw |= ADIV5_AP_CSW_SIZE_WORD;
+		break;
+	}
+	/* Select the AP base address via SELECT1 */
+	transfer_requests[0].request = SWD_DP_W_SELECT;
+	transfer_requests[0].data = ADIV5_DP_BANK5;
+	transfer_requests[1].request = SWD_DP_W_SELECT1;
+	transfer_requests[1].data = (uint32_t)(target_ap->ap_address >> 32U);
+	/* Select the bank for the CSW register */
+	transfer_requests[2].request = SWD_DP_W_SELECT;
+	transfer_requests[2].data = (uint32_t)target_ap->ap_address | (ADIV5_AP_CSW & ADIV6_AP_BANK_MASK);
+	/* Then write the CSW register to the new value */
+	transfer_requests[3].request = SWD_AP_CSW;
+	transfer_requests[3].data = csw;
+	/* Finally write the TAR register to its new value */
+	if (target_ap->base.flags & ADIV5_AP_FLAGS_64BIT) {
+		transfer_requests[4].request = SWD_AP_TAR_HIGH;
+		transfer_requests[4].data = (uint32_t)(addr >> 32U);
+		transfer_requests[5].request = SWD_AP_TAR_LOW;
+		transfer_requests[5].data = (uint32_t)addr;
+		return 6U;
+	} else {
+		transfer_requests[4].request = SWD_AP_TAR_LOW;
+		transfer_requests[4].data = (uint32_t)addr;
+		return 5U;
+	}
+}
+
+void dap_adiv6_mem_access_setup(adiv6_access_port_s *const target_ap, const target_addr64_t addr, const align_e align)
+{
+	/* Start by setting up the transfer and attempting it */
+	dap_transfer_request_s requests[6];
+	const size_t requests_count = dap_adiv6_mem_access_build(target_ap, requests, addr, align);
+	adiv5_debug_port_s *const target_dp = target_ap->base.dp;
+	const bool result = perform_dap_transfer_recoverable(target_dp, requests, requests_count, NULL, 0U);
+	/* If it didn't go well, say something and abort */
+	if (!result) {
+		if (target_dp->fault != DAP_TRANSFER_NO_RESPONSE)
+			DEBUG_ERROR("Transport error (%u), aborting\n", target_dp->fault);
+		else
+			DEBUG_ERROR("Transaction unrecoverably failed\n");
+		exit(-1);
+	}
+}
+
 uint32_t dap_adiv5_ap_read(adiv5_access_port_s *const target_ap, const uint16_t addr)
 {
 	dap_transfer_request_s requests[2];
