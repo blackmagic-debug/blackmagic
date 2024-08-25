@@ -99,6 +99,25 @@
 		REMOTE_SOM, REMOTE_ADIV5_PACKET, REMOTE_ADIV6_PACKET, REMOTE_AP_WRITE, REMOTE_ADIV5_DEV_INDEX, \
 			REMOTE_ADIV5_ADDR64, REMOTE_ADIV5_ADDR16, REMOTE_ADIV5_DATA, REMOTE_EOM, 0                 \
 	}
+#define REMOTE_ADIV6_MEM_READ_STR                                                                         \
+	(char[])                                                                                              \
+	{                                                                                                     \
+		REMOTE_SOM, REMOTE_ADIV5_PACKET, REMOTE_ADIV6_PACKET, REMOTE_MEM_READ, REMOTE_ADIV5_DEV_INDEX,    \
+			REMOTE_ADIV5_ADDR64, REMOTE_ADIV5_CSW, REMOTE_ADIV5_ADDR64, REMOTE_ADIV5_COUNT, REMOTE_EOM, 0 \
+	}
+/* 2 leader bytes and one trailer byte gives 3 bytes response overhead */
+#define REMOTE_ADIV6_MEM_READ_LENGTH 3U
+#define REMOTE_ADIV6_MEM_WRITE_STR                                                                                    \
+	(char[])                                                                                                          \
+	{                                                                                                                 \
+		REMOTE_SOM, REMOTE_ADIV5_PACKET, REMOTE_ADIV6_PACKET, REMOTE_MEM_WRITE, REMOTE_ADIV5_DEV_INDEX,               \
+			REMOTE_ADIV5_ADDR64, REMOTE_ADIV5_CSW, REMOTE_ADIV5_ALIGNMENT, REMOTE_ADIV5_ADDR64, REMOTE_ADIV5_COUNT, 0 \
+	}
+/*
+ * 3 leader bytes + 2 bytes for dev index + 16 bytes for the DP resource bus AP base address + 8 for CSW +
+ * 2 for the alignment + 16 for the address and 8 for the count and one trailer gives 57 bytes request overhead
+ */
+#define REMOTE_ADIV6_MEM_WRITE_LENGTH 57U
 
 /* This version of the protocol introduces an optional RISC-V acceleration protocol */
 #define REMOTE_RISCV_PACKET    'R'

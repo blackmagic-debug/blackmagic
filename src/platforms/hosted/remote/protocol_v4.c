@@ -110,8 +110,8 @@ bool remote_v4_adiv6_init(adiv5_debug_port_s *dp)
 {
 	dp->ap_read = remote_v4_adiv6_ap_read;
 	dp->ap_write = remote_v4_adiv6_ap_write;
-	dp->mem_read = advi5_mem_read_bytes;
-	dp->mem_write = adiv5_mem_write_bytes;
+	dp->mem_read = remote_v4_adiv6_mem_read_bytes;
+	dp->mem_write = remote_v4_adiv6_mem_write_bytes;
 	return true;
 }
 

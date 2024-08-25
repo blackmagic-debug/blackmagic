@@ -40,5 +40,8 @@
 
 uint32_t remote_v4_adiv6_ap_read(adiv5_access_port_s *ap, uint16_t addr);
 void remote_v4_adiv6_ap_write(adiv5_access_port_s *ap, uint16_t addr, uint32_t value);
+void remote_v4_adiv6_mem_read_bytes(adiv5_access_port_s *ap, void *dest, target_addr64_t src, size_t read_length);
+void remote_v4_adiv6_mem_write_bytes(
+	adiv5_access_port_s *ap, target_addr64_t dest, const void *src, size_t write_length, align_e align);
 
 #endif /*PLATFORMS_HOSTED_REMOTE_PROTOCOL_V4_ADIV6_H*/
