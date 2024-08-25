@@ -449,7 +449,8 @@ static void remote_packet_process_adiv5(const char *const packet, const size_t p
 		const target_addr64_t address = hex_string_to_num(16, packet + 14U);
 		/* And how many bytes to read, validating it for buffer overflows */
 		const uint32_t length = hex_string_to_num(8, packet + 30U);
-		if (length > GDB_PACKET_BUFFER_SIZE - REMOTE_ADIV5_MEM_READ_LENGTH) {
+		/* NB: Hex encoding on the response data halfs the available buffer capacity */
+		if (length > (GDB_PACKET_BUFFER_SIZE - REMOTE_ADIV5_MEM_READ_LENGTH) >> 1U) {
 			remote_respond(REMOTE_RESP_PARERR, 0);
 			break;
 		}
@@ -469,7 +470,8 @@ static void remote_packet_process_adiv5(const char *const packet, const size_t p
 		const target_addr64_t address = hex_string_to_num(16, packet + 16U);
 		/* And how many bytes to read, validating it for buffer overflows */
 		const uint32_t length = hex_string_to_num(8, packet + 32U);
-		if (length > GDB_PACKET_BUFFER_SIZE - REMOTE_ADIV5_MEM_WRITE_LENGTH) {
+		/* NB: Hex encoding on the response data halfs the available buffer capacity */
+		if (length > (GDB_PACKET_BUFFER_SIZE - REMOTE_ADIV5_MEM_WRITE_LENGTH) >> 1U) {
 			remote_respond(REMOTE_RESP_PARERR, 0);
 			break;
 		}

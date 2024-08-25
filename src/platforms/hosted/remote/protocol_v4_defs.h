@@ -69,11 +69,8 @@
 		REMOTE_SOM, REMOTE_ADIV5_PACKET, REMOTE_MEM_READ, REMOTE_ADIV5_DEV_INDEX, REMOTE_ADIV5_AP_SEL, \
 			REMOTE_ADIV5_CSW, REMOTE_ADIV5_ADDR64, REMOTE_ADIV5_COUNT, REMOTE_EOM, 0                   \
 	}
-/*
- * 3 leader bytes + 2 bytes for dev index + 2 bytes for AP select + 8 for CSW + 16 for the address
- * and 8 for the count and one trailer gives 40U
- */
-#define REMOTE_ADIV5_MEM_READ_LENGTH 40U
+/* 2 leader bytes and one trailer byte gives 3 bytes response overhead */
+#define REMOTE_ADIV5_MEM_READ_LENGTH 3U
 #define REMOTE_ADIV5_MEM_WRITE_STR                                                                      \
 	(char[])                                                                                            \
 	{                                                                                                   \
@@ -82,7 +79,7 @@
 	}
 /*
  * 3 leader bytes + 2 bytes for dev index + 2 bytes for AP select + 8 for CSW + 2 for the alignment +
- * 16 for the address and 8 for the count and one trailer gives 42U
+ * 16 for the address and 8 for the count and one trailer gives 42 bytes request overhead
  */
 #define REMOTE_ADIV5_MEM_WRITE_LENGTH 42U
 
