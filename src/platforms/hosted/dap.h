@@ -87,6 +87,8 @@ void dap_adiv6_ap_write(adiv5_access_port_s *base_ap, uint16_t addr, uint32_t va
 void dap_adiv5_mem_read_single(adiv5_access_port_s *target_ap, void *dest, target_addr64_t src, align_e align);
 void dap_adiv5_mem_write_single(adiv5_access_port_s *target_ap, target_addr64_t dest, const void *src, align_e align);
 void dap_adiv5_mem_access_setup(adiv5_access_port_s *target_ap, target_addr64_t addr, align_e align);
+void dap_adiv6_mem_read_single(adiv6_access_port_s *target_ap, void *dest, target_addr64_t src, align_e align);
+void dap_adiv6_mem_write_single(adiv6_access_port_s *target_ap, target_addr64_t dest, const void *src, align_e align);
 void dap_adiv6_mem_access_setup(adiv6_access_port_s *target_ap, target_addr64_t addr, align_e align);
 bool dap_mem_read_block(adiv5_access_port_s *target_ap, void *dest, target_addr64_t src, size_t len, align_e align);
 bool dap_mem_write_block(

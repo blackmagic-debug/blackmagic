@@ -632,6 +632,12 @@ static void dap_adiv6_mem_read(
 	adiv6_access_port_s *const ap = (adiv6_access_port_s *)base_ap;
 	const align_e align = MIN_ALIGN(src, len);
 	DEBUG_PROBE("%s @%08" PRIx64 "+%zu, alignment %u\n", __func__, src, len, align);
+	/* If the read can be done in a single transaction, use the dap_advi6_mem_read_single() fast-path */
+	if ((1U << align) == len) {
+		dap_adiv6_mem_read_single(ap, dest, src, align);
+		return;
+	}
+	/* Otherwise proceed blockwise */
 	const size_t blocks_per_transfer = dap_max_transfer_data(DAP_CMD_BLOCK_READ_HDR_LEN) >> 2U;
 	uint8_t *const data = (uint8_t *)dest;
 	for (size_t offset = 0; offset < len;) {
@@ -665,6 +671,12 @@ static void dap_adiv6_mem_write(
 		return;
 	adiv6_access_port_s *const ap = (adiv6_access_port_s *)base_ap;
 	DEBUG_PROBE("%s @%08" PRIx64 "+%zu, alignment %u\n", __func__, dest, len, align);
+	/* If the write can be done in a single transaction, use the dap_adiv5_mem_write_single() fast-path */
+	if ((1U << align) == len) {
+		dap_adiv6_mem_write_single(ap, dest, src, align);
+		return;
+	}
+	/* Otherwise proceed blockwise */
 	const size_t blocks_per_transfer = dap_max_transfer_data(DAP_CMD_BLOCK_WRITE_HDR_LEN) >> 2U;
 	const uint8_t *const data = (const uint8_t *)src;
 	for (size_t offset = 0; offset < len;) {

@@ -522,3 +522,33 @@ void dap_adiv5_mem_write_single(
 	if (!perform_dap_transfer_recoverable(target_dp, requests, requests_count + 1U, NULL, 0U))
 		DEBUG_ERROR("dap_write_single failed (fault = %u)\n", target_dp->fault);
 }
+
+void dap_adiv6_mem_read_single(
+	adiv6_access_port_s *const target_ap, void *const dest, const target_addr64_t src, const align_e align)
+{
+	dap_transfer_request_s requests[7];
+	const size_t requests_count = dap_adiv6_mem_access_build(target_ap, requests, src, align);
+	requests[requests_count].request = SWD_AP_DRW | DAP_TRANSFER_RnW;
+	uint32_t result;
+	adiv5_debug_port_s *target_dp = target_ap->base.dp;
+	if (!perform_dap_transfer_recoverable(target_dp, requests, requests_count + 1U, &result, 1U)) {
+		DEBUG_ERROR("dap_read_single failed (fault = %u)\n", target_dp->fault);
+		memset(dest, 0, 1U << align);
+		return;
+	}
+	/* Pull out the data. AP_DRW access implies an RDBUFF in CMSIS-DAP, so this is safe */
+	adiv5_unpack_data(dest, src, result, align);
+}
+
+void dap_adiv6_mem_write_single(
+	adiv6_access_port_s *const target_ap, const target_addr64_t dest, const void *const src, const align_e align)
+{
+	dap_transfer_request_s requests[7];
+	const size_t requests_count = dap_adiv6_mem_access_build(target_ap, requests, dest, align);
+	requests[requests_count].request = SWD_AP_DRW;
+	/* Pack data into correct data lane */
+	adiv5_pack_data(dest, src, &requests[requests_count].data, align);
+	adiv5_debug_port_s *target_dp = target_ap->base.dp;
+	if (!perform_dap_transfer_recoverable(target_dp, requests, requests_count + 1U, NULL, 0U))
+		DEBUG_ERROR("dap_write_single failed (fault = %u)\n", target_dp->fault);
+}
