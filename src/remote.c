@@ -124,7 +124,7 @@ static void remote_respond_string(const char response_code, const char *const st
 static adiv5_debug_port_s remote_dp = {
 	.ap_read = adiv5_ap_reg_read,
 	.ap_write = adiv5_ap_reg_write,
-	.mem_read = advi5_mem_read_bytes,
+	.mem_read = adiv5_mem_read_bytes,
 	.mem_write = adiv5_mem_write_bytes,
 };
 

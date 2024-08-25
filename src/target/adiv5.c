@@ -988,7 +988,7 @@ void adiv5_dp_init(adiv5_debug_port_s *const dp)
 	 */
 	dp->ap_write = adiv5_ap_reg_write;
 	dp->ap_read = adiv5_ap_reg_read;
-	dp->mem_read = advi5_mem_read_bytes;
+	dp->mem_read = adiv5_mem_read_bytes;
 	dp->mem_write = adiv5_mem_write_bytes;
 #if PC_HOSTED == 1
 	bmda_adiv5_dp_init(dp);
@@ -1260,7 +1260,7 @@ const void *adiv5_pack_data(
 	return (const uint8_t *)src + (1U << align);
 }
 
-void advi5_mem_read_bytes(adiv5_access_port_s *const ap, void *dest, const target_addr64_t src, const size_t len)
+void adiv5_mem_read_bytes(adiv5_access_port_s *const ap, void *dest, const target_addr64_t src, const size_t len)
 {
 	/* Do nothing and return if there's nothing to read */
 	if (len == 0U)

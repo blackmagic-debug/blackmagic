@@ -248,7 +248,7 @@ void adiv5_mem_write(adiv5_access_port_s *ap, target_addr64_t dest, const void *
 /* ADIv5 low-level logical operation functions for memory access */
 void adiv5_mem_access_setup(adiv5_access_port_s *ap, target_addr64_t addr, align_e align);
 void adiv5_mem_write_bytes(adiv5_access_port_s *ap, target_addr64_t dest, const void *src, size_t len, align_e align);
-void advi5_mem_read_bytes(adiv5_access_port_s *ap, void *dest, target_addr64_t src, size_t len);
+void adiv5_mem_read_bytes(adiv5_access_port_s *ap, void *dest, target_addr64_t src, size_t len);
 /* ADIv5 logical operation functions for AP register I/O */
 void adiv5_ap_reg_write(adiv5_access_port_s *ap, uint16_t addr, uint32_t value);
 uint32_t adiv5_ap_reg_read(adiv5_access_port_s *ap, uint16_t addr);

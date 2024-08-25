@@ -219,7 +219,7 @@ void remote_adiv6_dp_init(adiv5_debug_port_s *const dp)
 		remote_funcs.adiv6_init(dp);
 	/* If we cannot, but we did initialise ADIv5, adjust the memory I/O functions so the ADIv6 APs work */
 	else if (remote_funcs.adiv5_init) {
-		dp->mem_read = advi5_mem_read_bytes;
+		dp->mem_read = adiv5_mem_read_bytes;
 		dp->mem_write = adiv5_mem_write_bytes;
 	}
 }
