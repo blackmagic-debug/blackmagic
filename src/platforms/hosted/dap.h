@@ -33,6 +33,7 @@
 #include <stddef.h>
 #include <stdbool.h>
 #include "adiv5.h"
+#include "adiv6.h"
 
 typedef enum dap_info {
 	DAP_INFO_VENDOR = 0x01U,
@@ -78,12 +79,14 @@ bool dap_led(dap_led_type_e type, bool state);
 size_t dap_info(dap_info_e requested_info, void *buffer, size_t buffer_length);
 bool dap_set_reset_state(bool nrst_state);
 uint32_t dap_read_reg(adiv5_debug_port_s *target_dp, uint8_t reg);
-void dap_write_reg(adiv5_debug_port_s *target_dp, uint8_t reg, uint32_t data);
+void dap_write_reg(adiv5_debug_port_s *target_dp, uint8_t reg, uint32_t value);
 bool dap_read_block(adiv5_access_port_s *target_ap, void *dest, target_addr64_t src, size_t len, align_e align);
 bool dap_write_block(adiv5_access_port_s *target_ap, target_addr64_t dest, const void *src, size_t len, align_e align);
 void dap_ap_mem_access_setup(adiv5_access_port_s *target_ap, target_addr64_t addr, align_e align);
 uint32_t dap_adiv5_ap_read(adiv5_access_port_s *target_ap, uint16_t addr);
 void dap_adiv5_ap_write(adiv5_access_port_s *target_ap, uint16_t addr, uint32_t value);
+uint32_t dap_adiv6_ap_read(adiv5_access_port_s *target_ap, uint16_t addr);
+void dap_adiv6_ap_write(adiv5_access_port_s *target_ap, uint16_t addr, uint32_t value);
 void dap_read_single(adiv5_access_port_s *target_ap, void *dest, target_addr64_t src, align_e align);
 void dap_write_single(adiv5_access_port_s *target_ap, target_addr64_t dest, const void *src, align_e align);
 bool dap_run_cmd(const void *request_data, size_t request_length, void *response_data, size_t response_length);

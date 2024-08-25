@@ -52,6 +52,7 @@
 #define SWD_DP_W_WCR       0x04U // When CTRLSEL == 1
 #define SWD_DP_R_RESEND    0x08U
 #define SWD_DP_W_SELECT    0x08U
+#define SWD_DP_W_SELECT1   0x04U
 #define SWD_DP_R_RDBUFF    0x0cU
 
 #define SWD_DP_REG(reg, apsel) ((reg) | ((apsel) << 24U))
@@ -386,6 +387,51 @@ void dap_adiv5_ap_write(adiv5_access_port_s *const target_ap, const uint16_t add
 	requests[1].data = value;
 	adiv5_debug_port_s *const target_dp = target_ap->dp;
 	if (!perform_dap_transfer(target_dp, requests, 2U, NULL, 0U))
+		DEBUG_ERROR("%s failed (fault = %u)\n", __func__, target_dp->fault);
+}
+
+uint32_t dap_adiv6_ap_read(adiv5_access_port_s *const base_ap, const uint16_t addr)
+{
+	adiv6_access_port_s *const target_ap = (adiv6_access_port_s *)base_ap;
+	dap_transfer_request_s requests[4];
+	DEBUG_PROBE("%s addr %x\n", __func__, addr);
+	/* Set SELECT1 in the DP up first */
+	requests[0].request = SWD_DP_W_SELECT;
+	requests[0].data = ADIV5_DP_BANK5;
+	requests[1].request = SWD_DP_W_SELECT1;
+	requests[1].data = (uint32_t)(target_ap->ap_address >> 32U);
+	/* Now set up SELECT in the DP */
+	requests[2].request = SWD_DP_W_SELECT;
+	requests[2].data = (uint32_t)target_ap->ap_address | (addr & ADIV6_AP_BANK_MASK);
+	/* Read the register */
+	requests[3].request = (addr & 0x0cU) | DAP_TRANSFER_RnW | (addr & ADIV5_APnDP ? DAP_TRANSFER_APnDP : 0);
+	uint32_t result = 0;
+	adiv5_debug_port_s *const target_dp = base_ap->dp;
+	if (!perform_dap_transfer(target_dp, requests, 4U, &result, 1U)) {
+		DEBUG_ERROR("%s failed (fault = %u)\n", __func__, target_dp->fault);
+		return 0U;
+	}
+	return result;
+}
+
+void dap_adiv6_ap_write(adiv5_access_port_s *const base_ap, const uint16_t addr, const uint32_t value)
+{
+	adiv6_access_port_s *const target_ap = (adiv6_access_port_s *)base_ap;
+	dap_transfer_request_s requests[4];
+	DEBUG_PROBE("%s addr %04x value %08" PRIx32 "\n", __func__, addr, value);
+	/* Set SELECT1 in the DP up first */
+	requests[0].request = SWD_DP_W_SELECT;
+	requests[0].data = ADIV5_DP_BANK5;
+	requests[1].request = SWD_DP_W_SELECT1;
+	requests[1].data = (uint32_t)(target_ap->ap_address >> 32U);
+	/* Now set up SELECT in the DP */
+	requests[2].request = SWD_DP_W_SELECT;
+	requests[2].data = (uint32_t)target_ap->ap_address | (addr & ADIV6_AP_BANK_MASK);
+	/* Write the register */
+	requests[3].request = (addr & 0x0cU) | (addr & ADIV5_APnDP ? DAP_TRANSFER_APnDP : 0);
+	requests[3].data = value;
+	adiv5_debug_port_s *const target_dp = base_ap->dp;
+	if (!perform_dap_transfer(target_dp, requests, 4U, NULL, 0U))
 		DEBUG_ERROR("%s failed (fault = %u)\n", __func__, target_dp->fault);
 }
 

@@ -631,3 +631,10 @@ void dap_adiv5_dp_init(adiv5_debug_port_s *target_dp)
 	target_dp->mem_read = dap_mem_read;
 	target_dp->mem_write = dap_mem_write;
 }
+
+void dap_adiv6_dp_init(adiv5_debug_port_s *target_dp)
+{
+	/* Setup the access functions for this adaptor */
+	target_dp->ap_read = dap_adiv6_ap_read;
+	target_dp->ap_write = dap_adiv6_ap_write;
+}

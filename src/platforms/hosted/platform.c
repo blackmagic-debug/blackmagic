@@ -345,6 +345,11 @@ void bmda_adiv6_dp_init(adiv5_debug_port_s *const dp)
 		}
 		remote_adiv6_dp_init(dp);
 		break;
+#if HOSTED_BMP_ONLY == 0
+	case PROBE_TYPE_CMSIS_DAP:
+		dap_adiv6_dp_init(dp);
+		break;
+#endif
 
 	default:
 		break;
