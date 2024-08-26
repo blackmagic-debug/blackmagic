@@ -50,6 +50,17 @@
 #define RP2350_BOOTROM_MAGIC_MASK    0x00ffffffU
 #define RP2350_BOOTROM_VERSION_SHIFT 24U
 
+#define RP2350_GPIO_QSPI_BASE      0x40030000U
+#define RP2350_GPIO_QSPI_SCLK_CTRL (RP2350_GPIO_QSPI_BASE + 0x014U)
+#define RP2350_GPIO_QSPI_CS_CTRL   (RP2350_GPIO_QSPI_BASE + 0x01cU)
+#define RP2350_GPIO_QSPI_SD0_CTRL  (RP2350_GPIO_QSPI_BASE + 0x024U)
+#define RP2350_GPIO_QSPI_SD1_CTRL  (RP2350_GPIO_QSPI_BASE + 0x02cU)
+#define RP2350_GPIO_QSPI_SD2_CTRL  (RP2350_GPIO_QSPI_BASE + 0x034U)
+#define RP2350_GPIO_QSPI_SD3_CTRL  (RP2350_GPIO_QSPI_BASE + 0x03cU)
+
+#define RP2350_GPIO_QSPI_CTRL_FUNCSEL_MASK (0x1fU << 0U)
+#define RP2350_GPIO_QSPI_CTRL_FUNCSEL_NONE (0x1fU << 0U)
+
 #define RP2350_QMI_BASE       0x400d0000U
 #define RP2350_QMI_DIRECT_CSR (RP2350_QMI_BASE + 0x000U)
 #define RP2350_QMI_DIRECT_TX  (RP2350_QMI_BASE + 0x004U)
@@ -152,7 +163,18 @@ static bool rp2350_flash_resume(target_s *const target)
 
 static bool rp2350_spi_prepare(target_s *const target)
 {
-	/* Start by checking the current peripheral mode */
+	/* Check if the QMI peripheral is muxed out to the pads, and if not, fix that */
+	if ((target_mem32_read32(target, RP2350_GPIO_QSPI_SCLK_CTRL) & RP2350_GPIO_QSPI_CTRL_FUNCSEL_MASK) ==
+		RP2350_GPIO_QSPI_CTRL_FUNCSEL_NONE) {
+		target_mem32_write32(target, RP2350_GPIO_QSPI_SCLK_CTRL, 0U);
+		target_mem32_write32(target, RP2350_GPIO_QSPI_CS_CTRL, 0U);
+		target_mem32_write32(target, RP2350_GPIO_QSPI_SD0_CTRL, 0U);
+		target_mem32_write32(target, RP2350_GPIO_QSPI_SD1_CTRL, 0U);
+		target_mem32_write32(target, RP2350_GPIO_QSPI_SD2_CTRL, 0U);
+		target_mem32_write32(target, RP2350_GPIO_QSPI_SD3_CTRL, 0U);
+	}
+
+	/* Now check the current peripheral mode */
 	const uint32_t state = target_mem32_read32(target, RP2350_QMI_DIRECT_CSR);
 	/* If the peripheral is not yet in direct mode, turn it on and do the entry sequence for that */
 	if (!(state & RP2350_QMI_DIRECT_CSR_DIRECT_ENABLE)) {
