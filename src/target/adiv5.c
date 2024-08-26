@@ -980,6 +980,21 @@ static bool adiv5_power_cycle_aps(adiv5_debug_port_s *const dp)
 	return true;
 }
 
+void adiv5_ap_resume_cores(adiv5_access_port_s *const ap)
+{
+	/*
+	 * If we're not in connect-under-reset mode, and now that we're done with this AP's
+	 * ROM tables, look for any created targets and resume the core associated with it.
+	 */
+	for (target_s *target = target_list; target; target = target->next) {
+		if (!connect_assert_nrst && target->priv_free == cortex_priv_free) {
+			adiv5_access_port_s *target_ap = cortex_ap(target);
+			if (target_ap == ap)
+				target_halt_resume(target, false);
+		}
+	}
+}
+
 void adiv5_dp_init(adiv5_debug_port_s *const dp)
 {
 	/*
@@ -1140,17 +1155,8 @@ void adiv5_dp_init(adiv5_debug_port_s *const dp)
 
 		/* The rest should only be added after checking ROM table */
 		adiv5_component_probe(ap, ap->base, 0, 0);
-		/*
-		 * Having completed discovery on this AP, if we're not in connect-under-reset mode,
-		 * and now that we're done with this AP's ROM tables, look for the target and resume the core.
-		 */
-		for (target_s *target = target_list; target; target = target->next) {
-			if (!connect_assert_nrst && target->priv_free == cortex_priv_free) {
-				adiv5_access_port_s *target_ap = cortex_ap(target);
-				if (target_ap == ap)
-					target_halt_resume(target, false);
-			}
-		}
+		/* Having completed discovery on this AP, try to resume any halted cores */
+		adiv5_ap_resume_cores(ap);
 
 		/*
 		 * Due to the Tiva TM4C1294KCDT (among others) repeating the single AP ad-nauseum,

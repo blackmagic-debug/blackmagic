@@ -267,5 +267,7 @@ bool adiv5_configure_ap(adiv5_access_port_s *ap);
 /* Helper for probing a CoreSight debug component */
 void adiv5_component_probe(
 	adiv5_access_port_s *ap, target_addr64_t base_address, size_t recursion, uint32_t entry_number);
+/* Helper for resuming all cores halted on an AP during probe */
+void adiv5_ap_resume_cores(adiv5_access_port_s *ap);
 
 #endif /* TARGET_ADIV5_INTERNAL_H */
