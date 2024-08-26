@@ -34,7 +34,12 @@
 #include "general.h"
 #include "target.h"
 #include "target_internal.h"
-#include "cortex.h"
+#include "cortexm.h"
+
+#define RP2350_XIP_FLASH_BASE 0x10000000U
+#define RP2350_XIP_FLASH_SIZE 0x04000000U
+#define RP2350_SRAM_BASE      0x20000000U
+#define RP2350_SRAM_SIZE      0x00082000U
 
 #define RP2350_BOOTROM_BASE  0x00000000U
 #define RP2350_BOOTROM_MAGIC (RP2350_BOOTROM_BASE + 0x0010U)
@@ -43,7 +48,31 @@
 #define RP2350_BOOTROM_MAGIC_MASK    0x00ffffffU
 #define RP2350_BOOTROM_VERSION_SHIFT 24U
 
+#define RP2350_QMI_BASE       0x400d0000U
+#define RP2350_QMI_DIRECT_CSR (RP2350_QMI_BASE + 0x000U)
+#define RP2350_QMI_DIRECT_TX  (RP2350_QMI_BASE + 0x004U)
+#define RP2350_QMI_DIRECT_RX  (RP2350_QMI_BASE + 0x008U)
+
+#define RP2350_QMI_DIRECT_CSR_DIRECT_ENABLE (1U << 0U)
+#define RP2350_QMI_DIRECT_CSR_BUSY          (1U << 1U)
+#define RP2350_QMI_DIRECT_CSR_ASSERT_CS0N   (1U << 2U)
+#define RP2350_QMI_DIRECT_CSR_ASSERT_CS1N   (1U << 3U)
+#define RP2350_QMI_DIRECT_CSR_TXFULL        (1U << 10U)
+#define RP2350_QMI_DIRECT_CSR_TXEMPTY       (1U << 11U)
+#define RP2350_QMI_DIRECT_CSR_RXEMPTY       (1U << 16U)
+#define RP2350_QMI_DIRECT_CSR_RXFULL        (1U << 17U)
+
 #define ID_RP2350 0x0040U
+
+static bool rp2350_attach(target_s *target);
+static void rp2350_spi_prepare(target_s *target);
+static void rp2350_spi_resume(target_s *target);
+
+static void rp2350_add_flash(target_s *const target)
+{
+	rp2350_spi_prepare(target);
+	rp2350_spi_resume(target);
+}
 
 bool rp2350_probe(target_s *const target)
 {
@@ -60,5 +89,51 @@ bool rp2350_probe(target_s *const target)
 	DEBUG_TARGET("Boot ROM version: %x\n", (uint8_t)(boot_magic >> RP2350_BOOTROM_VERSION_SHIFT));
 
 	target->driver = "RP2350";
+	target->attach = rp2350_attach;
 	return true;
+}
+
+static bool rp2350_attach(target_s *const target)
+{
+	/* Complete the attach to the core first */
+	if (!cortexm_attach(target))
+		return false;
+
+	/* Then figure out the memory map */
+	target_mem_map_free(target);
+	target_add_ram32(target, RP2350_SRAM_BASE, RP2350_SRAM_SIZE);
+	rp2350_add_flash(target);
+	return true;
+}
+
+static void rp2350_spi_prepare(target_s *const target)
+{
+	/* Start by checking the current peripheral mode */
+	const uint32_t state = target_mem32_read32(target, RP2350_QMI_DIRECT_CSR);
+	/* If the peripheral is not yet in direct mode, turn it on and do the entry sequence for that */
+	if (!(state & RP2350_QMI_DIRECT_CSR_DIRECT_ENABLE)) {
+		target_mem32_write32(target, RP2350_QMI_DIRECT_CSR, state | RP2350_QMI_DIRECT_CSR_DIRECT_ENABLE);
+		/* Wait for the ongoing transaction to stop */
+		while (target_mem32_read32(target, RP2350_QMI_DIRECT_CSR) & RP2350_QMI_DIRECT_CSR_BUSY)
+			continue;
+	} else {
+		/* Otherwise, we were already in direct mode, so empty down the FIFOs and clear the chip selects */
+		uint32_t status = state;
+		while (!(status & (RP2350_QMI_DIRECT_CSR_RXEMPTY | RP2350_QMI_DIRECT_CSR_TXEMPTY)) ||
+			(status & RP2350_QMI_DIRECT_CSR_BUSY)) {
+			/* Read out the RX FIFO if that's not empty */
+			if (!(status & RP2350_QMI_DIRECT_CSR_RXEMPTY))
+				target_mem32_read16(target, RP2350_QMI_DIRECT_RX);
+			status = target_mem32_read32(target, RP2350_QMI_DIRECT_CSR);
+		}
+		target_mem32_write32(target, RP2350_QMI_DIRECT_CSR,
+			status & ~(RP2350_QMI_DIRECT_CSR_ASSERT_CS0N | RP2350_QMI_DIRECT_CSR_ASSERT_CS1N));
+	}
+}
+
+static void rp2350_spi_resume(target_s *const target)
+{
+	/* Turn direct access mode back off, which will re-memory-map the SPI Flash */
+	target_mem32_write32(target, RP2350_QMI_DIRECT_CSR,
+		target_mem32_read32(target, RP2350_QMI_DIRECT_CSR) & ~RP2350_QMI_DIRECT_CSR_DIRECT_ENABLE);
 }
