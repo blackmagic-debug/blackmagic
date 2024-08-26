@@ -73,6 +73,9 @@
 #define ID_RP2350 0x0040U
 
 static bool rp2350_attach(target_s *target);
+static bool rp2350_flash_prepare(target_s *target);
+static bool rp2350_flash_resume(target_s *target);
+
 static bool rp2350_spi_prepare(target_s *target);
 static void rp2350_spi_resume(target_s *target);
 static void rp2350_spi_read(target_s *target, uint16_t command, target_addr32_t address, void *buffer, size_t length);
@@ -114,6 +117,8 @@ bool rp2350_probe(target_s *const target)
 
 	target->driver = "RP2350";
 	target->attach = rp2350_attach;
+	target->enter_flash_mode = rp2350_flash_prepare;
+	target->exit_flash_mode = rp2350_flash_resume;
 	return true;
 }
 
@@ -127,6 +132,21 @@ static bool rp2350_attach(target_s *const target)
 	target_mem_map_free(target);
 	target_add_ram32(target, RP2350_SRAM_BASE, RP2350_SRAM_SIZE);
 	rp2350_add_flash(target);
+	return true;
+}
+
+static bool rp2350_flash_prepare(target_s *const target)
+{
+	/* Configure the QMI over to direct access mode */
+	rp2350_spi_prepare(target);
+	return true;
+}
+
+static bool rp2350_flash_resume(target_s *const target)
+{
+	/* Reset the target then reconfigure the QMI back to direct access mode */
+	target_reset(target);
+	rp2350_spi_resume(target);
 	return true;
 }
 
