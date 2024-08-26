@@ -1076,15 +1076,6 @@ void adiv5_dp_init(adiv5_debug_port_s *const dp)
 			(targetid & (ADIV5_DP_TARGETID_TDESIGNER_MASK | ADIV5_DP_TARGETID_TPARTNO_MASK)) | 1U;
 	}
 
-	/* If this is a DPv3+ device, switch to ADIv6 DP initialisation */
-	if (dp->version >= 3U) {
-		++dp->refcnt;
-		if (!adiv6_dp_init(dp))
-			DEBUG_ERROR("Error while discovering ADIv6 DP\n");
-		adiv5_dp_unref(dp);
-		return;
-	}
-
 	if (dp->designer_code == JEP106_MANUFACTURER_RASPBERRY && dp->partno == 0x2U) {
 		rp_rescue_setup(dp);
 		return;
@@ -1094,6 +1085,15 @@ void adiv5_dp_init(adiv5_debug_port_s *const dp)
 	if (!adiv5_power_cycle_aps(dp)) {
 		/* Clean up by freeing the DP - no APs have been constructed at this point, so this is safe */
 		free(dp);
+		return;
+	}
+
+	/* If this is a DPv3+ device, switch to ADIv6 DP initialisation */
+	if (dp->version >= 3U) {
+		++dp->refcnt;
+		if (!adiv6_dp_init(dp))
+			DEBUG_ERROR("Error while discovering ADIv6 DP\n");
+		adiv5_dp_unref(dp);
 		return;
 	}
 
