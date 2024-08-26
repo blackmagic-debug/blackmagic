@@ -35,6 +35,7 @@
 #include "target.h"
 #include "target_internal.h"
 #include "cortexm.h"
+#include "spi.h"
 
 #define RP2350_XIP_FLASH_BASE 0x10000000U
 #define RP2350_XIP_FLASH_SIZE 0x04000000U
@@ -61,12 +62,19 @@
 #define RP2350_QMI_DIRECT_CSR_TXEMPTY       (1U << 11U)
 #define RP2350_QMI_DIRECT_CSR_RXEMPTY       (1U << 16U)
 #define RP2350_QMI_DIRECT_CSR_RXFULL        (1U << 17U)
+#define RP2350_QMI_DIRECT_TX_MODE_SINGLE    (0x0 << 16U)
+#define RP2350_QMI_DIRECT_TX_MODE_DUAL      (0x1 << 16U)
+#define RP2350_QMI_DIRECT_TX_MODE_QUAD      (0x3 << 16U)
+#define RP2350_QMI_DIRECT_TX_DATA_8BIT      (0U << 18U)
+#define RP2350_QMI_DIRECT_TX_DATA_16BIT     (1U << 18U)
+#define RP2350_QMI_DIRECT_TX_NOPUSH_RX      (1U << 20U)
 
 #define ID_RP2350 0x0040U
 
 static bool rp2350_attach(target_s *target);
 static bool rp2350_spi_prepare(target_s *target);
 static void rp2350_spi_resume(target_s *target);
+static void rp2350_spi_run_command(target_s *target, uint16_t command, target_addr32_t address);
 
 static void rp2350_add_flash(target_s *const target)
 {
@@ -139,4 +147,47 @@ static void rp2350_spi_resume(target_s *const target)
 	/* Turn direct access mode back off, which will re-memory-map the SPI Flash */
 	target_mem32_write32(target, RP2350_QMI_DIRECT_CSR,
 		target_mem32_read32(target, RP2350_QMI_DIRECT_CSR) & ~RP2350_QMI_DIRECT_CSR_DIRECT_ENABLE);
+}
+
+static void rp2350_spi_setup_xfer(target_s *const target, const uint16_t command, const target_addr32_t address)
+{
+	/* Start by pulling the chip select for the Flash low */
+	target_mem32_write32(target, RP2350_QMI_DIRECT_CSR,
+		target_mem32_read32(target, RP2350_QMI_DIRECT_CSR) | RP2350_QMI_DIRECT_CSR_ASSERT_CS0N);
+
+	/* Set up the instruction */
+	const uint8_t opcode = command & SPI_FLASH_OPCODE_MASK;
+	target_mem32_write32(target, RP2350_QMI_DIRECT_TX,
+		RP2350_QMI_DIRECT_TX_MODE_SINGLE | RP2350_QMI_DIRECT_TX_DATA_8BIT | RP2350_QMI_DIRECT_TX_NOPUSH_RX | opcode);
+
+	/* If the command has an address phase, handle that */
+	if ((command & SPI_FLASH_OPCODE_MODE_MASK) == SPI_FLASH_OPCODE_3B_ADDR) {
+		target_mem32_write32(target, RP2350_QMI_DIRECT_TX,
+			RP2350_QMI_DIRECT_TX_MODE_SINGLE | RP2350_QMI_DIRECT_TX_DATA_8BIT | RP2350_QMI_DIRECT_TX_NOPUSH_RX |
+				((address >> 16U) & 0xffU));
+		target_mem32_write32(target, RP2350_QMI_DIRECT_TX,
+			RP2350_QMI_DIRECT_TX_MODE_SINGLE | RP2350_QMI_DIRECT_TX_DATA_8BIT | RP2350_QMI_DIRECT_TX_NOPUSH_RX |
+				((address >> 8U) & 0xffU));
+		target_mem32_write32(target, RP2350_QMI_DIRECT_TX,
+			RP2350_QMI_DIRECT_TX_MODE_SINGLE | RP2350_QMI_DIRECT_TX_DATA_8BIT | RP2350_QMI_DIRECT_TX_NOPUSH_RX |
+				(address & 0xffU));
+	}
+
+	/* Now deal with the dummy bytes phase, if any */
+	const size_t dummy_bytes = (command & SPI_FLASH_DUMMY_MASK) >> SPI_FLASH_DUMMY_SHIFT;
+	for (size_t i = 0; i < dummy_bytes; ++i)
+		target_mem32_write32(target, RP2350_QMI_DIRECT_TX,
+			RP2350_QMI_DIRECT_TX_MODE_SINGLE | RP2350_QMI_DIRECT_TX_DATA_8BIT | RP2350_QMI_DIRECT_TX_NOPUSH_RX);
+}
+
+static void rp2350_spi_run_command(target_s *const target, const uint16_t command, const target_addr32_t address)
+{
+	/* Set up the transaction */
+	rp2350_spi_setup_xfer(target, command, address);
+	/* Wait for the transaction cycles to complete */
+	while (target_mem32_read32(target, RP2350_QMI_DIRECT_CSR) & RP2350_QMI_DIRECT_CSR_BUSY)
+		continue;
+	/* Deselect the Flash to execute the transaction */
+	target_mem32_write32(target, RP2350_QMI_DIRECT_CSR,
+		target_mem32_read32(target, RP2350_QMI_DIRECT_CSR) & ~RP2350_QMI_DIRECT_CSR_ASSERT_CS0N);
 }
