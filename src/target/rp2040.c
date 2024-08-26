@@ -192,8 +192,8 @@ static void rp_spi_restore(target_s *target);
 static bool rp_flash_prepare(target_s *target);
 static bool rp_flash_resume(target_s *target);
 static bool rp_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t length);
-static void rp_spi_read(target_s *target, uint16_t command, target_addr_t address, void *buffer, size_t length);
-static void rp_spi_run_command(target_s *target, uint16_t command, target_addr_t address);
+static void rp_spi_read(target_s *target, uint16_t command, target_addr32_t address, void *buffer, size_t length);
+static void rp_spi_run_command(target_s *target, uint16_t command, target_addr32_t address);
 static uint32_t rp_get_flash_length(target_s *target);
 
 static bool rp_flash_in_por_state(target_s *target);
@@ -373,7 +373,7 @@ static uint8_t rp_spi_xfer_data(target_s *const target, const uint8_t data)
 	return target_mem32_read32(target, RP_SSI_DR0) & 0xffU;
 }
 
-static void rp_spi_setup_xfer(target_s *const target, const uint16_t command, const target_addr_t address)
+static void rp_spi_setup_xfer(target_s *const target, const uint16_t command, const target_addr32_t address)
 {
 	/* Select the Flash */
 	rp_spi_chip_select(target, RP_GPIO_QSPI_CS_DRIVE_LOW);
@@ -395,13 +395,13 @@ static void rp_spi_setup_xfer(target_s *const target, const uint16_t command, co
 		rp_spi_xfer_data(target, 0);
 }
 
-static void rp_spi_read(target_s *const target, const uint16_t command, const target_addr_t address, void *const buffer,
-	const size_t length)
+static void rp_spi_read(target_s *const target, const uint16_t command, const target_addr32_t address,
+	void *const buffer, const size_t length)
 {
 	/* Setup the transaction */
 	rp_spi_setup_xfer(target, command, address);
 	/* Now read back the data that elicited */
-	uint8_t *const data = (uint8_t *const)buffer;
+	uint8_t *const data = (uint8_t *)buffer;
 	for (size_t i = 0; i < length; ++i)
 		/* Do a write to read */
 		data[i] = rp_spi_xfer_data(target, 0);
@@ -409,7 +409,7 @@ static void rp_spi_read(target_s *const target, const uint16_t command, const ta
 	rp_spi_chip_select(target, RP_GPIO_QSPI_CS_DRIVE_HIGH);
 }
 
-static void rp_spi_run_command(target_s *const target, const uint16_t command, const target_addr_t address)
+static void rp_spi_run_command(target_s *const target, const uint16_t command, const target_addr32_t address)
 {
 	/* Setup the transaction */
 	rp_spi_setup_xfer(target, command, address);

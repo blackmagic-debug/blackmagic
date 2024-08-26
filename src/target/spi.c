@@ -39,7 +39,7 @@ static bool bmp_spi_flash_write(target_flash_s *flash, target_addr_t dest, const
 
 #if PC_HOSTED == 0
 static void bmp_spi_setup_xfer(
-	const spi_bus_e bus, const uint8_t device, const uint16_t command, const target_addr_t address)
+	const spi_bus_e bus, const uint8_t device, const uint16_t command, const target_addr32_t address)
 {
 	platform_spi_chip_select(device | 0x80U);
 
@@ -60,7 +60,7 @@ static void bmp_spi_setup_xfer(
 		platform_spi_xfer(bus, 0);
 }
 
-void bmp_spi_read(const spi_bus_e bus, const uint8_t device, const uint16_t command, const target_addr_t address,
+void bmp_spi_read(const spi_bus_e bus, const uint8_t device, const uint16_t command, const target_addr32_t address,
 	void *const buffer, const size_t length)
 {
 	/* Setup the transaction */
@@ -74,7 +74,7 @@ void bmp_spi_read(const spi_bus_e bus, const uint8_t device, const uint16_t comm
 	platform_spi_chip_select(device);
 }
 
-void bmp_spi_write(const spi_bus_e bus, const uint8_t device, const uint16_t command, const target_addr_t address,
+void bmp_spi_write(const spi_bus_e bus, const uint8_t device, const uint16_t command, const target_addr32_t address,
 	const void *const buffer, const size_t length)
 {
 	/* Setup the transaction */
@@ -88,7 +88,8 @@ void bmp_spi_write(const spi_bus_e bus, const uint8_t device, const uint16_t com
 	platform_spi_chip_select(device);
 }
 
-void bmp_spi_run_command(const spi_bus_e bus, const uint8_t device, const uint16_t command, const target_addr_t address)
+void bmp_spi_run_command(
+	const spi_bus_e bus, const uint8_t device, const uint16_t command, const target_addr32_t address)
 {
 	/* Setup the transaction */
 	bmp_spi_setup_xfer(bus, device, command, address);
