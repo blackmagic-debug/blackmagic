@@ -36,6 +36,7 @@
 #include "target_internal.h"
 #include "cortexm.h"
 #include "spi.h"
+#include "sfdp.h"
 
 #define RP2350_XIP_FLASH_BASE 0x10000000U
 #define RP2350_XIP_FLASH_SIZE 0x04000000U
@@ -82,6 +83,17 @@ static void rp2350_spi_run_command(target_s *target, uint16_t command, target_ad
 static void rp2350_add_flash(target_s *const target)
 {
 	const bool mode_switched = rp2350_spi_prepare(target);
+	/* Try to detect the flash that should be attached */
+	spi_flash_id_s flash_id;
+	rp2350_spi_read(target, SPI_FLASH_CMD_READ_JEDEC_ID, 0, &flash_id, sizeof(flash_id));
+	/* If we read out valid Flash information, set up a region for it */
+	if (flash_id.manufacturer != 0xffU && flash_id.type != 0xffU && flash_id.capacity != 0xffU) {
+		const uint32_t capacity = 1U << flash_id.capacity;
+		DEBUG_INFO("SPI Flash: mfr = %02x, type = %02x, capacity = %08" PRIx32 "\n", flash_id.manufacturer,
+			flash_id.type, capacity);
+		bmp_spi_add_flash(target, RP2350_XIP_FLASH_BASE, MIN(capacity, RP2350_XIP_FLASH_SIZE), rp2350_spi_read,
+			rp2350_spi_write, rp2350_spi_run_command);
+	}
 	if (mode_switched)
 		rp2350_spi_resume(target);
 }
