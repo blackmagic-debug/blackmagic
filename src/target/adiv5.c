@@ -780,6 +780,7 @@ bool adiv5_configure_ap(adiv5_access_port_s *const ap)
 			break;
 		case ADIV5_AP_IDR_TYPE_AHB3:
 		case ADIV5_AP_IDR_TYPE_AHB5:
+		case ADIV5_AP_IDR_TYPE_AHB5_HPROT:
 			/* Clear any existing HPROT modes */
 			ap->csw &= ~ADIV5_AP_CSW_AHB_HPROT_MASK;
 			/*
@@ -1147,7 +1148,7 @@ void adiv5_dp_init(adiv5_debug_port_s *const dp)
 		efm32_aap_probe(ap);
 		lpc55_dmap_probe(ap);
 
-		/* Try to prepare the AP if it seems to be a AHB (memory) AP */
+		/* Try to prepare the AP if it seems to be a AHB3 MEM-AP */
 		if (!ap->apsel && ADIV5_AP_IDR_CLASS(ap->idr) == 8U && ADIV5_AP_IDR_TYPE(ap->idr) == ARM_AP_TYPE_AHB3) {
 			if (!cortexm_prepare(ap))
 				DEBUG_WARN("adiv5: Failed to prepare AP, results may be unpredictable\n");
