@@ -336,6 +336,9 @@ static bool adiv6_component_probe(adiv5_debug_port_s *const dp, const target_add
 
 				/* Now we can use it, see what's on it and try to create debug targets */
 				adiv5_component_probe(&ap->base, ap->base.base, 1U, 0U);
+				/* Having completed discovery on this AP, try to resume any halted cores */
+				adiv5_ap_resume_cores(&ap->base);
+				/* Then clean up so we don't leave an AP floating about if no (usable) cores were found */
 				adiv5_ap_unref(&ap->base);
 				break;
 			}
