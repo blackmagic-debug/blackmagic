@@ -75,6 +75,8 @@ static bool rp2350_attach(target_s *target);
 static bool rp2350_spi_prepare(target_s *target);
 static void rp2350_spi_resume(target_s *target);
 static void rp2350_spi_read(target_s *target, uint16_t command, target_addr32_t address, void *buffer, size_t length);
+static void rp2350_spi_write(
+	target_s *target, uint16_t command, target_addr32_t address, const void *buffer, size_t length);
 static void rp2350_spi_run_command(target_s *target, uint16_t command, target_addr32_t address);
 
 static void rp2350_add_flash(target_s *const target)
@@ -194,6 +196,25 @@ static void rp2350_spi_read(target_s *const target, const uint16_t command, cons
 			target, RP2350_QMI_DIRECT_TX, RP2350_QMI_DIRECT_TX_MODE_SINGLE | RP2350_QMI_DIRECT_TX_DATA_8BIT);
 		data[i] = target_mem32_read8(target, RP2350_QMI_DIRECT_RX);
 	}
+	/* Deselect the Flash to complete the transaction */
+	target_mem32_write32(target, RP2350_QMI_DIRECT_CSR,
+		target_mem32_read32(target, RP2350_QMI_DIRECT_CSR) & ~RP2350_QMI_DIRECT_CSR_ASSERT_CS0N);
+}
+
+static void rp2350_spi_write(target_s *const target, const uint16_t command, const target_addr32_t address,
+	const void *const buffer, const size_t length)
+{
+	/* Set up the transaction */
+	rp2350_spi_setup_xfer(target, command, address);
+	/* Write out the data associated with this transaction */
+	const uint8_t *const data = (const uint8_t *)buffer;
+	for (size_t i = 0; i < length; ++i)
+		target_mem32_write32(target, RP2350_QMI_DIRECT_TX,
+			RP2350_QMI_DIRECT_TX_MODE_SINGLE | RP2350_QMI_DIRECT_TX_DATA_8BIT | RP2350_QMI_DIRECT_TX_NOPUSH_RX |
+				data[i]);
+	/* Wait for the transaction cycles to complete */
+	while (target_mem32_read32(target, RP2350_QMI_DIRECT_CSR) & RP2350_QMI_DIRECT_CSR_BUSY)
+		continue;
 	/* Deselect the Flash to complete the transaction */
 	target_mem32_write32(target, RP2350_QMI_DIRECT_CSR,
 		target_mem32_read32(target, RP2350_QMI_DIRECT_CSR) & ~RP2350_QMI_DIRECT_CSR_ASSERT_CS0N);
