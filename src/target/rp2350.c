@@ -36,6 +36,13 @@
 #include "target_internal.h"
 #include "cortex.h"
 
+#define RP2350_BOOTROM_BASE  0x00000000U
+#define RP2350_BOOTROM_MAGIC (RP2350_BOOTROM_BASE + 0x0010U)
+
+#define RP2350_BOOTROM_MAGIC_VALUE   ((uint32_t)'M' | ((uint32_t)'u' << 8U) | (2U << 16U))
+#define RP2350_BOOTROM_MAGIC_MASK    0x00ffffffU
+#define RP2350_BOOTROM_VERSION_SHIFT 24U
+
 #define ID_RP2350 0x0040U
 
 bool rp2350_probe(target_s *const target)
@@ -43,6 +50,14 @@ bool rp2350_probe(target_s *const target)
 	/* Check that the target has the right part number */
 	if (target->part_id != ID_RP2350)
 		return false;
+
+	/* Check the boot ROM magic for a more positive identification of the part */
+	const uint32_t boot_magic = target_mem32_read32(target, RP2350_BOOTROM_MAGIC);
+	if ((boot_magic & RP2350_BOOTROM_MAGIC_MASK) != RP2350_BOOTROM_MAGIC_VALUE) {
+		DEBUG_ERROR("Wrong Bootmagic %08" PRIx32 " found!\n", boot_magic);
+		return false;
+	}
+	DEBUG_TARGET("Boot ROM version: %x\n", (uint8_t)(boot_magic >> RP2350_BOOTROM_VERSION_SHIFT));
 
 	target->driver = "RP2350";
 	return true;
