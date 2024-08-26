@@ -65,13 +65,14 @@
 #define ID_RP2350 0x0040U
 
 static bool rp2350_attach(target_s *target);
-static void rp2350_spi_prepare(target_s *target);
+static bool rp2350_spi_prepare(target_s *target);
 static void rp2350_spi_resume(target_s *target);
 
 static void rp2350_add_flash(target_s *const target)
 {
-	rp2350_spi_prepare(target);
-	rp2350_spi_resume(target);
+	const bool mode_switched = rp2350_spi_prepare(target);
+	if (mode_switched)
+		rp2350_spi_resume(target);
 }
 
 bool rp2350_probe(target_s *const target)
@@ -106,7 +107,7 @@ static bool rp2350_attach(target_s *const target)
 	return true;
 }
 
-static void rp2350_spi_prepare(target_s *const target)
+static bool rp2350_spi_prepare(target_s *const target)
 {
 	/* Start by checking the current peripheral mode */
 	const uint32_t state = target_mem32_read32(target, RP2350_QMI_DIRECT_CSR);
@@ -129,6 +130,8 @@ static void rp2350_spi_prepare(target_s *const target)
 		target_mem32_write32(target, RP2350_QMI_DIRECT_CSR,
 			status & ~(RP2350_QMI_DIRECT_CSR_ASSERT_CS0N | RP2350_QMI_DIRECT_CSR_ASSERT_CS1N));
 	}
+	/* Return whether we actually had to enable direct mode */
+	return !(state & RP2350_QMI_DIRECT_CSR_DIRECT_ENABLE);
 }
 
 static void rp2350_spi_resume(target_s *const target)
