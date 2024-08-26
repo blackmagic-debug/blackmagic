@@ -29,15 +29,27 @@ some situations, Romtable access may also fail on STM32 device and so a debugger
 warm plug will fail. Cold plug should work with any STM32 device.
 
 ## Performance
-Stock firmware has three settings: High-performance (192M), Standard frequency (96M), Low-consumption (48M).
-SWD up to 24000 kHz, JTAG up to 21333 kHz (SPI), SWO up to 16 Mbaud, VCP 732-16000000 baud.
-Suffix 7 devices are rated for -40..+125 deg C but at 200 MHz frequency maximum.
-Other mentioned limits from DS11853 are 144M, 168M, 180M for scales 3-2-1 and overdrive on/off.
+(UM2448) Stock firmware has three settings: High-performance (192 MHz), Standard frequency (96 MHz), Low-consumption (48 MHz).
+SWD up to 24000 kHz (then 8000 kHz, 3333, ...); JTAG up to 21333 kHz (both likely via SPI5, SPI3), has a return clock pin, does not support daisy chaining of targets.
 
-This firmware always runs at 216 MHz (suffix 6). AHB clock = 216M, APB1 = 54M, APB2 = 108M.
-USART1, USART6 on APB2 (108M Pclk), others (including UART5) on APB1.
-SWO capture is implemented as UART5 Rx DMA. 3375k (4500k with OVER8) is the limit.
-13.5 Mbaud (18M with OVER8) could be derived from Sysclk, 216/N where N>=16 (OVER8: 2*216/N where 24<=N<=31).
+SWO up to 16 Mbaud, VCP 732-16000000 baud.
+See 14.2 Baud rate computing: 192000000/N where 16<=N<=65535 (OVER8: 2*192000000/N where 24<=N<=31). Substitute 96 MHz or 48 MHz correspondingly.
+
+(RN0093) "On STLINK-V3 boards in high-performance mode, the minimum baud rate for Virtual COM port is 2931 bauds."
+2931*65535~=192 MHz, or rather 192000000/65535~=2929.7, which also confirms the first system frequency.
+
+(DS11853 F723) Suffix 7 devices are rated for -40..+125 deg C but at 200 MHz frequency maximum.
+Other mentioned limits from datasheet are 144M, 168M, 180M for scales 3-2-1 and overdrive on/off.
+
+This firmware, in contrast, always runs at 216 MHz (suffix 6). AHB clock = 216 MHz, APB1 = 54 MHz, APB2 = 108 MHz.
+SWD can be around 12-18 MHz (no SPI) when size-optimized, JTAG is slower (no SPI). CRC32 offloading enabled.
+
+USART1, USART6 on APB2 (108 MHz Pclk) are 6.75 Mbaud, others (including UART5) on APB1, 3375000 baud.
+SWO capture is implemented as UART5 Rx DMA in particular.
+
+Recent versions of firmware switch `uart_ker_ck` to sysclk, bumping them to 13.5Mbaud, and enable OVER8 as needed, allowing 216000000/8 = 27000000 baud in theory.
+
+Only USB High-Speed capable ports are supported with current driver stack for Internal USBOTG_HS PHY and firmware descriptors. USB Full-Speed only ports, hubs, isolators are not supported.
 
 ## Building.
 
