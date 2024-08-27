@@ -23,6 +23,7 @@
 
 #include "target.h"
 
+/* Allow override in other platforms if needed */
 #ifndef GDB_PACKET_BUFFER_SIZE
 #define GDB_PACKET_BUFFER_SIZE 1024U
 #endif
