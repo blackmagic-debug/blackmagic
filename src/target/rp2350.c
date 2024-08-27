@@ -55,6 +55,13 @@
 #define RP2350_BOOTROM_MAGIC_MASK    0x00ffffffU
 #define RP2350_BOOTROM_VERSION_SHIFT 24U
 
+#define RP2350_RESETS_BASE       0x40020000U
+#define RP2350_RESETS_RESET      (RP2350_RESETS_BASE + 0x000U)
+#define RP2350_RESETS_RESET_DONE (RP2350_RESETS_BASE + 0x008U)
+
+#define RP2350_RESETS_RESET_IO_QSPI   (1U << 7U)
+#define RP2350_RESETS_RESET_PADS_QSPI (1U << 10U)
+
 #define RP2350_GPIO_QSPI_BASE      0x40030000U
 #define RP2350_GPIO_QSPI_SCLK_CTRL (RP2350_GPIO_QSPI_BASE + 0x014U)
 #define RP2350_GPIO_QSPI_CS_CTRL   (RP2350_GPIO_QSPI_BASE + 0x01cU)
@@ -66,25 +73,43 @@
 #define RP2350_GPIO_QSPI_CTRL_FUNCSEL_MASK (0x1fU << 0U)
 #define RP2350_GPIO_QSPI_CTRL_FUNCSEL_NONE (0x1fU << 0U)
 
+#define RP2350_PADS_QSPI_BASE 0x40040000U
+#define RP2350_PADS_QSPI_SCLK (RP2350_PADS_QSPI_BASE + 0x004U)
+#define RP2350_PADS_QSPI_SD0  (RP2350_PADS_QSPI_BASE + 0x008U)
+#define RP2350_PADS_QSPI_SD1  (RP2350_PADS_QSPI_BASE + 0x00cU)
+#define RP2350_PADS_QSPI_SD2  (RP2350_PADS_QSPI_BASE + 0x010U)
+#define RP2350_PADS_QSPI_SD3  (RP2350_PADS_QSPI_BASE + 0x014U)
+#define RP2350_PADS_QSPI_CS   (RP2350_PADS_QSPI_BASE + 0x018U)
+
+#define RP2350_PADS_QSPI_GPIO_PULL_DOWN_ENABLE (1U << 2U)
+#define RP2350_PADS_QSPI_GPIO_PULL_UP_ENABLE   (1U << 3U)
+#define RP2350_PADS_QSPI_GPIO_INPUT_ENABLE     (1U << 6U)
+#define RP2350_PADS_QSPI_GPIO_OUTPUT_DISABLE   (1U << 7U)
+#define RP2350_PADS_QSPI_GPIO_ISOLATE          (1U << 8U)
+
 #define RP2350_QMI_BASE       0x400d0000U
 #define RP2350_QMI_DIRECT_CSR (RP2350_QMI_BASE + 0x000U)
 #define RP2350_QMI_DIRECT_TX  (RP2350_QMI_BASE + 0x004U)
 #define RP2350_QMI_DIRECT_RX  (RP2350_QMI_BASE + 0x008U)
 
-#define RP2350_QMI_DIRECT_CSR_DIRECT_ENABLE (1U << 0U)
-#define RP2350_QMI_DIRECT_CSR_BUSY          (1U << 1U)
-#define RP2350_QMI_DIRECT_CSR_ASSERT_CS0N   (1U << 2U)
-#define RP2350_QMI_DIRECT_CSR_ASSERT_CS1N   (1U << 3U)
-#define RP2350_QMI_DIRECT_CSR_TXFULL        (1U << 10U)
-#define RP2350_QMI_DIRECT_CSR_TXEMPTY       (1U << 11U)
-#define RP2350_QMI_DIRECT_CSR_RXEMPTY       (1U << 16U)
-#define RP2350_QMI_DIRECT_CSR_RXFULL        (1U << 17U)
-#define RP2350_QMI_DIRECT_TX_MODE_SINGLE    (0x0 << 16U)
-#define RP2350_QMI_DIRECT_TX_MODE_DUAL      (0x1 << 16U)
-#define RP2350_QMI_DIRECT_TX_MODE_QUAD      (0x3 << 16U)
-#define RP2350_QMI_DIRECT_TX_DATA_8BIT      (0U << 18U)
-#define RP2350_QMI_DIRECT_TX_DATA_16BIT     (1U << 18U)
-#define RP2350_QMI_DIRECT_TX_NOPUSH_RX      (1U << 20U)
+#define RP2350_QMI_DIRECT_CSR_DIRECT_ENABLE  (1U << 0U)
+#define RP2350_QMI_DIRECT_CSR_BUSY           (1U << 1U)
+#define RP2350_QMI_DIRECT_CSR_ASSERT_CS0N    (1U << 2U)
+#define RP2350_QMI_DIRECT_CSR_ASSERT_CS1N    (1U << 3U)
+#define RP2350_QMI_DIRECT_CSR_AUTO_CS0N      (1U << 6U)
+#define RP2350_QMI_DIRECT_CSR_AUTO_CS1N      (1U << 7U)
+#define RP2350_QMI_DIRECT_CSR_TXFULL         (1U << 10U)
+#define RP2350_QMI_DIRECT_CSR_TXEMPTY        (1U << 11U)
+#define RP2350_QMI_DIRECT_CSR_RXEMPTY        (1U << 16U)
+#define RP2350_QMI_DIRECT_CSR_RXFULL         (1U << 17U)
+#define RP2350_QMI_DIRECT_CSR_CLKDIV_DEFAULT (12U << 22U)
+#define RP2350_QMI_DIRECT_TX_MODE_SINGLE     (0x0 << 16U)
+#define RP2350_QMI_DIRECT_TX_MODE_DUAL       (0x1 << 16U)
+#define RP2350_QMI_DIRECT_TX_MODE_QUAD       (0x3 << 16U)
+#define RP2350_QMI_DIRECT_TX_DATA_8BIT       (0U << 18U)
+#define RP2350_QMI_DIRECT_TX_DATA_16BIT      (1U << 18U)
+#define RP2350_QMI_DIRECT_TX_OUTPUT_ENABLE   (1U << 19U)
+#define RP2350_QMI_DIRECT_TX_NOPUSH_RX       (1U << 20U)
 
 #define ID_RP2350 0x0040U
 
@@ -167,17 +192,142 @@ static bool rp2350_flash_resume(target_s *const target)
 	return true;
 }
 
+static void rp2350_spi_drain_fifos(target_s *const target, uint32_t status)
+{
+	while (!(status & (RP2350_QMI_DIRECT_CSR_RXEMPTY | RP2350_QMI_DIRECT_CSR_TXEMPTY)) ||
+		(status & RP2350_QMI_DIRECT_CSR_BUSY)) {
+		/* Read out the RX FIFO if that's not empty */
+		if (!(status & RP2350_QMI_DIRECT_CSR_RXEMPTY))
+			target_mem32_read16(target, RP2350_QMI_DIRECT_RX);
+		status = target_mem32_read32(target, RP2350_QMI_DIRECT_CSR);
+	}
+}
+
+static void rp2350_flash_exit_xip(target_s *const target)
+{
+	/* Bring the QMI into a known state */
+	target_mem32_write32(
+		target, RP2350_QMI_DIRECT_CSR, RP2350_QMI_DIRECT_CSR_CLKDIV_DEFAULT | RP2350_QMI_DIRECT_CSR_AUTO_CS0N);
+	/* XXX: Might need to care about the transaction timing stuff, unsure */
+	/* Enter direct mode and drain FIFOs */
+	target_mem32_write32(
+		target, RP2350_QMI_DIRECT_CSR | RP2350_REG_ACCESS_WRITE_ATOMIC_BITSET, RP2350_QMI_DIRECT_CSR_DIRECT_ENABLE);
+	rp2350_spi_drain_fifos(target, target_mem32_read32(target, RP2350_QMI_DIRECT_CSR));
+	target_mem32_write32(
+		target, RP2350_QMI_DIRECT_CSR | RP2350_REG_ACCESS_WRITE_ATOMIC_BITCLR, RP2350_QMI_DIRECT_CSR_DIRECT_ENABLE);
+
+	/* Run `Exit QPI Mode` on the SPI Flash chips and put them in straight SPI mode */
+	uint32_t padctrl_tmp = (target_mem32_read32(target, RP2350_PADS_QSPI_SD0) & ~RP2350_PADS_QSPI_GPIO_PULL_UP_ENABLE) |
+		RP2350_PADS_QSPI_GPIO_OUTPUT_DISABLE | RP2350_PADS_QSPI_GPIO_PULL_DOWN_ENABLE;
+
+	for (size_t cycle = 0U; cycle < 2U; ++cycle) {
+		/* Set all the pads to be pulled to drive 32 bus cycles */
+		target_mem32_write32(target, RP2350_PADS_QSPI_SD0, padctrl_tmp);
+		target_mem32_write32(target, RP2350_PADS_QSPI_SD1, padctrl_tmp);
+		target_mem32_write32(target, RP2350_PADS_QSPI_SD2, padctrl_tmp);
+		target_mem32_write32(target, RP2350_PADS_QSPI_SD3, padctrl_tmp);
+		/* Wait a brief delay for the pulls to take effect */
+		platform_delay(10U);
+
+		/* Now run those 32 cycles */
+		target_mem32_write32(target, RP2350_QMI_DIRECT_CSR | RP2350_REG_ACCESS_WRITE_ATOMIC_BITSET,
+			RP2350_QMI_DIRECT_CSR_DIRECT_ENABLE | RP2350_QMI_DIRECT_CSR_ASSERT_CS0N);
+		target_mem32_write32(target, RP2350_QMI_DIRECT_TX,
+			RP2350_QMI_DIRECT_TX_MODE_SINGLE | RP2350_QMI_DIRECT_TX_DATA_16BIT | RP2350_QMI_DIRECT_TX_NOPUSH_RX |
+				0xffffU);
+		target_mem32_write32(target, RP2350_QMI_DIRECT_TX,
+			RP2350_QMI_DIRECT_TX_MODE_SINGLE | RP2350_QMI_DIRECT_TX_DATA_16BIT | RP2350_QMI_DIRECT_TX_NOPUSH_RX |
+				0xffffU);
+		/* Wait for the cycles to complete */
+		while (target_mem32_read32(target, RP2350_QMI_DIRECT_CSR) & RP2350_QMI_DIRECT_CSR_BUSY)
+			continue;
+		target_mem32_write32(target, RP2350_QMI_DIRECT_CSR | RP2350_REG_ACCESS_WRITE_ATOMIC_BITCLR,
+			RP2350_QMI_DIRECT_CSR_DIRECT_ENABLE | RP2350_QMI_DIRECT_CSR_ASSERT_CS0N);
+
+		padctrl_tmp ^= RP2350_PADS_QSPI_GPIO_PULL_UP_ENABLE | RP2350_PADS_QSPI_GPIO_PULL_DOWN_ENABLE;
+	}
+
+	/* Now set up the I/O pads with SD2 and 3 pulled up in case of ~WP or ~HOLD usage */
+	padctrl_tmp ^= RP2350_PADS_QSPI_GPIO_OUTPUT_DISABLE;
+	target_mem32_write32(target, RP2350_PADS_QSPI_SD0, padctrl_tmp);
+	target_mem32_write32(target, RP2350_PADS_QSPI_SD1, padctrl_tmp);
+	padctrl_tmp ^= RP2350_PADS_QSPI_GPIO_PULL_UP_ENABLE | RP2350_PADS_QSPI_GPIO_PULL_DOWN_ENABLE;
+	target_mem32_write32(target, RP2350_PADS_QSPI_SD2, padctrl_tmp);
+	target_mem32_write32(target, RP2350_PADS_QSPI_SD3, padctrl_tmp);
+
+	/* Next, run a 0xF5 QPI exit sequence */
+	target_mem32_write32(target, RP2350_QMI_DIRECT_CSR | RP2350_REG_ACCESS_WRITE_ATOMIC_BITSET,
+		RP2350_QMI_DIRECT_CSR_DIRECT_ENABLE | RP2350_QMI_DIRECT_CSR_ASSERT_CS0N);
+	target_mem32_write32(target, RP2350_QMI_DIRECT_TX,
+		RP2350_QMI_DIRECT_TX_MODE_QUAD | RP2350_QMI_DIRECT_TX_DATA_8BIT | RP2350_QMI_DIRECT_TX_OUTPUT_ENABLE |
+			RP2350_QMI_DIRECT_TX_NOPUSH_RX | 0xf5U);
+	/* Wait for the cycles to complete */
+	while (target_mem32_read32(target, RP2350_QMI_DIRECT_CSR) & RP2350_QMI_DIRECT_CSR_BUSY)
+		continue;
+	target_mem32_write32(target, RP2350_QMI_DIRECT_CSR | RP2350_REG_ACCESS_WRITE_ATOMIC_BITCLR,
+		RP2350_QMI_DIRECT_CSR_DIRECT_ENABLE | RP2350_QMI_DIRECT_CSR_ASSERT_CS0N);
+	/* Followed by an all 1's sequence for 16 cycles */
+	target_mem32_write32(target, RP2350_QMI_DIRECT_CSR | RP2350_REG_ACCESS_WRITE_ATOMIC_BITSET,
+		RP2350_QMI_DIRECT_CSR_DIRECT_ENABLE | RP2350_QMI_DIRECT_CSR_ASSERT_CS0N);
+	target_mem32_write32(target, RP2350_QMI_DIRECT_TX,
+		RP2350_QMI_DIRECT_TX_MODE_SINGLE | RP2350_QMI_DIRECT_TX_DATA_16BIT | RP2350_QMI_DIRECT_TX_NOPUSH_RX | 0xffffU);
+	/* Wait for the cycles to complete */
+	while (target_mem32_read32(target, RP2350_QMI_DIRECT_CSR) & RP2350_QMI_DIRECT_CSR_BUSY)
+		continue;
+	target_mem32_write32(target, RP2350_QMI_DIRECT_CSR | RP2350_REG_ACCESS_WRITE_ATOMIC_BITCLR,
+		RP2350_QMI_DIRECT_CSR_DIRECT_ENABLE | RP2350_QMI_DIRECT_CSR_ASSERT_CS0N);
+	/* And a 0xFF QPI exit sequence */
+	target_mem32_write32(target, RP2350_QMI_DIRECT_CSR | RP2350_REG_ACCESS_WRITE_ATOMIC_BITSET,
+		RP2350_QMI_DIRECT_CSR_DIRECT_ENABLE | RP2350_QMI_DIRECT_CSR_ASSERT_CS0N);
+	target_mem32_write32(target, RP2350_QMI_DIRECT_TX,
+		RP2350_QMI_DIRECT_TX_MODE_QUAD | RP2350_QMI_DIRECT_TX_DATA_8BIT | RP2350_QMI_DIRECT_TX_OUTPUT_ENABLE |
+			RP2350_QMI_DIRECT_TX_NOPUSH_RX | 0xffU);
+	/* Wait for the cycles to complete */
+	while (target_mem32_read32(target, RP2350_QMI_DIRECT_CSR) & RP2350_QMI_DIRECT_CSR_BUSY)
+		continue;
+	target_mem32_write32(target, RP2350_QMI_DIRECT_CSR | RP2350_REG_ACCESS_WRITE_ATOMIC_BITCLR,
+		RP2350_QMI_DIRECT_CSR_DIRECT_ENABLE | RP2350_QMI_DIRECT_CSR_ASSERT_CS0N);
+}
+
 static bool rp2350_spi_prepare(target_s *const target)
 {
 	/* Check if the QMI peripheral is muxed out to the pads, and if not, fix that */
 	if ((target_mem32_read32(target, RP2350_GPIO_QSPI_SCLK_CTRL) & RP2350_GPIO_QSPI_CTRL_FUNCSEL_MASK) ==
 		RP2350_GPIO_QSPI_CTRL_FUNCSEL_NONE) {
+		DEBUG_INFO("RP2350 Flash controller in POR state, reconfiguring\n");
+		/* Reset the GPIO and pads controllers */
+		target_mem32_write32(target, RP2350_RESETS_RESET | RP2350_REG_ACCESS_WRITE_ATOMIC_BITSET,
+			RP2350_RESETS_RESET_IO_QSPI | RP2350_RESETS_RESET_PADS_QSPI);
+		target_mem32_write32(target, RP2350_RESETS_RESET | RP2350_REG_ACCESS_WRITE_ATOMIC_BITCLR,
+			RP2350_RESETS_RESET_IO_QSPI | RP2350_RESETS_RESET_PADS_QSPI);
+		while ((target_mem32_read32(target, RP2350_RESETS_RESET_DONE) &
+				   (RP2350_RESETS_RESET_IO_QSPI | RP2350_RESETS_RESET_PADS_QSPI)) !=
+			(RP2350_RESETS_RESET_IO_QSPI | RP2350_RESETS_RESET_PADS_QSPI))
+			continue;
+
+		/* Configure the GPIOs to be QMI controlled */
 		target_mem32_write32(target, RP2350_GPIO_QSPI_SCLK_CTRL, 0U);
 		target_mem32_write32(target, RP2350_GPIO_QSPI_CS_CTRL, 0U);
 		target_mem32_write32(target, RP2350_GPIO_QSPI_SD0_CTRL, 0U);
 		target_mem32_write32(target, RP2350_GPIO_QSPI_SD1_CTRL, 0U);
 		target_mem32_write32(target, RP2350_GPIO_QSPI_SD2_CTRL, 0U);
 		target_mem32_write32(target, RP2350_GPIO_QSPI_SD3_CTRL, 0U);
+
+		/* Configure the pads to allow the QMI to see the outside world */
+		target_mem32_write32(
+			target, RP2350_PADS_QSPI_SCLK | RP2350_REG_ACCESS_WRITE_ATOMIC_BITCLR, RP2350_PADS_QSPI_GPIO_ISOLATE);
+		target_mem32_write32(
+			target, RP2350_PADS_QSPI_CS | RP2350_REG_ACCESS_WRITE_ATOMIC_BITCLR, RP2350_PADS_QSPI_GPIO_ISOLATE);
+		target_mem32_write32(
+			target, RP2350_PADS_QSPI_SD0 | RP2350_REG_ACCESS_WRITE_ATOMIC_BITCLR, RP2350_PADS_QSPI_GPIO_ISOLATE);
+		target_mem32_write32(
+			target, RP2350_PADS_QSPI_SD1 | RP2350_REG_ACCESS_WRITE_ATOMIC_BITCLR, RP2350_PADS_QSPI_GPIO_ISOLATE);
+		target_mem32_write32(
+			target, RP2350_PADS_QSPI_SD2 | RP2350_REG_ACCESS_WRITE_ATOMIC_BITCLR, RP2350_PADS_QSPI_GPIO_ISOLATE);
+		target_mem32_write32(
+			target, RP2350_PADS_QSPI_SD3 | RP2350_REG_ACCESS_WRITE_ATOMIC_BITCLR, RP2350_PADS_QSPI_GPIO_ISOLATE);
+
+		rp2350_flash_exit_xip(target);
 	}
 
 	/* Now check the current peripheral mode */
@@ -191,14 +341,7 @@ static bool rp2350_spi_prepare(target_s *const target)
 			continue;
 	} else {
 		/* Otherwise, we were already in direct mode, so empty down the FIFOs and clear the chip selects */
-		uint32_t status = state;
-		while (!(status & (RP2350_QMI_DIRECT_CSR_RXEMPTY | RP2350_QMI_DIRECT_CSR_TXEMPTY)) ||
-			(status & RP2350_QMI_DIRECT_CSR_BUSY)) {
-			/* Read out the RX FIFO if that's not empty */
-			if (!(status & RP2350_QMI_DIRECT_CSR_RXEMPTY))
-				target_mem32_read16(target, RP2350_QMI_DIRECT_RX);
-			status = target_mem32_read32(target, RP2350_QMI_DIRECT_CSR);
-		}
+		rp2350_spi_drain_fifos(target, state);
 		target_mem32_write32(target, RP2350_QMI_DIRECT_CSR | RP2350_REG_ACCESS_WRITE_ATOMIC_BITCLR,
 			RP2350_QMI_DIRECT_CSR_ASSERT_CS0N | RP2350_QMI_DIRECT_CSR_ASSERT_CS1N);
 	}
