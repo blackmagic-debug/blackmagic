@@ -65,8 +65,6 @@ typedef enum gdb_signal {
 	GDB_SIGLOST = 29,
 } gdb_signal_e;
 
-#define GDB_MAX_PACKET_SIZE 1024U
-
 #define ERROR_IF_NO_TARGET()   \
 	if (!cur_target) {         \
 		gdb_putpacketz("EFF"); \
@@ -456,7 +454,7 @@ static void exec_q_supported(const char *packet, const size_t length)
 
 	gdb_putpacket_f("PacketSize=%X;qXfer:memory-map:read+;qXfer:features:read+;"
 					"vContSupported+" GDB_QSUPPORTED_NOACKMODE,
-		GDB_MAX_PACKET_SIZE);
+		GDB_PACKET_BUFFER_SIZE);
 }
 
 static void exec_q_memory_map(const char *packet, const size_t length)

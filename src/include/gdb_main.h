@@ -23,7 +23,9 @@
 
 #include "target.h"
 
+#ifndef GDB_PACKET_BUFFER_SIZE
 #define GDB_PACKET_BUFFER_SIZE 1024U
+#endif
 
 extern bool gdb_target_running;
 extern target_s *cur_target;
