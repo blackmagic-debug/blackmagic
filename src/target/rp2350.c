@@ -43,6 +43,11 @@
 #define RP2350_SRAM_BASE      0x20000000U
 #define RP2350_SRAM_SIZE      0x00082000U
 
+#define RP2350_REG_ACCESS_NORMAL              0x0000U
+#define RP2350_REG_ACCESS_WRITE_XOR           0x1000U
+#define RP2350_REG_ACCESS_WRITE_ATOMIC_BITSET 0x2000U
+#define RP2350_REG_ACCESS_WRITE_ATOMIC_BITCLR 0x3000U
+
 #define RP2350_BOOTROM_BASE  0x00000000U
 #define RP2350_BOOTROM_MAGIC (RP2350_BOOTROM_BASE + 0x0010U)
 
@@ -179,7 +184,8 @@ static bool rp2350_spi_prepare(target_s *const target)
 	const uint32_t state = target_mem32_read32(target, RP2350_QMI_DIRECT_CSR);
 	/* If the peripheral is not yet in direct mode, turn it on and do the entry sequence for that */
 	if (!(state & RP2350_QMI_DIRECT_CSR_DIRECT_ENABLE)) {
-		target_mem32_write32(target, RP2350_QMI_DIRECT_CSR, state | RP2350_QMI_DIRECT_CSR_DIRECT_ENABLE);
+		target_mem32_write32(
+			target, RP2350_QMI_DIRECT_CSR | RP2350_REG_ACCESS_WRITE_ATOMIC_BITSET, RP2350_QMI_DIRECT_CSR_DIRECT_ENABLE);
 		/* Wait for the ongoing transaction to stop */
 		while (target_mem32_read32(target, RP2350_QMI_DIRECT_CSR) & RP2350_QMI_DIRECT_CSR_BUSY)
 			continue;
@@ -193,8 +199,8 @@ static bool rp2350_spi_prepare(target_s *const target)
 				target_mem32_read16(target, RP2350_QMI_DIRECT_RX);
 			status = target_mem32_read32(target, RP2350_QMI_DIRECT_CSR);
 		}
-		target_mem32_write32(target, RP2350_QMI_DIRECT_CSR,
-			status & ~(RP2350_QMI_DIRECT_CSR_ASSERT_CS0N | RP2350_QMI_DIRECT_CSR_ASSERT_CS1N));
+		target_mem32_write32(target, RP2350_QMI_DIRECT_CSR | RP2350_REG_ACCESS_WRITE_ATOMIC_BITCLR,
+			RP2350_QMI_DIRECT_CSR_ASSERT_CS0N | RP2350_QMI_DIRECT_CSR_ASSERT_CS1N);
 	}
 	/* Return whether we actually had to enable direct mode */
 	return !(state & RP2350_QMI_DIRECT_CSR_DIRECT_ENABLE);
@@ -203,15 +209,15 @@ static bool rp2350_spi_prepare(target_s *const target)
 static void rp2350_spi_resume(target_s *const target)
 {
 	/* Turn direct access mode back off, which will re-memory-map the SPI Flash */
-	target_mem32_write32(target, RP2350_QMI_DIRECT_CSR,
-		target_mem32_read32(target, RP2350_QMI_DIRECT_CSR) & ~RP2350_QMI_DIRECT_CSR_DIRECT_ENABLE);
+	target_mem32_write32(
+		target, RP2350_QMI_DIRECT_CSR | RP2350_REG_ACCESS_WRITE_ATOMIC_BITCLR, RP2350_QMI_DIRECT_CSR_DIRECT_ENABLE);
 }
 
 static void rp2350_spi_setup_xfer(target_s *const target, const uint16_t command, const target_addr32_t address)
 {
 	/* Start by pulling the chip select for the Flash low */
-	target_mem32_write32(target, RP2350_QMI_DIRECT_CSR,
-		target_mem32_read32(target, RP2350_QMI_DIRECT_CSR) | RP2350_QMI_DIRECT_CSR_ASSERT_CS0N);
+	target_mem32_write32(
+		target, RP2350_QMI_DIRECT_CSR | RP2350_REG_ACCESS_WRITE_ATOMIC_BITSET, RP2350_QMI_DIRECT_CSR_ASSERT_CS0N);
 
 	/* Set up the instruction */
 	const uint8_t opcode = command & SPI_FLASH_OPCODE_MASK;
@@ -252,8 +258,8 @@ static void rp2350_spi_read(target_s *const target, const uint16_t command, cons
 		data[i] = target_mem32_read8(target, RP2350_QMI_DIRECT_RX);
 	}
 	/* Deselect the Flash to complete the transaction */
-	target_mem32_write32(target, RP2350_QMI_DIRECT_CSR,
-		target_mem32_read32(target, RP2350_QMI_DIRECT_CSR) & ~RP2350_QMI_DIRECT_CSR_ASSERT_CS0N);
+	target_mem32_write32(
+		target, RP2350_QMI_DIRECT_CSR | RP2350_REG_ACCESS_WRITE_ATOMIC_BITCLR, RP2350_QMI_DIRECT_CSR_ASSERT_CS0N);
 }
 
 static void rp2350_spi_write(target_s *const target, const uint16_t command, const target_addr32_t address,
@@ -271,8 +277,8 @@ static void rp2350_spi_write(target_s *const target, const uint16_t command, con
 	while (target_mem32_read32(target, RP2350_QMI_DIRECT_CSR) & RP2350_QMI_DIRECT_CSR_BUSY)
 		continue;
 	/* Deselect the Flash to complete the transaction */
-	target_mem32_write32(target, RP2350_QMI_DIRECT_CSR,
-		target_mem32_read32(target, RP2350_QMI_DIRECT_CSR) & ~RP2350_QMI_DIRECT_CSR_ASSERT_CS0N);
+	target_mem32_write32(
+		target, RP2350_QMI_DIRECT_CSR | RP2350_REG_ACCESS_WRITE_ATOMIC_BITCLR, RP2350_QMI_DIRECT_CSR_ASSERT_CS0N);
 }
 
 static void rp2350_spi_run_command(target_s *const target, const uint16_t command, const target_addr32_t address)
@@ -283,6 +289,6 @@ static void rp2350_spi_run_command(target_s *const target, const uint16_t comman
 	while (target_mem32_read32(target, RP2350_QMI_DIRECT_CSR) & RP2350_QMI_DIRECT_CSR_BUSY)
 		continue;
 	/* Deselect the Flash to execute the transaction */
-	target_mem32_write32(target, RP2350_QMI_DIRECT_CSR,
-		target_mem32_read32(target, RP2350_QMI_DIRECT_CSR) & ~RP2350_QMI_DIRECT_CSR_ASSERT_CS0N);
+	target_mem32_write32(
+		target, RP2350_QMI_DIRECT_CSR | RP2350_REG_ACCESS_WRITE_ATOMIC_BITCLR, RP2350_QMI_DIRECT_CSR_ASSERT_CS0N);
 }
