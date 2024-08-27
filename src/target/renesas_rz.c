@@ -73,7 +73,7 @@
  * except for pnrs stored in 'FIXED_PNR1', where the code is stored in reverse order (but the last 3 bytes are still 0x20 aka ' ')
  */
 
-/* Base address for the RZ-series, including mirror */
+/* Base address for the OCRAM regions, including their mirrors (including RETRAM) */
 #define RENESAS_OCRAM_BASE        0x20000000U
 #define RENESAS_OCRAM_MIRROR_BASE 0x60000000U
 
@@ -191,7 +191,7 @@ bool renesas_rz_probe(target_s *const target)
 		renesas_rz_add_flash(target);
 
 	/* Determine RAM size by attempting to read in 512MB increments */
-	uint32_t ram_size = renesas_rz_ram_size(target);
+	const uint32_t ram_size = renesas_rz_ram_size(target);
 	target_add_ram32(target, RENESAS_OCRAM_BASE, ram_size);
 	target_add_ram32(target, RENESAS_OCRAM_MIRROR_BASE, ram_size);
 	return true;
@@ -216,9 +216,9 @@ static const char *renesas_rz_part_name(const uint32_t part_id)
  */
 static uint32_t renesas_rz_ram_size(target_s *target)
 {
-	uint32_t result = 0;
 	for (uint32_t addr = RENESAS_OCRAM_BASE; addr < RENESAS_OCRAM_BASE + RENESAS_OCRAM_MAX_SIZE;
 		 addr += RENESAS_OCRAM_SCAN_INCREMENT) {
+		uint32_t result;
 		/* Read ahead by one scan increment and if there's an error, return the current size. */
 		if (target_mem32_read(target, &result, addr + RENESAS_OCRAM_SCAN_INCREMENT - 8U, sizeof(result)))
 			return addr - RENESAS_OCRAM_BASE;
