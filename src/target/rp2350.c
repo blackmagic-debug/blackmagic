@@ -72,6 +72,8 @@
 
 #define RP2350_GPIO_QSPI_CTRL_FUNCSEL_MASK (0x1fU << 0U)
 #define RP2350_GPIO_QSPI_CTRL_FUNCSEL_NONE (0x1fU << 0U)
+#define RP2350_GPIO_QSPI_CTRL_INOVER_MASK  (0x3U << 16U)
+#define RP2350_GPIO_QSPI_CTRL_INOVER_NONE  (0x0U << 16U)
 
 #define RP2350_PADS_QSPI_BASE 0x40040000U
 #define RP2350_PADS_QSPI_SCLK (RP2350_PADS_QSPI_BASE + 0x004U)
@@ -255,7 +257,7 @@ static void rp2350_flash_exit_xip(target_s *const target)
 	target_mem32_write32(target, RP2350_PADS_QSPI_SD2, padctrl_tmp);
 	target_mem32_write32(target, RP2350_PADS_QSPI_SD3, padctrl_tmp);
 
-	/* Next, run a 0xF5 QPI exit sequence */
+	/* Next, run a 0xf5 QPI exit sequence */
 	target_mem32_write32(target, RP2350_QMI_DIRECT_CSR | RP2350_REG_ACCESS_WRITE_ATOMIC_BITSET,
 		RP2350_QMI_DIRECT_CSR_DIRECT_ENABLE | RP2350_QMI_DIRECT_CSR_ASSERT_CS0N);
 	target_mem32_write32(target, RP2350_QMI_DIRECT_TX,
@@ -276,7 +278,7 @@ static void rp2350_flash_exit_xip(target_s *const target)
 		continue;
 	target_mem32_write32(target, RP2350_QMI_DIRECT_CSR | RP2350_REG_ACCESS_WRITE_ATOMIC_BITCLR,
 		RP2350_QMI_DIRECT_CSR_DIRECT_ENABLE | RP2350_QMI_DIRECT_CSR_ASSERT_CS0N);
-	/* And a 0xFF QPI exit sequence */
+	/* And a 0xff QPI exit sequence */
 	target_mem32_write32(target, RP2350_QMI_DIRECT_CSR | RP2350_REG_ACCESS_WRITE_ATOMIC_BITSET,
 		RP2350_QMI_DIRECT_CSR_DIRECT_ENABLE | RP2350_QMI_DIRECT_CSR_ASSERT_CS0N);
 	target_mem32_write32(target, RP2350_QMI_DIRECT_TX,
@@ -328,6 +330,11 @@ static bool rp2350_spi_prepare(target_s *const target)
 			target, RP2350_PADS_QSPI_SD3 | RP2350_REG_ACCESS_WRITE_ATOMIC_BITCLR, RP2350_PADS_QSPI_GPIO_ISOLATE);
 
 		rp2350_flash_exit_xip(target);
+	}
+	/* Check if the Flash is currently inhibited and clear that condition */
+	if ((target_mem32_read32(target, RP2350_GPIO_QSPI_SD1_CTRL) & RP2350_GPIO_QSPI_CTRL_INOVER_MASK) !=
+		RP2350_GPIO_QSPI_CTRL_INOVER_NONE) {
+		target_mem32_write32(target, RP2350_GPIO_QSPI_SD1_CTRL, 0U);
 	}
 
 	/* Now check the current peripheral mode */
