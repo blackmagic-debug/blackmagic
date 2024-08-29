@@ -333,4 +333,22 @@ extern bool debug_bmp;
 		gpio_set_val(LED_PORT, LED_ERROR, state); \
 	}
 
+#ifdef ON_CARRIER_BOARD
+/*
+ * When the Blackpill is mounted on a carrier board with a full set of LEDs,
+ * a separate BOOTLOADER LED is available.
+ */
+#define LED_BOOT_LED      LED_BOOTLOADER
+#define BOOT_STATE_INVERT false
+#else
+#define LED_BOOT_LED      LED_IDLE_RUN
+#define BOOT_STATE_INVERT true
+#endif /* ON_CARRIER_BOARD */
+// gpio_set_val(LED_PORT, LED_BOOT_LED, BOOT_STATE_INVERT ? !(state) : (state));
+
+#define SET_BOOTLOADER_STATE(state)                                                   \
+	{                                                                                 \
+		gpio_set_val(LED_PORT, LED_BOOT_LED, BOOT_STATE_INVERT ? !(state) : (state)); \
+	}
+
 #endif /* PLATFORMS_COMMON_BLACKPILL_F4_H */
