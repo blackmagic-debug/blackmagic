@@ -65,8 +65,12 @@ int main(void)
 	/* Assert blue LED as indicator we are in the bootloader */
 	rcc_periph_clock_enable(RCC_GPIOC);
 	gpio_mode_setup(LED_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, LED_BOOTLOADER | LED_IDLE_RUN);
+#ifdef ON_CARRIER_BOARD
+	gpio_set(LED_PORT, LED_IDLE_RUN);
+	gpio_clear(LED_PORT, LED_BOOTLOADER);
+#else
 	gpio_clear(LED_PORT, LED_BOOTLOADER | LED_IDLE_RUN);
-
+#endif
 	/* Run heartbeat on blue LED */
 	sys_tick_init();
 
