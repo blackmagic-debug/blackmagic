@@ -94,7 +94,7 @@ void dfu_event(void)
 	/* Ask systick to pause blinking for 1 second */
 	dfu_activity_counter = 10U;
 	/* Toggle-blink it ourself */
-	SET_IDLE_STATE(idle_state);
+	SET_BOOTLOADER_STATE(idle_state);
 	idle_state = !idle_state;
 }
 
