@@ -121,12 +121,12 @@ void sys_tick_handler(void)
 	case 0U:
 		/* Reload downcounter and disable LED */
 		count = 10U;
-		SET_IDLE_STATE(false);
+		SET_BOOTLOADER_STATE(false);
 		break;
 	case 1U:
 		count--;
 		/* Enable LED for 1/10th of cycle */
-		SET_IDLE_STATE(true);
+		SET_BOOTLOADER_STATE(true);
 		break;
 	default:
 		count--;
