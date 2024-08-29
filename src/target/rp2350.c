@@ -32,6 +32,7 @@
  */
 
 #include "general.h"
+#include "buffer_utils.h"
 #include "target.h"
 #include "target_internal.h"
 #include "cortexm.h"
@@ -419,10 +420,10 @@ static void rp2350_spi_write(target_s *const target, const uint16_t command, con
 	rp2350_spi_setup_xfer(target, command, address);
 	/* Write out the data associated with this transaction */
 	const uint8_t *const data = (const uint8_t *)buffer;
-	for (size_t i = 0; i < length; ++i)
+	for (size_t i = 0; i < length; i += 2U)
 		target_mem32_write32(target, RP2350_QMI_DIRECT_TX,
-			RP2350_QMI_DIRECT_TX_MODE_SINGLE | RP2350_QMI_DIRECT_TX_DATA_8BIT | RP2350_QMI_DIRECT_TX_NOPUSH_RX |
-				data[i]);
+			RP2350_QMI_DIRECT_TX_MODE_SINGLE | RP2350_QMI_DIRECT_TX_DATA_16BIT | RP2350_QMI_DIRECT_TX_NOPUSH_RX |
+				read_le2(data, i));
 	/* Wait for the transaction cycles to complete */
 	while (target_mem32_read32(target, RP2350_QMI_DIRECT_CSR) & RP2350_QMI_DIRECT_CSR_BUSY)
 		continue;
