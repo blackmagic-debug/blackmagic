@@ -47,6 +47,8 @@ probe_blackpill_dfu_sources = files('usbdfu.c')
 
 bmd_bootloader = get_option('bmd_bootloader')
 
+on_carrier_board = get_option('on_carrier_board')
+
 probe_blackpill_dfu_serial_length = '13'
 probe_blackpill_load_address = bmd_bootloader ? '0x08004000' : '0x08000000'
 
@@ -59,6 +61,10 @@ probe_blackpill_args = [
 blackpill_alternative_pinout = get_option('alternative_pinout')
 if blackpill_alternative_pinout != '0'
 	probe_blackpill_args += [f'-DALTERNATIVE_PINOUT=@blackpill_alternative_pinout@']
+endif
+
+if on_carrier_board
+	probe_blackpill_args += ['-DON_CARRIER_BOARD']
 endif
 
 if bmd_bootloader

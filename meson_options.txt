@@ -108,6 +108,12 @@ option(
 	description: 'Alternative pinout for probe (only applicable to blackpill-f4*)'
 )
 option(
+	'on_carrier_board',
+	type: 'boolean',
+	value: false,
+	description: 'Maps some LEDs to use those on carrier board (only applicable to blackpill-f4*)'
+)
+option(
 	'enable_gpiod',
 	type: 'feature',
 	value: 'auto'
