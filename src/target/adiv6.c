@@ -41,6 +41,7 @@
 
 #include "general.h"
 #include "jep106.h"
+#include "adi.h"
 #include "adiv6.h"
 #include "adiv6_internal.h"
 
