@@ -32,8 +32,12 @@
  */
 
 #include "general.h"
+#include "target.h"
+#include "target_internal.h"
 #include "jep106.h"
 #include "adi.h"
+#include "cortex.h"
+#include "cortex_internal.h"
 
 #if ENABLE_DEBUG == 1
 #define ARM_COMPONENT_STR(...) __VA_ARGS__
@@ -440,4 +444,19 @@ bool adi_configure_ap(adiv5_access_port_s *const ap)
 
 	adi_display_ap(ap);
 	return true;
+}
+
+void adi_ap_resume_cores(adiv5_access_port_s *const ap)
+{
+	/*
+	 * If we're not in connect-under-reset mode, and now that we're done with this AP's
+	 * ROM tables, look for any created targets and resume the core associated with it.
+	 */
+	for (target_s *target = target_list; target; target = target->next) {
+		if (!connect_assert_nrst && target->priv_free == cortex_priv_free) {
+			adiv5_access_port_s *target_ap = cortex_ap(target);
+			if (target_ap == ap)
+				target_halt_resume(target, false);
+		}
+	}
 }
