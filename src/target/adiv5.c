@@ -60,6 +60,14 @@
 #define SAMX5X_DSU_CTRLSTAT 0x41002100U
 #define SAMX5X_STATUSB_PROT (1U << 16U)
 
+#define S32K344_TARGET_PARTNO        0x995cU
+#define S32K3xx_APB_AP               1U
+#define S32K3xx_AHB_AP               4U
+#define S32K3xx_MDM_AP               6U
+#define S32K3xx_SDA_AP               7U
+#define S32K3xx_SDA_AP_DBGENCTR      ADIV5_AP_REG(0x80U)
+#define S32K3xx_SDA_AP_DBGENCTR_MASK 0x300000f0U
+
 void adiv5_ap_ref(adiv5_access_port_s *ap)
 {
 	if (ap->refcnt == 0)
@@ -464,14 +472,6 @@ uint32_t adiv5_dp_read_dpidr(adiv5_debug_port_s *const dp)
 	}
 	return dpidr;
 }
-
-#define S32K344_TARGET_PARTNO        0x995cU
-#define S32K3xx_APB_AP               1U
-#define S32K3xx_AHB_AP               4U
-#define S32K3xx_MDM_AP               6U
-#define S32K3xx_SDA_AP               7U
-#define S32K3xx_SDA_AP_DBGENCTR      ADIV5_AP_REG(0x80U)
-#define S32K3xx_SDA_AP_DBGENCTR_MASK 0x300000f0U
 
 static bool s32k3xx_dp_prepare(adiv5_debug_port_s *const dp)
 {
