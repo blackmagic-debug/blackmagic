@@ -55,10 +55,6 @@
  */
 #define ARM_AP_TYPE_AHB3 1U
 
-/* Used to probe for a protected SAMX5X device */
-#define SAMX5X_DSU_CTRLSTAT 0x41002100U
-#define SAMX5X_STATUSB_PROT (1U << 16U)
-
 #define S32K344_TARGET_PARTNO        0x995cU
 #define S32K3xx_APB_AP               1U
 #define S32K3xx_AHB_AP               4U
@@ -86,30 +82,6 @@ void adiv5_ap_unref(adiv5_access_port_s *ap)
 		adiv5_dp_unref(ap->dp);
 		free(ap);
 	}
-}
-
-static uint32_t adiv5_mem_read32(adiv5_access_port_s *ap, uint32_t addr)
-{
-	uint32_t ret;
-	adiv5_mem_read(ap, &ret, addr, sizeof(ret));
-	return ret;
-}
-
-static uint32_t adiv5_ap_read_id(adiv5_access_port_s *ap, uint32_t addr)
-{
-	uint32_t res = 0;
-	uint8_t data[16];
-	adiv5_mem_read(ap, data, addr, sizeof(data));
-	for (size_t i = 0; i < 4U; ++i)
-		res |= (uint32_t)data[4U * i] << (i * 8U);
-	return res;
-}
-
-static uint64_t adiv5_ap_read_pidr(adiv5_access_port_s *ap, uint32_t addr)
-{
-	const uint32_t pidr_upper = adiv5_ap_read_id(ap, addr + PIDR4_OFFSET);
-	const uint32_t pidr_lower = adiv5_ap_read_id(ap, addr + PIDR0_OFFSET);
-	return ((uint64_t)pidr_upper << 32U) | (uint64_t)pidr_lower;
 }
 
 /*
@@ -211,14 +183,14 @@ static bool cortexm_prepare(adiv5_access_port_s *ap)
 	if (!dhcsr) {
 		DEBUG_ERROR("Halt via DHCSR(%08" PRIx32 "): failure after %" PRIu32 "ms\nTry again with longer "
 					"timeout or connect under reset\n",
-			adiv5_mem_read32(ap, CORTEXM_DHCSR), platform_time_ms() - start_time);
+			adi_mem_read32(ap, CORTEXM_DHCSR), platform_time_ms() - start_time);
 		return false;
 	}
 	/* Clear any residual WAIT fault code to keep things in good state for the next steps */
 	ap->dp->fault = 0;
 	DEBUG_INFO("Halt via DHCSR(%08" PRIx32 "): success after %" PRIu32 "ms\n", dhcsr, platform_time_ms() - start_time);
 	/* Save the old value of DEMCR and enable the DWT, and both vector table debug bits */
-	ap->ap_cortexm_demcr = adiv5_mem_read32(ap, CORTEXM_DEMCR);
+	ap->ap_cortexm_demcr = adi_mem_read32(ap, CORTEXM_DEMCR);
 	const uint32_t demcr = CORTEXM_DEMCR_TRCENA | CORTEXM_DEMCR_VC_HARDERR | CORTEXM_DEMCR_VC_CORERESET;
 	adiv5_mem_write(ap, CORTEXM_DEMCR, &demcr, sizeof(demcr));
 	/* Having setup DEMCR, try to observe the core being released from reset */
@@ -228,7 +200,7 @@ static bool cortexm_prepare(adiv5_access_port_s *ap)
 	platform_nrst_set_val(false);
 	while (true) {
 		/* Read back DHCSR and check if the reset status bit is still set */
-		dhcsr = adiv5_mem_read32(ap, CORTEXM_DHCSR);
+		dhcsr = adi_mem_read32(ap, CORTEXM_DHCSR);
 		if ((dhcsr & CORTEXM_DHCSR_S_RESET_ST) == 0)
 			break;
 		/* If it is and we timeout, turn that into an error */
@@ -239,172 +211,6 @@ static bool cortexm_prepare(adiv5_access_port_s *ap)
 	}
 	/* Core is now in a good state */
 	return true;
-}
-
-static void adiv5_parse_adi_rom_table(adiv5_access_port_s *const ap, const target_addr32_t base_address,
-	const size_t recursion_depth, const char *const indent, const uint64_t pidr)
-{
-#if defined(DEBUG_WARN_IS_NOOP) && defined(DEBUG_ERROR_IS_NOOP)
-	(void)indent;
-#endif
-
-	/* Extract the designer code and part number from the part ID register */
-	const uint16_t designer_code = adi_designer_from_pidr(pidr);
-	const uint16_t part_number = pidr & PIDR_PN_MASK;
-
-	if (recursion_depth == 0U) {
-		ap->designer_code = designer_code;
-		ap->partno = part_number;
-
-		if (ap->designer_code == JEP106_MANUFACTURER_ATMEL && ap->partno == 0xcd0U) {
-			uint32_t ctrlstat = adiv5_mem_read32(ap, SAMX5X_DSU_CTRLSTAT);
-			if (ctrlstat & SAMX5X_STATUSB_PROT) {
-				/* A protected SAMx5x device is found.
-					 * Handle it here, as access only to limited memory region
-					 * is allowed
-					 */
-				cortexm_probe(ap);
-				return;
-			}
-		}
-	}
-
-	/* Check SYSMEM bit */
-	const bool memtype = adiv5_mem_read32(ap, base_address + ADIV5_ROM_MEMTYPE) & ADIV5_ROM_MEMTYPE_SYSMEM;
-	if (adiv5_dp_error(ap->dp))
-		DEBUG_ERROR("Fault reading ROM table entry\n");
-	else if (memtype)
-		ap->flags |= ADIV5_AP_FLAGS_HAS_MEM;
-	DEBUG_INFO("ROM Table: BASE=0x%" PRIx32 " SYSMEM=%u, Manufacturer %03x Partno %03x (PIDR = 0x%02" PRIx32
-			   "%08" PRIx32 ")\n",
-		base_address, memtype, designer_code, part_number, (uint32_t)(pidr >> 32U), (uint32_t)pidr);
-
-	for (uint32_t i = 0; i < 960U; i++) {
-		adiv5_dp_error(ap->dp);
-
-		uint32_t entry = adiv5_mem_read32(ap, base_address + i * 4U);
-		if (adiv5_dp_error(ap->dp)) {
-			DEBUG_ERROR("%sFault reading ROM table entry %" PRIu32 "\n", indent, i);
-			break;
-		}
-
-		if (entry == 0)
-			break;
-
-		if (!(entry & ADIV5_ROM_ROMENTRY_PRESENT)) {
-			DEBUG_INFO("%s%" PRIu32 " Entry 0x%08" PRIx32 " -> Not present\n", indent, i, entry);
-			continue;
-		}
-
-		/* Probe recursively */
-		adiv5_component_probe(ap, base_address + (entry & ADIV5_ROM_ROMENTRY_OFFSET), recursion_depth + 1U, i);
-	}
-	DEBUG_INFO("%sROM Table: END\n", indent);
-}
-
-/* Return true if we find a debuggable device. */
-void adiv5_component_probe(
-	adiv5_access_port_s *ap, target_addr64_t base_address, const size_t recursion, const uint32_t entry_number)
-{
-#ifdef DEBUG_WARN_IS_NOOP
-	(void)entry_number;
-#endif
-
-	const uint32_t cidr = adiv5_ap_read_id(ap, base_address + CIDR0_OFFSET);
-	if (ap->dp->fault) {
-		DEBUG_ERROR("Error reading CIDR on AP%u: %u\n", ap->apsel, ap->dp->fault);
-		return;
-	}
-
-#if ENABLE_DEBUG == 1
-	char *const indent = alloca(recursion + 1U);
-
-	for (size_t i = 0; i < recursion; i++)
-		indent[i] = ' ';
-	indent[recursion] = 0;
-#else
-	const char *const indent = " ";
-#endif
-
-	if (adiv5_dp_error(ap->dp)) {
-		DEBUG_ERROR("%sFault reading ID registers\n", indent);
-		return;
-	}
-
-	/* CIDR preamble sanity check */
-	if ((cidr & ~CID_CLASS_MASK) != CID_PREAMBLE) {
-		DEBUG_WARN("%s%" PRIu32 " 0x%0" PRIx32 "%08" PRIx32 ": 0x%08" PRIx32 " <- does not match preamble (0x%08" PRIx32
-				   ")\n",
-			indent, entry_number, (uint32_t)(base_address >> 32U), (uint32_t)base_address, cidr, CID_PREAMBLE);
-		return;
-	}
-
-	/* Extract Component ID class nibble */
-	const uint8_t cid_class = (cidr & CID_CLASS_MASK) >> CID_CLASS_SHIFT;
-
-	/* Read out the peripheral ID register */
-	const uint64_t pidr = adiv5_ap_read_pidr(ap, base_address);
-
-	/* ROM table */
-	if (cid_class == cidc_romtab) {
-		/* Validate that the SIZE field is 0 per the spec */
-		if (pidr & PIDR_SIZE_MASK) {
-			DEBUG_ERROR("Fault reading ROM table\n");
-			return;
-		}
-		adiv5_parse_adi_rom_table(ap, base_address, recursion, indent, pidr);
-	} else {
-		/* Extract the designer code from the part ID register */
-		const uint16_t designer_code = adi_designer_from_pidr(pidr);
-
-		if (designer_code != JEP106_MANUFACTURER_ARM && designer_code != JEP106_MANUFACTURER_ARM_CHINA) {
-#ifndef DEBUG_TARGET_IS_NOOP
-			const uint16_t part_number = pidr & PIDR_PN_MASK;
-#endif
-			/* non-ARM components are not supported currently */
-			DEBUG_WARN("%s%" PRIu32 " 0x%0" PRIx32 "%08" PRIx32 ": 0x%02" PRIx32 "%08" PRIx32 " Non-ARM component "
-					   "ignored\n",
-				indent + 1, entry_number, (uint32_t)(base_address >> 32U), (uint32_t)base_address,
-				(uint32_t)(pidr >> 32U), (uint32_t)pidr);
-			DEBUG_TARGET("%s -> designer: %x, part no: %x\n", indent, designer_code, part_number);
-			return;
-		}
-
-		/* Check if this is a CoreSight component */
-		uint8_t dev_type = 0;
-		uint16_t arch_id = 0;
-		if (cid_class == cidc_dc) {
-			/* Read out the component's identification information */
-			const uint32_t devarch = adiv5_mem_read32(ap, base_address + DEVARCH_OFFSET);
-			dev_type = adiv5_mem_read32(ap, base_address + DEVTYPE_OFFSET) & DEVTYPE_MASK;
-
-			if (devarch & DEVARCH_PRESENT)
-				arch_id = devarch & DEVARCH_ARCHID_MASK;
-		}
-
-		/* Look the component up and dispatch to a probe routine accordingly */
-		const arm_coresight_component_s *const component =
-			adi_lookup_component(base_address, entry_number, indent, cid_class, pidr, dev_type, arch_id);
-
-		if (component) {
-			switch (component->arch) {
-			case aa_cortexm:
-				DEBUG_INFO("%s-> cortexm_probe\n", indent + 1);
-				cortexm_probe(ap);
-				break;
-			case aa_cortexa:
-				DEBUG_INFO("%s-> cortexa_probe\n", indent + 1);
-				cortexa_probe(ap, base_address);
-				break;
-			case aa_cortexr:
-				DEBUG_INFO("%s-> cortexr_probe\n", indent + 1);
-				cortexr_probe(ap, base_address);
-				break;
-			default:
-				break;
-			}
-		}
-	}
 }
 
 adiv5_access_port_s *adiv5_new_ap(adiv5_debug_port_s *const dp, const uint8_t apsel)
@@ -493,13 +299,13 @@ static bool s32k3xx_dp_prepare(adiv5_debug_port_s *const dp)
 	adiv5_access_port_s *apb_ap = adiv5_new_ap(dp, S32K3xx_APB_AP);
 	if (!apb_ap)
 		return false;
-	adiv5_component_probe(apb_ap, apb_ap->base, 0, 0);
+	adi_ap_component_probe(apb_ap, apb_ap->base, 0, 0);
 	adiv5_ap_unref(apb_ap);
 
 	adiv5_access_port_s *ahb_ap = adiv5_new_ap(dp, S32K3xx_AHB_AP);
 	if (!ahb_ap)
 		return false;
-	adiv5_component_probe(ahb_ap, ahb_ap->base, 0, 0);
+	adi_ap_component_probe(ahb_ap, ahb_ap->base, 0, 0);
 
 	cortexm_prepare(ahb_ap);
 	adi_ap_resume_cores(ahb_ap);
@@ -509,7 +315,7 @@ static bool s32k3xx_dp_prepare(adiv5_debug_port_s *const dp)
 	adiv5_access_port_s *mdm_ap = adiv5_new_ap(dp, S32K3xx_MDM_AP);
 	if (!mdm_ap)
 		return false;
-	adiv5_component_probe(mdm_ap, mdm_ap->base, 0, 0);
+	adi_ap_component_probe(mdm_ap, mdm_ap->base, 0, 0);
 	adiv5_ap_unref(mdm_ap);
 
 	return true;
@@ -711,7 +517,7 @@ void adiv5_dp_init(adiv5_debug_port_s *const dp)
 		}
 
 		/* The rest should only be added after checking ROM table */
-		adiv5_component_probe(ap, ap->base, 0, 0);
+		adi_ap_component_probe(ap, ap->base, 0, 0);
 		/* Having completed discovery on this AP, try to resume any halted cores */
 		adi_ap_resume_cores(ap);
 

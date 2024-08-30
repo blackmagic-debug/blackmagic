@@ -34,8 +34,10 @@ const arm_coresight_component_s *adi_lookup_component(target_addr64_t base_addre
 	const char *indent, uint8_t cid_class, uint64_t pidr, uint8_t dev_type, uint16_t arch_id);
 /* Helper for figuring out what an AP is and configuring it for use */
 bool adi_configure_ap(adiv5_access_port_s *ap);
+/* Helper for reading 32-bit registers from an AP's MMIO space */
+uint32_t adi_mem_read32(adiv5_access_port_s *ap, target_addr32_t addr);
 /* Helper for probing a CoreSight debug component */
-void adiv5_component_probe(
+void adi_ap_component_probe(
 	adiv5_access_port_s *ap, target_addr64_t base_address, size_t recursion, uint32_t entry_number);
 /* Helper for resuming all cores halted on an AP during probe */
 void adi_ap_resume_cores(adiv5_access_port_s *ap);
