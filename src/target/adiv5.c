@@ -56,170 +56,6 @@
  */
 #define ARM_AP_TYPE_AHB3 1U
 
-#if ENABLE_DEBUG == 1
-#define ARM_COMPONENT_STR(...) __VA_ARGS__
-#else
-#define ARM_COMPONENT_STR(...)
-#endif
-
-/*
- * The part number list was adopted from OpenOCD:
- * https://sourceforge.net/p/openocd/code/ci/406f4/tree/src/target/arm_adi_v5.c#l932
- *
- * The product ID register consists of several parts. For a full description
- * refer to ARM Debug Interface v5 Architecture Specification. Based on the
- * document the pidr is 64 bit long and has the following interpratiation:
- * |7   ID7 reg   0|7   ID6 reg   0|7   ID5 reg   0|7   ID4 reg   0|
- * |0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0| | | | | | | | |
- * |63           56|55           48|47           40|39   36|35   32|
- * \_______________________ ______________________/\___ __/\___ ___/
- *                         V                           V       V
- *                    Reserved, RAZ                   4KB      |
- *                                                   count     |
- *                                                          JEP-106
- *                                                     Continuation Code (only valid for JEP-106 codes)
- *
- * |7   ID3 reg   0|7   ID2 reg   0|7   ID1 reg   0|7   ID0 reg   0|
- * | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | |
- * |31   28|27   24|23   20|||18   |     12|11     |              0|
- * \___ __/\__ ___/\___ __/ |\______ _____/\___________ ___________/
- *     V      V        V    |       V                  V
- *  RevAnd    |    Revision |  JEP-106 ID         Part number
- *            |             |  (no parity)
- *        Customer          19
- *        modified          `- JEP-106 code is used
- *
- * only a subset of Part numbers are listed,
- * the ones that have ARM as the designer code.
- *
- * To properly identify ADIv6 CoreSight components, two additional fields,
- * DEVTYPE and ARCHID are read.
- * The dev_type and arch_id values in the table below were found in the
- * corresponding logic in pyOCD:
- * https://github.com/mbedmicro/pyOCD/blob/master/pyocd/coresight/component_ids.py
- *
- * Additional reference on the DEVTYPE and DEVARCH registers can be found in the
- * ARM CoreSight Architecture Specification v3.0, sections B2.3.4 and B2.3.8.
- */
-static const arm_coresight_component_s arm_component_lut[] = {
-	{0x000, 0x00, 0, aa_cortexm, cidc_gipc, ARM_COMPONENT_STR("Cortex-M3 SCS", "(System Control Space)")},
-	{0x001, 0x00, 0, aa_nosupport, cidc_unknown, ARM_COMPONENT_STR("Cortex-M3 ITM", "(Instrumentation Trace Module)")},
-	{0x002, 0x00, 0, aa_nosupport, cidc_unknown, ARM_COMPONENT_STR("Cortex-M3 DWT", "(Data Watchpoint and Trace)")},
-	{0x003, 0x00, 0, aa_nosupport, cidc_unknown, ARM_COMPONENT_STR("Cortex-M3 FBP", "(Flash Patch and Breakpoint)")},
-	{0x008, 0x00, 0, aa_cortexm, cidc_gipc, ARM_COMPONENT_STR("Cortex-M0 SCS", "(System Control Space)")},
-	{0x00a, 0x00, 0, aa_nosupport, cidc_unknown, ARM_COMPONENT_STR("Cortex-M0 DWT", "(Data Watchpoint and Trace)")},
-	{0x00b, 0x00, 0, aa_nosupport, cidc_unknown, ARM_COMPONENT_STR("Cortex-M0 BPU", "(Breakpoint Unit)")},
-	{0x00c, 0x00, 0, aa_cortexm, cidc_gipc, ARM_COMPONENT_STR("Cortex-M4 SCS", "(System Control Space)")},
-	{0x00d, 0x00, 0, aa_nosupport, cidc_unknown, ARM_COMPONENT_STR("CoreSight ETM11", "(Embedded Trace)")},
-	{0x00e, 0x00, 0, aa_nosupport, cidc_unknown, ARM_COMPONENT_STR("Cortex-M7 FBP", "(Flash Patch and Breakpoint)")},
-	{0x101, 0x00, 0, aa_nosupport, cidc_unknown, ARM_COMPONENT_STR("System TSGEN", "(Time Stamp Generator)")},
-	{0x471, 0x00, 0, aa_nosupport, cidc_unknown, ARM_COMPONENT_STR("Cortex-M0 ROM", "(Cortex-M0 ROM)")},
-	{0x490, 0x00, 0, aa_nosupport, cidc_unknown, ARM_COMPONENT_STR("Cortex-A15 GIC", "(Generic Interrupt Controller)")},
-	{0x4c0, 0x00, 0, aa_nosupport, cidc_unknown, ARM_COMPONENT_STR("Cortex-M0+ ROM", "(Cortex-M0+ ROM)")},
-	{0x4c3, 0x00, 0, aa_nosupport, cidc_unknown, ARM_COMPONENT_STR("Cortex-M3 ROM", "(Cortex-M3 ROM)")},
-	{0x4c4, 0x00, 0, aa_nosupport, cidc_unknown, ARM_COMPONENT_STR("Cortex-M4 ROM", "(Cortex-M4 ROM)")},
-	{0x4c7, 0x00, 0, aa_nosupport, cidc_unknown, ARM_COMPONENT_STR("Cortex-M7 PPB", "(Cortex-M7 PPB ROM Table)")},
-	{0x4c8, 0x00, 0, aa_nosupport, cidc_unknown, ARM_COMPONENT_STR("Cortex-M7 ROM", "(Cortex-M7 ROM)")},
-	{0x906, 0x14, 0, aa_nosupport, cidc_unknown, ARM_COMPONENT_STR("CoreSight CTI", "(Cross Trigger)")},
-	{0x907, 0x21, 0, aa_nosupport, cidc_unknown, ARM_COMPONENT_STR("CoreSight ETB", "(Trace Buffer)")},
-	{0x908, 0x12, 0, aa_nosupport, cidc_unknown, ARM_COMPONENT_STR("CoreSight CSTF", "(Trace Funnel)")},
-	{0x910, 0x00, 0, aa_nosupport, cidc_unknown, ARM_COMPONENT_STR("CoreSight ETM9", "(Embedded Trace)")},
-	{0x912, 0x11, 0, aa_nosupport, cidc_unknown, ARM_COMPONENT_STR("CoreSight TPIU", "(Trace Port Interface Unit)")},
-	{0x913, 0x43, 0, aa_nosupport, cidc_unknown,
-		ARM_COMPONENT_STR("CoreSight ITM", "(Instrumentation Trace Macrocell)")},
-	{0x914, 0x11, 0, aa_nosupport, cidc_unknown, ARM_COMPONENT_STR("CoreSight SWO", "(Single Wire Output)")},
-	{0x917, 0x00, 0, aa_nosupport, cidc_unknown, ARM_COMPONENT_STR("CoreSight HTM", "(AHB Trace Macrocell)")},
-	{0x920, 0x00, 0, aa_nosupport, cidc_unknown, ARM_COMPONENT_STR("CoreSight ETM11", "(Embedded Trace)")},
-	{0x921, 0x13, 0, aa_nosupport, cidc_unknown, ARM_COMPONENT_STR("Cortex-A8 ETM", "(Embedded Trace)")},
-	{0x922, 0x14, 0, aa_nosupport, cidc_unknown, ARM_COMPONENT_STR("Cortex-A8 CTI", "(Cross Trigger)")},
-	{0x923, 0x11, 0, aa_nosupport, cidc_unknown, ARM_COMPONENT_STR("Cortex-M3 TPIU", "(Trace Port Interface Unit)")},
-	{0x924, 0x13, 0, aa_nosupport, cidc_unknown, ARM_COMPONENT_STR("Cortex-M3 ETM", "(Embedded Trace)")},
-	{0x925, 0x13, 0, aa_nosupport, cidc_unknown, ARM_COMPONENT_STR("Cortex-M4 ETM", "(Embedded Trace)")},
-	{0x930, 0x13, 0, aa_nosupport, cidc_unknown, ARM_COMPONENT_STR("Cortex-R4 ETM", "(Embedded Trace)")},
-	{0x932, 0x31, 0x0a31, aa_nosupport, cidc_unknown,
-		ARM_COMPONENT_STR("CoreSight MTB-M0+", "(Simple Execution Trace)")},
-	{0x941, 0x00, 0, aa_nosupport, cidc_unknown,
-		ARM_COMPONENT_STR("CoreSight TPIU-Lite", "(Trace Port Interface Unit)")},
-	{0x950, 0x13, 0, aa_nosupport, cidc_unknown, ARM_COMPONENT_STR("Cortex-A9 PTM", "(Program Trace Macrocell)")},
-	{0x955, 0x00, 0, aa_nosupport, cidc_unknown,
-		ARM_COMPONENT_STR("CoreSight Component", "(unidentified Cortex-A5 component)")},
-	{0x956, 0x13, 0, aa_nosupport, cidc_unknown, ARM_COMPONENT_STR("Cortex-A7 ETM", "(Embedded Trace)")},
-	{0x95f, 0x00, 0, aa_nosupport, cidc_unknown, ARM_COMPONENT_STR("Cortex-A15 PTM", "(Program Trace Macrocell)")},
-	{0x961, 0x32, 0, aa_nosupport, cidc_unknown, ARM_COMPONENT_STR("CoreSight TMC", "(Trace Memory Controller)")},
-	{0x961, 0x21, 0, aa_nosupport, cidc_unknown, ARM_COMPONENT_STR("CoreSight TMC", "(Trace Buffer)")},
-	{0x962, 0x00, 0, aa_nosupport, cidc_unknown, ARM_COMPONENT_STR("CoreSight STM", "(System Trace Macrocell)")},
-	{0x963, 0x63, 0x0a63, aa_nosupport, cidc_unknown, ARM_COMPONENT_STR("CoreSight STM", "(System Trace Macrocell)")},
-	{0x975, 0x13, 0x4a13, aa_nosupport, cidc_unknown, ARM_COMPONENT_STR("Cortex-M7 ETM", "(Embedded Trace)")},
-	{0x9a0, 0x16, 0, aa_nosupport, cidc_unknown, ARM_COMPONENT_STR("CoreSight PMU", "(Performance Monitoring Unit)")},
-	{0x9a1, 0x11, 0, aa_nosupport, cidc_unknown, ARM_COMPONENT_STR("Cortex-M4 TPIU", "(Trace Port Interface Unit)")},
-	{0x9a6, 0x14, 0x1a14, aa_nosupport, cidc_dc, ARM_COMPONENT_STR("Cortex-M0+ CTI", "(Cross Trigger Interface)")},
-	{0x9a9, 0x11, 0, aa_nosupport, cidc_unknown, ARM_COMPONENT_STR("Cortex-M7 TPIU", "(Trace Port Interface Unit)")},
-	{0x9a5, 0x13, 0, aa_nosupport, cidc_unknown, ARM_COMPONENT_STR("Cortex-A5 ETM", "(Embedded Trace)")},
-	{0x9a7, 0x16, 0, aa_nosupport, cidc_unknown, ARM_COMPONENT_STR("Cortex-A7 PMU", "(Performance Monitor Unit)")},
-	{0x9af, 0x16, 0, aa_nosupport, cidc_unknown, ARM_COMPONENT_STR("Cortex-A15 PMU", "(Performance Monitor Unit)")},
-	{0xc05, 0x15, 0, aa_cortexa, cidc_dc, ARM_COMPONENT_STR("Cortex-A5", "(Debug Unit)")},
-	{0xc07, 0x15, 0, aa_cortexa, cidc_dc, ARM_COMPONENT_STR("Cortex-A7", "(Debug Unit)")},
-	{0xc08, 0x15, 0, aa_cortexa, cidc_dc, ARM_COMPONENT_STR("Cortex-A8", "(Debug Unit)")},
-	{0xc09, 0x15, 0, aa_cortexa, cidc_dc, ARM_COMPONENT_STR("Cortex-A9", "(Debug Unit)")},
-	{0xc0f, 0x15, 0, aa_cortexa, cidc_unknown, ARM_COMPONENT_STR("Cortex-A15", "(Debug Unit)")},
-	{0xc14, 0x15, 0, aa_cortexr, cidc_unknown, ARM_COMPONENT_STR("Cortex-R4", "(Debug Unit)")},
-	{0xcd0, 0x00, 0, aa_nosupport, cidc_unknown, ARM_COMPONENT_STR("Atmel DSU", "(Device Service Unit)")},
-	{0xd20, 0x00, 0x2a04, aa_cortexm, cidc_gipc, ARM_COMPONENT_STR("Cortex-M23", "(System Control Space)")},
-	{0xd20, 0x11, 0, aa_nosupport, cidc_dc, ARM_COMPONENT_STR("Cortex-M23", "(Trace Port Interface Unit)")},
-	{0xd20, 0x13, 0, aa_nosupport, cidc_dc, ARM_COMPONENT_STR("Cortex-M23", "(Embedded Trace)")},
-	{0xd20, 0x31, 0x0a31, aa_nosupport, cidc_dc, ARM_COMPONENT_STR("Cortex-M23", "(Micro Trace Buffer)")},
-	{0xd20, 0x00, 0x1a02, aa_nosupport, cidc_dc, ARM_COMPONENT_STR("Cortex-M23", "(Data Watchpoint and Trace)")},
-	{0xd20, 0x00, 0x1a03, aa_nosupport, cidc_dc, ARM_COMPONENT_STR("Cortex-M23", "(Breakpoint Unit)")},
-	{0xd20, 0x14, 0x1a14, aa_nosupport, cidc_dc, ARM_COMPONENT_STR("Cortex-M23", "(Cross Trigger)")},
-	{0xd21, 0x00, 0x2a04, aa_cortexm, cidc_gipc, ARM_COMPONENT_STR("Cortex-M33", "(System Control Space)")},
-	{0xd21, 0x31, 0x0a31, aa_nosupport, cidc_dc, ARM_COMPONENT_STR("Cortex-M33", "(Micro Trace Buffer)")},
-	{0xd21, 0x43, 0x1a01, aa_nosupport, cidc_dc, ARM_COMPONENT_STR("Cortex-M33", "(Instrumentation Trace Macrocell)")},
-	{0xd21, 0x00, 0x1a02, aa_nosupport, cidc_dc, ARM_COMPONENT_STR("Cortex-M33", "(Data Watchpoint and Trace)")},
-	{0xd21, 0x00, 0x1a03, aa_nosupport, cidc_dc, ARM_COMPONENT_STR("Cortex-M33", "(Breakpoint Unit)")},
-	{0xd21, 0x14, 0x1a14, aa_nosupport, cidc_dc, ARM_COMPONENT_STR("Cortex-M33", "(Cross Trigger)")},
-	{0xd21, 0x13, 0x4a13, aa_nosupport, cidc_dc, ARM_COMPONENT_STR("Cortex-M33", "(Embedded Trace)")},
-	{0xd21, 0x11, 0, aa_nosupport, cidc_dc, ARM_COMPONENT_STR("Cortex-M33", "(Trace Port Interface Unit)")},
-	{0x132, 0x31, 0x0a31, aa_nosupport, cidc_dc, ARM_COMPONENT_STR("STAR-MC1 MTB", "(Execution Trace)")},
-	{0x132, 0x43, 0x1a01, aa_nosupport, cidc_dc, ARM_COMPONENT_STR("STAR-MC1 ITM", "(Instrumentation Trace Module)")},
-	{0x132, 0x00, 0x1a02, aa_nosupport, cidc_dc, ARM_COMPONENT_STR("STAR-MC1 DWT", "(Data Watchpoint and Trace)")},
-	{0x132, 0x00, 0x1a03, aa_nosupport, cidc_dc, ARM_COMPONENT_STR("STAR-MC1 BPU", "(Breakpoint Unit)")},
-	{0x132, 0x14, 0x1a14, aa_nosupport, cidc_dc, ARM_COMPONENT_STR("STAR-MC1 CTI", "(Cross Trigger)")},
-	{0x132, 0x00, 0x2a04, aa_cortexm, cidc_dc, ARM_COMPONENT_STR("STAR-MC1 SCS", "(System Control Space)")},
-	{0x132, 0x13, 0x4a13, aa_nosupport, cidc_dc, ARM_COMPONENT_STR("STAR-MC1 ETM", "(Embedded Trace)")},
-	{0x132, 0x11, 0, aa_nosupport, cidc_dc, ARM_COMPONENT_STR("STAR-MC1 TPIU", "(Trace Port Interface Unit)")},
-	{0x9a3, 0x13, 0, aa_nosupport, cidc_dc, ARM_COMPONENT_STR("nRF NTB", "(Nordic Trace Buffer)")},
-	{0x9e3, 0x00, 0x0a17, aa_access_port, cidc_dc, ARM_COMPONENT_STR("ADIv6 MEM-APv2", "(Memory Access Port)")},
-	{0x193, 0x00, 0x0000, aa_nosupport, cidc_sys, ARM_COMPONENT_STR("CoreSight TSG", "(Timestamp Generator)")},
-	{0x9e7, 0x11, 0x0000, aa_nosupport, cidc_dc, ARM_COMPONENT_STR("CoreSight TPIU", "(Trace Port Interface Unit)")},
-	{0x9eb, 0x12, 0x0000, aa_nosupport, cidc_dc, ARM_COMPONENT_STR("CoreSight ATBF", "(ATB Funnel)")},
-	{0x9ed, 0x14, 0x1a14, aa_nosupport, cidc_dc, ARM_COMPONENT_STR("CoreSight CTI", "(Cross Trigger Interface)")},
-	{0xfff, 0x00, 0, aa_end, cidc_unknown, ARM_COMPONENT_STR("end", "end")},
-};
-
-#if ENABLE_DEBUG == 1
-static const char *adiv5_cid_class_string(const cid_class_e cid_class)
-{
-	switch (cid_class) {
-	case cidc_gvc:
-		return "Generic verification component";
-	case cidc_romtab:
-		return "ROM Table";
-	case cidc_dc:
-		return "Debug component";
-	case cidc_ptb:
-		return "Peripheral Test Block";
-	case cidc_dess:
-		return "OptimoDE Data Engine SubSystem component";
-	case cidc_gipc:
-		return "Generic IP component";
-	case cidc_sys:
-		return "Non STD System component";
-	default:
-		return "Unknown component"; /* Noted as reserved in the spec */
-	}
-};
-#endif
-
 /* Used to probe for a protected SAMX5X device */
 #define SAMX5X_DSU_CTRLSTAT 0x41002100U
 #define SAMX5X_STATUSB_PROT (1U << 16U)
@@ -398,17 +234,6 @@ static bool cortexm_prepare(adiv5_access_port_s *ap)
 	return true;
 }
 
-static cid_class_e adiv5_class_from_cid(const uint16_t part_number, const uint16_t arch_id, const cid_class_e cid_class)
-{
-	/*
-	 * Cortex-M23 and 33 incorrectly list their SCS's as a debug component,
-	 * but they're a generic IP component, so we adjust the cid_class.
-	 */
-	if ((part_number == 0xd20U || part_number == 0xd21U) && arch_id == 0x2a04U && cid_class == cidc_dc)
-		return cidc_gipc;
-	return cid_class;
-}
-
 static void adiv5_parse_adi_rom_table(adiv5_access_port_s *const ap, const target_addr32_t base_address,
 	const size_t recursion_depth, const char *const indent, const uint64_t pidr)
 {
@@ -468,44 +293,6 @@ static void adiv5_parse_adi_rom_table(adiv5_access_port_s *const ap, const targe
 		adiv5_component_probe(ap, base_address + (entry & ADIV5_ROM_ROMENTRY_OFFSET), recursion_depth + 1U, i);
 	}
 	DEBUG_INFO("%sROM Table: END\n", indent);
-}
-
-const arm_coresight_component_s *adiv5_lookup_component(const target_addr64_t base_address, const uint32_t entry_number,
-	const char *const indent, const uint8_t cid_class, const uint64_t pidr, const uint8_t dev_type,
-	const uint16_t arch_id)
-{
-#if defined(DEBUG_WARN_IS_NOOP) && defined(DEBUG_ERROR_IS_NOOP)
-	(void)indent;
-	(void)base_address;
-	(void)entry_number;
-#endif
-
-	const uint16_t part_number = pidr & PIDR_PN_MASK;
-	for (size_t index = 0; arm_component_lut[index].arch != aa_end; ++index) {
-		if (arm_component_lut[index].part_number != part_number || arm_component_lut[index].dev_type != dev_type ||
-			arm_component_lut[index].arch_id != arch_id)
-			continue;
-
-		DEBUG_INFO("%s%" PRIu32 " 0x%0" PRIx32 "%08" PRIx32 ": %s - %s %s (PIDR = 0x%02" PRIx32 "%08" PRIx32 " DEVTYPE "
-				   "= 0x%02x "
-				   "ARCHID = 0x%04x)\n",
-			indent + 1, entry_number, (uint32_t)(base_address >> 32U), (uint32_t)base_address,
-			adiv5_cid_class_string(cid_class), arm_component_lut[index].type, arm_component_lut[index].full,
-			(uint32_t)(pidr >> 32U), (uint32_t)pidr, dev_type, arch_id);
-
-		const cid_class_e adjusted_class = adiv5_class_from_cid(part_number, arch_id, cid_class);
-		/* Perform sanity check, if we know what to expect as * component ID class. */
-		if (arm_component_lut[index].cidc != cidc_unknown && adjusted_class != arm_component_lut[index].cidc)
-			DEBUG_WARN("%s\"%s\" expected, got \"%s\"\n", indent + 1,
-				adiv5_cid_class_string(arm_component_lut[index].cidc), adiv5_cid_class_string(adjusted_class));
-		return &arm_component_lut[index];
-	}
-
-	DEBUG_WARN("%s%" PRIu32 " 0x%0" PRIx32 "%08" PRIx32 ": %s - Unknown (PIDR = 0x%02" PRIx32 "%08" PRIx32 " DEVTYPE = "
-			   "0x%02x ARCHID = 0x%04x)\n",
-		indent, entry_number, (uint32_t)(base_address >> 32U), (uint32_t)base_address,
-		adiv5_cid_class_string(cid_class), (uint32_t)(pidr >> 32U), (uint32_t)pidr, dev_type, arch_id);
-	return NULL;
 }
 
 /* Return true if we find a debuggable device. */
@@ -590,7 +377,7 @@ void adiv5_component_probe(
 
 		/* Look the component up and dispatch to a probe routine accordingly */
 		const arm_coresight_component_s *const component =
-			adiv5_lookup_component(base_address, entry_number, indent, cid_class, pidr, dev_type, arch_id);
+			adi_lookup_component(base_address, entry_number, indent, cid_class, pidr, dev_type, arch_id);
 
 		if (component) {
 			switch (component->arch) {

@@ -320,7 +320,7 @@ static bool adiv6_component_probe(adiv5_debug_port_s *const dp, const target_add
 		/* If it's an ARM component of some kind, look it up in the ARM component table */
 		if (designer_code == JEP106_MANUFACTURER_ARM) {
 			const arm_coresight_component_s *const component =
-				adiv5_lookup_component(base_address, entry_number, " ", cid_class, pidr, dev_type, arch_id);
+				adi_lookup_component(base_address, entry_number, " ", cid_class, pidr, dev_type, arch_id);
 			if (component == NULL)
 				return true;
 
