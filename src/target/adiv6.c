@@ -247,7 +247,7 @@ static adiv6_access_port_s *adiv6_new_ap(
 		.ap_address = base_address,
 	};
 	/* Try to configure the AP for use */
-	if (!adiv5_configure_ap(&ap.base))
+	if (!adi_configure_ap(&ap.base))
 		return NULL;
 
 	/* It's valid to so create a heap copy */

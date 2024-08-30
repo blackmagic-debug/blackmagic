@@ -32,6 +32,7 @@
 target_common_includes = include_directories('.')
 
 target_common_sources = files(
+	'adi.c',
 	'adiv5.c',
 	'adiv5_jtag.c',
 	'adiv5_swd.c',

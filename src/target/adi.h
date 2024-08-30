@@ -33,11 +33,21 @@ uint16_t adiv5_designer_from_pidr(uint64_t pidr);
 const arm_coresight_component_s *adiv5_lookup_component(target_addr64_t base_address, uint32_t entry_number,
 	const char *indent, uint8_t cid_class, uint64_t pidr, uint8_t dev_type, uint16_t arch_id);
 /* Helper for figuring out what an AP is and configuring it for use */
-bool adiv5_configure_ap(adiv5_access_port_s *ap);
+bool adi_configure_ap(adiv5_access_port_s *ap);
 /* Helper for probing a CoreSight debug component */
 void adiv5_component_probe(
 	adiv5_access_port_s *ap, target_addr64_t base_address, size_t recursion, uint32_t entry_number);
 /* Helper for resuming all cores halted on an AP during probe */
 void adiv5_ap_resume_cores(adiv5_access_port_s *ap);
+
+/*
+ * Decode a designer code that's in the following form into BMD's internal designer code representation
+ * Bits 10:7 - JEP-106 Continuation code
+ * Bits 6:0 - JEP-106 Identity code
+ */
+static inline uint16_t adi_decode_designer(const uint16_t designer)
+{
+	return (designer & ADIV5_DP_DESIGNER_JEP106_CONT_MASK) << 1U | (designer & ADIV5_DP_DESIGNER_JEP106_CODE_MASK);
+}
 
 #endif /* TARGET_ADI_H */
