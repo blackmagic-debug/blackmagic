@@ -76,6 +76,31 @@ static const char *adi_arm_ap_type_string(const uint8_t ap_type, const uint8_t a
 }
 #endif
 
+uint16_t adi_designer_from_pidr(const uint64_t pidr)
+{
+	uint16_t designer_code;
+	if (pidr & PIDR_JEP106_USED) {
+		/* (OFFSET - 8) because we want it on bits 11:8 of new code, see "JEP-106 code list" */
+		designer_code = ((pidr & PIDR_JEP106_CONT_MASK) >> (PIDR_JEP106_CONT_OFFSET - 8U)) |
+			((pidr & PIDR_JEP106_CODE_MASK) >> PIDR_JEP106_CODE_OFFSET);
+
+	} else {
+		/* legacy ascii code */
+		designer_code = ((pidr & PIDR_JEP106_CODE_MASK) >> PIDR_JEP106_CODE_OFFSET) | ASCII_CODE_FLAG;
+	}
+
+	if (designer_code == JEP106_MANUFACTURER_ERRATA_STM32WX || designer_code == JEP106_MANUFACTURER_ERRATA_CS ||
+		designer_code == JEP106_MANUFACTURER_ERRATA_CS_ASCII) {
+		/**
+         * see 'JEP-106 code list' for context, here we are aliasing codes that are non compliant with the
+         * JEP-106 standard to their expected codes, this is later used to determine the correct probe function.
+         */
+		DEBUG_WARN("Patching Designer code %03x -> %03x\n", designer_code, JEP106_MANUFACTURER_STM);
+		designer_code = JEP106_MANUFACTURER_STM;
+	}
+	return designer_code;
+}
+
 static void adi_display_ap(const adiv5_access_port_s *const ap)
 {
 #if ENABLE_DEBUG == 1

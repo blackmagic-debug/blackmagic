@@ -165,7 +165,7 @@ static bool adiv6_parse_coresight_v0_rom_table(
 	adiv6_access_port_s *const rom_table, const target_addr64_t base_address, const uint64_t pidr)
 {
 	/* Extract the designer code and part number from the part ID register */
-	const uint16_t designer_code = adiv5_designer_from_pidr(pidr);
+	const uint16_t designer_code = adi_designer_from_pidr(pidr);
 	const uint16_t part_number = pidr & PIDR_PN_MASK;
 
 	/* Now we know we're in a CoreSight v0 ROM table, read out the device ID field and set up the memory flag on the AP */
@@ -294,7 +294,7 @@ static bool adiv6_component_probe(adiv5_debug_port_s *const dp, const target_add
 		}
 	} else {
 		/* Extract the designer code from the part ID register */
-		const uint16_t designer_code = adiv5_designer_from_pidr(pidr);
+		const uint16_t designer_code = adi_designer_from_pidr(pidr);
 
 		/* Check if this is a CoreSight component */
 		uint16_t arch_id = 0U;

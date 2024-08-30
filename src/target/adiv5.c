@@ -409,31 +409,6 @@ static cid_class_e adiv5_class_from_cid(const uint16_t part_number, const uint16
 	return cid_class;
 }
 
-uint16_t adiv5_designer_from_pidr(const uint64_t pidr)
-{
-	uint16_t designer_code;
-	if (pidr & PIDR_JEP106_USED) {
-		/* (OFFSET - 8) because we want it on bits 11:8 of new code, see "JEP-106 code list" */
-		designer_code = ((pidr & PIDR_JEP106_CONT_MASK) >> (PIDR_JEP106_CONT_OFFSET - 8U)) |
-			((pidr & PIDR_JEP106_CODE_MASK) >> PIDR_JEP106_CODE_OFFSET);
-
-	} else {
-		/* legacy ascii code */
-		designer_code = ((pidr & PIDR_JEP106_CODE_MASK) >> PIDR_JEP106_CODE_OFFSET) | ASCII_CODE_FLAG;
-	}
-
-	if (designer_code == JEP106_MANUFACTURER_ERRATA_STM32WX || designer_code == JEP106_MANUFACTURER_ERRATA_CS ||
-		designer_code == JEP106_MANUFACTURER_ERRATA_CS_ASCII) {
-		/**
-         * see 'JEP-106 code list' for context, here we are aliasing codes that are non compliant with the
-         * JEP-106 standard to their expected codes, this is later used to determine the correct probe function.
-         */
-		DEBUG_WARN("Patching Designer code %03x -> %03x\n", designer_code, JEP106_MANUFACTURER_STM);
-		designer_code = JEP106_MANUFACTURER_STM;
-	}
-	return designer_code;
-}
-
 static void adiv5_parse_adi_rom_table(adiv5_access_port_s *const ap, const target_addr32_t base_address,
 	const size_t recursion_depth, const char *const indent, const uint64_t pidr)
 {
@@ -442,7 +417,7 @@ static void adiv5_parse_adi_rom_table(adiv5_access_port_s *const ap, const targe
 #endif
 
 	/* Extract the designer code and part number from the part ID register */
-	const uint16_t designer_code = adiv5_designer_from_pidr(pidr);
+	const uint16_t designer_code = adi_designer_from_pidr(pidr);
 	const uint16_t part_number = pidr & PIDR_PN_MASK;
 
 	if (recursion_depth == 0U) {
@@ -586,7 +561,7 @@ void adiv5_component_probe(
 		adiv5_parse_adi_rom_table(ap, base_address, recursion, indent, pidr);
 	} else {
 		/* Extract the designer code from the part ID register */
-		const uint16_t designer_code = adiv5_designer_from_pidr(pidr);
+		const uint16_t designer_code = adi_designer_from_pidr(pidr);
 
 		if (designer_code != JEP106_MANUFACTURER_ARM && designer_code != JEP106_MANUFACTURER_ARM_CHINA) {
 #ifndef DEBUG_TARGET_IS_NOOP
