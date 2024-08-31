@@ -1083,34 +1083,35 @@ static size_t riscv_build_target_description(
 
 	size_t print_size = max_length;
 	/* Start with the "preamble" chunks, which are mostly common across targets save for 2 words. */
-	int offset = snprintf(buffer, print_size, "%s target %sriscv:rv%u%c%s%s <feature name=\"org.gnu.gdb.riscv.cpu\">",
-		gdb_xml_preamble_first, gdb_xml_preamble_second, address_width, embedded ? 'e' : 'i', riscv_fpu_ext_string(fpu),
-		gdb_xml_preamble_third);
+	size_t offset =
+		(size_t)snprintf(buffer, print_size, "%s target %sriscv:rv%u%c%s%s <feature name=\"org.gnu.gdb.riscv.cpu\">",
+			gdb_xml_preamble_first, gdb_xml_preamble_second, address_width, embedded ? 'e' : 'i',
+			riscv_fpu_ext_string(fpu), gdb_xml_preamble_third);
 
 	const uint8_t gprs = embedded ? 16U : 32U;
 	/* Then build the general purpose register descriptions using the arrays at top of file */
 	/* Note that in a device using the embedded (E) extension, we only generate the first 16. */
 	for (uint8_t i = 0; i < gprs; ++i) {
 		if (max_length != 0)
-			print_size = max_length - (size_t)offset;
+			print_size = max_length - offset;
 
 		const char *const name = riscv_gpr_names[i];
 		const gdb_reg_type_e type = riscv_gpr_types[i];
 
-		offset += snprintf(buffer + offset, print_size, "<reg name=\"%s\" bitsize=\"%u\"%s%s/>", name, address_width,
-			gdb_reg_type_strings[type], i == 0 ? " regnum=\"0\"" : "");
+		offset += (size_t)snprintf(buffer + offset, print_size, "<reg name=\"%s\" bitsize=\"%u\"%s%s/>", name,
+			address_width, gdb_reg_type_strings[type], i == 0 ? " regnum=\"0\"" : "");
 	}
 
 	/* Then build the program counter register description, which has the same bitsize as the GPRs. */
 	if (max_length != 0)
-		print_size = max_length - (size_t)offset;
-	offset += snprintf(buffer + offset, print_size, "<reg name=\"pc\" bitsize=\"%u\"%s/>", address_width,
+		print_size = max_length - offset;
+	offset += (size_t)snprintf(buffer + offset, print_size, "<reg name=\"pc\" bitsize=\"%u\"%s/>", address_width,
 		gdb_reg_type_strings[GDB_TYPE_CODE_PTR]);
 
-	/* Basic single precision support */
+	/* If the target has basic single precision support, generate a block for that */
 	if (extensions & RV_ISA_EXT_SINGLE_FLOAT) {
 		if (max_length != 0)
-			print_size = max_length - (size_t)offset;
+			print_size = max_length - offset;
 		offset += riscv_build_target_fpu_description(buffer + offset, print_size, 32);
 	}
 
@@ -1118,22 +1119,22 @@ static size_t riscv_build_target_description(
 
 	/* Add main CSR registers*/
 	if (max_length != 0)
-		print_size = max_length - (size_t)offset;
-	offset += snprintf(buffer + offset, print_size, "</feature><feature name=\"org.gnu.gdb.riscv.csr\">");
+		print_size = max_length - offset;
+	offset += (size_t)snprintf(buffer + offset, print_size, "</feature><feature name=\"org.gnu.gdb.riscv.csr\">");
 	for (size_t i = 0; i < ARRAY_LENGTH(riscv_csrs); i++) {
 		if (max_length != 0)
-			print_size = max_length - (size_t)offset;
-		offset += snprintf(buffer + offset, print_size, " <reg name=\"%s\" bitsize=\"%u\" regnum=\"%" PRIu32 "\" %s/>",
-			riscv_csrs[i].name, address_width, riscv_csrs[i].csr_number + RV_CSR_GDB_OFFSET,
-			gdb_reg_save_restore_strings[GDB_SAVE_RESTORE_NO]);
+			print_size = max_length - offset;
+		offset += (size_t)snprintf(buffer + offset, print_size,
+			" <reg name=\"%s\" bitsize=\"%u\" regnum=\"%" PRIu32 "\" %s/>", riscv_csrs[i].name, address_width,
+			riscv_csrs[i].csr_number + RV_CSR_GDB_OFFSET, gdb_reg_save_restore_strings[GDB_SAVE_RESTORE_NO]);
 	}
 	/* Add the closing tags required */
 	if (max_length != 0)
-		print_size = max_length - (size_t)offset;
+		print_size = max_length - offset;
 
-	offset += snprintf(buffer + offset, print_size, "</feature></target>");
+	offset += (size_t)snprintf(buffer + offset, print_size, "</feature></target>");
 	/* offset is now the total length of the string created, discard the sign and return it. */
-	return (size_t)offset;
+	return offset;
 }
 
 static const char *riscv_target_description(target_s *const target)
