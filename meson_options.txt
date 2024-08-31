@@ -108,6 +108,13 @@ option(
 	description: 'Alternative pinout for probe (only applicable to blackpill-f4*)'
 )
 option(
+	'trace_protocol',
+	type: 'combo',
+	choices: ['1','2', '3'],
+	value: '2',
+	description: 'Select the Trace SWO protocol, 1 == Manchester, 2 == UART, 3 == platform'
+)
+option(
 	'on_carrier_board',
 	type: 'boolean',
 	value: false,
