@@ -396,28 +396,29 @@ static size_t create_tdesc_cortex_mf(char *buffer, size_t max_len)
 	return (size_t)total;
 }
 
-static void cortexm_cache_clean(target_s *target, target_addr_t addr, size_t len, bool invalidate)
+static void cortexm_cache_clean(
+	target_s *const target, const target_addr32_t addr, const size_t len, const bool invalidate)
 {
-	cortexm_priv_s *priv = target->priv;
+	const cortexm_priv_s *const priv = (const cortexm_priv_s *)target->priv;
 	if (!priv->base.dcache_line_length)
 		return;
-	uint32_t cache_reg = invalidate ? CORTEXM_DCCIMVAC : CORTEXM_DCCMVAC;
-	size_t minline = priv->base.dcache_line_length << 2U;
+	const target_addr32_t cache_reg = invalidate ? CORTEXM_DCCIMVAC : CORTEXM_DCCMVAC;
+	const size_t minline = priv->base.dcache_line_length << 2U;
 
 	/* flush data cache for RAM regions that intersect requested region */
-	target_addr_t mem_end = addr + len; /* following code is NOP if wraparound */
+	const target_addr32_t mem_end = addr + len; /* following code is NOP if wraparound */
 	/* requested region is [src, src_end) */
-	for (target_ram_s *r = target->ram; r; r = r->next) {
-		target_addr_t ram = r->start;
-		target_addr_t ram_end = r->start + r->length;
-		/* RAM region is [ram, ram_end) */
-		if (addr > ram)
-			ram = addr;
-		if (mem_end < ram_end)
-			ram_end = mem_end;
-		/* intersection is [ram, ram_end) */
-		for (ram &= ~(minline - 1U); ram < ram_end; ram += minline)
-			adiv5_mem_write(cortex_ap(target), cache_reg, &ram, 4);
+	for (target_ram_s *ram = target->ram; ram; ram = ram->next) {
+		target_addr32_t region_start = ram->start;
+		target_addr32_t region_end = ram->start + ram->length;
+		/* RAM region is [region_start, region_end) */
+		if (addr > region_start)
+			region_start = addr;
+		if (mem_end < region_end)
+			region_end = mem_end;
+		/* intersection is [region_start, region_end) */
+		for (region_start &= ~(minline - 1U); region_start < region_end; region_start += minline)
+			target_mem32_write32(target, cache_reg, region_start);
 	}
 }
 
