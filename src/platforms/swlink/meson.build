@@ -42,7 +42,6 @@ probe_swlink_dfu_sources = files(
 
 probe_swlink_args = [
 	'-DDFU_SERIAL_LENGTH=9',
-	'-DTRACESWO_PROTOCOL=2',
 ]
 
 probe_swlink_common_link_args = [
@@ -53,6 +52,13 @@ probe_swlink_common_link_args = [
 probe_swlink_link_args = [
 	'-Wl,-Ttext=0x8002000',
 ]
+
+trace_protocol = get_option('trace_protocol')
+if trace_protocol == '2'
+	probe_swlink_args += '-DTRACESWO_PROTOCOL=2'
+else
+	error('Unsupported SWO protocol requested')
+endif
 
 probe_host = declare_dependency(
 	include_directories: probe_swlink_includes,
