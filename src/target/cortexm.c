@@ -1151,6 +1151,56 @@ static bool cortexm_hostio_request(target_s *const target)
 }
 
 /*
+ * Generate the FPU section of the description.
+ * When a Cortex-M core has the optional FPU, the following XML-equivalent is generated:
+ *  <feature name="org.gnu.gdb.arm.vfp">
+ *      <reg name="fpscr" bitsize="32"/>
+ *      <reg name="d0" bitsize="64" type="float"/>
+ *      <reg name="d1" bitsize="64" type="float"/>
+ *      <reg name="d2" bitsize="64" type="float"/>
+ *      <reg name="d3" bitsize="64" type="float"/>
+ *      <reg name="d4" bitsize="64" type="float"/>
+ *      <reg name="d5" bitsize="64" type="float"/>
+ *      <reg name="d6" bitsize="64" type="float"/>
+ *      <reg name="d7" bitsize="64" type="float"/>
+ *      <reg name="d8" bitsize="64" type="float"/>
+ *      <reg name="d9" bitsize="64" type="float"/>
+ *      <reg name="d10" bitsize="64" type="float"/>
+ *      <reg name="d11" bitsize="64" type="float"/>
+ *      <reg name="d12" bitsize="64" type="float"/>
+ *      <reg name="d13" bitsize="64" type="float"/>
+ *      <reg name="d14" bitsize="64" type="float"/>
+ *      <reg name="d15" bitsize="64" type="float"/>
+ *  </feature>"
+ */
+static size_t cortexm_build_target_fpu_description(char *const buffer, const size_t max_length)
+{
+	size_t offset = 0U;
+	size_t print_size = max_length;
+	/*
+	 * Start by ending the previous feature block and starting the new FPU one.
+	 * This includes the FPSCR entry which has to come before the VFP registers
+	 */
+	offset += snprintf(buffer + offset, print_size,
+		"</feature><feature name=\"org.gnu.gdb.arm.vfp\">"
+		"<reg name=\"fpscr\" bitsize=\"32\"/>");
+
+	/* After FPSCR, the rest of the VFP registers follow a regular format: d0-d15, bitsize 64, type float. */
+	for (uint8_t i = 0U; i < 16U; ++i) {
+		if (max_length != 0U)
+			print_size = max_length - offset;
+		/* Generate the register entry */
+		offset += snprintf(buffer + offset, print_size, "<reg name=\"d%u\" bitsize=\"64\" type=\"float\"/>", i);
+	}
+
+	/*
+	 * We then leave the closing feature tag off because that will get generated on
+	 * returning to cortexm_build_target_description() by the logic that finishes off the XML block.
+	 */
+	return offset;
+}
+
+/*
  * This function creates the target description XML string for a Cortex-M part.
  * This is done this way to decrease string duplication adn thus code size, making it
  * unfortunately much less readable than the string literal it is equvalent to.
@@ -1191,7 +1241,7 @@ static bool cortexm_hostio_request(target_s *const target)
  * "  </feature>"
  * "</target>"
  */
-static size_t cortexm_build_target_description(char *buffer, size_t max_len)
+static size_t cortexm_build_target_description(char *buffer, size_t max_len, const uint32_t target_options)
 {
 	// Minor hack: technically snprintf returns an int for possibility of error, but in this case
 	// these functions are given static input that should not be able to fail -- and if it does,
@@ -1237,117 +1287,11 @@ static size_t cortexm_build_target_description(char *buffer, size_t max_len)
 			cortex_m_spr_bitsizes[i], gdb_reg_save_restore_strings[save_restore], gdb_reg_type_strings[type]);
 	}
 
-	if (max_len != 0)
-		printsz = max_len - (size_t)total;
-
-	total += snprintf(buffer + total, printsz, "</feature></target>");
-
-	// Minor hack: technically snprintf returns an int for possibility of error, but in this case
-	// these functions are given static input that should not ever be able to fail -- and if it
-	// does, then there's nothing we can do about it, so we'll just discard the signedness
-	// of total when we return it.
-	return (size_t)total;
-}
-
-// Creates the target description XML string for a Cortex-MF. Like snprintf(), this function
-// will write no more than max_len and returns the amount of bytes written. Or, if max_len is 0,
-// then this function will return the amount of bytes that _would_ be necessary to create this
-// string.
-//
-// This function is hand-optimized to decrease string duplication and thus code size, making it
-// unfortunately much less readable than the string literal it is equivalent to.
-//
-// The string it creates is XML-equivalent to the following:
-/*
-	"<?xml version=\"1.0\"?>"
-	"<!DOCTYPE target SYSTEM \"gdb-target.dtd\">"
-	"<target>"
-	"  <architecture>arm</architecture>"
-	"  <feature name=\"org.gnu.gdb.arm.m-profile\">"
-	"    <reg name=\"r0\" bitsize=\"32\"/>"
-	"    <reg name=\"r1\" bitsize=\"32\"/>"
-	"    <reg name=\"r2\" bitsize=\"32\"/>"
-	"    <reg name=\"r3\" bitsize=\"32\"/>"
-	"    <reg name=\"r4\" bitsize=\"32\"/>"
-	"    <reg name=\"r5\" bitsize=\"32\"/>"
-	"    <reg name=\"r6\" bitsize=\"32\"/>"
-	"    <reg name=\"r7\" bitsize=\"32\"/>"
-	"    <reg name=\"r8\" bitsize=\"32\"/>"
-	"    <reg name=\"r9\" bitsize=\"32\"/>"
-	"    <reg name=\"r10\" bitsize=\"32\"/>"
-	"    <reg name=\"r11\" bitsize=\"32\"/>"
-	"    <reg name=\"r12\" bitsize=\"32\"/>"
-	"    <reg name=\"sp\" bitsize=\"32\" type=\"data_ptr\"/>"
-	"    <reg name=\"lr\" bitsize=\"32\" type=\"code_ptr\"/>"
-	"    <reg name=\"pc\" bitsize=\"32\" type=\"code_ptr\"/>"
-	"    <reg name=\"xpsr\" bitsize=\"32\"/>"
-	"    <reg name=\"msp\" bitsize=\"32\" save-restore=\"no\" type=\"data_ptr\"/>"
-	"    <reg name=\"psp\" bitsize=\"32\" save-restore=\"no\" type=\"data_ptr\"/>"
-	"    <reg name=\"primask\" bitsize=\"8\" save-restore=\"no\"/>"
-	"    <reg name=\"basepri\" bitsize=\"8\" save-restore=\"no\"/>"
-	"    <reg name=\"faultmask\" bitsize=\"8\" save-restore=\"no\"/>"
-	"    <reg name=\"control\" bitsize=\"8\" save-restore=\"no\"/>"
-	"  </feature>"
-	"  <feature name=\"org.gnu.gdb.arm.vfp\">"
-	"    <reg name=\"fpscr\" bitsize=\"32\"/>"
-	"    <reg name=\"d0\" bitsize=\"64\" type=\"float\"/>"
-	"    <reg name=\"d1\" bitsize=\"64\" type=\"float\"/>"
-	"    <reg name=\"d2\" bitsize=\"64\" type=\"float\"/>"
-	"    <reg name=\"d3\" bitsize=\"64\" type=\"float\"/>"
-	"    <reg name=\"d4\" bitsize=\"64\" type=\"float\"/>"
-	"    <reg name=\"d5\" bitsize=\"64\" type=\"float\"/>"
-	"    <reg name=\"d6\" bitsize=\"64\" type=\"float\"/>"
-	"    <reg name=\"d7\" bitsize=\"64\" type=\"float\"/>"
-	"    <reg name=\"d8\" bitsize=\"64\" type=\"float\"/>"
-	"    <reg name=\"d9\" bitsize=\"64\" type=\"float\"/>"
-	"    <reg name=\"d10\" bitsize=\"64\" type=\"float\"/>"
-	"    <reg name=\"d11\" bitsize=\"64\" type=\"float\"/>"
-	"    <reg name=\"d12\" bitsize=\"64\" type=\"float\"/>"
-	"    <reg name=\"d13\" bitsize=\"64\" type=\"float\"/>"
-	"    <reg name=\"d14\" bitsize=\"64\" type=\"float\"/>"
-	"    <reg name=\"d15\" bitsize=\"64\" type=\"float\"/>"
-	"  </feature>"
-	"</target>"
-*/
-static size_t create_tdesc_cortex_mf(char *buffer, size_t max_len)
-{
-	// Minor hack: technically snprintf returns an int for possibility of error, but in this case
-	// these functions are given static input that should not be able to fail -- and if it does,
-	// then there's not really anything we can do about it, so we repatedly cast this variable
-	// to a size_t when calculating printsz (see below). Likewise, cortexm_build_target_description()
-	// has static inputs and shouldn't ever return a value large enough for casting it to a
-	// signed int to change its value, and if it does, then again there's something wrong that
-	// we can't really do anything about.
-
-	// The first part of the target description for the Cortex-MF is identical to the Cortex-M
-	// target description.
-	int total = (int)cortexm_build_target_description(buffer, max_len);
-
-	// We can't just repeatedly pass max_len to snprintf, because we keep changing the start
-	// of buffer (effectively changing its size), so we have to repeatedly compute the size
-	// passed to snprintf by subtracting the current total from max_len.
-	// ...Unless max_len is 0, in which case that subtraction will result in an (underflowed)
-	// negative number. So we also have to repatedly check if max_len is 0 before perofmring
-	// that subtraction.
-	size_t printsz = max_len;
-
-	if (max_len != 0) {
-		// Minor hack: subtract the target closing tag, since we have a bit more to add.
-		total -= strlen("</target>");
-
-		printsz = max_len - (size_t)total;
-	}
-
-	total += snprintf(buffer + total, printsz,
-		"<feature name=\"org.gnu.gdb.arm.vfp\">"
-		"<reg name=\"fpscr\" bitsize=\"32\"/>");
-
-	// After fpscr, the rest of the vfp registers follow a regular format: d0-d15, bitsize 64, type float.
-	for (uint8_t i = 0; i <= 15; ++i) {
+	/* If the target has a FPU, include that */
+	if (target_options & CORTEXM_TOPT_FLAVOUR_V7MF) {
 		if (max_len != 0)
 			printsz = max_len - (size_t)total;
-
-		total += snprintf(buffer + total, printsz, "<reg name=\"d%u\" bitsize=\"64\" type=\"float\"/>", i);
+		total += (int)cortexm_build_target_fpu_description(buffer + total, printsz);
 	}
 
 	if (max_len != 0)
@@ -1364,15 +1308,9 @@ static size_t create_tdesc_cortex_mf(char *buffer, size_t max_len)
 
 static const char *cortexm_target_description(target_s *const target)
 {
-	const bool is_cortexmf = target->target_options & CORTEXM_TOPT_FLAVOUR_V7MF;
-	const size_t description_length =
-		(is_cortexmf ? create_tdesc_cortex_mf(NULL, 0) : cortexm_build_target_description(NULL, 0)) + 1U;
+	const size_t description_length = cortexm_build_target_description(NULL, 0, target->target_options) + 1U;
 	char *const description = malloc(description_length);
-	if (description) {
-		if (is_cortexmf)
-			create_tdesc_cortex_mf(description, description_length);
-		else
-			cortexm_build_target_description(description, description_length);
-	}
+	if (description)
+		cortexm_build_target_description(description, description_length, target->target_options);
 	return description;
 }
