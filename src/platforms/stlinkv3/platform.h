@@ -81,7 +81,6 @@ extern bool debug_bmp;
 
 #define PLATFORM_HAS_TRACESWO 1
 #define NUM_TRACE_PACKETS     (16)
-#define TRACESWO_PROTOCOL     2 /* 1 = Manchester, 2 = NRZ / async */
 
 #define SWDIO_MODE_REG      GPIO_MODER(TMS_PORT)
 #define SWDIO_MODE_REG_MULT (1 << (9 << 1))
