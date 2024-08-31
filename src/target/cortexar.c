@@ -1430,12 +1430,17 @@ static target_halt_reason_e cortexar_halt_poll(target_s *const target, target_ad
 
 static void cortexar_halt_resume(target_s *const target, const bool step)
 {
+	uint32_t dscr = cortex_dbg_read32(target, CORTEXAR_DBG_DSCR);
+
+	/* If system is not already halted, this function hangs. */
+	if (dscr & ~CORTEXAR_DBG_DSCR_HALTED)
+		return;
+
 	cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
 	priv->base.ap->dp->quirks &= ~ADIV5_AP_ACCESS_BANKED;
 	/* Restore the core's registers so the running program doesn't know we've been in there */
 	cortexar_regs_restore(target);
 
-	uint32_t dscr = cortex_dbg_read32(target, CORTEXAR_DBG_DSCR);
 	/*
 	 * If we're setting up to single-step the core, configure the final breakpoint slot appropriately.
 	 * We always keep the final supported breakpoint reserved for this purpose so
