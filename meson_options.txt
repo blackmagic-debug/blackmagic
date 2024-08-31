@@ -111,7 +111,7 @@ option(
 	'trace_protocol',
 	type: 'combo',
 	choices: ['1','2', '3'],
-	value: '2',
+	value: '3',
 	description: 'Select the Trace SWO protocol, 1 == Manchester, 2 == UART, 3 == platform'
 )
 option(
