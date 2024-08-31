@@ -56,7 +56,7 @@ const command_s cortexm_cmd_list[] = {
 /* target options recognised by the Cortex-M target */
 #define CORTEXM_TOPT_FLAVOUR_V6M (1U << 1U) /* if not set, target is assumed to be v7m */
 
-static const char *cortexm_regs_description(target_s *target);
+static const char *cortexm_target_description(target_s *target);
 static void cortexm_regs_read(target_s *target, void *data);
 static void cortexm_regs_write(target_s *target, const void *data);
 static uint32_t cortexm_pc_read(target_s *target);
@@ -272,7 +272,7 @@ bool cortexm_probe(adiv5_access_port_s *ap)
 	target_mem32_write32(target, CORTEXM_CPACR, cpacr);
 	bool is_cortexmf = target_mem32_read32(target, CORTEXM_CPACR) == cpacr;
 
-	target->regs_description = cortexm_regs_description;
+	target->regs_description = cortexm_target_description;
 	target->regs_read = cortexm_regs_read;
 	target->regs_write = cortexm_regs_write;
 	target->reg_read = cortexm_reg_read;
@@ -1191,7 +1191,7 @@ static bool cortexm_hostio_request(target_s *const target)
  * "  </feature>"
  * "</target>"
  */
-static size_t create_tdesc_cortex_m(char *buffer, size_t max_len)
+static size_t cortexm_build_target_description(char *buffer, size_t max_len)
 {
 	// Minor hack: technically snprintf returns an int for possibility of error, but in this case
 	// these functions are given static input that should not be able to fail -- and if it does,
@@ -1314,14 +1314,14 @@ static size_t create_tdesc_cortex_mf(char *buffer, size_t max_len)
 	// Minor hack: technically snprintf returns an int for possibility of error, but in this case
 	// these functions are given static input that should not be able to fail -- and if it does,
 	// then there's not really anything we can do about it, so we repatedly cast this variable
-	// to a size_t when calculating printsz (see below). Likewise, create_tdesc_cortex_m()
+	// to a size_t when calculating printsz (see below). Likewise, cortexm_build_target_description()
 	// has static inputs and shouldn't ever return a value large enough for casting it to a
 	// signed int to change its value, and if it does, then again there's something wrong that
 	// we can't really do anything about.
 
 	// The first part of the target description for the Cortex-MF is identical to the Cortex-M
 	// target description.
-	int total = (int)create_tdesc_cortex_m(buffer, max_len);
+	int total = (int)cortexm_build_target_description(buffer, max_len);
 
 	// We can't just repeatedly pass max_len to snprintf, because we keep changing the start
 	// of buffer (effectively changing its size), so we have to repeatedly compute the size
@@ -1362,17 +1362,17 @@ static size_t create_tdesc_cortex_mf(char *buffer, size_t max_len)
 	return (size_t)total;
 }
 
-static const char *cortexm_regs_description(target_s *target)
+static const char *cortexm_target_description(target_s *const target)
 {
 	const bool is_cortexmf = target->target_options & CORTEXM_TOPT_FLAVOUR_V7MF;
 	const size_t description_length =
-		(is_cortexmf ? create_tdesc_cortex_mf(NULL, 0) : create_tdesc_cortex_m(NULL, 0)) + 1U;
+		(is_cortexmf ? create_tdesc_cortex_mf(NULL, 0) : cortexm_build_target_description(NULL, 0)) + 1U;
 	char *const description = malloc(description_length);
 	if (description) {
 		if (is_cortexmf)
 			create_tdesc_cortex_mf(description, description_length);
 		else
-			create_tdesc_cortex_m(description, description_length);
+			cortexm_build_target_description(description, description_length);
 	}
 	return description;
 }
