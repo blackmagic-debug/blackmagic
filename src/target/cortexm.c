@@ -54,6 +54,8 @@ const command_s cortexm_cmd_list[] = {
 	{NULL, NULL, NULL},
 };
 
+#define CORTEXM_DCRSR_REG_WRITE (1U << 16U)
+
 /* Target options recognised by the Cortex-M target */
 #define CORTEXM_TOPT_FLAVOUR_V6M (1U << 1U) /* if not set, target is assumed to be v7m */
 
@@ -630,13 +632,14 @@ static void cortexm_regs_write(target_s *const target, const void *const data)
 		/* Walk the regnum_cortex_m array, writing the registers it specifies */
 		for (size_t i = 0; i < CORTEXM_GENERAL_REG_COUNT; ++i) {
 			adiv5_dp_write(ap->dp, ADIV5_AP_DB(DB_DCRDR), regs[i]);
-			adiv5_dp_write(ap->dp, ADIV5_AP_DB(DB_DCRSR), 0x10000 | regnum_cortex_m[i]);
+			adiv5_dp_write(ap->dp, ADIV5_AP_DB(DB_DCRSR), CORTEXM_DCRSR_REG_WRITE | regnum_cortex_m[i]);
 		}
+		/* If the device has a FPU, also walk the regnum_cortex_mf array */
 		if (target->target_options & CORTEXM_TOPT_FLAVOUR_V7MF) {
 			size_t offset = CORTEXM_GENERAL_REG_COUNT;
 			for (size_t i = 0; i < CORTEX_FLOAT_REG_COUNT; ++i) {
 				adiv5_dp_write(ap->dp, ADIV5_AP_DB(DB_DCRDR), regs[offset + i]);
-				adiv5_dp_write(ap->dp, ADIV5_AP_DB(DB_DCRSR), 0x10000 | regnum_cortex_mf[i]);
+				adiv5_dp_write(ap->dp, ADIV5_AP_DB(DB_DCRSR), CORTEXM_DCRSR_REG_WRITE | regnum_cortex_mf[i]);
 			}
 		}
 #if PC_HOSTED == 1
