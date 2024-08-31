@@ -99,7 +99,7 @@ static uint32_t cortexm_initial_halt(adiv5_access_port_s *ap)
 	platform_timeout_set(&halt_timeout, cortexm_wait_timeout);
 
 	/* Setup to read/write DHCSR */
-	/* adiv5_mem_access_setup() uses ADIV5_AP_CSW_ADDRINC_SINGLE which is undesirable for our use here */
+	/* adi_ap_mem_access_setup() uses ADIV5_AP_CSW_ADDRINC_SINGLE which is undesirable for our use here */
 	adiv5_ap_write(ap, ADIV5_AP_CSW, ap->csw | ADIV5_AP_CSW_SIZE_WORD);
 	adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_TAR_LOW, CORTEXM_DHCSR);
 	/* Write (and do a dummy read of) DHCSR to ensure debug is enabled */
@@ -536,31 +536,6 @@ void adiv5_dp_init(adiv5_debug_port_s *const dp)
 	adiv5_dp_unref(dp);
 }
 
-/* Program the CSW and TAR for sequential access at a given width */
-void adiv5_mem_access_setup(adiv5_access_port_s *const ap, const target_addr64_t addr, const align_e align)
-{
-	uint32_t csw = ap->csw | ADIV5_AP_CSW_ADDRINC_SINGLE;
-
-	switch (align) {
-	case ALIGN_8BIT:
-		csw |= ADIV5_AP_CSW_SIZE_BYTE;
-		break;
-	case ALIGN_16BIT:
-		csw |= ADIV5_AP_CSW_SIZE_HALFWORD;
-		break;
-	case ALIGN_64BIT:
-	case ALIGN_32BIT:
-		csw |= ADIV5_AP_CSW_SIZE_WORD;
-		break;
-	}
-	/* Select AP bank 0 and write CSW */
-	adiv5_ap_write(ap, ADIV5_AP_CSW, csw);
-	/* Then write TAR which is in the same AP bank */
-	if (ap->flags & ADIV5_AP_FLAGS_64BIT)
-		adiv5_dp_write(ap->dp, ADIV5_AP_TAR_HIGH, (uint32_t)(addr >> 32U));
-	adiv5_dp_write(ap->dp, ADIV5_AP_TAR_LOW, (uint32_t)addr);
-}
-
 /* Unpack data from the source uint32_t value based on data alignment and source address */
 void *adiv5_unpack_data(void *const dest, const target_addr32_t src, const uint32_t data, const align_e align)
 {
@@ -642,7 +617,7 @@ void adiv5_mem_read_bytes(adiv5_access_port_s *const ap, void *dest, const targe
 	/* Calculate how much each loop will increment the destination address by */
 	const uint8_t stride = 1U << align;
 	/* Set up the transfer */
-	adiv5_mem_access_setup(ap, src, align);
+	adi_ap_mem_access_setup(ap, src, align);
 	/* Now loop through the data and move it 1 stride at a time to the target */
 	for (; begin < end; begin += stride) {
 		/*
@@ -674,7 +649,7 @@ void adiv5_mem_write_bytes(
 	/* Calculate how much each loop will increment the destination address by */
 	const uint8_t stride = 1U << align;
 	/* Set up the transfer */
-	adiv5_mem_access_setup(ap, dest, align);
+	adi_ap_mem_access_setup(ap, dest, align);
 	/* Now loop through the data and move it 1 stride at a time to the target */
 	for (; begin < end; begin += stride) {
 		/*

@@ -50,6 +50,7 @@
 #include "general.h"
 #include "target.h"
 #include "target_internal.h"
+#include "adi.h"
 #include "cortexm.h"
 #ifdef ENABLE_RISCV
 #include "riscv_debug.h"
@@ -528,7 +529,7 @@ void mm32l0_mem_write_sized(adiv5_access_port_s *ap, target_addr64_t dest, const
 	/* Calculate how much each loop will increment the destination address by */
 	const uint8_t stride = 1U << align;
 	/* Set up the transfer */
-	adiv5_mem_access_setup(ap, dest, align);
+	adi_ap_mem_access_setup(ap, dest, align);
 	/* Now loop through the data and move it 1 stride at a time to the target */
 	for (; begin < end; begin += stride) {
 		/*

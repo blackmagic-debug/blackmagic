@@ -42,6 +42,9 @@ void adi_ap_component_probe(
 /* Helper for resuming all cores halted on an AP during probe */
 void adi_ap_resume_cores(adiv5_access_port_s *ap);
 
+/* Helper for setting up memory accesses */
+void adi_ap_mem_access_setup(adiv5_access_port_s *ap, target_addr64_t addr, align_e align);
+
 /*
  * Decode a designer code that's in the following form into BMD's internal designer code representation
  * Bits 10:7 - JEP-106 Continuation code

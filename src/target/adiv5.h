@@ -246,7 +246,6 @@ const void *adiv5_pack_data(target_addr32_t dest, const void *src, uint32_t *dat
 void adiv5_mem_write(adiv5_access_port_s *ap, target_addr64_t dest, const void *src, size_t len);
 
 /* ADIv5 low-level logical operation functions for memory access */
-void adiv5_mem_access_setup(adiv5_access_port_s *ap, target_addr64_t addr, align_e align);
 void adiv5_mem_write_bytes(adiv5_access_port_s *ap, target_addr64_t dest, const void *src, size_t len, align_e align);
 void adiv5_mem_read_bytes(adiv5_access_port_s *ap, void *dest, target_addr64_t src, size_t len);
 /* ADIv5 logical operation functions for AP register I/O */

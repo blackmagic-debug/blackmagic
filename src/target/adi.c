@@ -468,6 +468,31 @@ void adi_ap_resume_cores(adiv5_access_port_s *const ap)
 	}
 }
 
+/* Program the CSW and TAR for sequential access at a given width */
+void adi_ap_mem_access_setup(adiv5_access_port_s *const ap, const target_addr64_t addr, const align_e align)
+{
+	uint32_t csw = ap->csw | ADIV5_AP_CSW_ADDRINC_SINGLE;
+
+	switch (align) {
+	case ALIGN_8BIT:
+		csw |= ADIV5_AP_CSW_SIZE_BYTE;
+		break;
+	case ALIGN_16BIT:
+		csw |= ADIV5_AP_CSW_SIZE_HALFWORD;
+		break;
+	case ALIGN_64BIT:
+	case ALIGN_32BIT:
+		csw |= ADIV5_AP_CSW_SIZE_WORD;
+		break;
+	}
+	/* Select AP bank 0 and write CSW */
+	adiv5_ap_write(ap, ADIV5_AP_CSW, csw);
+	/* Then write TAR which is in the same AP bank */
+	if (ap->flags & ADIV5_AP_FLAGS_64BIT)
+		adiv5_dp_write(ap->dp, ADIV5_AP_TAR_HIGH, (uint32_t)(addr >> 32U));
+	adiv5_dp_write(ap->dp, ADIV5_AP_TAR_LOW, (uint32_t)addr);
+}
+
 static uint32_t adi_ap_read_id(adiv5_access_port_s *ap, uint32_t addr)
 {
 	uint32_t res = 0;
