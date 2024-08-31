@@ -1287,7 +1287,9 @@ static const char *riscv_target_description(target_s *const target)
 	const size_t description_length =
 		riscv_build_target_description(NULL, 0, hart->address_width, hart->extensions) + 1U;
 	char *const description = malloc(description_length);
-	if (description)
-		(void)riscv_build_target_description(description, description_length, hart->address_width, hart->extensions);
+	if (!description) /* malloc failed: heap exhaustion */
+		DEBUG_ERROR("malloc: failed in %s\n", __func__);
+	else
+		riscv_build_target_description(description, description_length, hart->address_width, hart->extensions);
 	return description;
 }
