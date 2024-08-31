@@ -549,7 +549,6 @@ bool cortexm_probe(adiv5_access_port_s *ap)
 				/* Go on and try to detect the target anyways */
 				break;
 			}
-			continue;
 		}
 	}
 
