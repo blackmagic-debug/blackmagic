@@ -1241,69 +1241,79 @@ static size_t cortexm_build_target_fpu_description(char *const buffer, const siz
  * "  </feature>"
  * "</target>"
  */
-static size_t cortexm_build_target_description(char *buffer, size_t max_len, const uint32_t target_options)
+static size_t cortexm_build_target_description(
+	char *const buffer, const size_t max_length, const uint32_t target_options)
 {
-	// Minor hack: technically snprintf returns an int for possibility of error, but in this case
-	// these functions are given static input that should not be able to fail -- and if it does,
-	// then there's nothing we can do about it, so we'll repatedly cast this variable to a size_t
-	// when calculating printsz (see below).
-	int total = 0;
+	/*
+	 * Minor hack: technically snprintf returns an int for possibility of error, but in this case
+	 * these functions are given static input that should not be able to fail -- and if it does,
+	 * then there's nothing we can do about it, so we'll repatedly cast its result to size_t
+	 * when updating this variable (see below).
+	 */
+	size_t offset = 0U;
+	/*
+	 * We can't just repeatedly pass max_length to snprintf, because we keep changing the start
+	 * of buffer (effectively changing its size), so we have to repeatedly recompute the size
+	 * passed to snprintf by subtracting the current total from max_length.
+	 * ...Unless max_length is 0, in which case that subtraction will result in an (underflowed)
+	 * negative number. So we also have to repatedly check if max_length is 0 before performing
+	 * that subtraction.
+	 */
+	size_t print_size = max_length;
 
-	// We can't just repeatedly pass max_len to snprintf, because we keep changing the start
-	// of buffer (effectively changing its size), so we have to repeatedly compute the size
-	// passed to snprintf by subtracting the current total from max_len.
-	// ...Unless max_len is 0, in which case that subtraction will result in an (underflowed)
-	// negative number. So we also have to repatedly check if max_len is 0 before performing
-	// that subtraction.
-	size_t printsz = max_len;
-
-	// Start with the "preamble", which is generic across ARM targets,
-	// ...save for one word, so we'll have to do the preamble in halves.
-	total += snprintf(buffer, printsz, "%s target %sarm%s <feature name=\"org.gnu.gdb.arm.m-profile\">",
+	/*
+	 * Start with the "preamble", which is generic across ARM targets,
+	 * ...save for one word, so we'll have to do the preamble in halves.
+	 */
+	offset += (size_t)snprintf(buffer, print_size, "%s target %sarm%s <feature name=\"org.gnu.gdb.arm.m-profile\">",
 		gdb_xml_preamble_first, gdb_xml_preamble_second, gdb_xml_preamble_third);
 
-	// Then the general purpose registers, which have names of r0 to r12,
-	// and all the same bitsize.
-	for (uint8_t i = 0; i <= 12; ++i) {
-		if (max_len != 0)
-			printsz = max_len - (size_t)total;
-
-		total += snprintf(buffer + total, printsz, "<reg name=\"r%u\" bitsize=\"32\"/>", i);
+	/* Then the general purpose registers, which have names of r0 to r12, and all the same bitsize. */
+	for (uint8_t i = 0U; i <= 12U; ++i) {
+		if (max_length != 0)
+			print_size = max_length - offset;
+		offset += (size_t)snprintf(buffer + offset, print_size, "<reg name=\"r%u\" bitsize=\"32\"/>", i);
 	}
 
-	// Now for sp, lr, pc, xpsr, msp, psp, primask, basepri, faultmask, and control.
-	// These special purpose registers are a little more complicated.
-	// Some of them have different bitsizes, specified types, or specified save-restore values.
-	// We'll use the 'associative arrays' defined for those values.
-	// NOTE: unlike the other loops, this loop uses a size_t for its counter, as it's used to index into arrays.
-	for (size_t i = 0; i < ARRAY_LENGTH(cortex_m_spr_names); ++i) {
-		if (max_len != 0)
-			printsz = max_len - (size_t)total;
+	/*
+	 * Now for sp, lr, pc, xpsr, msp, psp, primask, basepri, faultmask, and control.
+	 * These special purpose registers are a little more complicated.
+	 * Some of them have different bitsizes, specified types, or specified save-restore values.
+	 * We'll use the 'associative arrays' defined for those values.
+	 * NOTE: unlike the other loops, this loop uses a size_t for its counter, as it's used to index into arrays.
+	 */
+	for (size_t i = 0U; i < ARRAY_LENGTH(cortex_m_spr_names); ++i) {
+		if (max_length != 0U)
+			print_size = max_length - offset;
 
+		/* Extract the register type and save-restore status from the tables at the top of the file */
 		gdb_reg_type_e type = cortex_m_spr_types[i];
 		gdb_reg_save_restore_e save_restore = cortex_m_spr_save_restores[i];
 
-		total += snprintf(buffer + total, printsz, "<reg name=\"%s\" bitsize=\"%u\"%s%s/>", cortex_m_spr_names[i],
-			cortex_m_spr_bitsizes[i], gdb_reg_save_restore_strings[save_restore], gdb_reg_type_strings[type]);
+		offset += (size_t)snprintf(buffer + offset, print_size, "<reg name=\"%s\" bitsize=\"%u\"%s%s/>",
+			cortex_m_spr_names[i], cortex_m_spr_bitsizes[i], gdb_reg_save_restore_strings[save_restore],
+			gdb_reg_type_strings[type]);
 	}
 
 	/* If the target has a FPU, include that */
 	if (target_options & CORTEXM_TOPT_FLAVOUR_V7MF) {
-		if (max_len != 0)
-			printsz = max_len - (size_t)total;
-		total += (int)cortexm_build_target_fpu_description(buffer + total, printsz);
+		if (max_length != 0U)
+			print_size = max_length - offset;
+		offset += cortexm_build_target_fpu_description(buffer + offset, print_size);
 	}
 
-	if (max_len != 0)
-		printsz = max_len - (size_t)total;
+	/* Now generate the closing tags that are required */
+	if (max_length != 0U)
+		print_size = max_length - offset;
+	offset += (size_t)snprintf(buffer + offset, print_size, "</feature></target>");
 
-	total += snprintf(buffer + total, printsz, "</feature></target>");
-
-	// Minor hack: technically snprintf returns an int for possibility of error, but in this case
-	// these functions are given static input that should not ever be able to fail -- and if it
-	// does, then there's nothing we can do about it, so we'll just discard the signedness
-	// of total when we return it.
-	return (size_t)total;
+	/*
+	 * Minor hack: technically snprintf returns an int for possibility of error, but in this case
+	 * these functions are given static input that should not ever be able to fail -- and if it
+	 * does, then there's nothing we can do about it, so we just discard the signedness when building
+	 * the total in `offset` as we go.
+	 */
+	return offset;
 }
 
 static const char *cortexm_target_description(target_s *const target)
