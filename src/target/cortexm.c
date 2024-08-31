@@ -583,8 +583,7 @@ static void cortexm_regs_read(target_s *const target, void *const data)
 		 * and do so for 32-bit access
 		 */
 		adi_ap_mem_access_setup(ap, CORTEXM_DHCSR, ALIGN_32BIT);
-		/* Configure the bank selection to the appropriate AP register bank */
-		adiv5_dp_write(ap->dp, ADIV5_DP_SELECT, ((uint32_t)ap->apsel << 24U) | 0x10U);
+		adi_ap_banked_access_setup(ap);
 
 		/* Walk the regnum_cortex_m array, reading the registers it specifies */
 		for (size_t i = 0; i < CORTEXM_GENERAL_REG_COUNT; ++i) {
@@ -626,8 +625,7 @@ static void cortexm_regs_write(target_s *const target, const void *const data)
 		 * and do so for 32-bit access
 		 */
 		adi_ap_mem_access_setup(ap, CORTEXM_DHCSR, ALIGN_32BIT);
-		/* Configure the bank selection to the appropriate AP register bank */
-		adiv5_dp_write(ap->dp, ADIV5_DP_SELECT, ((uint32_t)ap->apsel << 24U) | 0x10U);
+		adi_ap_banked_access_setup(ap);
 
 		/* Walk the regnum_cortex_m array, writing the registers it specifies */
 		for (size_t i = 0; i < CORTEXM_GENERAL_REG_COUNT; ++i) {

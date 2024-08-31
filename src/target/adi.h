@@ -42,8 +42,9 @@ void adi_ap_component_probe(
 /* Helper for resuming all cores halted on an AP during probe */
 void adi_ap_resume_cores(adiv5_access_port_s *ap);
 
-/* Helper for setting up memory accesses */
+/* Helpers for setting up memory accesses and banked accesses */
 void adi_ap_mem_access_setup(adiv5_access_port_s *ap, target_addr64_t addr, align_e align);
+void adi_ap_banked_access_setup(adiv5_access_port_s *base_ap);
 
 /*
  * Decode a designer code that's in the following form into BMD's internal designer code representation

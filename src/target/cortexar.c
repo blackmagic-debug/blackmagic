@@ -414,8 +414,8 @@ static void cortexar_banked_dcc_mode(target_s *const target)
 		priv->base.ap->dp->quirks |= ADIV5_AP_ACCESS_BANKED;
 		/* Configure the AP to put {DBGDTR{TX,RX},DBGITR,DBGDCSR} in banked data registers window */
 		adi_ap_mem_access_setup(priv->base.ap, priv->base.base_addr + CORTEXAR_DBG_DTRTX, ALIGN_32BIT);
-		/* Selecting AP bank 1 to finish switching into banked mode */
-		adiv5_dp_write(priv->base.ap->dp, ADIV5_DP_SELECT, ((uint32_t)priv->base.ap->apsel << 24U) | 0x10U);
+		/* Now select AP bank 1 to finish switching into banked mode */
+		adi_ap_banked_access_setup(priv->base.ap);
 	}
 }
 

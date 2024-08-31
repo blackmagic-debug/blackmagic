@@ -37,6 +37,7 @@
 #include "jep106.h"
 #include "adi.h"
 #include "adiv5.h"
+#include "adiv6.h"
 #include "cortex.h"
 #include "cortex_internal.h"
 
@@ -491,6 +492,23 @@ void adi_ap_mem_access_setup(adiv5_access_port_s *const ap, const target_addr64_
 	if (ap->flags & ADIV5_AP_FLAGS_64BIT)
 		adiv5_dp_write(ap->dp, ADIV5_AP_TAR_HIGH, (uint32_t)(addr >> 32U));
 	adiv5_dp_write(ap->dp, ADIV5_AP_TAR_LOW, (uint32_t)addr);
+}
+
+void adi_ap_banked_access_setup(adiv5_access_port_s *base_ap)
+{
+	/* Check which ADI version this is for, v5 only requires we set up the DP's SELECT register */
+	if (base_ap->dp->version <= 2U)
+		/* Configure the bank selection to the appropriate AP register bank */
+		adiv5_dp_write(base_ap->dp, ADIV5_DP_SELECT, ((uint32_t)base_ap->apsel << 24U) | (ADIV5_AP_DB(0) & 0x00f0U));
+	else {
+		/* ADIv6 requires we set up the DP's SELECT1 and SELECT registers to correctly acccess the AP */
+		adiv6_access_port_s *const ap = (adiv6_access_port_s *)base_ap;
+		/* Set SELECT1 in the DP up first */
+		adiv5_dp_write(base_ap->dp, ADIV5_DP_SELECT, ADIV5_DP_BANK5);
+		adiv5_dp_write(base_ap->dp, ADIV6_DP_SELECT1, (uint32_t)(ap->ap_address >> 32U));
+		/* Now set up SELECT in the DP */
+		adiv5_dp_write(base_ap->dp, ADIV5_DP_SELECT, (uint32_t)ap->ap_address | (ADIV5_AP_DB(0) & ADIV6_AP_BANK_MASK));
+	}
 }
 
 static uint32_t adi_ap_read_id(adiv5_access_port_s *ap, uint32_t addr)
