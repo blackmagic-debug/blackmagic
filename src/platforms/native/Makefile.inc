@@ -4,7 +4,7 @@ OBJCOPY = $(CROSS_COMPILE)objcopy
 
 CFLAGS += -Istm32/include -mcpu=cortex-m3 -mthumb \
 	-DSTM32F1 -DBLACKMAGIC -I../deps/libopencm3/include \
-	-Iplatforms/common/stm32 -DDFU_SERIAL_LENGTH=9
+	-Iplatforms/common/stm32 -DDFU_SERIAL_LENGTH=9 -DTRACESWO_PROTOCOL=1
 
 LDFLAGS_BOOT := $(LDFLAGS) -lopencm3_stm32f1 -Lplatforms/native \
 	-Tnative.ld --specs=nano.specs -nostartfiles -lc \
