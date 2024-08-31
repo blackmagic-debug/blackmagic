@@ -54,7 +54,7 @@ const command_s cortexm_cmd_list[] = {
 	{NULL, NULL, NULL},
 };
 
-/* target options recognised by the Cortex-M target */
+/* Target options recognised by the Cortex-M target */
 #define CORTEXM_TOPT_FLAVOUR_V6M (1U << 1U) /* if not set, target is assumed to be v7m */
 
 static const char *cortexm_target_description(target_s *target);
@@ -73,7 +73,7 @@ static int cortexm_breakwatch_set(target_s *target, breakwatch_s *breakwatch);
 static int cortexm_breakwatch_clear(target_s *target, breakwatch_s *breakwatch);
 static target_addr_t cortexm_check_watch(target_s *target);
 
-static bool cortexm_hostio_request(target_s *const target);
+static bool cortexm_hostio_request(target_s *target);
 
 typedef struct cortexm_priv {
 	cortex_priv_s base;
