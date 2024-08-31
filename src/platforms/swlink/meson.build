@@ -54,6 +54,9 @@ probe_swlink_link_args = [
 ]
 
 trace_protocol = get_option('trace_protocol')
+if trace_protocol == '3'
+	trace_protocol = '2'
+endif
 if trace_protocol == '2'
 	probe_swlink_args += '-DTRACESWO_PROTOCOL=2'
 else
