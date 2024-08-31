@@ -59,6 +59,9 @@ probe_stlinkv3_link_args = [
 ]
 
 trace_protocol = get_option('trace_protocol')
+if trace_protocol == '3'
+	trace_protocol = '2'
+endif
 if trace_protocol == '2'
 	probe_stlinkv3_dependencies = fixme_platform_stm32f7_traceswoasync
 	probe_stlinkv3_args += ['-DTRACESWO_PROTOCOL=2']
