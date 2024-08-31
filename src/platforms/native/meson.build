@@ -39,6 +39,14 @@ probe_native_args = [
 	'-DBLACKMAGIC',
 ]
 
+trace_protocol = get_option('trace_protocol')
+if trace_protocol == '1'
+probe_native_args += [f'-DTRACESWO_PROTOCOL=@trace_protocol@']
+	probe_native_dependencies = fixme_platform_stm32_traceswo
+else
+	error('Unsupported SWO mode requested')
+endif
+
 probe_native_common_link_args = [
 	'-L@0@'.format(meson.current_source_dir()),
 	'-T@0@'.format('native.ld'),
@@ -53,7 +61,7 @@ probe_host = declare_dependency(
 	sources: probe_native_sources,
 	compile_args: probe_native_args,
 	link_args: probe_native_common_link_args + probe_native_link_args,
-	dependencies: [platform_common, platform_stm32f1, fixme_platform_stm32_traceswo],
+	dependencies: [platform_common, platform_stm32f1, probe_native_dependencies],
 )
 
 probe_bootloader = declare_dependency(

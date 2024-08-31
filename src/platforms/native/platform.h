@@ -27,7 +27,6 @@
 #include "timing.h"
 #include "timing_stm32.h"
 
-#define TRACESWO_PROTOCOL 1U /* 1 = Manchester, 2 = NRZ / async */
 #define PLATFORM_HAS_TRACESWO
 #define PLATFORM_HAS_POWER_SWITCH
 
