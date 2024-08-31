@@ -55,7 +55,6 @@ probe_blackpill_load_address = bmd_bootloader ? '0x08004000' : '0x08000000'
 probe_blackpill_args = [
 	f'-DDFU_SERIAL_LENGTH=@probe_blackpill_dfu_serial_length@',
 	f'-DAPP_START=@probe_blackpill_load_address@',
-	'-DTRACESWO_PROTOCOL=2',
 ]
 
 blackpill_alternative_pinout = get_option('alternative_pinout')
@@ -65,6 +64,17 @@ endif
 
 if on_carrier_board
 	probe_blackpill_args += ['-DON_CARRIER_BOARD']
+endif
+
+trace_protocol = get_option('trace_protocol')
+if trace_protocol == '3'
+	trace_protocol = '2'
+endif
+probe_blackpill_args += [f'-DTRACESWO_PROTOCOL=@trace_protocol@']
+if trace_protocol == '1'
+	probe_blackpill_dependencies = fixme_platform_stm32_traceswo
+else
+	probe_blackpill_dependencies = fixme_platform_stm32_traceswoasync
 endif
 
 if bmd_bootloader
@@ -86,7 +96,7 @@ probe_host = declare_dependency(
 	sources: probe_blackpill_sources,
 	compile_args: probe_blackpill_args,
 	link_args: probe_blackpill_common_link_args + probe_blackpill_link_args,
-	dependencies: [platform_common, platform_stm32f4, fixme_platform_stm32_traceswoasync],
+	dependencies: [platform_common, platform_stm32f4, probe_blackpill_dependencies],
 )
 
 probe_bootloader = declare_dependency(
