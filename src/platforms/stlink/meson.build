@@ -70,6 +70,9 @@ probe_stlink_dependencies = [platform_common, platform_stm32f1]
 stlink_swim_nrst_as_uart = get_option('stlink_swim_nrst_as_uart')
 
 trace_protocol = get_option('trace_protocol')
+if trace_protocol == '3'
+	trace_protocol = '2'
+endif
 if probe == 'stlink' and stlink_swim_nrst_as_uart
 	probe_stlink_args += ['-DSWIM_NRST_AS_UART=1']
 	probe_stlink_dependencies += fixme_platform_stm32_traceswo
