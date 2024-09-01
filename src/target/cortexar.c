@@ -390,6 +390,7 @@ static void cortexar_reset(target_s *target);
 static target_halt_reason_e cortexar_halt_poll(target_s *target, target_addr_t *watch);
 static void cortexar_halt_request(target_s *target);
 static void cortexar_halt_resume(target_s *target, bool step);
+static bool cortexar_halt_and_wait(target_s *target);
 
 static int cortexar_breakwatch_set(target_s *target, breakwatch_s *breakwatch);
 static int cortexar_breakwatch_clear(target_s *target, breakwatch_s *breakwatch);
@@ -636,41 +637,6 @@ static void cortexar_coproc_write(target_s *const target, const uint8_t coproc, 
 	cortexar_run_insn(target,
 		ARM_MCR_INSN |
 			ENCODE_CP_ACCESS(coproc & 0xfU, (op >> 8U) & 0x7U, 0U, (op >> 4U) & 0xfU, op & 0xfU, (op >> 12U) & 0x7U));
-}
-
-/*
- * Perform a virtual to physical address translation.
- * NB: This requires the core to be halted! Trashes r0.
- */
-static target_addr_t cortexar_virt_to_phys(target_s *const target, const target_addr_t virt_addr)
-{
-	/* Check if the target is PMSA and return early if it is */
-	if (!(target->target_options & TOPT_FLAVOUR_VIRT_MEM))
-		return virt_addr;
-
-	/*
-	 * Now we know the target is VMSA and so has the address translation machinery,
-	 * start by loading r0 with the VA to translate and request its translation
-	 */
-	cortexar_core_reg_write(target, 0U, virt_addr);
-	cortexar_coproc_write(target, CORTEXAR_ATS1CPR, 0U);
-	/*
-	 * Ensure that's complete with a sync barrier, then read the result back
-	 * from the physical address register into r0 so we can extract the result
-	 */
-	cortexar_run_insn(target, ARM_ISB_INSN);
-	cortexar_coproc_read(target, CORTEXAR_PAR32);
-
-	const uint32_t phys_addr = cortexar_core_reg_read(target, 0U);
-	/* Check if the MMU indicated a translation failure, marking a fault if it did */
-	if (phys_addr & CORTEXAR_PAR32_FAULT) {
-		cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
-		priv->core_status |= CORTEXAR_STATUS_MMU_FAULT;
-	}
-
-	/* Convert the physical address to a virtual one using the top 20 bits of PAR and the bottom 12 of the virtual. */
-	const target_addr_t address = (phys_addr & 0xfffff000U) | (virt_addr & 0x00000fffU);
-	return address;
 }
 
 static bool cortexar_oslock_unlock(target_s *const target)
@@ -1071,12 +1037,35 @@ static void cortexar_mem_handle_fault(target_s *const target, const char *const 
 }
 
 /*
+ * Halt the core and await halted status.
+ */
+static bool cortexar_halt_and_wait(target_s *const target)
+{
+	if (!(cortex_dbg_read32(target, CORTEXAR_DBG_DSCR) & CORTEXAR_DBG_DSCR_HALTED)) {
+		platform_timeout_s timeout;
+		cortexar_halt_request(target);
+		platform_timeout_set(&timeout, 250);
+		target_halt_reason_e reason = TARGET_HALT_RUNNING;
+		while (!platform_timeout_is_expired(&timeout) && reason == TARGET_HALT_RUNNING)
+			reason = target_halt_poll(target, NULL);
+		if (reason != TARGET_HALT_REQUEST) {
+			DEBUG_ERROR("Failed to halt the core\n");
+			return false;
+		}
+		return true;
+	}
+	return false;
+}
+
+/*
  * This reads memory by jumping from the debug unit bus to the system bus.
  * NB: This requires the core to be halted! Uses instruction launches on
  * the core and requires we're in debug mode to work. Trashes r0.
  */
 static void cortexar_mem_read(target_s *const target, void *const dest, const target_addr64_t src, const size_t len)
 {
+	const bool halted_in_function = cortexar_halt_and_wait(target);
+
 	cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
 	/* Cache DFSR and DFAR in case we wind up triggering a data fault */
 	if (!(priv->core_status & CORTEXAR_STATUS_FAULT_CACHE_VALID)) {
@@ -1110,6 +1099,10 @@ static void cortexar_mem_read(target_s *const target, void *const dest, const ta
 	if (len > 16U)
 		DEBUG_PROTO(" ...");
 	DEBUG_PROTO("\n");
+
+	if (halted_in_function) {
+		cortexar_halt_resume(target, false);
+	}
 }
 
 /* Fast path for cortexar_mem_write(). Assumes the address to read data from is already loaded in r0. */
@@ -1350,6 +1343,7 @@ static void cortexar_reset(target_s *const target)
 
 	/* 10ms delay to ensure bootroms have had time to run */
 	platform_delay(10);
+
 	/* Ignore any initial errors out of reset */
 	target_check_error(target);
 }
@@ -1431,12 +1425,11 @@ static target_halt_reason_e cortexar_halt_poll(target_s *const target, target_ad
 static void cortexar_halt_resume(target_s *const target, const bool step)
 {
 	uint32_t dscr = cortex_dbg_read32(target, CORTEXAR_DBG_DSCR);
+	cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
 
-	/* If system is not already halted, this function hangs. */
-	if (dscr & ~CORTEXAR_DBG_DSCR_HALTED)
+	if (!(dscr & CORTEXAR_DBG_DSCR_HALTED))
 		return;
 
-	cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
 	priv->base.ap->dp->quirks &= ~ADIV5_AP_ACCESS_BANKED;
 	/* Restore the core's registers so the running program doesn't know we've been in there */
 	cortexar_regs_restore(target);
@@ -1543,10 +1536,16 @@ static void cortexar_config_breakpoint(
 	else
 		mode |= CORTEXAR_DBG_BCR_BYTE_SELECT_ALL;
 
+	const bool halted_in_function = cortexar_halt_and_wait(target);
+
 	/* Configure the breakpoint slot */
-	cortex_dbg_write32(target, CORTEXAR_DBG_BVR + (slot << 2U), cortexar_virt_to_phys(target, addr & ~3U));
+	/* Removed virt_to_phys use from this line as its logic needs to be fixed. */
+	cortex_dbg_write32(target, CORTEXAR_DBG_BVR + (slot << 2U), addr & ~3U);
 	cortex_dbg_write32(
 		target, CORTEXAR_DBG_BCR + (slot << 2U), CORTEXAR_DBG_BCR_ENABLE | CORTEXAR_DBG_BCR_ALL_MODES | (mode & ~7U));
+
+	if (halted_in_function)
+		cortexar_halt_resume(target, false);
 }
 
 static uint32_t cortexar_watchpoint_mode(const target_breakwatch_e type)
@@ -1575,10 +1574,16 @@ static void cortexar_config_watchpoint(target_s *const target, const size_t slot
 	const uint32_t byte_mask = ((1U << breakwatch->size) - 1U) << (breakwatch->addr & 3U);
 	const uint32_t mode = cortexar_watchpoint_mode(breakwatch->type) | CORTEXAR_DBG_WCR_BYTE_SELECT(byte_mask);
 
+	const bool halted_in_function = cortexar_halt_and_wait(target);
+
 	/* Configure the watchpoint slot */
-	cortex_dbg_write32(target, CORTEXAR_DBG_WVR + (slot << 2U), cortexar_virt_to_phys(target, breakwatch->addr & ~3U));
+	/* Removed virt_to_phys from this line as its logic needs to be fixed. */
+	cortex_dbg_write32(target, CORTEXAR_DBG_WVR + (slot << 2U), breakwatch->addr & ~3U);
 	cortex_dbg_write32(
 		target, CORTEXAR_DBG_WCR + (slot << 2U), CORTEXAR_DBG_WCR_ENABLE | CORTEXAR_DBG_WCR_ALL_MODES | mode);
+
+	if (halted_in_function)
+		cortexar_halt_resume(target, false);
 }
 
 static int cortexar_breakwatch_set(target_s *const target, breakwatch_s *const breakwatch)
