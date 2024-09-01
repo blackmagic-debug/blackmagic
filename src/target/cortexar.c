@@ -316,6 +316,11 @@ static const uint16_t cortexar_spsr_encodings[5] = {
 /* Address Translate Stage 1 Current state PL1 Read */
 #define CORTEXAR_ATS1CPR 15U, ENCODE_CP_REG(7U, 8U, 0U, 0U)
 
+/* SCTLR System Control Register */
+#define CORTEXAR_SCTLR 15U, ENCODE_CP_REG(1U, 0U, 0U, 0U)
+
+#define CORTEXAR_SCTLR_MMU_ENABLED (1U << 0U)
+
 #define CORTEXAR_CPACR_CP10_FULL_ACCESS 0x00300000U
 #define CORTEXAR_CPACR_CP11_FULL_ACCESS 0x00c00000U
 
@@ -390,6 +395,7 @@ static void cortexar_reset(target_s *target);
 static target_halt_reason_e cortexar_halt_poll(target_s *target, target_addr_t *watch);
 static void cortexar_halt_request(target_s *target);
 static void cortexar_halt_resume(target_s *target, bool step);
+static bool cortexar_halt_and_wait(target_s *target);
 
 static int cortexar_breakwatch_set(target_s *target, breakwatch_s *breakwatch);
 static int cortexar_breakwatch_clear(target_s *target, breakwatch_s *breakwatch);
@@ -636,6 +642,54 @@ static void cortexar_coproc_write(target_s *const target, const uint8_t coproc, 
 	cortexar_run_insn(target,
 		ARM_MCR_INSN |
 			ENCODE_CP_ACCESS(coproc & 0xfU, (op >> 8U) & 0x7U, 0U, (op >> 4U) & 0xfU, op & 0xfU, (op >> 12U) & 0x7U));
+}
+
+/*
+ * Perform a virtual to physical address translation.
+ * NB: Halts target if needed to ensure operations succeed. Trashes r0.
+ */
+static target_addr_t cortexar_virt_to_phys(target_s *const target, const target_addr_t virt_addr)
+{
+	/* Check if the target is PMSA and return early if it is */
+	if (!(target->target_options & TOPT_FLAVOUR_VIRT_MEM))
+		return virt_addr;
+
+	/* Halt if not already halted to ensure coproc read/write operations succeed */
+	const bool halted_in_function = cortexar_halt_and_wait(target);
+
+	/* Check if MMU is turned on; if not, return the virt_addr as-is. */
+	const uint32_t sctlr = cortexar_coproc_read(target, CORTEXAR_SCTLR);
+	if (!(sctlr & CORTEXAR_SCTLR_MMU_ENABLED)) {
+		return virt_addr;
+	}
+
+	/*
+	 * Now we know the target is VMSA and so has the address translation machinery,
+	 * start by loading r0 with the VA to translate and request its translation
+	 */
+	cortexar_core_reg_write(target, 0U, virt_addr);
+	cortexar_coproc_write(target, CORTEXAR_ATS1CPR, 0U);
+	/*
+	 * Ensure that's complete with a sync barrier, then read the result back
+	 * from the physical address register into r0 so we can extract the result
+	 */
+	cortexar_run_insn(target, ARM_ISB_INSN);
+	cortexar_coproc_read(target, CORTEXAR_PAR32);
+
+	const uint32_t phys_addr = cortexar_core_reg_read(target, 0U);
+	/* Check if the MMU indicated a translation failure, marking a fault if it did */
+	if (phys_addr & CORTEXAR_PAR32_FAULT) {
+		cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
+		priv->core_status |= CORTEXAR_STATUS_MMU_FAULT;
+	}
+
+	/* Convert the physical address to a virtual one using the top 20 bits of PAR and the bottom 12 of the virtual. */
+	const target_addr_t address = (phys_addr & 0xfffff000U) | (virt_addr & 0x00000fffU);
+
+	if (halted_in_function)
+		cortexar_halt_resume(target, false);
+
+	return address;
 }
 
 static bool cortexar_oslock_unlock(target_s *const target)
@@ -1447,6 +1501,27 @@ static void cortexar_halt_resume(target_s *const target, const bool step)
 		status = cortex_dbg_read32(target, CORTEXAR_DBG_DSCR);
 }
 
+/*
+ * Halt the core and await halted status.
+ */
+static bool cortexar_halt_and_wait(target_s *const target)
+{
+	if (!(cortex_dbg_read32(target, CORTEXAR_DBG_DSCR) & CORTEXAR_DBG_DSCR_HALTED)) {
+		platform_timeout_s timeout;
+		cortexar_halt_request(target);
+		platform_timeout_set(&timeout, 250);
+		target_halt_reason_e reason = TARGET_HALT_RUNNING;
+		while (!platform_timeout_is_expired(&timeout) && reason == TARGET_HALT_RUNNING)
+			reason = target_halt_poll(target, NULL);
+		if (reason != TARGET_HALT_REQUEST) {
+			DEBUG_ERROR("Failed to halt the core\n");
+			return false;
+		}
+		return true;
+	}
+	return false;
+}
+
 void cortexar_invalidate_all_caches(target_s *const target)
 {
 	/* Extract the cache geometry */
@@ -1516,8 +1591,7 @@ static void cortexar_config_breakpoint(
 		mode |= CORTEXAR_DBG_BCR_BYTE_SELECT_ALL;
 
 	/* Configure the breakpoint slot */
-	/* Removed virt_to_phys use from this line as its logic needs to be fixed. */
-	cortex_dbg_write32(target, CORTEXAR_DBG_BVR + (slot << 2U), addr & ~3U);
+	cortex_dbg_write32(target, CORTEXAR_DBG_BVR + (slot << 2U), cortexar_virt_to_phys(target, addr & ~3U));
 	cortex_dbg_write32(
 		target, CORTEXAR_DBG_BCR + (slot << 2U), CORTEXAR_DBG_BCR_ENABLE | CORTEXAR_DBG_BCR_ALL_MODES | (mode & ~7U));
 }
@@ -1549,8 +1623,7 @@ static void cortexar_config_watchpoint(target_s *const target, const size_t slot
 	const uint32_t mode = cortexar_watchpoint_mode(breakwatch->type) | CORTEXAR_DBG_WCR_BYTE_SELECT(byte_mask);
 
 	/* Configure the watchpoint slot */
-	/* Removed virt_to_phys from this line as its logic needs to be fixed. */
-	cortex_dbg_write32(target, CORTEXAR_DBG_WVR + (slot << 2U), breakwatch->addr & ~3U);
+	cortex_dbg_write32(target, CORTEXAR_DBG_WVR + (slot << 2U), cortexar_virt_to_phys(target, breakwatch->addr & ~3U));
 	cortex_dbg_write32(
 		target, CORTEXAR_DBG_WCR + (slot << 2U), CORTEXAR_DBG_WCR_ENABLE | CORTEXAR_DBG_WCR_ALL_MODES | mode);
 }
