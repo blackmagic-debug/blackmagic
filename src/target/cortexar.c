@@ -390,7 +390,6 @@ static void cortexar_reset(target_s *target);
 static target_halt_reason_e cortexar_halt_poll(target_s *target, target_addr_t *watch);
 static void cortexar_halt_request(target_s *target);
 static void cortexar_halt_resume(target_s *target, bool step);
-static bool cortexar_halt_and_wait(target_s *target);
 
 static int cortexar_breakwatch_set(target_s *target, breakwatch_s *breakwatch);
 static int cortexar_breakwatch_clear(target_s *target, breakwatch_s *breakwatch);
@@ -1037,34 +1036,18 @@ static void cortexar_mem_handle_fault(target_s *const target, const char *const 
 }
 
 /*
- * Halt the core and await halted status.
- */
-static bool cortexar_halt_and_wait(target_s *const target)
-{
-	if (!(cortex_dbg_read32(target, CORTEXAR_DBG_DSCR) & CORTEXAR_DBG_DSCR_HALTED)) {
-		platform_timeout_s timeout;
-		cortexar_halt_request(target);
-		platform_timeout_set(&timeout, 250);
-		target_halt_reason_e reason = TARGET_HALT_RUNNING;
-		while (!platform_timeout_is_expired(&timeout) && reason == TARGET_HALT_RUNNING)
-			reason = target_halt_poll(target, NULL);
-		if (reason != TARGET_HALT_REQUEST) {
-			DEBUG_ERROR("Failed to halt the core\n");
-			return false;
-		}
-		return true;
-	}
-	return false;
-}
-
-/*
  * This reads memory by jumping from the debug unit bus to the system bus.
  * NB: This requires the core to be halted! Uses instruction launches on
  * the core and requires we're in debug mode to work. Trashes r0.
+ * If core is not halted, falls back to adiv5 mem read.
  */
 static void cortexar_mem_read(target_s *const target, void *const dest, const target_addr64_t src, const size_t len)
 {
-	const bool halted_in_function = cortexar_halt_and_wait(target);
+	/* If system is not halted, perform basic adiv5 memory read. */
+	if (!(cortex_dbg_read32(target, CORTEXAR_DBG_DSCR) & CORTEXAR_DBG_DSCR_HALTED)) {
+		adiv5_mem_read(cortex_ap(target), dest, src, len);
+		return;
+	}
 
 	cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
 	/* Cache DFSR and DFAR in case we wind up triggering a data fault */
@@ -1099,10 +1082,6 @@ static void cortexar_mem_read(target_s *const target, void *const dest, const ta
 	if (len > 16U)
 		DEBUG_PROTO(" ...");
 	DEBUG_PROTO("\n");
-
-	if (halted_in_function) {
-		cortexar_halt_resume(target, false);
-	}
 }
 
 /* Fast path for cortexar_mem_write(). Assumes the address to read data from is already loaded in r0. */
@@ -1536,16 +1515,11 @@ static void cortexar_config_breakpoint(
 	else
 		mode |= CORTEXAR_DBG_BCR_BYTE_SELECT_ALL;
 
-	const bool halted_in_function = cortexar_halt_and_wait(target);
-
 	/* Configure the breakpoint slot */
 	/* Removed virt_to_phys use from this line as its logic needs to be fixed. */
 	cortex_dbg_write32(target, CORTEXAR_DBG_BVR + (slot << 2U), addr & ~3U);
 	cortex_dbg_write32(
 		target, CORTEXAR_DBG_BCR + (slot << 2U), CORTEXAR_DBG_BCR_ENABLE | CORTEXAR_DBG_BCR_ALL_MODES | (mode & ~7U));
-
-	if (halted_in_function)
-		cortexar_halt_resume(target, false);
 }
 
 static uint32_t cortexar_watchpoint_mode(const target_breakwatch_e type)
@@ -1574,16 +1548,11 @@ static void cortexar_config_watchpoint(target_s *const target, const size_t slot
 	const uint32_t byte_mask = ((1U << breakwatch->size) - 1U) << (breakwatch->addr & 3U);
 	const uint32_t mode = cortexar_watchpoint_mode(breakwatch->type) | CORTEXAR_DBG_WCR_BYTE_SELECT(byte_mask);
 
-	const bool halted_in_function = cortexar_halt_and_wait(target);
-
 	/* Configure the watchpoint slot */
 	/* Removed virt_to_phys from this line as its logic needs to be fixed. */
 	cortex_dbg_write32(target, CORTEXAR_DBG_WVR + (slot << 2U), breakwatch->addr & ~3U);
 	cortex_dbg_write32(
 		target, CORTEXAR_DBG_WCR + (slot << 2U), CORTEXAR_DBG_WCR_ENABLE | CORTEXAR_DBG_WCR_ALL_MODES | mode);
-
-	if (halted_in_function)
-		cortexar_halt_resume(target, false);
 }
 
 static int cortexar_breakwatch_set(target_s *const target, breakwatch_s *const breakwatch)
