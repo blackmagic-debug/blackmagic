@@ -660,6 +660,9 @@ static target_addr_t cortexar_virt_to_phys(target_s *const target, const target_
 	/* Check if MMU is turned on; if not, return the virt_addr as-is. */
 	const uint32_t sctlr = cortexar_coproc_read(target, CORTEXAR_SCTLR);
 	if (!(sctlr & CORTEXAR_SCTLR_MMU_ENABLED)) {
+		/* Ensure we resume if we halted above, prior to returning. */
+		if (halted_in_function)
+			cortexar_halt_resume(target, false);
 		return virt_addr;
 	}
 
@@ -1093,15 +1096,13 @@ static void cortexar_mem_handle_fault(target_s *const target, const char *const 
  * This reads memory by jumping from the debug unit bus to the system bus.
  * NB: This requires the core to be halted! Uses instruction launches on
  * the core and requires we're in debug mode to work. Trashes r0.
- * If core is not halted, falls back to adiv5 mem read.
+ * If core is not halted, temporarily halts target and resumes at the end
+ * of the function.
  */
 static void cortexar_mem_read(target_s *const target, void *const dest, const target_addr64_t src, const size_t len)
 {
-	/* If system is not halted, perform basic adiv5 memory read. */
-	if (!(cortex_dbg_read32(target, CORTEXAR_DBG_DSCR) & CORTEXAR_DBG_DSCR_HALTED)) {
-		adiv5_mem_read(cortex_ap(target), dest, src, len);
-		return;
-	}
+	/* If system is not halted, halt temporarily within this function. */
+	const bool halted_in_function = cortexar_halt_and_wait(target);
 
 	cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
 	/* Cache DFSR and DFAR in case we wind up triggering a data fault */
@@ -1136,6 +1137,9 @@ static void cortexar_mem_read(target_s *const target, void *const dest, const ta
 	if (len > 16U)
 		DEBUG_PROTO(" ...");
 	DEBUG_PROTO("\n");
+
+	if (halted_in_function)
+		cortexar_halt_resume(target, false);
 }
 
 /* Fast path for cortexar_mem_write(). Assumes the address to read data from is already loaded in r0. */
@@ -1376,7 +1380,6 @@ static void cortexar_reset(target_s *const target)
 
 	/* 10ms delay to ensure bootroms have had time to run */
 	platform_delay(10);
-
 	/* Ignore any initial errors out of reset */
 	target_check_error(target);
 }
@@ -1458,12 +1461,10 @@ static target_halt_reason_e cortexar_halt_poll(target_s *const target, target_ad
 static void cortexar_halt_resume(target_s *const target, const bool step)
 {
 	uint32_t dscr = cortex_dbg_read32(target, CORTEXAR_DBG_DSCR);
-	cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
-
 	if (!(dscr & CORTEXAR_DBG_DSCR_HALTED))
 		return;
 
-	priv->base.ap->dp->quirks &= ~ADIV5_AP_ACCESS_BANKED;
+	cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
 	/* Restore the core's registers so the running program doesn't know we've been in there */
 	cortexar_regs_restore(target);
 
@@ -1502,24 +1503,33 @@ static void cortexar_halt_resume(target_s *const target, const bool step)
 }
 
 /*
- * Halt the core and await halted status.
+ * Halt the core and await halted status. This function should only return true when 
+ * it is, itself, responsible for having halted the target. This allows storing of the
+ * returned value to later determine whether the target should be resumed.
  */
 static bool cortexar_halt_and_wait(target_s *const target)
 {
-	if (!(cortex_dbg_read32(target, CORTEXAR_DBG_DSCR) & CORTEXAR_DBG_DSCR_HALTED)) {
-		platform_timeout_s timeout;
-		cortexar_halt_request(target);
-		platform_timeout_set(&timeout, 250);
-		target_halt_reason_e reason = TARGET_HALT_RUNNING;
-		while (!platform_timeout_is_expired(&timeout) && reason == TARGET_HALT_RUNNING)
-			reason = target_halt_poll(target, NULL);
-		if (reason != TARGET_HALT_REQUEST) {
-			DEBUG_ERROR("Failed to halt the core\n");
-			return false;
-		}
-		return true;
+	/*
+	 * Check the target is already halted; return false as this function was not
+	 * responsible for halting the target.
+	 */
+	if (cortex_dbg_read32(target, CORTEXAR_DBG_DSCR) & CORTEXAR_DBG_DSCR_HALTED)
+		return false;
+
+	platform_timeout_s timeout;
+	cortexar_halt_request(target);
+	platform_timeout_set(&timeout, 250);
+	target_halt_reason_e reason = TARGET_HALT_RUNNING;
+	while (!platform_timeout_is_expired(&timeout) && reason == TARGET_HALT_RUNNING)
+		reason = target_halt_poll(target, NULL);
+	if (reason != TARGET_HALT_REQUEST) {
+		DEBUG_ERROR("Failed to halt the core\n");
+		/* This function tried to halt the target but ultimately was not successful. */
+		return false;
 	}
-	return false;
+
+	/* Return true as this function successfully halted the target. */
+	return true;
 }
 
 void cortexar_invalidate_all_caches(target_s *const target)
