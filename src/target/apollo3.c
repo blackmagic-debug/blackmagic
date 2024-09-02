@@ -31,7 +31,11 @@ static bool apollo_3_flash_write(target_flash_s *flash, target_addr_t dest, cons
 static size_t flash_size;
 
 #define FLASH_BASE_ADDRESS 0x00000000U
+#define FLASH_SIZE         0x00100000
 #define FLASH_BLOCK_SIZE   0x2000U
+
+#define SRAM_BASE 0x10000000
+#define SRAM_SIZE 0x00060000
 
 #define CHIPPN_REGISTER 0x40020000U // Address of the Chip Part Number Register
 
@@ -91,7 +95,7 @@ static void apollo_3_add_flash(target_s *target)
 	}
 
 	flash->start = FLASH_BASE_ADDRESS;
-	flash->length = flash_size;
+	flash->length = FLASH_SIZE;
 	flash->blocksize = FLASH_BLOCK_SIZE;
 	flash->erase = apollo_3_flash_erase;
 	flash->write = apollo_3_flash_write;
@@ -107,10 +111,22 @@ bool apollo_3_probe(target_s *target)
 		return false;
 	} else
 		DEBUG_INFO("Read correct vendor ID\n");
-	t->driver = "apollo 3"; // TODO build the part number from data read
-	/* Add RAM mappings */
-	// target_add_ram(t, APOLLO_3_RAM_BASE, APOLLO_3_RAM_SIZE);
-	/* Add Flash mappings */
+	/*
+		Read the CHIPPN register to gather MCU details
+	 */
+	uint32_t mcu_chip_partnum = target_mem_read32(target, CHIPPN_REGISTER);
+	/*
+		Check the chip is an Apollo 3
+	 */
+	if ((mcu_chip_partnum & CHIPPN_PART_NUMBER_MASK) != 0x06000000) {
+		DEBUG_INFO("Invalid chip type read\n");
+		return false;
+	}
+
+	target->driver = "apollo 3 Blue";
+
+	target_add_ram(target, SRAM_BASE, SRAM_SIZE);
+
 	apollo_3_add_flash(target);
 	return true;
 }
