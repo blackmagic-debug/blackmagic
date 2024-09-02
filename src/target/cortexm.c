@@ -1294,9 +1294,19 @@ static size_t cortexm_build_target_description(
 		gdb_reg_type_e type = cortex_m_spr_types[i];
 		gdb_reg_save_restore_e save_restore = cortex_m_spr_save_restores[i];
 
-		offset += (size_t)snprintf(buffer + offset, print_size, "<reg name=\"%s\" bitsize=\"%u\"%s%s/>",
+		/* xPSR (reg index 3) requires placement at register logical number 25 */
+		offset += (size_t)snprintf(buffer + offset, print_size, "<reg name=\"%s\" bitsize=\"%u\"%s%s%s/>",
 			cortex_m_spr_names[i], cortex_m_spr_bitsizes[i], gdb_reg_save_restore_strings[save_restore],
-			gdb_reg_type_strings[type]);
+			gdb_reg_type_strings[type], i == 3U ? " regnum=\"25\"" : "");
+
+		/* After the xPSR, we might need to generate one of either a system block or a secext block */
+		if (i == 3U) {
+			if (max_length != 0U)
+				print_size = max_length - offset;
+
+			offset +=
+				(size_t)snprintf(buffer + offset, print_size, "</feature><feature name=\"org.gnu.gdb.arm.m-system\">");
+		}
 	}
 
 	/* If the target has a FPU, include that */
