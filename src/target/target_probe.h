@@ -52,7 +52,7 @@ bool nrf51_mdm_probe(adiv5_access_port_s *ap);
 bool rp_rescue_probe(adiv5_access_port_s *ap);
 
 bool at32f40x_probe(target_s *target); // STM32 clones from Artery
-bool apollo_3_probe(target_s *t);
+bool apollo_3_probe(target_s *target);
 bool at32f43x_probe(target_s *target);
 bool ch32f1_probe(target_s *target); // will catch all the clones
 bool ch579_probe(target_s *target);
