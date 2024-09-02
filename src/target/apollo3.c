@@ -2,7 +2,7 @@
  * This file is part of the Black Magic Debug project.
  *
  * Copyright (C) 2022-2023 1BitSquared <info@1bitsquared.com>
- * Copyright (C) 2023 Sid Price <sid@sidprice.com>
+ * Written by Sid Price <sid@sidprice.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,9 +25,13 @@
 static bool apollo_3_flash_erase(target_flash_s *flash, target_addr_t addr, size_t len);
 static bool apollo_3_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t len);
 
-static target_addr_t flash_base_address;
+/*
+	Read this value from the device during probing (PARTNUM Register)
+ */
 static size_t flash_size;
-static size_t flash_block_size;
+
+static const target_addr_t flash_base_address = 0x00000000U;
+static const size_t flash_block_size = 0x2000U;
 
 static void apollo_3_add_flash(target_s *target)
 {
