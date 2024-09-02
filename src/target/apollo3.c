@@ -35,9 +35,9 @@ static bool apollo_3_flash_write(target_flash_s *flash, target_addr_t dest, cons
 #define APOLLO_3_CHIPPN_REGISTER 0x40020000U /* Address of the Chip Part Number Register */
 
 /*
-	Define the bitfields of the CHIPPN register.
-	
-	This register contains the part number of the MCU
+ * Define the bitfields of the CHIPPN register.
+ *
+ * This register contains the part number of the MCU
  */
 #define APOLLO_3_CHIPPN_PART_NUMBER_MASK         0xff000000U
 #define APOLLO_3_CHIPPN_PART_NUMBER_BIT_POSITION 0x18U
@@ -69,9 +69,9 @@ static bool apollo_3_flash_write(target_flash_s *flash, target_addr_t dest, cons
 #define APOLLO_3_CHIPREV_REGISTER 0x4002000cU /* Chip Revision Register */
 
 /*
-	Define the bitfields of the CHIPREV register.
-
-	This register contains the revision of the MCU
+ * Define the bitfields of the CHIPREV register.
+ *
+ * This register contains the revision of the MCU
 */
 #define APOLLO_3_CHIPREV_RESERVED 0xfff00000U
 #define APOLLO_3_CHIPREV_SI_PART  0x000fff00U
