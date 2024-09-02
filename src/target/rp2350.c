@@ -40,6 +40,7 @@
 #include "sfdp.h"
 
 #define RP2350_XIP_FLASH_BASE 0x10000000U
+#define RP2350_XIP_CACHE_BASE 0x18000000U
 #define RP2350_XIP_FLASH_SIZE 0x04000000U
 #define RP2350_SRAM_BASE      0x20000000U
 #define RP2350_SRAM_SIZE      0x00082000U
@@ -48,6 +49,12 @@
 #define RP2350_REG_ACCESS_WRITE_XOR           0x1000U
 #define RP2350_REG_ACCESS_WRITE_ATOMIC_BITSET 0x2000U
 #define RP2350_REG_ACCESS_WRITE_ATOMIC_BITCLR 0x3000U
+
+#define RP2350_XIP_CACHE_INVALIDATE_BY_SET_WAY 0x0U
+#define RP2350_XIP_CACHE_CLEAN_BY_SET_WAY      0x1U
+#define RP2350_XIP_CACHE_INVALIDATE_BY_ADDRESS 0x2U
+#define RP2350_XIP_CACHE_CLEAN_BY_ADDRESS      0x3U
+#define RP2350_XIP_CACHE_PIN_BY_SET_WAY        0x7U
 
 #define RP2350_BOOTROM_BASE  0x00000000U
 #define RP2350_BOOTROM_MAGIC (RP2350_BOOTROM_BASE + 0x0010U)
@@ -420,10 +427,15 @@ static void rp2350_spi_write(target_s *const target, const uint16_t command, con
 	rp2350_spi_setup_xfer(target, command, address);
 	/* Write out the data associated with this transaction */
 	const uint8_t *const data = (const uint8_t *)buffer;
-	for (size_t i = 0; i < length; i += 2U)
+	for (size_t i = 0; i < length; i += 2U) {
 		target_mem32_write32(target, RP2350_QMI_DIRECT_TX,
 			RP2350_QMI_DIRECT_TX_MODE_SINGLE | RP2350_QMI_DIRECT_TX_DATA_16BIT | RP2350_QMI_DIRECT_TX_NOPUSH_RX |
 				read_le2(data, i));
+		/* Every 8 bytes when page programming, invalidate the associated cache line */
+		if (command == SPI_FLASH_CMD_PAGE_PROGRAM && (i & 7U) == 7U)
+			target_mem32_write32(
+				target, RP2350_XIP_CACHE_BASE + RP2350_XIP_CACHE_INVALIDATE_BY_ADDRESS + address + (i & ~7U), 0U);
+	}
 	/* Wait for the transaction cycles to complete */
 	while (target_mem32_read32(target, RP2350_QMI_DIRECT_CSR) & RP2350_QMI_DIRECT_CSR_BUSY)
 		continue;
