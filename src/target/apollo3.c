@@ -33,7 +33,7 @@ static size_t flash_size;
 #define FLASH_BASE_ADDRESS 0x00000000U
 #define FLASH_BLOCK_SIZE   0x2000U
 
-#define VENDOR_ID_ADDRESS 0x40020010
+#define CHIPPN_REGISTER 0x40020000U // Address of the Chip Part Number Register
 
 /*
 	Define the bitfields of the CHIPPN register.
@@ -55,6 +55,20 @@ static size_t flash_size;
 #define CHIPPN_PACKAGE_MASK         0x000000c0U
 #define CHIPPN_PACKAGE_BIT_POSITION 0x06U
 
+#define CHIPPN_PINS_MASK         0x00000038U
+#define CHIPPN_PINS_BIT_POSITION 0x03U
+
+#define CHIPPN_TEMP_MASK         0x00000006U
+#define CHIPPN_TEMP_BIT_POSITION 0x01U
+
+#define CHIPPN_QUALIFIED_MASK         0x00000001U
+#define CHIPPN_QUALIFIED_BIT_POSITION 0x0U
+
+#define CHIPID0_REGISTER 0x40020004U // Chip ID Register 0
+#define CHIPID1_REGISTER 0x40020008U // Chip ID Register 1
+
+#define CHIPREV_REGISTER 0x4002000cU // Chip Revision Register
+
 /*
 	Define the bitfields of the CHIPREV  register.
 
@@ -65,7 +79,8 @@ static size_t flash_size;
 #define CHIPREV_REVMAJ   0x000000f0U
 #define CHIPREV_REVMIN   0x0000000fU
 
-#define VENDOR_ID 0x414d4251
+#define VENDOR_ID_ADDRESS 0x40020010 // Vendir ID Register
+#define VENDOR_ID         0x414d4251
 
 static void apollo_3_add_flash(target_s *target)
 {
