@@ -33,6 +33,9 @@ static size_t flash_size;
 static const target_addr_t flash_base_address = 0x00000000U;
 static const size_t flash_block_size = 0x2000U;
 
+static const target_addr_t vendor_id_address = 0x40020010;
+static const uint32_t vendor_id = 0x414d4251;
+
 static void apollo_3_add_flash(target_s *target)
 {
 	target_flash_s *flash = calloc(1, sizeof(*flash));
@@ -52,11 +55,13 @@ static void apollo_3_add_flash(target_s *target)
 
 bool apollo_3_probe(target_s *target)
 {
-	/* Positively identify the target device somehow */
-	// if (target_mem_read32(t, APOLLO_3_DEVID_ADDR) != APOLLO_3_DEVID)
-	// 	return false;
-
-	target->driver = "apollo 3"; // TODO build the part number from data read
+	uint32_t mcu_vendor_id = target_mem_read32(t, vendor_id_address);
+	if (mcu_vendor_id != vendor_id) {
+		DEBUG_INFO("Invalid vendor ID read\n");
+		return false;
+	} else
+		DEBUG_INFO("Read correct vendor ID\n");
+	t->driver = "apollo 3"; // TODO build the part number from data read
 	/* Add RAM mappings */
 	// target_add_ram(t, APOLLO_3_RAM_BASE, APOLLO_3_RAM_SIZE);
 	/* Add Flash mappings */
