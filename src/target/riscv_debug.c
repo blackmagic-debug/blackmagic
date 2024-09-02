@@ -1032,48 +1032,48 @@ static size_t riscv_build_target_fpu_description(char *const buffer, size_t max_
  * unfortunately much less readable than the string literal it is equivalent to.
  *
  * This string it creates is the XML-equivalent to the following:
- * "<?xml version=\"1.0\"?>"
- * "<!DOCTYPE target SYSTEM \"gdb-target.dtd\">"
- * "<target>"
- * "	<architecture>riscv:rv[address_width][exts]</architecture>"
- * "	<feature name=\"org.gnu.gdb.riscv.cpu\">"
- * "		<reg name=\"zero\" bitsize=\"[address_width]\" regnum=\"0\"/>"
- * "		<reg name=\"ra\" bitsize=\"[address_width]\" type=\"code_ptr\"/>"
- * "		<reg name=\"sp\" bitsize=\"[address_width]\" type=\"data_ptr\"/>"
- * "		<reg name=\"gp\" bitsize=\"[address_width]\" type=\"data_ptr\"/>"
- * "		<reg name=\"tp\" bitsize=\"[address_width]\" type=\"data_ptr\"/>"
- * "		<reg name=\"t0\" bitsize=\"[address_width]\"/>"
- * "		<reg name=\"t1\" bitsize=\"[address_width]\"/>"
- * "		<reg name=\"t2\" bitsize=\"[address_width]\"/>"
- * "		<reg name=\"fp\" bitsize=\"[address_width]\" type=\"data_ptr\"/>"
- * "		<reg name=\"s1\" bitsize=\"[address_width]\"/>"
- * "		<reg name=\"a0\" bitsize=\"[address_width]\"/>"
- * "		<reg name=\"a1\" bitsize=\"[address_width]\"/>"
- * "		<reg name=\"a2\" bitsize=\"[address_width]\"/>"
- * "		<reg name=\"a3\" bitsize=\"[address_width]\"/>"
- * "		<reg name=\"a4\" bitsize=\"[address_width]\"/>"
- * "		<reg name=\"a5\" bitsize=\"[address_width]\"/>"
+ *  <?xml version=\"1.0\"?>
+ *  <!DOCTYPE target SYSTEM \"gdb-target.dtd\">
+ *  <target>
+ *      <architecture>riscv:rv[address_width][exts]</architecture>
+ *      <feature name="org.gnu.gdb.riscv.cpu">
+ *          <reg name="zero" bitsize="[address_width]" regnum="0"/>
+ *          <reg name="ra" bitsize="[address_width]" type="code_ptr"/>
+ *          <reg name="sp" bitsize="[address_width]" type="data_ptr"/>
+ *          <reg name="gp" bitsize="[address_width]" type="data_ptr"/>
+ *          <reg name="tp" bitsize="[address_width]" type="data_ptr"/>
+ *          <reg name="t0" bitsize="[address_width]"/>
+ *          <reg name="t1" bitsize="[address_width]"/>
+ *          <reg name="t2" bitsize="[address_width]"/>
+ *          <reg name="fp" bitsize="[address_width]" type="data_ptr"/>
+ *          <reg name="s1" bitsize="[address_width]"/>
+ *          <reg name="a0" bitsize="[address_width]"/>
+ *          <reg name="a1" bitsize="[address_width]"/>
+ *          <reg name="a2" bitsize="[address_width]"/>
+ *          <reg name="a3" bitsize="[address_width]"/>
+ *          <reg name="a4" bitsize="[address_width]"/>
+ *          <reg name="a5" bitsize="[address_width]"/>
  * The following are only generated for an I core, not an E:
- * "		<reg name=\"a6\" bitsize=\"[address_width]\"/>"
- * "		<reg name=\"a7\" bitsize=\"[address_width]\"/>"
- * "		<reg name=\"s2\" bitsize=\"[address_width]\"/>"
- * "		<reg name=\"s3\" bitsize=\"[address_width]\"/>"
- * "		<reg name=\"s4\" bitsize=\"[address_width]\"/>"
- * "		<reg name=\"s5\" bitsize=\"[address_width]\"/>"
- * "		<reg name=\"s6\" bitsize=\"[address_width]\"/>"
- * "		<reg name=\"s7\" bitsize=\"[address_width]\"/>"
- * "		<reg name=\"s8\" bitsize=\"[address_width]\"/>"
- * "		<reg name=\"s9\" bitsize=\"[address_width]\"/>"
- * "		<reg name=\"s10\" bitsize=\"[address_width]\"/>"
- * "		<reg name=\"s11\" bitsize=\"[address_width]\"/>"
- * "		<reg name=\"t3\" bitsize=\"[address_width]\"/>"
- * "		<reg name=\"t4\" bitsize=\"[address_width]\"/>"
- * "		<reg name=\"t5\" bitsize=\"[address_width]\"/>"
- * "		<reg name=\"t6\" bitsize=\"[address_width]\"/>"
+ *          <reg name="a6" bitsize="[address_width]"/>
+ *          <reg name="a7" bitsize="[address_width]"/>
+ *          <reg name="s2" bitsize="[address_width]"/>
+ *          <reg name="s3" bitsize="[address_width]"/>
+ *          <reg name="s4" bitsize="[address_width]"/>
+ *          <reg name="s5" bitsize="[address_width]"/>
+ *          <reg name="s6" bitsize="[address_width]"/>
+ *          <reg name="s7" bitsize="[address_width]"/>
+ *          <reg name="s8" bitsize="[address_width]"/>
+ *          <reg name="s9" bitsize="[address_width]"/>
+ *          <reg name="s10" bitsize="[address_width]"/>
+ *          <reg name="s11" bitsize="[address_width]"/>
+ *          <reg name="t3" bitsize="[address_width]"/>
+ *          <reg name="t4" bitsize="[address_width]"/>
+ *          <reg name="t5" bitsize="[address_width]"/>
+ *          <reg name="t6" bitsize="[address_width]"/>
  * Both are then continued with:
- * "		<reg name=\"pc\" bitsize=\"[address_width]\" type=\"code_ptr\"/>"
- * "	</feature>"
- * "</target>"
+ *          <reg name="pc" bitsize="[address_width]" type="code_ptr"/>
+ *      </feature>
+ *  </target>
  */
 static size_t riscv_build_target_description(
 	char *const buffer, size_t max_length, const uint8_t address_width, const uint32_t extensions)
