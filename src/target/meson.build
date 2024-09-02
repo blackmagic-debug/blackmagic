@@ -74,6 +74,7 @@ if is_firmware_build
 		'riscv32': 'RISC-V 32-bit support',
 		'riscv64': 'RISC-V 64-bit support',
 		'at32f4': 'Arterytek parts',
+		'apollo3': 'Ambiq Apollo3 parts',
 		'ch579': 'CH579',
 		'efm': 'Energy Micro parts',
 		'hc32': 'HC32 parts',
@@ -155,6 +156,11 @@ target_riscv32 = declare_dependency(
 target_riscv64 = declare_dependency(
 	sources: files('riscv64.c'),
 	dependencies: target_riscv,
+)
+
+target_apollo3 = declare_dependency(
+	sources: files('apollo3.c'),
+	dependencies: target_cortexm,
 )
 
 target_ch579 = declare_dependency(
@@ -320,6 +326,7 @@ libbmd_target_deps = [
 	target_riscv32,
 	target_riscv64,
 	# Enable all targets for libbmd
+	target_apollo3,
 	target_at32f4,
 	target_ch579,
 	target_efm,

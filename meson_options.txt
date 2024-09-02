@@ -30,6 +30,7 @@ option(
 		'cortexm',
 		'riscv32',
 		'riscv64',
+		'apollo3',
 		'at32f4',
 		'ch579',
 		'efm',
