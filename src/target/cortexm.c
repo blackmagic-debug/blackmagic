@@ -86,19 +86,24 @@ typedef struct cortexm_priv {
 
 /* Register number tables */
 static const uint32_t regnum_cortex_m[CORTEXM_GENERAL_REG_COUNT] = {
-	0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, /* standard r0-r15 */
-	0x10,                                                 /* xpsr */
-	0x11,                                                 /* msp */
-	0x12,                                                 /* psp */
-	0x14,                                                 /* special */
+	0U, 1U, 2U, 3U, 4U, 5U, 6U, 7U, 8U, 9U, 10U, 11U, 12U, 13U, 14U, 15U, /* r0-r15 */
+	0x10U,                                                                /* xpsr */
+	0x11U,                                                                /* msp */
+	0x12U,                                                                /* psp */
+	0x14U,                                                                /* special */
+};
+
+static const uint32_t regnum_cortex_m_trustzone[CORTEXM_TRUSTZONE_REG_COUNT] = {
+	0x18U, 0x19U, /* Non-secure msp + psp */
+	0x1aU, 0x1bU, /* Secure msp + psp */
 };
 
 static const uint32_t regnum_cortex_mf[CORTEX_FLOAT_REG_COUNT] = {
-	0x21,                                           /* fpscr */
-	0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, /* s0-s7 */
-	0x48, 0x49, 0x4a, 0x4b, 0x4c, 0x4d, 0x4e, 0x4f, /* s8-s15 */
-	0x50, 0x51, 0x52, 0x53, 0x54, 0x55, 0x56, 0x57, /* s16-s23 */
-	0x58, 0x59, 0x5a, 0x5b, 0x5c, 0x5d, 0x5e, 0x5f, /* s24-s31 */
+	0x21U,                                                  /* fpscr */
+	0x40U, 0x41U, 0x42U, 0x43U, 0x44U, 0x45U, 0x46U, 0x47U, /* s0-s7 */
+	0x48U, 0x49U, 0x4aU, 0x4bU, 0x4cU, 0x4dU, 0x4eU, 0x4fU, /* s8-s15 */
+	0x50U, 0x51U, 0x52U, 0x53U, 0x54U, 0x55U, 0x56U, 0x57U, /* s16-s23 */
+	0x58U, 0x59U, 0x5aU, 0x5bU, 0x5cU, 0x5dU, 0x5eU, 0x5fU, /* s24-s31 */
 };
 
 /*
@@ -289,15 +294,20 @@ bool cortexm_probe(adiv5_access_port_s *ap)
 	target->halt_resume = cortexm_halt_resume;
 	target->regs_size = sizeof(uint32_t) * CORTEXM_GENERAL_REG_COUNT;
 
-	target->breakwatch_set = cortexm_breakwatch_set;
-	target->breakwatch_clear = cortexm_breakwatch_clear;
+	/* Adjust the regs_size value for TrustZone */
+	if (target->target_options & CORTEXM_TOPT_TRUSTZONE)
+		target->regs_size += sizeof(uint32_t) * CORTEXM_TRUSTZONE_REG_COUNT;
 
-	target_add_commands(target, cortexm_cmd_list, target->driver);
-
+	/* Adjust the regs_size value for having a FPU */
 	if (is_cortexmf) {
 		target->target_options |= CORTEXM_TOPT_FLAVOUR_V7MF;
 		target->regs_size += sizeof(uint32_t) * CORTEX_FLOAT_REG_COUNT;
 	}
+
+	target->breakwatch_set = cortexm_breakwatch_set;
+	target->breakwatch_clear = cortexm_breakwatch_clear;
+
+	target_add_commands(target, cortexm_cmd_list, target->driver);
 
 	/* Default vectors to catch */
 	priv->demcr = CORTEXM_DEMCR_TRCENA | CORTEXM_DEMCR_VC_HARDERR | CORTEXM_DEMCR_VC_CORERESET;
@@ -590,14 +600,22 @@ static void cortexm_regs_read(target_s *const target, void *const data)
 		adi_ap_banked_access_setup(ap);
 
 		/* Walk the regnum_cortex_m array, reading the registers it specifies */
-		for (size_t i = 0; i < CORTEXM_GENERAL_REG_COUNT; ++i) {
+		for (size_t i = 0U; i < CORTEXM_GENERAL_REG_COUNT; ++i) {
 			adiv5_dp_write(ap->dp, ADIV5_AP_DB(DB_DCRSR), regnum_cortex_m[i]);
 			regs[i] = adiv5_dp_read(ap->dp, ADIV5_AP_DB(DB_DCRDR));
 		}
-		/* If the device has a FPU, also walk the regnum_cortex_mf array */
+		size_t offset = CORTEXM_GENERAL_REG_COUNT;
+		/* If the core implements TrustZone, pull out the extra stack pointers */
+		if (target->target_options & CORTEXM_TOPT_TRUSTZONE) {
+			for (size_t i = 0U; i < CORTEXM_TRUSTZONE_REG_COUNT; ++i) {
+				adiv5_dp_write(ap->dp, ADIV5_AP_DB(DB_DCRSR), regnum_cortex_m_trustzone[i]);
+				regs[offset + i] = adiv5_dp_read(ap->dp, ADIV5_AP_DB(DB_DCRDR));
+			}
+			offset += CORTEXM_TRUSTZONE_REG_COUNT;
+		}
+		/* If the core has a FPU, also walk the regnum_cortex_mf array */
 		if (target->target_options & CORTEXM_TOPT_FLAVOUR_V7MF) {
-			const size_t offset = CORTEXM_GENERAL_REG_COUNT;
-			for (size_t i = 0; i < CORTEX_FLOAT_REG_COUNT; ++i) {
+			for (size_t i = 0U; i < CORTEX_FLOAT_REG_COUNT; ++i) {
 				adiv5_dp_write(ap->dp, ADIV5_AP_DB(DB_DCRSR), regnum_cortex_mf[i]);
 				regs[offset + i] = adiv5_dp_read(ap->dp, ADIV5_AP_DB(DB_DCRDR));
 			}
@@ -632,14 +650,22 @@ static void cortexm_regs_write(target_s *const target, const void *const data)
 		adi_ap_banked_access_setup(ap);
 
 		/* Walk the regnum_cortex_m array, writing the registers it specifies */
-		for (size_t i = 0; i < CORTEXM_GENERAL_REG_COUNT; ++i) {
+		for (size_t i = 0U; i < CORTEXM_GENERAL_REG_COUNT; ++i) {
 			adiv5_dp_write(ap->dp, ADIV5_AP_DB(DB_DCRDR), regs[i]);
 			adiv5_dp_write(ap->dp, ADIV5_AP_DB(DB_DCRSR), CORTEXM_DCRSR_REG_WRITE | regnum_cortex_m[i]);
 		}
-		/* If the device has a FPU, also walk the regnum_cortex_mf array */
+		size_t offset = CORTEXM_GENERAL_REG_COUNT;
+		/* If the core implements TrustZone, write in the extra stack pointers */
+		if (target->target_options & CORTEXM_TOPT_TRUSTZONE) {
+			for (size_t i = 0U; i < CORTEXM_TRUSTZONE_REG_COUNT; ++i) {
+				adiv5_dp_write(ap->dp, ADIV5_AP_DB(DB_DCRDR), regs[offset + i]);
+				adiv5_dp_write(ap->dp, ADIV5_AP_DB(DB_DCRSR), CORTEXM_DCRSR_REG_WRITE | regnum_cortex_m_trustzone[i]);
+			}
+			offset += CORTEXM_TRUSTZONE_REG_COUNT;
+		}
+		/* If the core has a FPU, also walk the regnum_cortex_mf array */
 		if (target->target_options & CORTEXM_TOPT_FLAVOUR_V7MF) {
-			size_t offset = CORTEXM_GENERAL_REG_COUNT;
-			for (size_t i = 0; i < CORTEX_FLOAT_REG_COUNT; ++i) {
+			for (size_t i = 0U; i < CORTEX_FLOAT_REG_COUNT; ++i) {
 				adiv5_dp_write(ap->dp, ADIV5_AP_DB(DB_DCRDR), regs[offset + i]);
 				adiv5_dp_write(ap->dp, ADIV5_AP_DB(DB_DCRSR), CORTEXM_DCRSR_REG_WRITE | regnum_cortex_mf[i]);
 			}
@@ -659,10 +685,17 @@ int cortexm_mem_write_aligned(target_s *target, target_addr_t dest, const void *
 static int dcrsr_regnum(target_s *target, uint32_t reg)
 {
 	if (reg < CORTEXM_GENERAL_REG_COUNT)
-		return regnum_cortex_m[reg];
-	if ((target->target_options & CORTEXM_TOPT_FLAVOUR_V7MF) &&
-		reg < CORTEXM_GENERAL_REG_COUNT + CORTEX_FLOAT_REG_COUNT)
-		return regnum_cortex_mf[reg - CORTEXM_GENERAL_REG_COUNT];
+		return (int)regnum_cortex_m[reg];
+	size_t offset = CORTEXM_GENERAL_REG_COUNT;
+	if (target->target_options & CORTEXM_TOPT_TRUSTZONE) {
+		if (reg < offset + CORTEXM_TRUSTZONE_REG_COUNT)
+			return (int)regnum_cortex_m_trustzone[reg - offset];
+		offset += CORTEXM_TRUSTZONE_REG_COUNT;
+	}
+	if (target->target_options & CORTEXM_TOPT_FLAVOUR_V7MF) {
+		if (reg < offset + CORTEX_FLOAT_REG_COUNT)
+			return (int)regnum_cortex_mf[reg - offset];
+	}
 	return -1;
 }
 
@@ -670,9 +703,9 @@ static size_t cortexm_reg_read(target_s *target, uint32_t reg, void *data, size_
 {
 	if (max < 4U)
 		return 0;
-	uint32_t *r = data;
+	uint32_t *reg_value = data;
 	target_mem32_write32(target, CORTEXM_DCRSR, dcrsr_regnum(target, reg));
-	*r = target_mem32_read32(target, CORTEXM_DCRDR);
+	*reg_value = target_mem32_read32(target, CORTEXM_DCRDR);
 	return 4U;
 }
 
@@ -680,8 +713,8 @@ static size_t cortexm_reg_write(target_s *target, uint32_t reg, const void *data
 {
 	if (max < 4U)
 		return 0;
-	const uint32_t *r = data;
-	target_mem32_write32(target, CORTEXM_DCRDR, *r);
+	const uint32_t *reg_value = data;
+	target_mem32_write32(target, CORTEXM_DCRDR, *reg_value);
 	target_mem32_write32(target, CORTEXM_DCRSR, CORTEXM_DCRSR_REGWnR | dcrsr_regnum(target, reg));
 	return 4U;
 }
@@ -1205,6 +1238,49 @@ static size_t cortexm_build_target_fpu_description(char *const buffer, const siz
 }
 
 /*
+ * Generate the secext section of the description.
+ * When a ARMv8-M core has the security (TrustZone) extension, the following XML-equivalent must be generated:
+ *  <feature name="org.gnu.gdb.arm.m-secext">
+ *      <reg name="msp_ns" bitsize="32" save-restore="no" type="data_ptr"/>
+ *      <reg name="psp_ns" bitsize="32" save-restore="no" type="data_ptr"/>
+ *      <reg name="msp_s" bitsize="32" save-restore="no" type="data_ptr"/>
+ *      <reg name="psp_s" bitsize="32" save-restore="no" type="data_ptr"/>
+ *  </feature>
+ */
+static size_t cortexm_build_target_secext_description(char *const buffer, const size_t max_length)
+{
+	size_t offset = 0U;
+	size_t print_size = max_length;
+	/* Start by ending the previous feature block and starting the new secext one. */
+	offset +=
+		(size_t)snprintf(buffer + offset, print_size, "</feature><feature name=\"org.gnu.gdb.arm.m-%s\">", "secext");
+
+	/* Loop through first the non-secure and then the secure registers */
+	for (uint8_t mode = 0U; mode <= 1U; ++mode) {
+		/* Then loop through the MSP and PSP entries */
+		for (size_t i = 4U; i <= 5U; ++i) {
+			if (max_length != 0U)
+				print_size = max_length - offset;
+
+			/* Extract the register type and save-restore status from the tables at the top of the file */
+			gdb_reg_type_e type = cortex_m_spr_types[i];
+			gdb_reg_save_restore_e save_restore = cortex_m_spr_save_restores[i];
+
+			/* Build an appropriate entry for the register */
+			offset += (size_t)snprintf(buffer + offset, print_size, "<reg name=\"%s_%ss\" bitsize=\"%u\"%s%s/>",
+				cortex_m_spr_names[i], mode == 0U ? "n" : "", cortex_m_spr_bitsizes[i],
+				gdb_reg_save_restore_strings[save_restore], gdb_reg_type_strings[type]);
+		}
+	}
+
+	/*
+	 * We then leave the closing feature tag off because that will get generated on
+	 * returning to cortexm_build_target_description() by the logic that follows.
+	 */
+	return offset;
+}
+
+/*
  * This function creates the target description XML string for a Cortex-M part.
  * This is done this way to decrease string duplication adn thus code size, making it
  * unfortunately much less readable than the string literal it is equvalent to.
@@ -1296,19 +1372,29 @@ static size_t cortexm_build_target_description(
 		gdb_reg_type_e type = cortex_m_spr_types[i];
 		gdb_reg_save_restore_e save_restore = cortex_m_spr_save_restores[i];
 
-		/* xPSR (reg index 3) requires placement at register logical number 25 */
+		/*
+		 * There is one special extra thing that has to happen here -
+		 * xPSR (reg index 3) requires placement at register logical number 25
+		 */
 		offset += (size_t)snprintf(buffer + offset, print_size, "<reg name=\"%s\" bitsize=\"%u\"%s%s%s/>",
 			cortex_m_spr_names[i], cortex_m_spr_bitsizes[i], gdb_reg_save_restore_strings[save_restore],
 			gdb_reg_type_strings[type], i == 3U ? " regnum=\"25\"" : "");
 
-		/* After the xPSR, we might need to generate one of either a system block or a secext block */
+		/* After the xPSR, then need to generate the system block to receive system regs */
 		if (i == 3U) {
 			if (max_length != 0U)
 				print_size = max_length - offset;
 
-			offset +=
-				(size_t)snprintf(buffer + offset, print_size, "</feature><feature name=\"org.gnu.gdb.arm.m-system\">");
+			offset += (size_t)snprintf(
+				buffer + offset, print_size, "</feature><feature name=\"org.gnu.gdb.arm.m-%s\">", "system");
 		}
+	}
+
+	/* If the target implements TrustZone, include the extra stack pointers */
+	if (target_options & CORTEXM_TOPT_TRUSTZONE) {
+		if (max_length != 0U)
+			print_size = max_length - offset;
+		offset += cortexm_build_target_secext_description(buffer + offset, print_size);
 	}
 
 	/* If the target has a FPU, include that */

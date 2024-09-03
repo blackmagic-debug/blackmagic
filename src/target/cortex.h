@@ -75,10 +75,11 @@
 #define CORTEX_CPUID_REVISION_MASK 0x00f00000U
 #define CORTEX_CPUID_PATCH_MASK    0x0000000fU
 
-#define CORTEX_FLOAT_REG_COUNT     33U
-#define CORTEX_DOUBLE_REG_COUNT    17U
-#define CORTEXM_GENERAL_REG_COUNT  20U
-#define CORTEXAR_GENERAL_REG_COUNT 17U
+#define CORTEX_FLOAT_REG_COUNT      33U
+#define CORTEX_DOUBLE_REG_COUNT     17U
+#define CORTEXM_GENERAL_REG_COUNT   20U /* General purpose register count for Cortex-M cores */
+#define CORTEXM_TRUSTZONE_REG_COUNT 4U  /* TrustZone register count for Cortex-M cores */
+#define CORTEXAR_GENERAL_REG_COUNT  17U /* General purpose register count for Cortex-A/R cores */
 
 adiv5_access_port_s *cortex_ap(target_s *target);
 
