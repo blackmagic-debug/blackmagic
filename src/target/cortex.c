@@ -114,9 +114,11 @@ void cortex_read_cpuid(target_s *const target)
 		break;
 	case CORTEX_M33:
 		target->core = "M33";
+		target->target_options |= CORTEXM_TOPT_FLAVOUR_V8M;
 		break;
 	case CORTEX_M23:
 		target->core = "M23";
+		target->target_options |= CORTEXM_TOPT_FLAVOUR_V8M;
 		break;
 	case CORTEX_M3:
 		target->core = "M3";
@@ -132,9 +134,11 @@ void cortex_read_cpuid(target_s *const target)
 		break;
 	case CORTEX_M0P:
 		target->core = "M0+";
+		target->target_options |= CORTEXM_TOPT_FLAVOUR_V6M;
 		break;
 	case CORTEX_M0:
 		target->core = "M0";
+		target->target_options |= CORTEXM_TOPT_FLAVOUR_V6M;
 		break;
 	default: {
 		const adiv5_access_port_s *const ap = cortex_ap(target);

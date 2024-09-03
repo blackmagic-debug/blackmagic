@@ -56,9 +56,6 @@ const command_s cortexm_cmd_list[] = {
 
 #define CORTEXM_DCRSR_REG_WRITE (1U << 16U)
 
-/* Target options recognised by the Cortex-M target */
-#define CORTEXM_TOPT_FLAVOUR_V6M (1U << 1U) /* if not set, target is assumed to be v7m */
-
 static const char *cortexm_target_description(target_s *target);
 static void cortexm_regs_read(target_s *target, void *data);
 static void cortexm_regs_write(target_s *target, const void *data);
@@ -268,6 +265,11 @@ bool cortexm_probe(adiv5_access_port_s *ap)
 
 	target->attach = cortexm_attach;
 	target->detach = cortexm_detach;
+
+	/* Probe for the security extension if the core is not an ARMv6-M core */
+	if (!(target->target_options & CORTEXM_TOPT_FLAVOUR_V6M) &&
+		target_mem32_read32(target, CORTEXM_ID_PFR1) & CORTEXM_ID_PFR1_SECEXT_IMPL)
+		target->target_options |= CORTEXM_TOPT_TRUSTZONE;
 
 	/* Probe for FP extension. */
 	uint32_t cpacr = target_mem32_read32(target, CORTEXM_CPACR);

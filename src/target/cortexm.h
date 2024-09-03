@@ -30,16 +30,17 @@ extern unsigned cortexm_wait_timeout;
 
 #define CORTEXM_SCS_BASE (CORTEXM_PPB_BASE + 0xe000U)
 
-#define CORTEXM_CPUID (CORTEXM_SCS_BASE + 0xd00U)
-#define CORTEXM_AIRCR (CORTEXM_SCS_BASE + 0xd0cU)
-#define CORTEXM_CFSR  (CORTEXM_SCS_BASE + 0xd28U)
-#define CORTEXM_HFSR  (CORTEXM_SCS_BASE + 0xd2cU)
-#define CORTEXM_DFSR  (CORTEXM_SCS_BASE + 0xd30U)
-#define CORTEXM_CPACR (CORTEXM_SCS_BASE + 0xd88U)
-#define CORTEXM_DHCSR (CORTEXM_SCS_BASE + 0xdf0U)
-#define CORTEXM_DCRSR (CORTEXM_SCS_BASE + 0xdf4U)
-#define CORTEXM_DCRDR (CORTEXM_SCS_BASE + 0xdf8U)
-#define CORTEXM_DEMCR (CORTEXM_SCS_BASE + 0xdfcU)
+#define CORTEXM_CPUID   (CORTEXM_SCS_BASE + 0xd00U)
+#define CORTEXM_AIRCR   (CORTEXM_SCS_BASE + 0xd0cU)
+#define CORTEXM_CFSR    (CORTEXM_SCS_BASE + 0xd28U)
+#define CORTEXM_HFSR    (CORTEXM_SCS_BASE + 0xd2cU)
+#define CORTEXM_DFSR    (CORTEXM_SCS_BASE + 0xd30U)
+#define CORTEXM_ID_PFR1 (CORTEXM_SCS_BASE + 0xd44U)
+#define CORTEXM_CPACR   (CORTEXM_SCS_BASE + 0xd88U)
+#define CORTEXM_DHCSR   (CORTEXM_SCS_BASE + 0xdf0U)
+#define CORTEXM_DCRSR   (CORTEXM_SCS_BASE + 0xdf4U)
+#define CORTEXM_DCRDR   (CORTEXM_SCS_BASE + 0xdf8U)
+#define CORTEXM_DEMCR   (CORTEXM_SCS_BASE + 0xdfcU)
 
 /* Cache identification */
 #define CORTEXM_CLIDR  (CORTEXM_SCS_BASE + 0xd78U)
@@ -92,6 +93,9 @@ extern unsigned cortexm_wait_timeout;
 #define CORTEXM_DFSR_DWTTRAP  (1U << 2U)
 #define CORTEXM_DFSR_BKPT     (1U << 1U)
 #define CORTEXM_DFSR_HALTED   (1U << 0U)
+
+/* Processor Feature Register 1 (ID_PFR1) */
+#define CORTEXM_ID_PFR1_SECEXT_IMPL (1U << 4U)
 
 /* Debug Halting Control and Status Register (DHCSR) */
 /* This key must be written to bits 31:16 for write to take effect */
