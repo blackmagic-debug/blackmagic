@@ -85,7 +85,7 @@ typedef struct cortexm_priv {
 } cortexm_priv_s;
 
 /* Register number tables */
-static const uint32_t regnum_cortex_m[CORTEXM_GENERAL_REG_COUNT] = {
+static const uint8_t regnum_cortex_m[CORTEXM_GENERAL_REG_COUNT] = {
 	0U, 1U, 2U, 3U, 4U, 5U, 6U, 7U, 8U, 9U, 10U, 11U, 12U, 13U, 14U, 15U, /* r0-r15 */
 	0x10U,                                                                /* xpsr */
 	0x11U,                                                                /* msp */
@@ -93,12 +93,12 @@ static const uint32_t regnum_cortex_m[CORTEXM_GENERAL_REG_COUNT] = {
 	0x14U,                                                                /* special */
 };
 
-static const uint32_t regnum_cortex_m_trustzone[CORTEXM_TRUSTZONE_REG_COUNT] = {
+static const uint8_t regnum_cortex_m_trustzone[CORTEXM_TRUSTZONE_REG_COUNT] = {
 	0x18U, 0x19U, /* Non-secure msp + psp */
 	0x1aU, 0x1bU, /* Secure msp + psp */
 };
 
-static const uint32_t regnum_cortex_mf[CORTEX_FLOAT_REG_COUNT] = {
+static const uint8_t regnum_cortex_mf[CORTEX_FLOAT_REG_COUNT] = {
 	0x21U,                                                  /* fpscr */
 	0x40U, 0x41U, 0x42U, 0x43U, 0x44U, 0x45U, 0x46U, 0x47U, /* s0-s7 */
 	0x48U, 0x49U, 0x4aU, 0x4bU, 0x4cU, 0x4dU, 0x4eU, 0x4fU, /* s8-s15 */
