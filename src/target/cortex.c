@@ -44,20 +44,20 @@
 
 #define CORTEX_CPUID 0xd00U
 
-adiv5_access_port_s *cortex_ap(target_s *t)
+adiv5_access_port_s *cortex_ap(target_s *const target)
 {
-	return ((cortex_priv_s *)t->priv)->ap;
+	return ((cortex_priv_s *)target->priv)->ap;
 }
 
-void cortex_priv_free(void *priv)
+void cortex_priv_free(void *const priv)
 {
 	adiv5_ap_unref(((cortex_priv_s *)priv)->ap);
 	free(priv);
 }
 
-bool cortex_check_error(target_s *t)
+bool cortex_check_error(target_s *const target)
 {
-	adiv5_access_port_s *ap = cortex_ap(t);
+	adiv5_access_port_s *const ap = cortex_ap(target);
 	return adiv5_dp_error(ap->dp) != 0;
 }
 
@@ -81,7 +81,7 @@ void cortex_dbg_write32(target_s *const target, const uint16_t dest, const uint3
 	adiv5_mem_write(ap, priv->base_addr + dest, &value, sizeof(value));
 }
 
-void cortex_read_cpuid(target_s *target)
+void cortex_read_cpuid(target_s *const target)
 {
 	/*
 	 * The CPUID register is defined in the ARMv6, ARMv7 and ARMv8 architectures
