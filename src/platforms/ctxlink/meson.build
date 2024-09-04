@@ -40,6 +40,17 @@ probe_ctxlink_args = [
 	f'-DDFU_SERIAL_LENGTH=@probe_ctxlink_dfu_serial_length@',
 ]
 
+trace_protocol = get_option('trace_protocol')
+if trace_protocol == '3'
+	trace_protocol = '2'
+endif
+probe_ctxlink_args += [f'-DTRACESWO_PROTOCOL=@trace_protocol@']
+if trace_protocol == '1'
+	probe_ctxlink_dependencies = fixme_platform_stm32_traceswo
+else
+	probe_ctxlink_dependencies = fixme_platform_stm32_traceswoasync
+endif
+
 probe_ctxlink_commonn_link_args = [
 	'-L@0@'.format(meson.current_source_dir()),
 	'-T@0@'.format('ctxlink.ld'),
@@ -55,7 +66,7 @@ probe_host = declare_dependency(
 	sources: probe_ctxlink_sources,
 	compile_args: probe_ctxlink_args,
 	link_args: probe_ctxlink_commonn_link_args + probe_ctxlink_link_args,
-	dependencies: [platform_common, platform_stm32f4, fixme_platform_stm32_traceswo],
+	dependencies: [platform_common, platform_stm32f4, probe_ctxlink_dependencies],
 )
 
 summary(
