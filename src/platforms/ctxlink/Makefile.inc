@@ -29,10 +29,17 @@ VPATH += platforms/common/stm32
 SRC +=               \
 	platform.c \
 	traceswodecode.c \
-	traceswo.c	\
 	serialno.c	\
 	timing.c	\
 	timing_stm32.c
+
+ifeq ($(TRACESWO_PROTOCOL), 1)
+SRC += traceswo.c
+CFLAGS += -DTRACESWO_PROTOCOL=1
+else
+SRC += traceswoasync.c
+CFLAGS += -DTRACESWO_PROTOCOL=2
+endif
 
 ifneq ($(BMP_BOOTLOADER), 1)
 all:	blackmagic.bin
