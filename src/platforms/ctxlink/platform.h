@@ -108,8 +108,8 @@
 /*
  * To use USART1 as USBUSART, DMA2 is selected from RM0368, page 170, table 29.
  * This table defines USART1_TX as stream 7, channel 4, and USART1_RX as stream 2, channel 4.
- * Because USART1 is on APB2 with max Pclk of 100 MHz,
- * reachable baudrates are up to 12.5M with OVER8 or 6.25M with default OVER16 (per DS10314, page 31, table 6)
+ * Because USART1 is on APB2 with max Pclk of 84 MHz,
+ * reachable baudrates are up to 10.5M with OVER8 or 5.25M with default OVER16 (per DocID025644 Rev3, page 30, table 6)
  */
 #define USBUSART               USART1
 #define USBUSART_CR1           USART1_CR1
