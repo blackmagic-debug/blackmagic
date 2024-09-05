@@ -32,12 +32,8 @@ probe_ctxlink_includes = include_directories('.')
 
 probe_ctxlink_sources = files('platform.c')
 
-bmd_bootloader = get_option('bmd_bootloader')
-
-probe_ctxlink_dfu_serial_length = bmd_bootloader ? '9' : '13'
-
 probe_ctxlink_args = [
-	f'-DDFU_SERIAL_LENGTH=@probe_ctxlink_dfu_serial_length@',
+	'-DDFU_SERIAL_LENGTH=13',
 ]
 
 trace_protocol = get_option('trace_protocol')
@@ -57,9 +53,6 @@ probe_ctxlink_commonn_link_args = [
 ]
 
 probe_ctxlink_link_args = []
-if bmd_bootloader
-	probe_ctxlink_link_args += ['-Wl,-Ttext=0x8004000']
-endif
 
 probe_host = declare_dependency(
 	include_directories: probe_ctxlink_includes,
@@ -73,7 +66,7 @@ summary(
 	{
 		'Name': 'ctxLink',
 		'Platform': 'STM32F4',
-		'Bootloader': bmd_bootloader ? 'Black Magic Debug Bootloader' : 'OEM ST Bootloader',
+		'Bootloader': 'OEM ST Bootloader',
 	},
 	section: 'Probe',
 )
