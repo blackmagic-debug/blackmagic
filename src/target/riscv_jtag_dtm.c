@@ -35,7 +35,6 @@
 #include "jtag_scan.h"
 #include "jtagtap.h"
 #include "riscv_debug.h"
-#include "adiv5.h"
 
 #define IR_DTMCS  0x10U
 #define IR_DMI    0x11U

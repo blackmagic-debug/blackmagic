@@ -37,6 +37,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "target.h"
+#include "adiv5.h"
 
 typedef enum riscv_debug_version {
 	RISCV_DEBUG_UNKNOWN,
@@ -224,6 +225,7 @@ typedef struct riscv_hart {
 /* JTAG DTM function declarations */
 #ifdef ENABLE_RISCV
 void riscv_jtag_dtm_handler(uint8_t dev_index);
+void riscv_adi_dtm_handler(adiv5_access_port_s *ap);
 #endif
 bool riscv_jtag_dmi_read(riscv_dmi_s *dmi, uint32_t address, uint32_t *value);
 bool riscv_jtag_dmi_write(riscv_dmi_s *dmi, uint32_t address, uint32_t value);
