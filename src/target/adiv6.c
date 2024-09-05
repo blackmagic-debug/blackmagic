@@ -44,6 +44,11 @@
 #include "adi.h"
 #include "adiv6.h"
 #include "adiv6_internal.h"
+#ifdef ENABLE_RISCV
+#include "riscv_debug.h"
+#endif
+
+#define ID_RP2350 0x0004U
 
 static bool adiv6_component_probe(adiv5_debug_port_s *dp, target_addr64_t base_address, uint32_t entry_number,
 	uint16_t rom_designer_code, uint16_t rom_part_number);
@@ -335,8 +340,16 @@ static bool adiv6_component_probe(adiv5_debug_port_s *const dp, const target_add
 				ap->base.designer_code = rom_designer_code;
 				ap->base.partno = rom_part_number;
 
-				/* Now we can use it, see what's on it and try to create debug targets */
-				adi_ap_component_probe(&ap->base, ap->base.base, 1U, 0U);
+#ifdef ENABLE_RISCV
+				/* Special-cases for RISC-V parts using ADI as a DTM */
+				if (rom_designer_code == JEP106_MANUFACTURER_RASPBERRY && rom_part_number == ID_RP2350 &&
+					ap->base.base == 0U) {
+					/* Dispatch to the RISC-V ADI DTM handler */
+					riscv_adi_dtm_handler(&ap->base);
+				} else
+#endif
+					/* Now we can use it, see what's on it and try to create debug targets */
+					adi_ap_component_probe(&ap->base, ap->base.base, 1U, 0U);
 				/* Having completed discovery on this AP, try to resume any halted cores */
 				adi_ap_resume_cores(&ap->base);
 				/* Then clean up so we don't leave an AP floating about if no (usable) cores were found */
