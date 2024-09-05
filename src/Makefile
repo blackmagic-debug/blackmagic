@@ -144,6 +144,7 @@ SRC +=               \
 	riscv32.c        \
 	riscv64.c        \
 	riscv_debug.c    \
+	riscv_adi_dtm.c  \
 	riscv_jtag_dtm.c
 else ifeq ($(ENABLE_RISCV_ACCEL), 1)
 CFLAGS == -DENABLE_RISCV_ACCEL=1

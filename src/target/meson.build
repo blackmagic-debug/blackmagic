@@ -143,6 +143,7 @@ riscv_jtag_dtm = declare_dependency(
 target_riscv = declare_dependency(
 	sources: files(
 		'riscv_debug.c',
+		'riscv_adi_dtm.c',
 	),
 	compile_args: ['-DENABLE_RISCV=1'],
 	dependencies: riscv_jtag_dtm,
