@@ -732,26 +732,81 @@ bool riscv_csr_read(riscv_hart_s *const hart, const uint16_t reg, void *const da
 	return riscv_csr_read_data(hart, data, access_width);
 }
 
+static bool riscv_csr_write_data(riscv_hart_s *const hart, const void *const data, const uint8_t access_width)
+{
+	const uint32_t *const value = (const uint32_t *)data;
+	/* Regardless of width, we have to write data0 */
+	if (!riscv_dm_write(hart->dbg_module, RV_DM_DATA0, value[0]))
+		return false;
+	/* If we're doing at least a 64-bit wide access, set up data1 */
+	if (access_width >= 64U && !riscv_dm_write(hart->dbg_module, RV_DM_DATA1, value[1]))
+		return false;
+	/* For a 128-bit access, set up data2 and data3 too */
+	if (access_width == 128 &&
+		!(riscv_dm_write(hart->dbg_module, RV_DM_DATA2, value[2]) &&
+			riscv_dm_write(hart->dbg_module, RV_DM_DATA3, value[3])))
+		return false;
+	return true;
+}
+
+static bool riscv_csr_progbuf_write(riscv_hart_s *const hart, const uint16_t reg, const void *const data)
+{
+	/* Read out a0 to keep it safe as the actions below clobber it */
+	uint32_t a0_value[3];
+	if (!riscv_csr_read(hart, RV_GPR_A0, a0_value))
+		return false;
+
+	/* Set up the program buffer to write to the target CSR */
+	if (!riscv_dm_write(hart->dbg_module, RV_DM_PROGBUF_BASE + 0U, RV_CSRW_A0 | ((reg & RV_CSR_ADDR_MASK) << 20U)))
+		return false;
+	/* If there's more than one progbuf register, set the second to an ebreak */
+	if (hart->progbuf_size > 1U && !riscv_dm_write(hart->dbg_module, RV_DM_PROGBUF_BASE + 1U, RV_EBREAK))
+		return false;
+
+	/* Figure out what access width should be used for the data phase of this */
+	const uint8_t access_width = (reg & RV_CSR_FORCE_MASK) ? riscv_csr_access_width(reg) : hart->access_width;
+	/* Set up the data for the write */
+	if (!riscv_csr_write_data(hart, data, access_width))
+		return false;
+	/* Execute the program buffer we've set up, writing the data into a0 first */
+	bool result = riscv_dm_write(hart->dbg_module, RV_DM_ABST_COMMAND,
+		RV_DM_ABST_CMD_ACCESS_REG | RV_ABST_WRITE | RV_REG_XFER | RV_ABST_POSTEXEC |
+			riscv_hart_access_width(access_width) | RV_GPR_A0);
+	/* Wait for both the register write and progbuf execution to complete */
+	result &= riscv_command_wait_complete(hart);
+	/* Whatever happened, now put back a0 from before */
+	return riscv_csr_write(hart, RV_GPR_A0, a0_value) && result;
+}
+
 bool riscv_csr_write(riscv_hart_s *const hart, const uint16_t reg, const void *const data)
 {
 	const uint8_t access_width = (reg & RV_CSR_FORCE_MASK) ? riscv_csr_access_width(reg) : hart->access_width;
 	DEBUG_TARGET("Writing %u-bit CSR %03x\n", access_width, reg & ~RV_CSR_FORCE_MASK);
+	/* If the write must be completed using the progbuf mechanism, switch to doing that */
+	if ((hart->flags & RV_HART_FLAG_DATA_GPR_ONLY) && (reg & RV_CSR_TYPE_MASK) != RV_CSR_TYPE_GPR)
+		return riscv_csr_progbuf_write(hart, reg, data);
 	/* Set up the data registers based on the Hart native access size */
-	const uint32_t *const value = (const uint32_t *)data;
-	if (!riscv_dm_write(hart->dbg_module, RV_DM_DATA0, value[0]))
-		return false;
-	if (access_width >= 64U && !riscv_dm_write(hart->dbg_module, RV_DM_DATA1, value[1]))
-		return false;
-	if (access_width == 128 &&
-		!(riscv_dm_write(hart->dbg_module, RV_DM_DATA2, value[2]) &&
-			riscv_dm_write(hart->dbg_module, RV_DM_DATA3, value[3])))
+	if (!riscv_csr_write_data(hart, data, access_width))
 		return false;
 	/* Configure and run the write */
 	if (!riscv_dm_write(hart->dbg_module, RV_DM_ABST_COMMAND,
 			RV_DM_ABST_CMD_ACCESS_REG | RV_ABST_WRITE | RV_REG_XFER | riscv_hart_access_width(access_width) |
 				(reg & ~RV_CSR_FORCE_MASK)))
 		return false;
-	return riscv_command_wait_complete(hart);
+	if (!riscv_command_wait_complete(hart)) {
+		/*
+		 * Figure out why the write failed - if it's because the command requested is unsupported,
+		 * then restart and use the program buffer mechanism instead, marking the hart as supporting
+		 * only GPR access using abstract commands. NB: we have no recourse if no progbuf regs are implemented.
+		 */
+		if (hart->status == RISCV_HART_NOT_SUPP && (reg & RV_CSR_TYPE_MASK) != RV_CSR_TYPE_GPR &&
+			hart->progbuf_size > 0U) {
+			hart->flags |= RV_HART_FLAG_DATA_GPR_ONLY;
+			return riscv_csr_write(hart, reg, data);
+		}
+		return false;
+	}
+	return true;
 }
 
 uint8_t riscv_mem_access_width(const riscv_hart_s *const hart, const target_addr_t address, const size_t length)
