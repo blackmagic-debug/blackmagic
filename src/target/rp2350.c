@@ -36,6 +36,8 @@
 #include "target.h"
 #include "target_internal.h"
 #include "cortexm.h"
+#include "cortex_internal.h"
+#include "riscv_debug.h"
 #include "spi.h"
 #include "sfdp.h"
 
@@ -121,7 +123,8 @@
 #define RP2350_QMI_DIRECT_TX_OUTPUT_ENABLE   (1U << 19U)
 #define RP2350_QMI_DIRECT_TX_NOPUSH_RX       (1U << 20U)
 
-#define ID_RP2350 0x0040U
+#define ID_RP2350_ARM   0x0040U
+#define ID_RP2350_RISCV 0x0004U
 
 static bool rp2350_attach(target_s *target);
 static bool rp2350_flash_prepare(target_s *target);
@@ -155,7 +158,7 @@ static void rp2350_add_flash(target_s *const target)
 bool rp2350_probe(target_s *const target)
 {
 	/* Check that the target has the right part number */
-	if (target->part_id != ID_RP2350)
+	if (target->part_id != ID_RP2350_ARM && target->part_id != ID_RP2350_RISCV)
 		return false;
 
 	/* Check the boot ROM magic for a more positive identification of the part */
@@ -177,8 +180,15 @@ bool rp2350_probe(target_s *const target)
 static bool rp2350_attach(target_s *const target)
 {
 	/* Complete the attach to the core first */
-	if (!cortexm_attach(target))
-		return false;
+	if (target->priv_free == cortex_priv_free) {
+		if (!cortexm_attach(target))
+			return false;
+#ifdef ENABLE_RISCV
+	} else {
+		if (!riscv_attach(target))
+			return false;
+#endif
+	}
 
 	/* Then figure out the memory map */
 	target_mem_map_free(target);
