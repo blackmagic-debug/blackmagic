@@ -148,25 +148,32 @@ static void at32f43_add_flash(target_s *const target, const target_addr_t addr, 
 	target_add_flash(target, target_flash);
 }
 
-static bool at32f43_attach(target_s *target)
+static void at32f43_configure_dbgmcu(target_s *target)
 {
-	if (!cortexm_attach(target))
-		return false;
-
 	/*
 	 * Enable sleep state emulation (clocks fed by HICK)
 	 * and make both watchdogs pause during core halts so that they
 	 * don't issue extra resets when we're doing e.g. flash reprogramming
 	 */
-	uint32_t dbgmcu_ctrl = target_mem32_read32(target, AT32F43x_DBGMCU_CTRL);
-	dbgmcu_ctrl |= AT32F43x_DBGMCU_CTRL_SLEEP_MASK;
-	uint32_t dbgmcu_apb1_pause = target_mem32_read32(target, AT32F43x_DBGMCU_APB1_PAUSE);
-	dbgmcu_apb1_pause |= AT32F43x_DBGMCU_APB1_PAUSE_WWDT | AT32F43x_DBGMCU_APB1_PAUSE_WDT;
+	const uint32_t dbgmcu_ctrl = target_mem32_read32(target, AT32F43x_DBGMCU_CTRL);
+	if ((dbgmcu_ctrl & AT32F43x_DBGMCU_CTRL_SLEEP_MASK) != AT32F43x_DBGMCU_CTRL_SLEEP_MASK)
+		target_mem32_write32(target, AT32F43x_DBGMCU_CTRL,
+			dbgmcu_ctrl | AT32F43x_DBGMCU_CTRL_SLEEP_DEBUG | AT32F43x_DBGMCU_CTRL_DEEPSLEEP_DEBUG |
+				AT32F43x_DBGMCU_CTRL_STANDBY_DEBUG);
 
-	bool error = false;
-	error |= target_mem32_write32(target, AT32F43x_DBGMCU_CTRL, dbgmcu_ctrl);
-	error |= target_mem32_write32(target, AT32F43x_DBGMCU_APB1_PAUSE, dbgmcu_apb1_pause);
-	return !error;
+	const uint32_t dbgmcu_apb1_pause_mask = AT32F43x_DBGMCU_APB1_PAUSE_WWDT | AT32F43x_DBGMCU_APB1_PAUSE_WDT;
+	const uint32_t dbgmcu_apb1_pause = target_mem32_read32(target, AT32F43x_DBGMCU_APB1_PAUSE);
+	if ((dbgmcu_apb1_pause & dbgmcu_apb1_pause_mask) != dbgmcu_apb1_pause_mask)
+		target_mem32_write32(target, AT32F43x_DBGMCU_APB1_PAUSE, dbgmcu_apb1_pause & dbgmcu_apb1_pause_mask);
+}
+
+static bool at32f43_attach(target_s *target)
+{
+	if (!cortexm_attach(target))
+		return false;
+
+	at32f43_configure_dbgmcu(target);
+	return true;
 }
 
 static void at32f43_detach(target_s *target)
@@ -277,6 +284,8 @@ static bool at32f43_detect(target_s *target, const uint16_t part_id)
 	target_add_commands(target, at32f43_cmd_list, target->driver);
 	target->attach = at32f43_attach;
 	target->detach = at32f43_detach;
+
+	at32f43_configure_dbgmcu(target);
 	return true;
 }
 
