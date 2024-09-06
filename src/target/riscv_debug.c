@@ -49,9 +49,10 @@
  * https://github.com/riscv/riscv-debug-spec/blob/master/riscv-debug-stable.pdf
  */
 
-#define RV_DM_CONTROL 0x10U
-#define RV_DM_STATUS  0x11U
-#define RV_DM_NEXT_DM 0x1dU
+#define RV_DM_CONTROL      0x10U
+#define RV_DM_STATUS       0x11U
+#define RV_DM_NEXT_DM      0x1dU
+#define RV_DM_PROGBUF_BASE 0x20U
 
 #define RV_DM_CTRL_ACTIVE          (1U << 0U)
 #define RV_DM_CTRL_SYSTEM_RESET    (1U << 1U)
@@ -81,6 +82,9 @@
 #define RV_CSR_FORCE_MASK   0xc000U
 #define RV_CSR_FORCE_32_BIT 0x4000U
 #define RV_CSR_FORCE_64_BIT 0x8000U
+#define RV_CSR_TYPE_MASK    0x3000U
+#define RV_CSR_TYPE_GPR     0x1000U
+#define RV_CSR_ADDR_MASK    0x0fffU
 
 /* The following is a set of CSR address definitions */
 /* misa -> The Hart's machine ISA register */
@@ -104,6 +108,20 @@
 #define RV_TRIG_DATA_1 0x7a1U
 /* tdata2 -> selected trigger configuration register 2 */
 #define RV_TRIG_DATA_2 0x7a2U
+
+/* GPR a0, aka x10 is used as a bounce buffer for our progbuf CSR I/O */
+#define RV_GPR_A0 0x100aU
+
+/*
+ * Instructions for reading and writing CSRs through a0
+ * CSRR -> CSR Read, abuses the CSRRS atomic read and set bits instruction
+ * CSRW -> CSR Write, abuses the CSRRW atomic read/write instruction
+ * In the case of CSRRS, if the rs1 register is x0, no write is performed.
+ * In the case of CSRRW, if the rd register is x0, no read is performed.
+ */
+#define RV_CSRR_A0 0x00002573U
+#define RV_CSRW_A0 0x00051073U
+#define RV_EBREAK  0x00100073U
 
 #define RV_ISA_EXTENSIONS_MASK 0x03ffffffU
 
@@ -641,16 +659,8 @@ bool riscv_command_wait_complete(riscv_hart_s *const hart)
 	return hart->status == RISCV_HART_NO_ERROR;
 }
 
-bool riscv_csr_read(riscv_hart_s *const hart, const uint16_t reg, void *const data)
+static bool riscv_csr_read_data(riscv_hart_s *const hart, void *const data, const uint8_t access_width)
 {
-	const uint8_t access_width = (reg & RV_CSR_FORCE_MASK) ? riscv_csr_access_width(reg) : hart->access_width;
-	DEBUG_TARGET("Reading %u-bit CSR %03x\n", access_width, reg & ~RV_CSR_FORCE_MASK);
-	/* Set up the register read and wait for it to complete */
-	if (!riscv_dm_write(hart->dbg_module, RV_DM_ABST_COMMAND,
-			RV_DM_ABST_CMD_ACCESS_REG | RV_ABST_READ | RV_REG_XFER | riscv_hart_access_width(access_width) |
-				(reg & ~RV_CSR_FORCE_MASK)) ||
-		!riscv_command_wait_complete(hart))
-		return false;
 	uint32_t *const value = (uint32_t *)data;
 	/* If we're doing a 128-bit read, grab the upper-most 2 uint32_t's */
 	if (access_width == 128U &&
@@ -662,6 +672,57 @@ bool riscv_csr_read(riscv_hart_s *const hart, const uint16_t reg, void *const da
 		return false;
 	/* Finally grab the last and lowest uint32_t */
 	return riscv_dm_read(hart->dbg_module, RV_DM_DATA0, value);
+}
+
+static bool riscv_csr_progbuf_read(riscv_hart_s *const hart, const uint16_t reg, void *const data)
+{
+	/* Set up the program buffer to read out the target CSR */
+	if (!riscv_dm_write(hart->dbg_module, RV_DM_PROGBUF_BASE + 0U, RV_CSRR_A0 | ((reg & RV_CSR_ADDR_MASK) << 20U)))
+		return false;
+	/* If there's more than one progbuf register, set the second to an ebreak */
+	if (hart->progbuf_size > 1U && !riscv_dm_write(hart->dbg_module, RV_DM_PROGBUF_BASE + 1U, RV_EBREAK))
+		return false;
+
+	/* Execute the program buffer we've set up, reading a0 out to keep it safe */
+	bool result = riscv_dm_write(hart->dbg_module, RV_DM_ABST_COMMAND,
+		RV_DM_ABST_CMD_ACCESS_REG | RV_ABST_READ | RV_REG_XFER | RV_ABST_POSTEXEC |
+			riscv_hart_access_width(hart->access_width) | RV_GPR_A0);
+	/* Wait for both the register read and progbuf execution to complete */
+	result &= riscv_command_wait_complete(hart);
+	/* Extract the data read out by the GPR read */
+	uint32_t a0_value[3];
+	result &= riscv_csr_read_data(hart, a0_value, hart->access_width);
+	/* Now try to read out the requested data from a0 at the requested size */
+	result &= riscv_csr_read(hart, RV_GPR_A0 | (reg & RV_CSR_FORCE_MASK), data);
+	/* Whatever happened, now put back a0 from before */
+	return riscv_csr_write(hart, RV_GPR_A0, a0_value) && result;
+}
+
+bool riscv_csr_read(riscv_hart_s *const hart, const uint16_t reg, void *const data)
+{
+	const uint8_t access_width = (reg & RV_CSR_FORCE_MASK) ? riscv_csr_access_width(reg) : hart->access_width;
+	DEBUG_TARGET("Reading %u-bit CSR %03x\n", access_width, reg & ~RV_CSR_FORCE_MASK);
+	/* If the read must be completed using the progbuf mechanism, switch to doing that */
+	if ((hart->flags & RV_HART_FLAG_DATA_GPR_ONLY) && (reg & RV_CSR_TYPE_MASK) != RV_CSR_TYPE_GPR)
+		return riscv_csr_progbuf_read(hart, reg, data);
+	/* Set up the register read and wait for it to complete */
+	if (!riscv_dm_write(hart->dbg_module, RV_DM_ABST_COMMAND,
+			RV_DM_ABST_CMD_ACCESS_REG | RV_ABST_READ | RV_REG_XFER | riscv_hart_access_width(access_width) |
+				(reg & ~RV_CSR_FORCE_MASK)) ||
+		!riscv_command_wait_complete(hart)) {
+		/*
+		 * Figure out why the read failed - if it's because the command requested is unsupported,
+		 * then restart and use the program buffer mechanism instead, marking the hart as supporting
+		 * only GPR access using abstract commands. NB: we have no recourse if no progbuf regs are implemented.
+		 */
+		if (hart->status == RISCV_HART_NOT_SUPP && (reg & RV_CSR_TYPE_MASK) != RV_CSR_TYPE_GPR &&
+			hart->progbuf_size > 0U) {
+			hart->flags |= RV_HART_FLAG_DATA_GPR_ONLY;
+			return riscv_csr_read(hart, reg, data);
+		}
+		return false;
+	}
+	return riscv_csr_read_data(hart, data, access_width);
 }
 
 bool riscv_csr_write(riscv_hart_s *const hart, const uint16_t reg, const void *const data)

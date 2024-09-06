@@ -86,13 +86,15 @@ typedef enum riscv_match_size {
 } riscv_match_size_e;
 
 /* These defines specify Hart-specific information such as which memory access style to use */
-#define RV_HART_FLAG_MEMORY_ABSTRACT    0x00U
-#define RV_HART_FLAG_MEMORY_SYSBUS      0x10U
 #define RV_HART_FLAG_ACCESS_WIDTH_MASK  0x0fU
-#define RV_HART_FLAG_ACCESS_WIDTH_8BIT  0x01U
-#define RV_HART_FLAG_ACCESS_WIDTH_16BIT 0x02U
-#define RV_HART_FLAG_ACCESS_WIDTH_32BIT 0x04U
-#define RV_HART_FLAG_ACCESS_WIDTH_64BIT 0x08U
+#define RV_HART_FLAG_ACCESS_WIDTH_8BIT  (1U << 0U)
+#define RV_HART_FLAG_ACCESS_WIDTH_16BIT (1U << 1U)
+#define RV_HART_FLAG_ACCESS_WIDTH_32BIT (1U << 2U)
+#define RV_HART_FLAG_ACCESS_WIDTH_64BIT (1U << 3U)
+#define RV_HART_FLAG_MEMORY_MASK        (1U << 4U)
+#define RV_HART_FLAG_MEMORY_ABSTRACT    (0U << 4U)
+#define RV_HART_FLAG_MEMORY_SYSBUS      (1U << 4U)
+#define RV_HART_FLAG_DATA_GPR_ONLY      (1U << 5U) /* Hart supports Abstract Data commands for GPRs only */
 
 typedef struct riscv_dmi riscv_dmi_s;
 
@@ -169,12 +171,13 @@ typedef struct riscv_hart {
 #define RV_DM_ABST_CMD_ACCESS_REG 0x00000000U
 #define RV_DM_ABST_CMD_ACCESS_MEM 0x02000000U
 
-#define RV_ABST_READ          0x00000000U
-#define RV_ABST_WRITE         0x00010000U
-#define RV_REG_XFER           0x00020000U
-#define RV_REG_ACCESS_32_BIT  0x00200000U
-#define RV_REG_ACCESS_64_BIT  0x00300000U
-#define RV_REG_ACCESS_128_BIT 0x00400000U
+#define RV_ABST_READ          (0U << 16U)
+#define RV_ABST_WRITE         (1U << 16U)
+#define RV_REG_XFER           (1U << 17U)
+#define RV_ABST_POSTEXEC      (1U << 18U)
+#define RV_REG_ACCESS_32_BIT  (2U << 20U)
+#define RV_REG_ACCESS_64_BIT  (3U << 20U)
+#define RV_REG_ACCESS_128_BIT (4U << 20U)
 
 #define RV_MEM_ACCESS_8_BIT   0x0U
 #define RV_MEM_ACCESS_16_BIT  0x1U
