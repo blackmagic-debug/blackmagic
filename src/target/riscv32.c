@@ -68,8 +68,8 @@ typedef struct riscv32_regs {
 #define RV32_MATCH_BEFORE 0x00000000U
 #define RV32_MATCH_AFTER  0x00040000U
 
-static size_t riscv32_reg_read(target_s *target, uint32_t c, void *data, size_t max);
-static size_t riscv32_reg_write(target_s *target, uint32_t c, const void *data, size_t max);
+static size_t riscv32_reg_read(target_s *target, uint32_t reg, void *data, size_t max);
+static size_t riscv32_reg_write(target_s *target, uint32_t reg, const void *data, size_t max);
 static void riscv32_regs_read(target_s *target, void *data);
 static void riscv32_regs_write(target_s *target, const void *data);
 
@@ -95,6 +95,8 @@ bool riscv32_probe(target_s *const target)
 	switch (target->designer_code) {
 	case JEP106_MANUFACTURER_RV_GIGADEVICE:
 		PROBE(gd32vf1_probe);
+		break;
+	default:
 		break;
 	}
 
@@ -138,7 +140,7 @@ static void riscv32_regs_write(target_s *const target, const void *const data)
 
 static inline size_t riscv32_bool_to_4(const bool ret)
 {
-	return ret ? 4 : 0;
+	return ret ? 4U : 0U;
 }
 
 static size_t riscv32_reg_read(target_s *target, const uint32_t reg, void *data, const size_t max)
@@ -193,6 +195,8 @@ void riscv32_unpack_data(void *const dest, const uint32_t data, const uint8_t ac
 	case RV_MEM_ACCESS_32_BIT:
 		memcpy(dest, &data, sizeof(data));
 		break;
+	default:
+		break;
 	}
 }
 
@@ -215,6 +219,8 @@ uint32_t riscv32_pack_data(const void *const src, const uint8_t access_width)
 		memcpy(&value, src, sizeof(value));
 		return value;
 	}
+	default:
+		break;
 	}
 	return 0;
 }
@@ -353,6 +359,8 @@ static void riscv32_sysbus_mem_adjusted_read(riscv_hart_s *const hart, void *con
 			adiv5_unpack_data(data, src + adjustment, value, ALIGN_8BIT);
 		break;
 	}
+	default:
+		break;
 	}
 }
 
@@ -492,6 +500,8 @@ static void riscv32_sysbus_mem_adjusted_write(riscv_hart_s *const hart, const ta
 			hart, dest & alignment, &value, native_access_length, RV_MEM_ACCESS_32_BIT, native_access_length);
 		break;
 	}
+	default:
+		break;
 	}
 }
 
