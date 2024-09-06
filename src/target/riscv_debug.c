@@ -387,6 +387,8 @@ static uint8_t riscv_isa_address_width(const uint32_t isa)
 		return 64U;
 	case 3:
 		return 128U;
+	default:
+		break;
 	}
 	DEBUG_INFO("Unknown address width, defaulting to 32\n");
 	return 32U;
@@ -534,6 +536,8 @@ static riscv_debug_version_e riscv_dm_version(const uint32_t status)
 	case 3:
 		DEBUG_INFO("RISC-V debug v1.0 DM\n");
 		return RISCV_DEBUG_1_0;
+	default:
+		break;
 	}
 	DEBUG_INFO("Please report part with unknown RISC-V debug DM version %x\n", version);
 	return RISCV_DEBUG_UNKNOWN;
@@ -862,8 +866,10 @@ riscv_match_size_e riscv_breakwatch_match_size(const size_t size)
 		return RV_MATCH_SIZE_112_BIT;
 	case 128U:
 		return RV_MATCH_SIZE_128_BIT;
+	default:
+		break;
 	}
-	return 0;
+	return 0U;
 }
 
 bool riscv_config_trigger(riscv_hart_s *const hart, const uint32_t trigger, const riscv_trigger_state_e mode,
