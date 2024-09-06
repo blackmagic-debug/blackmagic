@@ -89,14 +89,26 @@ static bool at32f43_mass_erase(target_s *target);
 #define AT32F43x_2K_OB_COUNT 256U
 #define AT32F43x_4K_OB_COUNT 2048U
 
-#define AT32F43x_DEBUG            0xe0042000U
-#define DBGMCU_IDCODE             (AT32F43x_DEBUG + 0U)
-#define AT32F43x_DEBUG_CTRL       (AT32F43x_DEBUG + 4U)
-#define AT32F43x_DEBUG_APB1_PAUSE (AT32F43x_DEBUG + 8U)
+/*
+ * refman: DEBUG has 5 registers, of which CTRL, APB1_PAUSE, APB2_PAUSE are
+ * "asynchronously reset by POR Reset (not reset by system reset). It can be written by the debugger under reset."
+ * Note that it has no TRACE_IOEN and SWO is controlled by GPIO IOMUX (AF) instead.
+ */
+#define AT32F43x_DBGMCU_BASE       0xe0042000U
+#define AT32F43x_DBGMCU_IDCODE     (AT32F43x_DBGMCU_BASE + 0x00U)
+#define AT32F43x_DBGMCU_CTRL       (AT32F43x_DBGMCU_BASE + 0x40U)
+#define AT32F43x_DBGMCU_APB1_PAUSE (AT32F43x_DBGMCU_BASE + 0x80U)
+#define AT32F43x_DBGMCU_APB2_PAUSE (AT32F43x_DBGMCU_BASE + 0x0cU)
+#define AT32F43x_DBGMCU_SER_ID     (AT32F43x_DBGMCU_BASE + 0x20U)
 
-#define AT32F43x_DEBUG_CTRL_SLEEP      0x7U
-#define AT32F43x_DEBUG_APB1_PAUSE_WWDT (1U << 11U)
-#define AT32F43x_DEBUG_APB1_PAUSE_WDT  (1U << 12U)
+#define AT32F43x_DBGMCU_CTRL_SLEEP_DEBUG     (1U << 0U)
+#define AT32F43x_DBGMCU_CTRL_DEEPSLEEP_DEBUG (1U << 1U)
+#define AT32F43x_DBGMCU_CTRL_STANDBY_DEBUG   (1U << 2U)
+#define AT32F43x_DBGMCU_CTRL_SLEEP_MASK \
+	(AT32F43x_DBGMCU_CTRL_SLEEP_DEBUG | AT32F43x_DBGMCU_CTRL_DEEPSLEEP_DEBUG | AT32F43x_DBGMCU_CTRL_STANDBY_DEBUG)
+
+#define AT32F43x_DBGMCU_APB1_PAUSE_WWDT (1U << 11U)
+#define AT32F43x_DBGMCU_APB1_PAUSE_WDT  (1U << 12U)
 
 #define AT32F4x_IDCODE_SERIES_MASK 0xfffff000U
 #define AT32F4x_IDCODE_PART_MASK   0x00000fffU
@@ -142,30 +154,28 @@ static bool at32f43_attach(target_s *target)
 		return false;
 
 	/*
-	 * Save previous configuration (to restore on detach)
-	 * then enable sleep state emulation (clocks fed by HICK)
+	 * Enable sleep state emulation (clocks fed by HICK)
 	 * and make both watchdogs pause during core halts so that they
 	 * don't issue extra resets when we're doing e.g. flash reprogramming
 	 */
-	uint32_t debug_ctrl = target_mem32_read32(target, AT32F43x_DEBUG_CTRL);
-	debug_ctrl |= AT32F43x_DEBUG_CTRL_SLEEP;
-	uint32_t debug_apb1_pause = target_mem32_read32(target, AT32F43x_DEBUG_APB1_PAUSE);
-	debug_apb1_pause |= AT32F43x_DEBUG_APB1_PAUSE_WWDT | AT32F43x_DEBUG_APB1_PAUSE_WDT;
+	uint32_t dbgmcu_ctrl = target_mem32_read32(target, AT32F43x_DBGMCU_CTRL);
+	dbgmcu_ctrl |= AT32F43x_DBGMCU_CTRL_SLEEP_MASK;
+	uint32_t dbgmcu_apb1_pause = target_mem32_read32(target, AT32F43x_DBGMCU_APB1_PAUSE);
+	dbgmcu_apb1_pause |= AT32F43x_DBGMCU_APB1_PAUSE_WWDT | AT32F43x_DBGMCU_APB1_PAUSE_WDT;
 
-	bool result = true;
-	result |= target_mem32_write32(target, AT32F43x_DEBUG_CTRL, debug_ctrl);
-	result |= target_mem32_write32(target, AT32F43x_DEBUG_APB1_PAUSE, debug_apb1_pause);
-	return result;
+	bool error = false;
+	error |= target_mem32_write32(target, AT32F43x_DBGMCU_CTRL, dbgmcu_ctrl);
+	error |= target_mem32_write32(target, AT32F43x_DBGMCU_APB1_PAUSE, dbgmcu_apb1_pause);
+	return !error;
 }
 
 static void at32f43_detach(target_s *target)
 {
-	uint32_t debug_ctrl = target_mem32_read32(target, AT32F43x_DEBUG_CTRL);
-	debug_ctrl &= ~AT32F43x_DEBUG_CTRL_SLEEP;
-	uint32_t debug_apb1_pause = target_mem32_read32(target, AT32F43x_DEBUG_APB1_PAUSE);
-	debug_apb1_pause &= ~(AT32F43x_DEBUG_APB1_PAUSE_WWDT | AT32F43x_DEBUG_APB1_PAUSE_WDT);
-	target_mem32_write32(target, AT32F43x_DEBUG_CTRL, debug_ctrl);
-	target_mem32_write32(target, AT32F43x_DEBUG_APB1_PAUSE, debug_apb1_pause);
+	const uint32_t dbgmcu_ctrl = target_mem32_read32(target, AT32F43x_DBGMCU_CTRL);
+	const uint32_t dbgmcu_apb1_pause = target_mem32_read32(target, AT32F43x_DBGMCU_APB1_PAUSE);
+	target_mem32_write32(target, AT32F43x_DBGMCU_CTRL, dbgmcu_ctrl & ~AT32F43x_DBGMCU_CTRL_SLEEP_MASK);
+	target_mem32_write32(target, AT32F43x_DBGMCU_APB1_PAUSE,
+		dbgmcu_apb1_pause & ~(AT32F43x_DBGMCU_APB1_PAUSE_WWDT | AT32F43x_DBGMCU_APB1_PAUSE_WDT));
 
 	cortexm_detach(target);
 }
@@ -278,7 +288,7 @@ bool at32f43x_probe(target_s *target)
 		return false;
 
 	// Artery chips use the complete idcode word for identification
-	const uint32_t idcode = target_mem32_read32(target, DBGMCU_IDCODE);
+	const uint32_t idcode = target_mem32_read32(target, AT32F43x_DBGMCU_IDCODE);
 	const uint32_t series = idcode & AT32F4x_IDCODE_SERIES_MASK;
 	const uint16_t part_id = idcode & AT32F4x_IDCODE_PART_MASK;
 
