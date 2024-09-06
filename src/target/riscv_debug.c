@@ -521,8 +521,12 @@ static inline void riscv_dmi_ref(riscv_dmi_s *const dmi)
 static inline void riscv_dmi_unref(riscv_dmi_s *const dmi)
 {
 	--dmi->ref_count;
-	if (!dmi->ref_count)
+	if (!dmi->ref_count) {
+		/* Check if the DMI bus is on an AP */
+		if (dmi->dev_index == 0xffU && dmi->idle_cycles == 0xffU)
+			adiv5_ap_unref(((riscv_dmi_ap_s *)dmi)->ap);
 		free(dmi);
+	}
 }
 
 static void riscv_dm_ref(riscv_dm_s *const dbg_module)

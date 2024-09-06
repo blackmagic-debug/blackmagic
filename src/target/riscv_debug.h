@@ -114,6 +114,12 @@ struct riscv_dmi {
 	bool (*write)(riscv_dmi_s *dmi, uint32_t address, uint32_t value);
 };
 
+/* This structure represent a DMI bus that is accessed via an ADI AP */
+typedef struct riscv_dmi_ap {
+	riscv_dmi_s dmi;
+	adiv5_access_port_s *ap;
+} riscv_dmi_ap_s;
+
 /* This represents a specific Debug Module on the DMI bus */
 typedef struct riscv_dm {
 	uint32_t ref_count;
