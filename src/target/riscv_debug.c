@@ -456,6 +456,9 @@ static bool riscv_hart_init(riscv_hart_s *const hart)
 	/* If the hart implements mvendorid, this gives us the JEP-106, otherwise use the DTM designer code */
 	target->designer_code = hart->vendorid ? hart->vendorid : hart->dbg_module->dmi_bus->designer_code;
 	target->cpuid = hart->archid;
+	/* If the DMI bus is provided via ADI, grab the AP's partno for the target */
+	if (hart->dbg_module->dmi_bus->dev_index == 0xffU && hart->dbg_module->dmi_bus->idle_cycles == 0xffU)
+		target->part_id = ((riscv_dmi_ap_s *)hart->dbg_module->dmi_bus)->ap->partno;
 
 	/* Now we're in a safe environment, leasurely read out the triggers, etc. */
 	riscv_hart_discover_triggers(hart);
