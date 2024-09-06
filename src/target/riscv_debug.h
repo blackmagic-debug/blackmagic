@@ -1,7 +1,7 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
- * Copyright (C) 2023 1BitSquared <info@1bitsquared.com>
+ * Copyright (C) 2023-2024 1BitSquared <info@1bitsquared.com>
  * Written by Rachel Mant <git@dragonmux.network>
  * All rights reserved.
  *
@@ -139,6 +139,7 @@ typedef struct riscv_hart {
 	uint8_t access_width;
 	uint8_t address_width;
 	uint8_t flags;
+	uint8_t progbuf_size;
 	riscv_hart_status_e status;
 
 	uint32_t extensions;

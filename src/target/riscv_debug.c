@@ -1,7 +1,7 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
- * Copyright (C) 2023 1BitSquared <info@1bitsquared.com>
+ * Copyright (C) 2023-2024 1BitSquared <info@1bitsquared.com>
  * Written by Rachel Mant <git@dragonmux.network>
  * All rights reserved.
  *
@@ -71,8 +71,10 @@
 #define RV_DM_STAT_ALL_RESUME_ACK (1U << 17U)
 #define RV_DM_STAT_ALL_RESET      (1U << 19U)
 
-#define RV_DM_ABST_STATUS_BUSY       (1U << 12U)
-#define RV_DM_ABST_STATUS_DATA_COUNT 0x0000000fU
+#define RV_DM_ABST_STATUS_BUSY              (1U << 12U)
+#define RV_DM_ABST_STATUS_DATA_COUNT        0x0000000fU
+#define RV_DM_ABST_STATUS_PROGBUFSIZE_MASK  0x1f000000U
+#define RV_DM_ABST_STATUS_PROGBUFSIZE_SHIFT 24U
 
 #define RV_DM_SYSBUS_STATUS_ADDR_WIDTH_MASK 0x00000fe0U
 
@@ -557,9 +559,11 @@ static uint32_t riscv_hart_discover_isa(riscv_hart_s *const hart)
 	uint32_t data_registers = 0;
 	if (!riscv_dm_read(hart->dbg_module, RV_DM_ABST_CTRLSTATUS, &data_registers))
 		return 0U;
-	/* And use the data count bits to divine an initial guess on the platform width */
+	/* Extract the program buffer size in DM registers */
+	hart->progbuf_size = (data_registers & RV_DM_ABST_STATUS_PROGBUFSIZE_MASK) >> RV_DM_ABST_STATUS_PROGBUFSIZE_SHIFT;
+	/* Now use the data count bits to divine an initial guess on the platform width */
 	data_registers &= RV_DM_ABST_STATUS_DATA_COUNT;
-	DEBUG_INFO("Hart has %" PRIu32 " data registers\n", data_registers);
+	DEBUG_INFO("Hart has %" PRIu32 " data registers and %u progbuf registers\n", data_registers, hart->progbuf_size);
 	/* Check we have at least enough data registers for arg0 */
 	if (data_registers >= 4)
 		hart->access_width = 128U;
