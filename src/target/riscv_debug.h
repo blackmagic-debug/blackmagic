@@ -207,9 +207,10 @@ typedef struct riscv_hart {
 #define RV_TRIGGER_MODE_MASK          0xffff0000U
 #define RV_TRIGGER_SUPPORT_BREAKWATCH 0x00000004U
 
-// The CSR id when reported by GDB is shifted by RV_CSR_GDB_OFFSET
-// so they cannot collide with GPR registers, so you have to subtract
-// RV_CSR_GDB_OFFSET from the value received from gdb
+/*
+ * The CSR number when requested by GDB is shifted by RV_CSR_GDB_OFFSET so they cannot collide with
+ * the GPRs. As a result, we have to subtract RV_CSR_GDB_OFFSET from the value received from GDB.
+ */
 #define RV_CSR_GDB_OFFSET 128
 #define RV_CSR_STATUS     0x300
 #define RV_CSR_MISA       0x301
@@ -221,10 +222,10 @@ typedef struct riscv_hart {
 #define RV_CSR_MTVAL      0x343
 #define RV_CSR_MIP        0x344
 
-// These two lines are about allowing gdb to access
-// fpu registers through fake registers offset by
-// RV_FPU_GDB_OFFSET for normal fpu registers
-// and RV_FPU_GDB_CSR_OFFSET (for fpu related CSR)
+/*
+ * These two lines are about allowing GDB to access FPU registers through fake registers offset by
+ * RV_FPU_GDB_OFFSET for the normal FPU registers and RV_FPU_GDB_CSR_OFFSET for FPU related CSRs
+ */
 #define RV_FPU_GDB_OFFSET     33
 #define RV_FPU_GDB_CSR_OFFSET 66
 
