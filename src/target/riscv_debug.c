@@ -66,6 +66,7 @@
 #define RV_DM_CTRL_HARTSELHI_SHIFT 4U
 
 #define RV_DM_STAT_ALL_HALTED     (1U << 9U)
+#define RV_DM_STAT_UNAVAILABLE    (1U << 12U)
 #define RV_DM_STAT_NON_EXISTENT   (1U << 14U)
 #define RV_DM_STAT_ALL_RESUME_ACK (1U << 17U)
 #define RV_DM_STAT_ALL_RESET      (1U << 19U)
@@ -337,6 +338,11 @@ static void riscv_dm_init(riscv_dm_s *const dbg_module)
 		/* If the hart doesn't exist, the spec says to terminate scan */
 		if (status & RV_DM_STAT_NON_EXISTENT)
 			break;
+		/* If the hart is not available, skip it */
+		if (status & RV_DM_STAT_UNAVAILABLE) {
+			DEBUG_INFO("Skipping hart %" PRIu32 " -> Unavailable\n", hart_idx);
+			continue;
+		}
 
 		riscv_hart_s *hart = calloc(1, sizeof(*hart));
 		if (!hart) { /* calloc failed: heap exhaustion */
