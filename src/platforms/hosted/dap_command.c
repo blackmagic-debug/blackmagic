@@ -372,14 +372,14 @@ bool perform_dap_swd_sequences(dap_swd_sequence_s *const sequences, const uint8_
 
 	DEBUG_PROBE("-> dap_swd_sequence (%u sequences)\n", sequence_count);
 	/* 47 is 2 + (5 * 9) where 9 is the max length of each sequence request */
-	uint8_t request[47] = {
+	uint8_t request[47U] = {
 		DAP_SWD_SEQUENCE,
 		sequence_count,
 	};
 	/* Encode the transfers into the buffer */
 	size_t offset = 2U;
 	size_t result_length = 0U;
-	for (uint8_t i = 0; i < sequence_count; ++i) {
+	for (uint8_t i = 0U; i < sequence_count; ++i) {
 		const dap_swd_sequence_s *const sequence = &sequences[i];
 		const size_t adjustment = dap_encode_swd_sequence(sequence, request, offset);
 		/* If encoding failed, return */
@@ -391,11 +391,51 @@ bool perform_dap_swd_sequences(dap_swd_sequence_s *const sequences, const uint8_
 			result_length += (sequence->cycles + 7U) >> 3U;
 	}
 
-	uint8_t response[41] = {DAP_RESPONSE_OK};
+	uint8_t response[41U] = {DAP_RESPONSE_OK};
 	/* Run the request having set up the request buffer */
 	if (!dap_run_cmd(request, offset, response, 1U + result_length)) {
-		DEBUG_PROBE("-> sequence failed with %u\n", response[0]);
+		DEBUG_PROBE("-> sequence failed with %u\n", response[0U]);
 		return false;
+	}
+
+	/* Check if the request was for a DP IDR read, and if it was, check if we got a bugged response */
+	if (!(dap_quirks & DAP_QUIRK_BROKEN_SWD_SEQUENCE) && request[1U] == 0x04U && request[2U] == 0x08U &&
+		request[3U] == 0xa5U && response[0U] == 0x00U && response[1U] == 0x03U && response[2U] == 0xeeU) {
+		dap_quirks |= DAP_QUIRK_BROKEN_SWD_SEQUENCE;
+		DEBUG_WARN("Buggy CMSIS-DAP adaptor found, applying SWD sequence quirk\n");
+	}
+
+	/* If we've got a buggy adaptor, go through the response bytes *backwards* to correct. */
+	if (dap_quirks & DAP_QUIRK_BROKEN_SWD_SEQUENCE) {
+		offset = result_length;
+		uint8_t msb = 0U;
+		for (uint8_t i = 0U; i < sequence_count; ++i) {
+			dap_swd_sequence_s *const sequence = &sequences[sequence_count - (i + 1U)];
+			/* If this one is not an in sequence, skip it */
+			if (sequence->direction == DAP_SWD_OUT_SEQUENCE)
+				continue;
+			/* Figure out how many bytes are in this sequence's response */
+			const size_t bytes = (sequence->cycles + 7U) >> 3U;
+			/* Work through the response data for this chunk of the response */
+			for (size_t byte = 0; byte < bytes; ++byte) {
+				/* Extract the next byte from the end, working backwards */
+				uint8_t value = response[offset - byte];
+				/* Figure out how many bits are used in this response byte */
+				const size_t bits = byte ? 7U : (sequence->cycles & 7U);
+				/* Extract the LSb, shift it away and insert the previous byte's MSb */
+				const uint8_t lsb = value & 1U;
+				value = (msb >> (7U - bits)) | (value >> 1U);
+				msb = lsb << 7U;
+				/* Store the corrected byte back */
+				response[offset - byte] = value;
+			}
+			offset -= bytes;
+		}
+
+		DEBUG_WIRE("  corrected: ");
+		for (size_t idx = 0U; idx < result_length + 1U; ++idx)
+			DEBUG_WIRE("%02x ", response[idx]);
+		DEBUG_WIRE("\n");
 	}
 
 	/* Now we have data, grab the response bytes and stuff them back into the sequence structures */
