@@ -141,6 +141,7 @@ endif
 ifeq ($(ENABLE_RISCV), 1)
 CFLAGS += -DENABLE_RISCV=1
 SRC +=               \
+	esp32c3.c        \
 	riscv32.c        \
 	riscv64.c        \
 	riscv_debug.c    \

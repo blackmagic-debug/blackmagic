@@ -34,6 +34,7 @@ option(
 		'at32f4',
 		'ch579',
 		'efm',
+		'esp32',
 		'hc32',
 		'lpc',
 		'nrf',
