@@ -110,9 +110,9 @@ const command_s cmd_list[] = {
 #endif
 #ifdef PLATFORM_HAS_TRACESWO
 #if defined TRACESWO_PROTOCOL && TRACESWO_PROTOCOL == 2
-	{"traceswo", cmd_traceswo, "Start trace capture, NRZ mode: [BAUDRATE] [decode [CHANNEL_NR ...]]"},
+	{"traceswo", cmd_traceswo, "Start SWO capture, NRZ mode: <enable|disable> [BAUDRATE] [decode [CHANNEL_NR ...]]"},
 #else
-	{"traceswo", cmd_traceswo, "Start trace capture, Manchester mode: [decode [CHANNEL_NR ...]]"},
+	{"traceswo", cmd_traceswo, "Start SWO capture, Manchester mode: <enable|disable> [decode [CHANNEL_NR ...]]"},
 #endif
 #endif
 	{"heapinfo", cmd_heapinfo, "Set semihosting heapinfo: HEAP_BASE HEAP_LIMIT STACK_BASE STACK_LIMIT"},
@@ -659,17 +659,15 @@ static bool cmd_traceswo(target_s *t, int argc, const char **argv)
 {
 	(void)t;
 	bool mode = false;
-	if (argc >= 2) {
-		if (!parse_enable_or_disable(argv[1], &mode)) {
-			gdb_out("Usage: traceswo <enable|disable> [2000000] [decode [0 1 3 31]]\n");
-			return false;
-		}
+	if (argc >= 2 && !parse_enable_or_disable(argv[1], &mode)) {
+		gdb_out("Usage: traceswo <enable|disable> [2000000] [decode [0 1 3 31]]\n");
+		return false;
 	}
-	if (mode) {
+
+	if (mode)
 		return cmd_traceswo_enable(argc - 1, argv + 1);
-	} else {
+	else
 		return cmd_traceswo_disable();
-	}
 }
 #endif
 
@@ -677,10 +675,9 @@ static bool cmd_traceswo(target_s *t, int argc, const char **argv)
 static bool cmd_debug_bmp(target_s *t, int argc, const char **argv)
 {
 	(void)t;
-	if (argc == 2) {
-		if (!parse_enable_or_disable(argv[1], &debug_bmp))
-			return false;
-	} else if (argc > 2) {
+	if (argc == 2 && !parse_enable_or_disable(argv[1], &debug_bmp))
+		return false;
+	if (argc > 2) {
 		gdb_outf("usage: monitor debug [enable|disable]\n");
 		return false;
 	}
