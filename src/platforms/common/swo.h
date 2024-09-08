@@ -20,8 +20,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef PLATFORMS_COMMON_TRACESWO_H
-#define PLATFORMS_COMMON_TRACESWO_H
+#ifndef PLATFORMS_COMMON_SWO_H
+#define PLATFORMS_COMMON_SWO_H
 
 #include <libopencm3/usb/usbd.h>
 
@@ -44,4 +44,4 @@ void traceswo_setmask(uint32_t mask);
 /* Print decoded SWO packet on USB serial */
 uint16_t traceswo_decode(usbd_device *usbd_dev, uint8_t addr, const void *buf, uint16_t len);
 
-#endif /* PLATFORMS_COMMON_TRACESWO_H */
+#endif /* PLATFORMS_COMMON_SWO_H */

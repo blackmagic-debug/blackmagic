@@ -46,7 +46,7 @@ probe_host = declare_dependency(
 	sources: probe_f3_sources,
 	compile_args: probe_f3_args,
 	link_args: probe_f3_link_args,
-	dependencies: [platform_common, platform_stm32f3, fixme_platform_stm32_traceswo],
+	dependencies: [platform_common, platform_stm32f3, platform_stm32_swo_manchester],
 )
 
 summary(

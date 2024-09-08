@@ -42,9 +42,9 @@ if trace_protocol == '3'
 endif
 probe_ctxlink_args += [f'-DTRACESWO_PROTOCOL=@trace_protocol@']
 if trace_protocol == '1'
-	probe_ctxlink_dependencies = fixme_platform_stm32_traceswo
+	probe_ctxlink_dependencies = platform_stm32_swo_manchester
 else
-	probe_ctxlink_dependencies = fixme_platform_stm32_traceswoasync
+	probe_ctxlink_dependencies = platform_stm32_swo_uart
 endif
 
 probe_ctxlink_commonn_link_args = [

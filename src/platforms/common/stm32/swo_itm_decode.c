@@ -20,7 +20,7 @@
 
 #include "general.h"
 #include "usb_serial.h"
-#include "traceswo.h"
+#include "swo.h"
 
 /* SWO decoding */
 /* data is static in case swo packet is astride two buffers */

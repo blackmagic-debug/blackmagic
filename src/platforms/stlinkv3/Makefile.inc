@@ -30,13 +30,14 @@ endif
 
 VPATH += platforms/common/stm32
 
-SRC += 	\
-	platform.c \
-	serialno.c	\
-	timing.c	\
-	timing_stm32.c	\
-	traceswoasync_f723.c	\
-	traceswodecode.c	\
+SRC +=               \
+	platform.c       \
+	serialno.c       \
+	timing.c         \
+	timing_stm32.c   \
+	swo.c            \
+	swo_uart.c       \
+	swo_itm_decode.c
 
 .PHONY: libopencm3_stm32f7
 

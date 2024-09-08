@@ -57,7 +57,7 @@ probe_host = declare_dependency(
 	sources: probe_f4discovery_sources,
 	compile_args: probe_f4discovery_args,
 	link_args: probe_f4discovery_commonn_link_args + probe_f4discovery_link_args,
-	dependencies: [platform_common, platform_stm32f4, fixme_platform_stm32_traceswo],
+	dependencies: [platform_common, platform_stm32f4, platform_stm32_swo_manchester],
 )
 
 probe_bootloader = declare_dependency(

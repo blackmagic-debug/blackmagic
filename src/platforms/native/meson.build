@@ -42,7 +42,7 @@ probe_native_args = [
 trace_protocol = get_option('trace_protocol')
 if trace_protocol in ['1', '3']
 	probe_native_args += [f'-DTRACESWO_PROTOCOL=1']
-	probe_native_dependencies = fixme_platform_stm32_traceswo
+	probe_native_dependencies = platform_stm32_swo_manchester
 else
 	error('Unsupported SWO mode requested')
 endif

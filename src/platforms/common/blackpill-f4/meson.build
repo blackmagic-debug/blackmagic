@@ -72,9 +72,9 @@ if trace_protocol == '3'
 endif
 probe_blackpill_args += [f'-DTRACESWO_PROTOCOL=@trace_protocol@']
 if trace_protocol == '1'
-	probe_blackpill_dependencies = fixme_platform_stm32_traceswo
+	probe_blackpill_dependencies = platform_stm32_swo_manchester
 else
-	probe_blackpill_dependencies = fixme_platform_stm32_traceswoasync
+	probe_blackpill_dependencies = platform_stm32_swo_uart
 endif
 
 if bmd_bootloader

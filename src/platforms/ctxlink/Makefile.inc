@@ -17,19 +17,31 @@ LDFLAGS = -lopencm3_stm32f4 \
 VPATH += platforms/common/stm32
 
 SRC +=               \
-	platform.c \
-	traceswodecode.c \
-	serialno.c	\
-	timing.c	\
-	timing_stm32.c
+	platform.c       \
+	serialno.c       \
+	timing.c         \
+	timing_stm32.c   \
+	swo.c            \
+	swo_itm_decode.c
 
-ifeq ($(TRACESWO_PROTOCOL), 1)
-SRC += traceswo.c
-CFLAGS += -DTRACESWO_PROTOCOL=1
-else
-SRC += traceswoasync.c
-CFLAGS += -DTRACESWO_PROTOCOL=2
+# If SWO_ENCODING has not been given, default it to including both modes
+ifndef SWO_ENCODING
+	SWO_ENCODING = 3
 endif
+
+# Include the files for either: Manchester-only (1), UART-only (2) or both modes (3)
+ifeq ($(SWO_ENCODING), 1)
+	SRC += swo_manchester.c
+else ifeq ($(SWO_ENCODING), 2)
+	SRC += swo_uart.c
+else ifeq ($(SWO_ENCODING), 3)
+	SRC +=               \
+		swo_manchester.c \
+		swo_uart.c
+else # If we got some other value, that's an error so report it
+	$(error Invalid value for SWO encoding, must be one of 1, 2, or 3)
+endif
+CFLAGS += -DTRACESWO_PROTOCOL=$(SWO_ENCODING)
 
 all:	blackmagic.bin
 

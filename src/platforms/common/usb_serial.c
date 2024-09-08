@@ -46,7 +46,7 @@
 #include "gdb_if.h"
 #include "usb_serial.h"
 #ifdef PLATFORM_HAS_TRACESWO
-#include "traceswo.h"
+#include "swo.h"
 #endif
 #include "aux_serial.h"
 #include "rtt.h"

@@ -16,9 +16,9 @@ LDFLAGS = -lopencm3_lm4f -Lplatforms/launchpad-icdi \
 
 VPATH += platforms/common/tm4c
 
-SRC +=          \
+SRC +=         \
 	platform.c \
-	timing.c        \
-	traceswo.o
+	timing.c   \
+	swo_uart.o
 
 all: blackmagic.bin

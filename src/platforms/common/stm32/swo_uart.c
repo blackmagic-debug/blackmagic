@@ -31,7 +31,7 @@
 #include "general.h"
 #include "platform.h"
 #include "usb.h"
-#include "traceswo.h"
+#include "swo.h"
 
 #include <stdatomic.h>
 #include <malloc.h>

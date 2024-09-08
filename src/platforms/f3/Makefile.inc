@@ -16,12 +16,13 @@ LDFLAGS =  --specs=nano.specs -lopencm3_stm32f3 -Lplatforms/f3 \
 VPATH += platforms/common/stm32
 
 SRC +=               \
-	platform.c \
-	traceswodecode.c \
-	traceswo.c	\
-	serialno.c	\
-	timing.c	\
-	timing_stm32.c	\
+	platform.c       \
+	serialno.c       \
+	timing.c         \
+	timing_stm32.c   \
+	swo.c            \
+	swo_manchester.c \
+	swo_itm_decode.c
 
 all:	blackmagic.bin
 blackmagic.elf: libopencm3_stm32f3

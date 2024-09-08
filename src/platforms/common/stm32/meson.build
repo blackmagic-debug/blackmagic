@@ -34,14 +34,14 @@ platform_stm32_sources = files(
 	'gdb_if.c',
 	'serialno.c',
 	'timing_stm32.c',
-	'traceswodecode.c',
+	'swo_itm_decode.c',
 )
 
 # TODO: add proper traceswoasync support
-# This is a temporary hack to allow selecting traceswoasync vs traceswo implementation
-fixme_platform_stm32_traceswo = declare_dependency(sources: files('traceswo.c'))
-fixme_platform_stm32_traceswoasync = declare_dependency(sources: files('traceswoasync.c'))
-fixme_platform_stm32f7_traceswoasync = declare_dependency(sources: files('traceswoasync_f723.c'))
+# This is a temporary hack to allow selecting swo_manchester vs swo_uart implementation
+platform_stm32_swo_manchester = declare_dependency(sources: files('swo_manchester.c'))
+platform_stm32_swo_uart = declare_dependency(sources: files('swo_uart.c'))
+platform_stm32f7_swo_uart = declare_dependency(sources: files('swo_uart_f723.c'))
 
 # RTT support handling
 if get_option('rtt_support')

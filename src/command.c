@@ -47,7 +47,7 @@
 
 #ifdef PLATFORM_HAS_TRACESWO
 #include "serialno.h"
-#include "traceswo.h"
+#include "swo.h"
 #include "usb.h"
 #endif
 

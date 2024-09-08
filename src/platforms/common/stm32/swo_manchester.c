@@ -43,7 +43,7 @@
 #include "general.h"
 #include "platform.h"
 #include "usb.h"
-#include "traceswo.h"
+#include "swo.h"
 
 #include <libopencm3/cm3/nvic.h>
 #include <libopencm3/stm32/timer.h>

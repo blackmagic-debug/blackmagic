@@ -41,7 +41,7 @@ SRC =              \
 	adiv5.c        \
 	adiv5_jtag.c   \
 	adiv5_swd.c    \
-	apollo3.c     \
+	apollo3.c      \
 	adiv6.c        \
 	command.c      \
 	cortex.c       \
@@ -104,6 +104,12 @@ SRC =              \
 
 ifneq ($(PROBE_HOST), ctxLink)
 	SRC += gdb_if.c
+endif
+
+# Check if the old name for the SWO encoding setting has been used
+ifdef TRACESWO_PROTOCOL
+	$(warning the TRACESWO_PROTOCOL variable is deprecated, please use SWO_ENCODING instead)
+	SWO_ENCODING = $(TRACESWO_PROTOCOL)
 endif
 
 ifeq (,$(filter all_platforms,$(MAKECMDGOALS)))

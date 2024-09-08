@@ -37,9 +37,9 @@
 #include "aux_serial.h"
 
 static char aux_serial_receive_buffer[AUX_UART_BUFFER_SIZE];
-/* Fifo in pointer, writes assumed to be atomic, should be only incremented within RX ISR */
+/* FIFO in pointer, writes assumed to be atomic, should be only incremented within RX ISR */
 static uint16_t aux_serial_receive_write_index = 0;
-/* Fifo out pointer, writes assumed to be atomic, should be only incremented outside RX ISR */
+/* FIFO out pointer, writes assumed to be atomic, should be only incremented outside RX ISR */
 static uint16_t aux_serial_receive_read_index = 0;
 
 #if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4) || defined(STM32F7)
