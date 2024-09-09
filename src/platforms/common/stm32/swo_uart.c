@@ -67,6 +67,59 @@ static uint8_t pingpong_buf[2 * SWO_ENDPOINT_SIZE];
 /* SWO decoding */
 static bool decoding = false;
 
+static void swo_uart_set_baud(uint32_t baudrate);
+
+void swo_uart_init(uint32_t baudrate, uint32_t swo_chan_bitmask)
+{
+	/* Skip initial allocation on commands for mode change */
+	if (trace_rx_buf == NULL) {
+		/* Alignment (bytes): 1 for UART DMA, 2-4 for memcpy in usb code, 8 provided by malloc. Not 64 */
+		uint8_t *const newbuf = malloc(NUM_SWO_PACKETS * SWO_ENDPOINT_SIZE);
+		if (!newbuf) {
+			DEBUG_ERROR("malloc: failed in %s\n", __func__);
+			return;
+		}
+		trace_rx_buf = newbuf;
+	}
+
+	if (!baudrate)
+		baudrate = SWO_DEFAULT_BAUD;
+
+	rcc_periph_clock_enable(SWO_UART_CLK);
+	rcc_periph_clock_enable(SWO_DMA_CLK);
+
+#if defined(STM32F1)
+	gpio_set_mode(SWO_UART_PORT, GPIO_MODE_INPUT, GPIO_CNF_INPUT_PULL_UPDOWN, SWO_UART_RX_PIN);
+	/* Pull SWO pin high to keep open SWO line ind uart idle state! */
+	gpio_set(SWO_UART_PORT, SWO_UART_RX_PIN);
+#else
+	gpio_mode_setup(SWO_UART_PORT, GPIO_MODE_AF, GPIO_PUPD_PULLUP, SWO_UART_RX_PIN);
+	gpio_set_output_options(SWO_UART_PORT, GPIO_OTYPE_OD, GPIO_OSPEED_100MHZ, SWO_UART_RX_PIN);
+	gpio_set_af(SWO_UART_PORT, SWO_UART_PIN_AF, SWO_UART_RX_PIN);
+#endif
+
+	nvic_set_priority(SWO_DMA_IRQ, IRQ_PRI_SWO_DMA);
+	nvic_enable_irq(SWO_DMA_IRQ);
+	swo_uart_set_baud(baudrate);
+	swo_itm_decode_set_mask(swo_chan_bitmask);
+	decoding = (swo_chan_bitmask != 0);
+}
+
+void swo_uart_deinit(void)
+{
+	/* Stop peripherals servicing */
+	nvic_disable_irq(SWO_DMA_IRQ);
+	dma_disable_channel(SWO_DMA_BUS, SWO_DMA_CHAN);
+	usart_disable(SWO_UART);
+	/* Dump the buffered remains */
+	swo_send_buffer(usbdev, SWO_ENDPOINT | USB_REQ_TYPE_IN);
+	/* Return this contiguous chunk of SRAM to unshrinkable heap */
+	if (trace_rx_buf != NULL) {
+		free(trace_rx_buf);
+		trace_rx_buf = NULL;
+	}
+}
+
 void swo_send_buffer(usbd_device *dev, uint8_t ep)
 {
 	static atomic_flag reentry_flag = ATOMIC_FLAG_INIT;
@@ -95,7 +148,7 @@ uint32_t swo_uart_get_baudrate(void)
 	return usart_get_baudrate(SWO_UART);
 }
 
-void traceswo_setspeed(uint32_t baudrate)
+static void swo_uart_set_baud(const uint32_t baudrate)
 {
 	dma_disable_channel(SWO_DMA_BUS, SWO_DMA_CHAN);
 	usart_disable(SWO_UART);
@@ -146,55 +199,4 @@ void SWO_DMA_ISR(void)
 	}
 	write_index = (write_index + 1U) % NUM_SWO_PACKETS;
 	swo_send_buffer(usbdev, SWO_ENDPOINT | USB_REQ_TYPE_IN);
-}
-
-void swo_uart_init(uint32_t baudrate, uint32_t swo_chan_bitmask)
-{
-	/* Skip initial allocation on commands for mode change */
-	if (trace_rx_buf == NULL) {
-		/* Alignment (bytes): 1 for UART DMA, 2-4 for memcpy in usb code, 8 provided by malloc. Not 64 */
-		uint8_t *const newbuf = malloc(NUM_SWO_PACKETS * SWO_ENDPOINT_SIZE);
-		if (!newbuf) {
-			DEBUG_ERROR("malloc: failed in %s\n", __func__);
-			return;
-		}
-		trace_rx_buf = newbuf;
-	}
-
-	if (!baudrate)
-		baudrate = SWO_DEFAULT_BAUD;
-
-	rcc_periph_clock_enable(SWO_UART_CLK);
-	rcc_periph_clock_enable(SWO_DMA_CLK);
-
-#if defined(STM32F1)
-	gpio_set_mode(SWO_UART_PORT, GPIO_MODE_INPUT, GPIO_CNF_INPUT_PULL_UPDOWN, SWO_UART_RX_PIN);
-	/* Pull SWO pin high to keep open SWO line ind uart idle state! */
-	gpio_set(SWO_UART_PORT, SWO_UART_RX_PIN);
-#else
-	gpio_mode_setup(SWO_UART_PORT, GPIO_MODE_AF, GPIO_PUPD_PULLUP, SWO_UART_RX_PIN);
-	gpio_set_output_options(SWO_UART_PORT, GPIO_OTYPE_OD, GPIO_OSPEED_100MHZ, SWO_UART_RX_PIN);
-	gpio_set_af(SWO_UART_PORT, SWO_UART_PIN_AF, SWO_UART_RX_PIN);
-#endif
-
-	nvic_set_priority(SWO_DMA_IRQ, IRQ_PRI_SWO_DMA);
-	nvic_enable_irq(SWO_DMA_IRQ);
-	traceswo_setspeed(baudrate);
-	swo_itm_decode_set_mask(swo_chan_bitmask);
-	decoding = (swo_chan_bitmask != 0);
-}
-
-void swo_uart_deinit(void)
-{
-	/* Stop peripherals servicing */
-	nvic_disable_irq(SWO_DMA_IRQ);
-	dma_disable_channel(SWO_DMA_BUS, SWO_DMA_CHAN);
-	usart_disable(SWO_UART);
-	/* Dump the buffered remains */
-	swo_send_buffer(usbdev, SWO_ENDPOINT | USB_REQ_TYPE_IN);
-	/* Return this contiguous chunk of SRAM to unshrinkable heap */
-	if (trace_rx_buf != NULL) {
-		free(trace_rx_buf);
-		trace_rx_buf = NULL;
-	}
 }
