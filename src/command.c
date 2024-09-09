@@ -68,7 +68,7 @@ static bool cmd_tdi_low_reset(target_s *t, int argc, const char **argv);
 static bool cmd_target_power(target_s *t, int argc, const char **argv);
 #endif
 #ifdef PLATFORM_HAS_TRACESWO
-static bool cmd_traceswo(target_s *t, int argc, const char **argv);
+static bool cmd_swo(target_s *t, int argc, const char **argv);
 #endif
 static bool cmd_heapinfo(target_s *t, int argc, const char **argv);
 #ifdef ENABLE_RTT
@@ -110,10 +110,11 @@ const command_s cmd_list[] = {
 #endif
 #ifdef PLATFORM_HAS_TRACESWO
 #if defined TRACESWO_PROTOCOL && TRACESWO_PROTOCOL == 2
-	{"traceswo", cmd_traceswo, "Start SWO capture, NRZ mode: <enable|disable> [BAUDRATE] [decode [CHANNEL_NR ...]]"},
+	{"swo", cmd_swo, "Start SWO capture, UART mode: <enable|disable> [BAUDRATE] [decode [CHANNEL_NR ...]]"},
 #else
-	{"traceswo", cmd_traceswo, "Start SWO capture, Manchester mode: <enable|disable> [decode [CHANNEL_NR ...]]"},
+	{"swo", cmd_swo, "Start SWO capture, Manchester mode: <enable|disable> [decode [CHANNEL_NR ...]]"},
 #endif
+	{"traceswo", cmd_swo, "Deprecated: use swo instead"},
 #endif
 	{"heapinfo", cmd_heapinfo, "Set semihosting heapinfo: HEAP_BASE HEAP_LIMIT STACK_BASE STACK_LIMIT"},
 #if defined(PLATFORM_HAS_DEBUG) && PC_HOSTED == 0
@@ -603,7 +604,7 @@ static bool cmd_rtt(target_s *t, int argc, const char **argv)
 #endif
 
 #ifdef PLATFORM_HAS_TRACESWO
-static bool cmd_traceswo_enable(int argc, const char **argv)
+static bool cmd_swo_enable(int argc, const char **argv)
 {
 	uint32_t swo_channelmask = 0; /* swo decoding off */
 	uint8_t decode_arg = 1;
@@ -648,7 +649,7 @@ static bool cmd_traceswo_enable(int argc, const char **argv)
 	return true;
 }
 
-static bool cmd_traceswo_disable(void)
+static bool cmd_swo_disable(void)
 {
 #if TRACESWO_PROTOCOL == 1
 	swo_manchester_deinit();
@@ -659,7 +660,7 @@ static bool cmd_traceswo_disable(void)
 	return true;
 }
 
-static bool cmd_traceswo(target_s *t, int argc, const char **argv)
+static bool cmd_swo(target_s *t, int argc, const char **argv)
 {
 	(void)t;
 	bool mode = false;
@@ -669,9 +670,9 @@ static bool cmd_traceswo(target_s *t, int argc, const char **argv)
 	}
 
 	if (mode)
-		return cmd_traceswo_enable(argc - 1, argv + 1);
+		return cmd_swo_enable(argc - 1, argv + 1);
 	else
-		return cmd_traceswo_disable();
+		return cmd_swo_disable();
 }
 #endif
 
