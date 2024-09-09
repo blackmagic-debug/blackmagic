@@ -606,45 +606,54 @@ static bool cmd_rtt(target_s *t, int argc, const char **argv)
 #ifdef PLATFORM_HAS_TRACESWO
 static bool cmd_swo_enable(int argc, const char **argv)
 {
-	uint32_t swo_channelmask = 0; /* swo decoding off */
-	uint8_t decode_arg = 1;
+	/*
+	 * Before we can enable SWO data recovery, potentially with decoding,
+	 * start with the assumption ITM decoding is off
+	 */
+	uint32_t itm_stream_mask = 0U;
+	uint8_t decode_arg = 1U;
 #if TRACESWO_PROTOCOL == 2
 	uint32_t baudrate = SWO_DEFAULT_BAUD;
-	/* argument: optional baud rate for async mode */
+	/* Handle the optional baud rate argument if present */
 	if (argc > 1 && argv[1][0] >= '0' && argv[1][0] <= '9') {
 		baudrate = strtoul(argv[1], NULL, 0);
-		if (baudrate == 0)
+		if (baudrate == 0U)
 			baudrate = SWO_DEFAULT_BAUD;
-		decode_arg = 2;
+		decode_arg = 2U;
 	}
 #endif
-	/* argument: 'decode' literal */
+	/* Check if `decode` has been given and if it has, enable ITM decoding */
 	if (argc > decode_arg && !strncmp(argv[decode_arg], "decode", strlen(argv[decode_arg]))) {
-		swo_channelmask = 0xffffffffU; /* decoding all channels */
-		/* arguments: channels to decode */
+		/* Check if there are specific ITM streams to enable and build a bitmask of them */
 		if (argc > decode_arg + 1) {
-			swo_channelmask = 0U;
-			for (size_t i = decode_arg + 1U; i < (size_t)argc; ++i) { /* create bitmask of channels to decode */
-				const uint32_t channel = strtoul(argv[i], NULL, 0);
-				if (channel < 32U)
-					swo_channelmask |= 1U << channel;
+			/* For each of the specified streams */
+			for (size_t i = decode_arg + 1U; i < (size_t)argc; ++i) {
+				/* Figure out which the next one is */
+				const uint32_t stream = strtoul(argv[i], NULL, 0);
+				/* If it's a valid ITM stream number, set it in the mask */
+				if (stream < 32U)
+					itm_stream_mask |= 1U << stream;
 			}
-		}
+		} else
+			/* Decode all ITM streams if non given */
+			itm_stream_mask = 0xffffffffU;
 	}
 
+	/* Now enable SWO data recovery */
 #if TRACESWO_PROTOCOL == 2
-	swo_uart_init(baudrate, swo_channelmask);
+	swo_uart_init(baudrate, itm_stream_mask);
 	gdb_outf("Baudrate: %lu ", swo_uart_get_baudrate());
 #else
-	swo_manchester_init(swo_channelmask);
+	swo_manchester_init(itm_stream_mask);
 #endif
+	/* Now show the user what we've done - first the channel mask from MSb to LSb */
 	gdb_outf("Channel mask: ");
 	for (size_t i = 0; i < 32U; ++i) {
-		const uint32_t bit = (swo_channelmask >> (31U - i)) & 1U;
-		gdb_outf("%" PRIu32, bit);
+		const char bit = '0' + ((itm_stream_mask >> (31U - i)) & 1U);
+		gdb_outf("%c", bit);
 	}
 	gdb_outf("\n");
-
+	/* Then the connection information for programs that are scraping BMD's output to know what to connect to */
 	gdb_outf("Trace enabled for BMP serial %s, USB EP %u\n", serial_no, TRACE_ENDPOINT);
 	return true;
 }
