@@ -59,17 +59,19 @@
 /* SWO decoding */
 static bool decoding = false;
 
+#define SWO_BUFFER_SIZE 64U
+
 /* Buffer and fill level for USB */
-static uint8_t trace_usb_buf[64U];
-static uint8_t trace_usb_buf_size;
+static uint8_t swo_transmit_buffer[SWO_BUFFER_SIZE];
+static uint8_t swo_transmit_buffer_index;
 
 /* Manchester bit capture buffer and current bit index */
-static uint8_t trace_data[16U];
-static uint8_t trace_data_bit_index = 0;
+static uint8_t swo_data[16U];
+static uint8_t swo_data_bit_index = 0;
 /* Number of timer clock cycles that describe half a bit period as detected */
-static uint32_t trace_half_bit_period = 0U;
+static uint32_t swo_half_bit_period = 0U;
 
-void traceswo_init(const uint32_t itm_stream_bitmask)
+void swo_manchester_init(const uint32_t itm_stream_bitmask)
 {
 	/* Make sure the timer block is clocked on platforms that don't do this in their `platform_init()` */
 	TRACE_TIM_CLK_EN();
@@ -120,15 +122,15 @@ void traceswo_init(const uint32_t itm_stream_bitmask)
 	timer_enable_counter(TRACE_TIM);
 }
 
-void traceswo_deinit(void)
+void swo_manchester_deinit(void)
 {
 	/* Disable the timer capturing the incomming data stream */
 	timer_disable_counter(TRACE_TIM);
 	timer_slave_set_mode(TRACE_TIM, TIM_SMCR_SMS_OFF);
 
 	/* Reset state so that when init is called we wind up in a fresh capture state */
-	trace_data_bit_index = 0U;
-	trace_half_bit_period = 0U;
+	swo_data_bit_index = 0U;
+	swo_half_bit_period = 0U;
 
 #if defined(STM32F4) || defined(STM32F0) || defined(STM32F3)
 	gpio_mode_setup(SWO_PORT, GPIO_MODE_INPUT, GPIO_PUPD_NONE, SWO_PIN);
@@ -138,32 +140,34 @@ void traceswo_deinit(void)
 #endif
 }
 
-void trace_buf_push(uint8_t *buf, int len)
+void swo_buffer_data(void)
 {
+	const uint8_t byte_count = swo_data_bit_index >> 3U;
 	if (decoding)
-		swo_itm_decode(usbdev, CDCACM_UART_ENDPOINT, buf, len);
-	else if (usbd_ep_write_packet(usbdev, USB_REQ_TYPE_IN | TRACE_ENDPOINT, buf, len) != len) {
-		if (trace_usb_buf_size + len > 64) {
+		swo_itm_decode(usbdev, CDCACM_UART_ENDPOINT, swo_data, byte_count);
+	else if (usbd_ep_write_packet(usbdev, USB_REQ_TYPE_IN | TRACE_ENDPOINT, swo_data, byte_count) != byte_count) {
+		if (swo_transmit_buffer_index + byte_count > SWO_BUFFER_SIZE) {
 			/* Stall if upstream to too slow. */
-			usbd_ep_stall_set(usbdev, USB_REQ_TYPE_IN | TRACE_ENDPOINT, 1);
-			trace_usb_buf_size = 0;
+			usbd_ep_stall_set(usbdev, USB_REQ_TYPE_IN | TRACE_ENDPOINT, 1U);
+			swo_transmit_buffer_index = 0;
 			return;
 		}
-		memcpy(trace_usb_buf + trace_usb_buf_size, buf, len);
-		trace_usb_buf_size += len;
+		memcpy(swo_transmit_buffer + swo_transmit_buffer_index, swo_data, byte_count);
+		swo_transmit_buffer_index += byte_count;
 	}
+	swo_data_bit_index = 0U;
 }
 
 void swo_send_buffer(usbd_device *dev, uint8_t ep)
 {
-	if (!trace_usb_buf_size)
+	if (!swo_transmit_buffer_index)
 		return;
 
 	if (decoding)
-		swo_itm_decode(dev, CDCACM_UART_ENDPOINT, trace_usb_buf, trace_usb_buf_size);
+		swo_itm_decode(dev, CDCACM_UART_ENDPOINT, swo_transmit_buffer, swo_transmit_buffer_index);
 	else
-		usbd_ep_write_packet(dev, ep, trace_usb_buf, trace_usb_buf_size);
-	trace_usb_buf_size = 0;
+		usbd_ep_write_packet(dev, ep, swo_transmit_buffer, swo_transmit_buffer_index);
+	swo_transmit_buffer_index = 0;
 }
 
 void TRACE_ISR(void)
@@ -185,12 +189,11 @@ void TRACE_ISR(void)
 	const uint32_t space_period = cycle_period - mark_period;
 
 	/* Reset decoder state if crazy things happened */
-	if (cycle_period <= mark_period || (trace_half_bit_period && mark_period < trace_half_bit_period) ||
-		mark_period == 0U)
+	if (cycle_period <= mark_period || (swo_half_bit_period && mark_period < swo_half_bit_period) || mark_period == 0U)
 		goto flush_and_reset;
 
 	/* If the bit time is not yet known */
-	if (trace_half_bit_period == 0U) {
+	if (swo_half_bit_period == 0U) {
 		/* Are we here because we got an interrupt but not for the rising edge capture channel? */
 		if (!(status & TRACE_STATUS_RISING))
 			/* We're are, so leave early */
@@ -218,8 +221,8 @@ void TRACE_ISR(void)
 		 * bit value, and configure the timer maximum period to 6x the current max half bit period, enabling
 		 * overflow checking now we have an overflow target for the timer
 		 */
-		trace_half_bit_period = adjusted_mark_period;
-		bit_value = space_period >= trace_half_bit_period * 2U ? 0U : 1U;
+		swo_half_bit_period = adjusted_mark_period;
+		bit_value = space_period >= swo_half_bit_period * 2U ? 0U : 1U;
 		/* XXX: Need to make sure that this isn't setting a value outside the range of the timer */
 		timer_set_period(TRACE_TIM, mark_period * 6U);
 		timer_clear_flag(TRACE_TIM, TIM_SR_UIF | TRACE_STATUS_OVERFLOW);
@@ -231,11 +234,11 @@ void TRACE_ISR(void)
 		 *
 		 * If this would start a new byte in the data buffer, zero it to start with
 		 */
-		if ((trace_data_bit_index & 7U) == 0U)
-			trace_data[trace_data_bit_index >> 3U] = 0U;
+		if ((swo_data_bit_index & 7U) == 0U)
+			swo_data[swo_data_bit_index >> 3U] = 0U;
 		/* Store the new bit in the buffer and move along */
-		trace_data[trace_data_bit_index >> 3U] |= bit_value << (trace_data_bit_index & 7U);
-		++trace_data_bit_index;
+		swo_data[swo_data_bit_index >> 3U] |= bit_value << (swo_data_bit_index & 7U);
+		++swo_data_bit_index;
 
 		/*
 		 * Having stored a bit, check if we've got a long cycle period - this can happen due to any sequence
@@ -257,7 +260,7 @@ void TRACE_ISR(void)
 		 *
 		 * The bit write that has already occured deals with the lead-in part of all of these.
 		 */
-		if (cycle_period >= trace_half_bit_period * 3U) {
+		if (cycle_period >= swo_half_bit_period * 3U) {
 			/*
 			 * Having determined that we're in a long cycle, we need to figure out which kind.
 			 * If the mark period is short, then whether we're starting half way into a bit determines
@@ -265,7 +268,7 @@ void TRACE_ISR(void)
 			 * If the mark period is long, then this can only occur from a 0 -> 1 transition where we're
 			 * half way into the cycle. Anything else indicates a fault occured.
 			 */
-			if (mark_period >= trace_half_bit_period * 2U) {
+			if (mark_period >= swo_half_bit_period * 2U) {
 				if (bit_value == 1U)
 					goto flush_and_reset; /* Something bad happened and we lost sync */
 				bit_value = 1U;
@@ -275,19 +278,19 @@ void TRACE_ISR(void)
 			 * We now know the value of the extra bit, if it's from anything other than a short mark, long space,
 			 * then we need to store that next bit.
 			 */
-			if (mark_period >= trace_half_bit_period * 2U || space_period < trace_half_bit_period * 2U) {
+			if (mark_period >= swo_half_bit_period * 2U || space_period < swo_half_bit_period * 2U) {
 				/* If this would overflow the buffer, then do nothing */
-				if (trace_data_bit_index < 128U) {
+				if (swo_data_bit_index < 128U) {
 					/* If this would start a new byte in the data buffer, zero it to start with */
-					if ((trace_data_bit_index & 7U) == 0U)
-						trace_data[trace_data_bit_index >> 3U] = 0U;
+					if ((swo_data_bit_index & 7U) == 0U)
+						swo_data[swo_data_bit_index >> 3U] = 0U;
 					/* Store the new bit in the buffer and move along */
-					trace_data[trace_data_bit_index >> 3U] |= bit_value << (trace_data_bit_index & 7U);
-					++trace_data_bit_index;
+					swo_data[swo_data_bit_index >> 3U] |= bit_value << (swo_data_bit_index & 7U);
+					++swo_data_bit_index;
 				}
 			}
 			/* If it's a long space, we just saw a 1 -> 0 transition */
-			if (space_period >= trace_half_bit_period * 2U) {
+			if (space_period >= swo_half_bit_period * 2U) {
 				/* Unless of course this was acompanied by a short mark period, in which case it's a STOP bit */
 				if (bit_value == 0U)
 					goto flush_and_reset;
@@ -298,19 +301,18 @@ void TRACE_ISR(void)
 			 * We've now written enough data to the buffer, so we have one final check:
 			 * If the cycle has a long space, we need to determine how long to check for STOP bits.
 			 */
-			if (space_period >= trace_half_bit_period * 3U)
+			if (space_period >= swo_half_bit_period * 3U)
 				goto flush_and_reset;
 		}
 	}
 
 	/* If the buffer is not full, and we haven't encountered a STOP bit, we're done here */
-	if (trace_data_bit_index < 128U)
+	if (swo_data_bit_index < 128U)
 		return;
 
 flush_and_reset:
 	timer_set_period(TRACE_TIM, UINT32_MAX);
 	timer_disable_irq(TRACE_TIM, TIM_DIER_UIE);
-	trace_buf_push(trace_data, trace_data_bit_index >> 3U);
-	trace_data_bit_index = 0;
-	trace_half_bit_period = 0;
+	swo_buffer_data();
+	swo_half_bit_period = 0;
 }

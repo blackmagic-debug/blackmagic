@@ -635,7 +635,7 @@ static bool cmd_traceswo_enable(int argc, const char **argv)
 	traceswo_init(baudrate, swo_channelmask);
 	gdb_outf("Baudrate: %lu ", traceswo_get_baudrate());
 #else
-	traceswo_init(swo_channelmask);
+	swo_manchester_init(swo_channelmask);
 #endif
 	gdb_outf("Channel mask: ");
 	for (size_t i = 0; i < 32U; ++i) {
@@ -650,7 +650,11 @@ static bool cmd_traceswo_enable(int argc, const char **argv)
 
 static bool cmd_traceswo_disable(void)
 {
+#if TRACESWO_PROTOCOL == 1
+	swo_manchester_deinit();
+#else
 	traceswo_deinit();
+#endif
 	gdb_out("Trace disabled\n");
 	return true;
 }
