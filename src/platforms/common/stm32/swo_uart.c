@@ -67,7 +67,7 @@ static uint8_t pingpong_buf[2 * TRACE_ENDPOINT_SIZE];
 /* SWO decoding */
 static bool decoding = false;
 
-void trace_buf_drain(usbd_device *dev, uint8_t ep)
+void swo_send_buffer(usbd_device *dev, uint8_t ep)
 {
 	static atomic_flag reentry_flag = ATOMIC_FLAG_INIT;
 
@@ -147,7 +147,7 @@ void SWO_DMA_ISR(void)
 			&trace_rx_buf[write_index * TRACE_ENDPOINT_SIZE], &pingpong_buf[TRACE_ENDPOINT_SIZE], TRACE_ENDPOINT_SIZE);
 	}
 	write_index = (write_index + 1U) % NUM_TRACE_PACKETS;
-	trace_buf_drain(usbdev, TRACE_ENDPOINT | USB_REQ_TYPE_IN);
+	swo_send_buffer(usbdev, TRACE_ENDPOINT | USB_REQ_TYPE_IN);
 }
 
 void traceswo_init(uint32_t baudrate, uint32_t swo_chan_bitmask)
@@ -193,7 +193,7 @@ void traceswo_deinit(void)
 	dma_disable_channel(SWO_DMA_BUS, SWO_DMA_CHAN);
 	usart_disable(SWO_UART);
 	/* Dump the buffered remains */
-	trace_buf_drain(usbdev, TRACE_ENDPOINT | USB_REQ_TYPE_IN);
+	swo_send_buffer(usbdev, TRACE_ENDPOINT | USB_REQ_TYPE_IN);
 	/* Return this contiguous chunk of SRAM to unshrinkable heap */
 	if (trace_rx_buf != NULL) {
 		free(trace_rx_buf);

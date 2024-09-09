@@ -36,7 +36,7 @@ void traceswo_init(uint32_t itm_stream_bitmask);
 #endif
 void traceswo_deinit(void);
 
-void trace_buf_drain(usbd_device *dev, uint8_t ep);
+void swo_send_buffer(usbd_device *dev, uint8_t ep);
 
 /* Set a bitmask of SWO ITM streams to be decoded */
 void swo_itm_decode_set_mask(uint32_t mask);

@@ -154,7 +154,7 @@ void trace_buf_push(uint8_t *buf, int len)
 	}
 }
 
-void trace_buf_drain(usbd_device *dev, uint8_t ep)
+void swo_send_buffer(usbd_device *dev, uint8_t ep)
 {
 	if (!trace_usb_buf_size)
 		return;

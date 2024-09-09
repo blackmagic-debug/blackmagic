@@ -211,7 +211,7 @@ void usb_serial_set_config(usbd_device *dev, uint16_t value)
 
 #ifdef PLATFORM_HAS_TRACESWO
 	/* Trace interface */
-	usbd_ep_setup(dev, TRACE_ENDPOINT | USB_REQ_TYPE_IN, USB_ENDPOINT_ATTR_BULK, TRACE_ENDPOINT_SIZE, trace_buf_drain);
+	usbd_ep_setup(dev, TRACE_ENDPOINT | USB_REQ_TYPE_IN, USB_ENDPOINT_ATTR_BULK, TRACE_ENDPOINT_SIZE, swo_send_buffer);
 #endif
 
 	usbd_register_control_callback(dev, USB_REQ_TYPE_CLASS | USB_REQ_TYPE_INTERFACE,

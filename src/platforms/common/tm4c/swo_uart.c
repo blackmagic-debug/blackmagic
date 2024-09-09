@@ -122,7 +122,7 @@ void trace_buf_push(void)
 	}
 }
 
-void trace_buf_drain(usbd_device *dev, uint8_t ep)
+void swo_send_buffer(usbd_device *dev, uint8_t ep)
 {
 	(void)dev;
 	(void)ep;
