@@ -91,7 +91,7 @@ void swo_send_buffer(usbd_device *dev, uint8_t ep)
 	atomic_flag_clear_explicit(&reentry_flag, memory_order_relaxed);
 }
 
-uint32_t traceswo_get_baudrate(void)
+uint32_t swo_uart_get_baudrate(void)
 {
 	return usart_get_baudrate(SWO_UART);
 }
@@ -150,7 +150,7 @@ void SWO_DMA_ISR(void)
 	swo_send_buffer(usbdev, TRACE_ENDPOINT | USB_REQ_TYPE_IN);
 }
 
-void traceswo_init(uint32_t baudrate, uint32_t swo_chan_bitmask)
+void swo_uart_init(uint32_t baudrate, uint32_t swo_chan_bitmask)
 {
 	/* Skip initial allocation on commands for mode change */
 	if (trace_rx_buf == NULL) {
@@ -186,7 +186,7 @@ void traceswo_init(uint32_t baudrate, uint32_t swo_chan_bitmask)
 	decoding = (swo_chan_bitmask != 0);
 }
 
-void traceswo_deinit(void)
+void swo_uart_deinit(void)
 {
 	/* Stop peripherals servicing */
 	nvic_disable_irq(SWO_DMA_IRQ);

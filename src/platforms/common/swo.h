@@ -28,10 +28,10 @@
 #if defined TRACESWO_PROTOCOL && TRACESWO_PROTOCOL == 2
 /* Default line rate, used as default for a request without baudrate */
 #define SWO_DEFAULT_BAUD 2250000U
-void traceswo_init(uint32_t baudrate, uint32_t swo_chan_bitmask);
-void traceswo_deinit(void);
+void swo_uart_init(uint32_t baudrate, uint32_t swo_chan_bitmask);
+void swo_uart_deinit(void);
 
-uint32_t traceswo_get_baudrate(void);
+uint32_t swo_uart_get_baudrate(void);
 void bmd_usart_set_baudrate(uint32_t usart, uint32_t baud_rate);
 #else
 void swo_manchester_init(uint32_t itm_stream_bitmask);

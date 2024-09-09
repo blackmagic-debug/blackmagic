@@ -632,8 +632,8 @@ static bool cmd_traceswo_enable(int argc, const char **argv)
 	}
 
 #if TRACESWO_PROTOCOL == 2
-	traceswo_init(baudrate, swo_channelmask);
-	gdb_outf("Baudrate: %lu ", traceswo_get_baudrate());
+	swo_uart_init(baudrate, swo_channelmask);
+	gdb_outf("Baudrate: %lu ", swo_uart_get_baudrate());
 #else
 	swo_manchester_init(swo_channelmask);
 #endif
@@ -653,7 +653,7 @@ static bool cmd_traceswo_disable(void)
 #if TRACESWO_PROTOCOL == 1
 	swo_manchester_deinit();
 #else
-	traceswo_deinit();
+	swo_uart_deinit();
 #endif
 	gdb_out("Trace disabled\n");
 	return true;

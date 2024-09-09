@@ -37,7 +37,7 @@
 #include <libopencm3/lm4f/uart.h>
 #include <libopencm3/usb/usbd.h>
 
-void traceswo_init(void)
+void swo_uart_init(void)
 {
 	periph_clock_enable(RCC_GPIOD);
 	periph_clock_enable(TRACEUART_CLK);
@@ -87,7 +87,7 @@ void traceswo_baud(unsigned int baud)
 	uart_set_databits(TRACEUART, 8);
 }
 
-uint32_t traceswo_get_baudrate(void)
+uint32_t swo_uart_get_baudrate(void)
 {
 	return uart_get_baudrate(TRACEUART);
 }
