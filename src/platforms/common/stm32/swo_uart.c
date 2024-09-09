@@ -79,7 +79,7 @@ void trace_buf_drain(usbd_device *dev, uint8_t ep)
 		uint16_t result;
 		if (decoding)
 			/* write decoded swo packets to the uart port */
-			result = traceswo_decode(
+			result = swo_itm_decode(
 				dev, CDCACM_UART_ENDPOINT, &trace_rx_buf[read_index * TRACE_ENDPOINT_SIZE], TRACE_ENDPOINT_SIZE);
 		else
 			/* write raw swo packets to the trace port */
@@ -182,7 +182,7 @@ void traceswo_init(uint32_t baudrate, uint32_t swo_chan_bitmask)
 	nvic_set_priority(SWO_DMA_IRQ, IRQ_PRI_SWO_DMA);
 	nvic_enable_irq(SWO_DMA_IRQ);
 	traceswo_setspeed(baudrate);
-	traceswo_setmask(swo_chan_bitmask);
+	swo_itm_decode_set_mask(swo_chan_bitmask);
 	decoding = (swo_chan_bitmask != 0);
 }
 

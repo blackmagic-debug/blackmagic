@@ -69,7 +69,7 @@ static uint8_t trace_data_bit_index = 0;
 /* Number of timer clock cycles that describe half a bit period as detected */
 static uint32_t trace_half_bit_period = 0U;
 
-void traceswo_init(const uint32_t swo_chan_bitmask)
+void traceswo_init(const uint32_t itm_stream_bitmask)
 {
 	/* Make sure the timer block is clocked on platforms that don't do this in their `platform_init()` */
 	TRACE_TIM_CLK_EN();
@@ -115,8 +115,8 @@ void traceswo_init(const uint32_t swo_chan_bitmask)
 	timer_set_period(TRACE_TIM, UINT32_MAX);
 
 	/* Configure the capture decoder and state, then enable the timer */
-	traceswo_setmask(swo_chan_bitmask);
-	decoding = swo_chan_bitmask != 0;
+	swo_itm_decode_set_mask(itm_stream_bitmask);
+	decoding = itm_stream_bitmask != 0;
 	timer_enable_counter(TRACE_TIM);
 }
 
@@ -141,7 +141,7 @@ void traceswo_deinit(void)
 void trace_buf_push(uint8_t *buf, int len)
 {
 	if (decoding)
-		traceswo_decode(usbdev, CDCACM_UART_ENDPOINT, buf, len);
+		swo_itm_decode(usbdev, CDCACM_UART_ENDPOINT, buf, len);
 	else if (usbd_ep_write_packet(usbdev, USB_REQ_TYPE_IN | TRACE_ENDPOINT, buf, len) != len) {
 		if (trace_usb_buf_size + len > 64) {
 			/* Stall if upstream to too slow. */
@@ -160,7 +160,7 @@ void trace_buf_drain(usbd_device *dev, uint8_t ep)
 		return;
 
 	if (decoding)
-		traceswo_decode(dev, CDCACM_UART_ENDPOINT, trace_usb_buf, trace_usb_buf_size);
+		swo_itm_decode(dev, CDCACM_UART_ENDPOINT, trace_usb_buf, trace_usb_buf_size);
 	else
 		usbd_ep_write_packet(dev, ep, trace_usb_buf, trace_usb_buf_size);
 	trace_usb_buf_size = 0;

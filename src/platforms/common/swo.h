@@ -32,16 +32,16 @@ void traceswo_init(uint32_t baudrate, uint32_t swo_chan_bitmask);
 uint32_t traceswo_get_baudrate(void);
 void bmd_usart_set_baudrate(uint32_t usart, uint32_t baud_rate);
 #else
-void traceswo_init(uint32_t swo_chan_bitmask);
+void traceswo_init(uint32_t itm_stream_bitmask);
 #endif
 void traceswo_deinit(void);
 
 void trace_buf_drain(usbd_device *dev, uint8_t ep);
 
-/* Set bitmask of SWO channels to be decoded */
-void traceswo_setmask(uint32_t mask);
+/* Set a bitmask of SWO ITM streams to be decoded */
+void swo_itm_decode_set_mask(uint32_t mask);
 
-/* Print decoded SWO packet on USB serial */
-uint16_t traceswo_decode(usbd_device *usbd_dev, uint8_t addr, const void *buf, uint16_t len);
+/* Decode a new block of ITM data from SWO */
+uint16_t swo_itm_decode(usbd_device *usbd_dev, uint8_t ep, const uint8_t *data, uint16_t len);
 
 #endif /* PLATFORMS_COMMON_SWO_H */

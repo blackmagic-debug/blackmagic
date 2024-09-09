@@ -16,60 +16,65 @@
  * along with this program.	 If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* Print decoded swo stream on the usb serial */
+/*
+ * This file implements decoding of SWO data when that data is an ITM SWIT data stream.
+ * It puts the decoded data onto the aux USB serial interface for consumption.
+ */
 
 #include "general.h"
 #include "usb_serial.h"
 #include "swo.h"
 
-/* SWO decoding */
-/* data is static in case swo packet is astride two buffers */
-static uint8_t swo_buf[CDCACM_PACKET_SIZE];
-static int swo_buf_len = 0;
-static uint32_t swo_decode = 0; /* bitmask of channels to print */
-static int swo_pkt_len = 0;     /* decoder state */
-static bool swo_print = false;
+static uint8_t itm_decoded_buffer[CDCACM_PACKET_SIZE];
+static uint16_t itm_decoded_buffer_index = 0;
+static uint32_t itm_decode_mask = 0;  /* bitmask of channels to print */
+static uint8_t itm_packet_length = 0; /* decoder state */
+static bool itm_decode_packet = false;
 
-/* print decoded swo packet on usb serial */
-uint16_t traceswo_decode(usbd_device *usbd_dev, uint8_t addr, const void *buf, uint16_t len)
+uint16_t swo_itm_decode(usbd_device *usbd_dev, uint8_t ep, const uint8_t *data, uint16_t len)
 {
+	/* Check if we've got a valid USB device */
+	/* XXX: Can this ever actually be false?! */
 	if (usbd_dev == NULL)
-		return 0;
-	const uint8_t *const data = (const uint8_t *)buf;
-	for (uint16_t i = 0; i < len; i++) {
-		const uint8_t ch = data[i];
-		if (swo_pkt_len == 0) {                    /* header */
-			uint32_t channel = (uint32_t)ch >> 3U; /* channel number */
-			uint32_t size = ch & 0x7U;             /* drop channel number */
-			if (size == 0x01U)
-				swo_pkt_len = 1; /* SWO packet 0x01XX */
-			else if (size == 0x02U)
-				swo_pkt_len = 2; /* SWO packet 0x02XXXX */
-			else if (size == 0x03U)
-				swo_pkt_len = 4; /* SWO packet 0x03XXXXXXXX */
-			swo_print = (swo_pkt_len != 0) && ((swo_decode & (1UL << channel)) != 0UL);
-		} else if (swo_pkt_len <= 4) { /* data */
-			if (swo_print) {
-				swo_buf[swo_buf_len++] = ch;
-				if (swo_buf_len == sizeof(swo_buf)) {
-					if (usb_get_config() && gdb_serial_get_dtr()) /* silently drop if usb not ready */
-						usbd_ep_write_packet(usbd_dev, addr, swo_buf, swo_buf_len);
-					swo_buf_len = 0;
+		return 0U;
+
+	/* Step through each byte in the SWO data buffer */
+	for (uint16_t idx = 0; idx < len; ++idx) {
+		/* If we're waiting for a new ITM packet, start decoding the new byte as a header */
+		if (itm_packet_length == 0) {
+			/* Check that the required to be 0 bit of the SWIT packet is, and that the size bits aren't 0 */
+			if ((data[idx] & 0x04U) == 0U && (data[idx] & 0x03U) != 0U) {
+				/* Now extract the stimulus port address (stream number) and payload size */
+				uint8_t stream = data[idx] >> 3U;
+				/* Map 1 -> 1, 2 -> 2, and 3 -> 4 */
+				itm_packet_length = 1U << ((data[idx] & 3U) - 1U);
+				/* Determine if the packet should be displayed */
+				itm_decode_packet = (itm_decode_mask & (1U << stream)) != 0U;
+			} else {
+				/* If the bit is not 0, this is an invalid SWIT packet, so reset state */
+				itm_decode_packet = false;
+				itm_decoded_buffer_index = 0;
+			}
+		} else {
+			/* If we should actually decode this packet, then forward the data to the decoded data buffer */
+			if (itm_decode_packet) {
+				itm_decoded_buffer[itm_decoded_buffer_index++] = data[idx];
+				/* If the buffer has filled up and needs flushing, try to flush the data to the serial endpoint */
+				if (itm_decoded_buffer_index == sizeof(itm_decoded_buffer)) {
+					/* However, if the link is not yet up, drop the packet data silently */
+					if (usb_get_config() && gdb_serial_get_dtr())
+						usbd_ep_write_packet(usbd_dev, ep, itm_decoded_buffer, itm_decoded_buffer_index);
+					itm_decoded_buffer_index = 0U;
 				}
 			}
-			--swo_pkt_len;
-		} else { /* recover */
-			swo_buf_len = 0;
-			swo_pkt_len = 0;
+			/* Mark the byte consumed regardless */
+			--itm_packet_length;
 		}
 	}
 	return len;
 }
 
-/* set bitmask of swo channels to be decoded */
-void traceswo_setmask(uint32_t mask)
+void swo_itm_decode_set_mask(uint32_t mask)
 {
-	swo_decode = mask;
+	itm_decode_mask = mask;
 }
-
-/* not truncated */
