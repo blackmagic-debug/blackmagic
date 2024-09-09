@@ -96,8 +96,8 @@ static bool at32f43_mass_erase(target_s *target);
  */
 #define AT32F43x_DBGMCU_BASE       0xe0042000U
 #define AT32F43x_DBGMCU_IDCODE     (AT32F43x_DBGMCU_BASE + 0x00U)
-#define AT32F43x_DBGMCU_CTRL       (AT32F43x_DBGMCU_BASE + 0x40U)
-#define AT32F43x_DBGMCU_APB1_PAUSE (AT32F43x_DBGMCU_BASE + 0x80U)
+#define AT32F43x_DBGMCU_CTRL       (AT32F43x_DBGMCU_BASE + 0x04U)
+#define AT32F43x_DBGMCU_APB1_PAUSE (AT32F43x_DBGMCU_BASE + 0x08U)
 #define AT32F43x_DBGMCU_APB2_PAUSE (AT32F43x_DBGMCU_BASE + 0x0cU)
 #define AT32F43x_DBGMCU_SER_ID     (AT32F43x_DBGMCU_BASE + 0x20U)
 
@@ -164,7 +164,7 @@ static void at32f43_configure_dbgmcu(target_s *target)
 	const uint32_t dbgmcu_apb1_pause_mask = AT32F43x_DBGMCU_APB1_PAUSE_WWDT | AT32F43x_DBGMCU_APB1_PAUSE_WDT;
 	const uint32_t dbgmcu_apb1_pause = target_mem32_read32(target, AT32F43x_DBGMCU_APB1_PAUSE);
 	if ((dbgmcu_apb1_pause & dbgmcu_apb1_pause_mask) != dbgmcu_apb1_pause_mask)
-		target_mem32_write32(target, AT32F43x_DBGMCU_APB1_PAUSE, dbgmcu_apb1_pause & dbgmcu_apb1_pause_mask);
+		target_mem32_write32(target, AT32F43x_DBGMCU_APB1_PAUSE, dbgmcu_apb1_pause | dbgmcu_apb1_pause_mask);
 }
 
 static bool at32f43_attach(target_s *target)
