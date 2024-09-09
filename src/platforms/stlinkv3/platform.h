@@ -84,7 +84,7 @@ extern bool debug_bmp;
 #define MCO1_PIN  GPIO8
 #define MCO1_AF   0
 
-#define NUM_TRACE_PACKETS 16U
+#define NUM_SWO_PACKETS 16U
 
 #define SWDIO_MODE_REG      GPIO_MODER(TMS_PORT)
 #define SWDIO_MODE_REG_MULT (1U << (9U << 1U))

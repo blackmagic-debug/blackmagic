@@ -337,16 +337,16 @@ static const usb_iface_assoc_descriptor_s dfu_assoc = {
 static const usb_endpoint_descriptor_s trace_endp = {
 	.bLength = USB_DT_ENDPOINT_SIZE,
 	.bDescriptorType = USB_DT_ENDPOINT,
-	.bEndpointAddress = TRACE_ENDPOINT | USB_REQ_TYPE_IN,
+	.bEndpointAddress = SWO_ENDPOINT | USB_REQ_TYPE_IN,
 	.bmAttributes = USB_ENDPOINT_ATTR_BULK,
-	.wMaxPacketSize = TRACE_ENDPOINT_SIZE,
+	.wMaxPacketSize = SWO_ENDPOINT_SIZE,
 	.bInterval = 0,
 };
 
 const usb_interface_descriptor_s trace_iface = {
 	.bLength = USB_DT_INTERFACE_SIZE,
 	.bDescriptorType = USB_DT_INTERFACE,
-	.bInterfaceNumber = TRACE_IF_NO,
+	.bInterfaceNumber = SWO_IF_NO,
 	.bAlternateSetting = 0,
 	.bNumEndpoints = 1,
 	.bInterfaceClass = 0xff,
@@ -360,7 +360,7 @@ const usb_interface_descriptor_s trace_iface = {
 static const usb_iface_assoc_descriptor_s trace_assoc = {
 	.bLength = USB_DT_INTERFACE_ASSOCIATION_SIZE,
 	.bDescriptorType = USB_DT_INTERFACE_ASSOCIATION,
-	.bFirstInterface = TRACE_IF_NO,
+	.bFirstInterface = SWO_IF_NO,
 	.bInterfaceCount = 1,
 	.bFunctionClass = 0xff,
 	.bFunctionSubClass = 0xff,
@@ -443,7 +443,7 @@ static const char *const usb_strings[] = {
 #define PROPERTY_DEVICE_INTERFACE_GUID u"DeviceInterfaceGUID"
 #define VALUE_DFU_INTERFACE_GUID       u"{76be5ca1-e304-4b32-be5f-d9369d3d201a}"
 #ifdef PLATFORM_HAS_TRACESWO
-#define VALUE_TRACE_INTERFACE_GUID u"{76be5ca1-e305-4b32-be5f-d9369d3d201a}"
+#define VALUE_SWO_INTERFACE_GUID u"{76be5ca1-e305-4b32-be5f-d9369d3d201a}"
 #endif
 
 static const struct {
@@ -498,8 +498,8 @@ static const struct {
 			.wPropertyDataType = REG_SZ,
 			.wPropertyNameLength = ARRAY_LENGTH(PROPERTY_DEVICE_INTERFACE_GUID) * 2U,
 			.PropertyName = PROPERTY_DEVICE_INTERFACE_GUID,
-			.wPropertyDataLength = ARRAY_LENGTH(VALUE_TRACE_INTERFACE_GUID) * 2U,
-			.PropertyData = VALUE_TRACE_INTERFACE_GUID,
+			.wPropertyDataLength = ARRAY_LENGTH(VALUE_SWO_INTERFACE_GUID) * 2U,
+			.PropertyData = VALUE_SWO_INTERFACE_GUID,
 		},
 };
 #endif
@@ -519,7 +519,7 @@ static const microsoft_os_descriptor_function_subset_header microsoft_os_descrip
 	{
 		.wLength = MICROSOFT_OS_DESCRIPTOR_FUNCTION_SUBSET_HEADER_SIZE,
 		.wDescriptorType = MICROSOFT_OS_SUBSET_HEADER_FUNCTION,
-		.bFirstInterface = TRACE_IF_NO,
+		.bFirstInterface = SWO_IF_NO,
 		.bReserved = 0,
 		.wTotalLength = 0,
 
@@ -560,7 +560,7 @@ static const microsoft_os_descriptor_set_information microsoft_os_descriptor_set
 #ifdef PLATFORM_HAS_TRACESWO
 		MICROSOFT_OS_DESCRIPTOR_FUNCTION_SUBSET_HEADER_SIZE + MICROSOFT_OS_FEATURE_COMPATIBLE_ID_DESCRIPTOR_SIZE +
 		MICROSOFT_OS_FEATURE_REGISTRY_PROPERTY_DESCRIPTOR_SIZE_BASE +
-		(ARRAY_LENGTH(PROPERTY_DEVICE_INTERFACE_GUID) * 2U) + (ARRAY_LENGTH(VALUE_TRACE_INTERFACE_GUID) * 2U) +
+		(ARRAY_LENGTH(PROPERTY_DEVICE_INTERFACE_GUID) * 2U) + (ARRAY_LENGTH(VALUE_SWO_INTERFACE_GUID) * 2U) +
 #endif
 		MICROSOFT_OS_DESCRIPTOR_FUNCTION_SUBSET_HEADER_SIZE + MICROSOFT_OS_FEATURE_COMPATIBLE_ID_DESCRIPTOR_SIZE +
 		MICROSOFT_OS_FEATURE_REGISTRY_PROPERTY_DESCRIPTOR_SIZE_BASE +

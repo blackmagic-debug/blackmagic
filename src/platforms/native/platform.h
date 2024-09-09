@@ -260,7 +260,7 @@ extern int hwversion;
 #define IRQ_PRI_USBUSART     (2U << 4U)
 #define IRQ_PRI_USBUSART_DMA (2U << 4U)
 #define IRQ_PRI_USB_VBUS     (14U << 4U)
-#define IRQ_PRI_TRACE        (0U << 4U)
+#define IRQ_PRI_SWO_TIM      (0U << 4U)
 
 #define USBUSART        HW_SWITCH(6, USBUSART1, USBUSART2)
 #define USBUSART_IRQ    HW_SWITCH(6, NVIC_USART1_IRQ, NVIC_USART2_IRQ)
@@ -298,20 +298,20 @@ extern int hwversion;
 
 #if TRACESWO_PROTOCOL == 1U
 /* Use TIM3 Input 1 (from PA6/TDO) */
-#define TRACE_TIM TIM3
-#define TRACE_TIM_CLK_EN()
-#define TRACE_IRQ             NVIC_TIM3_IRQ
-#define TRACE_ISR(x)          tim3_isr(x)
-#define TRACE_IC_IN           TIM_IC_IN_TI1
-#define TRACE_IC_RISING       TIM_IC1
-#define TRACE_CC_RISING       TIM3_CCR1
-#define TRACE_ITR_RISING      TIM_DIER_CC1IE
-#define TRACE_STATUS_RISING   TIM_SR_CC1IF
-#define TRACE_IC_FALLING      TIM_IC2
-#define TRACE_CC_FALLING      TIM3_CCR2
-#define TRACE_STATUS_FALLING  TIM_SR_CC2IF
-#define TRACE_STATUS_OVERFLOW (TIM_SR_CC1OF | TIM_SR_CC2OF)
-#define TRACE_TRIG_IN         TIM_SMCR_TS_TI1FP1
+#define SWO_TIM TIM3
+#define SWO_TIM_CLK_EN()
+#define SWO_TIM_IRQ         NVIC_TIM3_IRQ
+#define SWO_TIM_ISR(x)      tim3_isr(x)
+#define SWO_IC_IN           TIM_IC_IN_TI1
+#define SWO_IC_RISING       TIM_IC1
+#define SWO_CC_RISING       TIM3_CCR1
+#define SWO_ITR_RISING      TIM_DIER_CC1IE
+#define SWO_STATUS_RISING   TIM_SR_CC1IF
+#define SWO_IC_FALLING      TIM_IC2
+#define SWO_CC_FALLING      TIM3_CCR2
+#define SWO_STATUS_FALLING  TIM_SR_CC2IF
+#define SWO_STATUS_OVERFLOW (TIM_SR_CC1OF | TIM_SR_CC2OF)
+#define SWO_TRIG_IN         TIM_SMCR_TS_TI1FP1
 #endif
 
 #define SET_RUN_STATE(state)   running_status = (state)

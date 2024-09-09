@@ -89,10 +89,10 @@ extern uint8_t running_status;
 		gpio_mode_setup(GPIOA_BASE, GPIO_MODE_INPUT, GPIO_PUPD_NONE, GPIO1);  \
 	} while (0)
 
-#define TRACEUART     UART2
-#define TRACEUART_CLK RCC_UART2
-#define TRACEUART_IRQ NVIC_UART2_IRQ
-#define TRACEUART_ISR uart2_isr
+#define SWO_UART     UART2
+#define SWO_UART_CLK RCC_UART2
+#define SWO_UART_IRQ NVIC_UART2_IRQ
+#define SWO_UART_ISR uart2_isr
 
 #define SET_RUN_STATE(state)      \
 	{                             \

@@ -74,7 +74,7 @@ static uint32_t swo_half_bit_period = 0U;
 void swo_manchester_init(const uint32_t itm_stream_bitmask)
 {
 	/* Make sure the timer block is clocked on platforms that don't do this in their `platform_init()` */
-	TRACE_TIM_CLK_EN();
+	SWO_TIM_CLK_EN();
 
 #if defined(STM32F4) || defined(STM32F0) || defined(STM32F3)
 	/* Set any required pin alt-function configuration - TIM3/TIM4/TIM5 are AF2 */
@@ -89,44 +89,44 @@ void swo_manchester_init(const uint32_t itm_stream_bitmask)
 	 * Start setting the timer block up by picking a pair of cross-linked capture channels suitable for the input,
 	 * and configure them to consume the input channel for the SWO pin. We use one in rising edge mode and the
 	 * other in falling to get the mark period and cycle period - together these define all elements of a wiggle.
-	 * NB: "TRACE_IC" here refers to the Input Capture channels being used
+	 * NB: "SWO_IC" here refers to the Input Capture channels being used
 	 */
-	timer_ic_set_input(TRACE_TIM, TRACE_IC_RISING, TRACE_IC_IN);
-	timer_ic_set_polarity(TRACE_TIM, TRACE_IC_RISING, TIM_IC_RISING);
-	timer_ic_set_input(TRACE_TIM, TRACE_IC_FALLING, TRACE_IC_IN);
-	timer_ic_set_polarity(TRACE_TIM, TRACE_IC_FALLING, TIM_IC_FALLING);
+	timer_ic_set_input(SWO_TIM, SWO_IC_RISING, SWO_IC_IN);
+	timer_ic_set_polarity(SWO_TIM, SWO_IC_RISING, TIM_IC_RISING);
+	timer_ic_set_input(SWO_TIM, SWO_IC_FALLING, SWO_IC_IN);
+	timer_ic_set_polarity(SWO_TIM, SWO_IC_FALLING, TIM_IC_FALLING);
 
 	/*
 	 * Use reset mode to trigger the timer, which makes the counter reset and start counting anew
 	 * when a rising edge is detected on the input pin via the filtered input channel as a trigger source
 	 */
-	timer_slave_set_trigger(TRACE_TIM, TRACE_TRIG_IN);
-	timer_slave_set_mode(TRACE_TIM, TIM_SMCR_SMS_RM);
+	timer_slave_set_trigger(SWO_TIM, SWO_TRIG_IN);
+	timer_slave_set_mode(SWO_TIM, TIM_SMCR_SMS_RM);
 
 	/* Enable capture interrupt */
-	nvic_set_priority(TRACE_IRQ, IRQ_PRI_TRACE);
-	nvic_enable_irq(TRACE_IRQ);
-	timer_enable_irq(TRACE_TIM, TRACE_ITR_RISING);
+	nvic_set_priority(SWO_TIM_IRQ, IRQ_PRI_SWO_TIM);
+	nvic_enable_irq(SWO_TIM_IRQ);
+	timer_enable_irq(SWO_TIM, SWO_ITR_RISING);
 
 	/* Enable the capture channels */
-	timer_ic_enable(TRACE_TIM, TRACE_IC_RISING);
-	timer_ic_enable(TRACE_TIM, TRACE_IC_FALLING);
+	timer_ic_enable(SWO_TIM, SWO_IC_RISING);
+	timer_ic_enable(SWO_TIM, SWO_IC_FALLING);
 	/* Make sure all the status register bits are cleared prior to enabling the counter */
-	timer_clear_flag(TRACE_TIM, TIM_SR_MASK);
+	timer_clear_flag(SWO_TIM, TIM_SR_MASK);
 	/* Set the period to an improbable value */
-	timer_set_period(TRACE_TIM, UINT32_MAX);
+	timer_set_period(SWO_TIM, UINT32_MAX);
 
 	/* Configure the capture decoder and state, then enable the timer */
 	swo_itm_decode_set_mask(itm_stream_bitmask);
 	decoding = itm_stream_bitmask != 0;
-	timer_enable_counter(TRACE_TIM);
+	timer_enable_counter(SWO_TIM);
 }
 
 void swo_manchester_deinit(void)
 {
 	/* Disable the timer capturing the incomming data stream */
-	timer_disable_counter(TRACE_TIM);
-	timer_slave_set_mode(TRACE_TIM, TIM_SMCR_SMS_OFF);
+	timer_disable_counter(SWO_TIM);
+	timer_slave_set_mode(SWO_TIM, TIM_SMCR_SMS_OFF);
 
 	/* Reset state so that when init is called we wind up in a fresh capture state */
 	swo_data_bit_index = 0U;
@@ -145,10 +145,10 @@ void swo_buffer_data(void)
 	const uint8_t byte_count = swo_data_bit_index >> 3U;
 	if (decoding)
 		swo_itm_decode(usbdev, CDCACM_UART_ENDPOINT, swo_data, byte_count);
-	else if (usbd_ep_write_packet(usbdev, USB_REQ_TYPE_IN | TRACE_ENDPOINT, swo_data, byte_count) != byte_count) {
+	else if (usbd_ep_write_packet(usbdev, USB_REQ_TYPE_IN | SWO_ENDPOINT, swo_data, byte_count) != byte_count) {
 		if (swo_transmit_buffer_index + byte_count > SWO_BUFFER_SIZE) {
 			/* Stall if upstream to too slow. */
-			usbd_ep_stall_set(usbdev, USB_REQ_TYPE_IN | TRACE_ENDPOINT, 1U);
+			usbd_ep_stall_set(usbdev, USB_REQ_TYPE_IN | SWO_ENDPOINT, 1U);
 			swo_transmit_buffer_index = 0;
 			return;
 		}
@@ -170,22 +170,22 @@ void swo_send_buffer(usbd_device *dev, uint8_t ep)
 	swo_transmit_buffer_index = 0;
 }
 
-void TRACE_ISR(void)
+void SWO_TIM_ISR(void)
 {
 	static uint8_t bit_value;
-	const uint16_t status = TIM_SR(TRACE_TIM);
+	const uint16_t status = TIM_SR(SWO_TIM);
 
-	const uint32_t cycle_period = TRACE_CC_RISING;
+	const uint32_t cycle_period = SWO_CC_RISING;
 	/* Check that we entered the handler because of a fresh trigger but have not yet had a chance to capture data */
-	if ((status & TRACE_STATUS_RISING) && cycle_period == 0U) {
+	if ((status & SWO_STATUS_RISING) && cycle_period == 0U) {
 		/* Clear the rising edge flag and wait for it to set again */
-		timer_clear_flag(TRACE_TIM, TRACE_STATUS_RISING | TRACE_STATUS_FALLING | TRACE_STATUS_OVERFLOW);
+		timer_clear_flag(SWO_TIM, SWO_STATUS_RISING | SWO_STATUS_FALLING | SWO_STATUS_OVERFLOW);
 		return;
 	}
 
-	timer_clear_flag(TRACE_TIM, TRACE_STATUS_RISING | TRACE_STATUS_FALLING | TRACE_STATUS_OVERFLOW | TIM_SR_UIF);
+	timer_clear_flag(SWO_TIM, SWO_STATUS_RISING | SWO_STATUS_FALLING | SWO_STATUS_OVERFLOW | TIM_SR_UIF);
 
-	const uint32_t mark_period = TRACE_CC_FALLING;
+	const uint32_t mark_period = SWO_CC_FALLING;
 	const uint32_t space_period = cycle_period - mark_period;
 
 	/* Reset decoder state if crazy things happened */
@@ -195,7 +195,7 @@ void TRACE_ISR(void)
 	/* If the bit time is not yet known */
 	if (swo_half_bit_period == 0U) {
 		/* Are we here because we got an interrupt but not for the rising edge capture channel? */
-		if (!(status & TRACE_STATUS_RISING))
+		if (!(status & SWO_STATUS_RISING))
 			/* We're are, so leave early */
 			return;
 		/*
@@ -224,9 +224,9 @@ void TRACE_ISR(void)
 		swo_half_bit_period = adjusted_mark_period;
 		bit_value = space_period >= swo_half_bit_period * 2U ? 0U : 1U;
 		/* XXX: Need to make sure that this isn't setting a value outside the range of the timer */
-		timer_set_period(TRACE_TIM, mark_period * 6U);
-		timer_clear_flag(TRACE_TIM, TIM_SR_UIF | TRACE_STATUS_OVERFLOW);
-		timer_enable_irq(TRACE_TIM, TIM_DIER_UIE);
+		timer_set_period(SWO_TIM, mark_period * 6U);
+		timer_clear_flag(SWO_TIM, TIM_SR_UIF | SWO_STATUS_OVERFLOW);
+		timer_enable_irq(SWO_TIM, TIM_DIER_UIE);
 	} else {
 		/*
 		 * We start off needing to store a newly captured bit - the value of which is determined in the *previous*
@@ -311,8 +311,8 @@ void TRACE_ISR(void)
 		return;
 
 flush_and_reset:
-	timer_set_period(TRACE_TIM, UINT32_MAX);
-	timer_disable_irq(TRACE_TIM, TIM_DIER_UIE);
+	timer_set_period(SWO_TIM, UINT32_MAX);
+	timer_disable_irq(SWO_TIM, TIM_DIER_UIE);
 	swo_buffer_data();
 	swo_half_bit_period = 0;
 }

@@ -654,7 +654,7 @@ static bool cmd_swo_enable(int argc, const char **argv)
 	}
 	gdb_outf("\n");
 	/* Then the connection information for programs that are scraping BMD's output to know what to connect to */
-	gdb_outf("Trace enabled for BMP serial %s, USB EP %u\n", serial_no, TRACE_ENDPOINT);
+	gdb_outf("Trace enabled for BMP serial %s, USB EP %u\n", serial_no, SWO_ENDPOINT);
 	return true;
 }
 

@@ -28,11 +28,11 @@ extern usbd_device *usbdev;
 extern uint16_t usb_config;
 
 #if defined(USB_HS)
-#define CDCACM_PACKET_SIZE  512U
-#define TRACE_ENDPOINT_SIZE 512U
+#define CDCACM_PACKET_SIZE 512U
+#define SWO_ENDPOINT_SIZE  512U
 #else
-#define CDCACM_PACKET_SIZE  64U
-#define TRACE_ENDPOINT_SIZE 64U
+#define CDCACM_PACKET_SIZE 64U
+#define SWO_ENDPOINT_SIZE  64U
 #endif
 
 #if !defined(USB_MAX_INTERVAL)
@@ -41,7 +41,7 @@ extern uint16_t usb_config;
 
 #define CDCACM_GDB_ENDPOINT  1U
 #define CDCACM_UART_ENDPOINT 2U
-#define TRACE_ENDPOINT       3U
+#define SWO_ENDPOINT         3U
 /*
  * AN4879, table 6: most STM32F4 families (excluding F412, F413, F423)
  * have OTG_FS DWC2 configured with "4 bidirectional endpoints" (including EP0),
@@ -57,7 +57,7 @@ extern uint16_t usb_config;
 #define UART_IF_NO 2U
 #define DFU_IF_NO  4U
 #ifdef PLATFORM_HAS_TRACESWO
-#define TRACE_IF_NO      5U
+#define SWO_IF_NO        5U
 #define TOTAL_INTERFACES 6U
 #else
 #define TOTAL_INTERFACES 5U

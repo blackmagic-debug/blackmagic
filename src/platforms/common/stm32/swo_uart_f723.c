@@ -45,9 +45,9 @@
 static volatile uint32_t write_index; /* Packet currently received via UART */
 static volatile uint32_t read_index;  /* Packet currently waiting to transmit to USB */
 /* Packets arrived from the SWO interface */
-static uint8_t trace_rx_buf[NUM_TRACE_PACKETS * TRACE_ENDPOINT_SIZE];
+static uint8_t trace_rx_buf[NUM_SWO_PACKETS * SWO_ENDPOINT_SIZE];
 /* Packet pingpong buffer used for receiving packets */
-static uint8_t pingpong_buf[2 * TRACE_ENDPOINT_SIZE];
+static uint8_t pingpong_buf[2 * SWO_ENDPOINT_SIZE];
 /* SWO decoding */
 static bool decoding = false;
 
@@ -64,13 +64,12 @@ void swo_send_buffer(usbd_device *dev, uint8_t ep)
 		if (decoding)
 			/* write decoded swo packets to the uart port */
 			result = traceswo_decode(
-				dev, CDCACM_UART_ENDPOINT, &trace_rx_buf[read_index * TRACE_ENDPOINT_SIZE], TRACE_ENDPOINT_SIZE);
+				dev, CDCACM_UART_ENDPOINT, &trace_rx_buf[read_index * SWO_ENDPOINT_SIZE], SWO_ENDPOINT_SIZE);
 		else
 			/* write raw swo packets to the trace port */
-			result =
-				usbd_ep_write_packet(dev, ep, &trace_rx_buf[read_index * TRACE_ENDPOINT_SIZE], TRACE_ENDPOINT_SIZE);
+			result = usbd_ep_write_packet(dev, ep, &trace_rx_buf[read_index * SWO_ENDPOINT_SIZE], SWO_ENDPOINT_SIZE);
 		if (result)
-			read_index = (read_index + 1U) % NUM_TRACE_PACKETS;
+			read_index = (read_index + 1U) % NUM_SWO_PACKETS;
 	}
 	atomic_flag_clear_explicit(&reentry_flag, memory_order_relaxed);
 }
@@ -107,7 +106,7 @@ void traceswo_setspeed(uint32_t baudrate)
 	nvic_enable_irq(SWO_DMA_IRQ);
 	write_index = read_index = 0;
 	dma_set_memory_address(SWO_DMA_BUS, SWO_DMA_STREAM, (uint32_t)pingpong_buf);
-	dma_set_number_of_data(SWO_DMA_BUS, SWO_DMA_STREAM, 2 * TRACE_ENDPOINT_SIZE);
+	dma_set_number_of_data(SWO_DMA_BUS, SWO_DMA_STREAM, 2 * SWO_ENDPOINT_SIZE);
 	dma_channel_select(SWO_DMA_BUS, SWO_DMA_STREAM, DMA_SxCR_CHSEL_4);
 	dma_enable_stream(SWO_DMA_BUS, SWO_DMA_STREAM);
 	usart_enable_rx_dma(SWO_UART);
@@ -117,15 +116,14 @@ void SWO_DMA_ISR(void)
 {
 	if (DMA_LISR(SWO_DMA_BUS) & DMA_LISR_HTIF0) {
 		DMA_LIFCR(SWO_DMA_BUS) |= DMA_LISR_HTIF0;
-		memcpy(&trace_rx_buf[write_index * TRACE_ENDPOINT_SIZE], pingpong_buf, TRACE_ENDPOINT_SIZE);
+		memcpy(&trace_rx_buf[write_index * SWO_ENDPOINT_SIZE], pingpong_buf, SWO_ENDPOINT_SIZE);
 	}
 	if (DMA_LISR(SWO_DMA_BUS) & DMA_LISR_TCIF0) {
 		DMA_LIFCR(SWO_DMA_BUS) |= DMA_LISR_TCIF0;
-		memcpy(
-			&trace_rx_buf[write_index * TRACE_ENDPOINT_SIZE], &pingpong_buf[TRACE_ENDPOINT_SIZE], TRACE_ENDPOINT_SIZE);
+		memcpy(&trace_rx_buf[write_index * SWO_ENDPOINT_SIZE], &pingpong_buf[SWO_ENDPOINT_SIZE], SWO_ENDPOINT_SIZE);
 	}
-	write_index = (write_index + 1) % NUM_TRACE_PACKETS;
-	swo_send_buffer(usbdev, TRACE_ENDPOINT);
+	write_index = (write_index + 1) % NUM_SWO_PACKETS;
+	swo_send_buffer(usbdev, SWO_ENDPOINT);
 }
 
 void swo_uart_init(uint32_t baudrate, uint32_t swo_chan_bitmask)
@@ -155,5 +153,5 @@ void swo_uart_deinit(void)
 	dma_disable_stream(SWO_DMA_BUS, SWO_DMA_STREAM);
 	usart_disable(SWO_UART);
 	/* Dump the buffered remains */
-	swo_send_buffer(usbdev, TRACE_ENDPOINT | USB_REQ_TYPE_IN);
+	swo_send_buffer(usbdev, SWO_ENDPOINT | USB_REQ_TYPE_IN);
 }
