@@ -672,16 +672,15 @@ static bool cmd_swo_disable(void)
 static bool cmd_swo(target_s *t, int argc, const char **argv)
 {
 	(void)t;
-	bool mode = false;
-	if (argc >= 2 && !parse_enable_or_disable(argv[1], &mode)) {
+	bool enable_swo = false;
+	if (argc >= 2 && !parse_enable_or_disable(argv[1], &enable_swo)) {
 		gdb_out("Usage: traceswo <enable|disable> [2000000] [decode [0 1 3 31]]\n");
 		return false;
 	}
 
-	if (mode)
+	if (enable_swo)
 		return cmd_swo_enable(argc - 1, argv + 1);
-	else
-		return cmd_swo_disable();
+	return cmd_swo_disable();
 }
 #endif
 
