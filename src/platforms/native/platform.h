@@ -285,7 +285,7 @@ extern int hwversion;
 #define USBUSART1_DMA_TX_ISR(x) dma1_channel4_isr(x)
 #define USBUSART1_DMA_RX_CHAN   DMA_CHANNEL5
 #define USBUSART1_DMA_RX_IRQ    NVIC_DMA1_CHANNEL5_IRQ
-#define USBUSART1_DMA_RX_ISR(x) dma1_channel5_isr(x)
+#define USBUSART1_DMA_RX_ISR(x) usart1_rx_dma_isr(x)
 
 #define USBUSART2               USART2
 #define USBUSART2_IRQ           NVIC_USART2_IRQ
@@ -326,11 +326,19 @@ extern int hwversion;
 #define SWO_DMA_CLK    RCC_DMA1
 #define SWO_DMA_CHAN   DMA_CHANNEL5
 #define SWO_DMA_IRQ    NVIC_DMA1_CHANNEL5_IRQ
-#define SWO_DMA_ISR(x) dma1_channel5_isr(x)
+#define SWO_DMA_ISR(x) swo_dma_isr(x)
 
 #define SET_RUN_STATE(state)   running_status = (state)
 #define SET_IDLE_STATE(state)  gpio_set_val(LED_PORT, LED_IDLE_RUN, state)
 #define SET_ERROR_STATE(state) gpio_set_val(LED_PORT, LED_ERROR, state)
+
+/*
+ * These are bounce declarations for the ISR handlers competing for dma1_channel5_isr().
+ * The actual handler is defined in platform.c, the USART1 RX handler in aux_serial.c,
+ * and the SWO DMA handler in swo_uart.c.
+ */
+void usart1_rx_dma_isr(void);
+void swo_dma_isr(void);
 
 /* Frequency constants (in Hz) for the bitbanging routines */
 #define BITBANG_CALIBRATED_FREQS

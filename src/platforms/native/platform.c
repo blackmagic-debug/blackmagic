@@ -570,3 +570,13 @@ static void setup_vbus_irq(void)
 
 	exti15_10_isr();
 }
+
+void dma1_channel5_isr(void)
+{
+	if (hwversion < 6)
+		usart1_rx_dma_isr();
+#if TRACE_PROTOCOL != 1
+	else
+		swo_dma_isr();
+#endif
+}
