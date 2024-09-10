@@ -173,9 +173,9 @@ extern bool debug_bmp;
 #define PLATFORM_HAS_TRACESWO 1
 #endif
 #define NUM_SWO_PACKETS 128U /* This is an 8K buffer */
-//#define TRACESWO_PROTOCOL     2U   /* 1 = Manchester, 2 = NRZ / async */
+//#define SWO_ENCODING     2U   /* 1 = Manchester, 2 = NRZ / async */
 
-#if TRACESWO_PROTOCOL == 1
+#if SWO_ENCODING == 1
 
 /* Use TIM3 Input 1 (from PA6/TDO) */
 #define SWO_TIM             TIM3
@@ -193,7 +193,7 @@ extern bool debug_bmp;
 #define SWO_STATUS_OVERFLOW (TIM_SR_CC1OF | TIM_SR_CC2OF)
 #define SWO_TRIG_IN         TIM_SMCR_TS_TI1FP1
 
-#elif TRACESWO_PROTOCOL == 2
+#elif SWO_ENCODING == 2
 
 /* On F103, only USART1 is on AHB2 and can reach 4.5MBaud at 72 MHz. */
 #define SWO_UART        USART1
@@ -209,7 +209,7 @@ extern bool debug_bmp;
 #define SWO_DMA_IRQ     NVIC_DMA1_CHANNEL5_IRQ
 #define SWO_DMA_ISR(x)  dma1_channel5_isr(x)
 
-#endif /* TRACESWO_PROTOCOL */
+#endif /* SWO_ENCODING */
 
 extern uint16_t led_idle_run;
 #define LED_IDLE_RUN led_idle_run

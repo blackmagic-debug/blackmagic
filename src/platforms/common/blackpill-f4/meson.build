@@ -70,7 +70,7 @@ trace_protocol = get_option('trace_protocol')
 if trace_protocol == '3'
 	trace_protocol = '2'
 endif
-probe_blackpill_args += [f'-DTRACESWO_PROTOCOL=@trace_protocol@']
+probe_blackpill_args += [f'-DSWO_ENCODING=@trace_protocol@']
 if trace_protocol == '1'
 	probe_blackpill_dependencies = platform_stm32_swo_manchester
 else

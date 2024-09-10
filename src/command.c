@@ -109,7 +109,7 @@ const command_s cmd_list[] = {
 		"MAXERR]]"},
 #endif
 #ifdef PLATFORM_HAS_TRACESWO
-#if defined TRACESWO_PROTOCOL && TRACESWO_PROTOCOL == 2
+#if defined SWO_ENCODING && SWO_ENCODING == 2
 	{"swo", cmd_swo, "Start SWO capture, UART mode: <enable|disable> [BAUDRATE] [decode [CHANNEL_NR ...]]"},
 #else
 	{"swo", cmd_swo, "Start SWO capture, Manchester mode: <enable|disable> [decode [CHANNEL_NR ...]]"},
@@ -612,7 +612,7 @@ static bool cmd_swo_enable(int argc, const char **argv)
 	 */
 	uint32_t itm_stream_mask = 0U;
 	uint8_t decode_arg = 1U;
-#if TRACESWO_PROTOCOL == 2
+#if SWO_ENCODING == 2
 	uint32_t baudrate = SWO_DEFAULT_BAUD;
 	/* Handle the optional baud rate argument if present */
 	if (argc > 1 && argv[1][0] >= '0' && argv[1][0] <= '9') {
@@ -640,7 +640,7 @@ static bool cmd_swo_enable(int argc, const char **argv)
 	}
 
 	/* Now enable SWO data recovery */
-#if TRACESWO_PROTOCOL == 2
+#if SWO_ENCODING == 2
 	swo_uart_init(baudrate, itm_stream_mask);
 	gdb_outf("Baudrate: %lu ", swo_uart_get_baudrate());
 #else
@@ -660,7 +660,7 @@ static bool cmd_swo_enable(int argc, const char **argv)
 
 static bool cmd_swo_disable(void)
 {
-#if TRACESWO_PROTOCOL == 1
+#if SWO_ENCODING == 1
 	swo_manchester_deinit();
 #else
 	swo_uart_deinit();

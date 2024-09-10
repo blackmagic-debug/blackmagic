@@ -290,7 +290,7 @@ extern bool debug_bmp;
 #define PLATFORM_HAS_TRACESWO
 #define NUM_SWO_PACKETS 256U /* 16K buffer */
 
-#if TRACESWO_PROTOCOL == 1
+#if SWO_ENCODING == 1
 
 /* Use TIM4 Input 2 (from PB7/TDO) or Input 1 (from PB6/TDO), AF2, triggered on rising edge */
 #define SWO_TIM             TIM4
@@ -309,7 +309,7 @@ extern bool debug_bmp;
 #define SWO_TRIG_IN         PINOUT_SWITCH(TIM_SMCR_TS_TI2FP2, TIM_SMCR_TS_TI1FP1)
 #define SWO_TIM_PIN_AF      GPIO_AF2
 
-#elif TRACESWO_PROTOCOL == 2
+#elif SWO_ENCODING == 2
 
 /* On F411 use USART1_RX mapped on PB7 for async capture */
 #define SWO_UART        USBUSART1
@@ -327,7 +327,7 @@ extern bool debug_bmp;
 #define SWO_DMA_ISR(x)  USBUSART1_DMA_RX_ISRx(x)
 #define SWO_DMA_TRG     DMA_SxCR_CHSEL_4
 
-#endif /* TRACESWO_PROTOCOL */
+#endif /* SWO_ENCODING */
 
 #define SET_RUN_STATE(state)      \
 	{                             \

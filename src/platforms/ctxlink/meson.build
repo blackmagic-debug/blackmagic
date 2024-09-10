@@ -40,7 +40,7 @@ trace_protocol = get_option('trace_protocol')
 if trace_protocol == '3'
 	trace_protocol = '2'
 endif
-probe_ctxlink_args += [f'-DTRACESWO_PROTOCOL=@trace_protocol@']
+probe_ctxlink_args += [f'-DSWO_ENCODING=@trace_protocol@']
 if trace_protocol == '1'
 	probe_ctxlink_dependencies = platform_stm32_swo_manchester
 else

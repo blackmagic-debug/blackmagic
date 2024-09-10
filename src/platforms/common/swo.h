@@ -25,19 +25,20 @@
 
 #include <libopencm3/usb/usbd.h>
 
-#if defined TRACESWO_PROTOCOL && TRACESWO_PROTOCOL == 2
 /* Default line rate, used as default for a request without baudrate */
 #define SWO_DEFAULT_BAUD 2250000U
+
+/* Initialisation and deinitialisation functions (ties into command.c) */
+void swo_manchester_init(uint32_t itm_stream_bitmask);
 void swo_uart_init(uint32_t baudrate, uint32_t swo_chan_bitmask);
+void swo_manchester_deinit(void);
 void swo_uart_deinit(void);
 
+/* UART mode baudate functions */
 uint32_t swo_uart_get_baudrate(void);
 void bmd_usart_set_baudrate(uint32_t usart, uint32_t baud_rate);
-#else
-void swo_manchester_init(uint32_t itm_stream_bitmask);
-void swo_manchester_deinit(void);
-#endif
 
+/* USB callback for the raw data endpoint to ask for a new buffer of data */
 void swo_send_buffer(usbd_device *dev, uint8_t ep);
 
 /* Set a bitmask of SWO ITM streams to be decoded */

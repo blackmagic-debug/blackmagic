@@ -5,7 +5,7 @@ OBJCOPY = $(CROSS_COMPILE)objcopy
 OPT_FLAGS = -Og -g
 CFLAGS += -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard \
 	-DSTM32F7 -DDFU_SERIAL_LENGTH=25 -I../deps/libopencm3/include \
-	-I platforms/common/stm32 -DTRACESWO_PROTOCOL=2
+	-I platforms/common/stm32 -DSWO_ENCODING=2
 LDFLAGS_BOOT := $(LDFLAGS) -mfpu=fpv5-sp-d16 -mfloat-abi=hard \
 	--specs=nano.specs -lopencm3_stm32f7 -Lplatforms/stlinkv3 \
 	-Tstlinkv3.ld -nostartfiles -lc \

@@ -80,7 +80,7 @@ else ifeq ($(SWO_ENCODING), 3)
 else # If we got some other value, that's an error so report it
 	$(error Invalid value for SWO encoding, must be one of 1, 2, or 3)
 endif
-CFLAGS += -DTRACESWO_PROTOCOL=$(SWO_ENCODING)
+CFLAGS += -DSWO_ENCODING=$(SWO_ENCODING)
 
 ifneq ($(BMD_BOOTLOADER), 1)
 all:	blackmagic.bin

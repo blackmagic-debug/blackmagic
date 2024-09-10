@@ -76,13 +76,13 @@ endif
 if probe == 'stlink' and stlink_swim_nrst_as_uart
 	probe_stlink_args += ['-DSWIM_NRST_AS_UART=1']
 	probe_stlink_dependencies += platform_stm32_swo_manchester
-	probe_stlink_args += ['-DTRACESWO_PROTOCOL=1']
+	probe_stlink_args += ['-DSWO_ENCODING=1']
 elif trace_protocol == '1'
 	probe_stlink_dependencies += platform_stm32_swo_manchester
-	probe_stlink_args += ['-DTRACESWO_PROTOCOL=1']
+	probe_stlink_args += ['-DSWO_ENCODING=1']
 elif trace_protocol == '2'
 	probe_stlink_dependencies += platform_stm32_swo_uart
-	probe_stlink_args += ['-DTRACESWO_PROTOCOL=2']
+	probe_stlink_args += ['-DSWO_ENCODING=2']
 else
 	error('Unsupported SWO mode requested')
 endif

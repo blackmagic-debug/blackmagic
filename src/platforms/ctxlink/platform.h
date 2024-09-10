@@ -186,7 +186,7 @@
 #define PLATFORM_HAS_TRACESWO
 #define NUM_SWO_PACKETS 256U /* 16K buffer */
 
-#if TRACESWO_PROTOCOL == 1
+#if SWO_ENCODING == 1
 
 /* Use TIM3 Input 2 from PC7/TDO, AF2, trigger on rising edge */
 #define SWO_TIM TIM3
@@ -205,7 +205,7 @@
 #define SWO_TRIG_IN         TIM_SMCR_TS_TI2FP2
 #define SWO_TIM_PIN_AF      GPIO_AF2
 
-#elif TRACESWO_PROTOCOL == 2
+#elif SWO_ENCODING == 2
 
 /* On ctxLink use USART6_RX mapped on PC7 for async capture */
 #define SWO_UART        USART6
@@ -223,7 +223,7 @@
 #define SWO_DMA_ISR     dma2_stream1_isr
 #define SWO_DMA_TRG     DMA_SxCR_CHSEL_5
 
-#endif /* TRACESWO_PROTOCOL */
+#endif /* SWO_ENCODING */
 
 #define SET_RUN_STATE(state)      \
 	{                             \
