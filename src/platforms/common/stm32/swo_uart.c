@@ -32,6 +32,7 @@
 #include "platform.h"
 #include "usb.h"
 #include "swo.h"
+#include "swo_internal.h"
 
 #include <stdatomic.h>
 #include <malloc.h>
@@ -120,7 +121,7 @@ void swo_uart_deinit(void)
 	}
 }
 
-void swo_send_buffer(usbd_device *dev, uint8_t ep)
+void swo_uart_send_buffer(usbd_device *const dev, const uint8_t ep)
 {
 	static atomic_flag reentry_flag = ATOMIC_FLAG_INIT;
 

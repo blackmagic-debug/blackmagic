@@ -660,11 +660,7 @@ static bool cmd_swo_enable(int argc, const char **argv)
 
 static bool cmd_swo_disable(void)
 {
-#if SWO_ENCODING == 1
-	swo_manchester_deinit();
-#else
-	swo_uart_deinit();
-#endif
+	swo_deinit();
 	gdb_out("Trace disabled\n");
 	return true;
 }

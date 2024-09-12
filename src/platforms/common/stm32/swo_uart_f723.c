@@ -34,6 +34,7 @@
 #include "platform.h"
 #include "usb.h"
 #include "swo.h"
+#include "swo_internal.h"
 
 #include <libopencmsis/core_cm3.h>
 #include <libopencm3/cm3/nvic.h>
@@ -51,7 +52,7 @@ static uint8_t pingpong_buf[2 * SWO_ENDPOINT_SIZE];
 /* SWO decoding */
 static bool decoding = false;
 
-void swo_send_buffer(usbd_device *dev, uint8_t ep)
+void swo_uart_send_buffer(usbd_device *dev, uint8_t ep)
 {
 	static atomic_flag reentry_flag = ATOMIC_FLAG_INIT;
 
@@ -63,7 +64,7 @@ void swo_send_buffer(usbd_device *dev, uint8_t ep)
 		uint16_t result;
 		if (decoding)
 			/* write decoded swo packets to the uart port */
-			result = traceswo_decode(
+			result = swo_itm_decode(
 				dev, CDCACM_UART_ENDPOINT, &trace_rx_buf[read_index * SWO_ENDPOINT_SIZE], SWO_ENDPOINT_SIZE);
 		else
 			/* write raw swo packets to the trace port */
@@ -79,7 +80,7 @@ uint32_t swo_uart_get_baudrate(void)
 	return usart_get_baudrate(SWO_UART);
 }
 
-void traceswo_setspeed(uint32_t baudrate)
+void swo_uart_set_baud(uint32_t baudrate)
 {
 	dma_disable_stream(SWO_DMA_BUS, SWO_DMA_STREAM);
 	usart_disable(SWO_UART);
@@ -141,7 +142,7 @@ void swo_uart_init(uint32_t baudrate, uint32_t swo_chan_bitmask)
 	gpio_set(SWO_UART_PORT, SWO_UART_RX_PIN);
 	nvic_set_priority(SWO_DMA_IRQ, IRQ_PRI_SWO_DMA);
 	nvic_enable_irq(SWO_DMA_IRQ);
-	traceswo_setspeed(baudrate);
+	swo_uart_set_baud(baudrate);
 	traceswo_setmask(swo_chan_bitmask);
 	decoding = swo_chan_bitmask != 0;
 }

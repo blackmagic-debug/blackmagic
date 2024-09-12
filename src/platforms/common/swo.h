@@ -28,11 +28,18 @@
 /* Default line rate, used as default for a request without baudrate */
 #define SWO_DEFAULT_BAUD 2250000U
 
+typedef enum swo_coding {
+	swo_none,
+	swo_manchester,
+	swo_nrz_uart,
+} swo_coding_e;
+
+extern swo_coding_e swo_current_coding;
+
 /* Initialisation and deinitialisation functions (ties into command.c) */
 void swo_manchester_init(uint32_t itm_stream_bitmask);
 void swo_uart_init(uint32_t baudrate, uint32_t swo_chan_bitmask);
-void swo_manchester_deinit(void);
-void swo_uart_deinit(void);
+void swo_deinit(void);
 
 /* UART mode baudate functions */
 uint32_t swo_uart_get_baudrate(void);

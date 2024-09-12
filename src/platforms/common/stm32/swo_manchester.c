@@ -44,6 +44,7 @@
 #include "platform.h"
 #include "usb.h"
 #include "swo.h"
+#include "swo_internal.h"
 
 #include <libopencm3/cm3/nvic.h>
 #include <libopencm3/stm32/timer.h>
@@ -158,7 +159,7 @@ void swo_buffer_data(void)
 	swo_data_bit_index = 0U;
 }
 
-void swo_send_buffer(usbd_device *dev, uint8_t ep)
+void swo_manchester_send_buffer(usbd_device *const dev, const uint8_t ep)
 {
 	if (!swo_transmit_buffer_index)
 		return;

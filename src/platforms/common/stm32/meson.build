@@ -34,6 +34,7 @@ platform_stm32_sources = files(
 	'gdb_if.c',
 	'serialno.c',
 	'timing_stm32.c',
+	'swo.c',
 	'swo_itm_decode.c',
 )
 
