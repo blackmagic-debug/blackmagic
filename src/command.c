@@ -606,20 +606,45 @@ static bool cmd_rtt(target_s *t, int argc, const char **argv)
 #ifdef PLATFORM_HAS_TRACESWO
 static bool cmd_swo_enable(int argc, const char **argv)
 {
+	/* Set up which mode we're going to default to */
+#if SWO_ENCODING == 1
+	const swo_coding_e capture_mode = swo_manchester;
+#elif SWO_ENCODING == 2
+	const swo_coding_e capture_mode = swo_nrz_uart;
+#elif SWO_ENCODING == 3
+	swo_coding_e capture_mode = swo_none;
+#endif
+	/* Set up the presumed baudrate for the stream */
+	uint32_t baudrate = SWO_DEFAULT_BAUD;
 	/*
 	 * Before we can enable SWO data recovery, potentially with decoding,
 	 * start with the assumption ITM decoding is off
 	 */
 	uint32_t itm_stream_mask = 0U;
 	uint8_t decode_arg = 1U;
-#if SWO_ENCODING == 2
-	uint32_t baudrate = SWO_DEFAULT_BAUD;
+#if SWO_ENCODING == 3
+	/* Next, determine which decoding mode to use */
+	if (argc > decode_arg) {
+		const size_t arg_length = strlen(argv[decode_arg]);
+		if (!strncmp(argv[decode_arg], "manchester", arg_length))
+			capture_mode = swo_manchester;
+		if (!strncmp(argv[decode_arg], "uart", arg_length))
+			capture_mode = swo_nrz_uart;
+	}
+	/* If a mode was given, make sure the rest of the parser skips the mode verb */
+	if (capture_mode != swo_none)
+		++decode_arg;
+	/* Otherwise set a default mode up */
+	else
+		capture_mode = swo_nrz_uart;
+#endif
+#if SWO_ENCODING == 2 || SWO_ENCODING == 3
 	/* Handle the optional baud rate argument if present */
-	if (argc > 1 && argv[1][0] >= '0' && argv[1][0] <= '9') {
-		baudrate = strtoul(argv[1], NULL, 0);
+	if (capture_mode == swo_nrz_uart && argc > decode_arg && argv[decode_arg][0] >= '0' && argv[decode_arg][0] <= '9') {
+		baudrate = strtoul(argv[decode_arg], NULL, 0);
 		if (baudrate == 0U)
 			baudrate = SWO_DEFAULT_BAUD;
-		decode_arg = 2U;
+		++decode_arg;
 	}
 #endif
 	/* Check if `decode` has been given and if it has, enable ITM decoding */
@@ -640,13 +665,8 @@ static bool cmd_swo_enable(int argc, const char **argv)
 	}
 
 	/* Now enable SWO data recovery */
-#if SWO_ENCODING == 2
-	swo_uart_init(baudrate, itm_stream_mask);
-	gdb_outf("Baudrate: %lu ", swo_uart_get_baudrate());
-#else
-	swo_manchester_init(itm_stream_mask);
-#endif
-	/* Now show the user what we've done - first the channel mask from MSb to LSb */
+	swo_init(capture_mode, baudrate, itm_stream_mask);
+	/* And show the user what we've done - first the channel mask from MSb to LSb */
 	gdb_outf("Channel mask: ");
 	for (size_t i = 0; i < 32U; ++i) {
 		const char bit = '0' + ((itm_stream_mask >> (31U - i)) & 1U);
@@ -724,8 +744,8 @@ static bool cmd_heapinfo(target_s *t, int argc, const char **argv)
 		target_addr_t heap_limit = strtoul(argv[2], NULL, 16);
 		target_addr_t stack_base = strtoul(argv[3], NULL, 16);
 		target_addr_t stack_limit = strtoul(argv[4], NULL, 16);
-		gdb_outf("heap_base: %08" PRIx32 " heap_limit: %08" PRIx32 " stack_base: %08" PRIx32 " stack_limit: %08" PRIx32
-				 "\n",
+		gdb_outf("heap_base: %08" PRIx32 " heap_limit: %08" PRIx32 " stack_base: %08" PRIx32 " stack_limit: "
+				 "%08" PRIx32 "\n",
 			heap_base, heap_limit, stack_base, stack_limit);
 		target_set_heapinfo(t, heap_base, heap_limit, stack_base, stack_limit);
 	} else

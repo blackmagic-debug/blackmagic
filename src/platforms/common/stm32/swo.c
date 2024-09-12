@@ -18,6 +18,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "general.h"
+#include "gdb_packet.h"
 #include "swo.h"
 #include "swo_internal.h"
 
@@ -34,29 +36,53 @@
  * under this circumstance as it requires SWO_ENCODING to be defined and valid.
  */
 
-swo_coding_e swo_current_coding;
+swo_coding_e swo_current_mode;
+
+void swo_init(const swo_coding_e swo_mode, const uint32_t baudrate, const uint32_t itm_stream_bitmask)
+{
+#if SWO_ENCODING == 1
+	(void)baudrate;
+#endif
+	/* Make sure any existing SWO capture is first spun down */
+	if (swo_current_mode != swo_none)
+		swo_deinit();
+
+		/* Now determine which mode to enable and initialise it */
+#if SWO_ENCODING == 1 || SWO_ENCODING == 3
+	if (swo_mode == swo_manchester)
+		swo_manchester_init(itm_stream_bitmask);
+#endif
+#if SWO_ENCODING == 2 || SWO_ENCODING == 3
+	if (swo_mode == swo_nrz_uart) {
+		swo_uart_init(baudrate, itm_stream_bitmask);
+		gdb_outf("Baudrate: %" PRIu32 " ", swo_uart_get_baudrate());
+	}
+#endif
+	/* Make a note of which mode we initialised into */
+	swo_current_mode = swo_mode;
+}
 
 void swo_deinit(void)
 {
 #if SWO_ENCODING == 1 || SWO_ENCODING == 3
-	if (swo_current_coding == swo_manchester)
+	if (swo_current_mode == swo_manchester)
 		swo_manchester_deinit();
 #endif
 #if SWO_ENCODING == 2 || SWO_ENCODING == 3
-	if (swo_current_coding == swo_nrz_uart)
+	if (swo_current_mode == swo_nrz_uart)
 		swo_uart_deinit();
 #endif
-	swo_current_coding = swo_none;
+	swo_current_mode = swo_none;
 }
 
 void swo_send_buffer(usbd_device *const dev, const uint8_t ep)
 {
 #if SWO_ENCODING == 1 || SWO_ENCODING == 3
-	if (swo_current_coding == swo_manchester)
+	if (swo_current_mode == swo_manchester)
 		swo_manchester_send_buffer(dev, ep);
 #endif
 #if SWO_ENCODING == 2 || SWO_ENCODING == 3
-	if (swo_current_coding == swo_nrz_uart)
+	if (swo_current_mode == swo_nrz_uart)
 		swo_uart_send_buffer(dev, ep);
 #endif
 }

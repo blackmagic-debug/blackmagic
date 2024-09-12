@@ -22,10 +22,12 @@
 #define PLATFORMS_COMMON_STM32_SWO_INTERNAL_H
 
 /* Manchester-mode implementation functions */
+void swo_manchester_init(uint32_t itm_stream_bitmask);
 void swo_manchester_deinit(void);
 void swo_manchester_send_buffer(usbd_device *dev, uint8_t ep);
 
 /* UART-mode implementation functions */
+void swo_uart_init(uint32_t baudrate, uint32_t itm_stream_bitmask);
 void swo_uart_deinit(void);
 void swo_uart_send_buffer(usbd_device *dev, uint8_t ep);
 
