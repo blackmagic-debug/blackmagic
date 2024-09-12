@@ -71,8 +71,11 @@ int rtt_if_exit()
 
 /* write buffer to terminal */
 
-uint32_t rtt_write(const char *buf, uint32_t len)
+uint32_t rtt_write(const uint32_t channel, const char *buf, uint32_t len)
 {
+	/* only support writing to up channel 0 */
+	if (channel != 0U)
+		return len;
 	int unused = write(1, buf, len);
 	(void)unused;
 	return len;
@@ -80,10 +83,11 @@ uint32_t rtt_write(const char *buf, uint32_t len)
 
 /* read character from terminal */
 
-int32_t rtt_getchar()
+int32_t rtt_getchar(const uint32_t channel)
 {
 	char ch;
 	int len;
+	(void)channel;
 	len = read(0, &ch, 1);
 	if (len == 1)
 		return ch;
@@ -92,8 +96,9 @@ int32_t rtt_getchar()
 
 /* true if no characters available */
 
-bool rtt_nodata()
+bool rtt_nodata(const uint32_t channel)
 {
+	(void)channel;
 	return false;
 }
 
@@ -113,23 +118,28 @@ int rtt_if_exit()
 
 /* write buffer to terminal */
 
-uint32_t rtt_write(const char *buf, uint32_t len)
+uint32_t rtt_write(const uint32_t channel, const char *buf, uint32_t len)
 {
+	/* only support writing to up channel 0 */
+	if (channel != 0U)
+		return len;
 	write(1, buf, len);
 	return len;
 }
 
 /* read character from terminal */
 
-int32_t rtt_getchar()
+int32_t rtt_getchar(const uint32_t channel)
 {
+	(void)channel;
 	return -1;
 }
 
 /* true if no characters available */
 
-bool rtt_nodata()
+bool rtt_nodata(const uint32_t channel)
 {
+	(void)channel;
 	return false;
 }
 
