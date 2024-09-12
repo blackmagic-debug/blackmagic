@@ -40,12 +40,13 @@ probe_native_args = [
 ]
 
 trace_protocol = get_option('trace_protocol')
+probe_native_args += [f'-DSWO_ENCODING=@trace_protocol@']
+probe_native_dependencies = []
 if trace_protocol in ['1', '3']
-	probe_native_args += ['-DSWO_ENCODING=1']
-	probe_native_dependencies = platform_stm32_swo_manchester
-else
-	probe_native_args += ['-DSWO_ENCODING=2']
-	probe_native_dependencies = platform_stm32_swo_uart
+	probe_native_dependencies += platform_stm32_swo_manchester
+endif
+if trace_protocol in ['2', '3']
+	probe_native_dependencies += platform_stm32_swo_uart
 endif
 
 probe_native_common_link_args = [
