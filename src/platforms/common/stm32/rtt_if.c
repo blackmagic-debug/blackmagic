@@ -93,9 +93,10 @@ void rtt_serial_receive_callback(usbd_device *dev, uint8_t ep)
 }
 
 /* rtt host to target: read one character */
-int32_t rtt_getchar()
+int32_t rtt_getchar(const uint32_t channel)
 {
 	int retval;
+	(void)channel;
 
 	if (recv_head == recv_tail)
 		return -1;
@@ -110,14 +111,20 @@ int32_t rtt_getchar()
 }
 
 /* rtt host to target: true if no characters available for reading */
-bool rtt_nodata()
+bool rtt_nodata(const uint32_t channel)
 {
+	/* only support reading from down channel 0 */
+	if (channel != 0U)
+		return true;
 	return recv_head == recv_tail;
 }
 
 /* rtt target to host: write string */
-uint32_t rtt_write(const char *buf, uint32_t len)
+uint32_t rtt_write(const uint32_t channel, const char *buf, uint32_t len)
 {
+	/* only support writing to up channel 0 */
+	if (channel != 0U)
+		return len;
 	if (len != 0 && usbdev && usb_get_config() && gdb_serial_get_dtr()) {
 		for (uint32_t p = 0; p < len; p += CDCACM_PACKET_SIZE) {
 			uint32_t plen = MIN(CDCACM_PACKET_SIZE, len - p);
