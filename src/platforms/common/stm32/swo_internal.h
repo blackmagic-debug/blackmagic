@@ -21,13 +21,23 @@
 #ifndef PLATFORMS_COMMON_STM32_SWO_INTERNAL_H
 #define PLATFORMS_COMMON_STM32_SWO_INTERNAL_H
 
+#include "usb.h"
+
+/* Control variables shared between decoders */
+extern bool swo_itm_decoding;
+
+/* Buffers, active buffer index and fill level for USB */
+extern uint8_t swo_transmit_buffers[2][SWO_ENDPOINT_SIZE];
+extern uint8_t swo_active_transmit_buffer;
+extern uint16_t swo_transmit_buffer_index;
+
 /* Manchester-mode implementation functions */
-void swo_manchester_init(uint32_t itm_stream_bitmask);
+void swo_manchester_init(void);
 void swo_manchester_deinit(void);
 void swo_manchester_send_buffer(usbd_device *dev, uint8_t ep);
 
 /* UART-mode implementation functions */
-void swo_uart_init(uint32_t baudrate, uint32_t itm_stream_bitmask);
+void swo_uart_init(uint32_t baudrate);
 void swo_uart_deinit(void);
 void swo_uart_send_buffer(usbd_device *dev, uint8_t ep);
 

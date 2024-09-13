@@ -36,7 +36,16 @@
  * under this circumstance as it requires SWO_ENCODING to be defined and valid.
  */
 
+/* Current SWO decoding mode being used */
 swo_coding_e swo_current_mode;
+
+/* Whether ITM decoding is engaged */
+bool swo_itm_decoding = false;
+
+/* Buffers, active buffer index and fill level for USB */
+uint8_t swo_transmit_buffers[2][SWO_ENDPOINT_SIZE];
+uint8_t swo_active_transmit_buffer = 0;
+uint16_t swo_transmit_buffer_index = 0;
 
 void swo_init(const swo_coding_e swo_mode, const uint32_t baudrate, const uint32_t itm_stream_bitmask)
 {
@@ -47,14 +56,18 @@ void swo_init(const swo_coding_e swo_mode, const uint32_t baudrate, const uint32
 	if (swo_current_mode != swo_none)
 		swo_deinit();
 
-		/* Now determine which mode to enable and initialise it */
+	/* Configure the ITM decoder and state */
+	swo_itm_decode_set_mask(itm_stream_bitmask);
+	swo_itm_decoding = itm_stream_bitmask != 0;
+
+	/* Now determine which mode to enable and initialise it */
 #if SWO_ENCODING == 1 || SWO_ENCODING == 3
 	if (swo_mode == swo_manchester)
-		swo_manchester_init(itm_stream_bitmask);
+		swo_manchester_init();
 #endif
 #if SWO_ENCODING == 2 || SWO_ENCODING == 3
 	if (swo_mode == swo_nrz_uart) {
-		swo_uart_init(baudrate, itm_stream_bitmask);
+		swo_uart_init(baudrate);
 		gdb_outf("Baudrate: %" PRIu32 " ", swo_uart_get_baudrate());
 	}
 #endif

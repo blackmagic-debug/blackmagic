@@ -57,22 +57,13 @@
 	(TIM_SR_UIF | TIM_SR_CC1IF | TIM_SR_CC2IF | TIM_SR_CC3IF | TIM_SR_CC4IF | TIM_SR_TIF | TIM_SR_CC1OF | \
 		TIM_SR_CC2OF | TIM_SR_CC3OF | TIM_SR_CC4OF)
 
-/* SWO decoding */
-static bool decoding = false;
-
-#define SWO_BUFFER_SIZE 64U
-
-/* Buffer and fill level for USB */
-static uint8_t swo_transmit_buffer[SWO_BUFFER_SIZE];
-static uint8_t swo_transmit_buffer_index;
-
 /* Manchester bit capture buffer and current bit index */
 static uint8_t swo_data[16U];
 static uint8_t swo_data_bit_index = 0;
 /* Number of timer clock cycles that describe half a bit period as detected */
 static uint32_t swo_half_bit_period = 0U;
 
-void swo_manchester_init(const uint32_t itm_stream_bitmask)
+void swo_manchester_init(void)
 {
 	/* Make sure the timer block is clocked on platforms that don't do this in their `platform_init()` */
 	SWO_TIM_CLK_EN();
@@ -117,9 +108,7 @@ void swo_manchester_init(const uint32_t itm_stream_bitmask)
 	/* Set the period to an improbable value */
 	timer_set_period(SWO_TIM, UINT32_MAX);
 
-	/* Configure the capture decoder and state, then enable the timer */
-	swo_itm_decode_set_mask(itm_stream_bitmask);
-	decoding = itm_stream_bitmask != 0;
+	/* Now we've got everything configured and ready, enable the timer */
 	timer_enable_counter(SWO_TIM);
 }
 
@@ -144,17 +133,23 @@ void swo_manchester_deinit(void)
 void swo_buffer_data(void)
 {
 	const uint8_t byte_count = swo_data_bit_index >> 3U;
-	if (decoding)
+	if (swo_itm_decoding)
 		swo_itm_decode(usbdev, CDCACM_UART_ENDPOINT, swo_data, byte_count);
-	else if (usbd_ep_write_packet(usbdev, USB_REQ_TYPE_IN | SWO_ENDPOINT, swo_data, byte_count) != byte_count) {
-		if (swo_transmit_buffer_index + byte_count > SWO_BUFFER_SIZE) {
-			/* Stall if upstream to too slow. */
-			usbd_ep_stall_set(usbdev, USB_REQ_TYPE_IN | SWO_ENDPOINT, 1U);
-			swo_transmit_buffer_index = 0;
-			return;
+	else {
+		/* First, see how much space we have in the current transmit buffer and move what we can */
+		const uint16_t amount = MIN(byte_count, SWO_ENDPOINT_SIZE - swo_transmit_buffer_index);
+		memcpy(&swo_transmit_buffers[swo_active_transmit_buffer][swo_transmit_buffer_index], swo_data, amount);
+		swo_transmit_buffer_index += amount;
+		/* Now, if we just exhausted that buffer, send it */
+		if (swo_transmit_buffer_index == SWO_ENDPOINT_SIZE)
+			swo_send_buffer(usbdev, SWO_ENDPOINT);
+		/* If we have anything left to move, now put that in the new buffer */
+		if (amount != byte_count) {
+			const uint16_t remainder = byte_count - amount;
+			memcpy(&swo_transmit_buffers[swo_active_transmit_buffer][swo_transmit_buffer_index], swo_data + amount,
+				remainder);
+			swo_transmit_buffer_index += remainder;
 		}
-		memcpy(swo_transmit_buffer + swo_transmit_buffer_index, swo_data, byte_count);
-		swo_transmit_buffer_index += byte_count;
 	}
 	swo_data_bit_index = 0U;
 }
@@ -164,11 +159,13 @@ void swo_manchester_send_buffer(usbd_device *const dev, const uint8_t ep)
 	if (!swo_transmit_buffer_index)
 		return;
 
-	if (decoding)
-		swo_itm_decode(dev, CDCACM_UART_ENDPOINT, swo_transmit_buffer, swo_transmit_buffer_index);
+	if (swo_itm_decoding)
+		swo_itm_decode(
+			dev, CDCACM_UART_ENDPOINT, swo_transmit_buffers[swo_active_transmit_buffer], swo_transmit_buffer_index);
 	else
-		usbd_ep_write_packet(dev, ep, swo_transmit_buffer, swo_transmit_buffer_index);
-	swo_transmit_buffer_index = 0;
+		usbd_ep_write_packet(dev, ep, swo_transmit_buffers[swo_active_transmit_buffer], swo_transmit_buffer_index);
+	swo_active_transmit_buffer ^= 1U;
+	swo_transmit_buffer_index = 0U;
 }
 
 void SWO_TIM_ISR(void)

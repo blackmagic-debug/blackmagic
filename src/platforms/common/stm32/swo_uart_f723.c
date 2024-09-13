@@ -49,8 +49,34 @@ static volatile uint32_t read_index;  /* Packet currently waiting to transmit to
 static uint8_t trace_rx_buf[NUM_SWO_PACKETS * SWO_ENDPOINT_SIZE];
 /* Packet pingpong buffer used for receiving packets */
 static uint8_t pingpong_buf[2 * SWO_ENDPOINT_SIZE];
-/* SWO decoding */
-static bool decoding = false;
+
+void swo_uart_init(uint32_t baudrate)
+{
+	if (!baudrate)
+		baudrate = SWO_DEFAULT_BAUD;
+
+	rcc_periph_clock_enable(SWO_UART_CLK);
+	rcc_periph_clock_enable(SWO_DMA_CLK);
+
+	rcc_periph_clock_enable(RCC_GPIOD);
+	gpio_mode_setup(SWO_UART_PORT, GPIO_MODE_AF, GPIO_PUPD_NONE, SWO_UART_RX_PIN);
+	gpio_set_af(SWO_UART_PORT, SWO_UART_PIN_AF, SWO_UART_RX_PIN);
+	/* Pull SWO pin high to keep open SWO line ind uart idle state!*/
+	gpio_set(SWO_UART_PORT, SWO_UART_RX_PIN);
+	nvic_set_priority(SWO_DMA_IRQ, IRQ_PRI_SWO_DMA);
+	nvic_enable_irq(SWO_DMA_IRQ);
+	swo_uart_set_baud(baudrate);
+}
+
+void swo_uart_deinit(void)
+{
+	/* Stop peripherals servicing */
+	nvic_disable_irq(SWO_DMA_IRQ);
+	dma_disable_stream(SWO_DMA_BUS, SWO_DMA_STREAM);
+	usart_disable(SWO_UART);
+	/* Dump the buffered remains */
+	swo_send_buffer(usbdev, SWO_ENDPOINT | USB_REQ_TYPE_IN);
+}
 
 void swo_uart_send_buffer(usbd_device *dev, uint8_t ep)
 {
@@ -62,7 +88,7 @@ void swo_uart_send_buffer(usbd_device *dev, uint8_t ep)
 	/* Attempt to write everything we buffered */
 	if (write_index != read_index) {
 		uint16_t result;
-		if (decoding)
+		if (swo_itm_decoding)
 			/* write decoded swo packets to the uart port */
 			result = swo_itm_decode(
 				dev, CDCACM_UART_ENDPOINT, &trace_rx_buf[read_index * SWO_ENDPOINT_SIZE], SWO_ENDPOINT_SIZE);
@@ -125,34 +151,4 @@ void SWO_DMA_ISR(void)
 	}
 	write_index = (write_index + 1) % NUM_SWO_PACKETS;
 	swo_send_buffer(usbdev, SWO_ENDPOINT);
-}
-
-void swo_uart_init(uint32_t baudrate, uint32_t swo_chan_bitmask)
-{
-	if (!baudrate)
-		baudrate = SWO_DEFAULT_BAUD;
-
-	rcc_periph_clock_enable(SWO_UART_CLK);
-	rcc_periph_clock_enable(SWO_DMA_CLK);
-
-	rcc_periph_clock_enable(RCC_GPIOD);
-	gpio_mode_setup(SWO_UART_PORT, GPIO_MODE_AF, GPIO_PUPD_NONE, SWO_UART_RX_PIN);
-	gpio_set_af(SWO_UART_PORT, SWO_UART_PIN_AF, SWO_UART_RX_PIN);
-	/* Pull SWO pin high to keep open SWO line ind uart idle state!*/
-	gpio_set(SWO_UART_PORT, SWO_UART_RX_PIN);
-	nvic_set_priority(SWO_DMA_IRQ, IRQ_PRI_SWO_DMA);
-	nvic_enable_irq(SWO_DMA_IRQ);
-	swo_uart_set_baud(baudrate);
-	traceswo_setmask(swo_chan_bitmask);
-	decoding = swo_chan_bitmask != 0;
-}
-
-void swo_uart_deinit(void)
-{
-	/* Stop peripherals servicing */
-	nvic_disable_irq(SWO_DMA_IRQ);
-	dma_disable_stream(SWO_DMA_BUS, SWO_DMA_STREAM);
-	usart_disable(SWO_UART);
-	/* Dump the buffered remains */
-	swo_send_buffer(usbdev, SWO_ENDPOINT | USB_REQ_TYPE_IN);
 }
