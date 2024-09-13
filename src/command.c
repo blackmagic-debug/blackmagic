@@ -109,10 +109,12 @@ const command_s cmd_list[] = {
 		"MAXERR]]"},
 #endif
 #ifdef PLATFORM_HAS_TRACESWO
-#if defined SWO_ENCODING && SWO_ENCODING == 2
-	{"swo", cmd_swo, "Start SWO capture, UART mode: <enable|disable> [BAUDRATE] [decode [CHANNEL_NR ...]]"},
-#else
+#if SWO_ENCODING == 1
 	{"swo", cmd_swo, "Start SWO capture, Manchester mode: <enable|disable> [decode [CHANNEL_NR ...]]"},
+#elif SWO_ENCODING == 2
+	{"swo", cmd_swo, "Start SWO capture, UART mode: <enable|disable> [BAUDRATE] [decode [CHANNEL_NR ...]]"},
+#elif SWO_ENCODING == 3
+	{"swo", cmd_swo, "Start SWO capture: <enable|disable> [manchester|uart] [BAUDRATE] [decode [CHANNEL_NR ...]]"},
 #endif
 	{"traceswo", cmd_swo, "Deprecated: use swo instead"},
 #endif
