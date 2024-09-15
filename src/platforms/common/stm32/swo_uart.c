@@ -62,21 +62,21 @@
 static volatile uint32_t write_index; /* Packet currently received via UART */
 static volatile uint32_t read_index;  /* Packet currently waiting to transmit to USB */
 /* Packets arrived from the SWO interface */
-static uint8_t *trace_rx_buf = NULL;
+static uint8_t *swo_data_buffer = NULL;
 
 static void swo_uart_set_baud(uint32_t baudrate);
 
 void swo_uart_init(uint32_t baudrate)
 {
 	/* Skip initial allocation on commands for mode change */
-	if (trace_rx_buf == NULL) {
+	if (swo_data_buffer == NULL) {
 		/* Alignment (bytes): 1 for UART DMA, 2-4 for memcpy in usb code, 8 provided by malloc. Not 64 */
-		uint8_t *const newbuf = malloc(NUM_SWO_PACKETS * SWO_ENDPOINT_SIZE);
-		if (!newbuf) {
+		uint8_t *const swo_data_buffer = malloc(NUM_SWO_PACKETS * SWO_ENDPOINT_SIZE);
+		/* Check for allocation failure and abort initialisation if we see it failed */
+		if (!swo_data_buffer) {
 			DEBUG_ERROR("malloc: failed in %s\n", __func__);
 			return;
 		}
-		trace_rx_buf = newbuf;
 	}
 
 	if (!baudrate)
@@ -109,9 +109,9 @@ void swo_uart_deinit(void)
 	/* Dump the buffered remains */
 	swo_send_buffer(usbdev, SWO_ENDPOINT);
 	/* Return this contiguous chunk of SRAM to unshrinkable heap */
-	if (trace_rx_buf != NULL) {
-		free(trace_rx_buf);
-		trace_rx_buf = NULL;
+	if (swo_data_buffer != NULL) {
+		free(swo_data_buffer);
+		swo_data_buffer = NULL;
 	}
 }
 
@@ -128,10 +128,10 @@ void swo_uart_send_buffer(usbd_device *const dev, const uint8_t ep)
 		if (swo_itm_decoding)
 			/* write decoded swo packets to the uart port */
 			result = swo_itm_decode(
-				dev, CDCACM_UART_ENDPOINT, &trace_rx_buf[read_index * SWO_ENDPOINT_SIZE], SWO_ENDPOINT_SIZE);
+				dev, CDCACM_UART_ENDPOINT, &swo_data_buffer[read_index * SWO_ENDPOINT_SIZE], SWO_ENDPOINT_SIZE);
 		else
 			/* write raw swo packets to the trace port */
-			result = usbd_ep_write_packet(dev, ep, &trace_rx_buf[read_index * SWO_ENDPOINT_SIZE], SWO_ENDPOINT_SIZE);
+			result = usbd_ep_write_packet(dev, ep, &swo_data_buffer[read_index * SWO_ENDPOINT_SIZE], SWO_ENDPOINT_SIZE);
 		if (result)
 			read_index = (read_index + 1U) % NUM_SWO_PACKETS;
 	}
@@ -186,11 +186,11 @@ void SWO_DMA_ISR(void)
 {
 	if (dma_get_interrupt_flag(SWO_DMA_BUS, SWO_DMA_CHAN, DMA_HTIF)) {
 		dma_clear_interrupt_flags(SWO_DMA_BUS, SWO_DMA_CHAN, DMA_HTIF);
-		memcpy(&trace_rx_buf[write_index * SWO_ENDPOINT_SIZE], swo_transmit_buffers[0U], SWO_ENDPOINT_SIZE);
+		memcpy(&swo_data_buffer[write_index * SWO_ENDPOINT_SIZE], swo_transmit_buffers[0U], SWO_ENDPOINT_SIZE);
 	}
 	if (dma_get_interrupt_flag(SWO_DMA_BUS, SWO_DMA_CHAN, DMA_TCIF)) {
 		dma_clear_interrupt_flags(SWO_DMA_BUS, SWO_DMA_CHAN, DMA_TCIF);
-		memcpy(&trace_rx_buf[write_index * SWO_ENDPOINT_SIZE], swo_transmit_buffers[1U], SWO_ENDPOINT_SIZE);
+		memcpy(&swo_data_buffer[write_index * SWO_ENDPOINT_SIZE], swo_transmit_buffers[1U], SWO_ENDPOINT_SIZE);
 	}
 	write_index = (write_index + 1U) % NUM_SWO_PACKETS;
 	swo_send_buffer(usbdev, SWO_ENDPOINT);
