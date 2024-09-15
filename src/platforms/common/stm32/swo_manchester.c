@@ -128,7 +128,7 @@ void swo_manchester_deinit(void)
 #if defined(STM32F4) || defined(STM32F0) || defined(STM32F3)
 	gpio_mode_setup(SWO_PORT, GPIO_MODE_INPUT, GPIO_PUPD_NONE, SWO_PIN);
 #else
-	/* Put the GPIO back into normal service as TDO */
+	/* Put the GPIO back into normal service as a GPIO */
 	gpio_set_mode(SWO_PORT, GPIO_MODE_INPUT, GPIO_CNF_INPUT_FLOAT, SWO_PIN);
 #endif
 }

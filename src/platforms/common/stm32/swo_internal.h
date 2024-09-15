@@ -26,7 +26,7 @@
 /* Control variables shared between decoders */
 extern bool swo_itm_decoding;
 
-/* Buffers, active buffer index and fill level for USB */
+/* Data buffers, active buffer index and fill level for USB */
 extern uint8_t swo_transmit_buffers[2][SWO_ENDPOINT_SIZE];
 extern uint8_t swo_active_transmit_buffer;
 extern uint16_t swo_transmit_buffer_index;
