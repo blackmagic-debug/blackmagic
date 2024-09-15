@@ -42,7 +42,6 @@ platform_stm32_sources = files(
 # This is a temporary hack to allow selecting swo_manchester vs swo_uart implementation
 platform_stm32_swo_manchester = declare_dependency(sources: files('swo_manchester.c'))
 platform_stm32_swo_uart = declare_dependency(sources: files('swo_uart.c'))
-platform_stm32f7_swo_uart = declare_dependency(sources: files('swo_uart_f723.c'))
 
 # RTT support handling
 if get_option('rtt_support')

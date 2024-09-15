@@ -185,8 +185,8 @@ extern const struct _usbd_driver stm32f723_usb_driver;
 /* This DMA channel is set by the USART in use */
 #define SWO_DMA_BUS    DMA1
 #define SWO_DMA_CLK    RCC_DMA1
-#define SWO_DMA_CHAN   DMA_CHANNEL4
-#define SWO_DMA_STREAM DMA_STREAM0
+#define SWO_DMA_CHAN   DMA_STREAM0
+#define SWO_DMA_TRG    DMA_SxCR_CHSEL_4
 #define SWO_DMA_IRQ    NVIC_DMA1_STREAM0_IRQ
 #define SWO_DMA_ISR(x) dma1_stream0_isr(x)
 

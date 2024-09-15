@@ -63,7 +63,7 @@ if trace_protocol == '3'
 	trace_protocol = '2'
 endif
 if trace_protocol == '2'
-	probe_stlinkv3_dependencies = platform_stm32f7_swo_uart
+	probe_stlinkv3_dependencies = platform_stm32_swo_uart
 	probe_stlinkv3_args += ['-DSWO_ENCODING=2']
 else
 	error('Unsupported SWO protocol requested')

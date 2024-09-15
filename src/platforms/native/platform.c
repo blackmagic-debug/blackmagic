@@ -265,7 +265,7 @@ void platform_init(void)
 		gpio_set_mode(GPIOB, GPIO_MODE_INPUT, GPIO_CNF_INPUT_PULL_UPDOWN, GPIO0);
 	}
 	/* Set up the NVIC vector table for the firmware */
-	SCB_VTOR = (uint32_t)&vector_table; // NOLINT(clang-diagnostic-pointer-to-int-cast)
+	SCB_VTOR = (uintptr_t)&vector_table; // NOLINT(clang-diagnostic-pointer-to-int-cast, performance-no-int-to-ptr)
 
 	platform_timing_init();
 	blackmagic_usb_init();

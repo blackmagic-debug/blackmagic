@@ -107,7 +107,7 @@ void swo_uart_deinit(void)
 	dma_disable_channel(SWO_DMA_BUS, SWO_DMA_CHAN);
 	usart_disable(SWO_UART);
 	/* Dump the buffered remains */
-	swo_send_buffer(usbdev, SWO_ENDPOINT | USB_REQ_TYPE_IN);
+	swo_send_buffer(usbdev, SWO_ENDPOINT);
 	/* Return this contiguous chunk of SRAM to unshrinkable heap */
 	if (trace_rx_buf != NULL) {
 		free(trace_rx_buf);
@@ -148,7 +148,7 @@ static void swo_uart_set_baud(const uint32_t baudrate)
 	dma_disable_channel(SWO_DMA_BUS, SWO_DMA_CHAN);
 	usart_disable(SWO_UART);
 	bmd_usart_set_baudrate(SWO_UART, baudrate);
-	usart_set_databits(SWO_UART, 8);
+	usart_set_databits(SWO_UART, 8U);
 	usart_set_stopbits(SWO_UART, USART_STOPBITS_1);
 	usart_set_mode(SWO_UART, USART_MODE_RX);
 	usart_set_parity(SWO_UART, USART_PARITY_NONE);
@@ -193,5 +193,5 @@ void SWO_DMA_ISR(void)
 		memcpy(&trace_rx_buf[write_index * SWO_ENDPOINT_SIZE], swo_transmit_buffers[1U], SWO_ENDPOINT_SIZE);
 	}
 	write_index = (write_index + 1U) % NUM_SWO_PACKETS;
-	swo_send_buffer(usbdev, SWO_ENDPOINT | USB_REQ_TYPE_IN);
+	swo_send_buffer(usbdev, SWO_ENDPOINT);
 }

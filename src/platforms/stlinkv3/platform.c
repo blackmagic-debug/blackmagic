@@ -244,12 +244,13 @@ void platform_init(void)
 	regval |= (usart6_clksel & RCC_DCKCFGR2_UARTxSEL_MASK) << RCC_DCKCFGR2_USART6SEL_SHIFT;
 	RCC_DCKCFGR2 = regval;
 
-	/* Relocate interrupt vector table here */
-	SCB_VTOR = (uintptr_t)&vector_table;
+	/* Set up the NVIC vector table for the firmware */
+	SCB_VTOR = (uintptr_t)&vector_table; // NOLINT(clang-diagnostic-pointer-to-int-cast, performance-no-int-to-ptr)
 
 	platform_timing_init();
 	blackmagic_usb_init();
 	aux_serial_init();
+
 	/* By default, do not drive the swd bus too fast. */
 	platform_max_frequency_set(6000000);
 }
