@@ -113,6 +113,13 @@ void swo_uart_deinit(void)
 		free(swo_data_buffer);
 		swo_data_buffer = NULL;
 	}
+
+	/* Put the GPIO back into normal service as a GPIO */
+#if defined(STM32F4) || defined(STM32F0) || defined(STM32F3)
+	gpio_mode_setup(SWO_UART_PORT, GPIO_MODE_INPUT, GPIO_PUPD_NONE, SWO_UART_RX_PIN);
+#else
+	gpio_set_mode(SWO_UART_PORT, GPIO_MODE_INPUT, GPIO_CNF_INPUT_FLOAT, SWO_UART_RX_PIN);
+#endif
 }
 
 void swo_uart_send_buffer(usbd_device *const dev, const uint8_t ep)
@@ -156,6 +163,7 @@ static void swo_uart_set_baud(const uint32_t baudrate)
 
 	/* Set up DMA channel */
 	dma_channel_reset(SWO_DMA_BUS, SWO_DMA_CHAN);
+	// NOLINTNEXTLINE(clang-diagnostic-pointer-to-int-cast,performance-no-int-to-ptr)
 	dma_set_peripheral_address(SWO_DMA_BUS, SWO_DMA_CHAN, (uintptr_t)&SWO_UART_DR);
 #if defined(DMA_STREAM0)
 	dma_set_transfer_mode(SWO_DMA_BUS, SWO_DMA_CHAN, DMA_SxCR_DIR_PERIPHERAL_TO_MEM);
@@ -176,6 +184,7 @@ static void swo_uart_set_baud(const uint32_t baudrate)
 	usart_enable(SWO_UART);
 	nvic_enable_irq(SWO_DMA_IRQ);
 	write_index = read_index = 0;
+	// NOLINTNEXTLINE(clang-diagnostic-pointer-to-int-cast)
 	dma_set_memory_address(SWO_DMA_BUS, SWO_DMA_CHAN, (uintptr_t)&swo_transmit_buffers[0][0]);
 	dma_set_number_of_data(SWO_DMA_BUS, SWO_DMA_CHAN, 2 * SWO_ENDPOINT_SIZE);
 	dma_enable_channel(SWO_DMA_BUS, SWO_DMA_CHAN);
