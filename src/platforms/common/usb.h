@@ -28,11 +28,13 @@ extern usbd_device *usbdev;
 extern uint16_t usb_config;
 
 #if defined(USB_HS)
-#define CDCACM_PACKET_SIZE 512U
-#define SWO_ENDPOINT_SIZE  512U
+#define CDCACM_PACKET_SIZE  512U
+#define SWO_ENDPOINT_SIZE   512U
+#define NUM_SWO_USB_PACKETS 16U /* 8KiB of data buffer */
 #else
-#define CDCACM_PACKET_SIZE 64U
-#define SWO_ENDPOINT_SIZE  64U
+#define CDCACM_PACKET_SIZE  64U
+#define SWO_ENDPOINT_SIZE   64U
+#define NUM_SWO_USB_PACKETS 4U /* 512B of data buffer */
 #endif
 
 #if !defined(USB_MAX_INTERVAL)

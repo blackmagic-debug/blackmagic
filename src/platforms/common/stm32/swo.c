@@ -23,6 +23,10 @@
 #include "swo.h"
 #include "swo_internal.h"
 
+#include <stdatomic.h>
+#include <malloc.h>
+#include <libopencmsis/core_cm3.h>
+
 /*
  * Management and muxing layer for the SWO implementations
  *
@@ -42,10 +46,18 @@ swo_coding_e swo_current_mode;
 /* Whether ITM decoding is engaged */
 bool swo_itm_decoding = false;
 
-/* Buffers, active buffer index and fill level for USB */
-uint8_t swo_transmit_buffers[2][SWO_ENDPOINT_SIZE];
-uint8_t swo_active_transmit_buffer = 0;
-uint16_t swo_transmit_buffer_index = 0;
+/*
+ * Dynamically-allocated data buffer, current read index, current write index,
+ * current fill level, and total available buffer size. We initialise to 0 just
+ * to get a consistent starting point, but the indexes do not matter once up and
+ * running. It only matters the post-condition of swo_deinit() that no bytes
+ * are available and the indicies are equal to each other are kept for entry
+ * into swo_init() and the successful execution of it all.
+ */
+uint8_t *swo_buffer;
+uint16_t swo_buffer_read_index = 0U;
+uint16_t swo_buffer_write_index = 0U;
+_Atomic uint16_t swo_buffer_bytes_available = 0U;
 
 void swo_init(const swo_coding_e swo_mode, const uint32_t baudrate, const uint32_t itm_stream_bitmask)
 {
@@ -54,7 +66,21 @@ void swo_init(const swo_coding_e swo_mode, const uint32_t baudrate, const uint32
 #endif
 	/* Make sure any existing SWO capture is first spun down */
 	if (swo_current_mode != swo_none)
-		swo_deinit();
+		swo_deinit(false);
+	/* If we're spinning this up fresh, allocate a buffer for the data */
+	else {
+		/*
+		 * This needs to be at least 2 endpoint buffers large, more is better to a point but
+		 * it has diminishing returns. Aim for no more than 8KiB of buffer as after that, larger
+		 * is entirely pointless.
+		 */
+		swo_buffer = malloc(SWO_BUFFER_SIZE);
+		/* Check for allocation failure and abort initialisation if we see it failed */
+		if (!swo_buffer) {
+			DEBUG_ERROR("malloc: failed in %s\n", __func__);
+			return;
+		}
+	}
 
 	/* Configure the ITM decoder and state */
 	swo_itm_decode_set_mask(itm_stream_bitmask);
@@ -75,7 +101,7 @@ void swo_init(const swo_coding_e swo_mode, const uint32_t baudrate, const uint32
 	swo_current_mode = swo_mode;
 }
 
-void swo_deinit(void)
+void swo_deinit(const bool deallocate)
 {
 #if SWO_ENCODING == 1 || SWO_ENCODING == 3
 	if (swo_current_mode == swo_manchester)
@@ -85,17 +111,59 @@ void swo_deinit(void)
 	if (swo_current_mode == swo_nrz_uart)
 		swo_uart_deinit();
 #endif
+
+	/* Spin waiting for all data to finish being transmitted */
+	while (swo_buffer_bytes_available) {
+		swo_send_buffer(usbdev, SWO_ENDPOINT);
+		__WFI();
+	}
+
+	/* If we're being asked to give the SWO buffer back, then free it */
+	if (deallocate)
+		free(swo_buffer);
 	swo_current_mode = swo_none;
 }
 
 void swo_send_buffer(usbd_device *const dev, const uint8_t ep)
 {
-#if SWO_ENCODING == 1 || SWO_ENCODING == 3
-	if (swo_current_mode == swo_manchester)
-		swo_manchester_send_buffer(dev, ep);
-#endif
-#if SWO_ENCODING == 2 || SWO_ENCODING == 3
-	if (swo_current_mode == swo_nrz_uart)
-		swo_uart_send_buffer(dev, ep);
-#endif
+	/* NOTLINTNEXTLINE(clang-diagnostic-error) */
+	static atomic_flag reentry_flag = ATOMIC_FLAG_INIT;
+
+	/* If we are already in this routine then we don't need to come in again */
+	if (atomic_flag_test_and_set_explicit(&reentry_flag, memory_order_relaxed))
+		return;
+
+	const uint16_t bytes_available = swo_buffer_bytes_available;
+	/*
+	 * If there is somthing to move, move the next up-to SWO_ENDPOINT_SIZE bytes chunk of it (USB)
+	 * or the whole lot (ITM decoding) as appropriate
+	 */
+	if (bytes_available) {
+		uint16_t result;
+		/* If we're doing decoding, hand the data to the ITM decoder */
+		if (swo_itm_decoding) {
+			/* If we're in UART mode, hand as much as we can all at once */
+			if (swo_current_mode == swo_nrz_uart)
+				result = swo_itm_decode(dev, CDCACM_UART_ENDPOINT, swo_buffer + swo_buffer_read_index,
+					MIN(bytes_available, SWO_BUFFER_SIZE - swo_buffer_read_index));
+			/* Otherwise, if we're in Manchester mode, manage the amount moved the same as we do USB */
+			else
+				result = swo_itm_decode(dev, CDCACM_UART_ENDPOINT, swo_buffer + swo_buffer_read_index,
+					MIN(bytes_available, SWO_ENDPOINT_SIZE));
+		} else
+			/* Otherwise, queue the new data to the SWO data endpoint */
+			result = usbd_ep_write_packet(
+				dev, ep, swo_buffer + swo_buffer_read_index, MIN(bytes_available, SWO_ENDPOINT_SIZE));
+
+		/* If we actually queued/processed some data, update indicies etc */
+		if (result) {
+			/*
+			 * Update the amount read and consumed */
+			swo_buffer_read_index += result;
+			swo_buffer_read_index &= SWO_BUFFER_SIZE - 1U;
+			swo_buffer_bytes_available -= result;
+		}
+	}
+
+	atomic_flag_clear_explicit(&reentry_flag, memory_order_relaxed);
 }

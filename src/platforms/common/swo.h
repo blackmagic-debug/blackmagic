@@ -38,7 +38,7 @@ extern swo_coding_e swo_current_mode;
 
 /* Initialisation and deinitialisation functions (ties into command.c) */
 void swo_init(swo_coding_e swo_mode, uint32_t baudrate, uint32_t itm_stream_bitmask);
-void swo_deinit(void);
+void swo_deinit(bool deallocate);
 
 /* UART mode baudate functions */
 uint32_t swo_uart_get_baudrate(void);

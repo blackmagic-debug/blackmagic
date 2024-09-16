@@ -118,9 +118,6 @@ void swo_manchester_deinit(void)
 	timer_disable_counter(SWO_TIM);
 	timer_slave_set_mode(SWO_TIM, TIM_SMCR_SMS_OFF);
 
-	/* Flush any pending data */
-	swo_send_buffer(usbdev, SWO_ENDPOINT);
-
 	/* Reset state so that when init is called we wind up in a fresh capture state */
 	swo_data_bit_index = 0U;
 	swo_half_bit_period = 0U;
@@ -136,35 +133,24 @@ void swo_manchester_deinit(void)
 void swo_buffer_data(void)
 {
 	const uint8_t byte_count = swo_data_bit_index >> 3U;
-	/* First, see how much space we have in the current transmit buffer and move what we can */
-	const uint16_t amount = MIN(byte_count, SWO_ENDPOINT_SIZE - swo_transmit_buffer_index);
-	memcpy(&swo_transmit_buffers[swo_active_transmit_buffer][swo_transmit_buffer_index], swo_data, amount);
-	swo_transmit_buffer_index += amount;
-	/* Now, if we just exhausted that buffer, send it */
-	if (swo_transmit_buffer_index == SWO_ENDPOINT_SIZE) {
+	/* First, see how much space we have in the buffer and move what we can */
+	const uint16_t amount = MIN(byte_count, SWO_BUFFER_SIZE - swo_buffer_write_index);
+	memcpy(swo_buffer + swo_buffer_write_index, swo_data, amount);
+	swo_buffer_write_index += amount;
+	swo_buffer_write_index &= SWO_BUFFER_SIZE - 1U;
+	swo_buffer_bytes_available += amount;
+	/* Make sure we're sending the data if we've got more than an endpoint buffer's worth */
+	if (swo_buffer_bytes_available >= SWO_ENDPOINT_SIZE) {
 		swo_send_buffer(usbdev, SWO_ENDPOINT);
-		/* If we have anything left to move, now put that in the new buffer */
+		/* If we have anything left to move, put that at the start of the buffer */
 		if (amount != byte_count) {
 			const uint16_t remainder = byte_count - amount;
-			memcpy(&swo_transmit_buffers[swo_active_transmit_buffer][0U], swo_data + amount, remainder);
-			swo_transmit_buffer_index = remainder;
+			memcpy(swo_buffer, swo_data + amount, remainder);
+			swo_buffer_write_index = remainder;
+			swo_buffer_bytes_available += remainder;
 		}
 	}
 	swo_data_bit_index = 0U;
-}
-
-void swo_manchester_send_buffer(usbd_device *const dev, const uint8_t ep)
-{
-	if (!swo_transmit_buffer_index)
-		return;
-
-	if (swo_itm_decoding)
-		swo_itm_decode(
-			dev, CDCACM_UART_ENDPOINT, swo_transmit_buffers[swo_active_transmit_buffer], swo_transmit_buffer_index);
-	else
-		usbd_ep_write_packet(dev, ep, swo_transmit_buffers[swo_active_transmit_buffer], swo_transmit_buffer_index);
-	swo_active_transmit_buffer ^= 1U;
-	swo_transmit_buffer_index = 0U;
 }
 
 void SWO_TIM_ISR(void)

@@ -34,10 +34,6 @@
 #include "swo.h"
 #include "swo_internal.h"
 
-#include <stdatomic.h>
-#include <malloc.h>
-#include <errno.h>
-
 #include <libopencmsis/core_cm3.h>
 #include <libopencm3/cm3/nvic.h>
 #include <libopencm3/stm32/timer.h>
@@ -59,32 +55,18 @@
 #define DMA_PL_HIGH    DMA_CCR_PL_HIGH
 #endif
 
-static volatile uint32_t write_index; /* Packet currently received via UART */
-static volatile uint32_t read_index;  /* Packet currently waiting to transmit to USB */
-/* Packets arrived from the SWO interface */
-static uint8_t *swo_data_buffer = NULL;
-
-static void swo_uart_set_baud(uint32_t baudrate);
-
 void swo_uart_init(uint32_t baudrate)
 {
-	/* Skip initial allocation on commands for mode change */
-	if (swo_data_buffer == NULL) {
-		/* Alignment (bytes): 1 for UART DMA, 2-4 for memcpy in usb code, 8 provided by malloc. Not 64 */
-		uint8_t *const swo_data_buffer = malloc(NUM_SWO_PACKETS * SWO_ENDPOINT_SIZE);
-		/* Check for allocation failure and abort initialisation if we see it failed */
-		if (!swo_data_buffer) {
-			DEBUG_ERROR("malloc: failed in %s\n", __func__);
-			return;
-		}
-	}
-
+	/* First, make sure the baud rate is something sensible */
 	if (!baudrate)
 		baudrate = SWO_DEFAULT_BAUD;
 
+	/* Ensure required peripherals are spun up */
+	/* TODO: Move this into platform_init()! */
 	rcc_periph_clock_enable(SWO_UART_CLK);
 	rcc_periph_clock_enable(SWO_DMA_CLK);
 
+	/* Reconfigure the GPIO over to UART mode */
 #if defined(STM32F1)
 	gpio_set_mode(SWO_UART_PORT, GPIO_MODE_INPUT, GPIO_CNF_INPUT_PULL_UPDOWN, SWO_UART_RX_PIN);
 	/* Pull SWO pin high to keep open SWO line ind uart idle state! */
@@ -95,65 +77,7 @@ void swo_uart_init(uint32_t baudrate)
 	gpio_set_af(SWO_UART_PORT, SWO_UART_PIN_AF, SWO_UART_RX_PIN);
 #endif
 
-	nvic_set_priority(SWO_DMA_IRQ, IRQ_PRI_SWO_DMA);
-	nvic_enable_irq(SWO_DMA_IRQ);
-	swo_uart_set_baud(baudrate);
-}
-
-void swo_uart_deinit(void)
-{
-	/* Stop peripherals servicing */
-	nvic_disable_irq(SWO_DMA_IRQ);
-	dma_disable_channel(SWO_DMA_BUS, SWO_DMA_CHAN);
-	usart_disable(SWO_UART);
-	/* Dump the buffered remains */
-	swo_send_buffer(usbdev, SWO_ENDPOINT);
-	/* Return this contiguous chunk of SRAM to unshrinkable heap */
-	if (swo_data_buffer != NULL) {
-		free(swo_data_buffer);
-		swo_data_buffer = NULL;
-	}
-
-	/* Put the GPIO back into normal service as a GPIO */
-#if defined(STM32F4) || defined(STM32F0) || defined(STM32F3)
-	gpio_mode_setup(SWO_UART_PORT, GPIO_MODE_INPUT, GPIO_PUPD_NONE, SWO_UART_RX_PIN);
-#else
-	gpio_set_mode(SWO_UART_PORT, GPIO_MODE_INPUT, GPIO_CNF_INPUT_FLOAT, SWO_UART_RX_PIN);
-#endif
-}
-
-void swo_uart_send_buffer(usbd_device *const dev, const uint8_t ep)
-{
-	static atomic_flag reentry_flag = ATOMIC_FLAG_INIT;
-
-	/* If we are already in this routine then we don't need to come in again */
-	if (atomic_flag_test_and_set_explicit(&reentry_flag, memory_order_relaxed))
-		return;
-	/* Attempt to write everything we buffered */
-	if (write_index != read_index) {
-		uint16_t result;
-		if (swo_itm_decoding)
-			/* write decoded swo packets to the uart port */
-			result = swo_itm_decode(
-				dev, CDCACM_UART_ENDPOINT, &swo_data_buffer[read_index * SWO_ENDPOINT_SIZE], SWO_ENDPOINT_SIZE);
-		else
-			/* write raw swo packets to the trace port */
-			result = usbd_ep_write_packet(dev, ep, &swo_data_buffer[read_index * SWO_ENDPOINT_SIZE], SWO_ENDPOINT_SIZE);
-		if (result)
-			read_index = (read_index + 1U) % NUM_SWO_PACKETS;
-	}
-	atomic_flag_clear_explicit(&reentry_flag, memory_order_relaxed);
-}
-
-uint32_t swo_uart_get_baudrate(void)
-{
-	return usart_get_baudrate(SWO_UART);
-}
-
-static void swo_uart_set_baud(const uint32_t baudrate)
-{
-	dma_disable_channel(SWO_DMA_BUS, SWO_DMA_CHAN);
-	usart_disable(SWO_UART);
+	/* Set up the UART for 8N1 at the requested baud rate in RX only */
 	bmd_usart_set_baudrate(SWO_UART, baudrate);
 	usart_set_databits(SWO_UART, 8U);
 	usart_set_stopbits(SWO_UART, USART_STOPBITS_1);
@@ -161,10 +85,14 @@ static void swo_uart_set_baud(const uint32_t baudrate)
 	usart_set_parity(SWO_UART, USART_PARITY_NONE);
 	usart_set_flow_control(SWO_UART, USART_FLOWCONTROL_NONE);
 
-	/* Set up DMA channel */
+	/* Set up DMA channel and tell the DMA subsystem where to put the data received from the UART */
 	dma_channel_reset(SWO_DMA_BUS, SWO_DMA_CHAN);
 	// NOLINTNEXTLINE(clang-diagnostic-pointer-to-int-cast,performance-no-int-to-ptr)
 	dma_set_peripheral_address(SWO_DMA_BUS, SWO_DMA_CHAN, (uintptr_t)&SWO_UART_DR);
+	// NOLINTNEXTLINE(clang-diagnostic-pointer-to-int-cast)
+	dma_set_memory_address(SWO_DMA_BUS, SWO_DMA_CHAN, (uintptr_t)swo_buffer);
+	/* Define the buffer length and configure this as a peripheral -> memory transfer */
+	dma_set_number_of_data(SWO_DMA_BUS, SWO_DMA_CHAN, SWO_BUFFER_SIZE);
 #if defined(DMA_STREAM0)
 	dma_set_transfer_mode(SWO_DMA_BUS, SWO_DMA_CHAN, DMA_SxCR_DIR_PERIPHERAL_TO_MEM);
 	dma_channel_select(SWO_DMA_BUS, SWO_DMA_CHAN, SWO_DMA_TRG);
@@ -174,33 +102,64 @@ static void swo_uart_set_baud(const uint32_t baudrate)
 	dma_set_read_from_peripheral(SWO_DMA_BUS, SWO_DMA_CHAN);
 #endif
 	dma_enable_memory_increment_mode(SWO_DMA_BUS, SWO_DMA_CHAN);
+	/* Define it as being bytewise into a circular buffer with high priority */
 	dma_set_peripheral_size(SWO_DMA_BUS, SWO_DMA_CHAN, DMA_PSIZE_8BIT);
 	dma_set_memory_size(SWO_DMA_BUS, SWO_DMA_CHAN, DMA_MSIZE_8BIT);
 	dma_set_priority(SWO_DMA_BUS, SWO_DMA_CHAN, DMA_PL_HIGH);
+	dma_enable_circular_mode(SWO_DMA_BUS, SWO_DMA_CHAN);
+	/* Enable the 50% and 100% interrupts so we can update the buffer counters to initiate the USB half of the picture */
 	dma_enable_transfer_complete_interrupt(SWO_DMA_BUS, SWO_DMA_CHAN);
 	dma_enable_half_transfer_interrupt(SWO_DMA_BUS, SWO_DMA_CHAN);
-	dma_enable_circular_mode(SWO_DMA_BUS, SWO_DMA_CHAN);
-
-	usart_enable(SWO_UART);
-	nvic_enable_irq(SWO_DMA_IRQ);
-	write_index = read_index = 0;
-	// NOLINTNEXTLINE(clang-diagnostic-pointer-to-int-cast)
-	dma_set_memory_address(SWO_DMA_BUS, SWO_DMA_CHAN, (uintptr_t)&swo_transmit_buffers[0][0]);
-	dma_set_number_of_data(SWO_DMA_BUS, SWO_DMA_CHAN, 2 * SWO_ENDPOINT_SIZE);
-	dma_enable_channel(SWO_DMA_BUS, SWO_DMA_CHAN);
+	/* Enable DMA trigger on receive for the UART */
 	usart_enable_rx_dma(SWO_UART);
+
+	/* Enable the interrupts */
+	nvic_set_priority(SWO_DMA_IRQ, IRQ_PRI_SWO_DMA);
+	nvic_enable_irq(SWO_DMA_IRQ);
+
+	/* Reset the read and write indicies */
+	swo_buffer_read_index = 0U;
+	swo_buffer_write_index = 0U;
+
+	/* Now everything has been configured, enable the UART and its associated DMA channel */
+	dma_enable_channel(SWO_DMA_BUS, SWO_DMA_CHAN);
+	usart_enable(SWO_UART);
+}
+
+void swo_uart_deinit(void)
+{
+	/* Disable the UART and halt DMA for it, grabbing the number of bytes left in the buffer as we do */
+	usart_disable(SWO_UART);
+	const uint16_t space_remaining = dma_get_number_of_data(SWO_DMA_BUS, SWO_DMA_CHAN);
+	dma_disable_channel(SWO_DMA_BUS, SWO_DMA_CHAN);
+
+	/* Convert the counter into an amount captured and add that to the write index and amount available */
+	const uint16_t amount = (SWO_BUFFER_SIZE - space_remaining) & ((SWO_BUFFER_SIZE / 2U) - 1U);
+	swo_buffer_write_index += amount;
+	swo_buffer_bytes_available += amount;
+
+	/* Put the GPIO back into normal service as a GPIO */
+#if defined(STM32F4) || defined(STM32F0) || defined(STM32F3)
+	gpio_mode_setup(SWO_UART_PORT, GPIO_MODE_INPUT, GPIO_PUPD_NONE, SWO_UART_RX_PIN);
+#else
+	gpio_set_mode(SWO_UART_PORT, GPIO_MODE_INPUT, GPIO_CNF_INPUT_FLOAT, SWO_UART_RX_PIN);
+#endif
+}
+
+uint32_t swo_uart_get_baudrate(void)
+{
+	return usart_get_baudrate(SWO_UART);
 }
 
 void SWO_DMA_ISR(void)
 {
 	if (dma_get_interrupt_flag(SWO_DMA_BUS, SWO_DMA_CHAN, DMA_HTIF)) {
 		dma_clear_interrupt_flags(SWO_DMA_BUS, SWO_DMA_CHAN, DMA_HTIF);
-		memcpy(&swo_data_buffer[write_index * SWO_ENDPOINT_SIZE], swo_transmit_buffers[0U], SWO_ENDPOINT_SIZE);
+		swo_buffer_bytes_available += SWO_BUFFER_SIZE / 2U;
 	}
 	if (dma_get_interrupt_flag(SWO_DMA_BUS, SWO_DMA_CHAN, DMA_TCIF)) {
 		dma_clear_interrupt_flags(SWO_DMA_BUS, SWO_DMA_CHAN, DMA_TCIF);
-		memcpy(&swo_data_buffer[write_index * SWO_ENDPOINT_SIZE], swo_transmit_buffers[1U], SWO_ENDPOINT_SIZE);
+		swo_buffer_bytes_available += SWO_BUFFER_SIZE / 2U;
 	}
-	write_index = (write_index + 1U) % NUM_SWO_PACKETS;
 	swo_send_buffer(usbdev, SWO_ENDPOINT);
 }

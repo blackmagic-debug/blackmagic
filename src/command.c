@@ -682,7 +682,7 @@ static bool cmd_swo_enable(int argc, const char **argv)
 
 static bool cmd_swo_disable(void)
 {
-	swo_deinit();
+	swo_deinit(true);
 	gdb_out("Trace disabled\n");
 	return true;
 }
