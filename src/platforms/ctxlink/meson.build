@@ -37,14 +37,13 @@ probe_ctxlink_args = [
 ]
 
 trace_protocol = get_option('trace_protocol')
-if trace_protocol == '3'
-	trace_protocol = '2'
-endif
 probe_ctxlink_args += [f'-DSWO_ENCODING=@trace_protocol@']
-if trace_protocol == '1'
-	probe_ctxlink_dependencies = platform_stm32_swo_manchester
-else
-	probe_ctxlink_dependencies = platform_stm32_swo_uart
+probe_ctxlink_dependencies = []
+if trace_protocol in ['1', '3']
+	probe_ctxlink_dependencies += platform_stm32_swo_manchester
+endif
+if trace_protocol in ['2', '3']
+	probe_ctxlink_dependencies += platform_stm32_swo_uart
 endif
 
 probe_ctxlink_commonn_link_args = [

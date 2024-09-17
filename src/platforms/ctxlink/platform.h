@@ -183,8 +183,6 @@
 #define IRQ_PRI_SWO_TIM      (0U << 4U)
 #define IRQ_PRI_SWO_DMA      (0U << 4U)
 
-#if SWO_ENCODING == 1
-
 /* Use TIM3 Input 2 from PC7/TDO, AF2, trigger on rising edge */
 #define SWO_TIM TIM3
 #define SWO_TIM_CLK_EN()
@@ -202,9 +200,7 @@
 #define SWO_TRIG_IN         TIM_SMCR_TS_TI2FP2
 #define SWO_TIM_PIN_AF      GPIO_AF2
 
-#elif SWO_ENCODING == 2
-
-/* On ctxLink use USART6_RX mapped on PC7 for async capture */
+/* On ctxLink use USART6 RX mapped on PC7 for async capture */
 #define SWO_UART        USART6
 #define SWO_UART_CLK    RCC_USART6
 #define SWO_UART_DR     USART6_DR
@@ -213,14 +209,12 @@
 #define SWO_UART_PIN_AF GPIO_AF8
 
 /* Bind to the same DMA Rx channel */
-#define SWO_DMA_BUS     DMA2
-#define SWO_DMA_CLK     RCC_DMA2
-#define SWO_DMA_CHAN    DMA_STREAM1
-#define SWO_DMA_IRQ     NVIC_DMA2_STREAM1_IRQ
-#define SWO_DMA_ISR     dma2_stream1_isr
-#define SWO_DMA_TRG     DMA_SxCR_CHSEL_5
-
-#endif /* SWO_ENCODING */
+#define SWO_DMA_BUS  DMA2
+#define SWO_DMA_CLK  RCC_DMA2
+#define SWO_DMA_CHAN DMA_STREAM1
+#define SWO_DMA_IRQ  NVIC_DMA2_STREAM1_IRQ
+#define SWO_DMA_ISR  dma2_stream1_isr
+#define SWO_DMA_TRG  DMA_SxCR_CHSEL_5
 
 #define SET_RUN_STATE(state)      \
 	{                             \
