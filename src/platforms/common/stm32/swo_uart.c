@@ -67,14 +67,14 @@ void swo_uart_init(uint32_t baudrate)
 	rcc_periph_clock_enable(SWO_DMA_CLK);
 
 	/* Reconfigure the GPIO over to UART mode */
-#if defined(STM32F1)
-	gpio_set_mode(SWO_UART_PORT, GPIO_MODE_INPUT, GPIO_CNF_INPUT_PULL_UPDOWN, SWO_UART_RX_PIN);
-	/* Pull SWO pin high to keep open SWO line ind uart idle state! */
-	gpio_set(SWO_UART_PORT, SWO_UART_RX_PIN);
-#else
+#if defined(STM32F4) || defined(STM32F0) || defined(STM32F3) || defined(STM32F7)
 	gpio_mode_setup(SWO_UART_PORT, GPIO_MODE_AF, GPIO_PUPD_PULLUP, SWO_UART_RX_PIN);
 	gpio_set_output_options(SWO_UART_PORT, GPIO_OTYPE_OD, GPIO_OSPEED_100MHZ, SWO_UART_RX_PIN);
 	gpio_set_af(SWO_UART_PORT, SWO_UART_PIN_AF, SWO_UART_RX_PIN);
+#else
+	gpio_set_mode(SWO_UART_PORT, GPIO_MODE_INPUT, GPIO_CNF_INPUT_PULL_UPDOWN, SWO_UART_RX_PIN);
+	/* Pull SWO pin high to keep open SWO line ind uart idle state! */
+	gpio_set(SWO_UART_PORT, SWO_UART_RX_PIN);
 #endif
 
 	/* Set up the UART for 8N1 at the requested baud rate in RX only */
@@ -139,7 +139,7 @@ void swo_uart_deinit(void)
 	swo_buffer_bytes_available += amount;
 
 	/* Put the GPIO back into normal service as a GPIO */
-#if defined(STM32F4) || defined(STM32F0) || defined(STM32F3)
+#if defined(STM32F4) || defined(STM32F0) || defined(STM32F3) || defined(STM32F7)
 	gpio_mode_setup(SWO_UART_PORT, GPIO_MODE_INPUT, GPIO_PUPD_NONE, SWO_UART_RX_PIN);
 #else
 	gpio_set_mode(SWO_UART_PORT, GPIO_MODE_INPUT, GPIO_CNF_INPUT_FLOAT, SWO_UART_RX_PIN);
