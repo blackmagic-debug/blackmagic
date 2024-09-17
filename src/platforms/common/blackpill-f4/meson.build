@@ -67,14 +67,13 @@ if on_carrier_board
 endif
 
 trace_protocol = get_option('trace_protocol')
-if trace_protocol == '3'
-	trace_protocol = '2'
-endif
 probe_blackpill_args += [f'-DSWO_ENCODING=@trace_protocol@']
-if trace_protocol == '1'
-	probe_blackpill_dependencies = platform_stm32_swo_manchester
-else
-	probe_blackpill_dependencies = platform_stm32_swo_uart
+probe_blackpill_dependencies = []
+if trace_protocol in ['1', '3']
+	probe_blackpill_dependencies += platform_stm32_swo_manchester
+endif
+if trace_protocol in ['2', '3']
+	probe_blackpill_dependencies += platform_stm32_swo_uart
 endif
 
 if bmd_bootloader

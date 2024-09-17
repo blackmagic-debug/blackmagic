@@ -289,8 +289,6 @@ extern bool debug_bmp;
 #define IRQ_PRI_SWO_TIM      (0U << 4U)
 #define IRQ_PRI_SWO_DMA      (0U << 4U)
 
-#if SWO_ENCODING == 1
-
 /* Use TIM4 Input 2 (from PB7/TDO) or Input 1 (from PB6/TDO), AF2, triggered on rising edge */
 #define SWO_TIM             TIM4
 #define SWO_TIM_CLK_EN()    rcc_periph_clock_enable(RCC_TIM4)
@@ -298,17 +296,15 @@ extern bool debug_bmp;
 #define SWO_TIM_ISR(x)      tim4_isr(x)
 #define SWO_IC_IN           PINOUT_SWITCH(TIM_IC_IN_TI2, TIM_IC_IN_TI1)
 #define SWO_IC_RISING       TIM_IC1
-#define SWO_CC_RISING       TIM3_CCR1
+#define SWO_CC_RISING       TIM4_CCR1
 #define SWO_ITR_RISING      TIM_DIER_CC1IE
 #define SWO_STATUS_RISING   TIM_SR_CC1IF
 #define SWO_IC_FALLING      TIM_IC2
-#define SWO_CC_FALLING      TIM3_CCR2
+#define SWO_CC_FALLING      TIM4_CCR2
 #define SWO_STATUS_FALLING  TIM_SR_CC2IF
 #define SWO_STATUS_OVERFLOW (TIM_SR_CC1OF | TIM_SR_CC2OF)
 #define SWO_TRIG_IN         PINOUT_SWITCH(TIM_SMCR_TS_TI2FP2, TIM_SMCR_TS_TI1FP1)
 #define SWO_TIM_PIN_AF      GPIO_AF2
-
-#elif SWO_ENCODING == 2
 
 /* On F411 use USART1_RX mapped on PB7 for async capture */
 #define SWO_UART        USBUSART1
@@ -319,14 +315,12 @@ extern bool debug_bmp;
 #define SWO_UART_PIN_AF GPIO_AF7
 
 /* Bind to the same DMA Rx channel */
-#define SWO_DMA_BUS     USBUSART1_DMA_BUS
-#define SWO_DMA_CLK     USBUSART1_DMA_CLK
-#define SWO_DMA_CHAN    USBUSART1_DMA_RX_CHAN
-#define SWO_DMA_IRQ     USBUSART1_DMA_RX_IRQ
-#define SWO_DMA_ISR(x)  USBUSART1_DMA_RX_ISRx(x)
-#define SWO_DMA_TRG     DMA_SxCR_CHSEL_4
-
-#endif /* SWO_ENCODING */
+#define SWO_DMA_BUS    USBUSART1_DMA_BUS
+#define SWO_DMA_CLK    USBUSART1_DMA_CLK
+#define SWO_DMA_CHAN   USBUSART1_DMA_RX_CHAN
+#define SWO_DMA_IRQ    USBUSART1_DMA_RX_IRQ
+#define SWO_DMA_ISR(x) USBUSART1_DMA_RX_ISRx(x)
+#define SWO_DMA_TRG    DMA_SxCR_CHSEL_4
 
 #define SET_RUN_STATE(state)      \
 	{                             \
