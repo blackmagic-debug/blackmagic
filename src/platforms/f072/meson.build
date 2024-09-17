@@ -30,7 +30,10 @@
 
 probe_f072_includes = include_directories('.')
 
-probe_f072_sources = files('platform.c')
+probe_f072_sources = files(
+	'platform.c',
+	'atomic.c',
+)
 
 probe_f072_args = [
 	'-DDFU_SERIAL_LENGTH=13',
@@ -41,12 +44,19 @@ probe_f072_link_args = [
 	'-T@0@'.format('stm32f07xzb.ld'),
 ]
 
+probe_f072_dependencies = [
+	platform_common,
+	platform_stm32f0,
+	platform_stm32_swo,
+	platform_stm32_swo_manchester,
+]
+
 probe_host = declare_dependency(
 	include_directories: probe_f072_includes,
 	sources: probe_f072_sources,
 	compile_args: probe_f072_args,
 	link_args: probe_f072_link_args,
-	dependencies: [platform_common, platform_stm32f0, platform_stm32_swo, platform_stm32_swo_manchester],
+	dependencies: probe_f072_dependencies,
 )
 
 summary(
