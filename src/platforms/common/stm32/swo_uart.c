@@ -55,12 +55,8 @@
 #define DMA_PL_HIGH    DMA_CCR_PL_HIGH
 #endif
 
-void swo_uart_init(uint32_t baudrate)
+void swo_uart_init(const uint32_t baudrate)
 {
-	/* First, make sure the baud rate is something sensible */
-	if (!baudrate)
-		baudrate = SWO_DEFAULT_BAUD;
-
 	/* Ensure required peripherals are spun up */
 	/* TODO: Move this into platform_init()! */
 	rcc_periph_clock_enable(SWO_UART_CLK);

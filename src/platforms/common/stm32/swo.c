@@ -94,7 +94,8 @@ void swo_init(const swo_coding_e swo_mode, const uint32_t baudrate, const uint32
 #endif
 #if SWO_ENCODING == 2 || SWO_ENCODING == 3
 	if (swo_mode == swo_nrz_uart) {
-		swo_uart_init(baudrate);
+		/* Ensure the baud rate is something sensible */
+		swo_uart_init(baudrate ? baudrate : SWO_DEFAULT_BAUD);
 		gdb_outf("Baudrate: %" PRIu32 " ", swo_uart_get_baudrate());
 	}
 #endif
