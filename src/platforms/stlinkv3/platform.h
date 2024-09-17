@@ -33,6 +33,7 @@
 #include <libopencm3/usb/usbd.h>
 
 #define PLATFORM_HAS_TRACESWO
+#define SWO_ENCODING 2 /* Use only UART mode SWO recovery */
 
 #if ENABLE_DEBUG == 1
 #define PLATFORM_HAS_DEBUG

@@ -29,6 +29,8 @@
 #include "timing_stm32.h"
 
 #define PLATFORM_HAS_TRACESWO
+#define SWO_ENCODING 1 /* Use only Manchester mode SWO recovery */
+
 #define PLATFORM_IDENT "(HydraBus) "
 
 /*

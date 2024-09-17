@@ -184,8 +184,8 @@
 #define IRQ_PRI_SWO_DMA      (0U << 4U)
 
 /* Use TIM3 Input 2 from PC7/TDO, AF2, trigger on rising edge */
-#define SWO_TIM TIM3
-#define SWO_TIM_CLK_EN()
+#define SWO_TIM             TIM3
+#define SWO_TIM_CLK_EN()    rcc_periph_clock_enable(RCC_TIM3)
 #define SWO_TIM_IRQ         NVIC_TIM3_IRQ
 #define SWO_TIM_ISR(x)      tim3_isr(x)
 #define SWO_IC_IN           TIM_IC_IN_TI2

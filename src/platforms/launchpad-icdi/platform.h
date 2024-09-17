@@ -23,6 +23,9 @@
 
 #include "timing.h"
 
+#define PLATFORM_HAS_TRACESWO
+#define SWO_ENCODING 2 /* Use only UART mode SWO recovery */
+
 #define PLATFORM_IDENT "(Launchpad ICDI) "
 
 extern uint8_t running_status;
@@ -103,16 +106,14 @@ extern uint8_t running_status;
 	}
 #define SET_ERROR_STATE(state) SET_IDLE_STATE(state)
 
-#define PLATFORM_HAS_TRACESWO
-
 inline static void gpio_set_val(uint32_t port, uint8_t pin, uint8_t val)
 {
-	gpio_write(port, pin, val == 0 ? 0 : 0xff);
+	gpio_write(port, pin, val == 0U ? 0U : 0xffU);
 }
 
 inline static uint8_t gpio_get(uint32_t port, uint8_t pin)
 {
-	return !(gpio_read(port, pin) == 0);
+	return gpio_read(port, pin) != 0U;
 }
 
 #define disconnect_usb()            \
