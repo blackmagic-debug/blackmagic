@@ -20,7 +20,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* This file implements capture of the TRACESWO output.
+/*
+ * This file implements capture of the Trace/SWO output using async signalling.
  *
  * ARM DDI 0403D - ARMv7M Architecture Reference Manual
  * ARM DDI 0337I - Cortex-M3 Technical Reference Manual
@@ -30,61 +31,70 @@
 #include "general.h"
 #include "platform.h"
 #include "usb.h"
+#include "swo.h"
 
 #include <libopencm3/cm3/nvic.h>
 #include <libopencm3/lm4f/rcc.h>
 #include <libopencm3/lm4f/nvic.h>
 #include <libopencm3/lm4f/uart.h>
-#include <libopencm3/usb/usbd.h>
 
-void swo_uart_init(void)
+void swo_init(const swo_coding_e swo_mode, const uint32_t baudrate, const uint32_t itm_stream_bitmask)
 {
+	/* Neither mode switching nor ITM decoding is implemented on this platform (yet) */
+	(void)swo_mode;
+	(void)itm_stream_bitmask;
+
+	/* Ensure required peripherals are spun up */
+	/* TODO: Move this into platform_init()! */
 	periph_clock_enable(RCC_GPIOD);
 	periph_clock_enable(SWO_UART_CLK);
 	__asm__("nop");
 	__asm__("nop");
 	__asm__("nop");
 
-	gpio_mode_setup(SWO_PORT, GPIO_MODE_INPUT, GPIO_PUPD_NONE, SWO_PIN);
-	gpio_set_af(SWO_PORT, 1, SWO_PIN); /* U2RX */
+	/* Reconfigure the GPIO over to UART mode */
+	gpio_mode_setup(SWO_UART_PORT, GPIO_MODE_INPUT, GPIO_PUPD_NONE, SWO_UART_RX_PIN);
+	gpio_set_af(SWO_UART_PORT, SWO_UART_PIN_AF, SWO_UART_RX_PIN);
 
-	uart_disable(SWO_UART);
-
-	/* Setup UART parameters. */
+	/* Set up the UART for 8N1 at the requested baud rate */
 	uart_clock_from_sysclk(SWO_UART);
-	uart_set_baudrate(SWO_UART, 800000);
-	uart_set_databits(SWO_UART, 8);
-	uart_set_stopbits(SWO_UART, 1);
+	uart_set_baudrate(SWO_UART, baudrate);
+	uart_set_databits(SWO_UART, 8U);
+	uart_set_stopbits(SWO_UART, 1U);
 	uart_set_parity(SWO_UART, UART_PARITY_NONE);
 
-	// Enable FIFO
+	/* Make use of the hardware FIFO for some additional buffering (up to 8 bytes) */
 	uart_enable_fifo(SWO_UART);
 
-	// Set FIFO interrupt trigger levels to 4/8 full for RX buffer and
-	// 7/8 empty (1/8 full) for TX buffer
+	/* Configure the FIFO interrupts for ½ full (RX) and ⅞ empty (TX) */
 	uart_set_fifo_trigger_levels(SWO_UART, UART_FIFO_RX_TRIG_1_2, UART_FIFO_TX_TRIG_7_8);
 
+	/* Clear and enable the RX and RX timeout interrupts */
 	uart_clear_interrupt_flag(SWO_UART, UART_INT_RX | UART_INT_RT);
-
-	/* Enable interrupts */
 	uart_enable_interrupts(SWO_UART, UART_INT_RX | UART_INT_RT);
+
+	/* Actually enable the interrupts */
+	nvic_set_priority(SWO_UART_IRQ, IRQ_PRI_SWO_UART);
+	nvic_enable_irq(SWO_UART_IRQ);
+
+	/* Un-stall USB endpoint */
+	usbd_ep_stall_set(usbdev, USB_REQ_TYPE_IN | SWO_ENDPOINT, 0U);
 
 	/* Finally enable the USART. */
 	uart_enable(SWO_UART);
 
-	nvic_set_priority(SWO_UART_IRQ, 0);
-	nvic_enable_irq(SWO_UART_IRQ);
-
-	/* Un-stall USB endpoint */
-	usbd_ep_stall_set(usbdev, USB_REQ_TYPE_IN | SWO_ENDPOINT, 0);
-
+	/* XXX: What is this even reconfiguring?! */
 	gpio_mode_setup(GPIOD, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO3);
 }
 
-void traceswo_baud(unsigned int baud)
+void swo_deinit(const bool deallocate)
 {
-	uart_set_baudrate(SWO_UART, baud);
-	uart_set_databits(SWO_UART, 8);
+	(void)deallocate;
+	/* Disable the UART */
+	uart_disable(SWO_UART);
+	/* Put the GPIO back into normal service as a GPIO */
+	gpio_mode_setup(SWO_UART_PORT, GPIO_MODE_INPUT, GPIO_PUPD_NONE, SWO_UART_RX_PIN);
+	gpio_set_af(SWO_UART_PORT, 0U, SWO_UART_RX_PIN);
 }
 
 uint32_t swo_uart_get_baudrate(void)

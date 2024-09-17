@@ -30,19 +30,19 @@
 
 extern uint8_t running_status;
 
-#define TMS_PORT GPIOA_BASE
+#define TMS_PORT GPIOA
 #define TMS_PIN  GPIO3
 
-#define TCK_PORT GPIOA_BASE
+#define TCK_PORT GPIOA
 #define TCK_PIN  GPIO2
 
-#define TDI_PORT GPIOA_BASE
+#define TDI_PORT GPIOA
 #define TDI_PIN  GPIO5
 
-#define TDO_PORT GPIOA_BASE
+#define TDO_PORT GPIOA
 #define TDO_PIN  GPIO4
 
-#define SWO_PORT GPIOD_BASE
+#define SWO_PORT GPIOD
 #define SWO_PIN  GPIO6
 
 #define SWDIO_PORT TMS_PORT
@@ -51,7 +51,7 @@ extern uint8_t running_status;
 #define SWCLK_PORT TCK_PORT
 #define SWCLK_PIN  TCK_PIN
 
-#define NRST_PORT GPIOA_BASE
+#define NRST_PORT GPIOA
 #define NRST_PIN  GPIO6
 
 #define TMS_SET_MODE()                                                            \
@@ -75,7 +75,8 @@ extern uint8_t running_status;
 #define USB_IRQ    NVIC_USB0_IRQ
 #define USB_ISR    usb0_isr
 
-#define IRQ_PRI_USB (2 << 4)
+#define IRQ_PRI_USB      (2U << 4U)
+#define IRQ_PRI_SWO_UART (0U << 4U)
 
 #define USBUART     UART0
 #define USBUART_CLK RCC_UART0
@@ -92,10 +93,13 @@ extern uint8_t running_status;
 		gpio_mode_setup(GPIOA_BASE, GPIO_MODE_INPUT, GPIO_PUPD_NONE, GPIO1);  \
 	} while (0)
 
-#define SWO_UART     UART2
-#define SWO_UART_CLK RCC_UART2
-#define SWO_UART_IRQ NVIC_UART2_IRQ
-#define SWO_UART_ISR uart2_isr
+#define SWO_UART        UART2
+#define SWO_UART_CLK    RCC_UART2
+#define SWO_UART_PORT   GPIOD
+#define SWO_UART_RX_PIN GPIO6
+#define SWO_UART_PIN_AF 1U
+#define SWO_UART_IRQ    NVIC_UART2_IRQ
+#define SWO_UART_ISR(x) uart2_isr(x)
 
 #define SET_RUN_STATE(state)      \
 	{                             \
