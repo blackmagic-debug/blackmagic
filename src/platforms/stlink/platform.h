@@ -31,6 +31,10 @@
 #include <libopencm3/stm32/memorymap.h>
 #include <libopencm3/usb/usbd.h>
 
+#ifndef SWIM_AS_UART
+#define PLATFORM_HAS_TRACESWO
+#endif
+
 #if ENABLE_DEBUG == 1
 #define PLATFORM_HAS_DEBUG
 extern bool debug_bmp;
@@ -168,12 +172,6 @@ extern bool debug_bmp;
 
 #define USBUSART_DMA_BUS DMA1
 #define USBUSART_DMA_CLK RCC_DMA1
-
-#ifndef SWIM_AS_UART
-#define PLATFORM_HAS_TRACESWO 1
-#endif
-#define NUM_SWO_PACKETS 128U /* This is an 8K buffer */
-//#define SWO_ENCODING     2U   /* 1 = Manchester, 2 = NRZ / async */
 
 #if SWO_ENCODING == 1
 

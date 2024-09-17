@@ -28,6 +28,7 @@
 #include "timing.h"
 #include "timing_stm32.h"
 
+#define PLATFORM_HAS_TRACESWO
 #if ENABLE_DEBUG == 1
 #define PLATFORM_HAS_DEBUG
 extern bool debug_bmp;
@@ -120,10 +121,6 @@ extern bool debug_bmp;
 #define USBUSART_DMA_RX_CHAN   DMA_CHANNEL5
 #define USBUSART_DMA_RX_IRQ    NVIC_DMA1_CHANNEL5_IRQ
 #define USBUSART_DMA_RX_ISR(x) dma1_channel5_isr(x)
-
-#define PLATFORM_HAS_TRACESWO 1
-#define NUM_SWO_PACKETS       128U /* This is an 8K buffer */
-//#define SWO_ENCODING     2U   /* 1 = Manchester, 2 = NRZ / async */
 
 #if SWO_ENCODING == 1
 

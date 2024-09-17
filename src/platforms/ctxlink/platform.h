@@ -183,9 +183,6 @@
 #define IRQ_PRI_SWO_TIM      (0U << 4U)
 #define IRQ_PRI_SWO_DMA      (0U << 4U)
 
-#define PLATFORM_HAS_TRACESWO
-#define NUM_SWO_PACKETS 256U /* 16K buffer */
-
 #if SWO_ENCODING == 1
 
 /* Use TIM3 Input 2 from PC7/TDO, AF2, trigger on rising edge */

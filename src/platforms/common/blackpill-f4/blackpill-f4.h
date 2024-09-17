@@ -32,6 +32,8 @@
 #include "timing.h"
 #include "timing_stm32.h"
 
+#define PLATFORM_HAS_TRACESWO
+
 #if ENABLE_DEBUG == 1
 #define PLATFORM_HAS_DEBUG
 extern bool debug_bmp;
@@ -286,9 +288,6 @@ extern bool debug_bmp;
 #define IRQ_PRI_USBUSART_DMA (2U << 4U)
 #define IRQ_PRI_SWO_TIM      (0U << 4U)
 #define IRQ_PRI_SWO_DMA      (0U << 4U)
-
-#define PLATFORM_HAS_TRACESWO
-#define NUM_SWO_PACKETS 256U /* 16K buffer */
 
 #if SWO_ENCODING == 1
 

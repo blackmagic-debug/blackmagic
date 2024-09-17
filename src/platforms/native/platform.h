@@ -297,8 +297,6 @@ extern int hwversion;
 #define USBUSART2_DMA_RX_IRQ    NVIC_DMA1_CHANNEL6_IRQ
 #define USBUSART2_DMA_RX_ISR(x) dma1_channel6_isr(x)
 
-#define NUM_SWO_PACKETS 8U /* 512B buffer */
-
 /* Use TIM3 Input 1 (from PA6/TDO) for Manchester data recovery */
 #define SWO_TIM TIM3
 #define SWO_TIM_CLK_EN()
