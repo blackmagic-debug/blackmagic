@@ -29,6 +29,7 @@
 #include "timing_stm32.h"
 
 #define PLATFORM_HAS_TRACESWO
+
 #if ENABLE_DEBUG == 1
 #define PLATFORM_HAS_DEBUG
 extern bool debug_bmp;
@@ -122,8 +123,6 @@ extern bool debug_bmp;
 #define USBUSART_DMA_RX_IRQ    NVIC_DMA1_CHANNEL5_IRQ
 #define USBUSART_DMA_RX_ISR(x) dma1_channel5_isr(x)
 
-#if SWO_ENCODING == 1
-
 /* Use TIM2 Input 2 (from PB3/TDO with Remap) */
 #define SWO_TIM             TIM2
 #define SWO_TIM_CLK_EN()    rcc_periph_clock_enable(RCC_TIM2)
@@ -131,16 +130,14 @@ extern bool debug_bmp;
 #define SWO_TIM_ISR(x)      tim2_isr(x)
 #define SWO_IC_IN           TIM_IC_IN_TI2
 #define SWO_IC_RISING       TIM_IC1
-#define SWO_CC_RISING       TIM3_CCR1
+#define SWO_CC_RISING       TIM2_CCR1
 #define SWO_ITR_RISING      TIM_DIER_CC1IE
 #define SWO_STATUS_RISING   TIM_SR_CC1IF
 #define SWO_IC_FALLING      TIM_IC2
-#define SWO_CC_FALLING      TIM3_CCR2
+#define SWO_CC_FALLING      TIM2_CCR2
 #define SWO_STATUS_FALLING  TIM_SR_CC2IF
 #define SWO_STATUS_OVERFLOW (TIM_SR_CC1OF | TIM_SR_CC2OF)
 #define SWO_TRIG_IN         TIM_SMCR_TS_TI2FP2
-
-#elif SWO_ENCODING == 2
 
 /*
  * On F103, only USART1 is on AHB2 and can reach 4.5MBaud at 72 MHz.
@@ -154,13 +151,11 @@ extern bool debug_bmp;
 #define SWO_UART_RX_PIN GPIO3
 
 /* This DMA channel is set by the USART in use */
-#define SWO_DMA_BUS     DMA1
-#define SWO_DMA_CLK     RCC_DMA1
-#define SWO_DMA_CHAN    DMA_CHANNEL6
-#define SWO_DMA_IRQ     NVIC_DMA1_CHANNEL6_IRQ
-#define SWO_DMA_ISR(x)  dma1_channel6_isr(x)
-
-#endif /* SWO_ENCODING */
+#define SWO_DMA_BUS    DMA1
+#define SWO_DMA_CLK    RCC_DMA1
+#define SWO_DMA_CHAN   DMA_CHANNEL6
+#define SWO_DMA_IRQ    NVIC_DMA1_CHANNEL6_IRQ
+#define SWO_DMA_ISR(x) dma1_channel6_isr(x)
 
 #define LED_PORT     GPIOC
 #define LED_IDLE_RUN GPIO15

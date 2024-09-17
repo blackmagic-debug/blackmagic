@@ -54,13 +54,13 @@ probe_swlink_link_args = [
 ]
 
 trace_protocol = get_option('trace_protocol')
-if trace_protocol == '3'
-	trace_protocol = '2'
+probe_swlink_args += [f'-DSWO_ENCODING=@trace_protocol@']
+probe_swlink_dependencies = []
+if trace_protocol in ['1', '3']
+	probe_swlink_dependencies += platform_stm32_swo_manchester
 endif
-if trace_protocol == '2'
-	probe_swlink_args += '-DSWO_ENCODING=2'
-else
-	error('Unsupported SWO protocol requested')
+if trace_protocol in ['2', '3']
+	probe_swlink_dependencies += platform_stm32_swo_uart
 endif
 
 probe_host = declare_dependency(
@@ -68,7 +68,7 @@ probe_host = declare_dependency(
 	sources: probe_swlink_sources,
 	compile_args: probe_swlink_args,
 	link_args: probe_swlink_common_link_args + probe_swlink_link_args,
-	dependencies: [platform_common, platform_stm32f1, platform_stm32_swo_uart],
+	dependencies: [platform_common, platform_stm32f1, probe_swlink_dependencies],
 )
 
 probe_bootloader = declare_dependency(
