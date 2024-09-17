@@ -173,8 +173,6 @@ extern bool debug_bmp;
 #define USBUSART_DMA_BUS DMA1
 #define USBUSART_DMA_CLK RCC_DMA1
 
-#if SWO_ENCODING == 1
-
 /* Use TIM3 Input 1 (from PA6/TDO) */
 #define SWO_TIM             TIM3
 #define SWO_TIM_CLK_EN()    rcc_periph_clock_enable(RCC_TIM3)
@@ -191,8 +189,6 @@ extern bool debug_bmp;
 #define SWO_STATUS_OVERFLOW (TIM_SR_CC1OF | TIM_SR_CC2OF)
 #define SWO_TRIG_IN         TIM_SMCR_TS_TI1FP1
 
-#elif SWO_ENCODING == 2
-
 /* On F103, only USART1 is on AHB2 and can reach 4.5MBaud at 72 MHz. */
 #define SWO_UART        USART1
 #define SWO_UART_DR     USART1_DR
@@ -201,13 +197,11 @@ extern bool debug_bmp;
 #define SWO_UART_RX_PIN GPIO10
 
 /* This DMA channel is set by the USART in use */
-#define SWO_DMA_BUS     DMA1
-#define SWO_DMA_CLK     RCC_DMA1
-#define SWO_DMA_CHAN    DMA_CHANNEL5
-#define SWO_DMA_IRQ     NVIC_DMA1_CHANNEL5_IRQ
-#define SWO_DMA_ISR(x)  dma1_channel5_isr(x)
-
-#endif /* SWO_ENCODING */
+#define SWO_DMA_BUS    DMA1
+#define SWO_DMA_CLK    RCC_DMA1
+#define SWO_DMA_CHAN   DMA_CHANNEL5
+#define SWO_DMA_IRQ    NVIC_DMA1_CHANNEL5_IRQ
+#define SWO_DMA_ISR(x) dma1_channel5_isr(x)
 
 extern uint16_t led_idle_run;
 #define LED_IDLE_RUN led_idle_run
