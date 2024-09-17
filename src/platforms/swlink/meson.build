@@ -55,7 +55,7 @@ probe_swlink_link_args = [
 
 trace_protocol = get_option('trace_protocol')
 probe_swlink_args += [f'-DSWO_ENCODING=@trace_protocol@']
-probe_swlink_dependencies = []
+probe_swlink_dependencies = [platform_stm32_swo]
 if trace_protocol in ['1', '3']
 	probe_swlink_dependencies += platform_stm32_swo_manchester
 endif

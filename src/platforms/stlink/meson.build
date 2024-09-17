@@ -65,7 +65,7 @@ if probe == 'bluepill'
 	probe_stlink_args += ['-DBLUEPILL=1']
 endif
 
-probe_stlink_dependencies = [platform_common, platform_stm32f1]
+probe_stlink_dependencies = [platform_common, platform_stm32f1, platform_stm32_swo]
 
 stlink_swim_nrst_as_uart = get_option('stlink_swim_nrst_as_uart')
 

@@ -34,12 +34,12 @@ platform_stm32_sources = files(
 	'gdb_if.c',
 	'serialno.c',
 	'timing_stm32.c',
-	'swo.c',
-	'swo_itm_decode.c',
 )
 
-# TODO: add proper traceswoasync support
-# This is a temporary hack to allow selecting swo_manchester vs swo_uart implementation
+platform_stm32_swo = declare_dependency(sources: files(
+	'swo.c',
+	'swo_itm_decode.c',
+))
 platform_stm32_swo_manchester = declare_dependency(sources: files('swo_manchester.c'))
 platform_stm32_swo_uart = declare_dependency(sources: files('swo_uart.c'))
 

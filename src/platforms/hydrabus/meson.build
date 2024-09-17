@@ -48,7 +48,7 @@ probe_host = declare_dependency(
 	sources: probe_hydrabus_sources,
 	compile_args: probe_hydrabus_args,
 	link_args: probe_hydrabus_link_args,
-	dependencies: [platform_common, platform_stm32f4, platform_stm32_swo_manchester],
+	dependencies: [platform_common, platform_stm32f4, platform_stm32_swo, platform_stm32_swo_manchester],
 )
 
 probe_bootloader = declare_dependency(
