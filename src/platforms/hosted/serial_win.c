@@ -147,6 +147,28 @@ static char *find_bmp_by_serial(const char *serial)
 	return port_name;
 }
 
+static void print_aux_by_serial(const char *serial)
+{
+	char *serial_path = format_string("\\%s", serial);
+	if (!serial_path)
+		return;
+	char *prefix = read_key_from_path(serial_path, "ParentIdPrefix");
+	free(serial_path);
+	if (!prefix)
+		return;
+	char *parameter_path = format_string("&MI_02\\%s&0002\\Device Parameters", prefix);
+	if (!parameter_path) {
+		free(prefix);
+		return;
+	}
+	char *port_name = read_key_from_path(parameter_path, "PortName");
+	free(prefix);
+	if (!port_name)
+		return;
+	DEBUG_WARN("Found AUX Serial at %s\n", port_name);
+	free(port_name);
+}
+
 static char *device_to_path(const char *const device)
 {
 	if (memcmp(device, NT_DEV_SUFFIX, NT_DEV_SUFFIX_LEN - 1U) == 0)
@@ -164,6 +186,7 @@ static char *find_bmp_device(const bmda_cli_options_s *const cl_opts, const char
 {
 	if (cl_opts->opt_device)
 		return device_to_path(cl_opts->opt_device);
+	print_aux_by_serial(serial);
 	char *const device = find_bmp_by_serial(serial);
 	if (!device)
 		return NULL;
