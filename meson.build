@@ -36,8 +36,7 @@ project(
 	# license_files: ['COPYING', 'COPYING-BSD', 'COPYING-MIT'], # Only available in meson 1.1.0
 	default_options: [
 		'c_std=c11',
-		'optimization=s',
-		'debug=true',
+		'buildtype=release',
 		# 'warning_level=3', # TODO: Enable by default when all warnings are fixed
 		'warning_level=2',
 		'werror=false',
@@ -106,7 +105,7 @@ extended_warnings = [
 	'-Wformat-truncation',
 	'-Wformat=2',
 	'-w24774', # ‘<function>’ : format string expected in argument <position> is not a string literal
-	'-w24777', #‘<function>’ : format string ‘<format-string>’ requires an argument of type ‘<type>’, but variadic argument <position> has type ‘<type>’ 
+	'-w24777', #‘<function>’ : format string ‘<format-string>’ requires an argument of type ‘<type>’, but variadic argument <position> has type ‘<type>’
 	'-Wimplicit-fallthrough',
 	'-Wmaybe-uninitialized',
 	'-w24701', # Potentially uninitialized local variable 'name' used
@@ -182,11 +181,23 @@ If you did not touch the build system this is not your fault, please report it
 	# Base name for output files
 	bmf_base_name = 'blackmagic_@0@'.format(probe).to_lower().underscorify()
 
+	# Determine the optimisation level to use - if the user is asking for debug optimisations
+	# or extra size optimisations then allow that, otherwise translate to optimise for size
+	optimisation_level = get_option('optimization')
+	if optimisation_level in ['g', 'z']
+		bmf_opt_level = optimisation_level
+	else
+		bmf_opt_level = 's'
+	endif
+
 	# Main firmware elf file
 	bmf_elf = executable(
 		f'@bmf_base_name@_firmware',
 		name_suffix: 'elf',
 		dependencies: [bmd_core, probe_host],
+		override_options: [
+			f'optimization=@bmf_opt_level@',
+		],
 	)
 	alias_target('elf', bmf_elf)
 
