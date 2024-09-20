@@ -114,7 +114,7 @@ use the `/dev/tty.usbmodemXXX` device node involving how it operates under the h
 When developing this project, the following tools are required:
 
 * [git](https://git-scm.com)
-* [meson](https://mesonbuild.com/Getting-meson.html) (version 0.61 or greater)
+* [meson](https://mesonbuild.com/Getting-meson.html) (version 1.5.1 or greater)
 * [ninja](https://ninja-build.org)
 
 Additionally, depending on if you want to build/work on the firmware or Black Magic Debug App (BMDA), you also need:
