@@ -28,11 +28,19 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+optimisation_level = get_option('optimization')
+if optimisation_level in ['g', 'z']
+	locm3_opt_level = optimisation_level
+else
+	locm3_opt_level = 's'
+endif
+
 # Pull in the libopencm3 subproject for various platform dependencies
-libopencm3 = subproject(
+subproject(
 	'libopencm3',
 	default_options: [
 		'c_std=c11',
+		f'optimization=@locm3_opt_level@',
 	],
 )
 

@@ -94,10 +94,17 @@ platform_stm32f0_link_args = [
 	'-mcpu=cortex-m0',
 ]
 
+platform_stm32f0_locm3 = dependency(
+	'opencm3_stm32f0',
+	default_options: [
+		f'optimization=@locm3_opt_level@',
+	],
+)
+
 platform_stm32f0 = declare_dependency(
 	compile_args: platform_stm32f0_args,
 	link_args: platform_stm32f0_link_args,
-	dependencies: [platform_stm32_common, dependency('opencm3_stm32f0')],
+	dependencies: [platform_stm32_common, platform_stm32f0_locm3],
 )
 
 ## STM32F1 Platform
@@ -114,17 +121,24 @@ platform_stm32f1_link_args = [
 	'-mcpu=cortex-m3',
 ]
 
+platform_stm32f1_locm3 = dependency(
+	'opencm3_stm32f1',
+	default_options: [
+		f'optimization=@locm3_opt_level@',
+	],
+)
+
 platform_stm32f1 = declare_dependency(
 	compile_args: platform_stm32f1_args,
 	link_args: platform_stm32f1_link_args,
-	dependencies: [platform_stm32_common, dependency('opencm3_stm32f1')],
+	dependencies: [platform_stm32_common, platform_stm32f1_locm3],
 )
 
 platform_stm32f1_dfu = declare_dependency(
 	sources: platform_stm32f1_dfu_sources,
 	compile_args: platform_stm32f1_args,
 	link_args: platform_stm32f1_link_args,
-	dependencies: [platform_stm32_dfu_common, dependency('opencm3_stm32f1')],
+	dependencies: [platform_stm32_dfu_common, platform_stm32f1_locm3],
 )
 
 ## STM32F3 Platform
@@ -143,10 +157,17 @@ platform_stm32f3_link_args = [
 	'-mfpu=fpv4-sp-d16',
 ]
 
+platform_stm32f3_locm3 = dependency(
+	'opencm3_stm32f3',
+	default_options: [
+		f'optimization=@locm3_opt_level@',
+	],
+)
+
 platform_stm32f3 = declare_dependency(
 	compile_args: platform_stm32f3_args,
 	link_args: platform_stm32f3_link_args,
-	dependencies: [platform_stm32_common, dependency('opencm3_stm32f3')],
+	dependencies: [platform_stm32_common, platform_stm32f3_locm3],
 )
 
 ## STM32F4 Platform
@@ -167,17 +188,24 @@ platform_stm32f4_link_args = [
 	'-mfpu=fpv4-sp-d16',
 ]
 
+platform_stm32f4_locm3 = dependency(
+	'opencm3_stm32f4',
+	default_options: [
+		f'optimization=@locm3_opt_level@',
+	],
+)
+
 platform_stm32f4 = declare_dependency(
 	compile_args: platform_stm32f4_args,
 	link_args: platform_stm32f4_link_args,
-	dependencies: [platform_stm32_common, dependency('opencm3_stm32f4')],
+	dependencies: [platform_stm32_common, platform_stm32f4_locm3],
 )
 
 platform_stm32f4_dfu = declare_dependency(
 	sources: platform_stm32f4_dfu_sources,
 	compile_args: platform_stm32f4_args,
 	link_args: platform_stm32f4_link_args,
-	dependencies: [platform_stm32_dfu_common, dependency('opencm3_stm32f4')],
+	dependencies: [platform_stm32_dfu_common, platform_stm32f4_locm3],
 )
 
 ## STM32F7 Platform
@@ -196,15 +224,22 @@ platform_stm32f7_link_args = [
 	'-mfpu=fpv5-sp-d16',
 ]
 
+platform_stm32f7_locm3 = dependency(
+	'opencm3_stm32f7',
+	default_options: [
+		f'optimization=@locm3_opt_level@',
+	],
+)
+
 platform_stm32f7 = declare_dependency(
 	compile_args: platform_stm32f7_args,
 	link_args: platform_stm32f7_link_args,
-	dependencies: [platform_stm32_common, dependency('opencm3_stm32f7')],
+	dependencies: [platform_stm32_common, platform_stm32f7_locm3],
 )
 
 platform_stm32f7_dfu = declare_dependency(
 	sources: platform_stm32f4_dfu_sources,
 	compile_args: platform_stm32f7_args,
 	link_args: platform_stm32f7_link_args,
-	dependencies: [platform_stm32_dfu_common, dependency('opencm3_stm32f7')],
+	dependencies: [platform_stm32_dfu_common, platform_stm32f7_locm3],
 )
