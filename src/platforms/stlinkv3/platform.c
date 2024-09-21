@@ -188,20 +188,20 @@ void platform_init(void)
 	gpio_set(NRST_PORT, NRST_PIN);
 
 	gpio_mode_setup(TMS_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, TMS_PIN);
-	gpio_set_output_options(TMS_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_2MHZ, TMS_PIN);
+	gpio_set_output_options(TMS_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_25MHZ, TMS_PIN);
 	gpio_mode_setup(SWDIO_IN_PORT, GPIO_MODE_INPUT, GPIO_PUPD_PULLUP, SWDIO_IN_PIN);
 
 	/* Configure TDI pin. */
 	gpio_mode_setup(TDI_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, TDI_PIN);
-	gpio_set_output_options(TDI_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_2MHZ, TDI_PIN);
+	gpio_set_output_options(TDI_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_25MHZ, TDI_PIN);
 
 	/* Drive the tck/swck pin low. */
 	gpio_mode_setup(TCK_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, TCK_PIN);
-	gpio_set_output_options(TCK_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_2MHZ, TCK_PIN);
+	gpio_set_output_options(TCK_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_25MHZ, TCK_PIN);
 
 	/* Drive direction switch pin. */
 	gpio_mode_setup(TMS_DRIVE_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, TMS_DRIVE_PIN);
-	gpio_set_output_options(TMS_DRIVE_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_2MHZ, TMS_DRIVE_PIN);
+	gpio_set_output_options(TMS_DRIVE_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_25MHZ, TMS_DRIVE_PIN);
 	gpio_set(TMS_DRIVE_PORT, TMS_DRIVE_PIN);
 
 	gpio_mode_setup(PWR_EN_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, PWR_EN_PIN);
@@ -260,7 +260,7 @@ void platform_target_clk_output_enable(bool enable)
 	/* Regardless of swdptap.c, tri-state TCK and TMS */
 	if (enable) {
 		gpio_mode_setup(TCK_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, TCK_PIN);
-		gpio_set_output_options(TCK_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_2MHZ, TCK_PIN);
+		gpio_set_output_options(TCK_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_25MHZ, TCK_PIN);
 		SWDIO_MODE_DRIVE();
 	} else {
 		gpio_mode_setup(TCK_PORT, GPIO_MODE_INPUT, GPIO_PUPD_NONE, TCK_PIN);
