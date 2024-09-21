@@ -257,7 +257,15 @@ void platform_init(void)
 
 void platform_target_clk_output_enable(bool enable)
 {
-	(void)enable;
+	/* Regardless of swdptap.c, tri-state TCK and TMS */
+	if (enable) {
+		gpio_mode_setup(TCK_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, TCK_PIN);
+		gpio_set_output_options(TCK_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_2MHZ, TCK_PIN);
+		SWDIO_MODE_DRIVE();
+	} else {
+		gpio_mode_setup(TCK_PORT, GPIO_MODE_INPUT, GPIO_PUPD_NONE, TCK_PIN);
+		SWDIO_MODE_FLOAT();
+	}
 }
 
 bool platform_spi_init(const spi_bus_e bus)
