@@ -3,6 +3,8 @@
  *
  * Based on work that is Copyright (C) 2017 Black Sphere Technologies Ltd.
  * Copyright (C) 2017 Dave Marples <dave@marples.net>
+ * Copyright (C) 2024 1BitSquared <info@1bitsquared.com>
+ * Modified by Rachel Mant <git@dragonmux.network>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,14 +21,16 @@
  */
 
 /*
- * This file implements capture of the Trace/SWO output using async signalling.
+ * This file implements recovery and capture of UART/NRZ encoded SWO trace output
  *
- * ARM DDI 0403D - ARMv7M Architecture Reference Manual
- * ARM DDI 0337I - Cortex-M3 Technical Reference Manual
- * ARM DDI 0314H - CoreSight Components Technical Reference Manual
+ * References:
+ * DDI0403 - ARMv7-M Architecture Reference Manual, version E.e
+ * - https://developer.arm.com/documentation/ddi0403/latest/
+ * DDI0314 - CoreSight Components Technical Reference Manual, version 1.0, rev. H
+ * - https://developer.arm.com/documentation/ddi0314/latest/
+ *
+ * We use a hardware UART to capture and recover the data, and DMA to buffer it.
  */
-
-/* TDO/TRACESWO signal comes into the SWOUSART RX pin. */
 
 #include "general.h"
 #include "platform.h"

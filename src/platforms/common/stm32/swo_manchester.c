@@ -22,7 +22,7 @@
  */
 
 /*
- * This file implements capture of Machester SWO trace output
+ * This file implements recovery and capture of Machester encoded SWO trace output
  *
  * References:
  * DDI0403 - ARMv7-M Architecture Reference Manual, version E.e
