@@ -83,7 +83,7 @@ if is_firmware_build
 		'nxp': 'Kinetis series parts',
 		'puya': 'Puya PY32 series parts',
 		'renesas': 'Renesas parts',
-		'rp': 'RP2040',
+		'rp': 'Raspberry Pi MCUs (RP2040, RP2350)',
 		'sam': 'ATSAM series parts',
 		'stm': 'STM32 (and clones) parts',
 		'ti': 'Texas Instruments parts',
