@@ -75,7 +75,7 @@ if is_firmware_build
 		'riscv64': 'RISC-V 64-bit support',
 		'at32f4': 'Arterytek parts',
 		'apollo3': 'Ambiq Apollo3 parts',
-		'ch579': 'CH579',
+		'ch579': 'WinChipHead CH579',
 		'efm': 'Energy Micro parts',
 		'hc32': 'HC32 parts',
 		'lpc': 'LPC series parts',
