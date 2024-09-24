@@ -126,7 +126,7 @@ void trace_buf_push(void)
 	if (len > 64U)
 		len = 64;
 
-	if (usbd_ep_write_packet(usbdev, USB_REQ_TYPE_IN | SWO_ENDPOINT, (uint8_t *)&buf_rx[buf_rx_out], len) == len) {
+	if (usbd_ep_write_packet(usbdev, SWO_ENDPOINT, (uint8_t *)&buf_rx[buf_rx_out], len) == len) {
 		buf_rx_out += len;
 		buf_rx_out %= FIFO_SIZE;
 	}
