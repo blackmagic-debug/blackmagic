@@ -219,7 +219,8 @@ void usb_serial_set_config(usbd_device *dev, uint16_t value)
 	usbd_register_control_callback(dev, USB_REQ_TYPE_CLASS | USB_REQ_TYPE_INTERFACE,
 		USB_REQ_TYPE_TYPE | USB_REQ_TYPE_RECIPIENT, gdb_serial_control_request);
 
-	/* Notify the host that DCD is asserted.
+	/*
+	 * Notify the host that DCD is asserted.
 	 * Allows the use of /dev/tty* devices on *BSD/MacOS
 	 */
 	usb_serial_set_state(dev, GDB_IF_NO, CDCACM_GDB_NOTIF_ENDPOINT);
@@ -277,8 +278,7 @@ static void debug_serial_send_data(void)
 	debug_serial_send_complete = false;
 	aux_serial_update_receive_buffer_fullness();
 
-	/* Forcibly empty fifo if no USB endpoint.
-	 * If fifo empty, nothing further to do. */
+	/* Forcibly empty fifo if no USB endpoint. If fifo empty, nothing further to do. */
 	if (usb_get_config() != 1 ||
 		(aux_serial_receive_buffer_empty()
 #if ENABLE_DEBUG == 1 && defined(PLATFORM_HAS_DEBUG)
