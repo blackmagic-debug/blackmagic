@@ -31,13 +31,8 @@ static uint32_t itm_decode_mask = 0;  /* bitmask of channels to print */
 static uint8_t itm_packet_length = 0; /* decoder state */
 static bool itm_decode_packet = false;
 
-uint16_t swo_itm_decode(usbd_device *usbd_dev, uint8_t ep, const uint8_t *data, uint16_t len)
+uint16_t swo_itm_decode(const uint8_t *data, uint16_t len)
 {
-	/* Check if we've got a valid USB device */
-	/* XXX: Can this ever actually be false?! */
-	if (usbd_dev == NULL)
-		return 0U;
-
 	/* Step through each byte in the SWO data buffer */
 	for (uint16_t idx = 0; idx < len; ++idx) {
 		/* If we're waiting for a new ITM packet, start decoding the new byte as a header */
@@ -63,7 +58,7 @@ uint16_t swo_itm_decode(usbd_device *usbd_dev, uint8_t ep, const uint8_t *data, 
 				if (itm_decoded_buffer_index == sizeof(itm_decoded_buffer)) {
 					/* However, if the link is not yet up, drop the packet data silently */
 					if (usb_get_config() && gdb_serial_get_dtr())
-						usbd_ep_write_packet(usbd_dev, ep, itm_decoded_buffer, itm_decoded_buffer_index);
+						debug_serial_send_stdout(itm_decoded_buffer, itm_decoded_buffer_index);
 					itm_decoded_buffer_index = 0U;
 				}
 			}

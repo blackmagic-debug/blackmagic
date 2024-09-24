@@ -146,12 +146,11 @@ void swo_send_buffer(usbd_device *const dev, const uint8_t ep)
 		if (swo_itm_decoding) {
 			/* If we're in UART mode, hand as much as we can all at once */
 			if (swo_current_mode == swo_nrz_uart)
-				result = swo_itm_decode(dev, CDCACM_UART_ENDPOINT, swo_buffer + swo_buffer_read_index,
-					MIN(bytes_available, SWO_BUFFER_SIZE - swo_buffer_read_index));
+				result = swo_itm_decode(
+					swo_buffer + swo_buffer_read_index, MIN(bytes_available, SWO_BUFFER_SIZE - swo_buffer_read_index));
 			/* Otherwise, if we're in Manchester mode, manage the amount moved the same as we do USB */
 			else
-				result = swo_itm_decode(dev, CDCACM_UART_ENDPOINT, swo_buffer + swo_buffer_read_index,
-					MIN(bytes_available, SWO_ENDPOINT_SIZE));
+				result = swo_itm_decode(swo_buffer + swo_buffer_read_index, MIN(bytes_available, SWO_ENDPOINT_SIZE));
 		} else
 			/* Otherwise, queue the new data to the SWO data endpoint */
 			result = usbd_ep_write_packet(

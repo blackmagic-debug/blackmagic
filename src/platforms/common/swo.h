@@ -55,7 +55,7 @@ void swo_send_buffer(usbd_device *dev, uint8_t ep);
 void swo_itm_decode_set_mask(uint32_t mask);
 
 /* Decode a new block of ITM data from SWO */
-uint16_t swo_itm_decode(usbd_device *usbd_dev, uint8_t ep, const uint8_t *data, uint16_t len);
+uint16_t swo_itm_decode(const uint8_t *data, uint16_t len);
 
 #endif /* !NO_LIBOPENCM3 */
 
