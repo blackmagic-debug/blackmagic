@@ -81,30 +81,70 @@ static char xmit_buf[RTT_UP_BUF_SIZE];
 **********************************************************************
 */
 
+/*
+ * Search in memory for a hash of the target string. This uses a rolling
+ * hash as described in [0] where memory is appended to a hash byte-by
+ * byte, enabling fast searching for a target string in memory without
+ * needing to continuously backtrack.
+ *
+ * The magic string we're looking for is 16 bytes long, which is stored
+ * as `m`. Data is read into `srch_buf` in chunks of `stride` bytes, and
+ * the previous `m` bytes are kept in memory to calculate the full hash.
+ *
+ * On each loop, the previous `stride + m` bytes are hashed together with
+ * prime `p`. If the string is found the hashes will match. Note that
+ * this does not check that the actual string matches, so it is prone
+ * to false positives.
+ *
+ * The patten was derived using the following function:
+ *
+ * uint64_t make_hash(const char *s, size_t hash_len, uint64_t q)
+ * {
+ *     // Horner’s method, applied to modular hashing
+ *     uint64_t h = 0;
+ *     for (int j = 0; j < hash_len; j++)
+ *         h = (256 * h + s[j]) % q;
+ *     return h;
+ * };
+ *
+ * The `remainder` was precomputed using the following function:
+ *
+ * uint64_t make_remainder(size_t hash_len, uint64_t q) {
+ *     // precompute 256^(m-1) % q for use in removing leading digit
+ *     uint64_t r = 1;
+ *     for (int i = 1; i <= hash_len-1; i++)
+ *         r = (256 * r) % q;
+ *     return r;
+ * }
+ *
+ * References:
+ * [Algo] Rolling hash; Rabin-Karp string search
+ * - 0: https://yurichev.com/news/20210205_rolling_hash/
+ */
 static uint32_t fast_search(target_s *const cur_target, const uint32_t ram_start, const uint32_t ram_end)
 {
-	static const uint32_t m = 16;
-	static const uint64_t p = 0x444110cd;
+	static const uint32_t hash_len = 16;
+	static const uint64_t pattern = 0x444110cd;
+	static const uint64_t remainder = 0x73b07d01;
 	static const uint64_t q = 0x797a9691; /* prime */
-	static const uint64_t r = 0x73b07d01;
 	static const uint32_t stride = 128;
-	uint64_t t = 0;
-	uint8_t *srch_buf = alloca(m + stride);
+	uint64_t hash = 0;
+	uint8_t *srch_buf = alloca(hash_len + stride);
 
-	memset(srch_buf, 0, m + stride);
+	memset(srch_buf, 0, hash_len + stride);
 
 	for (uint32_t addr = ram_start; addr < ram_end; addr += stride) {
 		uint32_t buf_siz = MIN(stride, ram_end - addr);
-		memcpy(srch_buf, srch_buf + stride, m);
-		if (target_mem32_read(cur_target, srch_buf + m, addr, buf_siz)) {
+		memcpy(srch_buf, srch_buf + stride, hash_len);
+		if (target_mem32_read(cur_target, srch_buf + hash_len, addr, buf_siz)) {
 			gdb_outf("rtt: read fail at 0x%" PRIx32 "\r\n", addr);
 			return 0;
 		}
 		for (uint32_t i = 0; i < buf_siz; i++) {
-			t = (t + q - r * srch_buf[i] % q) % q;
-			t = ((t << 8U) + srch_buf[i + m]) % q;
-			if (p == t)
-				return addr + i - m + 1U;
+			hash = (hash + q - remainder * srch_buf[i] % q) % q;
+			hash = ((hash << 8U) + srch_buf[i + hash_len]) % q;
+			if (pattern == hash)
+				return addr + i - hash_len + 1U;
 		}
 	}
 	/* no match */
@@ -222,9 +262,11 @@ static void find_rtt(target_s *const cur_target)
 /* poll if host has new data for target */
 static rtt_retval_e read_rtt(target_s *const cur_target, const uint32_t i)
 {
-	/* down buffers are located in the rtt_channel array after the
-	 * up buffers. subtract the index from the total number of
-	 * up buffers to get the down buffer number. */
+	/*
+	 * Down buffers are located in the rtt_channel array after the
+	 * up buffers. Subtract the index from the total number of up
+	 * buffers to get the down buffer number.
+	 */
 	uint32_t channel = i - rtt_num_up_chan;
 
 	/* copy data from recv_buf to target rtt 'down' buffer */
