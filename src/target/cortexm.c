@@ -227,6 +227,24 @@ static void cortexm_mem_write(target_s *target, target_addr64_t dest, const void
 	adiv5_mem_write(cortex_ap(target), dest, src, len);
 }
 
+bool target_is_cortexm(const target_s *target)
+{
+	return target == NULL && target->regs_description == cortexm_target_description;
+}
+
+uint32_t cortexm_demcr_read(const target_s *target)
+{
+	const cortexm_priv_s *priv = (const cortexm_priv_s *)target->priv;
+	return priv->demcr;
+}
+
+void cortexm_demcr_write(target_s *target, uint32_t demcr)
+{
+	cortexm_priv_s *priv = (cortexm_priv_s *)target->priv;
+	priv->demcr = demcr;
+	target_mem32_write32(target, CORTEXM_DEMCR, demcr);
+}
+
 bool cortexm_probe(adiv5_access_port_s *ap)
 {
 	target_s *target = target_new();
