@@ -21,6 +21,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <winsock2.h>
+#include <ws2tcpip.h>
 #include "general.h"
 #include <windows.h>
 #include "platform.h"
@@ -41,10 +43,92 @@
 
 /* Windows handle for the connection to the remote BMP */
 static HANDLE port_handle = INVALID_HANDLE_VALUE;
+static SOCKET network_socket = INVALID_SOCKET;
 /* Buffer for read request data + fullness and next read position values */
 static uint8_t read_buffer[READ_BUFFER_LENGTH];
 static size_t read_buffer_fullness = 0U;
 static size_t read_buffer_offset = 0U;
+
+/* Socket code taken from https://beej.us/guide/bgnet/ */
+static bool try_opening_network_device(const char *const name)
+{
+	if (!name)
+		return false;
+
+	DWORD last_error = GetLastError();
+
+	struct addrinfo addr_hints = {
+		.ai_family = AF_UNSPEC,
+		.ai_socktype = SOCK_STREAM,
+		.ai_protocol = IPPROTO_TCP,
+		.ai_flags = AI_ADDRCONFIG | AI_V4MAPPED,
+	};
+	struct addrinfo *results;
+
+	// Maximum legal length of a hostname
+	char hostname[256];
+
+	// Copy the hostname to an internal array. We need to modify it
+	// to separate the hostname from the service name.
+	if (strlen(name) >= sizeof(hostname)) {
+		DEBUG_WARN("Hostname:port must be shorter than 255 characters\n");
+		return false;
+	}
+	strncpy(hostname, name, sizeof(hostname) - 1U);
+
+	// The service name or port number
+	char *service_name = strstr(hostname, ":");
+	if (service_name == NULL) {
+		DEBUG_WARN("Device name is not a network address in the format hostname:port\n");
+		return false;
+	}
+
+	// Separate the service name / port number from the hostname
+	*service_name = '\0';
+	++service_name;
+
+	// The service name is commonly empty on Windows where port names
+	// tend to be things like "COM4:" which can be mistaken for a hostname.
+	if (*service_name == '\0')
+		return false;
+
+	WSADATA wsaData;
+	int result = WSAStartup(MAKEWORD(2, 2), &wsaData);
+	if (result != 0) {
+		SetLastError(last_error);
+		return false;
+	}
+
+	if (getaddrinfo(hostname, service_name, &addr_hints, &results) != 0) {
+		SetLastError(last_error);
+		return false;
+	}
+
+	// Loop through all the results and connect to the first we can.
+	struct addrinfo *server_addr;
+	for (server_addr = results; server_addr != NULL; server_addr = server_addr->ai_next) {
+		network_socket = socket(server_addr->ai_family, server_addr->ai_socktype, server_addr->ai_protocol);
+		if (network_socket == INVALID_SOCKET)
+			continue;
+
+		if (connect(network_socket, server_addr->ai_addr, server_addr->ai_addrlen) == SOCKET_ERROR) {
+			closesocket(network_socket);
+			continue;
+		}
+
+		// If we get here, we must have connected successfully
+		break;
+	}
+	freeaddrinfo(results);
+
+	if (server_addr == NULL) {
+		network_socket = INVALID_SOCKET;
+		SetLastError(last_error);
+		return false;
+	}
+
+	return true;
+}
 
 static void display_error(const LSTATUS error, const char *const operation, const char *const path)
 {
@@ -202,6 +286,8 @@ bool serial_open(const bmda_cli_options_s *const cl_opts, const char *const seri
 
 	/* If opening the device node failed for any reason, error out early */
 	if (port_handle == INVALID_HANDLE_VALUE) {
+		if (try_opening_network_device(cl_opts->opt_device))
+			return true;
 		handle_dev_error(port_handle, "opening device");
 		return false;
 	}
@@ -256,8 +342,15 @@ bool serial_open(const bmda_cli_options_s *const cl_opts, const char *const seri
 
 void serial_close(void)
 {
-	CloseHandle(port_handle);
-	port_handle = INVALID_HANDLE_VALUE;
+	if (port_handle != INVALID_HANDLE_VALUE) {
+		CloseHandle(port_handle);
+		port_handle = INVALID_HANDLE_VALUE;
+	}
+	if (network_socket != INVALID_SOCKET) {
+		closesocket(network_socket);
+		network_socket = INVALID_SOCKET;
+		WSACleanup();
+	}
 }
 
 bool platform_buffer_write(const void *const data, const size_t length)
@@ -266,16 +359,65 @@ bool platform_buffer_write(const void *const data, const size_t length)
 	DEBUG_WIRE("%s\n", buffer);
 	DWORD written = 0;
 	for (size_t offset = 0; offset < length; offset += written) {
-		if (!WriteFile(port_handle, buffer + offset, length - offset, &written, NULL)) {
-			DEBUG_ERROR("Serial write failed %lu, written %zu\n", GetLastError(), offset);
-			return false;
+		if (port_handle != INVALID_HANDLE_VALUE) {
+			if (!WriteFile(port_handle, buffer + offset, length - offset, &written, NULL)) {
+				DEBUG_ERROR("Serial write failed %lu, written %zu\n", GetLastError(), offset);
+				return false;
+			}
+		} else if (network_socket != INVALID_SOCKET) {
+			int network_written = send(network_socket, buffer + offset, length - offset, 0);
+			if (network_written == SOCKET_ERROR) {
+				DEBUG_ERROR("Network write failed %d, written %zu\n", WSAGetLastError(), offset);
+				return false;
+			}
+			written = network_written;
 		}
 	}
 	return true;
 }
 
+static ssize_t bmda_read_more_socket_data(void)
+{
+	struct timeval timeout = {
+		.tv_sec = cortexm_wait_timeout / 1000U,
+		.tv_usec = 1000U * (cortexm_wait_timeout % 1000U),
+	};
+
+	fd_set select_set;
+	FD_ZERO(&select_set);
+	FD_SET(network_socket, &select_set);
+
+	/* Set up to wait for more data from the probe */
+	const int result = select(FD_SETSIZE, &select_set, NULL, NULL, &timeout);
+	/* If select() fails, bail */
+	if (result < 0) {
+		DEBUG_ERROR("Failed on select\n");
+		return -3;
+	}
+	/* If we timed out, bail differently */
+	if (result == 0) {
+		DEBUG_ERROR("Timeout while waiting for BMP response\n");
+		return -4;
+	}
+	/* Now we know there's data, try to fill the read buffer */
+	const ssize_t bytes_received = recv(network_socket, (char *)read_buffer, READ_BUFFER_LENGTH, 0);
+	/* If that failed, bail */
+	if (bytes_received < 0) {
+		const int error = errno;
+		DEBUG_ERROR("Failed to read response (%d): %s\n", error, strerror(error));
+		return -6;
+	}
+	/* We now have more data, so update the read buffer counters */
+	read_buffer_fullness = (size_t)bytes_received;
+	read_buffer_offset = 0U;
+	return 0;
+}
+
 static ssize_t bmda_read_more_data(const uint32_t end_time)
 {
+	if (network_socket != INVALID_SOCKET)
+		return bmda_read_more_socket_data();
+
 	// Try to wait for up to 100ms for data to become available
 	if (WaitForSingleObject(port_handle, 100) != WAIT_OBJECT_0) {
 		DEBUG_ERROR("Timeout while waiting for BMP response: %lu\n", GetLastError());
