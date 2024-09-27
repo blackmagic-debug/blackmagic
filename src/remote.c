@@ -42,7 +42,6 @@
 #include "exception.h"
 #include "hex_utils.h"
 
-#if CONFIG_BMDA == 0
 static void remote_packet_process_adiv6(const char *packet, size_t packet_len);
 
 /* hex-ify and send a buffer of data */
@@ -883,4 +882,3 @@ void remote_packet_process(char *const packet, const size_t packet_length)
 		break;
 	}
 }
-#endif
