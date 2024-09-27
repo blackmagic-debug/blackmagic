@@ -39,7 +39,7 @@
 
 void remote_v1_init(void);
 
-void remote_v1_add_jtag_dev(uint32_t dev_index, const jtag_dev_s *jtag_dev);
+void remote_v1_jtag_add_device(uint32_t dev_index, const jtag_dev_s *jtag_dev);
 bool remote_v1_adiv5_init(adiv5_debug_port_s *dp);
 
 #endif /*PLATFORMS_HOSTED_REMOTE_PROTOCOL_V1_H*/
