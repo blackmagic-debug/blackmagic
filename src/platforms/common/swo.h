@@ -23,7 +23,9 @@
 #ifndef PLATFORMS_COMMON_SWO_H
 #define PLATFORMS_COMMON_SWO_H
 
+#if !defined(NO_LIBOPENCM3)
 #include <libopencm3/usb/usbd.h>
+#endif
 
 /* Default line rate, used as default for a request without baudrate */
 #define SWO_DEFAULT_BAUD 2250000U
@@ -40,6 +42,8 @@ extern swo_coding_e swo_current_mode;
 void swo_init(swo_coding_e swo_mode, uint32_t baudrate, uint32_t itm_stream_bitmask);
 void swo_deinit(bool deallocate);
 
+#if !defined(NO_LIBOPENCM3)
+
 /* UART mode baudate functions */
 uint32_t swo_uart_get_baudrate(void);
 void bmd_usart_set_baudrate(uint32_t usart, uint32_t baud_rate);
@@ -52,5 +56,7 @@ void swo_itm_decode_set_mask(uint32_t mask);
 
 /* Decode a new block of ITM data from SWO */
 uint16_t swo_itm_decode(usbd_device *usbd_dev, uint8_t ep, const uint8_t *data, uint16_t len);
+
+#endif /* !NO_LIBOPENCM3 */
 
 #endif /* PLATFORMS_COMMON_SWO_H */
