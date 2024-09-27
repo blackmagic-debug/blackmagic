@@ -138,7 +138,11 @@ static void remote_packet_process_swd(const char *const packet, const size_t pac
 			remote_dp.error = adiv5_swd_clear_error;
 			remote_dp.low_access = adiv5_swd_raw_access;
 			remote_dp.abort = adiv5_swd_abort;
+#if PC_HOSTED == 0
 			swdptap_init();
+#else
+			bmda_swd_dp_init(&remote_dp);
+#endif
 			remote_respond(REMOTE_RESP_OK, 0);
 		} else
 			remote_respond(REMOTE_RESP_ERR, REMOTE_ERROR_WRONGLEN);
@@ -191,7 +195,11 @@ static void remote_packet_process_jtag(const char *const packet, const size_t pa
 		remote_dp.error = adiv5_jtag_clear_error;
 		remote_dp.low_access = adiv5_jtag_raw_access;
 		remote_dp.abort = adiv5_jtag_abort;
+#if PC_HOSTED == 0
 		jtagtap_init();
+#else
+		bmda_jtag_init();
+#endif
 		remote_respond(REMOTE_RESP_OK, 0);
 		break;
 
