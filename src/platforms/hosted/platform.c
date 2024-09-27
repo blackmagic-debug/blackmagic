@@ -248,10 +248,10 @@ bool bmda_swd_dp_init(adiv5_debug_port_s *dp)
 	}
 }
 
-void bmda_add_jtag_dev(const uint32_t dev_index, const jtag_dev_s *const jtag_dev)
+void bmda_jtag_add_device(const uint32_t dev_index, const jtag_dev_s *const jtag_dev)
 {
 	if (bmda_probe_info.type == PROBE_TYPE_BMP)
-		remote_add_jtag_dev(dev_index, jtag_dev);
+		remote_jtag_add_device(dev_index, jtag_dev);
 }
 
 bool bmda_jtag_scan(void)

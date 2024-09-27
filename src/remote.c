@@ -355,7 +355,7 @@ static void remote_packet_process_high_level(const char *packet, const size_t pa
 #if PC_HOSTED == 0
 		jtag_add_device(index, &jtag_dev);
 #else
-		bmda_add_jtag_dev(index, &jtag_dev);
+		bmda_jtag_add_device(index, &jtag_dev);
 #endif
 		remote_respond(REMOTE_RESP_OK, 0);
 		break;

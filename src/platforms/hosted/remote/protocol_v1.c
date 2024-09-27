@@ -44,7 +44,7 @@ void remote_v1_init(void)
 		.swd_init = remote_v0_swd_init,
 		.jtag_init = remote_v0_jtag_init,
 		.adiv5_init = remote_v1_adiv5_init,
-		.add_jtag_dev = remote_v1_add_jtag_dev,
+		.jtag_add_device = remote_v1_jtag_add_device,
 	};
 }
 
@@ -60,7 +60,7 @@ bool remote_v1_adiv5_init(adiv5_debug_port_s *const dp)
 	return true;
 }
 
-void remote_v1_add_jtag_dev(const uint32_t dev_index, const jtag_dev_s *const jtag_dev)
+void remote_v1_jtag_add_device(const uint32_t dev_index, const jtag_dev_s *const jtag_dev)
 {
 	char buffer[REMOTE_MAX_MSG_SIZE];
 	const int length = snprintf(buffer, REMOTE_MAX_MSG_SIZE, REMOTE_JTAG_ADD_DEV_STR, dev_index, jtag_dev->dr_prescan,

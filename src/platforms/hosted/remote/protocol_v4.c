@@ -64,7 +64,7 @@ bool remote_v4_init(void)
 	remote_funcs = (bmp_remote_protocol_s){
 		.swd_init = remote_v0_swd_init,
 		.jtag_init = remote_v2_jtag_init,
-		.add_jtag_dev = remote_v1_add_jtag_dev,
+		.jtag_add_device = remote_v1_jtag_add_device,
 		.get_comms_frequency = remote_v2_get_comms_frequency,
 		.set_comms_frequency = remote_v2_set_comms_frequency,
 		.target_clk_output_enable = remote_v2_target_clk_output_enable,

@@ -230,8 +230,8 @@ void remote_riscv_jtag_dtm_init(riscv_dmi_s *const dmi)
 		remote_funcs.riscv_jtag_init(dmi);
 }
 
-void remote_add_jtag_dev(uint32_t dev_index, const jtag_dev_s *jtag_dev)
+void remote_jtag_add_device(uint32_t dev_index, const jtag_dev_s *jtag_dev)
 {
-	if (remote_funcs.add_jtag_dev)
-		remote_funcs.add_jtag_dev(dev_index, jtag_dev);
+	if (remote_funcs.jtag_add_device)
+		remote_funcs.jtag_add_device(dev_index, jtag_dev);
 }
