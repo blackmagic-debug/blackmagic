@@ -48,6 +48,11 @@ extern const uint8_t ones[8];
 
 void jtag_dev_write_ir(uint8_t dev_index, uint32_t ir);
 void jtag_dev_shift_dr(uint8_t dev_index, uint8_t *data_out, const uint8_t *data_in, size_t clock_cycles);
+#if PC_HOSTED == 0
 void jtag_add_device(uint32_t dev_index, const jtag_dev_s *jtag_dev);
+#else
+/* BMDA interposition function for JTAG device setup */
+void bmda_add_jtag_dev(uint32_t dev_index, const jtag_dev_s *jtag_dev);
+#endif
 
 #endif /* TARGET_JTAG_SCAN_H */
