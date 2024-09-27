@@ -352,7 +352,11 @@ static void remote_packet_process_high_level(const char *packet, const size_t pa
 		jtag_dev.ir_prescan = hex_string_to_num(2, packet + 10);
 		jtag_dev.ir_postscan = hex_string_to_num(2, packet + 12);
 		jtag_dev.current_ir = hex_string_to_num(8, packet + 14);
+#if PC_HOSTED == 0
 		jtag_add_device(index, &jtag_dev);
+#else
+		bmda_add_jtag_dev(index, &jtag_dev);
+#endif
 		remote_respond(REMOTE_RESP_OK, 0);
 		break;
 	}
