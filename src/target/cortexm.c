@@ -229,7 +229,7 @@ static void cortexm_mem_write(target_s *target, target_addr64_t dest, const void
 
 bool target_is_cortexm(const target_s *target)
 {
-	return target == NULL && target->regs_description == cortexm_target_description;
+	return target != NULL && target->regs_description == cortexm_target_description;
 }
 
 uint32_t cortexm_demcr_read(const target_s *target)
