@@ -110,7 +110,6 @@ static uint8_t gdb_packet_checksum(const gdb_packet_s *const packet)
 
 packet_state_e consume_remote_packet(char *const packet, const size_t size)
 {
-#if CONFIG_BMDA == 0
 	/* We got what looks like probably a remote control packet */
 	size_t offset = 0;
 	while (true) {
@@ -154,13 +153,6 @@ packet_state_e consume_remote_packet(char *const packet, const size_t size)
 			}
 		}
 	}
-#else
-	(void)packet;
-	(void)size;
-
-	/* Hosted builds ignore remote control packets */
-	return PACKET_IDLE;
-#endif
 }
 
 gdb_packet_s *gdb_packet_receive(void)
@@ -179,9 +171,7 @@ gdb_packet_s *gdb_packet_receive(void)
 				state = PACKET_GDB_CAPTURE;
 				packet_buffer.size = 0;
 				packet_buffer.notification = false;
-			}
-#if CONFIG_BMDA == 0
-			else if (rx_char == REMOTE_SOM) {
+			} else if (rx_char == REMOTE_SOM) {
 				/* Start of BMP remote packet */
 				/*
 				 * Let consume_remote_packet handle this
@@ -190,7 +180,6 @@ gdb_packet_s *gdb_packet_receive(void)
 				state = consume_remote_packet(packet_buffer.data, GDB_PACKET_BUFFER_SIZE);
 				packet_buffer.size = 0;
 			}
-#endif
 			/* EOT (end of transmission) - connection was closed */
 			else if (rx_char == '\x04') {
 				packet_buffer.data[1U] = '\0'; /* Null terminate */
@@ -425,10 +414,10 @@ void gdb_out(const char *const str)
 	/**
      * Program console output packet
      * See https://sourceware.org/gdb/current/onlinedocs/gdb.html/Stop-Reply-Packets.html#Stop-Reply-Packets
-     * 
+     *
      * Format: ‘O XX…’
      * ‘XX…’ is hex encoding of ASCII data, to be written as the program’s console output.
-     * 
+     *
      * Can happen at any time while the program is running and the debugger should continue to wait for ‘W’, ‘T’, etc.
      * This reply is not permitted in non-stop mode.
      */
@@ -441,7 +430,7 @@ void gdb_voutf(const char *const fmt, va_list ap)
 	 * We could technically do the formatting and transformation in a single buffer reducing stack usage
 	 * But it is a bit more complex and likely slower, we would need to spread the characters out such
 	 * that each occupies two bytes, and then we could hex them in place
-	 * 
+	 *
 	 * If this stack usage proves to be a problem, we can revisit this
 	 */
 	char str_scratch[GDB_OUT_PACKET_MAX_SIZE + 1U];
