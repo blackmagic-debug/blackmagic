@@ -64,7 +64,6 @@ void gdb_set_noackmode(bool enable)
 
 packet_state_e consume_remote_packet(char *const packet, const size_t size)
 {
-#if CONFIG_BMDA == 0
 	/* We got what looks like probably a remote control packet */
 	size_t offset = 0;
 	while (true) {
@@ -108,13 +107,6 @@ packet_state_e consume_remote_packet(char *const packet, const size_t size)
 			}
 		}
 	}
-#else
-	(void)packet;
-	(void)size;
-
-	/* Hosted builds ignore remote control packets */
-	return PACKET_IDLE;
-#endif
 }
 
 size_t gdb_getpacket(char *const packet, const size_t size)
@@ -136,9 +128,7 @@ size_t gdb_getpacket(char *const packet, const size_t size)
 				state = PACKET_GDB_CAPTURE;
 				offset = 0;
 				checksum = 0;
-			}
-#if CONFIG_BMDA == 0
-			else if (rx_char == REMOTE_SOM) {
+			} else if (rx_char == REMOTE_SOM) {
 				/* Start of BMP remote packet */
 				/*
 				 * Let consume_remote_packet handle this
@@ -148,7 +138,6 @@ size_t gdb_getpacket(char *const packet, const size_t size)
 				offset = 0;
 				checksum = 0;
 			}
-#endif
 			/* EOT (end of transmission) - connection was closed */
 			if (packet[0U] == '\x04') {
 				packet[1U] = 0;
