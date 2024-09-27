@@ -153,19 +153,19 @@
 /* AP Identification Register (IDR) */
 #define ADIV5_AP_IDR_REVISION_OFFSET 28U
 #define ADIV5_AP_IDR_REVISION_MASK   0xf0000000U
-#define ADIV5_AP_IDR_REVISION(idr)   (((idr)&ADIV5_AP_IDR_REVISION_MASK) >> ADIV5_AP_IDR_REVISION_OFFSET)
+#define ADIV5_AP_IDR_REVISION(idr)   (((idr) & ADIV5_AP_IDR_REVISION_MASK) >> ADIV5_AP_IDR_REVISION_OFFSET)
 #define ADIV5_AP_IDR_DESIGNER_OFFSET 17U
 #define ADIV5_AP_IDR_DESIGNER_MASK   0x0ffe0000U
-#define ADIV5_AP_IDR_DESIGNER(idr)   (((idr)&ADIV5_AP_IDR_DESIGNER_MASK) >> ADIV5_AP_IDR_DESIGNER_OFFSET)
+#define ADIV5_AP_IDR_DESIGNER(idr)   (((idr) & ADIV5_AP_IDR_DESIGNER_MASK) >> ADIV5_AP_IDR_DESIGNER_OFFSET)
 #define ADIV5_AP_IDR_CLASS_OFFSET    13U
 #define ADIV5_AP_IDR_CLASS_MASK      0x0001e000U
-#define ADIV5_AP_IDR_CLASS(idr)      (((idr)&ADIV5_AP_IDR_CLASS_MASK) >> ADIV5_AP_IDR_CLASS_OFFSET)
+#define ADIV5_AP_IDR_CLASS(idr)      (((idr) & ADIV5_AP_IDR_CLASS_MASK) >> ADIV5_AP_IDR_CLASS_OFFSET)
 #define ADIV5_AP_IDR_VARIANT_OFFSET  4U
 #define ADIV5_AP_IDR_VARIANT_MASK    0x000000f0U
-#define ADIV5_AP_IDR_VARIANT(idr)    (((idr)&ADIV5_AP_IDR_VARIANT_MASK) >> ADIV5_AP_IDR_VARIANT_OFFSET)
+#define ADIV5_AP_IDR_VARIANT(idr)    (((idr) & ADIV5_AP_IDR_VARIANT_MASK) >> ADIV5_AP_IDR_VARIANT_OFFSET)
 #define ADIV5_AP_IDR_TYPE_OFFSET     0U
 #define ADIV5_AP_IDR_TYPE_MASK       0x0000000fU
-#define ADIV5_AP_IDR_TYPE(idr)       ((idr)&ADIV5_AP_IDR_TYPE_MASK)
+#define ADIV5_AP_IDR_TYPE(idr)       ((idr) & ADIV5_AP_IDR_TYPE_MASK)
 
 #define ADIV5_AP_IDR_CLASS_JTAG 0U
 #define ADIV5_AP_IDR_CLASS_COM  1U
@@ -233,9 +233,6 @@ void adiv5_ap_unref(adiv5_access_port_s *ap);
 void bmda_adiv5_dp_init(adiv5_debug_port_s *dp);
 void bmda_jtag_dp_init(adiv5_debug_port_s *dp);
 bool bmda_swd_dp_init(adiv5_debug_port_s *dp);
-
-/* BMDA interposition function for JTAG device setup */
-void bmda_add_jtag_dev(uint32_t dev_index, const jtag_dev_s *jtag_dev);
 #endif
 
 /* Data transfer value packing/unpacking helper functions */
