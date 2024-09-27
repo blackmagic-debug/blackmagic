@@ -37,7 +37,6 @@
 static bool bmp_spi_flash_erase(target_flash_s *flash, target_addr_t addr, size_t length);
 static bool bmp_spi_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t length);
 
-#if CONFIG_BMDA == 0
 static void bmp_spi_setup_xfer(
 	const spi_bus_e bus, const uint8_t device, const uint16_t command, const target_addr32_t address)
 {
@@ -96,7 +95,6 @@ void bmp_spi_run_command(
 	/* Deselect the Flash */
 	platform_spi_chip_select(device);
 }
-#endif
 
 static inline uint8_t bmp_spi_read_status(target_s *const target, const spi_flash_s *const flash)
 {
