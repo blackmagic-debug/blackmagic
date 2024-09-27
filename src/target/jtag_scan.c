@@ -127,7 +127,7 @@ bool jtag_scan(void)
 #if CONFIG_BMDA == 1
 	/*Transfer needed device information to firmware jtag_devs */
 	for (size_t device = 0; device < jtag_dev_count; ++device)
-		bmda_add_jtag_dev(device, jtag_devs + device);
+		bmda_jtag_add_device(device, jtag_devs + device);
 #endif
 
 	jtag_display_idcodes();
