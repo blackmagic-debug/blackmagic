@@ -38,6 +38,11 @@ else
 		SWO_ENCODING = 3
 	endif
 
+    # Include the base implementation and decoder
+	SRC +=               \
+		swo.c            \
+		swo_itm_decode.c
+
     # Include the files for either: Manchester-only (1), UART-only (2) or both modes (3)
 	ifeq ($(SWO_ENCODING), 1)
 		SRC += swo_manchester.c
@@ -67,13 +72,12 @@ endif
 
 VPATH += platforms/common/stm32
 
-SRC +=          \
-	platform.c \
-	serialno.c	\
-	timing.c	\
-	timing_stm32.c	\
-	traceswodecode.c	\
-	stlink_common.c \
+SRC +=               \
+	platform.c       \
+	serialno.c       \
+	timing.c         \
+	timing_stm32.c   \
+	stlink_common.c
 
 ifeq ($(ST_BOOTLOADER), 1)
 all:	blackmagic.bin
