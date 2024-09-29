@@ -271,12 +271,18 @@ bool dap_init(bool allow_fallback)
 		type = CMSIS_TYPE_HID;
 
 	/* Windows hosts may not have the winusb driver associated with v2, handle that by degrading to v1 */
-	if (type == CMSIS_TYPE_BULK) {
-		if (!dap_init_bulk()) {
+	if (type == CMSIS_TYPE_BULK && !dap_init_bulk()) {
+		if (allow_fallback) {
 			DEBUG_WARN("Could not setup a CMSIS-DAP v2 device in Bulk mode (no drivers?), retrying HID mode\n");
 			type = CMSIS_TYPE_HID;
+		} else {
+			DEBUG_ERROR("Could not setup a CMSIS-DAP device over Bulk interface, failing. Hint: pass %s to retry "
+						"HID interface\n",
+				"--allow-fallback");
+			return false;
 		}
 	}
+
 	if (type == CMSIS_TYPE_HID) {
 		if (!dap_init_hid())
 			return false;
