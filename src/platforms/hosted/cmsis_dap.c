@@ -262,7 +262,7 @@ static bool dap_init_bulk(void)
 }
 
 /* LPC845 Breakout Board Rev. 0 reports an invalid response with > 65 bytes */
-bool dap_init(void)
+bool dap_init(bool allow_fallback)
 {
 	/* Initialise the adaptor via a suitable protocol */
 	if (bmda_probe_info.in_ep && bmda_probe_info.out_ep)

@@ -150,7 +150,7 @@ void platform_init(int argc, char **argv)
 		break;
 
 	case PROBE_TYPE_CMSIS_DAP:
-		if (!dap_init())
+		if (!dap_init(cl_opts.opt_cmsisdap_allow_fallback))
 			exit(1);
 		break;
 

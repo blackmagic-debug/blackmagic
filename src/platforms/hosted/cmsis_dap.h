@@ -24,7 +24,7 @@
 #include "adiv5.h"
 #include "cli.h"
 
-bool dap_init(void);
+bool dap_init(bool allow_fallback);
 void dap_exit_function(void);
 void dap_adiv5_dp_init(adiv5_debug_port_s *dp);
 void dap_adiv6_dp_init(adiv5_debug_port_s *dp);

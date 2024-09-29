@@ -245,6 +245,7 @@ static const getopt_option_s long_options[] = {
 #ifdef ENABLE_GPIOD
 	{"gpiod", required_argument, NULL, 'g'},
 #endif
+	{"allow-fallback", no_argument, NULL, 'k'},
 	{NULL, 0, NULL, 0},
 };
 
@@ -264,7 +265,7 @@ void cl_init(bmda_cli_options_s *opt, int argc, char **argv)
 	opt->opt_mode = BMP_MODE_DEBUG;
 	while (true) {
 		const int option =
-			getopt_long(argc, argv, "eEFhHv:Od:f:s:I:c:Cln:m:M:wVtTa:S:jApP:rR::" GPIOD_ARG_STR, long_options, NULL);
+			getopt_long(argc, argv, "eEFhHv:Od:f:s:I:c:Cln:m:M:wVtTa:S:jApP:rR::k" GPIOD_ARG_STR, long_options, NULL);
 		if (option == -1)
 			break;
 
@@ -421,6 +422,9 @@ void cl_init(bmda_cli_options_s *opt, int argc, char **argv)
 			if (optarg)
 				opt->opt_gpio_map = optarg;
 #endif
+		case 'k':
+			opt->opt_cmsisdap_allow_fallback = true;
+			break;
 		}
 	}
 	if (optind && argv[optind]) {
