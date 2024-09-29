@@ -36,6 +36,8 @@
 
 #include "general.h"
 
+bool cortexar_attach(target_s *target);
+void cortexar_detach(target_s *target);
 void cortexar_invalidate_all_caches(target_s *target);
 
 #endif /* TARGET_CORTEXAR_H */

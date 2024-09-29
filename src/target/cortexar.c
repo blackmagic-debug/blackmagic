@@ -402,9 +402,6 @@ static int cortexar_breakwatch_set(target_s *target, breakwatch_s *breakwatch);
 static int cortexar_breakwatch_clear(target_s *target, breakwatch_s *breakwatch);
 static void cortexar_config_breakpoint(target_s *target, size_t slot, uint32_t mode, target_addr_t addr);
 
-bool cortexar_attach(target_s *target);
-void cortexar_detach(target_s *target);
-
 static const char *cortexar_target_description(target_s *target);
 
 static void cortexar_banked_dcc_mode(target_s *const target)
