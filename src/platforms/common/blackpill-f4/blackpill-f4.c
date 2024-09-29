@@ -50,6 +50,20 @@ void platform_init(void)
 	rcc_periph_clock_enable(RCC_GPIOC);
 	rcc_periph_clock_enable(RCC_GPIOB);
 	rcc_periph_clock_enable(RCC_CRC);
+#if SWO_ENCODING == 1 || SWO_ENCODING == 3
+	/* Make sure to power up the timer used for trace */
+	rcc_periph_clock_enable(SWO_TIM_CLK);
+#endif
+#if SWO_ENCODING == 2 || SWO_ENCODING == 3
+	/* Enable relevant USART and DMA early in platform init */
+	rcc_periph_clock_enable(SWO_UART_CLK);
+	rcc_periph_clock_enable(SWO_DMA_CLK);
+	/* Deal with receiving on Tx pin by enabling Half-Duplex mode */
+#if SWO_UART_PORT == GPIOB && SWO_UART_RX_PIN == GPIO6
+	//usart_enable_halfduplex(SWO_UART);
+	USART_CR3(SWO_UART) |= USART_CR3_HDSEL;
+#endif
+#endif
 
 #ifndef BMD_BOOTLOADER
 	/* Blackpill board has a floating button on PA0. Pull it up and use as active-low. */

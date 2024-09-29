@@ -160,7 +160,7 @@ extern bool debug_bmp;
 #define NRST_PORT PINOUT_SWITCH(GPIOA, GPIOB, GPIOA)
 #define NRST_PIN  PINOUT_SWITCH(GPIO5, GPIO4, GPIO5)
 
-/* SWO comes in on the same pin as TDO (FIXME: PB6 TX. Half-duplex?) */
+/* SWO comes in on the same pin as TDO */
 #define SWO_PORT GPIOB
 #define SWO_PIN  PINOUT_SWITCH(GPIO7, GPIO6, GPIO3)
 
@@ -291,29 +291,35 @@ extern bool debug_bmp;
 #define IRQ_PRI_SWO_TIM      (0U << 4U)
 #define IRQ_PRI_SWO_DMA      (0U << 4U)
 
-/* Use TIM4 Input 2 (from PB7/TDO) or Input 1 (from PB6/TDO), AF2, triggered on rising edge */
-#define SWO_TIM             TIM4
-#define SWO_TIM_CLK_EN()    rcc_periph_clock_enable(RCC_TIM4)
-#define SWO_TIM_IRQ         NVIC_TIM4_IRQ
-#define SWO_TIM_ISR(x)      tim4_isr(x)
-#define SWO_IC_IN           PINOUT_SWITCH(TIM_IC_IN_TI2, TIM_IC_IN_TI1)
-#define SWO_IC_RISING       PINOUT_SWITCH(TIM_IC2, TIM_IC1)
-#define SWO_CC_RISING       PINOUT_SWITCH(TIM4_CCR2, TIM4_CCR1)
-#define SWO_ITR_RISING      PINOUT_SWITCH(TIM_DIER_CC2IE, TIM_DIER_CC1IE)
-#define SWO_STATUS_RISING   PINOUT_SWITCH(TIM_SR_CC2IF, TIM_SR_CC1IF)
-#define SWO_IC_FALLING      PINOUT_SWITCH(TIM_IC1, TIM_IC2)
-#define SWO_CC_FALLING      PINOUT_SWITCH(TIM4_CCR1, TIM4_CCR2)
-#define SWO_STATUS_FALLING  PINOUT_SWITCH(TIM_SR_CC1IF, TIM_SR_CC2IF)
+/*
+ * Use general-purpose timer input capture triggered on rising edge
+ * TIM4 Input 2 from PB7 AF2, or
+ * TIM4 Input 1 from PB6 AF2, or
+ * TIM2 Input 2 from PB3 AF1
+ */
+#define SWO_TIM_CLK_EN()
+#define SWO_TIM_CLK         PINOUT_SWITCH(RCC_TIM4, RCC_TIM4, RCC_TIM2)
+#define SWO_TIM             PINOUT_SWITCH(TIM4, TIM4, TIM2)
+#define SWO_TIM_IRQ         PINOUT_SWITCH(NVIC_TIM4_IRQ, NVIC_TIM4_IRQ, NVIC_TIM2_IRQ)
+#define SWO_TIM_ISR(x)      PINOUT_SWITCH(tim4_isr(x), tim4_isr(x), tim2_isr(x))
+#define SWO_IC_IN           PINOUT_SWITCH(TIM_IC_IN_TI2, TIM_IC_IN_TI1, TIM_IC_IN_TI2)
+#define SWO_IC_RISING       PINOUT_SWITCH(TIM_IC2, TIM_IC1, TIM_IC2)
+#define SWO_CC_RISING       PINOUT_SWITCH(TIM4_CCR2, TIM4_CCR1, TIM2_CCR2)
+#define SWO_ITR_RISING      PINOUT_SWITCH(TIM_DIER_CC2IE, TIM_DIER_CC1IE, TIM_DIER_CC2IE)
+#define SWO_STATUS_RISING   PINOUT_SWITCH(TIM_SR_CC2IF, TIM_SR_CC1IF, TIM_SR_CC2IF)
+#define SWO_IC_FALLING      PINOUT_SWITCH(TIM_IC1, TIM_IC2, TIM_IC1)
+#define SWO_CC_FALLING      PINOUT_SWITCH(TIM4_CCR1, TIM4_CCR2, TIM2_CCR1)
+#define SWO_STATUS_FALLING  PINOUT_SWITCH(TIM_SR_CC1IF, TIM_SR_CC2IF, TIM_SR_CC1IF)
 #define SWO_STATUS_OVERFLOW (TIM_SR_CC1OF | TIM_SR_CC2OF)
-#define SWO_TRIG_IN         PINOUT_SWITCH(TIM_SMCR_TS_TI2FP2, TIM_SMCR_TS_TI1FP1)
-#define SWO_TIM_PIN_AF      GPIO_AF2
+#define SWO_TRIG_IN         PINOUT_SWITCH(TIM_SMCR_TS_TI2FP2, TIM_SMCR_TS_TI1FP1, TIM_SMCR_TS_TI2FP2)
+#define SWO_TIM_PIN_AF      PINOUT_SWITCH(GPIO_AF2, GPIO_AF2, GPIO_AF1)
 
-/* On F411 use USART1_RX mapped on PB7 for async capture */
+/* On F411 use USART1_RX mapped on PB7/PB6/PB3 for async capture */
 #define SWO_UART        USBUSART1
 #define SWO_UART_CLK    USBUSART1_CLK
 #define SWO_UART_DR     USBUSART1_DR
 #define SWO_UART_PORT   GPIOB
-#define SWO_UART_RX_PIN GPIO7
+#define SWO_UART_RX_PIN PINOUT_SWITCH(GPIO7, GPIO6, GPIO3)
 #define SWO_UART_PIN_AF GPIO_AF7
 
 /* Bind to the same DMA Rx channel */
