@@ -291,6 +291,48 @@ uint8_t platform_spi_xfer(const spi_bus_e bus, const uint8_t value)
 	}
 }
 
+void platform_spi_xfer_block(const spi_bus_e bus, uint8_t *const data, const size_t count)
+{
+	uint32_t spi_base = OB_SPI;
+	switch (bus) {
+	case SPI_BUS_INTERNAL:
+		spi_base = OB_SPI;
+		break;
+	case SPI_BUS_EXTERNAL:
+		spi_base = EXT_SPI;
+		break;
+	default:
+		return;
+	}
+
+#if 0
+	/* Put a byte on MOSI, wait entire transfer, grab the byte from MOSI into buffer, repeat. */
+	for (size_t i = 0; i < count; i++) {
+		uint8_t resp = spi_xfer(spi_base, data[i]);
+		data[i] = resp;
+	}
+#else
+	CM_ATOMIC_CONTEXT();
+	/*
+	 * Start the waveform by putting first MOSI byte into TXDR
+	 * from which it falls immediately into the shadow register
+	 * (pipelined polling version with inter-byte-gaps removed, no IRQ, no DMA)
+	 */
+	spi_write(spi_base, data[0]);
+	/*
+	 * Put the next MOSI byte into TXDR,
+	 * wait for previous byte from MOSI to appear in RXDR and copy it into buffer,
+	 * repeat N-2 times
+	 */
+	for (size_t i = 0; i < count - 1; i++) {
+		spi_send(spi_base, data[i + 1]);
+		data[i] = spi_read(spi_base);
+	}
+	/* Once the last MOSI byte comes out, grab the last MISO byte */
+	data[count - 1] = spi_read(spi_base);
+#endif
+}
+
 int platform_hwversion(void)
 {
 	return 0;
