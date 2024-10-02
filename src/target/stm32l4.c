@@ -454,6 +454,7 @@ static stm32l4_device_info_s const stm32l4_device_info[] = {
 static const uint8_t stm32l4_opt_reg_offsets[9] = {0x20, 0x24, 0x28, 0x2c, 0x30, 0x44, 0x48, 0x4c, 0x50};
 static const uint8_t stm32g4_opt_reg_offsets[11] = {0x20, 0x24, 0x28, 0x2c, 0x30, 0x70, 0x44, 0x48, 0x4c, 0x50, 0x74};
 static const uint8_t stm32wl_opt_reg_offsets[7] = {0x20, 0x24, 0x28, 0x2c, 0x30, 0x34, 0x38};
+static const uint8_t stm32wb_opt_reg_offsets[10] = {0x20, 0x24, 0x28, 0x2c, 0x30, 0x34, 0x38, 0x3c, 0x80, 0x84};
 
 static const uint32_t stm32l4_default_options_values[9] = {
 	0xffeff8aaU,
@@ -496,12 +497,27 @@ static const uint32_t stm32wl_default_options_values[7] = {
 	0xffffff00U,
 };
 
+static const uint32_t stm32wb_default_options_values[10] = {
+	0x2d8f71aaU, // User and read protection option bytes
+	0x000001ffU, // PCROP1A start address option bytes
+	0x80000000U, // PCROP1A end address option bytes
+	0x000000ffU, // WRP Area A address option bytes
+	0x000000ffU, // WRP Area B address option bytes
+	0x000001ffU, // PCROP1B start address option bytes
+	0x00000000U, // PCROP1B end address option bytes
+	0x00000000U, // IPCC mailbox data buffer address option bytes
+	0x00001000U, // Secure flash memory start address option bytes
+	0x00000000U, // Secure SRAM2 start address and CPU2 reset vector option bytes
+};
+
 static_assert(ARRAY_LENGTH(stm32l4_opt_reg_offsets) == ARRAY_LENGTH(stm32l4_default_options_values),
 	"Number of stm32l4 option registers must match number of default values");
 static_assert(ARRAY_LENGTH(stm32g4_opt_reg_offsets) == ARRAY_LENGTH(stm32g4_default_options_values),
 	"Number of stm32g4 option registers must match number of default values");
 static_assert(ARRAY_LENGTH(stm32wl_opt_reg_offsets) == ARRAY_LENGTH(stm32wl_default_options_values),
 	"Number of stm32wl option registers must match number of default values");
+static_assert(ARRAY_LENGTH(stm32wb_opt_reg_offsets) == ARRAY_LENGTH(stm32wb_default_options_values),
+	"Number of stm32wb option registers must match number of default values");
 
 /* Retrieve device basic information, just add to the vector to extend */
 static const stm32l4_device_info_s *stm32l4_get_device_info(const uint16_t device_id)
@@ -921,6 +937,8 @@ static uint32_t stm32l4_fpec_base_addr(const target_s *const target)
 {
 	if (target->part_id == ID_STM32WLxx)
 		return STM32WL_FPEC_BASE;
+	if (target->part_id == ID_STM32WBxx)
+		return STM32WB_FPEC_BASE;
 	return STM32L4_FPEC_BASE;
 }
 
@@ -951,6 +969,12 @@ static stm32l4_option_bytes_info_s stm32l4_get_opt_bytes_info(const uint16_t par
 			.word_count = ARRAY_LENGTH(stm32wl_default_options_values),
 			.offsets = stm32wl_opt_reg_offsets,
 			.default_values = stm32wl_default_options_values,
+		};
+	case ID_STM32WBxx:
+		return (stm32l4_option_bytes_info_s){
+			.word_count = ARRAY_LENGTH(stm32wb_default_options_values),
+			.offsets = stm32wb_opt_reg_offsets,
+			.default_values = stm32wb_default_options_values,
 		};
 	default:
 		return (stm32l4_option_bytes_info_s){
@@ -984,8 +1008,8 @@ static bool stm32l4_cmd_option(target_s *target, int argc, const char **argv)
 		tc_printf(target, "%s options not implemented!\n", "STM32L5");
 		return false;
 	}
-	if (target->part_id == ID_STM32WBxx || target->part_id == ID_STM32WB1x) {
-		tc_printf(target, "%s options not implemented!\n", "STM32WBxx");
+	if (target->part_id == ID_STM32WB1x) {
+		tc_printf(target, "%s options not implemented!\n", "STM32WB1x");
 		return false;
 	}
 	if (target->part_id == ID_STM32WLxx) {
