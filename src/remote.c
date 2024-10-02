@@ -255,10 +255,6 @@ static void remote_packet_process_jtag(const char *const packet, const size_t pa
 	}
 }
 
-#if !defined(PLATFORM_IDENT)
-#define PLATFORM_IDENT BOARD_IDENT
-#endif
-
 static void remote_packet_process_general(char *packet, const size_t packet_len)
 {
 	(void)packet_len;
@@ -309,7 +305,7 @@ static void remote_packet_process_general(char *packet, const size_t packet_len)
 #if ENABLE_DEBUG == 1 && defined(PLATFORM_HAS_DEBUG)
 		debug_bmp = true;
 #endif
-		remote_respond_string(REMOTE_RESP_OK, PLATFORM_IDENT "" FIRMWARE_VERSION);
+		remote_respond_string(REMOTE_RESP_OK, BOARD_IDENT);
 		break;
 	case REMOTE_TARGET_CLK_OE:
 		platform_target_clk_output_enable(packet[2] != '0');
