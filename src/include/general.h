@@ -184,4 +184,10 @@ static inline int vasprintf(char **strp, const char *const fmt, va_list ap)
 
 #endif /* _MSC_VER */
 
+#ifndef PLATFORM_IDENT_DYNAMIC
+#define BOARD_IDENT "Black Magic Probe " PLATFORM_IDENT "" FIRMWARE_VERSION
+#else
+#define BOARD_IDENT "Black Magic Probe (%s) " FIRMWARE_VERSION
+#endif
+
 #endif /* INCLUDE_GENERAL_H */

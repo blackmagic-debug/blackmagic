@@ -79,4 +79,8 @@ bool platform_spi_chip_select(uint8_t device_select);
 uint8_t platform_spi_xfer(spi_bus_e bus, uint8_t value);
 #endif
 
+#ifdef PLATFORM_IDENT_DYNAMIC
+const char *platform_ident(void);
+#endif
+
 #endif /* INCLUDE_PLATFORM_SUPPORT_H */

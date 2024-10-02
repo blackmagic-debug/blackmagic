@@ -255,7 +255,7 @@ static void remote_packet_process_jtag(const char *const packet, const size_t pa
 	}
 }
 
-#if !defined(BOARD_IDENT) && defined(BOARD_IDENT)
+#if !defined(PLATFORM_IDENT)
 #define PLATFORM_IDENT BOARD_IDENT
 #endif
 
