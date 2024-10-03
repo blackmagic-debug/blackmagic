@@ -305,7 +305,12 @@ static void remote_packet_process_general(char *packet, const size_t packet_len)
 #if ENABLE_DEBUG == 1 && defined(PLATFORM_HAS_DEBUG)
 		debug_bmp = true;
 #endif
+#ifndef PLATFORM_IDENT_DYNAMIC
 		remote_respond_string(REMOTE_RESP_OK, BOARD_IDENT);
+#else
+		snprintf(packet, GDB_PACKET_BUFFER_SIZE, BOARD_IDENT, platform_ident());
+		remote_respond_string(REMOTE_RESP_OK, packet);
+#endif
 		break;
 	case REMOTE_TARGET_CLK_OE:
 		platform_target_clk_output_enable(packet[2] != '0');
