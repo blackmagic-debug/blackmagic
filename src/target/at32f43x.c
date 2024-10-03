@@ -23,8 +23,8 @@
  * the device, providing the XML memory map and Flash memory programming.
  *
  * References:
- * ARTERY doc - RM_AT32F435_437_EN_V2.04.pdf
- *   Reference manual - AT32F435/437 Series Reference Manual
+ * AT32F435/437 Series Reference Manual
+ *   https://www.arterychip.com/download/RM/RM_AT32F435_437_EN_V2.04.pdf
  */
 
 #include "general.h"
@@ -114,6 +114,8 @@ static bool at32f43_mass_erase(target_s *target);
 #define AT32F4x_IDCODE_PART_MASK   0x00000fffU
 #define AT32F43_SERIES_4K          0x70084000U
 #define AT32F43_SERIES_2K          0x70083000U
+#define AT32F4x_PROJECT_ID         0x1ffff7f3U
+#define AT32F4x_FLASHSIZE          0x1ffff7e0U
 
 typedef struct at32f43_flash {
 	target_flash_s target_flash;
@@ -187,6 +189,7 @@ static void at32f43_detach(target_s *target)
 	cortexm_detach(target);
 }
 
+/* Identify AT32F43x "High Performance" line devices */
 static bool at32f43_detect(target_s *target, const uint16_t part_id)
 {
 	/*
@@ -289,7 +292,7 @@ static bool at32f43_detect(target_s *target, const uint16_t part_id)
 	return true;
 }
 
-/* Identify AT32F43x "High Performance" line devices (Cortex-M4) */
+/* Identify any Arterytek devices with Cortex-M4 and FPEC at 0x4002_3c00 */
 bool at32f43x_probe(target_s *target)
 {
 	// Artery clones use Cortex M4 cores
@@ -300,9 +303,15 @@ bool at32f43x_probe(target_s *target)
 	const uint32_t idcode = target_mem32_read32(target, AT32F43x_DBGMCU_IDCODE);
 	const uint32_t series = idcode & AT32F4x_IDCODE_SERIES_MASK;
 	const uint16_t part_id = idcode & AT32F4x_IDCODE_PART_MASK;
+	// ... and highest byte of UID
+	const uint8_t project_id = target_mem32_read8(target, AT32F4x_PROJECT_ID);
 
-	if (series == AT32F43_SERIES_4K || series == AT32F43_SERIES_2K)
+	DEBUG_TARGET("%s: idcode = %08" PRIx32 ", project_id = %02x\n", __func__, idcode, project_id);
+
+	/* 0x0e: F437 (has EMAC), 0x0d: F435 (no EMAC). 4K/2K describe sector sizes, not total flash capacity. */
+	if ((series == AT32F43_SERIES_4K || series == AT32F43_SERIES_2K) && (project_id == 0x0dU || project_id == 0x0eU))
 		return at32f43_detect(target, part_id);
+
 	return false;
 }
 
