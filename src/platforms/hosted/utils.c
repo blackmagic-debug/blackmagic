@@ -1,11 +1,13 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
- * Copyright (C) 2020 Uwe Bonnes (bon@elektron.ikp.physik.tu-darmstadt.de)
- * Base on code:
- * Copyright (C) 2011  Black Sphere Technologies Ltd.
- * Written by Gareth McMullin <gareth@blacksphere.co.nz>
- * and others.
+ * Copyright (C) 2011 Black Sphere Technologies Ltd.
+ * Copyright (C) 2020 Uwe Bonnes <bon@elektron.ikp.physik.tu-darmstadt.de>
+ * Copyright (C) 2022-2024 1BitSquared <info@1bitsquared.com>
+ *
+ * Originally written by Gareth McMullin <gareth@blacksphere.co.nz> and others.
+ * Modified by Uwe Bonnes <bon@elektron.ikp.physik.tu-darmstadt.de>
+ * Modified by Rachel Mant <git@dragonmux.network>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,6 +28,7 @@
 #include "general.h"
 
 #include <string.h>
+#include <stdio.h>
 
 #include "timeofday.h"
 #include "timing.h"
@@ -45,6 +48,23 @@ uint32_t platform_time_ms(void)
 	timeval_s tv;
 	gettimeofday(&tv, NULL);
 	return (tv.tv_sec * 1000U) + (tv.tv_usec / 1000U);
+}
+
+char *format_string(const char *format, ...)
+{
+	va_list args;
+	va_start(args, format);
+	const int len = vsnprintf(NULL, 0, format, args);
+	va_end(args);
+	if (len <= 0)
+		return NULL;
+	char *const ret = (char *)malloc(len + 1);
+	if (!ret)
+		return NULL;
+	va_start(args, format);
+	vsprintf(ret, format, args);
+	va_end(args);
+	return ret;
 }
 
 bool begins_with(const char *const str, const size_t str_length, const char *const value)

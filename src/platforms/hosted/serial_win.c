@@ -1,7 +1,11 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
- * Copyright (C) 2020  Uwe Bonnes (bon@elektron.ikp.physik.tu-darmstadt.de)
+ * Copyright (C) 2020 Uwe Bonnes <bon@elektron.ikp.physik.tu-darmstadt.de>
+ * Copyright (C) 2022-2024 1BitSquared <info@1bitsquared.com>
+ *
+ * Written by Uwe Bonnes <bon@elektron.ikp.physik.tu-darmstadt.de>
+ * Modified by Rachel Mant <git@dragonmux.network>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,6 +26,7 @@
 #include "platform.h"
 #include "remote.h"
 #include "cli.h"
+#include "utils.h"
 
 #include <assert.h>
 #include <string.h>
@@ -31,25 +36,6 @@
 
 #define NT_DEV_SUFFIX     "\\\\.\\"
 #define NT_DEV_SUFFIX_LEN ARRAY_LENGTH(NT_DEV_SUFFIX)
-
-static char *format_string(const char *format, ...) DEBUG_FORMAT_ATTR;
-
-static char *format_string(const char *format, ...)
-{
-	va_list args;
-	va_start(args, format);
-	const int len = vsnprintf(NULL, 0, format, args);
-	va_end(args);
-	if (len <= 0)
-		return NULL;
-	char *const ret = (char *)malloc(len + 1);
-	if (!ret)
-		return NULL;
-	va_start(args, format);
-	vsprintf(ret, format, args);
-	va_end(args);
-	return ret;
-}
 
 #define READ_BUFFER_LENGTH 4096U
 
