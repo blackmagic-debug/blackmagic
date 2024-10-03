@@ -34,20 +34,20 @@
 #endif // _MSC_VER <= 1932
 #endif
 
-#if !defined(BMD_IS_STDC) && !defined(BMD_MSVC_PRE_172)
+#if !defined(BMD_IS_STDC) && defined(BMD_MSVC_PRE_172)
 #error "Black Magic Debug must be built in a standards compliant C mode"
 #endif
 
 #ifndef _GNU_SOURCE
-// NOLINTNEXTLINE(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp)
+// NOLINTNEXTLINE(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp,readability-identifier-naming)
 #define _GNU_SOURCE
 #endif
 #ifndef _DEFAULT_SOURCE
-// NOLINTNEXTLINE(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp)
+// NOLINTNEXTLINE(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp,readability-identifier-naming)
 #define _DEFAULT_SOURCE
 #endif
 #if !defined(__USE_MINGW_ANSI_STDIO)
-// NOLINTNEXTLINE(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp)
+// NOLINTNEXTLINE(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp,readability-identifier-naming)
 #define __USE_MINGW_ANSI_STDIO 1
 #endif
 #if defined(_WIN32) || defined(__CYGWIN__)
