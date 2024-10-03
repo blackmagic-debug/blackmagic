@@ -511,22 +511,22 @@ static const probe_info_s *scan_for_devices(bmda_probe_s *info)
 	return probe_info_correct_order(probe_list);
 }
 
-int find_debuggers(bmda_cli_options_s *cl_opts, bmda_probe_s *info)
+bool find_debuggers(bmda_cli_options_s *cl_opts, bmda_probe_s *info)
 {
 	if (cl_opts->opt_device)
-		return 1;
+		return false;
 
 	const int result = libusb_init(&info->libusb_ctx);
 	if (result != LIBUSB_SUCCESS) {
 		DEBUG_ERROR("Failed to initialise libusb (%d): %s\n", result, libusb_error_name(result));
-		return -1;
+		return false;
 	}
 
 	/* Scan for all possible probes on the system */
 	const probe_info_s *probe_list = scan_for_devices(info);
 	if (!probe_list) {
 		DEBUG_WARN("No probes found\n");
-		return -1;
+		return false;
 	}
 	/* Count up how many were found and filter the list for a match to the program options request */
 	const size_t probes = probe_info_count(probe_list);
@@ -546,7 +546,8 @@ int find_debuggers(bmda_cli_options_s *cl_opts, bmda_probe_s *info)
 			DEBUG_WARN(" %2zu. %-20s %-25s %-25s %s\n", position, probe->product, probe->serial, probe->manufacturer,
 				probe->version);
 		probe_info_list_free(probe_list);
-		return cl_opts->opt_list_only ? 0 : 1; // false;
+		/* Indicate success if we've been asked to generate a listing only */
+		return cl_opts->opt_list_only;
 	}
 
 	/* We found a matching probe, populate bmda_probe_s and signal success */
@@ -557,14 +558,14 @@ int find_debuggers(bmda_cli_options_s *cl_opts, bmda_probe_s *info)
 		DEBUG_WARN("Multiple FTDI adapters match Vendor and Product ID.\n");
 		DEBUG_WARN("Please specify adapter type on command line using \"-c\" option.\n");
 		probe_info_list_free(probe_list);
-		return -1; //false
+		return false;
 	}
 	/* If the selected probe is CMSIS-DAP, check for v2 interfaces */
 	if (probe->type == PROBE_TYPE_CMSIS_DAP)
 		check_cmsis_interface_type(probe->device, info);
 
 	probe_info_list_free(probe_list);
-	return 0; // true;
+	return true;
 }
 
 /*

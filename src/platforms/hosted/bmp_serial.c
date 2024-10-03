@@ -48,12 +48,12 @@ void libusb_exit_function(bmda_probe_s *info)
 };
 
 #ifdef __APPLE__
-int find_debuggers(bmda_cli_options_s *cl_opts, bmda_probe_s *info)
+bool find_debuggers(bmda_cli_options_s *cl_opts, bmda_probe_s *info)
 {
-	DEBUG_ERROR("Please implement find_debuggers for MACOS!\n");
+	DEBUG_ERROR("Please use full BMDA on macOS, BMP-only not supported\n");
 	(void)cl_opts;
 	(void)info;
-	return -1;
+	return false;
 }
 #elif defined(__WIN32__) || defined(__CYGWIN__)
 
@@ -79,7 +79,7 @@ DEFINE_DEVPROPKEY(DEVPKEY_Device_BusReportedDeviceDesc, 0x540b947e, 0x8b40, 0x45
 
 /* List all USB devices with some additional information.
  * Unfortunately, this code is quite ugly. */
-int find_debuggers(bmda_cli_options_s *cl_opts, bmda_probe_s *info)
+bool find_debuggers(bmda_cli_options_s *cl_opts, bmda_probe_s *info)
 {
 	unsigned i;
 	DWORD dwSize;
@@ -96,7 +96,7 @@ int find_debuggers(bmda_cli_options_s *cl_opts, bmda_probe_s *info)
 
 	hDevInfo = SetupDiGetClassDevs(0, "USB", NULL, DIGCF_ALLCLASSES | DIGCF_PRESENT);
 	if (hDevInfo == INVALID_HANDLE_VALUE)
-		return -1;
+		return false;
 print_probes_info:
 	for (i = 0;; i++) {
 		char serial_number[sizeof info->serial];
@@ -133,20 +133,20 @@ print_probes_info:
 					 * or as a separate string, the result is pretty much the same. */
 					info->version[0] = 0;
 					if (probe_identified)
-						return 0;
+						return true;
 				}
 			}
 		}
 	}
 	if (is_printing_probes_info)
-		return 1;
+		return false;
 	if (probes_found == 1U)
 		/* Exactly one probe found. Its information has already been filled
 		 * in the detection loop, so use this probe. */
-		return 0;
+		return true;
 	if (probes_found < 1U) {
 		DEBUG_ERROR("No BMP probe found\n");
-		return -1;
+		return false;
 	}
 	/* Otherwise, if this line is reached, then more than one probe has been found,
 	 * and no probe was identified as selected by the user.
@@ -322,15 +322,15 @@ static const probe_info_s *scan_for_devices(void)
 	return probe_info_correct_order(probe_list);
 }
 
-int find_debuggers(bmda_cli_options_s *cl_opts, bmda_probe_s *info)
+bool find_debuggers(bmda_cli_options_s *cl_opts, bmda_probe_s *info)
 {
 	if (cl_opts->opt_device)
-		return 1;
+		return false;
 	/* Scan for all possible probes on the system */
 	const probe_info_s *const probe_list = scan_for_devices();
 	if (!probe_list) {
-		DEBUG_ERROR("No BMP probe found\n");
-		return -1;
+		DEBUG_ERROR("No Black Magic Probes found\n");
+		return false;
 	}
 	/* Count up how many were found and filter the list for a match to the program options request */
 	const size_t probes = probe_info_count(probe_list);
@@ -349,12 +349,12 @@ int find_debuggers(bmda_cli_options_s *cl_opts, bmda_probe_s *info)
 			DEBUG_WARN(
 				"%2zu: %s, Black Magic Debug, %s, %s\n", position, probe->serial, probe->manufacturer, probe->version);
 		probe_info_list_free(probe_list);
-		return 1; // false;
+		return false;
 	}
 
 	/* We found a matching probe, populate bmda_probe_s and signal success */
 	probe_info_to_bmda_probe(probe, info);
 	probe_info_list_free(probe_list);
-	return 0; // true;
+	return true;
 }
 #endif

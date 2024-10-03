@@ -129,7 +129,7 @@ void platform_init(int argc, char **argv)
 		bmda_probe_info.type = PROBE_TYPE_BMP;
 	else if (cl_opts.opt_gpio_map)
 		bmda_probe_info.type = PROBE_TYPE_GPIOD;
-	else if (find_debuggers(&cl_opts, &bmda_probe_info))
+	else if (!find_debuggers(&cl_opts, &bmda_probe_info))
 		exit(1);
 
 	if (cl_opts.opt_list_only)
