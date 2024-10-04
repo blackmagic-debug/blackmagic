@@ -35,6 +35,8 @@
 #include "utils.h"
 #include "version.h"
 
+#define BMP_PRODUCT_STRING "Black Magic Probe"
+
 void bmp_ident(bmda_probe_s *info)
 {
 	DEBUG_INFO("Black Magic Debug App (for BMP only) %s\n", FIRMWARE_VERSION);
@@ -57,6 +59,8 @@ bool find_debuggers(bmda_cli_options_s *cl_opts, bmda_probe_s *info)
 	return false;
 }
 #elif defined(_WIN32) || defined(__CYGWIN__)
+#define BMD_INSTANCE_PREFIX_LENGTH 22U
+
 static void display_error(const LSTATUS error, const char *const operation, const char *const path)
 {
 	char *message = NULL;
@@ -121,6 +125,23 @@ static const char *read_value_str_from_path(HKEY path_handle, const char *const 
 	return value;
 }
 
+static probe_info_s *discover_device_entry(const char *const instance_id, probe_info_s *const probe_list)
+{
+	/* Extract the serial number portion of the instance ID */
+	const char *const serial = strdup(instance_id + BMD_INSTANCE_PREFIX_LENGTH);
+	/* If that failed to duplicate the string segment needed, bail */
+	if (!serial)
+		return probe_list;
+
+	/* Prepare the probe information to hand to the probe_info_s system */
+	const char *version = NULL;
+	const char *type = NULL;
+	const char *const product = strdup(BMP_PRODUCT_STRING);
+
+	/* Finish up by adding the new probe to the list */
+	return probe_info_add_by_serial(probe_list, PROBE_TYPE_BMP, type, product, serial, version);
+}
+
 static const probe_info_s *scan_for_devices(void)
 {
 	HKEY driver_handle = open_hklm_registry_path("SYSTEM\\CurrentControlSet\\Services\\usbccgp\\Enum", KEY_READ);
@@ -171,7 +192,21 @@ static const probe_info_s *scan_for_devices(void)
 			free((void *)instance_id);
 			continue;
 		}
+		/* If we got a valid prefix, go figure out what the device is exactly and make a probe_info_s entry for it */
+		probe_info_s *probe_info = discover_device_entry(instance_id, probe_list);
+		/* If the operation would have succeeded but probe_info_add_by_serial fails, we exhausted memory. */
+		if (!probe_info) {
+			free((void *)instance_id);
+			probe_info_list_free(probe_list);
+			probe_list = NULL;
+			break;
+		}
+		/* If the operation returned the probe_list unchanged, it failed to discover the device */
+		if (probe_info == probe_list)
+			DEBUG_ERROR(
+				"Error discovering potential probe with serial \"%s\"\n", instance_id + BMD_INSTANCE_PREFIX_LENGTH);
 		free((void *)instance_id);
+		probe_list = probe_info;
 	}
 	free((void *)bmd_instance_prefix);
 	RegCloseKey(driver_handle);
@@ -187,7 +222,6 @@ static const probe_info_s *scan_for_devices(void)
 #define BMP_IDSTRING_BLACKMAGIC  "usb-Black_Magic_Debug_Black_Magic_Probe"
 #define BMP_IDSTRING_1BITSQUARED "usb-1BitSquared_Black_Magic_Probe"
 #define DEVICE_BY_ID             "/dev/serial/by-id"
-#define BMP_PRODUCT_STRING       "Black Magic Probe"
 
 typedef struct dirent dirent_s;
 
