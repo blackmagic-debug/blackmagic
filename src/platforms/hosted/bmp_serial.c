@@ -125,8 +125,10 @@ static const probe_info_s *scan_for_devices(void)
 {
 	HKEY driver_handle = open_hklm_registry_path("SYSTEM\\CurrentControlSet\\Services\\usbccgp\\Enum", KEY_READ);
 	/* Check if we failed to open the registry key for enumeration */
-	if (driver_handle == INVALID_HANDLE_VALUE)
+	if (driver_handle == INVALID_HANDLE_VALUE) {
+		DEBUG_INFO("No composite devices have been enumerated on this system since boot\n");
 		return NULL;
+	}
 	/*
 	 * Now we've got a key to work with, grab the "Count" value from the USBCCGP driver so we know
 	 * how many composite devices exist at this moment on the user's system
@@ -134,6 +136,11 @@ static const probe_info_s *scan_for_devices(void)
 	uint32_t device_count = 0U;
 	if (!read_value_u32_from_path(driver_handle, "Count", &device_count)) {
 		DEBUG_ERROR("Failed to determine how many USB devices are attached to your computer\n");
+		RegCloseKey(driver_handle);
+		return NULL;
+	}
+	if (device_count == 0U) {
+		DEBUG_INFO("No composite devices currently plugged in");
 		RegCloseKey(driver_handle);
 		return NULL;
 	}
