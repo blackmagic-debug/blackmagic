@@ -1,8 +1,8 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
- * Copyright (C) 2023 1BitSquared <info@1bitsquared.com>
- * Written by ALTracer <tolstov_den@mail.ru>
+ * Copyright (C) 2023-2024 1BitSquared <info@1bitsquared.com>
+ * Written by ALTracer <11005378+ALTracer@users.noreply.github.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
