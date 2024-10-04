@@ -64,6 +64,7 @@ bool find_debuggers(bmda_cli_options_s *cl_opts, bmda_probe_s *info)
 }
 #elif defined(_WIN32) || defined(__CYGWIN__)
 #define BMD_INSTANCE_PREFIX_LENGTH 22U
+#define BMP_PRODUCT_STRING_LENGTH  ARRAY_LENGTH(BMP_PRODUCT_STRING)
 
 static void display_error(const LSTATUS error, const char *const operation, const char *const path)
 {
@@ -200,6 +201,21 @@ static const char *query_product_description(const char *const instance_id, size
 	return result;
 }
 
+static char *strndup(const char *const src, const size_t size)
+{
+	/* Determine how many bytes to copy to the new string, including the NULL terminator */
+	const size_t length = MIN(size, strlen(src)) + 1U;
+	/* Try to allocate storage for the new string */
+	char *result = malloc(length);
+	if (!result)
+		return NULL;
+	/* Now we have storage, copy the bytes over */
+	memcpy(result, src, length - 1U);
+	/* And finally terminate the string to return */
+	result[length - 1U] = '\0';
+	return result;
+}
+
 static probe_info_s *discover_device_entry(const char *const instance_id, probe_info_s *const probe_list)
 {
 	/* Extract the serial number portion of the instance ID */
@@ -235,7 +251,53 @@ static probe_info_s *discover_device_entry(const char *const instance_id, probe_
 	 * From this we want to extract two main things: version (if available), and probe type
 	 */
 
+	/* Now try to determine if the probe is a BMP or one of the alternate platforms */
+	const char *const opening_paren = strchr(description + BMP_PRODUCT_STRING_LENGTH, '(');
+	/* If there's no opening `(` in the string, it's native */
+	if (!opening_paren) {
+		type = strdup("Native");
+		/*
+		 * Scan from the end of the string, if there are some remaining characters after the product string proper,
+		 * and look for the last space - everything right of that must be the version string.
+		 */
+		if (description_len > BMP_PRODUCT_STRING_LENGTH) {
+			const char *version_begin = strrchr(description, ' ');
+			/* Thankfully, this can't fail, so just grab the version string from what we got */
+			version = strdup(version_begin + 1U);
+		} else
+			version = strdup("Unknown");
+	} else {
+		/* Otherwise, we've now got to find the closing `)` and extract the substring created */
+		const char *const closing_paren = strchr(opening_paren, ')');
+		if (!closing_paren) {
+			DEBUG_ERROR("Production description for device with serial %s is invalid, founding opening '(' but no "
+						"closing ')'\n",
+				serial);
+			free((void *)description);
+			free((void *)product);
+			free((void *)serial);
+			return probe_list;
+		}
+		/* Grab just the substring inside the parens as the type value */
+		type = strndup(opening_paren + 1U, (closing_paren - opening_paren) - 1U);
+		/* Going forward a couple of characters, making sure we find a space, take the remainder as the version string */
+		const char *version_begin = strchr(closing_paren, ' ');
+		/* Check if that failed, and if it didn't, grab what we got as the version string */
+		if (version_begin)
+			version = strdup(version_begin + 1U);
+		else
+			version = strdup("Unknown");
+	}
 	free((void *)description);
+
+	if (!version || !type) {
+		DEBUG_ERROR("Failed to construct version or type string");
+		free((void *)serial);
+		free((void *)version);
+		free((void *)type);
+		free((void *)product);
+		return probe_list;
+	}
 
 	/* Finish up by adding the new probe to the list */
 	return probe_info_add_by_serial(probe_list, PROBE_TYPE_BMP, type, product, serial, version);
@@ -358,7 +420,7 @@ char *extract_serial(const char *const device, const size_t length)
 	return result;
 }
 
-static probe_info_s *parse_device_node(const char *name, probe_info_s *probe_list)
+static probe_info_s *parse_device_node(const char *name, probe_info_s *const probe_list)
 {
 	/* Starting with a string such as 'usb-Black_Magic_Debug_Black_Magic_Probe_v1.8.0-650-g829308db_8BB20695-if00' */
 	const size_t name_len = strlen(name) + 1U;
