@@ -31,7 +31,7 @@
 #include <sys/types.h>
 
 #if defined(_MSC_VER)
-#include <BaseTsd.h>
+#include <basetsd.h>
 typedef SSIZE_T ssize_t;
 typedef int32_t mode_t;
 #endif /* _MSC_VER */
