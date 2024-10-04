@@ -172,7 +172,8 @@ static const probe_info_s *scan_for_devices(void)
 	return probe_info_correct_order(probe_list);
 }
 #else
-/* Old ID: Black_Sphere_Technologies_Black_Magic_Probe_BFE4D6EC-if00
+/*
+ * Old ID: Black_Sphere_Technologies_Black_Magic_Probe_BFE4D6EC-if00
  * Recent: Black_Sphere_Technologies_Black_Magic_Probe_v1.7.1-212-g212292ab_7BAE7AB8-if00
  * usb-Black_Sphere_Technologies_Black_Magic_Probe__SWLINK__v1.7.1-155-gf55ad67b-dirty_DECB8811-if00
  */
@@ -294,7 +295,7 @@ static probe_info_s *parse_device_node(const char *name, probe_info_s *probe_lis
 	}
 
 	if (!version || !type) {
-		DEBUG_ERROR("Failed to construct version of type string");
+		DEBUG_ERROR("Failed to construct version or type string");
 		free(serial);
 		free(version);
 		free(type);
