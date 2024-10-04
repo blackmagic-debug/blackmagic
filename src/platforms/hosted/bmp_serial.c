@@ -20,7 +20,6 @@
 /* Find all known serial connected debuggers */
 
 #include "general.h"
-#include <string.h>
 #if defined(_WIN32) || defined(__CYGWIN__)
 #define NOMINMAX
 #define WIN32_LEAN_AND_MEAN
@@ -29,6 +28,7 @@
 #else
 #include <dirent.h>
 #endif
+#include <string.h>
 #include <errno.h>
 #include "bmp_hosted.h"
 #include "probe_info.h"
@@ -146,11 +146,10 @@ static const probe_info_s *scan_for_devices(void)
 	}
 
 	/* Before looping through all the composite devices, make a string of the expected prefix to look for */
-	const char *const bmd_enum_prefix = format_string("USB\\VID_%04X&PID_%04X\\", VENDOR_ID_BMP, PRODUCT_ID_BMP);
+	const char *const bmd_instance_prefix = format_string("USB\\VID_%04X&PID_%04X\\", VENDOR_ID_BMP, PRODUCT_ID_BMP);
 	/* Check if string formatting failed for some reason */
-	if (!bmd_enum_prefix)
+	if (!bmd_instance_prefix)
 		return NULL;
-	const size_t bmd_enum_prefix_len = strlen(bmd_enum_prefix);
 
 	probe_info_s *probe_list = NULL;
 	/* Loop through each of the devices which are named by number and extract serial numbers */
@@ -158,23 +157,23 @@ static const probe_info_s *scan_for_devices(void)
 		/* Turn the index into a string */
 		const char *const value_name = format_string("%" PRIu32, device_index);
 		if (!value_name) {
-			free((void *)bmd_enum_prefix);
+			free((void *)bmd_instance_prefix);
 			RegCloseKey(driver_handle);
 			return NULL;
 		}
-		/* Now read the registry value to get a serial number */
-		size_t serial_len = 0U;
-		const char *const serial = read_value_str_from_path(driver_handle, value_name, &serial_len);
+		/* Now read the registry value to get an instance ID */
+		size_t instance_id_len = 0U;
+		const char *const instance_id = read_value_str_from_path(driver_handle, value_name, &instance_id_len);
 		/* Free the index string before error checking or doing anything else */
 		free((void *)value_name);
-		/* Check that the value read is valid and that it begins with the expected prefix for a BMP */
-		if (!serial || !begins_with(serial, serial_len, bmd_enum_prefix)) {
-			free((void *)serial);
+		/* Check that the value read is valid and that it begins with the expected prefix for a BMD probe */
+		if (!instance_id || !begins_with(instance_id, instance_id_len, bmd_instance_prefix)) {
+			free((void *)instance_id);
 			continue;
 		}
-		free((void *)serial);
+		free((void *)instance_id);
 	}
-	free((void *)bmd_enum_prefix);
+	free((void *)bmd_instance_prefix);
 	RegCloseKey(driver_handle);
 	return probe_info_correct_order(probe_list);
 }
