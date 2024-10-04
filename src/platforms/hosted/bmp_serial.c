@@ -24,6 +24,10 @@
 #define NOMINMAX
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+#include <initguid.h>
+#include <usbiodef.h>
+#include <devpkey.h>
+#include <setupapi.h>
 #include <assert.h>
 #else
 #include <dirent.h>
@@ -125,6 +129,77 @@ static const char *read_value_str_from_path(HKEY path_handle, const char *const 
 	return value;
 }
 
+static const char *query_product_description(const char *const instance_id, size_t *const result_len)
+{
+	/* Start by asking for all the device information for the device */
+	HDEVINFO device_info = SetupDiGetClassDevs(&GUID_DEVINTERFACE_USB_DEVICE, instance_id, NULL, DIGCF_DEVICEINTERFACE);
+	/* Check if that suceeded, and bail if it didn't.. */
+	if (device_info == INVALID_HANDLE_VALUE) {
+		display_error((LSTATUS)GetLastError(), "querying", "device information");
+		return NULL;
+	}
+
+	/* Extract the device info data from the information set so we can then query a property */
+	SP_DEVINFO_DATA device_data = {
+		.cbSize = sizeof(SP_DEVINFO_DATA),
+	};
+	if (!SetupDiOpenDeviceInfo(device_info, instance_id, NULL, 0U, &device_data)) {
+		/* If that didn't work, report the error and bail out */
+		display_error((LSTATUS)GetLastError(), "retreiving", "device information");
+		SetupDiDestroyDeviceInfoList(device_info);
+		return NULL;
+	}
+
+	/* Find out how big a buffer is needed for the string */
+	DEVPROPTYPE property_type = DEVPROP_TYPE_NULL;
+	DWORD value_len = 0U;
+	/*
+	 * This call is guaranteed to "fail" because we don't provide a big enough buffer,
+	 * so we have to be careful how we check the result
+	 */
+	if (!SetupDiGetDevicePropertyW(device_info, &device_data, &DEVPKEY_Device_BusReportedDeviceDesc, &property_type,
+			NULL, 0U, &value_len, 0U)) {
+		const DWORD result = GetLastError();
+		/* Single out the result code for the buffer size return and dispatch the rest to error handling */
+		if (result != ERROR_INSUFFICIENT_BUFFER) {
+			display_error((LSTATUS)result, "querying", "product description");
+			SetupDiDestroyDeviceInfoList(device_info);
+			return NULL;
+		}
+	}
+	/* Check the value will be of the correct type */
+	if (property_type != DEVPROP_TYPE_STRING) {
+		DEBUG_ERROR("Product description value of improper type\n");
+		SetupDiDestroyDeviceInfoList(device_info);
+		return NULL;
+	}
+
+	/* Now we know how big of an allocation to make, allocate a buffer big enough to receive the value */
+	uint8_t *const value = calloc(1, value_len);
+	/* Check if the allocation succeeded, and bail if not */
+	if (!value) {
+		DEBUG_ERROR("Could not allocate sufficient memory for device product description value\n");
+		SetupDiDestroyDeviceInfoList(device_info);
+		return NULL;
+	}
+	/* Now actually retreive the description string and check the result of the call is sane */
+	assert(SetupDiGetDevicePropertyW(device_info, &device_data, &DEVPKEY_Device_BusReportedDeviceDesc, &property_type,
+			   value, value_len, NULL, 0U) == TRUE);
+	assert(property_type == DEVPROP_TYPE_STRING);
+	/* Clean up working with the device info */
+	SetupDiDestroyDeviceInfoList(device_info);
+	/*
+	 * The result of all this will be a wide character string, which is not particularly useful to us,
+	 * so, convert the string to UTF-8 for use in BMD and return that instead.
+	 */
+	const size_t value_len_chars = wcsnlen((wchar_t *)value, value_len / 2U) + 1U;
+	*result_len = (size_t)WideCharToMultiByte(CP_UTF8, 0U, (wchar_t *)value, (int)value_len_chars, NULL, 0, NULL, NULL);
+	char *const result = malloc(*result_len);
+	WideCharToMultiByte(CP_UTF8, 0U, (wchar_t *)value, (int)value_len_chars, result, (int)*result_len, NULL, NULL);
+	free(value);
+	return result;
+}
+
 static probe_info_s *discover_device_entry(const char *const instance_id, probe_info_s *const probe_list)
 {
 	/* Extract the serial number portion of the instance ID */
@@ -137,6 +212,30 @@ static probe_info_s *discover_device_entry(const char *const instance_id, probe_
 	const char *version = NULL;
 	const char *type = NULL;
 	const char *const product = strdup(BMP_PRODUCT_STRING);
+
+	/* Query SetupAPI to find out what the actual product description string of the device is */
+	size_t description_len = 0U;
+	const char *const description = query_product_description(instance_id, &description_len);
+	/* Check that the query succeeded, then double-check that the string starts with the expected product string */
+	if (!description || !begins_with(description, description_len, BMP_PRODUCT_STRING)) {
+		if (description)
+			DEBUG_ERROR("Product description for device with serial %s was not valid\n", serial);
+		else
+			DEBUG_ERROR("Failed to retrieve product description for device with serial %s\n", serial);
+		free((void *)description);
+		free((void *)product);
+		free((void *)serial);
+		return probe_list;
+	}
+	/*
+	 * At this point we should have a product string that's in one of the following forms:
+	 * Recent: Black Magic Probe v1.10.0-1273-g2b1ce9aee
+	 *       : Black Magic Probe (ST-Link v2) v1.10.0-1273-g2b1ce9aee
+	 *   Old : Black Magic Probe
+	 * From this we want to extract two main things: version (if available), and probe type
+	 */
+
+	free((void *)description);
 
 	/* Finish up by adding the new probe to the list */
 	return probe_info_add_by_serial(probe_list, PROBE_TYPE_BMP, type, product, serial, version);
