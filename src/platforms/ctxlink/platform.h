@@ -159,8 +159,6 @@
 #define SWO_UART_ISR    usart6_isr
 #define SWO_UART_IRQ    NVIC_USART6_IRQ
 
-#define TRACESWO_PROTOCOL 2 /* 1 = Manchester, 2 = NRZ / async */
-
 /* USB pin definitions */
 #define USB_PU_PORT GPIOA
 #define USB_PORT    GPIOA
