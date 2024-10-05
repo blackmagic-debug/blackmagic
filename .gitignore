@@ -27,3 +27,5 @@ scripts/swolisten
 
 ozone/
 .direnv/
+
+deps/winc1500
