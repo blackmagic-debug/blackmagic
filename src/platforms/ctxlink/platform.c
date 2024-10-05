@@ -287,7 +287,7 @@ void platform_init(void)
 //	Return number of bytes available from the WiFi client
 //
 
-static bool fStartup = true; ///< True to startup
+static bool startup = true; ///< True to startup
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 /// <summary> Platform tasks.</summary>
@@ -298,8 +298,8 @@ static bool fStartup = true; ///< True to startup
 void platform_tasks(void)
 {
 	app_task(); // WiFi Server app tasks
-	if (fStartup == true) {
-		fStartup = false;
+	if (startup == true) {
+		startup = false;
 		platform_delay(1000);
 	}
 	m2m_wifi_task();   // WINC1500 tasks
@@ -419,6 +419,7 @@ bool platform_check_battery_voltage(void)
 		//
 		// Is the voltage good?
 		//
+		/* NOLINTNEXTLINE(bugprone-branch-clone) */
 		if (input_voltages[CTXLINK_ADC_BATTERY] <= BATTERY_LOW) {
 			last_battery_state = fResult = false;
 		} else {
