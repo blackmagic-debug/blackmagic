@@ -77,13 +77,12 @@ static void adc_init(void)
 // e.g. 38400,8,N,1
 bool platform_configure_uart(char *configurationString)
 {
-	bool fResult;
-	uint32_t baudRate;
-	uint32_t bits;
-	uint32_t stopBits;
-	char parity;
-	uint32_t count;
 	if (strlen(configurationString) > 5) {
+		uint32_t baudRate;
+		uint32_t bits;
+		uint32_t stopBits;
+		char parity;
+		int count;
 		count = sscanf(configurationString, "%ld,%ld,%c,%ld", &baudRate, &bits, &parity, &stopBits);
 		if (count == 4) {
 			uint32_t parityValue;
@@ -108,12 +107,9 @@ bool platform_configure_uart(char *configurationString)
 			}
 			}
 			usart_set_parity(USBUSART, parityValue);
-			fResult = true;
 		}
-	} else {
-		fResult = true; // ignore possible newline strings
 	}
-	return fResult;
+	return true;
 }
 
 void wifi_init(void)
