@@ -39,6 +39,8 @@
 #include <libopencm3/cm3/cortex.h>
 #include <libopencm3/usb/dwc/otg_fs.h>
 #include <libopencm3/stm32/f4/flash.h>
+#include "WiFi_Server.h"
+#include "winc1500_api.h"
 
 #define CTXLINK_BATTERY_INPUT        0 // ADC Channel for battery input
 #define CTXLINK_TARGET_VOLTAGE_INPUT 8 // ADC Chanmel for target voltage
@@ -65,6 +67,60 @@ static void adc_init(void)
 	/* Wait for ADC starting up. */
 	for (volatile size_t i = 0; i < 800000; i++) /* Wait a bit. */
 		__asm__("nop");
+}
+
+//
+// Use the passed string to configure the USB UART
+//
+// e.g. 38400,8,N,1
+bool platform_configure_uart(char *configurationString)
+{
+	bool fResult;
+	uint32_t baudRate;
+	uint32_t bits;
+	uint32_t stopBits;
+	char parity;
+	uint32_t count;
+	if (strlen(configurationString) > 5) {
+		count = sscanf(configurationString, "%ld,%ld,%c,%ld", &baudRate, &bits, &parity, &stopBits);
+		if (count == 4) {
+			uint32_t parityValue;
+			usart_set_baudrate(USBUSART, baudRate);
+			usart_set_databits(USBUSART, bits);
+			usart_set_stopbits(USBUSART, stopBits);
+			switch (parity) {
+			default:
+			case 'N': {
+				parityValue = USART_PARITY_NONE;
+				break;
+			}
+
+			case 'O': {
+				parityValue = USART_PARITY_ODD;
+				break;
+			}
+
+			case 'E': {
+				parityValue = USART_PARITY_EVEN;
+				break;
+			}
+				usart_set_parity(USBUSART, parityValue);
+			}
+			fResult = true;
+		}
+	} else {
+		fResult = true; // ignore possible newline strings
+	}
+	return fResult;
+}
+
+void wifi_init(void)
+{
+	//
+	// Initialize the WiFi server app
+	//
+	m2m_wifi_init();
+	APP_Initialize();
 }
 
 void platform_adc_read(void)
@@ -191,6 +247,25 @@ void platform_init(void)
 
 	platform_timing_init();
 	adc_init();
+	wifi_init(); //	Setup the Wifi channel
+#ifdef WINC_1500_FIRMWARE_UPDATE
+	//
+	// ONLY for firmware update
+	//
+	// Perform WINC1500 reset sequence
+	//
+	m2mStub_PinSet_CE(M2M_WIFI_PIN_LOW);
+	m2mStub_PinSet_RESET(M2M_WIFI_PIN_LOW);
+	DelayMs(100);
+	m2mStub_PinSet_CE(M2M_WIFI_PIN_HIGH);
+	DelayMs(10);
+	m2mStub_PinSet_RESET(M2M_WIFI_PIN_HIGH);
+	DelayMs(10);
+	while (1) {
+		;
+	}
+#endif
+
 	blackmagic_usb_init();
 	aux_serial_init();
 
@@ -199,6 +274,36 @@ void platform_init(void)
 	OTG_FS_GCCFG &= ~(OTG_GCCFG_VBUSBSEN | OTG_GCCFG_VBUSASEN);
 
 	/* By default, do not drive the SWD bus too fast. */
+}
+
+//
+// The following method is called in the main gdb loop in order to run
+// the app and wifi tasks
+//
+// It also checks for GDB packets from a connected WiFi client
+//
+//	Return "0" if no WiFi client or no data from client
+//	Return number of bytes available from the WiFi client
+//
+
+static bool fStartup = true; ///< True to startup
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+/// <summary> Platform tasks.</summary>
+///
+/// <remarks> Sid Price, 3/15/2018.</remarks>
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+void platform_tasks(void)
+{
+	APP_Task(); // WiFi Server app tasks
+	if (fStartup == true) {
+		fStartup = false;
+		platform_delay(1000);
+	}
+	m2m_wifi_task();  // WINC1500 tasks
+	GDB_TCPServer();  // Run the TCP sever state machine
+	DATA_TCPServer(); // Run the Uart/Debug TCP server
 }
 
 void platform_nrst_set_val(bool assert)
@@ -243,6 +348,71 @@ bool platform_target_set_power(const bool power)
 void platform_target_clk_output_enable(bool enable)
 {
 	(void)enable;
+}
+
+//
+// With a 3V3 reference voltage and using a 12 bit ADC each bit represents 0.8mV
+//  Note the battery voltage is divided by 2 with resistor divider
+//
+// No battery voltage 1 == 2.0v or a count of 1250
+// No battery voltage 2 == 4.268v or a count of 2668
+// Battery present (report voltage) < 4.268v or a count of 2667
+// Low batter voltage == 3.6v or a count of 2250
+//
+#define uiBattVoltage_1 1250
+#define uiBattVoltage_2 2668
+#define uiLowBattery    2250
+
+volatile uint32_t retVal;
+volatile uint32_t batteryVoltage = 0;
+
+bool fLastState = true;
+bool fBatteryPresent = false;
+
+#define voltagePerBit 0.000806
+
+const char *platform_battery_voltage(void)
+{
+	static char ret[64] = {0};
+	if (fBatteryPresent == true) {
+		double batteryVoltageAsDouble = (batteryVoltage * voltagePerBit) * 2;
+		sprintf(&ret[0], "\n      Battery : %.3f", batteryVoltageAsDouble);
+		//
+		// Let's truncate to 2 places
+		//
+		ret[21] = 'V';
+		ret[22] = '\n';
+		ret[23] = 0x00;
+	} else {
+		sprintf(&ret[0], "\n      Battery : Not present");
+	}
+	return ret;
+}
+
+bool platform_check_battery_voltage(void)
+{
+	bool fResult;
+	platform_adc_read();
+	batteryVoltage = input_voltages[CTXLINK_ADC_BATTERY];
+	fResult = fLastState;
+	//
+	// Is battery connected?
+	//
+	if ((batteryVoltage <= uiBattVoltage_1) || (batteryVoltage >= uiBattVoltage_2)) {
+		fBatteryPresent = false;
+		fLastState = fResult = true;
+	} else {
+		fBatteryPresent = true;
+		//
+		// Is the voltage good?
+		//
+		if (batteryVoltage <= uiLowBattery) {
+			fLastState = fResult = false;
+		} else {
+			fLastState = fResult = true;
+		}
+	}
+	return fResult;
 }
 
 bool platform_spi_init(const spi_bus_e bus)
