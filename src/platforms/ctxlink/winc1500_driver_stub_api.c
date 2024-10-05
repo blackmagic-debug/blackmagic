@@ -1,49 +1,21 @@
-
-/**
-  WINC1500 Driver Stub API Source File 
-
-  @Company
-    Microchip Technology Inc.
-
-  @File Name
-    winc1500_driver_stub_api.c
-
-  @Summary
-    Before one can use the WINC1500 Driver API, there are some MCU-specific stub 
-    functions that must be coded. The WINC1500 Driver will call these functions 
-    during run-time.
-
-  @Description
-    The function prototypes are provided using the MPLAB Code Configurator (MCC)
-    Plug-in. The MLA Driver will call these functions, but they must be coded by 
-    the user. The stub functions control MUC-specific hardware and event handling:
-       - SPI Interface
-       - GPIO control
-       - 1ms Timer
-       - Interrupt from WINC1500
-       - Event handling for Wi-Fi, socket, and OTA events
- */
-
 /*
-    (c) 2016 Microchip Technology Inc. and its subsidiaries. You may use this
-    software and any derivatives exclusively with Microchip products.
-
-    THIS SOFTWARE IS SUPPLIED BY MICROCHIP "AS IS". NO WARRANTIES, WHETHER
-    EXPRESS, IMPLIED OR STATUTORY, APPLY TO THIS SOFTWARE, INCLUDING ANY IMPLIED
-    WARRANTIES OF NON-INFRINGEMENT, MERCHANTABILITY, AND FITNESS FOR A
-    PARTICULAR PURPOSE, OR ITS INTERACTION WITH MICROCHIP PRODUCTS, COMBINATION
-    WITH ANY OTHER PRODUCTS, OR USE IN ANY APPLICATION.
-
-    IN NO EVENT WILL MICROCHIP BE LIABLE FOR ANY INDIRECT, SPECIAL, PUNITIVE,
-    INCIDENTAL OR CONSEQUENTIAL LOSS, DAMAGE, COST OR EXPENSE OF ANY KIND
-    WHATSOEVER RELATED TO THE SOFTWARE, HOWEVER CAUSED, EVEN IF MICROCHIP HAS
-    BEEN ADVISED OF THE POSSIBILITY OR THE DAMAGES ARE FORESEEABLE. TO THE
-    FULLEST EXTENT ALLOWED BY LAW, MICROCHIP'S TOTAL LIABILITY ON ALL CLAIMS IN
-    ANY WAY RELATED TO THIS SOFTWARE WILL NOT EXCEED THE AMOUNT OF FEES, IF ANY,
-    THAT YOU HAVE PAID DIRECTLY TO MICROCHIP FOR THIS SOFTWARE.
-
-    MICROCHIP PROVIDES THIS SOFTWARE CONDITIONALLY UPON YOUR ACCEPTANCE OF THESE
-    TERMS.
+ * This file is part of the Black Magic Debug project.
+ *
+ * Copyright (C) 2024  Sid Price.
+ * Written by Sid Price <sid@sidprice.com>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 //==============================================================================
@@ -200,7 +172,7 @@ void m2mStub_SpiTxRx(uint8_t *p_txBuf, uint16_t txLen, uint8_t *p_rxBuf, uint16_
 	//
 	uint8_t outputBuffer[256] = {0};
 	uint8_t inputBuffer[256] = {0};
-	/* 
+	/*
      *	total number of byte to clock is whichever is larger, txLen or rxLen
      */
 	byteCount = (txLen >= rxLen) ? txLen : rxLen;
@@ -245,7 +217,7 @@ void m2m_wifi_handle_events(t_m2mWifiEventType eventCode, t_wifiEventData *p_eve
 	if (gpfAppWifiCb)
 		gpfAppWifiCb(eventCode, p_eventData);
 	else
-		dprintf("STUB_WIFI_EVENT[%d]: Wi-Fi event handler not registered!\r\n", eventCode);
+		DEBUG_WARN("STUB_WIFI_EVENT[%d]: Wi-Fi event handler not registered!\r\n", eventCode);
 }
 
 //             --------------- * end of wifi event block * ---------------
@@ -262,20 +234,26 @@ void m2m_socket_handle_events(SOCKET sock, t_m2mSocketEventType eventCode, t_soc
 	if (gpfAppSocketCb)
 		gpfAppSocketCb(sock, eventCode, p_eventData);
 	else
-		dprintf("STUB_SOCK_EVENT[%d]: Socket event handler not registered!\r\n", eventCode);
+		DEBUG_WARN("STUB_SOCK_EVENT[%d]: Socket event handler not registered!\r\n", eventCode);
 }
 
 //             --------------- * end of socket event block * ---------------
 
 void m2m_ota_handle_events(t_m2mOtaEventType eventCode, t_m2mOtaEventData *p_eventData)
 {
+#if ENABLE_DEBUG == 0
+	(void)eventCode;
+#endif
 	(void)p_eventData;
-	dprintf("STUB_OTA_EVENT[%d]: OTA event handler not registered!\r\n", eventCode);
+	DEBUG_WARN("STUB_OTA_EVENT[%d]: OTA event handler not registered!\r\n", eventCode);
 }
 
 void m2m_error_handle_events(uint32_t errorCode)
 {
-	dprintf("STUB_ERR_EVENT[x]: ERROR EVENT: %lu\n", errorCode);
+#if ENABLE_DEBUG == 0
+	(void)errorCode;
+#endif
+	DEBUG_WARN("STUB_ERR_EVENT[x]: ERROR EVENT: %lu\n", errorCode);
 }
 
 #if defined(M2M_ENABLE_SPI_FLASH)
