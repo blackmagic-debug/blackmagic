@@ -65,7 +65,7 @@ static uint8_t swoData[BUFFER_SIZE];
 
 void traceSendData(void)
 {
-	if (isSwoTraceClientConnected()) {
+	if (is_swo_trace_client_connected()) {
 		uint32_t dataCount;
 		__atomic_load(&bufferSize, &dataCount, __ATOMIC_RELAXED);
 		if (dataCount >= FULL_SWO_PACKET) {
@@ -78,7 +78,7 @@ void traceSendData(void)
 					outBuf = 0;
 				}
 			}
-			SendSwoTraceData(&swoData[0], dataCount);
+			send_swo_trace_data(&swoData[0], dataCount);
 			__atomic_fetch_sub(&bufferSize, dataCount, __ATOMIC_RELAXED);
 		}
 	}
@@ -98,7 +98,7 @@ void _trace_buf_drain(usbd_device *dev, uint8_t ep)
 	// to do. The network code will pick up the data
 	// and deal with it directly out of the trace_rx_buf
 	//
-	if (isSwoTraceClientConnected()) {
+	if (is_swo_trace_client_connected()) {
 		return;
 	}
 	//
@@ -199,8 +199,8 @@ void traceswo_init(uint32_t swo_chan_bitmask)
 	// //
 	// if (isGDBClientConnected()) {
 	// 	// Check if SWO Trace Server is already active
-	// 	if (!swoTraceServerActive()) {
-	// 		WiFi_setupSwoTraceServer();
+	// 	if (!swo_trace_server_active()) {
+	// 		wifi_setup_swo_trace_server();
 	// 	}
 	// }
 	// // Enable interrupts
