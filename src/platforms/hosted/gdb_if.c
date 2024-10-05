@@ -35,8 +35,12 @@
 typedef SOCKET socket_t;
 #define PRI_SOCKET "zu"
 #ifndef __CYGWIN__
+#ifdef _WIN64
 typedef signed long long ssize_t;
-#endif
+#else
+typedef signed int ssize_t;
+#endif /* _WIN64 */
+#endif /* __CYGWIN__ */
 #else
 #include <sys/socket.h>
 #include <netdb.h>
