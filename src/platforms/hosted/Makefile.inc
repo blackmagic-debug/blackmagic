@@ -60,6 +60,7 @@ else ifneq (,$(findstring mingw,$(SYS)))
         CFLAGS += -mcrtdll=ucrt
         LDFLAGS += -mcrtdll=ucrt
     else ifneq (,$(findstring clang,$(FLAVOUR)))
+    else ifneq (,$(findstring w64-mingw32,$(FLAVOUR)))
     else
         CFLAGS += -mcrtdll=msvcrt
         LDFLAGS += -mcrtdll=msvcrt
