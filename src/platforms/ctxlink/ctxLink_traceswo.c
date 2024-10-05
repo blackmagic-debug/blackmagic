@@ -49,37 +49,37 @@
 
 #define BUFFER_SIZE 1024
 
-static volatile uint32_t inBuf = 0;  // input buffer index
-static volatile uint32_t outBuf = 0; // output buffer index
-volatile uint32_t bufferSize = 0;    // Number of bytes in the buffer
+static volatile uint32_t input_buffer = 0;  // input buffer index
+static volatile uint32_t output_buffer = 0; // output buffer index
+volatile uint32_t buffer_size = 0;          // Number of bytes in the buffer
 
 static uint8_t trace_rx_buf[BUFFER_SIZE] = {0};
 #define NUM_PINGPONG_BUFFERS 2
-static uint8_t pingpongBuffers[NUM_PINGPONG_BUFFERS * FULL_SWO_PACKET] = {0};
-static uint32_t bufferSelect = 0;
+static uint8_t pingpong_buffers[NUM_PINGPONG_BUFFERS * FULL_SWO_PACKET] = {0};
+static uint32_t buffer_select = 0;
 //
 // Check for SWO Trace nework client, if present send
 // any queued data
 //
-static uint8_t swoData[BUFFER_SIZE];
+static uint8_t swo_data[BUFFER_SIZE];
 
 void trace_send_data(void)
 {
 	if (is_swo_trace_client_connected()) {
 		uint32_t dataCount;
-		__atomic_load(&bufferSize, &dataCount, __ATOMIC_RELAXED);
+		__atomic_load(&buffer_size, &dataCount, __ATOMIC_RELAXED);
 		if (dataCount >= FULL_SWO_PACKET) {
 			//
 			// Copy the data
 			//
 			for (uint32_t i = 0; i < dataCount; i++) {
-				swoData[i] = trace_rx_buf[outBuf++];
-				if (outBuf >= BUFFER_SIZE) {
-					outBuf = 0;
+				swo_data[i] = trace_rx_buf[output_buffer++];
+				if (output_buffer >= BUFFER_SIZE) {
+					output_buffer = 0;
 				}
 			}
-			send_swo_trace_data(&swoData[0], dataCount);
-			__atomic_fetch_sub(&bufferSize, dataCount, __ATOMIC_RELAXED);
+			send_swo_trace_data(&swo_data[0], dataCount);
+			__atomic_fetch_sub(&buffer_size, dataCount, __ATOMIC_RELAXED);
 		}
 	}
 }
@@ -89,7 +89,7 @@ void _trace_buf_drain(usbd_device *dev, uint8_t ep)
 	uint32_t outCount;
 	uint8_t *bufferPointer, *bufferStart;
 
-	__atomic_load(&bufferSize, &outCount, __ATOMIC_RELAXED);
+	__atomic_load(&buffer_size, &outCount, __ATOMIC_RELAXED);
 	if (outCount == 0) {
 		return;
 	}
@@ -104,22 +104,22 @@ void _trace_buf_drain(usbd_device *dev, uint8_t ep)
 	//
 	// Set up the pointer to grab the data
 	//
-	bufferPointer = bufferStart = &pingpongBuffers[bufferSelect * FULL_SWO_PACKET];
+	bufferPointer = bufferStart = &pingpong_buffers[buffer_select * FULL_SWO_PACKET];
 	//
 	// Copy the data
 	//
 	for (uint32_t i = 0; i < outCount; i++) {
-		*bufferPointer++ = trace_rx_buf[outBuf++];
-		if (outBuf >= BUFFER_SIZE) {
-			outBuf = 0;
+		*bufferPointer++ = trace_rx_buf[output_buffer++];
+		if (output_buffer >= BUFFER_SIZE) {
+			output_buffer = 0;
 		}
 	}
 	//
 	// Bump the pingpong buffer selection
 	//
-	bufferSelect = (bufferSelect + 1) % NUM_PINGPONG_BUFFERS;
+	buffer_select = (buffer_select + 1) % NUM_PINGPONG_BUFFERS;
 	usbd_ep_write_packet(dev, ep, bufferStart, outCount);
-	__atomic_fetch_sub(&bufferSize, outCount, __ATOMIC_RELAXED);
+	__atomic_fetch_sub(&buffer_size, outCount, __ATOMIC_RELAXED);
 }
 
 /* TODO Address this */
@@ -132,37 +132,37 @@ void trace_buf_drain(usbd_device *dev, uint8_t ep)
 
 #define TRACE_TIM_COMPARE_VALUE 2000
 
-static volatile uint32_t errCount = 0;
+static volatile uint32_t error_count = 0;
 
 void SWO_UART_ISR(void)
 {
 	uint32_t err = USART_SR(SWO_UART);
-	char c = usart_recv(SWO_UART);
+	char ch = usart_recv(SWO_UART);
 
 	if (err & (USART_FLAG_ORE | USART_FLAG_FE | USART_SR_NE)) {
-		errCount++;
+		error_count++;
 		return;
 	}
 	/* If the next increment of rx_in would put it at the same point
 	 * as rx_out, the FIFO is considered full.
 	 */
 	uint32_t copyOutBuf;
-	__atomic_load(&outBuf, &copyOutBuf, __ATOMIC_RELAXED);
-	if (((inBuf + 1) % BUFFER_SIZE) != copyOutBuf) {
+	__atomic_load(&output_buffer, &copyOutBuf, __ATOMIC_RELAXED);
+	if (((input_buffer + 1) % BUFFER_SIZE) != copyOutBuf) {
 		/* insert into FIFO */
-		trace_rx_buf[inBuf++] = c;
-		__atomic_fetch_add(&bufferSize, 1, __ATOMIC_RELAXED); // bufferSize++ ;
+		trace_rx_buf[input_buffer++] = ch;
+		__atomic_fetch_add(&buffer_size, 1, __ATOMIC_RELAXED); // buffer_size++ ;
 
 		/* wrap out pointer */
-		if (inBuf >= BUFFER_SIZE) {
-			inBuf = 0;
+		if (input_buffer >= BUFFER_SIZE) {
+			input_buffer = 0;
 		}
 		//
 		// If we have a packet-sized amount of data send
 		// it to USB
 		//
 		uint32_t outCount;
-		__atomic_load(&bufferSize, &outCount, __ATOMIC_RELAXED);
+		__atomic_load(&buffer_size, &outCount, __ATOMIC_RELAXED);
 		// if (outCount >= FULL_SWO_PACKET)
 		if (outCount >= FULL_SWO_PACKET) {
 			/* TODO Address this */
