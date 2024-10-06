@@ -188,9 +188,8 @@ bool cmd_version(target_s *t, int argc, const char **argv)
 #if PC_HOSTED == 1
 	char ident[256];
 	gdb_ident(ident, sizeof(ident));
-	DEBUG_WARN("%s\n", ident);
-	DEBUG_WARN("Copyright (C) 2010-2023 Black Magic Debug Project\n");
-	DEBUG_WARN("License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>\n\n");
+	gdb_out("Black Magic Debug App " FIRMWARE_VERSION "\n");
+	gdb_outf("Using a %s\n", ident);
 #else
 #ifndef PLATFORM_IDENT_DYNAMIC
 	gdb_out(BOARD_IDENT);
@@ -198,9 +197,9 @@ bool cmd_version(target_s *t, int argc, const char **argv)
 	gdb_outf(BOARD_IDENT, platform_ident());
 #endif
 	gdb_outf(", Hardware Version %d\n", platform_hwversion());
-	gdb_out("Copyright (C) 2010-2023 Black Magic Debug Project\n");
-	gdb_out("License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>\n\n");
 #endif
+	gdb_out("Copyright (C) 2010-2024 Black Magic Debug Project\n");
+	gdb_out("License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>\n\n");
 
 	return true;
 }
