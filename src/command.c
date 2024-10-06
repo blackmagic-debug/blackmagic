@@ -51,34 +51,34 @@
 #include "usb.h"
 #endif
 
-static bool cmd_version(target_s *t, int argc, const char **argv);
-static bool cmd_help(target_s *t, int argc, const char **argv);
+static bool cmd_version(target_s *target, int argc, const char **argv);
+static bool cmd_help(target_s *target, int argc, const char **argv);
 
 static bool cmd_jtag_scan(target_s *target, int argc, const char **argv);
 static bool cmd_swd_scan(target_s *target, int argc, const char **argv);
-static bool cmd_auto_scan(target_s *t, int argc, const char **argv);
-static bool cmd_frequency(target_s *t, int argc, const char **argv);
-static bool cmd_targets(target_s *t, int argc, const char **argv);
-static bool cmd_morse(target_s *t, int argc, const char **argv);
-static bool cmd_halt_timeout(target_s *t, int argc, const char **argv);
-static bool cmd_connect_reset(target_s *t, int argc, const char **argv);
-static bool cmd_reset(target_s *t, int argc, const char **argv);
-static bool cmd_tdi_low_reset(target_s *t, int argc, const char **argv);
+static bool cmd_auto_scan(target_s *target, int argc, const char **argv);
+static bool cmd_frequency(target_s *target, int argc, const char **argv);
+static bool cmd_targets(target_s *target, int argc, const char **argv);
+static bool cmd_morse(target_s *target, int argc, const char **argv);
+static bool cmd_halt_timeout(target_s *target, int argc, const char **argv);
+static bool cmd_connect_reset(target_s *target, int argc, const char **argv);
+static bool cmd_reset(target_s *target, int argc, const char **argv);
+static bool cmd_tdi_low_reset(target_s *target, int argc, const char **argv);
 #ifdef PLATFORM_HAS_POWER_SWITCH
-static bool cmd_target_power(target_s *t, int argc, const char **argv);
+static bool cmd_target_power(target_s *target, int argc, const char **argv);
 #endif
 #ifdef PLATFORM_HAS_TRACESWO
-static bool cmd_swo(target_s *t, int argc, const char **argv);
+static bool cmd_swo(target_s *target, int argc, const char **argv);
 #endif
-static bool cmd_heapinfo(target_s *t, int argc, const char **argv);
+static bool cmd_heapinfo(target_s *target, int argc, const char **argv);
 #ifdef ENABLE_RTT
-static bool cmd_rtt(target_s *t, int argc, const char **argv);
+static bool cmd_rtt(target_s *target, int argc, const char **argv);
 #endif
 #if defined(PLATFORM_HAS_DEBUG) && PC_HOSTED == 0
-static bool cmd_debug_bmp(target_s *t, int argc, const char **argv);
+static bool cmd_debug_bmp(target_s *target, int argc, const char **argv);
 #endif
 #if PC_HOSTED == 1
-static bool cmd_shutdown_bmda(target_s *t, int argc, const char **argv);
+static bool cmd_shutdown_bmda(target_s *target, int argc, const char **argv);
 #endif
 
 #ifdef _MSC_VER
@@ -138,7 +138,7 @@ bool debug_bmp;
 #endif
 unsigned cortexm_wait_timeout = 2000; /* Timeout to wait for Cortex to react on halt command. */
 
-int command_process(target_s *const t, char *const cmd_buffer)
+int command_process(target_s *const target, char *const cmd_buffer)
 {
 	/* Initial estimate for argc */
 	size_t argc = 1;
@@ -165,24 +165,24 @@ int command_process(target_s *const t, char *const cmd_buffer)
 		 * So 'mon ver' will match 'monitor version'
 		 */
 		if ((argc == 0) || !strncmp(argv[0], cmd->cmd, strlen(argv[0])))
-			return !cmd->handler(t, argc, argv);
+			return !cmd->handler(target, argc, argv);
 	}
 
 #ifdef PLATFORM_HAS_CUSTOM_COMMANDS
 	for (const command_s *cmd = platform_cmd_list; cmd->cmd; ++cmd) {
 		if (!strncmp(argv[0], cmd->cmd, strlen(argv[0])))
-			return !cmd->handler(t, argc, argv);
+			return !cmd->handler(target, argc, argv);
 	}
 #endif
 
-	if (!t)
+	if (!target)
 		return -1;
-	return target_command(t, argc, argv);
+	return target_command(target, argc, argv);
 }
 
-bool cmd_version(target_s *t, int argc, const char **argv)
+bool cmd_version(target_s *target, int argc, const char **argv)
 {
-	(void)t;
+	(void)target;
 	(void)argc;
 	(void)argv;
 #if PC_HOSTED == 1
@@ -204,12 +204,12 @@ bool cmd_version(target_s *t, int argc, const char **argv)
 	return true;
 }
 
-bool cmd_help(target_s *t, int argc, const char **argv)
+bool cmd_help(target_s *target, int argc, const char **argv)
 {
 	(void)argc;
 	(void)argv;
 
-	if (!t || t->tc->destroy_callback) {
+	if (!target || target->tc->destroy_callback) {
 		gdb_out("General commands:\n");
 		for (const command_s *cmd = cmd_list; cmd->cmd; cmd++)
 			gdb_outf("\t%s -- %s\n", cmd->cmd, cmd->help);
@@ -218,11 +218,11 @@ bool cmd_help(target_s *t, int argc, const char **argv)
 		for (const command_s *cmd = platform_cmd_list; cmd->cmd; ++cmd)
 			gdb_outf("\t%s -- %s\n", cmd->cmd, cmd->help);
 #endif
-		if (!t)
+		if (!target)
 			return true;
 	}
 
-	target_command_help(t);
+	target_command_help(target);
 	return true;
 }
 
@@ -308,9 +308,9 @@ bool cmd_swd_scan(target_s *target, int argc, const char **argv)
 	return true;
 }
 
-bool cmd_auto_scan(target_s *t, int argc, const char **argv)
+bool cmd_auto_scan(target_s *target, int argc, const char **argv)
 {
-	(void)t;
+	(void)target;
 	(void)argc;
 	(void)argv;
 
@@ -360,9 +360,9 @@ bool cmd_auto_scan(target_s *t, int argc, const char **argv)
 	return true;
 }
 
-bool cmd_frequency(target_s *t, int argc, const char **argv)
+bool cmd_frequency(target_s *target, int argc, const char **argv)
 {
-	(void)t;
+	(void)target;
 	if (argc == 2) {
 		char *multiplier = NULL;
 		uint32_t frequency = strtoul(argv[1], &multiplier, 10);
@@ -415,9 +415,9 @@ bool cmd_targets(target_s *target, int argc, const char **argv)
 	return true;
 }
 
-bool cmd_morse(target_s *t, int argc, const char **argv)
+bool cmd_morse(target_s *target, int argc, const char **argv)
 {
-	(void)t;
+	(void)target;
 	(void)argc;
 	(void)argv;
 	if (morse_msg) {
@@ -442,9 +442,9 @@ bool parse_enable_or_disable(const char *value, bool *out)
 	return true;
 }
 
-static bool cmd_connect_reset(target_s *t, int argc, const char **argv)
+static bool cmd_connect_reset(target_s *target, int argc, const char **argv)
 {
-	(void)t;
+	(void)target;
 	bool print_status = false;
 	if (argc == 1)
 		print_status = true;
@@ -460,18 +460,18 @@ static bool cmd_connect_reset(target_s *t, int argc, const char **argv)
 	return true;
 }
 
-static bool cmd_halt_timeout(target_s *t, int argc, const char **argv)
+static bool cmd_halt_timeout(target_s *target, int argc, const char **argv)
 {
-	(void)t;
+	(void)target;
 	if (argc > 1)
 		cortexm_wait_timeout = strtoul(argv[1], NULL, 0);
 	gdb_outf("Cortex-M timeout to wait for device halts: %u\n", cortexm_wait_timeout);
 	return true;
 }
 
-static bool cmd_reset(target_s *t, int argc, const char **argv)
+static bool cmd_reset(target_s *target, int argc, const char **argv)
 {
-	(void)t;
+	(void)target;
 	uint32_t pulse_len_ms = 0;
 	if (argc > 1)
 		pulse_len_ms = strtoul(argv[1], NULL, 0);
@@ -482,9 +482,9 @@ static bool cmd_reset(target_s *t, int argc, const char **argv)
 	return true;
 }
 
-static bool cmd_tdi_low_reset(target_s *t, int argc, const char **argv)
+static bool cmd_tdi_low_reset(target_s *target, int argc, const char **argv)
 {
-	(void)t;
+	(void)target;
 	(void)argc;
 	(void)argv;
 	jtag_proc.jtagtap_next(true, false);
@@ -493,9 +493,9 @@ static bool cmd_tdi_low_reset(target_s *t, int argc, const char **argv)
 }
 
 #ifdef PLATFORM_HAS_POWER_SWITCH
-static bool cmd_target_power(target_s *t, int argc, const char **argv)
+static bool cmd_target_power(target_s *target, int argc, const char **argv)
 {
-	(void)t;
+	(void)target;
 	if (argc == 1)
 		gdb_outf("Target Power: %s\n", platform_target_get_power() ? "enabled" : "disabled");
 	else if (argc == 2) {
@@ -523,9 +523,8 @@ static const char *on_or_off(const bool value)
 	return value ? "on" : "off";
 }
 
-static bool cmd_rtt(target_s *t, int argc, const char **argv)
+static bool cmd_rtt(target_s *target, int argc, const char **argv)
 {
-	(void)t;
 	const size_t command_len = argc > 1 ? strlen(argv[1]) : 0;
 	if (argc == 1 || (argc == 2 && strncmp(argv[1], "enabled", command_len) == 0)) {
 		rtt_enabled = true;
@@ -540,7 +539,7 @@ static bool cmd_rtt(target_s *t, int argc, const char **argv)
 			gdb_out("off");
 		else
 			gdb_outf("\"%s\"", rtt_ident);
-		gdb_outf(" halt: %s", on_or_off(target_mem_access_needs_halt(t)));
+		gdb_outf(" halt: %s", on_or_off(target_mem_access_needs_halt(target)));
 		gdb_out(" channels: ");
 		if (rtt_auto_channel)
 			gdb_out("auto ");
@@ -688,9 +687,9 @@ static bool cmd_swo_disable(void)
 	return true;
 }
 
-static bool cmd_swo(target_s *t, int argc, const char **argv)
+static bool cmd_swo(target_s *target, int argc, const char **argv)
 {
-	(void)t;
+	(void)target;
 	bool enable_swo = false;
 	if (argc >= 2 && !parse_enable_or_disable(argv[1], &enable_swo)) {
 		gdb_out("Usage: traceswo <enable|disable> [2000000] [decode [0 1 3 31]]\n");
@@ -704,9 +703,9 @@ static bool cmd_swo(target_s *t, int argc, const char **argv)
 #endif
 
 #if defined(PLATFORM_HAS_DEBUG) && PC_HOSTED == 0
-static bool cmd_debug_bmp(target_s *t, int argc, const char **argv)
+static bool cmd_debug_bmp(target_s *target, int argc, const char **argv)
 {
-	(void)t;
+	(void)target;
 	if (argc == 2 && !parse_enable_or_disable(argv[1], &debug_bmp))
 		return false;
 	if (argc > 2) {
@@ -720,9 +719,9 @@ static bool cmd_debug_bmp(target_s *t, int argc, const char **argv)
 #endif
 
 #if PC_HOSTED == 1
-static bool cmd_shutdown_bmda(target_s *t, int argc, const char **argv)
+static bool cmd_shutdown_bmda(target_s *target, int argc, const char **argv)
 {
-	(void)t;
+	(void)target;
 	(void)argc;
 	(void)argv;
 	shutdown_bmda = true;
@@ -738,9 +737,9 @@ static bool cmd_shutdown_bmda(target_s *t, int argc, const char **argv)
  * - If the target system crashes, increase heap or stack
  * See newlib/libc/sys/arm/crt0.S "Issue Angel SWI to read stack info"
  */
-static bool cmd_heapinfo(target_s *t, int argc, const char **argv)
+static bool cmd_heapinfo(target_s *target, int argc, const char **argv)
 {
-	if (t == NULL)
+	if (target == NULL)
 		gdb_out("not attached\n");
 	else if (argc == 5) {
 		target_addr_t heap_base = strtoul(argv[1], NULL, 16);
@@ -750,7 +749,7 @@ static bool cmd_heapinfo(target_s *t, int argc, const char **argv)
 		gdb_outf("heap_base: %08" PRIx32 " heap_limit: %08" PRIx32 " stack_base: %08" PRIx32 " stack_limit: "
 				 "%08" PRIx32 "\n",
 			heap_base, heap_limit, stack_base, stack_limit);
-		target_set_heapinfo(t, heap_base, heap_limit, stack_base, stack_limit);
+		target_set_heapinfo(target, heap_base, heap_limit, stack_base, stack_limit);
 	} else
 		gdb_outf("%s\n", "Set semihosting heapinfo: HEAP_BASE HEAP_LIMIT STACK_BASE STACK_LIMIT");
 	return true;
