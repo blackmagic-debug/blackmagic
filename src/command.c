@@ -252,6 +252,8 @@ static bool cmd_jtag_scan(target_s *target, int argc, const char **argv)
 	case EXCEPTION_ERROR:
 		gdb_outf("Exception: %s\n", exception_frame.msg);
 		break;
+	default:
+		break;
 	}
 
 	if (!scan_result) {
@@ -292,6 +294,8 @@ bool cmd_swd_scan(target_s *target, int argc, const char **argv)
 		break;
 	case EXCEPTION_ERROR:
 		gdb_outf("Exception: %s\n", exception_frame.msg);
+		break;
+	default:
 		break;
 	}
 
@@ -345,6 +349,8 @@ bool cmd_auto_scan(target_s *target, int argc, const char **argv)
 	case EXCEPTION_ERROR:
 		gdb_outf("Exception: %s\n", exception_frame.msg);
 		break;
+	default:
+		break;
 	}
 
 	if (!scan_result) {
@@ -376,6 +382,8 @@ bool cmd_frequency(target_s *target, int argc, const char **argv)
 			break;
 		case 'M':
 			frequency *= 1000U * 1000U;
+			break;
+		default:
 			break;
 		}
 		platform_max_frequency_set(frequency);
