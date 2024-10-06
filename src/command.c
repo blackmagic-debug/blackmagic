@@ -186,10 +186,8 @@ bool cmd_version(target_s *target, int argc, const char **argv)
 	(void)argc;
 	(void)argv;
 #if PC_HOSTED == 1
-	char ident[256];
-	gdb_ident(ident, sizeof(ident));
 	gdb_out("Black Magic Debug App " FIRMWARE_VERSION "\n");
-	gdb_outf("Using a %s\n", ident);
+	bmda_display_probe();
 #else
 #ifndef PLATFORM_IDENT_DYNAMIC
 	gdb_out(BOARD_IDENT);

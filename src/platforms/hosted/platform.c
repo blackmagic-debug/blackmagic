@@ -69,9 +69,9 @@ static uint32_t max_frequency = 4000000U;
 
 static bmda_cli_options_s cl_opts;
 
-void gdb_ident(char *p, int count)
+void bmda_display_probe(void)
 {
-	snprintf(p, count, "%s (%s), %s", bmda_probe_info.manufacturer, bmda_probe_info.product, bmda_probe_info.version);
+	gdb_outf("Using a %s (%s), %s\n", bmda_probe_info.product, bmda_probe_info.manufacturer, bmda_probe_info.version);
 }
 
 static void exit_function(void)

@@ -87,7 +87,7 @@ typedef enum probe_type {
 	PROBE_TYPE_GPIOD,
 } probe_type_e;
 
-void gdb_ident(char *p, int count);
+void bmda_display_probe(void);
 
 #ifdef ENABLE_GPIOD
 #include "bmda_gpiod_platform.h"
