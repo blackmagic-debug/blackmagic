@@ -679,25 +679,29 @@ static bool stm32l4_configure_dbgmcu(target_s *const target, const stm32l4_devic
 bool stm32l4_probe(target_s *const target)
 {
 	adiv5_access_port_s *const ap = cortex_ap(target);
-	uint16_t device_id = ap->dp->version >= 2U ? ap->dp->target_partno : ap->partno;
 	/*
-	 * If the part is DPv0 or DPv1, we must use the L4 ID register, except if we've already identified
-	 * a L5 part or a U5 part of some sort (there are 4 IDs for these parts)
+	 * If the part is SWD-DPv1, nothing special needs to happen.. however, if it is SWD-DPv2, we have to deal
+	 * with the mess that is the dual-core parts like the WL5x and WB35/WB55 series. These have no
+	 * viable identification available on their second core, and require either using the TARGETID register
+	 * or using DBGMCU_IDCODE to form a positive identification on the part. Additionally, the TARGETID
+	 * value is bit shifted by a nibble left and only available under SWD, not JTAG. So.. if we can't find the
+	 * part by using ap->partno, we try again reading the L4 DBGMCU_IDCODE address.
 	 */
-	if (ap->dp->version < 2U && device_id != ID_STM32L55 && device_id != ID_STM32U535 && device_id != ID_STM32U575 &&
-		device_id != ID_STM32U59x && device_id != ID_STM32U5Fx)
-		device_id = target_mem32_read32(target, STM32L4_DBGMCU_IDCODE) & 0xfffU;
+	const stm32l4_device_info_s *device = stm32l4_get_device_info(ap->partno);
+	if (!device)
+		device = stm32l4_get_device_info(target_mem32_read16(target, STM32L4_DBGMCU_IDCODE) & 0xfffU);
 
-	const stm32l4_device_info_s *device = stm32l4_get_device_info(device_id);
 	/*
-	 * If the call returned the sentinel, it's not a supported L4 device.
+	 * If the call returned the sentinel both times, it's not a supported L4 device.
 	 * Now we have a stable debug environment, make sure the WDTs + WFI and WFE instructions can't cause problems
 	 */
 	if (!device->device_id || !stm32l4_configure_dbgmcu(target, device))
 		return false;
 
+	const uint16_t device_id = device->device_id;
 	target->part_id = device_id;
 	target->driver = device->designator;
+
 	switch (device_id) {
 	case ID_STM32WLxx:
 	case ID_STM32WB35:
@@ -720,8 +724,10 @@ bool stm32l4_probe(target_s *const target)
 		if ((stm32l4_flash_read32(target, FLASH_OPTR)) & STM32L5_FLASH_OPTR_TZEN) {
 			DEBUG_WARN("STM32L5 Trust Zone enabled\n");
 			target->core = "M33+TZ";
-			break;
 		}
+		break;
+	default:
+		break;
 	}
 
 	target->mass_erase = stm32l4_mass_erase;
