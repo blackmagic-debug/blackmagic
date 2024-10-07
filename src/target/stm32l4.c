@@ -166,33 +166,75 @@ const command_s stm32l4_cmd_list[] = {
 /* TODO: add block size constants for other MCUs */
 #define STM32U5_FLASH_BLOCK_SIZE 0x2000U
 
-typedef enum stm32l4_device_id {
-	/* This first block of devices uses an ID code register located in the DBG_MCU block at 0xe0042000 */
-	ID_STM32L41 = 0x464U, /* RM0394, Rev.4 §46.6.1 MCU device ID code */
-	ID_STM32L43 = 0x435U, /* RM0394, Rev.4 §46.6.1 MCU device ID code */
-	ID_STM32L45 = 0x462U, /* RM0394, Rev.4 §46.6.1 MCU device ID code */
-	ID_STM32L47 = 0x415U, /* RM0351, Rev.9 §48.6.1 MCU device ID code */
-	ID_STM32L49 = 0x461U, /* RM0351, Rev.9 §48.6.1 MCU device ID code */
-	ID_STM32L4R = 0x470U, /* RM0432, Rev.9 §57.6.1 MCU device ID code */
-	ID_STM32L4P = 0x471U, /* RM0432, Rev.9 §57.6.1 MCU device ID code */
-	ID_STM32G43 = 0x468U, /* RM0440, Rev.7 §47.6.1 MCU device ID code Cat 2 */
-	ID_STM32G47 = 0x469U, /* RM0440, Rev.7 §47.6.1 MCU device ID code Cat 3 */
-	ID_STM32G49 = 0x479U, /* RM0440, Rev.7 §47.6.1 MCU device ID code Cat 4 */
-	/* This part is a bit funky to identify as it's both DPv1 (JTAG) and DPv2 (SWD) */
-	ID_STM32L55 = 0x0472U, /* RM0438, Rev.7 §52.2.10 for DPv2, §52.4.1 (MCU ROM table PIDR) for DPv1 */
-	/*
-	 * The following are all DPv2 parts which are then identified using their "DP target identification register"
-	 * which is ADIv5 DP register TARGETID in bank 2 from the ADIv5.2 spec §B2.2.10.
-	 * The references after the values are the sections to look at in the respective reference manuals.
-	 */
-	ID_STM32U535 = 0x4550U, /* STM32U535/545 from RM0456, Rev.4 $75.3.3 DP_TARGETIDR pg.3497 Not Tested */
-	ID_STM32U5Fx = 0x4760U, /* STM32U5Fx/5Gx from RM0456, Rev.4 $75.3.3 DP_TARGETIDR pg.3497 Not Tested */
-	ID_STM32U59x = 0x4810U, /* STM32U59x/5Ax from RM0456, Rev.4 $75.3.3 DP_TARGETIDR pg.3497 Not Tested */
-	ID_STM32U575 = 0x4820U, /* STM32U575/585 from RM0456, Rev.4 $75.3.3 DP_TARGETIDR pg.3497 Tested on U575 */
-	ID_STM32WLxx = 0x4970U, /* from RM0461, Rev.5 §36.4.5, and RM0453, Rev.3 §38.4.5 */
-	ID_STM32WBxx = 0x4950U, /* from RM0434, Rev.10 §41.4.8 */
-	ID_STM32WB1x = 0x4940U, /* from RM0473, Rev.7 §33.4.8 and RM0478 Rev.5 §31.4.8 */
-} stm32l4_device_id_e;
+/*
+ * This first block of devices uses the AP part number, as that matches the DBGMCU
+ * ID code value at address 0xe0042000. These are SWD-DPv1 parts.
+ */
+#define ID_STM32L41 0x464U /* RM0394, Rev.4 §46.6.1 DBGMCU_IDCODE pg 1560 */
+#define ID_STM32L43 0x435U /* RM0394, Rev.4 §46.6.1 DBGMCU_IDCODE pg 1560 */
+#define ID_STM32L45 0x462U /* RM0394, Rev.4 §46.6.1 DBGMCU_IDCODE pg 1560 */
+#define ID_STM32L47 0x415U /* RM0351, Rev.9 §48.6.1 DBGMCU_IDCODE pg 1840 */
+#define ID_STM32L49 0x461U /* RM0351, Rev.9 §48.6.1 DBGMCU_IDCODE pg 1840 */
+#define ID_STM32L4R 0x470U /* RM0432, Rev.9 §57.6.1 DBGMCU_IDCODE pg 2245 */
+#define ID_STM32L4P 0x471U /* RM0432, Rev.9 §57.6.1 DBGMCU_IDCODE pg 2245 */
+
+#define ID_STM32G43 0x468U /* RM0440, Rev.7 §47.6.1 DBGMCU_IDCODE pg 2082 (Category 2) */
+#define ID_STM32G47 0x469U /* RM0440, Rev.7 §47.6.1 DBGMCU_IDCODE pg 2082 (Category 3) */
+#define ID_STM32G49 0x479U /* RM0440, Rev.7 §47.6.1 DBGMCU_IDCODE pg 2082 (Category 4) */
+/*
+ * The L55 series uses SWD-DPv2, which has a TARGETID register value of 0x0472.
+ * As the part is also accessible over JTAG-DPv0 which does not have this register,
+ * we consider other options as outlined below:
+ * TARGETID then matches the DBGMCU_IDCODE value at 0xe0044000. This means the
+ * default target part_id is just fine. These numbers also match the AP part number.
+ * TARGETID is a ADIv5 DP register in bank 2 from the ADIv5.2 spec §B2.2.10
+ * RM0438, Rev.7 §52.2.10 DP_TARGETID pg 2033
+ * RM0438, Rev.7 §52.4.1 MCU ROM table PIDR pg 2047
+ * RM0438, Rev.7 §52.11.1 DBGMCU_IDCODE pg 2157
+ */
+#define ID_STM32L55 0x0472U
+/*
+ * These next parts are likewise accessible over both SWD-DPv2 and JTAG-DPv0, however
+ * many of them carry the typical ST TARGETID encoding error which puts the value off
+ * by a nibble, so requiring identification by other means.
+ *
+ * References for the U5 parts:
+ * - RM0456, Rev.5 §75.3.3 DP_TARGETID pg 3497
+ * - RM0456, Rev.5 §75.5.1 MCU ROM table PIDR pg 3510
+ * - RM0456, Rev.5 §75.12.4 DBGMCU_IDCODE pg 3604 (at address 0xe0044000)
+ * References for the WL parts:
+ * - RM0453, Rev.3 §38.4.5 DP_TARGETID pg 1333
+ * - RM0453, Rev.3 §38.8.3 CPU1 ROM table PIDR pg 1381
+ * - RM0453, Rev.3 §38.12.1 DBGMCU_IDCODE pg 1415 (at address 0xe0042000)
+ * - RM0461, Rev.5 §36.4.5 DP_TARGETID pg 1226
+ * - RM0461, Rev.5 §36.7.3 ROM table PIDR pg 1253
+ * - RM0461, Rev.5 §36.11.1 DBGMCU_IDCODE pg 1287 (at address 0xe0042000)
+ * References for WB35/WB55 parts:
+ * - RM0434, Rev.10 §41.4.8 DP_TARGETID pg 1361
+ * - RM0434, Rev.10 §41.8.1 DBGMCU_IDCODE pg 1394 (at address 0xe0042000)
+ * - RM0434, Rev.10 §41.13.3 CPU1 ROM table PIDR pg 1441
+ * References for WB1x parts:
+ * - RM0473, Rev.10 §33.4.8 DP_TARGETID pg 1054
+ * - RM0473, Rev.10 §33.8.1 DBGMCU_IDCODE pg 1086 (at address 0xe0042000)
+ * - RM0473, Rev.10 §33.13.3 CPU1 ROM table PIDR pg 1132
+ * - RM0478, Rev.8 §31.4.8 DP_TARGETID pg 980
+ * - RM0478, Rev.8 §31.8.1 DBGMCU_IDCODE pg 1011 (at address 0xe0042000)
+ * - RM0478, Rev.8 §31.13.3 CPU1 ROM table PIDR pg 1057
+ *
+ * NB: For WL5x parts, core 2's AP requires using DBGMCU_IDCODE for identification.
+ * The outer ROM table for this core carries the ARM core ID, not the part ID.
+ * NB: For WB35/WB55 parts, core 2's AP requires using DBGMCU_IDCODE for identification.
+ * The outer ROM table for this core carries the ARM core ID, not the part ID.
+ * NB: For the WB10CC, core2's AP requires using DBGMCU_IDCODE for identification.
+ * The outer ROM table for this core carries the ARM core ID, not the part ID.
+ */
+#define ID_STM32U535 0x455U /* STM32U535/545 */
+#define ID_STM32U5Fx 0x476U /* STM32U5Fx/5Gx */
+#define ID_STM32U59x 0x481U /* STM32U59x/5Ax */
+#define ID_STM32U575 0x482U /* STM32U575/585 */
+#define ID_STM32WLxx 0x497U
+#define ID_STM32WB35 0x495U /* STM32WB35/55 */
+#define ID_STM32WB1x 0x494U
 
 typedef enum stm32l4_family {
 	STM32L4_FAMILY_L4xx,
@@ -215,7 +257,7 @@ typedef struct stm32l4_device_info {
 	uint16_t sram2; /* SRAM at 0x10000000, mapped after sram1 (not L47) */
 	uint16_t sram3; /* SRAM mapped after SRAM1 and SRAM2 */
 	uint8_t flags;  /* Only DUAL_BANK is evaluated for now. */
-	stm32l4_device_id_e device_id;
+	uint16_t device_id;
 	stm32l4_family_e family;
 	const uint32_t *flash_regs_map;
 	const uint32_t flash_size_reg;
@@ -426,7 +468,7 @@ static stm32l4_device_info_s const stm32l4_device_info[] = {
 		.flash_size_reg = STM32L4_FLASH_SIZE_REG,
 	},
 	{
-		.device_id = ID_STM32WBxx,
+		.device_id = ID_STM32WB35,
 		.family = STM32L4_FAMILY_WBxx,
 		.designator = "STM32WBxx",
 		.sram1 = 192U,
@@ -658,7 +700,7 @@ bool stm32l4_probe(target_s *const target)
 	target->driver = device->designator;
 	switch (device_id) {
 	case ID_STM32WLxx:
-	case ID_STM32WBxx:
+	case ID_STM32WB35:
 	case ID_STM32WB1x:
 		if ((stm32l4_flash_read32(target, FLASH_OPTR)) & FLASH_OPTR_ESE) {
 			DEBUG_WARN("STM32W security enabled\n");
@@ -937,7 +979,7 @@ static uint32_t stm32l4_fpec_base_addr(const target_s *const target)
 {
 	if (target->part_id == ID_STM32WLxx)
 		return STM32WL_FPEC_BASE;
-	if (target->part_id == ID_STM32WBxx)
+	if (target->part_id == ID_STM32WB35)
 		return STM32WB_FPEC_BASE;
 	return STM32L4_FPEC_BASE;
 }
@@ -970,7 +1012,7 @@ static stm32l4_option_bytes_info_s stm32l4_get_opt_bytes_info(const uint16_t par
 			.offsets = stm32wl_opt_reg_offsets,
 			.default_values = stm32wl_default_options_values,
 		};
-	case ID_STM32WBxx:
+	case ID_STM32WB35:
 		return (stm32l4_option_bytes_info_s){
 			.word_count = ARRAY_LENGTH(stm32wb_default_options_values),
 			.offsets = stm32wb_opt_reg_offsets,
