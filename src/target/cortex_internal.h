@@ -55,9 +55,10 @@
  * Target options recognised by the Cortex-M architecture driver
  * If neither of the flavour options are set, the core is assumed to be an ARMv7-M core
  */
-#define CORTEXM_TOPT_FLAVOUR_V6M (1U << 1U) /* If set, target is an ARMv6-M core */
-#define CORTEXM_TOPT_FLAVOUR_V8M (1U << 2U) /* If set, target is an ARMv8-M core */
-#define CORTEXM_TOPT_TRUSTZONE   (1U << 3U) /* Whether a core implements the security model (TrustZone) */
+#define CORTEXM_TOPT_FLAVOUR_V6M   (1U << 1U) /* If set, target is an ARMv6-M core */
+#define CORTEXM_TOPT_FLAVOUR_FLOAT (1U << 2U) /* If set, the target has a FPU */
+#define CORTEXM_TOPT_FLAVOUR_V8M   (1U << 3U) /* If set, target is an ARMv8-M core */
+#define CORTEXM_TOPT_TRUSTZONE     (1U << 4U) /* Whether a core implements the security model (TrustZone) */
 
 typedef struct cortex_priv {
 	/* AP from which this CPU hangs */

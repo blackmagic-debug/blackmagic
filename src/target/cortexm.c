@@ -318,7 +318,7 @@ bool cortexm_probe(adiv5_access_port_s *ap)
 
 	/* Adjust the regs_size value for having a FPU */
 	if (is_cortexmf) {
-		target->target_options |= CORTEXM_TOPT_FLAVOUR_V7MF;
+		target->target_options |= CORTEXM_TOPT_FLAVOUR_FLOAT;
 		target->regs_size += sizeof(uint32_t) * CORTEX_FLOAT_REG_COUNT;
 	}
 
@@ -604,7 +604,7 @@ static void cortexm_regs_read(target_s *const target, void *const data)
 		for (size_t i = 0; i < CORTEXM_GENERAL_REG_COUNT; ++i)
 			regs[i] = core_regs[regnum_cortex_m[i]];
 
-		if (target->target_options & CORTEXM_TOPT_FLAVOUR_V7MF) {
+		if (target->target_options & CORTEXM_TOPT_FLAVOUR_FLOAT) {
 			const size_t offset = CORTEXM_GENERAL_REG_COUNT;
 			for (size_t i = 0; i < CORTEX_FLOAT_REG_COUNT; ++i)
 				regs[offset + i] = ap->dp->ap_reg_read(ap, regnum_cortex_mf[i]);
@@ -634,7 +634,7 @@ static void cortexm_regs_read(target_s *const target, void *const data)
 			offset += CORTEXM_TRUSTZONE_REG_COUNT;
 		}
 		/* If the core has a FPU, also walk the regnum_cortex_mf array */
-		if (target->target_options & CORTEXM_TOPT_FLAVOUR_V7MF) {
+		if (target->target_options & CORTEXM_TOPT_FLAVOUR_FLOAT) {
 			for (size_t i = 0U; i < CORTEX_FLOAT_REG_COUNT; ++i) {
 				adiv5_dp_write(ap->dp, ADIV5_AP_DB(DB_DCRSR), regnum_cortex_mf[i]);
 				regs[offset + i] = adiv5_dp_read(ap->dp, ADIV5_AP_DB(DB_DCRDR));
@@ -654,7 +654,7 @@ static void cortexm_regs_write(target_s *const target, const void *const data)
 		for (size_t i = 0; i < CORTEXM_GENERAL_REG_COUNT; ++i)
 			ap->dp->ap_reg_write(ap, regnum_cortex_m[i], regs[i]);
 
-		if (target->target_options & CORTEXM_TOPT_FLAVOUR_V7MF) {
+		if (target->target_options & CORTEXM_TOPT_FLAVOUR_FLOAT) {
 			const size_t offset = CORTEXM_GENERAL_REG_COUNT;
 			for (size_t i = 0; i < CORTEX_FLOAT_REG_COUNT; ++i)
 				ap->dp->ap_reg_write(ap, regnum_cortex_mf[i], regs[offset + i]);
@@ -684,7 +684,7 @@ static void cortexm_regs_write(target_s *const target, const void *const data)
 			offset += CORTEXM_TRUSTZONE_REG_COUNT;
 		}
 		/* If the core has a FPU, also walk the regnum_cortex_mf array */
-		if (target->target_options & CORTEXM_TOPT_FLAVOUR_V7MF) {
+		if (target->target_options & CORTEXM_TOPT_FLAVOUR_FLOAT) {
 			for (size_t i = 0U; i < CORTEX_FLOAT_REG_COUNT; ++i) {
 				adiv5_dp_write(ap->dp, ADIV5_AP_DB(DB_DCRDR), regs[offset + i]);
 				adiv5_dp_write(ap->dp, ADIV5_AP_DB(DB_DCRSR), CORTEXM_DCRSR_REG_WRITE | regnum_cortex_mf[i]);
@@ -712,7 +712,7 @@ static int dcrsr_regnum(target_s *target, uint32_t reg)
 			return (int)regnum_cortex_m_trustzone[reg - offset];
 		offset += CORTEXM_TRUSTZONE_REG_COUNT;
 	}
-	if (target->target_options & CORTEXM_TOPT_FLAVOUR_V7MF) {
+	if (target->target_options & CORTEXM_TOPT_FLAVOUR_FLOAT) {
 		if (reg < offset + CORTEX_FLOAT_REG_COUNT)
 			return (int)regnum_cortex_mf[reg - offset];
 	}
@@ -1418,7 +1418,7 @@ static size_t cortexm_build_target_description(
 	}
 
 	/* If the target has a FPU, include that */
-	if (target_options & CORTEXM_TOPT_FLAVOUR_V7MF) {
+	if (target_options & CORTEXM_TOPT_FLAVOUR_FLOAT) {
 		if (max_length != 0U)
 			print_size = max_length - offset;
 		offset += cortexm_build_target_fpu_description(buffer + offset, print_size);
