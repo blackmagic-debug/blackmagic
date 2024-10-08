@@ -334,13 +334,10 @@ bool target_mem64_write(target_s *const target, const target_addr64_t dest, cons
 	return target_check_error(target);
 }
 
-/* target_mem_access_needs_halt() is true if the target needs to be halted during jtag memory access */
-
+/* Returns true if the target needs halting to access memory on it */
 bool target_mem_access_needs_halt(target_s *target)
 {
-	/* assume all arm processors allow memory access while running, and no riscv does. */
-	bool is_riscv = target && target->core && strstr(target->core, "RVDBG");
-	return is_riscv;
+	return !(target->target_options & TOPT_NON_HALTING_MEM_IO);
 }
 
 /* Register access functions */

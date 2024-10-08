@@ -27,8 +27,9 @@
 #include "platform_support.h"
 #include "target_probe.h"
 
-#define TOPT_INHIBIT_NRST           (1U << 0U)
-#define TOPT_IN_SEMIHOSTING_SYSCALL (1U << 31U)
+#define TOPT_INHIBIT_NRST           (1U << 0U)  /* Target misbehaves if reset using nRST line */
+#define TOPT_NON_HALTING_MEM_IO     (1U << 30U) /* Target does not need halting for memory I/O */
+#define TOPT_IN_SEMIHOSTING_SYSCALL (1U << 31U) /* Target is currently in a semihosting syscall */
 
 extern target_s *target_list;
 
