@@ -277,7 +277,7 @@ static riscv_debug_version_e riscv_dm_version(uint32_t status);
 
 static uint32_t riscv_hart_discover_isa(riscv_hart_s *hart);
 static void riscv_hart_discover_triggers(riscv_hart_s *hart);
-static void riscv_hart_memory_access_type(riscv_hart_s *hart);
+static void riscv_hart_memory_access_type(target_s *target);
 
 static const char *riscv_target_description(target_s *target);
 
@@ -438,7 +438,7 @@ static bool riscv_hart_init(riscv_hart_s *const hart)
 	hart->address_width = riscv_isa_address_width(isa);
 	hart->extensions = isa & RV_ISA_EXTENSIONS_MASK;
 	/* Figure out if the target needs us to use sysbus or not for memory access */
-	riscv_hart_memory_access_type(hart);
+	riscv_hart_memory_access_type(target);
 	/* Then read out the ID registers */
 	riscv_hart_read_ids(hart);
 
@@ -886,10 +886,11 @@ static void riscv_hart_discover_triggers(riscv_hart_s *const hart)
 	}
 }
 
-static void riscv_hart_memory_access_type(riscv_hart_s *const hart)
+static void riscv_hart_memory_access_type(target_s *const target)
 {
-	uint32_t sysbus_status;
+	riscv_hart_s *const hart = riscv_hart_struct(target);
 	hart->flags &= (uint8_t)~RV_HART_FLAG_MEMORY_SYSBUS;
+	uint32_t sysbus_status;
 	/*
 	 * Try reading the system bus access control and status register.
 	 * Check if the value read back is non-zero for the sbasize field
@@ -899,6 +900,8 @@ static void riscv_hart_memory_access_type(riscv_hart_s *const hart)
 		return;
 	/* If all the checks passed, we now have a valid system bus so can proceed with using it for memory access */
 	hart->flags = RV_HART_FLAG_MEMORY_SYSBUS | (sysbus_status & RV_HART_FLAG_ACCESS_WIDTH_MASK);
+	/* System Bus also means the target can have memory read without halting */
+	target->target_options |= TOPT_NON_HALTING_MEM_IO;
 	/* Make sure the system bus is not in any kind of error state */
 	(void)riscv_dm_write(hart->dbg_module, RV_DM_SYSBUS_CTRLSTATUS, 0x00407000U);
 }
