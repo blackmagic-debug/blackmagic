@@ -363,8 +363,8 @@ void target_regs_read(target_s *target, void *data)
 	if (target->regs_read)
 		target->regs_read(target, data);
 	else {
-		for (size_t x = 0, i = 0; x < target->regs_size;)
-			x += target_reg_read(target, i++, (uint8_t *)data + x, target->regs_size - x);
+		for (size_t offset = 0, i = 0; offset < target->regs_size;)
+			offset += target_reg_read(target, i++, (uint8_t *)data + offset, target->regs_size - offset);
 	}
 }
 
@@ -373,8 +373,8 @@ void target_regs_write(target_s *target, const void *data)
 	if (target->regs_write)
 		target->regs_write(target, data);
 	else {
-		for (size_t x = 0, i = 0; x < target->regs_size;)
-			x += target_reg_write(target, i++, (const uint8_t *)data + x, target->regs_size - x);
+		for (size_t offset = 0, i = 0; offset < target->regs_size;)
+			offset += target_reg_write(target, i++, (const uint8_t *)data + offset, target->regs_size - offset);
 	}
 }
 
@@ -578,19 +578,21 @@ bool target_mem32_write8(target_s *target, target_addr32_t addr, uint8_t value)
 
 void target_command_help(target_s *target)
 {
-	for (const target_command_s *tc = target->commands; tc; tc = tc->next) {
-		tc_printf(target, "%s specific commands:\n", tc->specific_name);
-		for (const command_s *c = tc->cmds; c->cmd; c++)
-			tc_printf(target, "\t%s -- %s\n", c->cmd, c->help);
+	for (const target_command_s *target_commands = target->commands; target_commands;
+		 target_commands = target_commands->next) {
+		tc_printf(target, "%s specific commands:\n", target_commands->specific_name);
+		for (const command_s *command = target_commands->cmds; command->cmd; command++)
+			tc_printf(target, "\t%s -- %s\n", command->cmd, command->help);
 	}
 }
 
 int target_command(target_s *target, int argc, const char *argv[])
 {
-	for (const target_command_s *tc = target->commands; tc; tc = tc->next) {
-		for (const command_s *c = tc->cmds; c->cmd; c++) {
-			if (!strncmp(argv[0], c->cmd, strlen(argv[0])))
-				return c->handler(target, argc, argv) ? 0 : 1;
+	for (const target_command_s *target_commands = target->commands; target_commands;
+		 target_commands = target_commands->next) {
+		for (const command_s *command = target_commands->cmds; command->cmd; command++) {
+			if (!strncmp(argv[0], command->cmd, strlen(argv[0])))
+				return command->handler(target, argc, argv) ? 0 : 1;
 		}
 	}
 	return -1;
