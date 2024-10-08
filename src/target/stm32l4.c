@@ -470,7 +470,7 @@ static stm32l4_device_info_s const stm32l4_device_info[] = {
 	{
 		.device_id = ID_STM32WB35,
 		.family = STM32L4_FAMILY_WBxx,
-		.designator = "STM32WBxx",
+		.designator = "STM32WB35/55",
 		.sram1 = 192U,
 		.sram2 = 64U,
 		.flags = 2U,
