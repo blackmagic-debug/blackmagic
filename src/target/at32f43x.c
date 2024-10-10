@@ -1,8 +1,8 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
- * Copyright (C) 2023 1BitSquared <info@1bitsquared.com>
- * Written by ALTracer <tolstov_den@mail.ru>
+ * Copyright (C) 2023-2024 1BitSquared <info@1bitsquared.com>
+ * Written by ALTracer <11005378+ALTracer@users.noreply.github.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,8 +23,12 @@
  * the device, providing the XML memory map and Flash memory programming.
  *
  * References:
- * ARTERY doc - RM_AT32F435_437_EN_V2.04.pdf
- *   Reference manual - AT32F435/437 Series Reference Manual
+ * AT32F435/437 Series Reference Manual
+ *   https://www.arterychip.com/download/RM/RM_AT32F435_437_EN_V2.04.pdf
+ * AT32F402/405 Series Reference Manual
+ *   https://www.arterychip.com/download/RM/RM_AT32F402_405_EN_V2.01.pdf
+ * AT32F423 Series Reference Manual
+ *   https://www.arterychip.com/download/RM/RM_AT32F423_EN_V2.03.pdf
  */
 
 #include "general.h"
@@ -89,6 +93,9 @@ static bool at32f43_mass_erase(target_s *target);
 #define AT32F43x_2K_OB_COUNT 256U
 #define AT32F43x_4K_OB_COUNT 2048U
 
+#define AT32F405_USD_BASE 0x1ffff800U
+#define AT32F405_OB_COUNT 256U
+
 /*
  * refman: DEBUG has 5 registers, of which CTRL, APB1_PAUSE, APB2_PAUSE are
  * "asynchronously reset by POR Reset (not reset by system reset). It can be written by the debugger under reset."
@@ -114,6 +121,13 @@ static bool at32f43_mass_erase(target_s *target);
 #define AT32F4x_IDCODE_PART_MASK   0x00000fffU
 #define AT32F43_SERIES_4K          0x70084000U
 #define AT32F43_SERIES_2K          0x70083000U
+#define AT32F405_SERIES_256KB      0x70053000U
+#define AT32F405_SERIES_128KB      0x70042000U
+#define AT32F423_SERIES_256KB      0x700a3000U
+#define AT32F423_SERIES_128KB      0x700a2000U
+#define AT32F423_SERIES_64KB       0x70032000U
+#define AT32F4x_PROJECT_ID         0x1ffff7f3U
+#define AT32F4x_FLASHSIZE          0x1ffff7e0U
 
 typedef struct at32f43_flash {
 	target_flash_s target_flash;
@@ -187,6 +201,7 @@ static void at32f43_detach(target_s *target)
 	cortexm_detach(target);
 }
 
+/* Identify AT32F43x "High Performance" line devices */
 static bool at32f43_detect(target_s *target, const uint16_t part_id)
 {
 	/*
@@ -289,7 +304,66 @@ static bool at32f43_detect(target_s *target, const uint16_t part_id)
 	return true;
 }
 
-/* Identify AT32F43x "High Performance" line devices (Cortex-M4) */
+/* Identify AT32F405 Mainstream devices */
+static bool at32f405_detect(target_s *target, const uint32_t series)
+{
+	/*
+	 * AT32F405/F402 always contain 1 bank with 128 sectors
+	 * Flash (C): 256 KiB, 2 KiB per sector, 0x7005_3000
+	 * Flash (B): 128 KiB, 1 KiB per sector, 0x7004_2000
+	 */
+	const uint16_t flash_size = target_mem32_read16(target, AT32F4x_FLASHSIZE);
+	const uint16_t sector_size = (series == AT32F405_SERIES_128KB) ? 1024U : 2048U;
+	at32f43_add_flash(target, 0x08000000, flash_size, sector_size, 0, AT32F43x_FLASH_BANK1_REG_OFFSET);
+
+	/*
+	 * Either 96 or 102 KiB of SRAM, depending on USD bit 7 nRAM_PRT_CHK:
+	 * when first 48 KiB are protected by odd parity, last 6 KiB are reserved for this purpose
+	 */
+	target_add_ram32(target, 0x20000000, 102U * 1024U);
+	target->driver = "AT32F405";
+	target->mass_erase = at32f43_mass_erase;
+
+	/* 512 byte User System Data area at 0x1fff_f800 (different USD_BASE, no EOPB0) */
+	//target_add_commands(target, at32f43_cmd_list, target->driver);
+
+	/* Same registers and freeze bits in DBGMCU as F437 */
+	target->attach = at32f43_attach;
+	target->detach = at32f43_detach;
+	at32f43_configure_dbgmcu(target);
+
+	return true;
+}
+
+/* Identify AT32F423 Value line devices */
+static bool at32f423_detect(target_s *target, const uint32_t series)
+{
+	/*
+	 * AT32F423 always has 48 KiB of SRAM and one of
+	 * Flash (C): 256 KiB, 2 KiB per sector, 0x700a_3000
+	 * Flash (B): 128 KiB, 1 KiB per sector, 0x700a_2000
+	 * Flash (8):  64 KiB, 1 KiB per sector, 0x7003_2000
+	 */
+	const uint16_t flash_size = target_mem32_read16(target, AT32F4x_FLASHSIZE);
+	const uint16_t sector_size = (series == AT32F423_SERIES_256KB) ? 2048U : 1024U;
+	at32f43_add_flash(target, 0x08000000, flash_size, sector_size, 0, AT32F43x_FLASH_BANK1_REG_OFFSET);
+
+	target_add_ram32(target, 0x20000000, 48U * 1024U);
+	target->driver = "AT32F423";
+	target->mass_erase = at32f43_mass_erase;
+
+	/* 512 byte User System Data area at 0x1fff_f800 (different USD_BASE, no EOPB0) */
+	//target_add_commands(target, at32f43_cmd_list, target->driver);
+
+	/* Same registers and freeze bits in DBGMCU as F437 */
+	target->attach = at32f43_attach;
+	target->detach = at32f43_detach;
+	at32f43_configure_dbgmcu(target);
+
+	return true;
+}
+
+/* Identify any Arterytek devices with Cortex-M4 and FPEC at 0x4002_3c00 */
 bool at32f43x_probe(target_s *target)
 {
 	// Artery clones use Cortex M4 cores
@@ -300,9 +374,24 @@ bool at32f43x_probe(target_s *target)
 	const uint32_t idcode = target_mem32_read32(target, AT32F43x_DBGMCU_IDCODE);
 	const uint32_t series = idcode & AT32F4x_IDCODE_SERIES_MASK;
 	const uint16_t part_id = idcode & AT32F4x_IDCODE_PART_MASK;
+	// ... and highest byte of UID
+	const uint8_t project_id = target_mem32_read8(target, AT32F4x_PROJECT_ID);
+	const uint32_t debug_ser_id = target_mem32_read32(target, AT32F43x_DBGMCU_SER_ID);
 
-	if (series == AT32F43_SERIES_4K || series == AT32F43_SERIES_2K)
+	DEBUG_TARGET("%s: idcode = %08" PRIx32 ", project_id = %02x, debug_ser_id = %08" PRIx32 "\n", __func__, idcode,
+		project_id, debug_ser_id);
+
+	/* 0x0e: F437 (has EMAC), 0x0d: F435 (no EMAC). 4K/2K describe sector sizes, not total flash capacity. */
+	if ((series == AT32F43_SERIES_4K || series == AT32F43_SERIES_2K) && (project_id == 0x0dU || project_id == 0x0eU))
 		return at32f43_detect(target, part_id);
+	/* 0x13: F405 (has USB HS), 0x14: F402 (no USB HS) */
+	if ((series == AT32F405_SERIES_256KB || series == AT32F405_SERIES_128KB) &&
+		(project_id == 0x13U || project_id == 0x14U))
+		return at32f405_detect(target, series);
+	if ((series == AT32F423_SERIES_256KB || series == AT32F423_SERIES_128KB || series == AT32F423_SERIES_64KB) &&
+		project_id == 0x12U)
+		return at32f423_detect(target, series);
+
 	return false;
 }
 
