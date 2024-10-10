@@ -76,7 +76,7 @@ void remote_v0_jtag_tdi_tdo_seq(uint8_t *data_out, bool final_tms, const uint8_t
 	/* Loop through the data to send/receive and handle it in chunks of up to 32 bits */
 	for (size_t cycle = 0; cycle < clock_cycles; cycle += 32U) {
 		/* Calculate how many bits need to be in this chunk, capped at 32 */
-		const size_t chunk_length = MIN(clock_cycles - cycle, 32U);
+		const uint8_t chunk_length = MIN(clock_cycles - cycle, 32U);
 		/* If the result would complete the transaction, check if TMS needs to be high at the end */
 		const char packet_type =
 			cycle + chunk_length == clock_cycles && final_tms ? REMOTE_TDITDO_TMS : REMOTE_TDITDO_NOTMS;
@@ -93,7 +93,7 @@ void remote_v0_jtag_tdi_tdo_seq(uint8_t *data_out, bool final_tms, const uint8_t
 		 * This uses its own copy of the REMOTE_JTAG_TDIDO_STR to correct for how
 		 * formatting a uint32_t is platform-specific.
 		 */
-		int length = snprintf(buffer, REMOTE_MAX_MSG_SIZE, "!J%c%02zx%" PRIx32 "%c", packet_type, chunk_length,
+		int length = snprintf(buffer, REMOTE_MAX_MSG_SIZE, "!J%c%02x%" PRIx32 "%c", packet_type, chunk_length,
 			packet_data_in, REMOTE_EOM);
 		platform_buffer_write(buffer, length);
 
