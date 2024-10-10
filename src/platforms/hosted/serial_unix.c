@@ -28,6 +28,10 @@
 #include <unistd.h>
 #endif
 
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netdb.h>
+
 #include "general.h"
 #include "remote.h"
 #include "bmp_hosted.h"
@@ -42,6 +46,73 @@ static int fd;
 static uint8_t read_buffer[READ_BUFFER_LENGTH];
 static size_t read_buffer_fullness = 0U;
 static size_t read_buffer_offset = 0U;
+
+/* Socket code taken from https://beej.us/guide/bgnet/ */
+static bool try_opening_network_device(const char *const name)
+{
+	// Maximum legal length of a hostname
+	char hostname[256];
+
+	// The service name or port number
+	char *service_name;
+
+	struct addrinfo addr_hints = {
+		.ai_family = AF_UNSPEC,
+		.ai_socktype = SOCK_STREAM,
+		.ai_protocol = IPPROTO_TCP,
+		.ai_flags = AI_ADDRCONFIG | AI_V4MAPPED,
+	};
+	struct addrinfo *server_info;
+
+	if (!name) {
+		return false;
+	}
+
+	// Copy the hostname to an internal array. We need to modify it
+	// to separate the hostname from the service name.
+	strncpy(hostname, name, sizeof(hostname) - 1U);
+
+	service_name = strstr(hostname, ":");
+	if (service_name == NULL) {
+		return false;
+	}
+
+	// Separate the service name / port number from the hostname
+	*service_name = '\0';
+	service_name += 1;
+
+	if (*service_name == '\0') {
+		return false;
+	}
+
+	if (getaddrinfo(hostname, service_name, &addr_hints, &server_info) != 0) {
+		return false;
+	}
+
+	// Loop through all the results and connect to the first we can.
+	struct addrinfo *p;
+	for (p = server_info; p != NULL; p = p->ai_next) {
+		fd = socket(p->ai_family, p->ai_socktype, p->ai_protocol);
+		if (fd == -1) {
+			continue;
+		}
+
+		if (connect(fd, p->ai_addr, p->ai_addrlen) == -1) {
+			close(fd);
+			continue;
+		}
+
+		// If we get here, we must have connected successfully
+		break;
+	}
+	freeaddrinfo(server_info);
+
+	if (p == NULL) {
+		return false;
+	}
+
+	return true;
+}
 
 /* A nice routine grabbed from
  * https://stackoverflow.com/questions/6947413/how-to-open-read-and-write-from-serial-port-in-c
@@ -97,6 +168,9 @@ bool serial_open(const bmda_cli_options_s *cl_opts, const char *serial)
 	}
 	fd = open(name, O_RDWR | O_SYNC | O_NOCTTY);
 	if (fd < 0) {
+		if (try_opening_network_device(name)) {
+			return true;
+		}
 		DEBUG_ERROR("Couldn't open serial port %s\n", name);
 		return false;
 	}
@@ -202,6 +276,9 @@ bool serial_open(const bmda_cli_options_s *const cl_opts, const char *const seri
 	read_buffer_offset = 0U;
 	fd = open(name, O_RDWR | O_SYNC | O_NOCTTY);
 	if (fd < 0) {
+		if (try_opening_network_device(name)) {
+			return true;
+		}
 		DEBUG_ERROR("Couldn't open serial port %s\n", name);
 		return false;
 	}
