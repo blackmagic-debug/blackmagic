@@ -25,4 +25,7 @@ src/ftd2xx.dll
 
 scripts/swolisten
 
+ozone/
 .direnv/
+
+deps/winc1500

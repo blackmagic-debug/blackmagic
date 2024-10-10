@@ -31,10 +31,13 @@
 platform_stm32_includes = include_directories('.')
 
 platform_stm32_sources = files(
-	'gdb_if.c',
 	'serialno.c',
 	'timing_stm32.c',
 )
+
+if probe != 'ctxlink'
+	platform_stm32_sources += files('gdb_if.c')
+endif
 
 platform_stm32_swo = declare_dependency(sources: files(
 	'swo.c',
