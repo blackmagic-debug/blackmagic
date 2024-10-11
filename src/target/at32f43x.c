@@ -374,12 +374,21 @@ bool at32f43x_probe(target_s *target)
 	const uint32_t idcode = target_mem32_read32(target, AT32F43x_DBGMCU_IDCODE);
 	const uint32_t series = idcode & AT32F4x_IDCODE_SERIES_MASK;
 	const uint16_t part_id = idcode & AT32F4x_IDCODE_PART_MASK;
-	// ... and highest byte of UID
-	const uint8_t project_id = target_mem32_read8(target, AT32F4x_PROJECT_ID);
+	// ... and another word from PPB
 	const uint32_t debug_ser_id = target_mem32_read32(target, AT32F43x_DBGMCU_SER_ID);
+	const uint8_t project_id = (debug_ser_id >> 8U) & 0xffU;
 
-	DEBUG_TARGET("%s: idcode = %08" PRIx32 ", project_id = %02x, debug_ser_id = %08" PRIx32 "\n", __func__, idcode,
-		project_id, debug_ser_id);
+#ifndef DEBUG_TARGET_IS_NOOP
+	// ... and/or highest byte of UID, which reads as 0xff under Read Protection
+	const uint8_t uid_byte = target_mem32_read8(target, AT32F4x_PROJECT_ID);
+	const uint32_t flash_usd = target_mem32_read32(target, AT32F43x_FLASH_USD);
+	const bool read_protected = (flash_usd & AT32F43x_FLASH_USD_RDP) == AT32F43x_FLASH_USD_RDP;
+	if (read_protected)
+		DEBUG_TARGET("%s: Flash Access Protection enabled, UID reads as 0x%02x\n", __func__, uid_byte);
+
+	DEBUG_TARGET("%s: idcode = %08" PRIx32 ", uid_byte = %02x, debug_ser_id = %08" PRIx32 "\n", __func__, idcode,
+		uid_byte, debug_ser_id);
+#endif
 
 	/* 0x0e: F437 (has EMAC), 0x0d: F435 (no EMAC). 4K/2K describe sector sizes, not total flash capacity. */
 	if ((series == AT32F43_SERIES_4K || series == AT32F43_SERIES_2K) && (project_id == 0x0dU || project_id == 0x0eU))
