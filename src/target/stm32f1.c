@@ -368,6 +368,54 @@ static void gd32vf1_detach(target_s *const target)
 #endif
 #endif
 
+static bool at32f403_detect(target_s *target, const uint16_t part_id)
+{
+	switch (part_id) {
+	case 0x0240U: // AT32F403ZCT6 / LQFP144
+	case 0x0241U: // AT32F403VCT6 / LQFP100
+	case 0x0242U: // AT32F403RCT6 / LQFP64
+	case 0x0243U: // AT32F403CCT6 / LQFP48
+	case 0x024eU: // AT32F403CCU6 / QFN48
+		// Flash (C): 256 KiB / 2 KiB per block
+		stm32f1_add_flash(target, STM32F1_FLASH_BANK1_BASE, 256U * 1024U, 2U * 1024U);
+		break;
+	case 0x02c8U: // AT32F403ZET6 / LQFP144
+	case 0x02c9U: // AT32F403VET6 / LQFP100
+	case 0x02caU: // AT32F403RET6 / LQFP64
+	case 0x02cbU: // AT32F403CET6 / LQFP48
+	case 0x02cdU: // AT32F403CEU6 / QFN48
+		// Flash (E): 512 KiB / 2 KiB per block
+		stm32f1_add_flash(target, STM32F1_FLASH_BANK1_BASE, 512U * 1024U, 2U * 1024U);
+		break;
+	case 0x0344U: // AT32F403ZGT6 / LQFP144
+	case 0x0345U: // AT32F403VGT6 / LQFP100
+	case 0x0346U: // AT32F403RGT6 / LQFP64
+	case 0x0347U: // AT32F403CGT6 / LQFP48
+	case 0x034cU: // AT32F403CGU6 / QFN48
+		// Flash (G): 1024 KiB / 2 KiB per block, dual-bank
+		stm32f1_add_flash(target, STM32F1_FLASH_BANK1_BASE, 512U * 1024U, 2U * 1024U);
+		stm32f1_add_flash(target, STM32F1_FLASH_BANK2_BASE, 512U * 1024U, 2U * 1024U);
+		break;
+	// Unknown/undocumented
+	default:
+		return false;
+	}
+
+	// All parts have 96 KiB SRAM
+	target_add_ram32(target, STM32F1_SRAM_BASE, 96U * 1024U);
+	target->driver = "AT32F403";
+	target->part_id = part_id;
+	target->target_options |= STM32F1_TOPT_32BIT_WRITES;
+	target->mass_erase = stm32f1_mass_erase;
+
+	// AT32F403 has 48 bytes of User System Data
+	target_add_commands(target, stm32f1_cmd_list, target->driver);
+	// TODO: SPIM 0x08400000 bank support
+
+	/* Now we have a stable debug environment, make sure the WDTs + WFI and WFE instructions can't cause problems */
+	return stm32f1_configure_dbgmcu(target, STM32F1_DBGMCU_CONFIG);
+}
+
 static bool at32f40_is_dual_bank(const uint16_t part_id)
 {
 	switch (part_id) {
@@ -493,8 +541,10 @@ bool at32f40x_probe(target_s *target)
 
 	DEBUG_TARGET("%s: idcode = %08" PRIx32 ", project_id = %02x\n", __func__, idcode, project_id);
 
-	/* 0x08: F407 (has EMAC), 0x07: F403A (only CAN+USB). */
+	/* 0x08: F407 (has EMAC), 0x07: F403A (only CAN+USB). 0x02 is the older F403 (200MHz). */
 	if (series == AT32F40_SERIES) {
+		if (project_id == 2U)
+			return at32f403_detect(target, part_id);
 		if (project_id == 7U || project_id == 8U)
 			return at32f403a_407_detect(target, part_id);
 		if (project_id == 0xffU)
