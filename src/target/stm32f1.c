@@ -141,6 +141,7 @@
 #define AT32F4x_IDCODE_PART_MASK   0x00000fffU
 #define AT32F41_SERIES             0x70030000U
 #define AT32F40_SERIES             0x70050000U
+#define AT32F4x_PROJECT_ID         0x1ffff7f3U
 
 #define STM32F1_OB_COUNT 8U
 #define AT32F4_OB_COUNT  24U
@@ -383,7 +384,7 @@ static bool at32f40_is_dual_bank(const uint16_t part_id)
 	return false;
 }
 
-static bool at32f40_detect(target_s *target, const uint16_t part_id)
+static bool at32f403a_407_detect(target_s *target, const uint16_t part_id)
 {
 	// Current driver supports only *default* memory layout (256 KB ZW Flash / 96 KB SRAM)
 	// XXX: Support for external Flash on SPIM requires specific flash code (not implemented)
@@ -431,7 +432,7 @@ static bool at32f40_detect(target_s *target, const uint16_t part_id)
 	return stm32f1_configure_dbgmcu(target, STM32F1_DBGMCU_CONFIG);
 }
 
-static bool at32f41_detect(target_s *target, const uint16_t part_id)
+static bool at32f415_detect(target_s *target, const uint16_t part_id)
 {
 	switch (part_id) {
 	case 0x0240U: // LQFP64_10x10
@@ -466,6 +467,7 @@ static bool at32f41_detect(target_s *target, const uint16_t part_id)
 	target->part_id = part_id;
 	target->target_options |= STM32F1_TOPT_32BIT_WRITES;
 	target->mass_erase = stm32f1_mass_erase;
+	// TODO: 1 KiB User System Data, i.e. Option bytes
 
 	/* Now we have a stable debug environment, make sure the WDTs + WFI and WFE instructions can't cause problems */
 	return stm32f1_configure_dbgmcu(target, STM32F1_DBGMCU_CONFIG);
@@ -482,11 +484,30 @@ bool at32f40x_probe(target_s *target)
 	const uint32_t idcode = target_mem32_read32(target, STM32F1_DBGMCU_IDCODE);
 	const uint32_t series = idcode & AT32F4x_IDCODE_SERIES_MASK;
 	const uint16_t part_id = idcode & AT32F4x_IDCODE_PART_MASK;
+	// ... and highest byte of UID
+	const uint32_t project_id = target_mem32_read8(target, AT32F4x_PROJECT_ID);
 
-	if (series == AT32F40_SERIES)
-		return at32f40_detect(target, part_id);
-	if (series == AT32F41_SERIES)
-		return at32f41_detect(target, part_id);
+	const bool read_protected = target_mem32_read32(target, FLASH_OBR) & FLASH_OBR_RDPRT;
+	if (read_protected)
+		DEBUG_TARGET("%s: Read protection enabled, UID reads as 0x%02x\n", __func__, project_id);
+
+	DEBUG_TARGET("%s: idcode = %08" PRIx32 ", project_id = %02x\n", __func__, idcode, project_id);
+
+	/* 0x08: F407 (has EMAC), 0x07: F403A (only CAN+USB). */
+	if (series == AT32F40_SERIES) {
+		if (project_id == 7U || project_id == 8U)
+			return at32f403a_407_detect(target, part_id);
+		if (project_id == 0xffU)
+			return false;
+	}
+	/* Value line. 0x05: F415 (OTGFS) */
+	if (series == AT32F41_SERIES) {
+		if (project_id == 5U)
+			return at32f415_detect(target, part_id);
+		if (project_id == 0xffU)
+			return false;
+	}
+
 	return false;
 }
 
