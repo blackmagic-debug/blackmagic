@@ -554,7 +554,47 @@ static bool at32f43_mass_erase(target_s *target)
 	return true;
 }
 
-static bool at32f43x_swd_raw_access_noabort(adiv5_debug_port_s *dp, uint8_t rnw, uint16_t addr, uint32_t value)
+/* Borrow macros from adiv5_jtag.c */
+#define JTAGDP_ACK_OK   0x02U
+#define JTAGDP_ACK_WAIT 0x01U
+
+#define IR_DPACC 0xaU
+#define IR_APACC 0xbU
+
+uint32_t adiv5_jtag_raw_access_noabort(adiv5_debug_port_s *dp, uint8_t rnw, uint16_t addr, uint32_t value)
+{
+	const bool is_ap = addr & ADIV5_APnDP;
+	addr &= 0xffU;
+
+	const uint64_t request = ((uint64_t)value << 3U) | ((addr >> 1U) & 0x06U) | (rnw ? 1U : 0U);
+
+	uint32_t result = 0U;
+	uint8_t ack = JTAGDP_ACK_WAIT;
+
+	jtag_dev_write_ir(dp->dev_index, is_ap ? IR_APACC : IR_DPACC);
+
+	platform_timeout_s timeout_progressbar;
+	platform_timeout_set(&timeout_progressbar, 500U);
+	platform_timeout_s timeout_erase;
+	platform_timeout_set(&timeout_erase, 15000U);
+	while (ack == JTAGDP_ACK_WAIT && !platform_timeout_is_expired(&timeout_erase)) {
+		uint64_t response;
+		jtag_dev_shift_dr(dp->dev_index, (uint8_t *)&response, (const uint8_t *)&request, 35);
+		result = response >> 3U;
+		ack = response & 0x07U;
+		platform_delay(5U);
+		target_print_progress(&timeout_progressbar);
+	}
+
+	if (ack != JTAGDP_ACK_OK) {
+		DEBUG_ERROR("JTAG access resulted in: %" PRIx32 ":%x\n", result, ack);
+		raise_exception(EXCEPTION_ERROR, "JTAG-DP invalid ACK");
+	}
+
+	return result;
+}
+
+static bool adiv5_swd_raw_access_noabort(adiv5_debug_port_s *dp, uint8_t rnw, uint16_t addr, uint32_t value)
 {
 	const uint8_t request = make_packet_request(rnw, addr);
 	uint32_t response = 0;
@@ -615,7 +655,10 @@ static bool at32f43x_mem_write_noabort(target_s *target, target_addr32_t dest, u
 	volatile uint32_t rdbuff = 0;
 	TRY (EXCEPTION_ALL) {
 		//ack = ap->dp->low_access(dp, rnw, addr, value)
-		rdbuff = at32f43x_swd_raw_access_noabort(ap->dp, ADIV5_LOW_READ, ADIV5_DP_RDBUFF, 0);
+		if (ap->dp->low_access == adiv5_swd_raw_access)
+			rdbuff = adiv5_swd_raw_access_noabort(ap->dp, ADIV5_LOW_READ, ADIV5_DP_RDBUFF, 0);
+		else if (ap->dp->low_access == adiv5_jtag_raw_access)
+			rdbuff = adiv5_jtag_raw_access_noabort(ap->dp, ADIV5_LOW_READ, ADIV5_DP_RDBUFF, 0);
 	}
 	CATCH () {
 	case EXCEPTION_TIMEOUT:
