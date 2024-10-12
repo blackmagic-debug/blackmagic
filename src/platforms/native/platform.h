@@ -288,6 +288,18 @@ extern bool debug_bmp;
 #define TRACE_IRQ          NVIC_TIM3_IRQ
 #define TRACE_ISR(x)       tim3_isr(x)
 
+#define TRACE_DMA_BUS      DMA1
+#define TRACE_DMA_CLK      RCC_DMA1
+#define TRACE_DMA_CHAN     DMA_CHANNEL3
+#define TRACE_DMA_SAMPLES  512
+#define TRACE_DMA_IRQ      NVIC_DMA1_CHANNEL3_IRQ
+#define TRACE_DMA_ISR(x)   dma1_channel3_isr(x)
+
+// an extra IRQ used by the trace decoder, can be anything as long as it's
+// not used elsewhere and can be triggered using the NVIC
+#define TRACE_SW_IRQ       NVIC_EXTI0_IRQ
+#define TRACE_SW_ISR(x)    exti0_isr(x)
+
 #define SET_RUN_STATE(state)   running_status = (state)
 #define SET_IDLE_STATE(state)  gpio_set_val(LED_PORT, LED_IDLE_RUN, state)
 #define SET_ERROR_STATE(state) gpio_set_val(LED_PORT, LED_ERROR, state)
