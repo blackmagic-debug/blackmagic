@@ -130,13 +130,11 @@ void swo_uart_deinit(void)
 {
 	/* Disable the UART and halt DMA for it, grabbing the number of bytes left in the buffer as we do */
 	usart_disable(SWO_UART);
-	const uint16_t space_remaining = dma_get_number_of_data(SWO_DMA_BUS, SWO_DMA_CHAN);
 	dma_disable_channel(SWO_DMA_BUS, SWO_DMA_CHAN);
 
-	/* Convert the counter into an amount captured and add that to the write index and amount available */
-	const uint16_t amount = (SWO_BUFFER_SIZE - space_remaining) & ((SWO_BUFFER_SIZE / 2U) - 1U);
-	swo_buffer_write_index += amount;
-	swo_buffer_bytes_available += amount;
+	/* Update buffer write index */
+	const uint16_t space_remaining = dma_get_number_of_data(SWO_DMA_BUS, SWO_DMA_CHAN);
+	swo_buffer_write_index = (SWO_BUFFER_SIZE - space_remaining);
 
 	/* Put the GPIO back into normal service as a GPIO */
 #if defined(STM32F4) || defined(STM32F0) || defined(STM32F3) || defined(STM32F7)
@@ -153,13 +151,10 @@ uint32_t swo_uart_get_baudrate(void)
 
 void SWO_DMA_ISR(void)
 {
-	if (dma_get_interrupt_flag(SWO_DMA_BUS, SWO_DMA_CHAN, DMA_HTIF)) {
-		dma_clear_interrupt_flags(SWO_DMA_BUS, SWO_DMA_CHAN, DMA_HTIF);
-		swo_buffer_bytes_available += SWO_BUFFER_SIZE / 2U;
-	}
-	if (dma_get_interrupt_flag(SWO_DMA_BUS, SWO_DMA_CHAN, DMA_TCIF)) {
-		dma_clear_interrupt_flags(SWO_DMA_BUS, SWO_DMA_CHAN, DMA_TCIF);
-		swo_buffer_bytes_available += SWO_BUFFER_SIZE / 2U;
-	}
+	const uint16_t flags = dma_get_interrupt_flag(SWO_DMA_BUS, SWO_DMA_CHAN, DMA_HTIF | DMA_TCIF);
+	dma_clear_interrupt_flags(SWO_DMA_BUS, SWO_DMA_CHAN, flags);
+
+	const uint16_t space_remaining = dma_get_number_of_data(SWO_DMA_BUS, SWO_DMA_CHAN);
+	swo_buffer_write_index = (SWO_BUFFER_SIZE - space_remaining);
 	swo_send_buffer(usbdev, SWO_ENDPOINT);
 }

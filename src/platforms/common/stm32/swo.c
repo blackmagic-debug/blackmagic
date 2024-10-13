@@ -58,7 +58,6 @@ bool swo_itm_decoding = false;
 uint8_t *swo_buffer;
 uint16_t swo_buffer_read_index = 0U;
 uint16_t swo_buffer_write_index = 0U;
-_Atomic uint16_t swo_buffer_bytes_available = 0U;
 
 void swo_init(const swo_coding_e swo_mode, const uint32_t baudrate, const uint32_t itm_stream_bitmask)
 {
@@ -115,7 +114,7 @@ void swo_deinit(const bool deallocate)
 #endif
 
 	/* Spin waiting for all data to finish being transmitted */
-	while (swo_buffer_bytes_available) {
+	while (swo_buffer_read_index != swo_buffer_write_index) {
 		swo_send_buffer(usbdev, SWO_ENDPOINT);
 		__WFI();
 	}
@@ -135,7 +134,11 @@ void swo_send_buffer(usbd_device *const dev, const uint8_t ep)
 	if (atomic_flag_test_and_set_explicit(&reentry_flag, memory_order_relaxed))
 		return;
 
-	const uint16_t bytes_available = swo_buffer_bytes_available;
+	const uint16_t bytes_unprocessed = (swo_buffer_write_index - swo_buffer_read_index) & (SWO_BUFFER_SIZE - 1U);
+	const uint16_t bytes_to_end = SWO_BUFFER_SIZE - swo_buffer_read_index;
+	/* we cannot process a non-contiguous block at once */
+	const uint16_t bytes_available = MIN(bytes_unprocessed, bytes_to_end);
+
 	/*
 	 * If there is somthing to move, move the next up-to SWO_ENDPOINT_SIZE bytes chunk of it (USB)
 	 * or the whole lot (ITM decoding) as appropriate
@@ -147,7 +150,7 @@ void swo_send_buffer(usbd_device *const dev, const uint8_t ep)
 			/* If we're in UART mode, hand as much as we can all at once */
 			if (swo_current_mode == swo_nrz_uart)
 				result = swo_itm_decode(
-					swo_buffer + swo_buffer_read_index, MIN(bytes_available, SWO_BUFFER_SIZE - swo_buffer_read_index));
+					swo_buffer + swo_buffer_read_index, bytes_available);
 			/* Otherwise, if we're in Manchester mode, manage the amount moved the same as we do USB */
 			else
 				result = swo_itm_decode(swo_buffer + swo_buffer_read_index, MIN(bytes_available, SWO_ENDPOINT_SIZE));
@@ -162,7 +165,6 @@ void swo_send_buffer(usbd_device *const dev, const uint8_t ep)
 			 * Update the amount read and consumed */
 			swo_buffer_read_index += result;
 			swo_buffer_read_index &= SWO_BUFFER_SIZE - 1U;
-			swo_buffer_bytes_available -= result;
 		}
 	}
 
