@@ -35,12 +35,12 @@ endif
 
 # Include the files for either: Manchester-only (1), UART-only (2) or both modes (3)
 ifeq ($(SWO_ENCODING), 1)
-	SRC += swo_manchester.c
+	SRC += swo_manchester_dma.c
 else ifeq ($(SWO_ENCODING), 2)
 	SRC += swo_uart.c
 else ifeq ($(SWO_ENCODING), 3)
 	SRC +=               \
-		swo_manchester.c \
+		swo_manchester_dma.c \
 		swo_uart.c
 else # If we got some other value, that's an error so report it
 	$(error Invalid value for SWO encoding, must be one of 1, 2, or 3)

@@ -326,6 +326,15 @@ extern int hwversion;
 #define SWO_DMA_IRQ    NVIC_DMA1_CHANNEL5_IRQ
 #define SWO_DMA_ISR(x) swo_dma_isr(x)
 
+#define SWO_DMA_EDGE_CHAN   DMA_CHANNEL3
+#define SWO_DMA_EDGE_IRQ    NVIC_DMA1_CHANNEL3_IRQ
+#define SWO_DMA_EDGE_ISR(x) dma1_channel3_isr(x)
+
+// an extra IRQ used by the SWO decoder, can be anything as long as it's
+// not used elsewhere and can be triggered using the NVIC
+#define SWO_DMA_SW_IRQ    NVIC_EXTI0_IRQ
+#define SWO_DMA_SW_ISR(x) exti0_isr(x)
+
 #define SET_RUN_STATE(state)   running_status = (state)
 #define SET_IDLE_STATE(state)  gpio_set_val(LED_PORT, LED_IDLE_RUN, state)
 #define SET_ERROR_STATE(state) gpio_set_val(LED_PORT, LED_ERROR, state)
