@@ -44,6 +44,11 @@
 #define ADIV5_SWD_TO_JTAG_SELECT_SEQUENCE 0xe73cU /* 16 bits, LSB (MSB: 0x3ce7) */
 #define ADIV5_JTAG_TO_SWD_SELECT_SEQUENCE 0xe79eU /* 16 bits, LSB (MSB: 0x79e7) */
 
+/* ADIv5 JTAG to dormant sequence */
+#define ADIV5_JTAG_TO_DORMANT_SEQUENCE0 0x1fU       /* 5 bits */
+#define ADIV5_JTAG_TO_DORMANT_SEQUENCE1 0x33bbbbbaU /* 31 bits, LSB  (MSB : 0x2eeeeee6) */
+#define ADIV5_JTAG_TO_DORMANT_SEQUENCE2 0xffU       /* 8 bits  */
+
 /*
  * ADIv5 Selection Alert sequence
  * This sequence is sent MSB first and can be represented as either:
