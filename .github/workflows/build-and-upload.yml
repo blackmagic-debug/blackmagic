@@ -341,8 +341,8 @@ jobs:
     strategy:
       matrix:
         os:
-          - {id: macos-12, name: '12'}
           - {id: macos-13, name: '13'}
+          - {id: macos-14, name: '14'}
       fail-fast: false
 
     # Steps represent a sequence of tasks that will be executed as part of the job
