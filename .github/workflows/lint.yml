@@ -17,4 +17,4 @@ jobs:
     - uses: actions/checkout@v4
 
     - name: Run pre-commit
-      uses: pre-commit/action@v3.0.1
+      uses: blackmagic-debug/pre-commit-action@v3-bmd
