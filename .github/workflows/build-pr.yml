@@ -378,8 +378,9 @@ jobs:
     strategy:
       matrix:
         os:
+          - macos-13
+          - macos-14
           - macos-latest
-          - macos-12
       fail-fast: false
 
     # Steps represent a sequence of tasks that will be executed as part of the job
@@ -433,8 +434,8 @@ jobs:
     strategy:
       matrix:
         os:
-          - macos-latest
           - macos-13
+          - macos-14
         compiler:
           - gcc@11
           - gcc@12
