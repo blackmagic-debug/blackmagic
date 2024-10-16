@@ -1,7 +1,8 @@
 /*
- * This file is a contribution to the Black Magic Debug project.
+ * This file is part of the Black Magic Debug project.
  * 
- * Copyright (c) 2024 Stefan Simek, triaxis s.r.o.
+ * Copyright (c) 2024 Stefan Simek, triaxis state.r.o.
+ * Written by Stefan Simek <simek@triaxis.sk>
  * 
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -80,25 +81,77 @@
 // a proper break in the pulse sequence
 //#define SWO_ADVANCED_RECOVERY	1
 
-#define FORCE_INLINE	inline __attribute__((always_inline))
+/*
+ * Manchester decoder state
+ */
+static struct state {
+	uint16_t read_index;	// index of next edge in dma_buf to process
+	uint16_t last_edge;		// time of the last processed edge
+	uint32_t pulse_multiplier;	// discriminator between long and short pulses (1.5x preamble time)
+	int32_t bit_buffer;		// contains up to 32 decoded but unsent bits
+	uint8_t state;			// state machine state (see enum below)
+} swo_state;
+
+/*
+ * Manchester decoder state machine states
+ *
+ * Even/odd states correspond to line high/low state
+ */
+enum {
+	ST_MIDH,		// line high at mid-bit
+	ST_MIDL,		// line low at mid-bit
+	ST_RESH,		// line high after invalid pulse
+	ST_IDLE,		// line idle
+	ST_INIT,		// line high before initial half-bit
+	ST_INIL,		// line low after init (does not count for output)
+	ST_BITH,		// line high at bit boundary
+	ST_BITL,		// line low at bit boundary
+};
 
 // edge time buffer
-static uint16_t swo_dma[SWO_DMA_EDGE_SAMPLES];
+static uint16_t swo_dma_edge_samples[SWO_DMA_EDGE_SAMPLES];
 
 // helper to get the current write head of the DMA
-static FORCE_INLINE uint16_t swo_dma_wx()
+static inline uint16_t swo_dma_write_index()
 {
 	return SWO_DMA_EDGE_SAMPLES - DMA_CNDTR(SWO_DMA_BUS, SWO_DMA_EDGE_CHAN);
 }
 
-static FORCE_INLINE void swo_buffer_write(uint8_t b)
+
+static inline void swo_buffer_write_multi(uint32_t bytes, unsigned count)
 {
-	uint16_t wx = swo_buffer_write_index;
-	swo_buffer[wx++] = b;
-	swo_buffer_write_index = wx & SWO_BUFFER_MASK;
+	uint32_t write_index = swo_buffer_write_index;
+	uint8_t* buffer = swo_buffer;
+
+	if (write_index + 4 <= SWO_BUFFER_SIZE)
+	{
+		// use 32-bit write, it is (almost) safe even when count is less
+		// as if the read head is anywhere close, we'd be overflowing soon
+		// anyway
+		*(uint32_t*)&buffer[write_index] = bytes;
+		write_index += count;
+	}
+	else
+	{
+		while (count--)
+		{
+			buffer[write_index++ & SWO_BUFFER_MASK] = bytes;
+			bytes >>= 8;
+		}
+	}
+
+	swo_buffer_write_index = write_index & SWO_BUFFER_MASK;
 }
 
-static FORCE_INLINE void swo_buffer_push(void)
+
+static inline void swo_buffer_write(uint8_t byte)
+{
+	uint32_t write_index = swo_buffer_write_index;
+	swo_buffer[write_index++ & SWO_BUFFER_MASK] = byte;
+	swo_buffer_write_index = write_index & SWO_BUFFER_MASK;
+}
+
+static inline void swo_buffer_push(void)
 {
 	// just trigger the IRQ and let it check if it makes sense to do more -
 	// it will be tail-chained after the main ISR anyway so an additional
@@ -106,26 +159,6 @@ static FORCE_INLINE void swo_buffer_push(void)
 	NVIC_STIR = SWO_DMA_SW_IRQ;
 }
 
-// decoder state
-static struct state {
-	uint16_t rx, t, q;
-	uint8_t s;
-	int32_t b;
-} swo_s;
-
-// Manchester decoder states
-enum {
-	ST_IDLE,		// line idle
-	ST_INIT,		// line high before initial half-bit
-	ST_BITL,		// line low at bit boundary
-	ST_BITH,		// line high at bit boundary
-	ST_MIDL,		// line low at mid-bit
-	ST_MIDH,		// line high at mid-bit
-	ST_INIL,		// line low after init (does not count for output)
-#if SWO_ADVANCED_RECOVERY
-	ST_RESH,		// line high before idle (special recovery state)
-#endif
-};
 
 /*
  * Initializes and starts the decoder
@@ -180,7 +213,7 @@ void swo_manchester_init(void)
 	dma_set_priority(SWO_DMA_BUS, SWO_DMA_EDGE_CHAN, DMA_CCR_PL_HIGH);
 
 	dma_set_peripheral_address(SWO_DMA_BUS, SWO_DMA_EDGE_CHAN, (uint32_t)&TIM_CCR4(SWO_TIM));
-	dma_set_memory_address(SWO_DMA_BUS, SWO_DMA_EDGE_CHAN, (uint32_t)swo_dma);
+	dma_set_memory_address(SWO_DMA_BUS, SWO_DMA_EDGE_CHAN, (uint32_t)swo_dma_edge_samples);
 	dma_set_number_of_data(SWO_DMA_BUS, SWO_DMA_EDGE_CHAN, SWO_DMA_EDGE_SAMPLES);
 	dma_enable_circular_mode(SWO_DMA_BUS, SWO_DMA_EDGE_CHAN);
 	dma_enable_memory_increment_mode(SWO_DMA_BUS, SWO_DMA_EDGE_CHAN);
@@ -203,6 +236,9 @@ void swo_manchester_init(void)
 	nvic_set_priority(SWO_DMA_SW_IRQ, IRQ_PRI_USB);
 	nvic_enable_irq(SWO_DMA_SW_IRQ);
 
+	// set initial state (BSS leaves it in ST_MIDL)
+	swo_state.state = ST_IDLE;
+
 	// start the engine
 	timer_enable_counter(SWO_TIM);
 }
@@ -218,8 +254,8 @@ void swo_manchester_deinit(void)
 
 	// we can leave the rest of the peripheral configuration alone, just
 	// make sure the restarts in a known state
-	swo_s.s = ST_IDLE;
-	swo_s.rx = 0;
+	swo_state.state = ST_IDLE;
+	swo_state.read_index = 0;
 }
 
 /*
@@ -254,12 +290,12 @@ void SWO_DMA_SW_ISR(void)
  *  32 - output symbols indicating polarity and length of each pulse
  */
 
-//#define SWO_DIAG_ISR	(4 | 8)
+//#define SWO_DIAG_ISR	(4 | 16)
 
 // enable assembly optimizations
 #define SWO_ASM_OPTIMIZATIONS	1
 
-static FORCE_INLINE void swo_diag_nibble(uint32_t v)
+static inline void swo_diag_nibble(uint32_t v)
 {
 	swo_buffer_write("0123456789ABCDEF"[v & 0xF]);
 }
@@ -298,32 +334,25 @@ void SWO_DMA_EDGE_ISR(void)
  */
 void SWO_TIM_ISR(void)
 {
-	// transitions on short/long pulse
+	// transitions on glitch/short/long/eof pulse
 	// careful, the lookup table order must match enum
-	static const uint8_t transitions[][2] = {
-		// ST_IDLE
-		{ ST_INIT, ST_INIT },
-		// ST_INIT
-		{ ST_INIL, ST_INIL },
-		// ST_BITL
-		{ ST_MIDH, ST_INIT },
-		// ST_BITH
-		// the long pulse goes to INIT, because in this state it is most likely
-		// we accidentally switched polarity at some point - this is an attempt
-		// to recover it
-		// it happens especially at low speeds when there is little chance to
-		// find an idle period long enough to recover
-		{ ST_MIDL, ST_INIT },
-		// ST_MIDL
-		{ ST_BITH, ST_MIDH },
+	static const uint8_t transitions[][4] = {
 		// ST_MIDH
-		{ ST_BITL, ST_MIDL },
-		// ST_INIL (same as ST_MIDL)
-		{ ST_BITH, ST_MIDH },
-#if SWO_ADVANCED_RECOVERY
-		// ST_RESH (recovery)
-		{ ST_IDLE, ST_IDLE },
-#endif
+		{ ST_IDLE, ST_BITL, ST_MIDL, ST_IDLE },
+		// ST_MIDL
+		{ ST_RESH, ST_BITH, ST_MIDH, ST_INIT },
+		// ST_RESH (recovery reset)
+		{ ST_IDLE, ST_IDLE, ST_IDLE, ST_IDLE },
+		// ST_IDLE - always go to INIT, bit time is not known
+		{ ST_INIT, ST_INIT, ST_INIT, ST_INIT },
+		// ST_INIT - always go to INIL, bit time is not known
+		{ ST_INIL, ST_INIL, ST_INIL, ST_INIL },
+		// ST_INIL
+		{ ST_RESH, ST_BITH, ST_MIDH, ST_IDLE },
+		// ST_BITH
+		{ ST_IDLE, ST_MIDL, ST_IDLE, ST_IDLE },
+		// ST_BITL
+		{ ST_RESH, ST_MIDH, ST_INIT, ST_INIT },
 	};
 
 	// clear all interrupts, we don't care about details at all
@@ -348,57 +377,56 @@ void SWO_TIM_ISR(void)
 	// do not work with the state in RAM directly, it has to be loaded
 	// into variables to allow the compiler to use them as registers
 	// in the critical loop
-	unsigned rx = swo_s.rx;	// read index
-	unsigned s = swo_s.s;		// state
-	uint16_t t = swo_s.t;		// last edge time
-	uint16_t p;				// pulse time
+	unsigned read_index = swo_state.read_index;
+	unsigned state = swo_state.state;
+	uint16_t last_edge = swo_state.last_edge;
+	uint16_t pulse_length;
 
 	// number of samples available in the buffer
-	unsigned avail = (swo_dma_wx() - rx) & SWO_DMA_EDGE_MASK;
+	unsigned samples_available = (swo_dma_write_index() - read_index) & SWO_DMA_EDGE_MASK;
 
-	if (!avail)
+	if (!samples_available)
 	{
 		// no data available
-		if (s != ST_IDLE)
+		if (state != ST_IDLE)
 		{
 			// if the state machine is still running, use current count to measure time elapsed since the last pulse
 			// if enough time has elapsed, reset it, there is not much else we can do...
-			p = TIM_CNT(SWO_TIM) - t;
-			if (p >= SWO_MAX_PULSE)
+			pulse_length = TIM_CNT(SWO_TIM) - last_edge;
+			if (pulse_length >= SWO_MAX_PULSE)
 			{
 				// modify the state in RAM directly
-				swo_s.s = ST_IDLE;
-				swo_s.q = 0;
+				swo_state.state = ST_IDLE;
+				swo_state.pulse_multiplier = 0;
 			}
 		}
 		
 		// this is a good time to push out any unflushed bytes the 32-bit buffer
 #if !SWO_DIAG_ISR || (SWO_DIAG_ISR & (8 | 16))
-		uint32_t b = swo_s.b;
-		if (b)	// b must not be zero, it would make the bitcount negative
+		uint32_t bit_buffer = swo_state.bit_buffer;
+		if (bit_buffer)	// must not be zero, it would make the bitcount negative
 		{
-			// 31 - CTZ(b) == number of bits shifted into the buffer
-			unsigned bits = 31 - __builtin_ctz(b);
+			// 31 - CTZ(bit_buffer) == number of bits shifted into the buffer (because of the terminator bit)
+			unsigned bit_count = 31 - __builtin_ctz(bit_buffer);
 			// full bytes and unaligned (yet unsent) bits
-			unsigned bytes = bits >> 3;
-			unsigned unaligned = bits & 7;
-			// keep just the remaining bits in the register, writing 
-			uint32_t terminator = 1u << 31 >> unaligned;
-			swo_s.b = (b | terminator) & ~(terminator - 1);
-			// extract the full bytes to be sent so they are aligned at LSB
-			b = ~(b >> (32 - bits));
-
-			unsigned wx = swo_buffer_write_index;
-			while (bytes--)
-			{
-#if SWO_DIAG_ISR & 16
-				swo_diag_nibble(swo_buf_wx);
-#else
-				swo_buffer[wx++ & SWO_BUFFER_MASK] = b;
+			unsigned bytes_count = bit_count >> 3;
+			unsigned unaligned_count = bit_count & 7;
+			// keep just the remaining bits in the register, overwriting the rest
+			// with a new terminator 
+			uint32_t terminator = 1u << 31 >> unaligned_count;
+			swo_state.bit_buffer = (bit_buffer | terminator) & ~(terminator - 1);
+			// align the full bytes to be sent at LSB
+			bit_buffer >>= 32 - bit_count;
+			
+#if !SWO_DIAG_ISR || (SWO_DIAG_ISR & 8)
+			swo_buffer_write_multi(bit_buffer, bytes_count);
 #endif
-				b >>= 8;
+#if SWO_DIAG_ISR & 16
+			while (bytes_count--)
+			{
+				swo_diag_nibble(swo_buffer_write_index);
 			}
-			swo_buffer_write_index = wx & SWO_BUFFER_MASK;
+#endif
 		}
 #endif
 		
@@ -408,108 +436,75 @@ void SWO_TIM_ISR(void)
 	}
 
 	// load the remainder of the state
-	uint16_t q = swo_s.q;	// 3/4 of bit time for differentiating between short and long pulses
+	uint32_t pulse_multiplier = swo_state.pulse_multiplier;
 	// bit buffer for 32 bits
 	// bits are shifted in from the top since they are incoming LSB first
 	// initialized to 1 << 31 so that when the init bit is shifted out, we know
 	// the buffer is full
-	uint32_t b = swo_s.b;
+	uint32_t bit_buffer = swo_state.bit_buffer;
 
-	unsigned n = 0;
+	unsigned pulse_count = 0;
 
-	// inner processing loop - this has to be as fast as possible, every clock
-	// counts - for example, even enabling SWO_ADVANCED_RECOVERY reduces
-	// the maximum processable frequency to ~1 MHz
-	while (avail--)
+	// inner processing loop - this has to be as fast as possible,
+	// every clock counts
+	do
 	{
-		p = swo_dma[rx++] - t;
-		rx &= SWO_DMA_EDGE_MASK;
-		t += p;
-		n++;
+		pulse_length = swo_dma_edge_samples[read_index++] - last_edge;
+		read_index &= SWO_DMA_EDGE_MASK;
+		last_edge += pulse_length;
+		pulse_count++;
 
-		if (p >= SWO_MAX_PULSE)
-		{
-#if SWO_DIAG_ISR & 32
-			swo_buffer_write('!');
-#endif
-			s = ST_INIT;
-			q = 0;
-			continue;
-		}
-
-#if SWO_ADVANCED_RECOVERY
-		if (q && (p < q / 2 || p > q * 2))
-		{
-			// invalid pulse length, try to recover by dropping all data 
-			// and initializing according to current input polarity
-			// determined by comparing the last capture times of CH1 and CH2
-			q = 0;
-			rx = swo_dma_wx();
-			if ((int16_t)(TIM_CCR1(SWO_TIM) - TIM_CCR2(SWO_TIM)) > 0)
-			{
-				// last edge was rising
-				s = ST_RESH;
-			}
-			else
-			{
-				// last edge was falling
-				s = ST_IDLE;
-			}
-			break;
-		}
-#endif
-		
+		// pulse_mul will contain the pulse length in the top 2 bits of the bottom word
+		uint64_t pulse_mul = (int64_t)pulse_length * pulse_multiplier;
+		// if it overflows, make it a 3 (very long pulse)
+		unsigned tran;
 #if SWO_ASM_OPTIMIZATIONS
-		uint32_t tbl_index;
-		__asm__(
-			"cmp %[p], %[q]\n"
-			"adc %[r], %[s], %[s]"	// s + s + carry (p >= q) is exactly what we want
-			: [r] "=r"(tbl_index)
-			: [p] "r"(p), [q] "r"(q), [s] "r"(s));
-		s = ((uint8_t*)transitions)[tbl_index];
+		// this is pretty bizarre, but GCC insists on jumping back and forth to
+		// handle the overflow state instead of using ite eq
+		__asm__ (
+			"cmp %[h], #0\n"
+			"ite eq\n"
+			"moveq %[tran], %[l], lsr #30\n"
+			"movne %[tran], #3\n"
+			: [tran] "=r" (tran)
+			: [h] "r" ((uint32_t)(pulse_mul >> 32)), [l] "r" ((uint32_t)pulse_mul)
+		);
 #else
-		s = transitions[s][p >= q];
+		tran = (uint32_t)(pulse_mul >> 32) ? 3 : (uint32_t)pulse_mul >> 30;
 #endif
+		state = transitions[state][tran];
 
 #if SWO_DIAG_ISR & 32
-		swo_buffer_write(
-			p < MIN_PULSE ? '?' :
-			p >= MAX_PULSE ? '_' :
-			((s & 1) ? 'A' : 'a') + (p >> 7)
-			);
+		swo_buffer_write((state & 1 ? "^'\"!": "v._-")[tran]);
 #endif
 
 #if SWO_DIAG_ISR & 64
-		swo_buffer_write("_IbBxXiR"[s]);
+		swo_buffer_write("_IbBxXiR"[state]);
 #endif
-
-		// short-circuit for states requiring no extra action
-		if (s < ST_MIDL) { continue; }
 
 		// handle states requiring extra actions, primarily bit writing
 #if SWO_ASM_OPTIMIZATIONS
 		bool output;
 		__asm__ goto (
-			"cmp %[s], %[ST_MIDH]\n"	// C = s == MIDH
-			"bhi %l[init_q]\n"			// s > MIDH
-			// shift C into b - note that the value is actually inverted
-			// (rising edge produces 1), this is compensated for when outputting
+			"cmp %[state], %[ST_MIDL]\n"	// C = state == MIDL
+			"bhi %l[not_bit_state]\n"		// state > MIDL
+			// shift C into bit_buffer
 			// shift LSB into C to know if we have full output ready
-			"rrxs %[b], %[b]"
-			// NOTE: b is passed in as an input operand - this seems to be 
+			"rrxs %[bit_buffer], %[bit_buffer]"
+			// NOTE: bit_buffer is passed in as an input operand - this seems to be 
 			// the only way to prevent the compiler from generating
 			// spurious move instructions before and/or after the inline block
 			// it works in practice, but is deep in the UB territory...
 			: "=@cccs" (output)
-			: [b] "r" (b), [s] "r" (s), [ST_MIDH] "i" (ST_MIDH)
+			: [bit_buffer] "r" (bit_buffer), [state] "r" (state), [ST_MIDL] "i" (ST_MIDL)
 			:
-			: init_q
+			: not_bit_state
 			);
 #else
 		// just to make it comparable with the assembly version :)
-		if (s > ST_MIDH) { goto init_q; }
-		bool output = b & 1;
-		b = b >> 1 | ((s == ST_MIDH) << 31);
+		if (state > ST_MIDL) { goto not_bit_state; }
+		bool output = bit_buffer & 1;
+		bit_buffer = bit_buffer >> 1 | ((state == ST_MIDL) << 31);
 #endif
 		// mid-bit transition == output bit
 		if (output)
@@ -518,47 +513,36 @@ void SWO_TIM_ISR(void)
 			// meaning full 32 bits have been collected
 			//swo_buffer_write(swo_buf_wx);
 #if !SWO_DIAG_ISR || (SWO_DIAG_ISR & 8)
-			b = ~b;
-			uint32_t wx = swo_buffer_write_index;
-			uint8_t* p = swo_buffer;
-			if (wx + 4 <= SWO_BUFFER_SIZE)
-			{
-				// single write
-				*(uint32_t*)&p[wx] = b;
-				wx += 4;
-			}
-			else
-			{
-				// must split
-				p[wx++ & SWO_BUFFER_MASK] = b;
-				b >>= 8;
-				p[wx++ & SWO_BUFFER_MASK] = b;
-				b >>= 8;
-				p[wx++ & SWO_BUFFER_MASK] = b;
-				b >>= 8;
-				p[wx++ & SWO_BUFFER_MASK] = b;
-			}
-			swo_buffer_write_index = wx & SWO_BUFFER_MASK;
+			swo_buffer_write_multi(bit_buffer, 4);
 #endif
 #if SWO_DIAG_ISR & 16
 			for (int i = 0; i < 4; i++)
 			{
-				swo_diag_nibble(swo_buf_wx);
+				swo_diag_nibble(swo_buffer_write_index);
 			}
 #endif
-			b = 1 << 31;
+			bit_buffer = 1 << 31;
 		}
 		continue;
 
-init_q:
-		// calculate differentiator, reset state
-		q = p * 3 / 2;
-		b = 1 << 31;
-	}
+not_bit_state:
+		if (state == ST_INIL)
+		{
+			// calculate pulse multipler that, when multiplied by an actual pulse
+			// length, gets it into three categories in top 2 bits
+			// 00 - < 0.75x of the original, considered a glitch
+			// 01 - between 0.75x and 1.5x of the original, short pulse
+			// 10 - between 1.5x and 2.25x of the original, long pulse
+			// 11 - more than 2.25x of the original, "too long" pulse
+			// an overflow automatically means the pulse is too long
+			pulse_multiplier = ~0u / 3 / pulse_length;
+			bit_buffer = 1 << 31;
+		}
+	} while (--samples_available);
 
 #if SWO_DIAG_ISR & 4
 	swo_buffer_write('{');
-	swo_diag_hex(n);
+	swo_diag_hex(pulse_count);
 	swo_buffer_write('}');
 #endif
 
@@ -566,5 +550,5 @@ init_q:
 	swo_buffer_push();
 
 	// store the state for next run
-	swo_s = (struct state){ rx, t, q, s, b };
+	swo_state = (struct state){ read_index, last_edge, pulse_multiplier, bit_buffer, state };
 }
