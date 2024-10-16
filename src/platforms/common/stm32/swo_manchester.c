@@ -138,17 +138,19 @@ void swo_buffer_data(void)
 	memcpy(swo_buffer + swo_buffer_write_index, swo_data, amount);
 	swo_buffer_write_index += amount;
 	swo_buffer_write_index &= SWO_BUFFER_SIZE - 1U;
-	swo_buffer_bytes_available += amount;
+	/* If we have anything left to move, put that at the start of the buffer */
+	if (amount != byte_count) {
+		const uint16_t remainder = byte_count - amount;
+		memcpy(swo_buffer, swo_data + amount, remainder);
+		swo_buffer_write_index = remainder;
+	}
+
 	/* Make sure we're sending the data if we've got more than an endpoint buffer's worth */
+	const uint16_t swo_buffer_bytes_available =
+		(swo_buffer_write_index - swo_buffer_read_index) &
+		(SWO_BUFFER_SIZE - 1U);
 	if (swo_buffer_bytes_available >= SWO_ENDPOINT_SIZE) {
 		swo_send_buffer(usbdev, SWO_ENDPOINT);
-		/* If we have anything left to move, put that at the start of the buffer */
-		if (amount != byte_count) {
-			const uint16_t remainder = byte_count - amount;
-			memcpy(swo_buffer, swo_data + amount, remainder);
-			swo_buffer_write_index = remainder;
-			swo_buffer_bytes_available += remainder;
-		}
 	}
 	swo_data_bit_index = 0U;
 }
