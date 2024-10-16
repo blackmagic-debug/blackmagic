@@ -130,10 +130,11 @@ void swo_uart_deinit(void)
 {
 	/* Disable the UART and halt DMA for it, grabbing the number of bytes left in the buffer as we do */
 	usart_disable(SWO_UART);
+	const uint16_t space_remaining = dma_get_number_of_data(SWO_DMA_BUS, SWO_DMA_CHAN);
+
 	dma_disable_channel(SWO_DMA_BUS, SWO_DMA_CHAN);
 
 	/* Update buffer write index */
-	const uint16_t space_remaining = dma_get_number_of_data(SWO_DMA_BUS, SWO_DMA_CHAN);
 	swo_buffer_write_index = SWO_BUFFER_SIZE - space_remaining;
 
 	/* Put the GPIO back into normal service as a GPIO */
