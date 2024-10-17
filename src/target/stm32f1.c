@@ -243,6 +243,7 @@ static bool stm32f1_configure_dbgmcu(target_s *const target, const target_addr32
 	return true;
 }
 
+#ifdef CONFIG_GD32
 /* Identify GD32F1, GD32F2, GD32F3, GD32E230 and GD32E5 chips */
 bool gd32f1_probe(target_s *target)
 {
@@ -360,6 +361,7 @@ static void gd32vf1_detach(target_s *const target)
 	/* Now defer to the normal Cortex-M detach routine to complete the detach */
 	riscv_detach(target);
 }
+#endif
 #endif
 
 static bool at32f40_is_dual_bank(const uint16_t part_id)

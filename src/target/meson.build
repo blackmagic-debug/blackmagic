@@ -295,6 +295,11 @@ target_stm = declare_dependency(
 	dependencies: [target_cortexm, target_stm_common, target_stm32f1],
 )
 
+target_gd32 = declare_dependency(
+	dependencies: target_stm32f1,
+	compile_args: ['-DCONFIG_GD32=1'],
+)
+
 target_mm32 = declare_dependency(
 	dependencies: target_stm32f1,
 	compile_args: ['-DCONFIG_MM32=1'],
@@ -367,6 +372,7 @@ libbmd_target_deps = [
 	target_ch32,
 	target_ch579,
 	target_efm,
+	target_gd32,
 	target_hc32,
 	target_lpc,
 	target_mm32,
