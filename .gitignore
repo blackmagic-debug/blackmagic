@@ -31,3 +31,5 @@ ozone/
 /deps/*
 !/deps/*.wrap
 !/deps/libopencm3
+
+deps/winc1500
