@@ -122,7 +122,7 @@ void wifi_init(void)
 	// Initialize the WiFi server app
 	//
 	m2m_wifi_init();
-	APP_Initialize();
+	app_initialize();
 }
 
 void platform_adc_read(void)
@@ -297,14 +297,14 @@ static bool fStartup = true; ///< True to startup
 
 void platform_tasks(void)
 {
-	APP_Task(); // WiFi Server app tasks
+	app_task(); // WiFi Server app tasks
 	if (fStartup == true) {
 		fStartup = false;
 		platform_delay(1000);
 	}
-	m2m_wifi_task();  // WINC1500 tasks
-	GDB_TCPServer();  // Run the TCP sever state machine
-	DATA_TCPServer(); // Run the Uart/Debug TCP server
+	m2m_wifi_task();   // WINC1500 tasks
+	gdb_tcp_server();  // Run the TCP sever state machine
+	data_tcp_server(); // Run the Uart/Debug TCP server
 }
 
 void platform_nrst_set_val(bool assert)
