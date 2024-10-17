@@ -28,9 +28,20 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-probe_ctxlink_includes = include_directories('.')
+subproject('winc1500')
+winc1500 = dependency('winc1500')
 
-probe_ctxlink_sources = files('platform.c')
+probe_ctxlink_includes = include_directories(
+	'.'
+)
+
+probe_ctxlink_sources = files(
+	'platform.c',
+	'ctxlink_gdb_if.c',
+	'WiFi_Server.c',
+	'ctxLink_mode_led.c',
+	'winc1500_driver_stub_api.c'
+)
 
 probe_ctxlink_args = [
 	'-DDFU_SERIAL_LENGTH=13',
@@ -58,7 +69,7 @@ probe_host = declare_dependency(
 	sources: probe_ctxlink_sources,
 	compile_args: probe_ctxlink_args,
 	link_args: probe_ctxlink_commonn_link_args + probe_ctxlink_link_args,
-	dependencies: [platform_common, platform_stm32f4, probe_ctxlink_dependencies],
+	dependencies: [platform_common, platform_stm32f4, probe_ctxlink_dependencies, winc1500],
 )
 
 summary(
