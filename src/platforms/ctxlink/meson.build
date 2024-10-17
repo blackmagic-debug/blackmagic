@@ -32,7 +32,20 @@ probe_ctxlink_includes = include_directories('.')
 
 probe_ctxlink_sources = files(
 	'platform.c',
-	'ctxlink_gdb_if.c')
+	'ctxlink_gdb_if.c ',
+	'WiFi_Server.c',
+	'ctxLink_mode_led.c',
+	'ctxLink_traceswo.c',
+	'winc1500_driver_stub_api.c',
+	'wf_asic.c',
+	'wf_hif.c',
+	'wf_ota.c',
+	'wf_socket.c',
+	'wf_spi.c',
+	'wf_spi_flash.c',
+	'wf_utils.c',
+	'wf_wifi.c'
+)
 
 probe_ctxlink_args = [
 	'-DDFU_SERIAL_LENGTH=13',
