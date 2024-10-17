@@ -28,6 +28,7 @@
 #include "aux_serial.h"
 #include "morse.h"
 #include "exception.h"
+#include <string.h>
 
 #include <libopencm3/stm32/rcc.h>
 #include <libopencm3/cm3/scb.h>
@@ -123,9 +124,10 @@ bool platform_configure_uart(char *configuration_string)
 			}
 			}
 			usart_set_parity(USBUSART, parityValue);
+			return true;
 		}
 	}
-	return true;
+	return false;
 }
 
 void wifi_init(void)
@@ -339,7 +341,7 @@ const char *platform_target_voltage(void)
 	val = val % 100U;
 	target[3] = '0' + val / 10U;
 	target[4] = 'V';
-	strcat(target, platform_battery_voltage());
+	strncat(target, platform_battery_voltage(), sizeof(target) - 1);
 	return target;
 }
 
@@ -391,37 +393,29 @@ const char *platform_battery_voltage(void)
 		ret[append_index++] = 'V';
 		ret[append_index++] = '\n';
 		ret[append_index] = 0x00;
-	} else {
-		sprintf(&ret[0], "\n      Battery : Not present");
-	}
+	} else
+		memcpy(ret, "\n      Battery : Not present", strlen("\n      Battery : Not present") + 1);
 	return ret;
 }
 
 bool platform_check_battery_voltage(void)
 {
-	bool fResult;
 	platform_adc_read();
-	fResult = last_battery_state;
 	//
 	// Is battery connected?
 	//
-	if ((input_voltages[CTXLINK_ADC_BATTERY] <= BATTERY_VOLTAGE_1) ||
-		(input_voltages[CTXLINK_ADC_BATTERY] >= BATTERY_VOLTAGE_2)) {
+	if (input_voltages[CTXLINK_ADC_BATTERY] <= BATTERY_VOLTAGE_1 ||
+		input_voltages[CTXLINK_ADC_BATTERY] >= BATTERY_VOLTAGE_2) {
 		battery_present = false;
-		last_battery_state = fResult = true;
+		last_battery_state = true;
 	} else {
 		battery_present = true;
 		//
 		// Is the voltage good?
 		//
-		/* NOLINTNEXTLINE(bugprone-branch-clone) */
-		if (input_voltages[CTXLINK_ADC_BATTERY] <= BATTERY_LOW) {
-			last_battery_state = fResult = false;
-		} else {
-			last_battery_state = fResult = true;
-		}
+		last_battery_state = input_voltages[CTXLINK_ADC_BATTERY] > BATTERY_LOW;
 	}
-	return fResult;
+	return last_battery_state;
 }
 
 bool platform_spi_init(const spi_bus_e bus)
