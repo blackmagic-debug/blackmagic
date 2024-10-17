@@ -32,6 +32,7 @@
 
 #define PLATFORM_IDENT "(ctxLink) "
 
+#define PLATFORM_HAS_BATTERY
 /*
  * Important pin mappings for STM32 implementation:
  *
