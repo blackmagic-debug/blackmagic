@@ -3,7 +3,7 @@
  *
  * Based on work that is Copyright (C) 2017 Black Sphere Technologies Ltd.
  * Based on work that is Copyright (C) 2017 Dave Marples <dave@marples.net>
- * Copyrigh (C) Sid Price 2020 <sid@sidprice.com>
+ * Updates for ctxLink Copyright (C) Sid Price 2024 <sid@sidprice.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
