@@ -107,7 +107,7 @@ void m2mStub_EintDisable(void)
 // A TMR peripheral can be set to interrupt every 1ms. The timer ISR increments
 // a global counter.
 
-static volatile uint32_t one_ms_counter = 0;
+static _Atomic uint32_t one_ms_counter = 0;
 
 //
 // Implement this timer ISR or call this function in your timer ISR to
@@ -122,14 +122,7 @@ void m2m_TMR_ISR(void)
 /* NOLINTNEXTLINE(readability-identifier-naming) */
 uint32_t m2mStub_GetOneMsTimer(void)
 {
-	uint32_t tmp;
-
-	timer_disable_irq(TIM2, TIM_DIER_CC1IE);
-	tmp = one_ms_counter; // get a clean copy of counter variable
-	timer_enable_irq(TIM2, TIM_DIER_CC1IE);
-
-	// return platform_time_ms();		// TODO, this looks wrong it should return the tmp value I think
-	return tmp; // TODO, this looks wrong it should return the tmp value I think
+	return one_ms_counter;
 }
 
 //==============================================================================
