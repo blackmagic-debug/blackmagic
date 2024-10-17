@@ -128,13 +128,13 @@ void platform_adc_read(void)
 	/* Wait for end of conversion. */
 	while (!adc_eoc(ADC1))
 		continue;
-	input_voltages[CTXLINK_ADC_BATTERY] = ((adc_read_regular(ADC1) * 16) / 10);
+	input_voltages[CTXLINK_ADC_BATTERY] = ((adc_read_regular(ADC1) * 16U) / 10U);
 	adc_set_regular_sequence(ADC1, 1, &adc_channels[CTXLINK_ADC_TARGET]);
 	adc_start_conversion_regular(ADC1);
 	/* Wait for end of conversion. */
 	while (!adc_eoc(ADC1))
 		continue;
-	input_voltages[CTXLINK_ADC_TARGET] = ((adc_read_regular(ADC1) * 16) / 10);
+	input_voltages[CTXLINK_ADC_TARGET] = (adc_read_regular(ADC1) * 16U) / 10U;
 }
 
 uint32_t platform_target_voltage_sense(void)
@@ -366,9 +366,9 @@ void platform_target_clk_output_enable(bool enable)
 // Battery present (report voltage) < 4.268v
 // Low batter voltage == 3.6v
 //
-#define BATTERY_VOLTAGE_1 2000
-#define BATTERY_VOLTAGE_2 4268
-#define BATTERY_LOW       3600
+#define BATTERY_VOLTAGE_1 2000U
+#define BATTERY_VOLTAGE_2 4268U
+#define BATTERY_LOW       3600U
 
 bool last_battery_state = true;
 bool battery_present = false;
