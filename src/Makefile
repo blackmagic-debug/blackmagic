@@ -138,7 +138,7 @@ SRC +=           \
 	renesas_rz.c
 
 ifeq ($(ENABLE_XILINX), 1)
-CFLAGS += -DENABLE_XILINX=1
+CFLAGS += -DCONFIG_XILINX=1
 SRC +=         \
 	zynq7000.c
 endif

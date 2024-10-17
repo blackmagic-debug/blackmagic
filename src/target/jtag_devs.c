@@ -102,7 +102,7 @@ const jtag_dev_descr_s dev_descr[] = {
 		.descr = "NPX: LPC11C24.",
 	},
 #endif
-#ifdef ENABLE_XILINX
+#ifdef CONFIG_XILINX
 	{
 		.idcode = 0x1396d093U,
 		.idmask = 0xffffffffU,
