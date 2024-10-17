@@ -37,9 +37,9 @@ void trace_send_data(void);
 
 #define INPUT_BUFFER_SIZE 2048
 static unsigned char input_buffer[INPUT_BUFFER_SIZE] = {0}; ///< The input buffer[ input buffer size]
-static volatile u_int32_t input_index = 0;                  ///< Zero-based index of the input
-static volatile u_int32_t output_index = 0;                 ///< Zero-based index of the output
-static volatile u_int32_t buffer_count = 0;                 ///< Number of buffers
+static volatile uint32_t input_index = 0;                   ///< Zero-based index of the input
+static volatile uint32_t output_index = 0;                  ///< Zero-based index of the output
+static volatile uint32_t buffer_count = 0;                  ///< Number of buffers
 
 static unsigned char local_buffer[INPUT_BUFFER_SIZE] = {0}; ///< The local buffer[ input buffer size]
 
