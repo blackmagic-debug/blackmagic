@@ -1,5 +1,0 @@
-[submodule "libopencm3"]
-	path = deps/libopencm3
-	url = https://github.com/blackmagic-debug/libopencm3
-	branch = main
-	ignore = dirty
