@@ -61,7 +61,7 @@ static volatile bool morse_repeat = false;
 
 void morse(const char *const msg, const bool repeat)
 {
-#if PC_HOSTED == 1
+#if CONFIG_BMDA == 1
 	if (msg)
 		DEBUG_WARN("%s\n", msg);
 	(void)repeat;

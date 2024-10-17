@@ -45,7 +45,7 @@ static void jtag_display_idcodes(void);
 static bool jtag_read_irs(void);
 static bool jtag_sanity_check(void);
 
-#if PC_HOSTED == 0
+#if CONFIG_BMDA == 0
 void jtag_add_device(const uint32_t dev_index, const jtag_dev_s *jtag_dev)
 {
 	if (dev_index == 0)
@@ -88,7 +88,7 @@ bool jtag_scan(void)
 	 * any SWD/JTAG DPs in the chain
 	 */
 	DEBUG_INFO("Resetting TAP\n");
-#if PC_HOSTED == 1
+#if CONFIG_BMDA == 1
 	if (!bmda_jtag_init()) {
 		DEBUG_ERROR("JTAG not available\n");
 		return false;
@@ -124,7 +124,7 @@ bool jtag_scan(void)
 		postscan += jtag_devs[idx].ir_len;
 	}
 
-#if PC_HOSTED == 1
+#if CONFIG_BMDA == 1
 	/*Transfer needed device information to firmware jtag_devs */
 	for (size_t device = 0; device < jtag_dev_count; ++device)
 		bmda_add_jtag_dev(device, jtag_devs + device);
@@ -132,7 +132,7 @@ bool jtag_scan(void)
 
 	jtag_display_idcodes();
 
-#if PC_HOSTED == 1
+#if CONFIG_BMDA == 1
 	DEBUG_PROBE("Enumerated %" PRIu32 " devices\n", jtag_dev_count);
 	for (size_t device = 0; device < jtag_dev_count; ++device) {
 		const jtag_dev_s *dev = &jtag_devs[device];

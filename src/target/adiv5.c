@@ -39,7 +39,7 @@
 #include "cortexm.h"
 #include "cortex_internal.h"
 #include "exception.h"
-#if PC_HOSTED == 1
+#if CONFIG_BMDA == 1
 #include "bmp_hosted.h"
 #endif
 
@@ -128,7 +128,7 @@ static uint32_t cortexm_initial_halt(adiv5_access_port_s *ap)
 		 * will do nothing (return 0) and instead need RDBUFF read to get the data.
 		 */
 		if ((ap->dp->quirks & ADIV5_DP_QUIRK_MINDP)
-#if PC_HOSTED == 1
+#if CONFIG_BMDA == 1
 			&& bmda_probe_info.type != PROBE_TYPE_CMSIS_DAP && bmda_probe_info.type != PROBE_TYPE_STLINK_V2
 #endif
 		)
@@ -176,7 +176,7 @@ static uint32_t cortexm_initial_halt(adiv5_access_port_s *ap)
  */
 static bool cortexm_prepare(adiv5_access_port_s *ap)
 {
-#if PC_HOSTED == 1 || ENABLE_DEBUG == 1
+#if CONFIG_BMDA == 1 || ENABLE_DEBUG == 1
 	uint32_t start_time = platform_time_ms();
 #endif
 	uint32_t dhcsr = cortexm_initial_halt(ap);
@@ -368,7 +368,7 @@ void adiv5_dp_init(adiv5_debug_port_s *const dp)
 	dp->ap_read = adiv5_ap_reg_read;
 	dp->mem_read = adiv5_mem_read_bytes;
 	dp->mem_write = adiv5_mem_write_bytes;
-#if PC_HOSTED == 1
+#if CONFIG_BMDA == 1
 	bmda_adiv5_dp_init(dp);
 #endif
 

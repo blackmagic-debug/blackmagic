@@ -30,7 +30,7 @@
 #include <unistd.h>
 #endif
 
-#if PC_HOSTED == 1
+#if CONFIG_BMDA == 1
 #include "platform.h"
 #endif
 
@@ -279,7 +279,7 @@ void target_detach(target_s *target)
 		target->detach(target);
 	platform_target_clk_output_enable(false);
 	target->attached = false;
-#if PC_HOSTED == 1
+#if CONFIG_BMDA == 1
 	platform_buffer_flush();
 #endif
 }
@@ -409,7 +409,7 @@ void target_halt_resume(target_s *t, bool step)
 void target_set_cmdline(target_s *target, const char *const cmdline, const size_t cmdline_len)
 {
 	/* This assertion is really expensive, so only include it on BMDA builds */
-#if PC_HOSTED == 1
+#if CONFIG_BMDA == 1
 	/* Check and make sure that we don't exceed the target buffer size */
 	assert(cmdline_len < MAX_CMDLINE);
 #endif

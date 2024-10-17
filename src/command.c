@@ -36,7 +36,7 @@
 #include "version.h"
 #include "jtagtap.h"
 
-#if PC_HOSTED == 0
+#if CONFIG_BMDA == 0
 #include "jtag_scan.h"
 #endif
 
@@ -74,10 +74,10 @@ static bool cmd_heapinfo(target_s *target, int argc, const char **argv);
 #ifdef ENABLE_RTT
 static bool cmd_rtt(target_s *target, int argc, const char **argv);
 #endif
-#if defined(PLATFORM_HAS_DEBUG) && PC_HOSTED == 0
+#if defined(PLATFORM_HAS_DEBUG) && CONFIG_BMDA == 0
 static bool cmd_debug_bmp(target_s *target, int argc, const char **argv);
 #endif
-#if PC_HOSTED == 1
+#if CONFIG_BMDA == 1
 static bool cmd_shutdown_bmda(target_s *target, int argc, const char **argv);
 #endif
 
@@ -119,10 +119,10 @@ const command_s cmd_list[] = {
 	{"traceswo", cmd_swo, "Deprecated: use swo instead"},
 #endif
 	{"heapinfo", cmd_heapinfo, "Set semihosting heapinfo: HEAP_BASE HEAP_LIMIT STACK_BASE STACK_LIMIT"},
-#if defined(PLATFORM_HAS_DEBUG) && PC_HOSTED == 0
+#if defined(PLATFORM_HAS_DEBUG) && CONFIG_BMDA == 0
 	{"debug_bmp", cmd_debug_bmp, "Output BMP \"debug\" strings to the second vcom: [enable|disable]"},
 #endif
-#if PC_HOSTED == 1
+#if CONFIG_BMDA == 1
 	{"shutdown_bmda", cmd_shutdown_bmda, "Tell the BMDA server to shut down when the GDB connection closes"},
 #endif
 	{NULL, NULL, NULL},
@@ -133,7 +133,7 @@ extern const command_s platform_cmd_list[];
 #endif
 
 bool connect_assert_nrst;
-#if defined(PLATFORM_HAS_DEBUG) && PC_HOSTED == 0
+#if defined(PLATFORM_HAS_DEBUG) && CONFIG_BMDA == 0
 bool debug_bmp;
 #endif
 unsigned cortexm_wait_timeout = 2000; /* Timeout to wait for Cortex to react on halt command. */
@@ -185,7 +185,7 @@ bool cmd_version(target_s *target, int argc, const char **argv)
 	(void)target;
 	(void)argc;
 	(void)argv;
-#if PC_HOSTED == 1
+#if CONFIG_BMDA == 1
 	gdb_out("Black Magic Debug App " FIRMWARE_VERSION "\n");
 	bmda_display_probe();
 #else
@@ -237,7 +237,7 @@ static bool cmd_jtag_scan(target_s *target, int argc, const char **argv)
 
 	bool scan_result = false;
 	TRY (EXCEPTION_ALL) {
-#if PC_HOSTED == 1
+#if CONFIG_BMDA == 1
 		scan_result = bmda_jtag_scan();
 #else
 		scan_result = jtag_scan();
@@ -280,7 +280,7 @@ bool cmd_swd_scan(target_s *target, int argc, const char **argv)
 
 	bool scan_result = false;
 	TRY (EXCEPTION_ALL) {
-#if PC_HOSTED == 1
+#if CONFIG_BMDA == 1
 		scan_result = bmda_swd_scan(targetid);
 #else
 		scan_result = adiv5_swd_scan(targetid);
@@ -323,7 +323,7 @@ bool cmd_auto_scan(target_s *target, int argc, const char **argv)
 
 	bool scan_result = false;
 	TRY (EXCEPTION_ALL) {
-#if PC_HOSTED == 1
+#if CONFIG_BMDA == 1
 		scan_result = bmda_jtag_scan();
 #else
 		scan_result = jtag_scan();
@@ -331,7 +331,7 @@ bool cmd_auto_scan(target_s *target, int argc, const char **argv)
 		if (!scan_result) {
 			gdb_out("JTAG scan found no devices, trying SWD!\n");
 
-#if PC_HOSTED == 1
+#if CONFIG_BMDA == 1
 			scan_result = bmda_swd_scan(0);
 #else
 			scan_result = adiv5_swd_scan(0);
@@ -708,7 +708,7 @@ static bool cmd_swo(target_s *target, int argc, const char **argv)
 }
 #endif
 
-#if defined(PLATFORM_HAS_DEBUG) && PC_HOSTED == 0
+#if defined(PLATFORM_HAS_DEBUG) && CONFIG_BMDA == 0
 static bool cmd_debug_bmp(target_s *target, int argc, const char **argv)
 {
 	(void)target;
@@ -724,7 +724,7 @@ static bool cmd_debug_bmp(target_s *target, int argc, const char **argv)
 }
 #endif
 
-#if PC_HOSTED == 1
+#if CONFIG_BMDA == 1
 static bool cmd_shutdown_bmda(target_s *target, int argc, const char **argv)
 {
 	(void)target;

@@ -55,7 +55,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#if PC_HOSTED == 1
+#if CONFIG_BMDA == 1
 #include <errno.h>
 #include <time.h>
 #include <sys/stat.h>
@@ -123,7 +123,7 @@ const char *const semihosting_names[] = {
 };
 #endif
 
-#if PC_HOSTED == 1
+#if CONFIG_BMDA == 1
 static semihosting_errno_e semihosting_errno(void);
 #endif
 
@@ -183,7 +183,7 @@ static int32_t semihosting_get_gdb_response(target_controller_s *const tc)
 		/* If this was an escape packet (or gdb_if reports link closed), fail the call */
 		if (size == 1U && packet_buffer[0] == '\x04')
 			return -1;
-		/* 
+		/*
 		 * If this was an F-packet, we are done waiting.
 		 * Check before gdb_main_loop as it may clobber the packet buffer.
 		 */
@@ -198,7 +198,7 @@ static int32_t semihosting_get_gdb_response(target_controller_s *const tc)
 static int32_t semihosting_remote_read(
 	target_s *const target, const int32_t fd, const target_addr_t buf_taddr, const uint32_t count)
 {
-#if PC_HOSTED == 1
+#if CONFIG_BMDA == 1
 	if ((target->stdout_redirected && fd == STDIN_FILENO) || fd > STDERR_FILENO) {
 		uint8_t *const buf = malloc(count);
 		if (buf == NULL)
@@ -220,7 +220,7 @@ static int32_t semihosting_remote_read(
 static int32_t semihosting_remote_write(
 	target_s *const target, const int32_t fd, const target_addr_t buf_taddr, const uint32_t count)
 {
-#if PC_HOSTED == 1
+#if CONFIG_BMDA == 1
 	if (fd > STDERR_FILENO) {
 		uint8_t *const buf = malloc(count);
 		if (buf == NULL)
@@ -242,7 +242,7 @@ static int32_t semihosting_remote_write(
 		for (size_t offset = 0; offset < count; offset += STDOUT_READ_BUF_SIZE) {
 			const size_t amount = MIN(count - offset, STDOUT_READ_BUF_SIZE);
 			target_mem32_read(target, buffer, buf_taddr, amount);
-#if PC_HOSTED == 0
+#if CONFIG_BMDA == 0
 			debug_serial_send_stdout(buffer, amount);
 #else
 			const ssize_t result = write(fd, buffer, amount);
@@ -259,7 +259,7 @@ static int32_t semihosting_remote_write(
 	return semihosting_get_gdb_response(target->tc);
 }
 
-#if PC_HOSTED == 1
+#if CONFIG_BMDA == 1
 /*
  * Convert an errno value from a syscall into its GDB-compat target errno equivalent
  *
@@ -383,7 +383,7 @@ int32_t semihosting_open(target_s *const target, const semihosting_s *const requ
 		}
 	}
 
-#if PC_HOSTED == 1
+#if CONFIG_BMDA == 1
 	const char *const file_name = semihosting_read_string(target, file_name_taddr, file_name_length);
 	if (file_name == NULL)
 		return -1;
@@ -424,7 +424,7 @@ int32_t semihosting_close(target_s *const target, const semihosting_s *const req
 	if (fd == STDIN_FILENO || fd == STDOUT_FILENO || fd == STDERR_FILENO || request->params[0] == INT32_MAX)
 		return 0;
 		/* Otherwise close the descriptor returned by semihosting_open() */
-#if PC_HOSTED == 1
+#if CONFIG_BMDA == 1
 	const int32_t result = close(fd);
 	target->tc->gdb_errno = semihosting_errno();
 	return result;
@@ -438,7 +438,7 @@ int32_t semihosting_read(target_s *const target, const semihosting_s *const requ
 {
 	const target_addr_t buf_taddr = request->params[1];
 	const uint32_t buf_len = request->params[2];
-#if PC_HOSTED == 1
+#if CONFIG_BMDA == 1
 	if (buf_len == 0)
 		return 0;
 #endif
@@ -470,7 +470,7 @@ int32_t semihosting_write(target_s *const target, const semihosting_s *const req
 	const int32_t fd = request->params[0] - 1;
 	const target_addr_t buf_taddr = request->params[1];
 	const uint32_t buf_len = request->params[2];
-#if PC_HOSTED == 1
+#if CONFIG_BMDA == 1
 	if (buf_len == 0)
 		return 0;
 #endif
@@ -508,7 +508,7 @@ int32_t semihosting_write0(target_s *const target, const semihosting_s *const re
 int32_t semihosting_isatty(target_s *const target, const semihosting_s *const request)
 {
 	const int32_t fd = request->params[0] - 1;
-#if PC_HOSTED == 1
+#if CONFIG_BMDA == 1
 	if (!target->stdout_redirected || fd > STDERR_FILENO) {
 		const int32_t result = isatty(fd);
 		target->tc->gdb_errno = semihosting_errno();
@@ -531,7 +531,7 @@ int32_t semihosting_seek(target_s *const target, const semihosting_s *const requ
 			semihosting_features_offset = SEMIHOSTING_FEATURES_LENGTH;
 		return 0;
 	}
-#if PC_HOSTED == 1
+#if CONFIG_BMDA == 1
 	if (!target->stdout_redirected || fd > STDERR_FILENO) {
 		const int32_t result = lseek(fd, offset, SEEK_SET) == offset ? 0 : -1;
 		target->tc->gdb_errno = semihosting_errno();
@@ -544,7 +544,7 @@ int32_t semihosting_seek(target_s *const target, const semihosting_s *const requ
 
 int32_t semihosting_rename(target_s *const target, const semihosting_s *const request)
 {
-#if PC_HOSTED == 1
+#if CONFIG_BMDA == 1
 	const char *const old_file_name = semihosting_read_string(target, request->params[0], request->params[1]);
 	if (old_file_name == NULL)
 		return -1;
@@ -567,7 +567,7 @@ int32_t semihosting_rename(target_s *const target, const semihosting_s *const re
 
 int32_t semihosting_remove(target_s *const target, const semihosting_s *const request)
 {
-#if PC_HOSTED == 1
+#if CONFIG_BMDA == 1
 	const char *const file_name = semihosting_read_string(target, request->params[0], request->params[1]);
 	if (file_name == NULL)
 		return -1;
@@ -595,7 +595,7 @@ int32_t semihosting_file_length(target_s *const target, const semihosting_s *con
 		return SEMIHOSTING_FEATURES_LENGTH;
 
 	const int32_t fd = request->params[0] - 1;
-#if PC_HOSTED == 1
+#if CONFIG_BMDA == 1
 	if (!target->stdout_redirected || fd > STDERR_FILENO) {
 		struct stat file_stat;
 		const bool result = fstat(fd, &file_stat) == 0;
@@ -629,7 +629,7 @@ int32_t semihosting_file_length(target_s *const target, const semihosting_s *con
 	return result;
 }
 
-#if PC_HOSTED == 0
+#if CONFIG_BMDA == 0
 semihosting_time_s semihosting_get_time(target_s *const target)
 {
 	/* Provide space for reciving a fio_timeval structure from GDB */
@@ -652,7 +652,7 @@ semihosting_time_s semihosting_get_time(target_s *const target)
 
 int32_t semihosting_clock(target_s *const target)
 {
-#if PC_HOSTED == 1
+#if CONFIG_BMDA == 1
 	/* NB: Can't use clock() because that would give cpu time of BMDA process */
 	struct timeval current_time;
 	/* Get the current time from the host */
@@ -687,7 +687,7 @@ int32_t semihosting_clock(target_s *const target)
 
 int32_t semihosting_time(target_s *const target)
 {
-#if PC_HOSTED == 1
+#if CONFIG_BMDA == 1
 	/* Get the current time in seconds from the host */
 	int32_t result = (int32_t)time(NULL);
 	target->tc->gdb_errno = semihosting_errno();
@@ -907,7 +907,7 @@ int32_t semihosting_request(target_s *const target, const uint32_t syscall, cons
 		request.params[1], request.params[2], request.params[3]);
 #endif
 
-#if PC_HOSTED == 1
+#if CONFIG_BMDA == 1
 	if (syscall != SEMIHOSTING_SYS_ERRNO)
 		target->tc->gdb_errno = TARGET_SUCCESS;
 #endif

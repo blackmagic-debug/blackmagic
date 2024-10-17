@@ -521,7 +521,7 @@ static void imxrt_spi_wait_complete(target_s *const target)
 	target_mem32_write32(target, IMXRT_FLEXSPI1_INT(priv), IMXRT_FLEXSPI1_INT_PRG_CMD_DONE);
 	/* Check if any errors occurred */
 	if (target_mem32_read32(target, IMXRT_FLEXSPI1_INT(priv)) & IMXRT_FLEXSPI1_INT_CMD_ERR) {
-#if ENABLE_DEBUG == 1 && PC_HOSTED == 1
+#if ENABLE_DEBUG == 1 && CONFIG_BMDA == 1
 		/* Read out the status code and display it */
 		const uint32_t status = target_mem32_read32(target, IMXRT_FLEXSPI1_STAT1(priv));
 		DEBUG_TARGET("Error executing sequence, offset %u, error code %u\n", (uint8_t)(status >> 16U) & 0xfU,

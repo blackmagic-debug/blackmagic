@@ -69,7 +69,7 @@ static void bmp_poll_loop(void)
 	gdb_main(pbuf, GDB_PACKET_BUFFER_SIZE, size);
 }
 
-#if PC_HOSTED == 1
+#if CONFIG_BMDA == 1
 int main(int argc, char **argv)
 {
 	platform_init(argc, argv);
@@ -90,7 +90,7 @@ int main(void)
 			gdb_outf("Uncaught exception: %s\n", exception_frame.msg);
 			morse("TARGET LOST.", true);
 		}
-#if PC_HOSTED == 1
+#if CONFIG_BMDA == 1
 		if (shutdown_bmda)
 			break;
 #endif

@@ -103,7 +103,7 @@ bool riscv32_probe(target_s *const target)
 		break;
 	}
 
-#if PC_HOSTED == 0
+#if CONFIG_BMDA == 0
 	gdb_outf("Please report unknown device with Designer 0x%x\n", target->designer_code);
 #else
 	DEBUG_WARN("Please report unknown device with Designer 0x%x\n", target->designer_code);

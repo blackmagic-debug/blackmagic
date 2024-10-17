@@ -44,7 +44,7 @@ platform_tm4c_args = [
 	'-mfloat-abi=hard',
 	'-mfpu=fpv4-sp-d16',
 	'-DLM4F',
-	'-DPC_HOSTED=0',
+	'-DCONFIG_BMDA=0',
 ]
 
 platform_tm4c_link_args = [

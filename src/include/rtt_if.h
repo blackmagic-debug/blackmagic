@@ -34,7 +34,7 @@
  */
 #include "platform.h"
 
-#if PC_HOSTED == 0 && !defined(NO_LIBOPENCM3)
+#if CONFIG_BMDA == 0 && !defined(NO_LIBOPENCM3)
 #include <libopencm3/usb/usbd.h>
 
 /* usb rx callback */
@@ -45,7 +45,7 @@ void rtt_serial_receive_callback(usbd_device *dev, uint8_t ep);
 /* override RTT_UP_BUF_SIZE and RTT_DOWN_BUF_SIZE in platform.h if needed */
 
 #if !defined(RTT_UP_BUF_SIZE) || !defined(RTT_DOWN_BUF_SIZE)
-#if (PC_HOSTED == 1)
+#if (CONFIG_BMDA == 1)
 #define RTT_UP_BUF_SIZE   (4096U + 8U)
 #define RTT_DOWN_BUF_SIZE 512U
 #elif defined(STM32F7)

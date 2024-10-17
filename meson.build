@@ -106,7 +106,7 @@ extended_warnings = [
 	'-Wformat-truncation',
 	'-Wformat=2',
 	'-w24774', # ‘<function>’ : format string expected in argument <position> is not a string literal
-	'-w24777', #‘<function>’ : format string ‘<format-string>’ requires an argument of type ‘<type>’, but variadic argument <position> has type ‘<type>’ 
+	'-w24777', #‘<function>’ : format string ‘<format-string>’ requires an argument of type ‘<type>’, but variadic argument <position> has type ‘<type>’
 	'-Wimplicit-fallthrough',
 	'-Wmaybe-uninitialized',
 	'-w24701', # Potentially uninitialized local variable 'name' used
@@ -271,7 +271,7 @@ if meson.is_subproject()
 	libbmd = static_library(
 		'blackmagicdebug',
 		c_args: [
-			'-DPC_HOSTED=1',
+			'-DCONFIG_BMDA=1',
 			'-DHOSTED_BMP_ONLY=1',
 		],
 		dependencies: [libbmd_core],

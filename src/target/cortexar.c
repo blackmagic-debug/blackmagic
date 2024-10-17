@@ -906,7 +906,7 @@ bool cortexa_probe(adiv5_access_port_s *const ap, const target_addr_t base_addre
 		break;
 	}
 
-#if PC_HOSTED == 0
+#if CONFIG_BMDA == 0
 	gdb_outf("Please report unknown device with Designer 0x%x Part ID 0x%x\n", target->designer_code, target->part_id);
 #else
 	DEBUG_WARN(
@@ -921,7 +921,7 @@ bool cortexr_probe(adiv5_access_port_s *const ap, const target_addr_t base_addre
 	if (!target)
 		return false;
 
-#if PC_HOSTED == 0
+#if CONFIG_BMDA == 0
 	gdb_outf("Please report unknown device with Designer 0x%x Part ID 0x%x\n", target->designer_code, target->part_id);
 #else
 	DEBUG_WARN(
@@ -1504,7 +1504,7 @@ static void cortexar_halt_resume(target_s *const target, const bool step)
 }
 
 /*
- * Halt the core and await halted status. This function should only return true when 
+ * Halt the core and await halted status. This function should only return true when
  * it is, itself, responsible for having halted the target. This allows storing of the
  * returned value to later determine whether the target should be resumed.
  */

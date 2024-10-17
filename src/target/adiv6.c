@@ -69,7 +69,7 @@ bool adiv6_dp_init(adiv5_debug_port_s *const dp)
 {
 	dp->ap_read = adiv6_ap_reg_read;
 	dp->ap_write = adiv6_ap_reg_write;
-#if PC_HOSTED == 1
+#if CONFIG_BMDA == 1
 	bmda_adiv6_dp_init(dp);
 #endif
 

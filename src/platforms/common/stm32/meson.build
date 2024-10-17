@@ -56,7 +56,7 @@ platform_stm32_dfu_sources = files(
 platform_stm32_args = [
 	'-mthumb',
 	'-nostartfiles',
-	'-DPC_HOSTED=0',
+	'-DCONFIG_BMDA=0',
 ]
 
 platform_stm32_link_args = [

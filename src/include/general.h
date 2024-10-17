@@ -77,7 +77,7 @@
 
 #define FREQ_FIXED 0xffffffffU
 
-#if PC_HOSTED == 0
+#if CONFIG_BMDA == 0
 /*
  * XXX: This is not really the proper place for all this as this is too intrusive into
  * the rest of the code base. The correct way to do this would be to define a debug

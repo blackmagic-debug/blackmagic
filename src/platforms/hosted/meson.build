@@ -58,7 +58,7 @@ bmda_sources = files(
 subdir('remote')
 
 bmda_args = [
-	'-DPC_HOSTED=1',
+	'-DCONFIG_BMDA=1',
 	'-DHOSTED_BMP_ONLY=0',
 	# XXX: These need removing and the warnings they're covering up fixing
 	'-Wno-format-nonliteral',

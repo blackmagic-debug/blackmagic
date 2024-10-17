@@ -165,7 +165,7 @@ struct adiv5_debug_port {
 	uint32_t (*low_access)(adiv5_debug_port_s *dp, uint8_t RnW, uint16_t addr, uint32_t value);
 	void (*abort)(adiv5_debug_port_s *dp, uint32_t abort);
 
-#if PC_HOSTED == 1
+#if CONFIG_BMDA == 1
 	void (*ap_regs_read)(adiv5_access_port_s *ap, void *data);
 	uint32_t (*ap_reg_read)(adiv5_access_port_s *ap, uint8_t reg_num);
 	void (*ap_reg_write)(adiv5_access_port_s *ap, uint8_t num, uint32_t value);

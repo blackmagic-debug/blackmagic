@@ -153,7 +153,7 @@ ifneq ($(HOSTED_BMP_ONLY), 1)
 else
     SRC += bmp_serial.c
 endif
-PC_HOSTED = 1
+CONFIG_BMDA = 1
 
 all: blackmagic
 

@@ -3,10 +3,10 @@ MFLAGS += --no-print-dir
 Q := @
 endif
 
-PC_HOSTED =
+CONFIG_BMDA =
 NO_LIBOPENCM3 =
 ifeq ($(PROBE_HOST), hosted)
-	PC_HOSTED = true
+	CONFIG_BMDA = true
 	NO_LIBOPENCM3 = true
 endif
 

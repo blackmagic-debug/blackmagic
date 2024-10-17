@@ -158,7 +158,7 @@ SRC +=               \
 	riscv_jtag_dtm.c
 endif
 
-ifneq ($(PC_HOSTED),1)
+ifneq ($(CONFIG_BMDA),1)
 # Output memory usage information
 LDFLAGS += -Wl,--print-memory-usage
 endif
@@ -168,7 +168,7 @@ CFLAGS += $(OPT_FLAGS)
 LDFLAGS += $(OPT_FLAGS)
 
 ifndef TARGET
-ifdef PC_HOSTED
+ifdef CONFIG_BMDA
 TARGET = blackmagic
 else
 TARGET = blackmagic.elf
@@ -179,10 +179,10 @@ ifdef NO_OWN_LL
 SRC += jtagtap_generic.c swdptap_generic.c
 endif
 
-ifdef PC_HOSTED
-CFLAGS += -DPC_HOSTED=1
+ifdef CONFIG_BMDA
+CFLAGS += -DCONFIG_BMDA=1
 else
-CFLAGS += -DPC_HOSTED=0
+CFLAGS += -DCONFIG_BMDA=0
 include platforms/common/Makefile.inc
 endif
 
@@ -215,7 +215,7 @@ $(TARGET): include/version.h $(OBJ)
 	@echo "  AS      $<"
 	$(Q)$(CC) $(CFLAGS) -c $< -o $@
 
-ifndef PC_HOSTED
+ifndef CONFIG_BMDA
 %.bin:	%.elf
 	@echo "  OBJCOPY $@"
 	$(Q)$(OBJCOPY) -O binary $^ $@

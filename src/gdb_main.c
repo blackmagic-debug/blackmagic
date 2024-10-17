@@ -307,7 +307,7 @@ int32_t gdb_main_loop(target_controller_s *tc, char *pbuf, size_t pbuf_size, siz
 
 	case '\x04':
 	case 'D': /* GDB 'detach' command. */
-#if PC_HOSTED == 1
+#if CONFIG_BMDA == 1
 		if (shutdown_bmda)
 			return 0;
 #endif

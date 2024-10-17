@@ -42,7 +42,7 @@ typedef uint64_t target_addr64_t;
 typedef target_addr32_t target_addr_t;
 typedef struct target_controller target_controller_s;
 
-#if PC_HOSTED == 1
+#if CONFIG_BMDA == 1
 bool bmda_swd_scan(uint32_t targetid);
 bool bmda_jtag_scan(void);
 #endif

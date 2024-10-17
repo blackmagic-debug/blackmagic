@@ -24,13 +24,13 @@
 #error "Include 'general.h' instead"
 #endif
 
-#if PC_HOSTED == 0
+#if CONFIG_BMDA == 0
 #include "stdio_newlib.h"
 #endif
 #include "target.h"
 #include "spi_types.h"
 
-#if PC_HOSTED == 1
+#if CONFIG_BMDA == 1
 void platform_init(int argc, char **argv);
 void platform_pace_poll(void);
 
@@ -71,7 +71,7 @@ uint32_t platform_max_frequency_get(void);
 
 void platform_target_clk_output_enable(bool enable);
 
-#if PC_HOSTED == 0
+#if CONFIG_BMDA == 0
 bool platform_spi_init(spi_bus_e bus);
 bool platform_spi_deinit(spi_bus_e bus);
 

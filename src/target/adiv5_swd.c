@@ -165,7 +165,7 @@ bool adiv5_swd_scan(const uint32_t targetid)
 	dp->error = adiv5_swd_clear_error;
 	dp->abort = adiv5_swd_abort;
 
-#if PC_HOSTED == 0
+#if CONFIG_BMDA == 0
 	swdptap_init();
 #else
 	if (!bmda_swd_dp_init(dp)) {
@@ -234,13 +234,13 @@ bool adiv5_swd_scan(const uint32_t targetid)
 	}
 
 	/* If we were given targetid or we have a DPv2+ device, do a multi-drop scan */
-#if PC_HOSTED == 0
+#if CONFIG_BMDA == 0
 	/* On non hosted platforms, scan_multidrop can be constant */
 	const
 #endif
 		bool scan_multidrop = targetid || dp->version >= 2U;
 
-#if PC_HOSTED == 1
+#if CONFIG_BMDA == 1
 	if (scan_multidrop && !dp->write_no_check) {
 		DEBUG_WARN("Discovered multi-drop enabled target but CMSIS_DAP < v1.2 cannot handle multi-drop\n");
 		scan_multidrop = false;

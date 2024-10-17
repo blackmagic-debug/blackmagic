@@ -105,7 +105,7 @@ static void riscv_jtag_dtm_init(riscv_dmi_s *const dmi)
 	dmi->prepare = riscv_jtag_prepare;
 	dmi->read = riscv_jtag_dmi_read;
 	dmi->write = riscv_jtag_dmi_write;
-#if PC_HOSTED == 1
+#if CONFIG_BMDA == 1
 	bmda_riscv_jtag_dtm_init(dmi);
 #endif
 

@@ -228,7 +228,7 @@ adiv5_access_port_s *adiv5_new_ap(adiv5_debug_port_s *dp, uint8_t apsel);
 void adiv5_ap_ref(adiv5_access_port_s *ap);
 void adiv5_ap_unref(adiv5_access_port_s *ap);
 
-#if PC_HOSTED == 1
+#if CONFIG_BMDA == 1
 /* BMDA interposition functions for DP setup */
 void bmda_adiv5_dp_init(adiv5_debug_port_s *dp);
 void bmda_jtag_dp_init(adiv5_debug_port_s *dp);

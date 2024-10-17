@@ -35,7 +35,7 @@ int command_process(target_s *t, char *cmd_buffer);
  */
 bool parse_enable_or_disable(const char *s, bool *out);
 
-#if PC_HOSTED == 1
+#if CONFIG_BMDA == 1
 extern bool shutdown_bmda;
 #endif
 

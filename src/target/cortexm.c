@@ -495,7 +495,7 @@ bool cortexm_probe(adiv5_access_port_s *ap)
 		PROBE(lpc11xx_probe); /* LPC1343 */
 		break;
 	}
-#if PC_HOSTED == 0
+#if CONFIG_BMDA == 0
 	gdb_outf("Please report unknown device with Designer 0x%x Part ID 0x%x\n", target->designer_code, target->part_id);
 #else
 	DEBUG_WARN(
@@ -597,7 +597,7 @@ static void cortexm_regs_read(target_s *const target, void *const data)
 {
 	uint32_t *const regs = data;
 	adiv5_access_port_s *const ap = cortex_ap(target);
-#if PC_HOSTED == 1
+#if CONFIG_BMDA == 1
 	if (ap->dp->ap_regs_read && ap->dp->ap_reg_read) {
 		uint32_t core_regs[21U];
 		ap->dp->ap_regs_read(ap, core_regs);
@@ -640,7 +640,7 @@ static void cortexm_regs_read(target_s *const target, void *const data)
 				regs[offset + i] = adiv5_dp_read(ap->dp, ADIV5_AP_DB(DB_DCRDR));
 			}
 		}
-#if PC_HOSTED == 1
+#if CONFIG_BMDA == 1
 	}
 #endif
 }
@@ -649,7 +649,7 @@ static void cortexm_regs_write(target_s *const target, const void *const data)
 {
 	const uint32_t *const regs = data;
 	adiv5_access_port_s *const ap = cortex_ap(target);
-#if PC_HOSTED == 1
+#if CONFIG_BMDA == 1
 	if (ap->dp->ap_reg_write) {
 		for (size_t i = 0; i < CORTEXM_GENERAL_REG_COUNT; ++i)
 			ap->dp->ap_reg_write(ap, regnum_cortex_m[i], regs[i]);
@@ -690,7 +690,7 @@ static void cortexm_regs_write(target_s *const target, const void *const data)
 				adiv5_dp_write(ap->dp, ADIV5_AP_DB(DB_DCRSR), CORTEXM_DCRSR_REG_WRITE | regnum_cortex_mf[i]);
 			}
 		}
-#if PC_HOSTED == 1
+#if CONFIG_BMDA == 1
 	}
 #endif
 }

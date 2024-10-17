@@ -244,7 +244,7 @@ bool riscv_jtag_dmi_write(riscv_dmi_s *dmi, uint32_t address, uint32_t value);
 void riscv_dmi_init(riscv_dmi_s *dmi);
 riscv_hart_s *riscv_hart_struct(target_s *target);
 
-#if PC_HOSTED == 1
+#if CONFIG_BMDA == 1
 /* BMDA interposition functions for DP setup */
 void bmda_riscv_jtag_dtm_init(riscv_dmi_s *dmi);
 #endif

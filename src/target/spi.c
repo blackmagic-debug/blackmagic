@@ -37,7 +37,7 @@
 static bool bmp_spi_flash_erase(target_flash_s *flash, target_addr_t addr, size_t length);
 static bool bmp_spi_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t length);
 
-#if PC_HOSTED == 0
+#if CONFIG_BMDA == 0
 static void bmp_spi_setup_xfer(
 	const spi_bus_e bus, const uint8_t device, const uint16_t command, const target_addr32_t address)
 {

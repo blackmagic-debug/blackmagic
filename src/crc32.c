@@ -103,7 +103,7 @@ static uint32_t crc32_calc(const uint32_t crc, const uint8_t data)
 static bool generic_crc32(target_s *const target, uint32_t *const result, const uint32_t base, const size_t len)
 {
 	uint32_t crc = 0xffffffffU;
-#if PC_HOSTED == 1
+#if CONFIG_BMDA == 1
 	/*
 	 * Reading a 2 MByte on a H743 takes about 80 s@128, 28s @ 1k,
 	 * 22 s @ 4k and 21 s @ 64k
