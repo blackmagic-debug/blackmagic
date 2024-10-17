@@ -289,6 +289,11 @@ target_stm = declare_dependency(
 	dependencies: [target_cortexm, target_stm_common, target_stm32f1],
 )
 
+target_mm32 = declare_dependency(
+	dependencies: target_stm32f1,
+	compile_args: ['-DCONFIG_MM32=1'],
+)
+
 target_at32f4 = declare_dependency(
 	sources: files(
 		'at32f43x.c',
@@ -349,6 +354,7 @@ libbmd_target_deps = [
 	target_efm,
 	target_hc32,
 	target_lpc,
+	target_mm32,
 	target_nrf,
 	target_nxp,
 	target_puya,
