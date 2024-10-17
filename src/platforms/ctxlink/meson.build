@@ -28,10 +28,11 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+subproject('winc1500')
+winc1500 = dependency('winc1500')
+
 probe_ctxlink_includes = include_directories(
-	'.',
-	'../../../deps/winc1500',
-	'../../../deps/winc1500/src'
+	'.'
 )
 
 probe_ctxlink_sources = files(
