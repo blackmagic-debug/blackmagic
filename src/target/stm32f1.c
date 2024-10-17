@@ -481,6 +481,7 @@ bool at32f40x_probe(target_s *target)
 	return false;
 }
 
+#ifdef CONFIG_MM32
 /* Pack data from the source value into a uint32_t based on data alignment */
 const void *mm32l0_pack_data(const void *const src, uint32_t *const data, const align_e align)
 {
@@ -640,6 +641,7 @@ bool mm32f3xx_probe(target_s *target)
 	/* Now we have a stable debug environment, make sure the WDTs + WFI and WFE instructions can't cause problems */
 	return stm32f1_configure_dbgmcu(target, MM32F3_DBGMCU_CONFIG);
 }
+#endif
 
 /* Identify real STM32F0/F1/F3 devices */
 bool stm32f1_probe(target_s *target)
