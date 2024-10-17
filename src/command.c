@@ -532,10 +532,10 @@ static bool cmd_target_power(target_s *target, int argc, const char **argv)
 #ifdef PLATFORM_HAS_BATTERY
 static bool cmd_target_battery(target_s *t, int argc, const char **argv)
 {
-	(void)t ;
-	(void)argc ;
-	(void) argv ;
-	gdb_out(platform_battery_voltage()) ;
+	(void)t;
+	(void)argc;
+	(void)argv;
+	gdb_out(platform_battery_voltage());
 	return true;
 }
 #endif
