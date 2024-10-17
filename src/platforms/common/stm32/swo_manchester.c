@@ -147,8 +147,7 @@ void swo_buffer_data(void)
 
 	/* Make sure we're sending the data if we've got more than an endpoint buffer's worth */
 	const uint16_t swo_buffer_bytes_available =
-		(swo_buffer_write_index - swo_buffer_read_index) &
-		(SWO_BUFFER_SIZE - 1U);
+		(swo_buffer_write_index - swo_buffer_read_index) & (SWO_BUFFER_SIZE - 1U);
 	if (swo_buffer_bytes_available >= SWO_ENDPOINT_SIZE) {
 		swo_send_buffer(usbdev, SWO_ENDPOINT);
 	}
