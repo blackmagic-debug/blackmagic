@@ -163,7 +163,7 @@ char gdb_if_getchar(void)
 		if (usb_get_config() == 1) {
 			ch = gdb_usb_getchar();
 		} else {
-			ch = 0xFF;
+			ch = 0xff;
 		}
 	}
 	return ch;
