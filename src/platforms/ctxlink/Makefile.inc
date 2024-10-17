@@ -17,7 +17,17 @@ LDFLAGS = -lopencm3_stm32f4 \
 
 VPATH += platforms/common/stm32 ../deps/winc1500/src ../deps/winc1500/
 
-SRC +=               \
+WINC1500_SRC = \
+	wf_asic.c \
+	wf_hif.c \
+	wf_ota.c \
+	wf_socket.c \
+	wf_spi.c \
+	wf_spi_flash.c \
+	wf_utils.c \
+	wf_wifi.c \
+
+SRC +=              \
 	platform.c       \
 	serialno.c       \
 	timing.c         \
@@ -28,14 +38,7 @@ SRC +=               \
 	WiFi_Server.c \
 	ctxLink_mode_led.c \
 	winc1500_driver_stub_api.c \
-	wf_asic.c \
-	wf_hif.c \
-	wf_ota.c \
-	wf_socket.c \
-	wf_spi.c \
-	wf_spi_flash.c \
-	wf_utils.c \
-	wf_wifi.c
+	$(WINC1500_SRC)
 
 # If SWO_ENCODING has not been given, default it to including both modes
 ifndef SWO_ENCODING
@@ -56,7 +59,13 @@ else # If we got some other value, that's an error so report it
 endif
 CFLAGS += -DSWO_ENCODING=$(SWO_ENCODING)
 
-all:	blackmagic.bin
+all:	../deps/winc1500 blackmagic.bin
+
+../deps/winc1500:
+	$(Q) echo "Initializing win1500 driver" ;
+	$(Q) git clone https://github.com/sidprice/ctxlink_winc1500.git ../deps/winc1500
+
+$(addprefix ../deps/winc1500/,$(WINC1500_SRC)): ../deps/winc1500
 
 host_clean:
 	-$(Q)$(RM) blackmagic.bin
