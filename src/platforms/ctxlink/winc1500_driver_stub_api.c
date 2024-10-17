@@ -52,49 +52,22 @@
 //      defaulted high prior to the WINC1500 driver running.
 //==============================================================================
 
+/* NOLINTNEXTLINE(readability-identifier-naming) */
 void m2mStub_PinSet_CE(t_m2mWifiPinAction action)
 {
-	if (action == M2M_WIFI_PIN_LOW) {
-		//
-		// Set CHIP_EN output low
-		//
-		gpio_clear(WINC1500_CHIP_EN_PORT, WINC1500_CHIP_EN);
-	} else {
-		//
-		// Set CHIP_EN output high
-		//
-		gpio_set(WINC1500_CHIP_EN_PORT, WINC1500_CHIP_EN);
-	}
+	gpio_set_val(WINC1500_CHIP_EN_PORT, WINC1500_CHIP_EN, action != M2M_WIFI_PIN_LOW);
 }
 
+/* NOLINTNEXTLINE(readability-identifier-naming) */
 void m2mStub_PinSet_RESET(t_m2mWifiPinAction action)
 {
-	if (action == M2M_WIFI_PIN_LOW) {
-		//
-		// Set reset output low
-		//
-		gpio_clear(WINC1500_RESET_PORT, WINC1500_RESET);
-	} else {
-		//
-		// Set reset output high
-		//
-		gpio_set(WINC1500_RESET_PORT, WINC1500_RESET);
-	}
+	gpio_set_val(WINC1500_RESET_PORT, WINC1500_RESET, action != M2M_WIFI_PIN_LOW);
 }
 
+/* NOLINTNEXTLINE(readability-identifier-naming) */
 void m2mStub_PinSet_SPI_SS(t_m2mWifiPinAction action)
 {
-	if (action == M2M_WIFI_PIN_LOW) {
-		//
-		// Set SS output low
-		//
-		gpio_clear(WINC1500_PORT, WINC1500_SPI_NCS);
-	} else {
-		//
-		// Set SS output high
-		//
-		gpio_set(WINC1500_PORT, WINC1500_SPI_NCS);
-	}
+	gpio_set_val(WINC1500_PORT, WINC1500_SPI_NCS, action != M2M_WIFI_PIN_LOW);
 }
 
 //==============================================================================
@@ -105,18 +78,20 @@ void m2mStub_PinSet_SPI_SS(t_m2mWifiPinAction action)
 //    - The Host MCU should be configured to trigger an interrupt on a falling edge.
 //==============================================================================
 
-int intEnabled = 1;
+static int interrupt_enabled = 1;
 
+/* NOLINTNEXTLINE(readability-identifier-naming) */
 void m2mStub_EintEnable(void)
 {
-	intEnabled += 1;
+	interrupt_enabled += 1;
 	exti_enable_request(WINC1500_IRQ);
 }
 
+/* NOLINTNEXTLINE(readability-identifier-naming) */
 void m2mStub_EintDisable(void)
 {
-	if (--intEnabled == 0) {
-		intEnabled = 0;
+	if (--interrupt_enabled == 0) {
+		interrupt_enabled = 0;
 		exti_disable_request(WINC1500_IRQ);
 	}
 }
@@ -132,23 +107,25 @@ void m2mStub_EintDisable(void)
 // A TMR peripheral can be set to interrupt every 1ms. The timer ISR increments
 // a global counter.
 
-static volatile uint32_t g_oneMsCounter = 0;
+static volatile uint32_t one_ms_counter = 0;
 
 //
 // Implement this timer ISR or call this function in your timer ISR to
-// increment g_oneMsCounter variable as below:
+// increment one_ms_counter variable as below:
 //
+/* NOLINTNEXTLINE(readability-identifier-naming) */
 void m2m_TMR_ISR(void)
 {
-	g_oneMsCounter++;
+	one_ms_counter++;
 }
 
+/* NOLINTNEXTLINE(readability-identifier-naming) */
 uint32_t m2mStub_GetOneMsTimer(void)
 {
 	uint32_t tmp;
 
 	timer_disable_irq(TIM2, TIM_DIER_CC1IE);
-	tmp = g_oneMsCounter; // get a clean copy of counter variable
+	tmp = one_ms_counter; // get a clean copy of counter variable
 	timer_enable_irq(TIM2, TIM_DIER_CC1IE);
 
 	// return platform_time_ms();		// TODO, this looks wrong it should return the tmp value I think
@@ -161,6 +138,7 @@ uint32_t m2mStub_GetOneMsTimer(void)
 //    - The Host MCU will communicate to the WINC1500 via the SPI interface.
 //==============================================================================
 
+/* NOLINTNEXTLINE(readability-identifier-naming) */
 void m2mStub_SpiTxRx(uint8_t *p_txBuf, uint16_t txLen, uint8_t *p_rxBuf, uint16_t rxLen)
 {
 	uint16_t byteCount;
@@ -205,34 +183,36 @@ void m2mStub_SpiTxRx(uint8_t *p_txBuf, uint16_t txLen, uint8_t *p_rxBuf, uint16_
 //      - Error Events
 //==============================================================================
 
-volatile tpfAppWifiCb gpfAppWifiCb = NULL;
+volatile tpfAppWifiCb app_wifi_cb = NULL;
 
+/* NOLINTNEXTLINE(readability-identifier-naming) */
 void registerWifiCallback(tpfAppWifiCb pfAppWifiCb)
 {
-	gpfAppWifiCb = pfAppWifiCb;
+	app_wifi_cb = pfAppWifiCb;
 }
 
 void m2m_wifi_handle_events(t_m2mWifiEventType eventCode, t_wifiEventData *p_eventData)
 {
-	if (gpfAppWifiCb)
-		gpfAppWifiCb(eventCode, p_eventData);
+	if (app_wifi_cb)
+		app_wifi_cb(eventCode, p_eventData);
 	else
 		DEBUG_WARN("STUB_WIFI_EVENT[%d]: Wi-Fi event handler not registered!\r\n", eventCode);
 }
 
 //             --------------- * end of wifi event block * ---------------
 
-volatile tpfAppSocketCb gpfAppSocketCb = NULL;
+volatile tpfAppSocketCb app_socket_cb = NULL;
 
+/* NOLINTNEXTLINE(readability-identifier-naming) */
 void registerSocketCallback(tpfAppSocketCb pfAppSocketCb)
 {
-	gpfAppSocketCb = pfAppSocketCb;
+	app_socket_cb = pfAppSocketCb;
 }
 
 void m2m_socket_handle_events(SOCKET sock, t_m2mSocketEventType eventCode, t_socketEventData *p_eventData)
 {
-	if (gpfAppSocketCb)
-		gpfAppSocketCb(sock, eventCode, p_eventData);
+	if (app_socket_cb)
+		app_socket_cb(sock, eventCode, p_eventData);
 	else
 		DEBUG_WARN("STUB_SOCK_EVENT[%d]: Socket event handler not registered!\r\n", eventCode);
 }
