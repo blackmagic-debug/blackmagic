@@ -166,7 +166,7 @@ bool stm32mp15_cm4_probe(target_s *const target)
 	return true;
 }
 
-#ifdef ENABLE_CORTEXAR
+#ifdef CONFIG_CORTEXAR
 bool stm32mp15_ca7_probe(target_s *const target)
 {
 	if (!stm32mp15_ident(target, false))

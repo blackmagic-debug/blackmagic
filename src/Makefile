@@ -132,7 +132,7 @@ SRC +=     \
 endif
 
 ifeq ($(ENABLE_CORTEXAR), 1)
-CFLAGS += -DENABLE_CORTEXAR=1
+CFLAGS += -DCONFIG_CORTEXAR=1
 SRC +=           \
 	cortexar.c   \
 	renesas_rz.c

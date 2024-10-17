@@ -126,7 +126,7 @@ target_cortex = declare_dependency(
 target_cortexar = declare_dependency(
 	sources: files('cortexar.c'),
 	dependencies: target_cortex,
-	compile_args: ['-DENABLE_CORTEXAR=1'],
+	compile_args: ['-DCONFIG_CORTEXAR=1'],
 )
 
 target_cortexm = declare_dependency(
