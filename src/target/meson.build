@@ -332,12 +332,20 @@ if is_firmware_build
 	endforeach
 
 	# Check if we should enable the RISC-V Debug remote protocol acceleration and do so if required
-	if get_option('enable_riscv_accel')
+	enable_riscv_accel = get_option('enable_riscv_accel')
+	if enable_riscv_accel
 		enabled_target_deps += declare_dependency(
 			compile_args: ['-DCONFIG_RISCV_ACCEL=1'],
 			dependencies: riscv_jtag_dtm,
 		)
 	endif
+
+	summary(
+		'RISC-V acceleration',
+		enable_riscv_accel,
+		bool_yn: true,
+		section: 'Remote Protocol',
+	)
 
 	# BMD target dependency
 	bmd_targets = declare_dependency(
