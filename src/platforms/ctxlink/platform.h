@@ -64,7 +64,7 @@
 //	TODO, use part or all of the MAC address to make this unique.
 //
 
-#define ctxLink_NetName "ctxLink_0001"
+#define CTXLINK_NETWORK_NAME "ctxLink_0001"
 
 // Port definitions for WINC1500 wireless module
 //
