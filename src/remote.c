@@ -35,7 +35,7 @@
 #include "target.h"
 #include "adiv5.h"
 #include "adiv6.h"
-#if defined(ENABLE_RISCV_ACCEL) && ENABLE_RISCV_ACCEL == 1
+#if defined(CONFIG_RISCV_ACCEL) && CONFIG_RISCV_ACCEL == 1
 #include "riscv_debug.h"
 #endif
 #include "version.h"
@@ -354,7 +354,7 @@ static void remote_packet_process_high_level(const char *packet, const size_t pa
 		/* Build a response value that depends on what things are built into the firmare */
 		remote_respond(REMOTE_RESP_OK,
 			REMOTE_ACCEL_ADIV5 | REMOTE_ACCEL_ADIV6
-#if defined(ENABLE_RISCV_ACCEL) && ENABLE_RISCV_ACCEL == 1
+#if defined(CONFIG_RISCV_ACCEL) && CONFIG_RISCV_ACCEL == 1
 				| REMOTE_ACCEL_RISCV
 #endif
 		);
@@ -597,7 +597,7 @@ static void remote_packet_process_adiv6(const char *const packet, const size_t p
 	SET_IDLE_STATE(1);
 }
 
-#if defined(ENABLE_RISCV_ACCEL) && ENABLE_RISCV_ACCEL == 1
+#if defined(CONFIG_RISCV_ACCEL) && CONFIG_RISCV_ACCEL == 1
 /*
  * This faked RISC-V DMI structure holds the currently used low-level implementation functions and basic DMI
  * state for remote protocol requests made. This is for use by remote_packet_process_riscv() so it can do the right
@@ -844,7 +844,7 @@ void remote_packet_process(char *const packet, const size_t packet_length)
 		break;
 	}
 
-#if defined(ENABLE_RISCV_ACCEL) && ENABLE_RISCV_ACCEL == 1
+#if defined(CONFIG_RISCV_ACCEL) && CONFIG_RISCV_ACCEL == 1
 	case REMOTE_RISCV_PACKET:
 		remote_packet_process_riscv(packet, packet_length);
 		break;

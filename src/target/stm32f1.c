@@ -52,7 +52,7 @@
 #include "target_internal.h"
 #include "adi.h"
 #include "cortexm.h"
-#ifdef ENABLE_RISCV
+#ifdef CONFIG_RISCV
 #include "riscv_debug.h"
 #endif
 #include "jep106.h"
@@ -306,7 +306,7 @@ bool gd32f1_probe(target_s *target)
 	return stm32f1_configure_dbgmcu(target, dbgmcu_config_taddr);
 }
 
-#ifdef ENABLE_RISCV
+#ifdef CONFIG_RISCV
 static bool gd32vf1_attach(target_s *target);
 static void gd32vf1_detach(target_s *target);
 

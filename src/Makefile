@@ -145,7 +145,7 @@ endif
 endif
 
 ifeq ($(ENABLE_RISCV), 1)
-CFLAGS += -DENABLE_RISCV=1
+CFLAGS += -DCONFIG_RISCV=1
 SRC +=               \
 	riscv32.c        \
 	riscv64.c        \
@@ -153,7 +153,7 @@ SRC +=               \
 	riscv_adi_dtm.c  \
 	riscv_jtag_dtm.c
 else ifeq ($(ENABLE_RISCV_ACCEL), 1)
-CFLAGS == -DENABLE_RISCV_ACCEL=1
+CFLAGS += -DCONFIG_RISCV_ACCEL=1
 SRC +=               \
 	riscv_jtag_dtm.c
 endif

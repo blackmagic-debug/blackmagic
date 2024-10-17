@@ -183,7 +183,7 @@ static bool rp2350_attach(target_s *const target)
 	if (target->priv_free == cortex_priv_free) {
 		if (!cortexm_attach(target))
 			return false;
-#ifdef ENABLE_RISCV
+#ifdef CONFIG_RISCV
 	} else {
 		if (!riscv_attach(target))
 			return false;

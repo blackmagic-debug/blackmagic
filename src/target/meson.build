@@ -145,7 +145,7 @@ target_riscv = declare_dependency(
 		'riscv_debug.c',
 		'riscv_adi_dtm.c',
 	),
-	compile_args: ['-DENABLE_RISCV=1'],
+	compile_args: ['-DCONFIG_RISCV=1'],
 	dependencies: riscv_jtag_dtm,
 )
 
@@ -311,7 +311,7 @@ if is_firmware_build
 	# Check if we should enable the RISC-V Debug remote protocol acceleration and do so if required
 	if get_option('enable_riscv_accel')
 		enabled_target_deps += declare_dependency(
-			compile_args: ['-DENABLE_RISCV_ACCEL=1'],
+			compile_args: ['-DCONFIG_RISCV_ACCEL=1'],
 			dependencies: riscv_jtag_dtm,
 		)
 	endif

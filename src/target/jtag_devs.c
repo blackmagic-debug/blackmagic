@@ -404,7 +404,7 @@ const jtag_dev_descr_s dev_descr[] = {
 			},
 	},
 #endif
-#ifdef ENABLE_RISCV
+#ifdef CONFIG_RISCV
 	{
 		.idcode = 0x0000563dU,
 		.idmask = 0x0fffffffU,

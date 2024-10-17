@@ -7,7 +7,7 @@ CFLAGS +=-I ./target
 
 # Architecture enables
 ENABLE_CORTEXAR := 1
-ENABLE_RISCV := 1
+CONFIG_RISCV := 1
 # Target enables
 ENABLE_ARTERY := 1
 ENABLE_CH579 := 1

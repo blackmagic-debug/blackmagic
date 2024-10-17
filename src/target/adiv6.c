@@ -44,7 +44,7 @@
 #include "adi.h"
 #include "adiv6.h"
 #include "adiv6_internal.h"
-#ifdef ENABLE_RISCV
+#ifdef CONFIG_RISCV
 #include "riscv_debug.h"
 #endif
 
@@ -340,7 +340,7 @@ static bool adiv6_component_probe(adiv5_debug_port_s *const dp, const target_add
 				ap->base.designer_code = rom_designer_code;
 				ap->base.partno = rom_part_number;
 
-#ifdef ENABLE_RISCV
+#ifdef CONFIG_RISCV
 				/* Special-cases for RISC-V parts using ADI as a DTM */
 				if (rom_designer_code == JEP106_MANUFACTURER_RASPBERRY && rom_part_number == ID_RP2350 &&
 					ap->base.base == 0U) {

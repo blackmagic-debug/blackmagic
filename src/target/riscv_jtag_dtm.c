@@ -57,7 +57,7 @@
 #define RV_DMI_FAILURE  2U
 #define RV_DMI_TOO_SOON 3U
 
-#ifdef ENABLE_RISCV
+#ifdef CONFIG_RISCV
 static void riscv_jtag_dtm_init(riscv_dmi_s *dmi);
 static uint32_t riscv_shift_dtmcs(const riscv_dmi_s *dmi, uint32_t control);
 static riscv_debug_version_e riscv_dtmcs_version(uint32_t dtmcs);
@@ -213,7 +213,7 @@ bool riscv_jtag_dmi_write(riscv_dmi_s *const dmi, const uint32_t address, const 
 	return result;
 }
 
-#ifdef ENABLE_RISCV
+#ifdef CONFIG_RISCV
 static riscv_debug_version_e riscv_dtmcs_version(const uint32_t dtmcs)
 {
 	uint8_t version = dtmcs & RV_STATUS_VERSION_MASK;
