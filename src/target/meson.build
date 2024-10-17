@@ -255,16 +255,28 @@ target_sam = declare_dependency(
 	dependencies: target_cortexm,
 )
 
-target_stm_deps = [target_cortexm]
+target_stm_common = declare_dependency(
+	sources: files(
+		'stm32_common.c',
+	)
+)
+
+target_stm32f1_deps = [target_cortexm, target_stm_common]
 # If the 32-bit RISC-V target is not enabled, don't enable GD32VF103 support
 if not is_firmware_build or enabled_targets.contains('riscv32')
-	target_stm_deps += [target_riscv32]
+	target_stm32f1_deps += [target_riscv32]
 endif
+
+target_stm32f1 = declare_dependency(
+	sources: files(
+		'stm32f1.c',
+	),
+	dependencies: target_stm32f1_deps,
+)
 
 target_stm = declare_dependency(
 	sources: files(
 		'ch32f1.c',
-		'stm32f1.c',
 		'stm32f4.c',
 		'stm32g0.c',
 		'stm32h5.c',
@@ -273,9 +285,8 @@ target_stm = declare_dependency(
 		'stm32l4.c',
 		'stm32mp15.c',
 		'stm32wb0.c',
-		'stm32_common.c',
 	),
-	dependencies: target_stm_deps,
+	dependencies: [target_cortexm, target_stm_common, target_stm32f1],
 )
 
 target_at32f4 = declare_dependency(
