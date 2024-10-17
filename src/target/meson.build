@@ -274,9 +274,15 @@ target_stm32f1 = declare_dependency(
 	dependencies: target_stm32f1_deps,
 )
 
-target_stm = declare_dependency(
+target_ch32 = declare_dependency(
 	sources: files(
 		'ch32f1.c',
+	),
+	dependencies: target_stm32f1,
+)
+
+target_stm = declare_dependency(
+	sources: files(
 		'stm32f4.c',
 		'stm32g0.c',
 		'stm32h5.c',
@@ -350,6 +356,7 @@ libbmd_target_deps = [
 	# Enable all targets for libbmd
 	target_apollo3,
 	target_at32f4,
+	target_ch32,
 	target_ch579,
 	target_efm,
 	target_hc32,
