@@ -258,7 +258,7 @@ int gdb_if_init(void)
 				DEBUG_WARN("Listening on IPv6 only.\n");
 		}
 
-		if (bind(gdb_if_serv, (sockaddr_s *)&addr, family_to_size(addr.ss_family)) == -1) {
+		if (bind(gdb_if_serv, (const sockaddr_s *)&addr, family_to_size(addr.ss_family)) == -1) {
 			handle_error(gdb_if_serv, "binding socket");
 			continue;
 		}

@@ -474,9 +474,11 @@ static bool kinetis_flash_cmd_write(target_flash_s *f, target_addr_t dest, const
 	kinetis_flash_s *const kf = (kinetis_flash_s *)f;
 
 	/* Ensure we don't write something horrible over the security byte */
-	if (!f->t->unsafe_enabled && dest <= FLASH_SECURITY_BYTE_ADDRESS && dest + len > FLASH_SECURITY_BYTE_ADDRESS) {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-qual"
+	if (!f->t->unsafe_enabled && dest <= FLASH_SECURITY_BYTE_ADDRESS && dest + len > FLASH_SECURITY_BYTE_ADDRESS)
 		((uint8_t *)src)[FLASH_SECURITY_BYTE_ADDRESS - dest] = FLASH_SECURITY_BYTE_UNSECURED;
-	}
+#pragma GCC diagnostic pop
 
 	/* Determine write command based on the alignment. */
 	uint8_t write_cmd;

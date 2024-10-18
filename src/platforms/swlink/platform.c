@@ -157,7 +157,7 @@ const char *platform_target_voltage(void)
 	const uint8_t channel = 0;
 	switch (rev) {
 	case 0:
-		adc_set_regular_sequence(ADC1, 1, (uint8_t *)&channel);
+		adc_set_regular_sequence(ADC1, 1, &channel);
 		adc_start_conversion_direct(ADC1);
 		/* Wait for end of conversion. */
 		while (!adc_eoc(ADC1))

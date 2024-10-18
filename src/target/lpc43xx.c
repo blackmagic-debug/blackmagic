@@ -3,7 +3,7 @@
  *
  * Copyright (C) 2014 Allen Ibara <aibara>
  * Copyright (C) 2015 Gareth McMullin <gareth@blacksphere.co.nz>
- * Copyright (C) 2022 1BitSquared <info@1bitsquared.com>
+ * Copyright (C) 2022-2024 1BitSquared <info@1bitsquared.com>
  * Rewritten by Rachel Mant <git@dragonmux.network>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -908,7 +908,7 @@ static void lpc43x0_spi_write(target_s *const target, const uint16_t command, co
 		target_mem32_write32(target, LPC43xx_GPIO_PORT0_SET, 1U << 6U);
 		lpc43x0_ssp0_setup_command(target, command, address);
 		/* And finally do the meat and potatoes of the transfer */
-		uint8_t *const data = (uint8_t *)buffer;
+		const uint8_t *const data = (const uint8_t *)buffer;
 		for (size_t i = 0; i < length; ++i)
 			lpc43x0_ssp0_transfer(target, data[i]);
 		/* Deselect the Flash */

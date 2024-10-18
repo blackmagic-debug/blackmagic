@@ -889,7 +889,7 @@ static bool renesas_rv40_flash_write(target_flash_s *const flash, target_addr_t 
 		/* Write one chunk */
 		for (size_t i = 0U; i < (write_size / 2U); i++) {
 			/* Copy data from source address to destination */
-			target_mem32_write16(target, RV40_CMD, *(uint16_t *)src);
+			target_mem32_write16(target, RV40_CMD, *(const uint16_t *)src);
 
 			/* 2 bytes of data */
 			src = (const uint8_t *)src + 2U;
