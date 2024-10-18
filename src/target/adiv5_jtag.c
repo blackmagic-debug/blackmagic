@@ -112,7 +112,7 @@ uint32_t adiv5_jtag_raw_access(adiv5_debug_port_s *dp, uint8_t rnw, uint16_t add
 	platform_timeout_set(&timeout, 250);
 	do {
 		uint64_t response;
-		jtag_dev_shift_dr(dp->dev_index, (uint8_t *)&response, (uint8_t *)&request, 35);
+		jtag_dev_shift_dr(dp->dev_index, (uint8_t *)&response, (const uint8_t *)&request, 35);
 		result = response >> 3U;
 		ack = response & 0x07U;
 	} while (!platform_timeout_is_expired(&timeout) && ack == JTAGDP_ACK_WAIT);

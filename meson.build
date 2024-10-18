@@ -94,7 +94,7 @@ extended_warnings = [
 	'-Wbad-function-cast',
 	# '-Wcast-align=strict',
 	'-Wcast-function-type',
-	# '-Wcast-qual',
+	'-Wcast-qual',
 	# '-Wconversion',
 	'-Wdangling-else',
 	'-Wdouble-promotion',

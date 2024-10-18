@@ -2,7 +2,7 @@
  * This file is part of the Black Magic Debug project.
  *
  * Copyright (C) 2015 Gareth McMullin <gareth@blacksphere.co.nz>
- * Copyright (C) 2022-2023 1BitSquared <info@1bitsquared.com>
+ * Copyright (C) 2022-2024 1BitSquared <info@1bitsquared.com>
  * Modified by Rachel Mant <git@dragonmux.network>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -358,13 +358,16 @@ bool lpc_flash_write_magic_vect(target_flash_s *f, target_addr_t dest, const voi
 {
 	if (dest == 0) {
 		/* Fill in the magic vector to allow booting the flash */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-qual"
 		uint32_t *const vectors = (uint32_t *)src;
+#pragma GCC diagnostic pop
 		uint32_t sum = 0;
 
-		/* compute checksum of first 7 vectors */
+		/* Compute checksum of first 7 vectors */
 		for (size_t i = 0; i < 7U; ++i)
 			sum += vectors[i];
-		/* two's complement is written to 8'th vector */
+		/* Two's complement is written to 8'th vector */
 		vectors[7] = ~sum + 1U;
 	}
 	return lpc_flash_write(f, dest, src, len);

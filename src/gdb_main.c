@@ -1,8 +1,10 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
- * Copyright (C) 2011  Black Sphere Technologies Ltd.
+ * Copyright (C) 2011 Black Sphere Technologies Ltd.
  * Written by Gareth McMullin <gareth@blacksphere.co.nz>
+ * Copyright (C) 2022-2024 1BitSquared <info@1bitsquared.com>
+ * Modified by Rachel Mant <git@dragonmux.network>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -488,7 +490,10 @@ static void exec_q_feature_read(const char *packet, const size_t length)
 	}
 	const char *const description = target_regs_description(target);
 	handle_q_string_reply(description ? description : "", packet);
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-qual"
 	free((void *)description);
+#pragma GCC diagnostic pop
 }
 
 static void exec_q_crc(const char *packet, const size_t length)
@@ -789,7 +794,7 @@ static void exec_v_flash_write(const char *packet, const size_t length)
 		/* Write Flash Memory */
 		const uint32_t count = length - (size_t)(rest - packet);
 		DEBUG_GDB("Flash Write %08" PRIX32 " %08" PRIX32 "\n", addr, count);
-		if (cur_target && target_flash_write(cur_target, addr, (uint8_t *)rest, count))
+		if (cur_target && target_flash_write(cur_target, addr, (const uint8_t *)rest, count))
 			gdb_putpacketz("OK");
 		else {
 			target_flash_complete(cur_target);

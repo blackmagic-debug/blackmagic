@@ -270,12 +270,12 @@ static void remote_packet_process_general(char *packet, const size_t packet_len)
 		remote_respond(REMOTE_RESP_OK, platform_nrst_get_val());
 		break;
 	case REMOTE_FREQ_SET:
-		platform_max_frequency_set(hex_string_to_num(8, packet + 2));
+		platform_max_frequency_set(hex_string_to_num(8U, packet + 2U));
 		remote_respond(REMOTE_RESP_OK, 0);
 		break;
 	case REMOTE_FREQ_GET: {
 		const uint32_t freq = platform_max_frequency_get();
-		remote_respond_buf(REMOTE_RESP_OK, (uint8_t *)&freq, 4);
+		remote_respond_buf(REMOTE_RESP_OK, (const uint8_t *)&freq, 4U);
 		break;
 	}
 	case REMOTE_PWR_SET:
@@ -288,7 +288,7 @@ static void remote_packet_process_general(char *packet, const size_t packet_len)
 			remote_respond(REMOTE_RESP_ERR, 0);
 		} else {
 			const bool result = platform_target_set_power(packet[2] == '1');
-			remote_respond(result ? REMOTE_RESP_OK : REMOTE_RESP_ERR, 0);
+			remote_respond(result ? REMOTE_RESP_OK : REMOTE_RESP_ERR, 0U);
 		}
 #else
 		remote_respond(REMOTE_RESP_NOTSUP, 0);

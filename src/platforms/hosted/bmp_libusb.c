@@ -584,7 +584,7 @@ int bmda_usb_transfer(
 {
 	/* If there's data to send */
 	if (tx_len) {
-		uint8_t *tx_data = (uint8_t *)tx_buffer;
+		const uint8_t *tx_data = (const uint8_t *)tx_buffer;
 		/* Display the request */
 		DEBUG_WIRE(" request:");
 		for (size_t i = 0; i < tx_len && i < 32U; ++i)
@@ -593,9 +593,12 @@ int bmda_usb_transfer(
 			DEBUG_WIRE(" ...");
 		DEBUG_WIRE("\n");
 
-		/* Perform the transfer */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-qual"
+		/* Perform the transfer - NB, libusb has a miserably const-and-signed-incorrect API, hence some the casts here */
 		const int result = libusb_bulk_transfer(
-			link->device_handle, link->ep_tx | LIBUSB_ENDPOINT_OUT, tx_data, (int)tx_len, NULL, timeout);
+			link->device_handle, link->ep_tx | LIBUSB_ENDPOINT_OUT, (uint8_t *)tx_data, (int)tx_len, NULL, timeout);
+#pragma GCC diagnostic pop
 		/* Then decode the result value - if its anything other than LIBUSB_SUCCESS, something went horribly wrong */
 		if (result != LIBUSB_SUCCESS) {
 			DEBUG_ERROR(

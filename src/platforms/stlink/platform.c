@@ -157,7 +157,7 @@ const char *platform_target_voltage(void)
 {
 	static char ret[6] = "0.00V";
 	const uint8_t channel = 0;
-	adc_set_regular_sequence(ADC1, 1, (uint8_t *)&channel);
+	adc_set_regular_sequence(ADC1, 1, &channel);
 	adc_start_conversion_direct(ADC1);
 	/* Wait for end of conversion. */
 	while (!adc_eoc(ADC1))
@@ -165,7 +165,7 @@ const char *platform_target_voltage(void)
 	uint32_t platform_adc_value = adc_read_regular(ADC1);
 
 	const uint8_t ref_channel = 17;
-	adc_set_regular_sequence(ADC1, 1, (uint8_t *)&ref_channel);
+	adc_set_regular_sequence(ADC1, 1, &ref_channel);
 	adc_start_conversion_direct(ADC1);
 	/* Wait for end of conversion. */
 	while (!adc_eoc(ADC1))

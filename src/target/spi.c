@@ -1,7 +1,7 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
- * Copyright (C) 2023 1BitSquared <info@1bitsquared.com>
+ * Copyright (C) 2023-2024 1BitSquared <info@1bitsquared.com>
  * Written by Rachel Mant <git@dragonmux.network>
  * All rights reserved.
  *
@@ -80,7 +80,7 @@ void bmp_spi_write(const spi_bus_e bus, const uint8_t device, const uint16_t com
 	/* Setup the transaction */
 	bmp_spi_setup_xfer(bus, device, command, address);
 	/* Now write out back the data requested */
-	uint8_t *const data = (uint8_t *const)buffer;
+	const uint8_t *const data = (const uint8_t *)buffer;
 	for (size_t i = 0; i < length; ++i)
 		/* Do a write to read */
 		platform_spi_xfer(bus, data[i]);

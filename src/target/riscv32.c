@@ -130,7 +130,7 @@ static void riscv32_regs_write(target_s *const target, const void *const data)
 {
 	/* Grab the hart structure and figure out how many registers need reading out */
 	riscv_hart_s *const hart = riscv_hart_struct(target);
-	riscv32_regs_s *const regs = (riscv32_regs_s *)data;
+	const riscv32_regs_s *const regs = (const riscv32_regs_s *)data;
 	const size_t gprs_count = hart->extensions & RV_ISA_EXT_EMBEDDED ? 16U : 32U;
 	/* Loop through writing out the GPRs, except for the first which is always 0 */
 	for (size_t gpr = 1; gpr < gprs_count; ++gpr) {

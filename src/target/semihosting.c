@@ -403,7 +403,10 @@ int32_t semihosting_open(target_s *const target, const semihosting_s *const requ
 
 	const int32_t result = open(file_name, native_open_mode | O_NOCTTY, 0644);
 	target->tc->gdb_errno = semihosting_errno();
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-qual"
 	free((void *)file_name);
+#pragma GCC diagnostic pop
 #else
 	gdb_putpacket_f("Fopen,%08" PRIX32 "/%08" PRIX32 ",%08" PRIX32 ",%08X", file_name_taddr, file_name_length + 1U,
 		open_mode, 0644U);
@@ -451,13 +454,13 @@ int32_t semihosting_read(target_s *const target, const semihosting_s *const requ
 		target_mem32_write(target, buf_taddr, semihosting_features + semihosting_features_offset, amount);
 		semihosting_features_offset += amount;
 		/* Return how much was left from what we transferred */
-		return buf_len - amount;
+		return (int32_t)(buf_len - amount);
 	}
 
 	const int32_t fd = request->params[0] - 1;
 	const int32_t result = semihosting_remote_read(target, fd, buf_taddr, buf_len);
 	if (result >= 0)
-		return buf_len - result;
+		return (int32_t)(buf_len - result);
 	return result;
 }
 
@@ -550,13 +553,19 @@ int32_t semihosting_rename(target_s *const target, const semihosting_s *const re
 		return -1;
 	const char *const new_file_name = semihosting_read_string(target, request->params[2], request->params[3]);
 	if (new_file_name == NULL) {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-qual"
 		free((void *)old_file_name);
+#pragma GCC diagnostic pop
 		return -1;
 	}
 	const int32_t result = rename(old_file_name, new_file_name);
 	target->tc->gdb_errno = semihosting_errno();
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-qual"
 	free((void *)old_file_name);
 	free((void *)new_file_name);
+#pragma GCC diagnostic pop
 	return result;
 #else
 	gdb_putpacket_f("Frename,%08" PRIX32 "/%08" PRIX32 ",%08" PRIX32 "/%08" PRIX32, request->params[0],
@@ -573,7 +582,10 @@ int32_t semihosting_remove(target_s *const target, const semihosting_s *const re
 		return -1;
 	const int32_t result = remove(file_name);
 	target->tc->gdb_errno = semihosting_errno();
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-qual"
 	free((void *)file_name);
+#pragma GCC diagnostic pop
 	return result;
 #else
 	gdb_putpacket_f("Funlink,%08" PRIX32 "/%08" PRIX32, request->params[0], request->params[1] + 1U);
