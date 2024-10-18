@@ -32,11 +32,10 @@
 /* Control variables shared between decoders */
 extern bool swo_itm_decoding;
 
-/* Dynamically-allocated data buffer, current read index, current write index, and current fill level */
+/* Dynamically-allocated data buffer, current read index, and current write index */
 extern uint8_t *swo_buffer;
 extern uint16_t swo_buffer_read_index;
 extern uint16_t swo_buffer_write_index;
-extern _Atomic uint16_t swo_buffer_bytes_available;
 
 /* Manchester-mode implementation functions */
 void swo_manchester_init(void);

@@ -41,6 +41,7 @@ platform_stm32_swo = declare_dependency(sources: files(
 	'swo_itm_decode.c',
 ))
 platform_stm32_swo_manchester = declare_dependency(sources: files('swo_manchester.c'))
+platform_stm32_swo_manchester_dma = declare_dependency(sources: files('swo_manchester_dma.c'))
 platform_stm32_swo_uart = declare_dependency(sources: files('swo_uart.c'))
 
 # RTT support handling
