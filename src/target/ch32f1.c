@@ -96,17 +96,17 @@ static void ch32f1_add_flash(target_s *target, uint32_t addr, size_t length, siz
 		}                                                    \
 	} while (!(status & FLASH_SR_EOP));
 
-#define SET_CR(bit)                                                          \
-	do {                                                                     \
-		const uint32_t ctrl = target_mem32_read32(target, FLASH_CR) | (bit); \
-		target_mem32_write32(target, FLASH_CR, ctrl);                        \
-	} while (0)
+static void ch32f1_flash_ctrl_set(target_s *const target, const uint32_t value)
+{
+	const uint32_t ctrl = target_mem32_read32(target, FLASH_CR);
+	target_mem32_write32(target, FLASH_CR, ctrl | value);
+}
 
-#define CLEAR_CR(bit)                                                         \
-	do {                                                                      \
-		const uint32_t ctrl = target_mem32_read32(target, FLASH_CR) & ~(bit); \
-		target_mem32_write32(target, FLASH_CR, ctrl);                         \
-	} while (0)
+static void ch32f1_flash_ctrl_clear(target_s *const target, const uint32_t value)
+{
+	const uint32_t ctrl = target_mem32_read32(target, FLASH_CR);
+	target_mem32_write32(target, FLASH_CR, ctrl & ~value);
+}
 
 /* Attempt unlock ch32f103 in fast mode */
 static bool ch32f1_flash_unlock(target_s *const target)
@@ -134,7 +134,7 @@ static bool ch32f1_flash_lock(target_s *const target)
 	 * The LOCK (bit 7) and FLOCK (bit 15) must be set (1) in the same write
 	 * operation, if not FLOCK will be read back as unset (0).
 	 */
-	SET_CR(FLASH_CR_LOCK | FLASH_CR_FLOCK_CH32);
+	ch32f1_flash_ctrl_set(target, FLASH_CR_LOCK | FLASH_CR_FLOCK_CH32);
 	const uint32_t ctrl = target_mem32_read32(target, FLASH_CR);
 	if (!(ctrl & FLASH_CR_FLOCK_CH32))
 		DEBUG_ERROR("Fast lock failed, cr: 0x%08" PRIx32 "\n", ctrl);
@@ -148,7 +148,7 @@ static bool ch32f1_has_fast_unlock(target_s *const target)
 {
 	DEBUG_INFO("CH32: has fast unlock\n");
 	// reset fast unlock
-	SET_CR(FLASH_CR_FLOCK_CH32);
+	ch32f1_flash_ctrl_set(target, FLASH_CR_FLOCK_CH32);
 	platform_delay(1); // The flash controller is timing sensitive
 	if (!(target_mem32_read32(target, FLASH_CR) & FLASH_CR_FLOCK_CH32))
 		return false;
@@ -237,14 +237,14 @@ static bool ch32f1_flash_erase(target_flash_s *const flash, const target_addr_t 
 	}
 	// Fast Erase 128 bytes pages (ch32 mode)
 	for (size_t offset = 0; offset < len; offset += 128U) {
-		SET_CR(FLASH_CR_FTER_CH32); // CH32 PAGE_ER
+		ch32f1_flash_ctrl_set(target, FLASH_CR_FTER_CH32); // CH32 PAGE_ER
 		/* Write address to FMA */
 		target_mem32_write32(target, FLASH_AR, addr + offset);
 		/* Flash page erase start instruction */
-		SET_CR(FLASH_CR_STRT);
+		ch32f1_flash_ctrl_set(target, FLASH_CR_STRT);
 		WAIT_EOP();
 		target_mem32_write32(target, FLASH_SR, FLASH_SR_EOP);
-		CLEAR_CR(FLASH_CR_STRT);
+		ch32f1_flash_ctrl_clear(target, FLASH_CR_STRT);
 		ch32f1_write_magic(target, addr + offset);
 	}
 	status = target_mem32_read32(target, FLASH_SR);
@@ -282,15 +282,15 @@ static int ch32f1_upload(
 	const uint32_t *ss = (const uint32_t *)(src + offset);
 	target_addr32_t dd = dest + offset;
 
-	SET_CR(FLASH_CR_FTPG_CH32);
+	ch32f1_flash_ctrl_set(target, FLASH_CR_FTPG_CH32);
 	target_mem32_write32(target, dd + 0, ss[0]);
 	target_mem32_write32(target, dd + 4U, ss[1]);
 	target_mem32_write32(target, dd + 8U, ss[2]);
 	target_mem32_write32(target, dd + 12U, ss[3]);
-	SET_CR(FLASH_CR_BUF_LOAD_CH32); /* BUF LOAD */
+	ch32f1_flash_ctrl_set(target, FLASH_CR_BUF_LOAD_CH32); /* BUF LOAD */
 	WAIT_EOP();
 	target_mem32_write32(target, FLASH_SR, FLASH_SR_EOP);
-	CLEAR_CR(FLASH_CR_FTPG_CH32);
+	ch32f1_flash_ctrl_clear(target, FLASH_CR_FTPG_CH32);
 	ch32f1_write_magic(target, dest + offset);
 	return 0;
 }
@@ -298,10 +298,10 @@ static int ch32f1_upload(
 /* Clear the write buffer */
 static int ch32f1_buffer_clear(target_s *const target)
 {
-	SET_CR(FLASH_CR_FTPG_CH32);      // Fast page program 4-
-	SET_CR(FLASH_CR_BUF_RESET_CH32); // BUF_RESET 5-
-	ch32f1_flash_busy_wait(target);  // 6-
-	CLEAR_CR(FLASH_CR_FTPG_CH32);    // Fast page program 4-
+	ch32f1_flash_ctrl_set(target, FLASH_CR_FTPG_CH32);      // Fast page program 4-
+	ch32f1_flash_ctrl_set(target, FLASH_CR_BUF_RESET_CH32); // BUF_RESET 5-
+	ch32f1_flash_busy_wait(target);                         // 6-
+	ch32f1_flash_ctrl_clear(target, FLASH_CR_FTPG_CH32);    // Fast page program 4-
 	return 0;
 }
 
@@ -339,12 +339,12 @@ static bool ch32f1_flash_write(
 			}
 		}
 		// write buffer
-		SET_CR(FLASH_CR_FTPG_CH32);
+		ch32f1_flash_ctrl_set(target, FLASH_CR_FTPG_CH32);
 		target_mem32_write32(target, FLASH_AR, dest + offset); // 10
-		SET_CR(FLASH_CR_STRT);                                 // 11 Start
+		ch32f1_flash_ctrl_set(target, FLASH_CR_STRT);          // 11 Start
 		WAIT_EOP();                                            // 12
 		target_mem32_write32(target, FLASH_SR, FLASH_SR_EOP);
-		CLEAR_CR(FLASH_CR_FTPG_CH32);
+		ch32f1_flash_ctrl_clear(target, FLASH_CR_FTPG_CH32);
 
 		ch32f1_write_magic(target, dest + offset);
 
