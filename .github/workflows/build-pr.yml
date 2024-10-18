@@ -228,6 +228,7 @@ jobs:
           path-type: inherit
           pacboy: >-
             toolchain:p
+            meson:p
 
       # Build a suitable runtime environment
       - name: Runtime environment
@@ -257,30 +258,25 @@ jobs:
 
       # Record the versions of all the tools used in the build
       - name: Version tools
-        shell: bash
         run: |
           $CC --version
-          make --version
+          meson --version
+          ninja --version
 
       # Checkout the repository and branch to build under the default location
       - name: Checkout
         uses: actions/checkout@v4
 
-      # Build BMDA in BMP-only mode
-      - name: Build BMP only BMDA
-        run: make PROBE_HOST=hosted HOSTED_BMP_ONLY=1
-
-      - name: Clean
-        run: make -C src clean
-
-      # Install the dependencies needed for a full BMDA build
+      # Install the dependencies needed for a BMDA build
       - name: Install BMDA dependencies
         run: |
           pacman --noconfirm -S mingw-w64-${{matrix.sys.env}}-libusb mingw-w64-${{matrix.sys.env}}-hidapi
 
       # And build that full binary
-      - name: Build full BMDA
-        run: make PROBE_HOST=hosted HOSTED_BMP_ONLY=0
+      - name: Build BMDA with MSYS2-provided dependencies
+        run: |
+          meson setup build
+          meson compile -C build
 
   # This workflow tests the experimental Meson build system
   build-linux-meson:
