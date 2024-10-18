@@ -146,7 +146,9 @@ const command_s stm32f4_cmd_list[] = {
 };
 
 static bool stm32f4_attach(target_s *target);
+#ifdef CONFIG_GD32
 static bool gd32f4_attach(target_s *target);
+#endif
 static void stm32f4_detach(target_s *target);
 static bool stm32f4_flash_erase(target_flash_s *target_flash, target_addr_t addr, size_t len);
 static bool stm32f4_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t len);
@@ -297,6 +299,7 @@ bool stm32f4_probe(target_s *target)
 	return true;
 }
 
+#ifdef CONFIG_GD32
 bool gd32f4_probe(target_s *target)
 {
 	if (target->part_id != ID_GD32F450 && target->part_id != ID_GD32F470 && target->part_id != ID_GD32F405)
@@ -331,6 +334,7 @@ bool gd32f4_probe(target_s *target)
 
 	return true;
 }
+#endif
 
 static inline bool stm32f4_device_is_f7(const uint16_t part_id)
 {
@@ -495,6 +499,7 @@ static bool stm32f4_attach(target_s *target)
 	return true;
 }
 
+#ifdef CONFIG_GD32
 static bool gd32f4_attach(target_s *const target)
 {
 	/*
@@ -503,6 +508,7 @@ static bool gd32f4_attach(target_s *const target)
 	 */
 	return cortexm_attach(target) && stm32f4_configure_dbgmcu(target);
 }
+#endif
 
 static void stm32f4_detach(target_s *target)
 {
