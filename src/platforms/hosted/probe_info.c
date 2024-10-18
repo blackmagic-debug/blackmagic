@@ -80,23 +80,26 @@ size_t probe_info_count(const probe_info_s *const list)
 	return probes;
 }
 
-void probe_info_free(probe_info_s *const probe_info)
+void probe_info_free(const probe_info_s *const probe_info)
 {
 #if HOSTED_BMP_ONLY == 0
 	if (probe_info->device)
 		libusb_unref_device(probe_info->device);
 #endif
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-qual"
 	free((void *)probe_info->manufacturer);
 	free((void *)probe_info->product);
 	free((void *)probe_info->serial);
 	free((void *)probe_info->version);
-	free(probe_info);
+	free((void *)probe_info);
+#pragma GCC diagnostic pop
 }
 
 void probe_info_list_free(const probe_info_s *list)
 {
 	while (list) {
-		probe_info_s *probe_info = (probe_info_s *)list;
+		const probe_info_s *const probe_info = (const probe_info_s *)list;
 		list = probe_info->next;
 		probe_info_free(probe_info);
 	}
