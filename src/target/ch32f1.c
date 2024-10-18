@@ -33,9 +33,6 @@
 #include "cortex.h"
 #include "stm32_common.h"
 
-static bool ch32f1_flash_erase(target_flash_s *flash, target_addr_t addr, size_t len);
-static bool ch32f1_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t len);
-
 // These are common with stm32f1/gd32f1/...
 #define FPEC_BASE     0x40022000U
 #define FLASH_ACR     (FPEC_BASE + 0x00U)
@@ -64,6 +61,9 @@ static bool ch32f1_flash_write(target_flash_s *flash, target_addr_t dest, const 
 #define FLASH_SR_EOP             (1U << 5U)          // End of programming
 #define FLASH_BEGIN_ADDRESS_CH32 0x8000000U
 
+static bool ch32f1_flash_erase(target_flash_s *flash, target_addr_t addr, size_t len);
+static bool ch32f1_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t len);
+
 /* "fast" Flash driver for CH32F10x chips */
 static void ch32f1_add_flash(target_s *target, uint32_t addr, size_t length, size_t erasesize)
 {
@@ -83,15 +83,6 @@ static void ch32f1_add_flash(target_s *target, uint32_t addr, size_t length, siz
 	target_add_flash(target, flash);
 }
 
-#define WAIT_BUSY()                                          \
-	do {                                                     \
-		status = target_mem32_read32(target, FLASH_SR);      \
-		if (target_check_error(target)) {                    \
-			DEBUG_ERROR("ch32f1 flash write: comm error\n"); \
-			return -1;                                       \
-		}                                                    \
-	} while (status & FLASH_SR_BSY);
-
 #define WAIT_EOP()                                           \
 	do {                                                     \
 		status = target_mem32_read32(target, FLASH_SR);      \
@@ -100,8 +91,6 @@ static void ch32f1_add_flash(target_s *target, uint32_t addr, size_t length, siz
 			return -1;                                       \
 		}                                                    \
 	} while (!(status & FLASH_SR_EOP));
-
-#define CLEAR_EOP() target_mem32_write32(target, FLASH_SR, FLASH_SR_EOP)
 
 #define SET_CR(bit)                                                          \
 	do {                                                                     \
@@ -221,8 +210,21 @@ bool ch32f1_probe(target_s *const target)
 	return true;
 }
 
+static bool ch32f1_flash_busy_wait(target_s *const target)
+{
+	uint32_t status = FLASH_SR_BSY;
+	while (status & FLASH_SR_BSY) {
+		status = target_mem32_read32(target, FLASH_SR);
+		if (target_check_error(target)) {
+			DEBUG_ERROR("ch32f1 flash write: comm error\n");
+			return false;
+		}
+	}
+	return true;
+}
+
 /* Fast erase of CH32 devices */
-bool ch32f1_flash_erase(target_flash_s *const flash, const target_addr_t addr, const size_t len)
+static bool ch32f1_flash_erase(target_flash_s *const flash, const target_addr_t addr, const size_t len)
 {
 	uint32_t status;
 	uint32_t magic;
@@ -241,7 +243,7 @@ bool ch32f1_flash_erase(target_flash_s *const flash, const target_addr_t addr, c
 		/* Flash page erase start instruction */
 		SET_CR(FLASH_CR_STRT);
 		WAIT_EOP();
-		CLEAR_EOP();
+		target_mem32_write32(target, FLASH_SR, FLASH_SR_EOP);
 		CLEAR_CR(FLASH_CR_STRT);
 		// Magic
 		MAGIC(addr + offset);
@@ -289,7 +291,7 @@ static int ch32f1_upload(
 	target_mem32_write32(target, dd + 12U, ss[3]);
 	SET_CR(FLASH_CR_BUF_LOAD_CH32); /* BUF LOAD */
 	WAIT_EOP();
-	CLEAR_EOP();
+	target_mem32_write32(target, FLASH_SR, FLASH_SR_EOP);
 	CLEAR_CR(FLASH_CR_FTPG_CH32);
 	MAGIC(dest + offset);
 	return 0;
@@ -298,10 +300,9 @@ static int ch32f1_upload(
 /* Clear the write buffer */
 static int ch32f1_buffer_clear(target_s *const target)
 {
-	uint32_t status;
 	SET_CR(FLASH_CR_FTPG_CH32);      // Fast page program 4-
 	SET_CR(FLASH_CR_BUF_RESET_CH32); // BUF_RESET 5-
-	WAIT_BUSY();                     // 6-
+	ch32f1_flash_busy_wait(target);  // 6-
 	CLEAR_CR(FLASH_CR_FTPG_CH32);    // Fast page program 4-
 	return 0;
 }
@@ -325,7 +326,7 @@ static bool ch32f1_flash_write(
 			DEBUG_ERROR("ch32f1 cannot fast unlock\n");
 			return false;
 		}
-		WAIT_BUSY();
+		ch32f1_flash_busy_wait(target);
 
 		// Buffer reset...
 		ch32f1_buffer_clear(target);
@@ -344,7 +345,7 @@ static bool ch32f1_flash_write(
 		target_mem32_write32(target, FLASH_AR, dest + offset); // 10
 		SET_CR(FLASH_CR_STRT);                                 // 11 Start
 		WAIT_EOP();                                            // 12
-		CLEAR_EOP();
+		target_mem32_write32(target, FLASH_SR, FLASH_SR_EOP);
 		CLEAR_CR(FLASH_CR_FTPG_CH32);
 
 		uint32_t magic;
