@@ -274,6 +274,13 @@ target_stm32f1 = declare_dependency(
 	dependencies: target_stm32f1_deps,
 )
 
+target_stm32f4 = declare_dependency(
+	sources: files(
+		'stm32f4.c',
+	),
+	dependencies: [target_cortexm, target_stm_common],
+)
+
 target_ch32 = declare_dependency(
 	sources: files(
 		'ch32f1.c',
@@ -283,7 +290,6 @@ target_ch32 = declare_dependency(
 
 target_stm = declare_dependency(
 	sources: files(
-		'stm32f4.c',
 		'stm32g0.c',
 		'stm32h5.c',
 		'stm32h7.c',
@@ -292,11 +298,11 @@ target_stm = declare_dependency(
 		'stm32mp15.c',
 		'stm32wb0.c',
 	),
-	dependencies: [target_cortexm, target_stm_common, target_stm32f1],
+	dependencies: [target_cortexm, target_stm_common, target_stm32f1, target_stm32f4],
 )
 
 target_gd32 = declare_dependency(
-	dependencies: target_stm32f1,
+	dependencies: [target_stm32f1, target_stm32f4],
 	compile_args: ['-DCONFIG_GD32=1'],
 )
 
