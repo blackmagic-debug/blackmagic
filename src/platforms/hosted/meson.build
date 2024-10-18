@@ -102,8 +102,10 @@ if build_machine.system() == 'windows' and cc.get_define('__MINGW32__') == '1'
 			bmda_link_args += ['-mcrtdll=ucrt']
 		endif
 	else
-		bmda_args += ['-mcrtdll=msvcrt']
-		bmda_link_args += ['-mcrtdll=msvcrt']
+		# Check for GCCs built for Windows but which have been built stupid (don't understand the -mcrtdll option)
+		mcrtdll = cc.get_supported_arguments('-mcrtdll=msvcrt')
+		bmda_args += mcrtdll
+		bmda_link_args += mcrtdll
 	endif
 endif
 
