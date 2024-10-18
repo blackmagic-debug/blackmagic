@@ -101,7 +101,7 @@ extended_warnings = [
 	'-Wduplicated-branches',
 	'-w24754', # Conversion rules for arithmetic operations in a comparison mean that one branch cannot be executed.
 	'-Wfloat-conversion',
-	# '-Wformat-overflow=2',
+	'-Wformat-overflow=2',
 	# '-Wformat-signedness',
 	'-Wformat-truncation',
 	'-Wformat=2',
