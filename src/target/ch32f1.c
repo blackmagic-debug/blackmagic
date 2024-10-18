@@ -61,6 +61,10 @@
 #define FLASH_SR_EOP             (1U << 5U)          // End of programming
 #define FLASH_BEGIN_ADDRESS_CH32 0x8000000U
 
+// Which one is the right value?
+#define FLASH_MAGIC_OFFSET 0x100U
+// #define FLASH_MAGIC_OFFSET 0x1000U
+
 static bool ch32f1_flash_erase(target_flash_s *flash, target_addr_t addr, size_t len);
 static bool ch32f1_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t len);
 
@@ -102,15 +106,6 @@ static void ch32f1_add_flash(target_s *target, uint32_t addr, size_t length, siz
 	do {                                                                      \
 		const uint32_t ctrl = target_mem32_read32(target, FLASH_CR) & ~(bit); \
 		target_mem32_write32(target, FLASH_CR, ctrl);                         \
-	} while (0)
-
-// Which one is the right value?
-#define MAGIC_WORD 0x100U
-// #define MAGIC_WORD 0x1000U
-#define MAGIC(addr)                                               \
-	do {                                                          \
-		magic = target_mem32_read32(target, (addr) ^ MAGIC_WORD); \
-		target_mem32_write32(target, FLASH_MAGIC, magic);         \
 	} while (0)
 
 /* Attempt unlock ch32f103 in fast mode */
@@ -223,11 +218,16 @@ static bool ch32f1_flash_busy_wait(target_s *const target)
 	return true;
 }
 
+static void ch32f1_write_magic(target_s *const target, const target_addr32_t addr)
+{
+	const uint32_t magic_value = target_mem32_read32(target, addr ^ FLASH_MAGIC_OFFSET);
+	target_mem32_write32(target, FLASH_MAGIC, magic_value);
+}
+
 /* Fast erase of CH32 devices */
 static bool ch32f1_flash_erase(target_flash_s *const flash, const target_addr_t addr, const size_t len)
 {
 	uint32_t status;
-	uint32_t magic;
 	target_s *target = flash->t;
 	DEBUG_INFO("CH32: flash erase \n");
 
@@ -245,8 +245,7 @@ static bool ch32f1_flash_erase(target_flash_s *const flash, const target_addr_t 
 		WAIT_EOP();
 		target_mem32_write32(target, FLASH_SR, FLASH_SR_EOP);
 		CLEAR_CR(FLASH_CR_STRT);
-		// Magic
-		MAGIC(addr + offset);
+		ch32f1_write_magic(target, addr + offset);
 	}
 	status = target_mem32_read32(target, FLASH_SR);
 	ch32f1_flash_lock(target);
@@ -280,7 +279,6 @@ static int ch32f1_upload(
 	target_s *const target, const target_addr32_t dest, const uint8_t *const src, const size_t offset)
 {
 	uint32_t status;
-	uint32_t magic;
 	const uint32_t *ss = (const uint32_t *)(src + offset);
 	target_addr32_t dd = dest + offset;
 
@@ -293,7 +291,7 @@ static int ch32f1_upload(
 	WAIT_EOP();
 	target_mem32_write32(target, FLASH_SR, FLASH_SR_EOP);
 	CLEAR_CR(FLASH_CR_FTPG_CH32);
-	MAGIC(dest + offset);
+	ch32f1_write_magic(target, dest + offset);
 	return 0;
 }
 
@@ -348,8 +346,7 @@ static bool ch32f1_flash_write(
 		target_mem32_write32(target, FLASH_SR, FLASH_SR_EOP);
 		CLEAR_CR(FLASH_CR_FTPG_CH32);
 
-		uint32_t magic;
-		MAGIC(dest + offset);
+		ch32f1_write_magic(target, dest + offset);
 
 		status = target_mem32_read32(target, FLASH_SR); // 13
 		ch32f1_flash_lock(target);
