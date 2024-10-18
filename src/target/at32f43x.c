@@ -1,8 +1,8 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
- * Copyright (C) 2023 1BitSquared <info@1bitsquared.com>
- * Written by ALTracer <tolstov_den@mail.ru>
+ * Copyright (C) 2023-2024 1BitSquared <info@1bitsquared.com>
+ * Written by ALTracer <11005378+ALTracer@users.noreply.github.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,8 +23,12 @@
  * the device, providing the XML memory map and Flash memory programming.
  *
  * References:
- * ARTERY doc - RM_AT32F435_437_EN_V2.04.pdf
- *   Reference manual - AT32F435/437 Series Reference Manual
+ * AT32F435/437 Series Reference Manual
+ *   https://www.arterychip.com/download/RM/RM_AT32F435_437_EN_V2.04.pdf
+ * AT32F402/405 Series Reference Manual
+ *   https://www.arterychip.com/download/RM/RM_AT32F402_405_EN_V2.01.pdf
+ * AT32F423 Series Reference Manual
+ *   https://www.arterychip.com/download/RM/RM_AT32F423_EN_V2.03.pdf
  */
 
 #include "general.h"
@@ -89,6 +93,9 @@ static bool at32f43_mass_erase(target_s *target);
 #define AT32F43x_2K_OB_COUNT 256U
 #define AT32F43x_4K_OB_COUNT 2048U
 
+#define AT32F405_USD_BASE 0x1ffff800U
+#define AT32F405_OB_COUNT 256U
+
 /*
  * refman: DEBUG has 5 registers, of which CTRL, APB1_PAUSE, APB2_PAUSE are
  * "asynchronously reset by POR Reset (not reset by system reset). It can be written by the debugger under reset."
@@ -114,6 +121,13 @@ static bool at32f43_mass_erase(target_s *target);
 #define AT32F4x_IDCODE_PART_MASK   0x00000fffU
 #define AT32F43_SERIES_4K          0x70084000U
 #define AT32F43_SERIES_2K          0x70083000U
+#define AT32F405_SERIES_256KB      0x70053000U
+#define AT32F405_SERIES_128KB      0x70042000U
+#define AT32F423_SERIES_256KB      0x700a3000U
+#define AT32F423_SERIES_128KB      0x700a2000U
+#define AT32F423_SERIES_64KB       0x70032000U
+#define AT32F4x_PROJECT_ID         0x1ffff7f3U
+#define AT32F4x_FLASHSIZE          0x1ffff7e0U
 
 typedef struct at32f43_flash {
 	target_flash_s target_flash;
@@ -187,6 +201,7 @@ static void at32f43_detach(target_s *target)
 	cortexm_detach(target);
 }
 
+/* Identify AT32F43x "High Performance" line devices */
 static bool at32f43_detect(target_s *target, const uint16_t part_id)
 {
 	/*
@@ -289,7 +304,66 @@ static bool at32f43_detect(target_s *target, const uint16_t part_id)
 	return true;
 }
 
-/* Identify AT32F43x "High Performance" line devices (Cortex-M4) */
+/* Identify AT32F405 Mainstream devices */
+static bool at32f405_detect(target_s *target, const uint32_t series)
+{
+	/*
+	 * AT32F405/F402 always contain 1 bank with 128 sectors
+	 * Flash (C): 256 KiB, 2 KiB per sector, 0x7005_3000
+	 * Flash (B): 128 KiB, 1 KiB per sector, 0x7004_2000
+	 */
+	const uint16_t flash_size = target_mem32_read16(target, AT32F4x_FLASHSIZE);
+	const uint16_t sector_size = (series == AT32F405_SERIES_128KB) ? 1024U : 2048U;
+	at32f43_add_flash(target, 0x08000000, flash_size, sector_size, 0, AT32F43x_FLASH_BANK1_REG_OFFSET);
+
+	/*
+	 * Either 96 or 102 KiB of SRAM, depending on USD bit 7 nRAM_PRT_CHK:
+	 * when first 48 KiB are protected by odd parity, last 6 KiB are reserved for this purpose
+	 */
+	target_add_ram32(target, 0x20000000, 102U * 1024U);
+	target->driver = "AT32F405";
+	target->mass_erase = at32f43_mass_erase;
+
+	/* 512 byte User System Data area at 0x1fff_f800 (different USD_BASE, no EOPB0) */
+	//target_add_commands(target, at32f43_cmd_list, target->driver);
+
+	/* Same registers and freeze bits in DBGMCU as F437 */
+	target->attach = at32f43_attach;
+	target->detach = at32f43_detach;
+	at32f43_configure_dbgmcu(target);
+
+	return true;
+}
+
+/* Identify AT32F423 Value line devices */
+static bool at32f423_detect(target_s *target, const uint32_t series)
+{
+	/*
+	 * AT32F423 always has 48 KiB of SRAM and one of
+	 * Flash (C): 256 KiB, 2 KiB per sector, 0x700a_3000
+	 * Flash (B): 128 KiB, 1 KiB per sector, 0x700a_2000
+	 * Flash (8):  64 KiB, 1 KiB per sector, 0x7003_2000
+	 */
+	const uint16_t flash_size = target_mem32_read16(target, AT32F4x_FLASHSIZE);
+	const uint16_t sector_size = (series == AT32F423_SERIES_256KB) ? 2048U : 1024U;
+	at32f43_add_flash(target, 0x08000000, flash_size, sector_size, 0, AT32F43x_FLASH_BANK1_REG_OFFSET);
+
+	target_add_ram32(target, 0x20000000, 48U * 1024U);
+	target->driver = "AT32F423";
+	target->mass_erase = at32f43_mass_erase;
+
+	/* 512 byte User System Data area at 0x1fff_f800 (different USD_BASE, no EOPB0) */
+	//target_add_commands(target, at32f43_cmd_list, target->driver);
+
+	/* Same registers and freeze bits in DBGMCU as F437 */
+	target->attach = at32f43_attach;
+	target->detach = at32f43_detach;
+	at32f43_configure_dbgmcu(target);
+
+	return true;
+}
+
+/* Identify any Arterytek devices with Cortex-M4 and FPEC at 0x4002_3c00 */
 bool at32f43x_probe(target_s *target)
 {
 	// Artery clones use Cortex M4 cores
@@ -300,9 +374,30 @@ bool at32f43x_probe(target_s *target)
 	const uint32_t idcode = target_mem32_read32(target, AT32F43x_DBGMCU_IDCODE);
 	const uint32_t series = idcode & AT32F4x_IDCODE_SERIES_MASK;
 	const uint16_t part_id = idcode & AT32F4x_IDCODE_PART_MASK;
+	// ... and highest byte of UID
+	const uint8_t uid_byte = target_mem32_read8(target, AT32F4x_PROJECT_ID);
+	const uint32_t debug_ser_id = target_mem32_read32(target, AT32F43x_DBGMCU_SER_ID);
 
-	if (series == AT32F43_SERIES_4K || series == AT32F43_SERIES_2K)
+	const uint32_t flash_usd = target_mem32_read32(target, AT32F43x_FLASH_USD);
+	const bool read_protected = (flash_usd & AT32F43x_FLASH_USD_RDP) == AT32F43x_FLASH_USD_RDP;
+	if (read_protected)
+		DEBUG_TARGET("%s: Flash Access Protection enabled, UID reads as 0x%02x\n", __func__, uid_byte);
+	const uint8_t project_id = !read_protected ? uid_byte : (debug_ser_id >> 8U) & 0xffU;
+
+	DEBUG_TARGET("%s: idcode = %08" PRIx32 ", project_id = %02x, debug_ser_id = %08" PRIx32 "\n", __func__, idcode,
+		project_id, debug_ser_id);
+
+	/* 0x0e: F437 (has EMAC), 0x0d: F435 (no EMAC). 4K/2K describe sector sizes, not total flash capacity. */
+	if ((series == AT32F43_SERIES_4K || series == AT32F43_SERIES_2K) && (project_id == 0x0dU || project_id == 0x0eU))
 		return at32f43_detect(target, part_id);
+	/* 0x13: F405 (has USB HS), 0x14: F402 (no USB HS) */
+	if ((series == AT32F405_SERIES_256KB || series == AT32F405_SERIES_128KB) &&
+		(project_id == 0x13U || project_id == 0x14U))
+		return at32f405_detect(target, series);
+	if ((series == AT32F423_SERIES_256KB || series == AT32F423_SERIES_128KB || series == AT32F423_SERIES_64KB) &&
+		project_id == 0x12U)
+		return at32f423_detect(target, series);
+
 	return false;
 }
 
@@ -456,6 +551,127 @@ static bool at32f43_mass_erase(target_s *target)
 	return true;
 }
 
+/* Borrow macros from adiv5_jtag.c */
+#define JTAGDP_ACK_OK   0x02U
+#define JTAGDP_ACK_WAIT 0x01U
+
+#define IR_DPACC 0xaU
+#define IR_APACC 0xbU
+
+uint32_t adiv5_jtag_raw_access_noabort(adiv5_debug_port_s *dp, uint8_t rnw, uint16_t addr, uint32_t value)
+{
+	const bool is_ap = addr & ADIV5_APnDP;
+	addr &= 0xffU;
+
+	const uint64_t request = ((uint64_t)value << 3U) | ((addr >> 1U) & 0x06U) | (rnw ? 1U : 0U);
+
+	uint32_t result = 0U;
+	uint8_t ack = JTAGDP_ACK_WAIT;
+
+	jtag_dev_write_ir(dp->dev_index, is_ap ? IR_APACC : IR_DPACC);
+
+	platform_timeout_s timeout_progressbar;
+	platform_timeout_set(&timeout_progressbar, 500U);
+	platform_timeout_s timeout_erase;
+	platform_timeout_set(&timeout_erase, 15000U);
+	while (ack == JTAGDP_ACK_WAIT && !platform_timeout_is_expired(&timeout_erase)) {
+		uint64_t response;
+		jtag_dev_shift_dr(dp->dev_index, (uint8_t *)&response, (uint8_t *)&request, 35);
+		result = response >> 3U;
+		ack = response & 0x07U;
+		platform_delay(5U);
+		target_print_progress(&timeout_progressbar);
+	}
+
+	if (ack != JTAGDP_ACK_OK) {
+		DEBUG_ERROR("JTAG access resulted in: %" PRIx32 ":%x\n", result, ack);
+		raise_exception(EXCEPTION_ERROR, "JTAG-DP invalid ACK");
+	}
+
+	return result;
+}
+
+static bool adiv5_swd_raw_access_noabort(adiv5_debug_port_s *dp, uint8_t rnw, uint16_t addr, uint32_t value)
+{
+	const uint8_t request = make_packet_request(rnw, addr);
+	uint32_t response = 0;
+	uint8_t ack = SWDP_ACK_WAIT;
+	platform_timeout_s timeout_progressbar;
+	platform_timeout_set(&timeout_progressbar, 500U);
+	platform_timeout_s timeout_erase;
+	platform_timeout_set(&timeout_erase, 15000U);
+	while ((ack == SWDP_ACK_WAIT) && !platform_timeout_is_expired(&timeout_erase)) {
+		swd_proc.seq_out(request, 8U);
+		ack = swd_proc.seq_in(3U);
+		/* No data phase */
+		platform_delay(5U);
+		target_print_progress(&timeout_progressbar);
+	}
+
+	if (ack != SWDP_ACK_OK) {
+		DEBUG_ERROR("SWD access has invalid ack %x\n", ack);
+		raise_exception(EXCEPTION_ERROR, "SWD invalid ACK");
+	}
+
+	if (platform_timeout_is_expired(&timeout_erase)) {
+		DEBUG_ERROR("%s timed out after %u ms\n", __func__, 15000U);
+		raise_exception(EXCEPTION_TIMEOUT, "SWD WAIT");
+	}
+
+	if (rnw) {
+		if (!swd_proc.seq_in_parity(&response, 32U)) {
+			dp->fault = 1U;
+			DEBUG_ERROR("SWD access resulted in parity error\n");
+			raise_exception(EXCEPTION_ERROR, "SWD parity error");
+		}
+	} else
+		swd_proc.seq_out_parity(value, 32U);
+	/* Idle cycles */
+	swd_proc.seq_out(0, 8U);
+	return response;
+}
+
+static bool at32f43x_mem_write_noabort(target_s *target, target_addr32_t dest, uint16_t val)
+{
+	const uint32_t src_bytes = val;
+	const void *src = &src_bytes;
+	const align_e align = ALIGN_16BIT;
+	adiv5_access_port_s *ap = cortex_ap(target);
+
+	//adi_ap_mem_access_setup(ap, dest, align);
+	uint32_t csw = ap->csw | ADIV5_AP_CSW_ADDRINC_SINGLE | ADIV5_AP_CSW_SIZE_HALFWORD;
+	adiv5_ap_write(ap, ADIV5_AP_CSW, csw);
+	adiv5_dp_write(ap->dp, ADIV5_AP_TAR_LOW, (uint32_t)dest);
+
+	uint32_t value = 0;
+	adiv5_pack_data(dest, src, &value, align);
+	/* Submit the memory write */
+	adiv5_dp_write(ap->dp, ADIV5_AP_DRW, value);
+
+	/* Poll for completion (RDBUFF will be responding with WAITs) */
+	volatile uint32_t rdbuff = 0;
+	TRY (EXCEPTION_ALL) {
+		//ack = ap->dp->low_access(dp, rnw, addr, value)
+		if (ap->dp->low_access == adiv5_swd_raw_access)
+			rdbuff = adiv5_swd_raw_access_noabort(ap->dp, ADIV5_LOW_READ, ADIV5_DP_RDBUFF, 0);
+		else if (ap->dp->low_access == adiv5_jtag_raw_access)
+			rdbuff = adiv5_jtag_raw_access_noabort(ap->dp, ADIV5_LOW_READ, ADIV5_DP_RDBUFF, 0);
+	}
+	CATCH () {
+	case EXCEPTION_TIMEOUT:
+		DEBUG_TARGET("Timeout during scan. Is target stuck in WFI?\n");
+		break;
+	case EXCEPTION_ERROR:
+		DEBUG_TARGET("Exception: %s\n", exception_frame.msg);
+		break;
+	default:
+		return false;
+	}
+	(void)rdbuff;
+
+	return true;
+}
+
 static bool at32f43_option_erase(target_s *target)
 {
 	/* bank_reg_offset is 0, option bytes belong to first bank */
@@ -585,8 +801,11 @@ static bool at32f43_cmd_option(target_s *target, int argc, const char **argv)
 		 * FIXME: this transaction only completes after typ. 15 seconds (mass erase of both banks of 4032 KiB chip)
 		 * and if BMD ABORTs it after 250 ms, then chip considers erase as incomplete and stays read-protected.
 		 */
-		if (!at32f43_option_write_erased(target, 0U, AT32F43x_USD_RDP_KEY))
+		at32f43_flash_clear_eop(target, 0);
+		target_mem32_write32(target, AT32F43x_FLASH_CTRL, AT32F43x_FLASH_CTRL_USDPRGM | AT32F43x_FLASH_CTRL_USDULKS);
+		if (!at32f43x_mem_write_noabort(target, AT32F43x_USD_BASE, AT32F43x_USD_RDP_KEY))
 			return false;
+
 		/* Set EOPB0 to default 0b010 for 384 KB SRAM */
 		if (!at32f43_option_write_erased(target, 8U, AT32F43x_USD_EOPB0_DEFAULT))
 			return false;
