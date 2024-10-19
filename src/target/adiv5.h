@@ -85,7 +85,7 @@
 #define ADIV5_DP_CTRLSTAT_CDBGRSTREQ   (1U << 26U)
 /* Bits 25:24 - Reserved */
 /* Bits 23:12 - TRNCNT */
-#define ADIV5_DP_CTRLSTAT_TRNCNT(x) ((x & 0xfffU) << 12U)
+#define ADIV5_DP_CTRLSTAT_TRNCNT(x) (((x)&0xfffU) << 12U)
 /* Bits 11:8 - MASKLANE */
 #define ADIV5_DP_CTRLSTAT_MASKLANE
 /* Bits 7:6 - Reserved in JTAG-DP */
