@@ -512,11 +512,22 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
           path: head
 
+      # Install and setup a suitable Meson + Ninja
+      - name: Setup Meson + Ninja
+        run: |
+          sudo python3 -m pip install --upgrade pip setuptools wheel
+          sudo python3 -m pip install meson ninja
+        working-directory: ${{ runner.temp }}
+
       - name: Build base
-        run: make -C base > base/build.log
+        run: |
+          meson setup base/build-native base --cross-file base/cross-file/native.ini
+          meson compile -C base/build-native bin > base/build.log
 
       - name: Build head
-        run: make -C head > head/build.log
+        run: |
+          meson setup head/build-native head --cross-file head/cross-file/native.ini
+          meson compile -C head/build-native bin > head/build.log
 
       - name: Diff
         run: head/scripts/diff_size.py base/build.log head/build.log
