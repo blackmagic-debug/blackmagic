@@ -131,12 +131,11 @@ static bool at32f43_mass_erase(target_s *target);
 
 typedef struct at32f43_flash {
 	target_flash_s target_flash;
-	target_addr_t bank_split; /* Address of first page of bank 2 */
 	uint32_t bank_reg_offset; /* Flash register offset for this bank */
 } at32f43_flash_s;
 
 static void at32f43_add_flash(target_s *const target, const target_addr_t addr, const size_t length,
-	const size_t pagesize, const target_addr_t bank_split, const uint32_t bank_reg_offset)
+	const size_t pagesize, const uint32_t bank_reg_offset)
 {
 	if (length == 0)
 		return;
@@ -157,7 +156,6 @@ static void at32f43_add_flash(target_s *const target, const target_addr_t addr, 
 	target_flash->done = at32f43_flash_done;
 	target_flash->writesize = 1024U;
 	target_flash->erased = 0xffU;
-	flash->bank_split = bank_split;
 	flash->bank_reg_offset = bank_reg_offset;
 	target_add_flash(target, target_flash);
 }
@@ -273,14 +271,10 @@ static bool at32f43_detect(target_s *target, const uint16_t part_id)
 	 * Block erase operates on 64 KB at once for all parts.
 	 * Using here only sector erase (page erase) for compatibility.
 	 */
-	if (flash_size_bank2 > 0) {
-		const uint32_t bank_split = 0x08000000 + flash_size_bank1;
+	at32f43_add_flash(target, 0x08000000, flash_size_bank1, sector_size, AT32F43x_FLASH_BANK1_REG_OFFSET);
+	if (flash_size_bank2 > 0)
 		at32f43_add_flash(
-			target, 0x08000000, flash_size_bank1, sector_size, bank_split, AT32F43x_FLASH_BANK1_REG_OFFSET);
-		at32f43_add_flash(
-			target, bank_split, flash_size_bank2, sector_size, bank_split, AT32F43x_FLASH_BANK2_REG_OFFSET);
-	} else
-		at32f43_add_flash(target, 0x08000000, flash_size_bank1, sector_size, 0, AT32F43x_FLASH_BANK1_REG_OFFSET);
+			target, 0x08000000 + flash_size_bank1, flash_size_bank2, sector_size, AT32F43x_FLASH_BANK2_REG_OFFSET);
 
 	// SRAM1 (64KB) can be remapped to 0x10000000.
 	target_add_ram32(target, 0x20000000, 64U * 1024U);
@@ -314,7 +308,7 @@ static bool at32f405_detect(target_s *target, const uint32_t series)
 	 */
 	const uint16_t flash_size = target_mem32_read16(target, AT32F4x_FLASHSIZE);
 	const uint16_t sector_size = series == AT32F405_SERIES_128KB ? 1024U : 2048U;
-	at32f43_add_flash(target, 0x08000000, flash_size, sector_size, 0, AT32F43x_FLASH_BANK1_REG_OFFSET);
+	at32f43_add_flash(target, 0x08000000, flash_size, sector_size, AT32F43x_FLASH_BANK1_REG_OFFSET);
 
 	/*
 	 * Either 96 or 102 KiB of SRAM, depending on USD bit 7 nRAM_PRT_CHK:
@@ -346,7 +340,7 @@ static bool at32f423_detect(target_s *target, const uint32_t series)
 	 */
 	const uint16_t flash_size = target_mem32_read16(target, AT32F4x_FLASHSIZE);
 	const uint16_t sector_size = series == AT32F423_SERIES_256KB ? 2048U : 1024U;
-	at32f43_add_flash(target, 0x08000000, flash_size, sector_size, 0, AT32F43x_FLASH_BANK1_REG_OFFSET);
+	at32f43_add_flash(target, 0x08000000, flash_size, sector_size, AT32F43x_FLASH_BANK1_REG_OFFSET);
 
 	target_add_ram32(target, 0x20000000, 48U * 1024U);
 	target->driver = "AT32F423";
@@ -548,8 +542,7 @@ static bool at32f43_mass_erase(target_s *target)
 		return false;
 
 	/* For dual-bank targets, mass erase bank 2 as well */
-	const at32f43_flash_s *const flash = (at32f43_flash_s *)target->flash;
-	if (flash->bank_split)
+	if (target->flash->next)
 		return at32f43_mass_erase_bank(target, AT32F43x_FLASH_BANK2_REG_OFFSET, &timeout);
 	return true;
 }
