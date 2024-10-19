@@ -112,8 +112,8 @@ typedef enum target_breakwatch {
 	TARGET_WATCH_ACCESS,
 } target_breakwatch_e;
 
-int target_breakwatch_set(target_s *target, target_breakwatch_e, target_addr_t, size_t);
-int target_breakwatch_clear(target_s *target, target_breakwatch_e, target_addr_t, size_t);
+int target_breakwatch_set(target_s *target, target_breakwatch_e type, target_addr_t addr, size_t len);
+int target_breakwatch_clear(target_s *target, target_breakwatch_e type, target_addr_t addr, size_t len);
 
 /* Command interpreter */
 void target_command_help(target_s *target);
