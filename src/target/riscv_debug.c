@@ -1013,10 +1013,11 @@ static void riscv_halt_resume(target_s *target, const bool step)
 	uint32_t stepping_config = 0U;
 	if (!riscv_csr_read(hart, RV_DCSR | RV_CSR_FORCE_32_BIT, &stepping_config))
 		return;
-	if (step)
-		stepping_config |= RV_DCSR_STEP | RV_DCSR_STEPIE;
-	else {
-		stepping_config &= ~(RV_DCSR_STEP | RV_DCSR_STEPIE);
+	if (step) {
+		stepping_config |= RV_DCSR_STEP;
+		stepping_config &= ~RV_DCSR_STEPIE; // disable interrupt during single step
+	} else {
+		stepping_config &= ~RV_DCSR_STEP;
 		stepping_config |= RV_DCSR_EBREAK_MACHINE;
 	}
 	if (!riscv_csr_write(hart, RV_DCSR | RV_CSR_FORCE_32_BIT, &stepping_config))
