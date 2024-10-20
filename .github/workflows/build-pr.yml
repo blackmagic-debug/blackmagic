@@ -154,6 +154,91 @@ jobs:
           meson setup build
           meson compile -C build
 
+  build-windows-mingw:
+    # Name the job more appropriately so we can tell which windows and which MinGW ABI is in use
+    name: 'build-mingw (${{ matrix.os }}, ${{ matrix.sys.abi }})'
+    # The type of runner that the job will run on
+    runs-on: ${{ matrix.os }}
+
+    # Set the shell so run steps will execute from in msys2 correctly by default
+    defaults:
+      run:
+        shell: msys2 {0}
+
+    # We define a matrix of compilers and OS versions to build against so we can cover a variety of
+    # suitable compilation environments and early discover issues. The `build-and-upload`
+    # workflow contains an extended set.
+    strategy:
+      matrix:
+        os:
+          - windows-2022
+        sys:
+          - {abi: mingw64, env: x86_64, compiler: gcc}
+          - {abi: ucrt64, env: ucrt-x86_64, compiler: gcc}
+          - {abi: clang64, env: clang-x86_64, compiler: clang}
+      fail-fast: false
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Install a suitable system compiler for the build
+      - name: Use MinGW from MSYS
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: ${{matrix.sys.abi}}
+          update: true
+          path-type: inherit
+          pacboy: >-
+            toolchain:p
+            meson:p
+
+      # Build a suitable runtime environment
+      - name: Runtime environment
+        env:
+          WORKSPACE: ${{ github.workspace }}
+        # The GITHUB_WORKSPACE step here fixes https://github.com/actions/runner/issues/2058 which is an ongoing issue.
+        run: |
+          echo "$GITHUB_WORKSPACE=`pwd`" >> $GITHUB_ENV
+
+      # Configure the system toolchain environment
+      - name: Setup system GCC
+        if: matrix.sys.compiler == 'gcc'
+        run: |
+          CXX=${CC/#gcc/g++}
+          echo "CC=$CC" >> $GITHUB_ENV
+          echo "CXX=$CXX" >> $GITHUB_ENV
+        env:
+          CC: ${{ matrix.sys.compiler }}
+      - name: Setup system Clang
+        if: matrix.sys.compiler == 'clang'
+        run: |
+          CXX=${CC/#clang/clang++}
+          echo "CC=$CC" >> $GITHUB_ENV
+          echo "CXX=$CXX" >> $GITHUB_ENV
+        env:
+          CC: ${{ matrix.sys.compiler }}
+
+      # Record the versions of all the tools used in the build
+      - name: Version tools
+        run: |
+          $CC --version
+          meson --version
+          ninja --version
+
+      # Checkout the repository and branch to build under the default location
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Install the dependencies needed for BMDA build
+      - name: Install extra BMDA dependencies
+        run: |
+          pacman --noconfirm -S mingw-w64-${{matrix.sys.env}}-libusb mingw-w64-${{matrix.sys.env}}-hidapi
+
+      # Build BMDA
+      - name: Build BMDA with MSYS2-provided dependencies
+        run: |
+          meson setup build
+          meson compile -C build
+
   build-macos:
     # Name the job more appropriately so we can tell which Xcode/macOS version is in use
     name: 'build-macos (${{ matrix.os }})'
