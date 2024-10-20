@@ -75,11 +75,18 @@ static void dormant_to_swd_sequence(void)
 	 * §5.3.4 Switching out of Dormant state
 	 */
 
-	DEBUG_INFO("Switching out of dormant state into SWD\n");
-
 	/* Send at least 8 SWCLKTCK cycles with SWDIOTMS HIGH */
 	swd_line_reset_sequence(false);
+
+	/* If the target is both Jtag and SWD with Jtag as default, switch Jtag->DS first. 
+     * See B5.3.2
+     */
+	DEBUG_INFO("Switching from jtag do dormant \n");
+	swd_proc.seq_out(ADIV5_JTAG_TO_DORMANT_SEQUENCE0, 5U);
+	swd_proc.seq_out(ADIV5_JTAG_TO_DORMANT_SEQUENCE1, 31U);
+	swd_proc.seq_out(ADIV5_JTAG_TO_DORMANT_SEQUENCE2, 8U); // not sure this one is needed
 	/* Send the 128-bit Selection Alert sequence on SWDIOTMS */
+	DEBUG_INFO("Switching out of dormant state into SWD\n");
 	swd_proc.seq_out(ADIV5_SELECTION_ALERT_SEQUENCE_0, 32U);
 	swd_proc.seq_out(ADIV5_SELECTION_ALERT_SEQUENCE_1, 32U);
 	swd_proc.seq_out(ADIV5_SELECTION_ALERT_SEQUENCE_2, 32U);
