@@ -274,7 +274,7 @@ static void mspm0_flash_unprotect(target_flash_s *const target_flash)
 static void mspm0_flash_unprotect_sector(target_flash_s *const target_flash, const target_addr_t addr)
 {
 	mspm0_flash_s *mspm0_flash = (mspm0_flash_s *)target_flash;
-	unsigned sector = (addr - target_flash->start) / MSPM0_FLASH_SECTOR_SZ;
+	uint32_t sector = (addr - target_flash->start) / MSPM0_FLASH_SECTOR_SZ;
 
 	if (sector < 32U) { /* One sector per bit */
 		uint32_t mask = ~(1U << sector);
@@ -282,7 +282,7 @@ static void mspm0_flash_unprotect_sector(target_flash_s *const target_flash, con
 	} else if (sector < 256U) { /* 8 sectors per bit */
 		/* When main flash is single bank, PROTB covers sectors starting after PROTA which is 32k. In multibank case
 		 * PROTB bits overlap PROTA and starts at sector 0. */
-		unsigned start_protb_sector = mspm0_flash->banks > 1 ? 0U : 32U;
+		uint32_t start_protb_sector = mspm0_flash->banks > 1U ? 0U : 32U;
 		uint32_t mask = ~(1U << ((sector - start_protb_sector) >> 3U));
 		target_mem32_write32(target_flash->t, MSPM0_FLASHCTL_CMDWEPROTB, mask);
 	} else { /* 8 sectors per bit, starts at sector 256 */
