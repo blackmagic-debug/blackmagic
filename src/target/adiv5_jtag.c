@@ -30,8 +30,10 @@
 #include "jtagtap.h"
 #include "morse.h"
 
-#define JTAG_ADIv5_ACK_OK   0x02U
-#define JTAG_ADIv5_ACK_WAIT 0x01U
+#define JTAG_ACK_WAIT        0x01U
+#define JTAG_ADIv5_ACK_OK    0x02U
+#define JTAG_ADIv6_ACK_FAULT 0x02U
+#define JTAG_ADIv6_ACK_OK    0x04U
 
 /* 35-bit registers that control the ADIv5 DP */
 #define IR_ABORT 0x8U
@@ -118,9 +120,13 @@ uint32_t adiv5_jtag_raw_access(
 		result = (uint32_t)(response >> 3U);
 		/* Then the acknowledgement code */
 		ack = (uint8_t)(response & 0x07U);
-	} while (!platform_timeout_is_expired(&timeout) && ack == JTAG_ADIv5_ACK_WAIT);
+	} while (!platform_timeout_is_expired(&timeout) && ack == JTAG_ACK_WAIT);
 
-	if (ack == JTAG_ADIv5_ACK_WAIT) {
+	/*
+	 * If even after waiting for the 250ms we still get a WAIT response,
+	 * we're done - abort the request, mark it failed.
+	 */
+	if (ack == JTAG_ACK_WAIT) {
 		DEBUG_ERROR("JTAG access resulted in wait, aborting\n");
 		dp->abort(dp, ADIV5_DP_ABORT_DAPABORT);
 		dp->fault = 1;
