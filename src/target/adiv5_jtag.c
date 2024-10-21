@@ -96,25 +96,28 @@ uint32_t adiv5_jtag_clear_error(adiv5_debug_port_s *dp, const bool protocol_reco
 	return adiv5_dp_low_access(dp, ADIV5_LOW_WRITE, ADIV5_DP_CTRLSTAT, status) & 0x32U;
 }
 
-uint32_t adiv5_jtag_raw_access(adiv5_debug_port_s *dp, uint8_t rnw, uint16_t addr, uint32_t value)
+uint32_t adiv5_jtag_raw_access(
+	adiv5_debug_port_s *const dp, const uint8_t rnw, const uint16_t addr, const uint32_t value)
 {
-	const bool is_ap = addr & ADIV5_APnDP;
-	addr &= 0xffU;
-
-	const uint64_t request = ((uint64_t)value << 3U) | ((addr >> 1U) & 0x06U) | (rnw ? 1U : 0U);
+	const uint8_t reg = addr & 0x0cU;
+	const uint64_t request = ((uint64_t)value << 3U) | (reg >> 1U) | (rnw ? 1U : 0U);
 
 	uint32_t result;
 	uint8_t ack;
 
-	jtag_dev_write_ir(dp->dev_index, is_ap ? IR_APACC : IR_DPACC);
+	/* Set the instruction to the correct one for the kind of access needed */
+	jtag_dev_write_ir(dp->dev_index, (addr & ADIV5_APnDP) ? IR_APACC : IR_DPACC);
 
 	platform_timeout_s timeout;
 	platform_timeout_set(&timeout, 250);
 	do {
 		uint64_t response;
+		/* Send the request and see what response we get back */
 		jtag_dev_shift_dr(dp->dev_index, (uint8_t *)&response, (const uint8_t *)&request, 35);
-		result = response >> 3U;
-		ack = response & 0x07U;
+		/* Extract the data portion of the response */
+		result = (uint32_t)(response >> 3U);
+		/* Then the acknowledgement code */
+		ack = (uint8_t)(response & 0x07U);
 	} while (!platform_timeout_is_expired(&timeout) && ack == JTAG_ADIv5_ACK_WAIT);
 
 	if (ack == JTAG_ADIv5_ACK_WAIT) {
