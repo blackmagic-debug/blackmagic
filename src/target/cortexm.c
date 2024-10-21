@@ -417,6 +417,7 @@ bool cortexm_probe(adiv5_access_port_s *ap)
 		break;
 	case JEP106_MANUFACTURER_TEXAS:
 		PROBE(msp432p4_probe);
+		PROBE(mspm0_probe);
 		break;
 	case JEP106_MANUFACTURER_SPECULAR:
 		PROBE(lpc11xx_probe); /* LPC845 */
