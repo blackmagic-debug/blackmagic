@@ -152,7 +152,7 @@ static inline uint32_t adiv5_dp_recoverable_access(adiv5_debug_port_s *dp, uint8
 {
 	const uint32_t result = dp->low_access(dp, rnw, addr, value);
 	/* If the access results in the no-response response, retry after clearing the error state */
-	if (dp->fault == SWDP_ACK_NO_RESPONSE) {
+	if (dp->fault == SWD_ACK_NO_RESPONSE) {
 		uint32_t response;
 		/* Wait the response period, then clear the error */
 		swd_proc.seq_in_parity(&response, 32);
@@ -160,7 +160,7 @@ static inline uint32_t adiv5_dp_recoverable_access(adiv5_debug_port_s *dp, uint8
 		dp->error(dp, true);
 		response = dp->low_access(dp, rnw, addr, value);
 		/* If the access results in no-response again, throw to propergate that up */
-		if (dp->fault == SWDP_ACK_NO_RESPONSE)
+		if (dp->fault == SWD_ACK_NO_RESPONSE)
 			raise_exception(EXCEPTION_ERROR, "SWD invalid ACK");
 		return response;
 	}
