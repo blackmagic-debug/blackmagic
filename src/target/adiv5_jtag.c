@@ -142,7 +142,8 @@ uint32_t adiv5_jtag_raw_access(
 		return 0;
 	}
 
-	if (ack != JTAG_ADIv5_ACK_OK) {
+	/* Check for a not-OK ack under ADIv5 JTAG-DPv0, or ADIv6 JTAG-DPv1 */
+	if ((dp->version == 0 && ack != JTAG_ADIv5_ACK_OK) || (dp->version > 0 && ack != JTAG_ADIv6_ACK_OK)) {
 		DEBUG_ERROR("JTAG access resulted in: %" PRIx32 ":%x\n", result, ack);
 		raise_exception(EXCEPTION_ERROR, "JTAG-DP invalid ACK");
 	}
