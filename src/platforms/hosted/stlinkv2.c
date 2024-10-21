@@ -637,7 +637,7 @@ uint32_t stlink_raw_access(adiv5_debug_port_s *dp, uint8_t rnw, uint16_t addr, u
 
 	if (result == STLINK_ERROR_WAIT) {
 		DEBUG_ERROR("SWD access resulted in wait, aborting\n");
-		dp->fault = SWDP_ACK_WAIT;
+		dp->fault = SWD_ACK_WAIT;
 		return 0;
 	}
 
@@ -646,7 +646,7 @@ uint32_t stlink_raw_access(adiv5_debug_port_s *dp, uint8_t rnw, uint16_t addr, u
 		/* On fault, abort the request */
 		stlink_write_dp_register(STLINK_DEBUG_PORT, ADIV5_DP_ABORT,
 			ADIV5_DP_ABORT_ORUNERRCLR | ADIV5_DP_ABORT_WDERRCLR | ADIV5_DP_ABORT_STKERRCLR | ADIV5_DP_ABORT_STKCMPCLR);
-		dp->fault = SWDP_ACK_FAULT;
+		dp->fault = SWD_ACK_FAULT;
 		return 0;
 	}
 

@@ -190,7 +190,7 @@ static bool jlink_adiv5_raw_write_no_check(const uint16_t addr, const uint32_t d
 		DEBUG_ERROR("jlink_adiv5_raw_write_no_check failed\n");
 		return false;
 	}
-	return ack != SWDP_ACK_OK;
+	return ack != SWD_ACK_OK;
 }
 
 static uint32_t jlink_adiv5_raw_read_no_check(const uint16_t addr)
@@ -215,7 +215,7 @@ static uint32_t jlink_adiv5_raw_read_no_check(const uint16_t addr)
 	const uint32_t data = read_le4(response, 0);
 	DEBUG_PROBE("jlink_adiv5_raw_read_no_check %04x -> %08" PRIx32 " %s\n", addr, data,
 		calculate_odd_parity(data) != response[4] ? "ERR" : "OK");
-	return ack == SWDP_ACK_OK ? data : 0U;
+	return ack == SWD_ACK_OK ? data : 0U;
 }
 
 static uint32_t jlink_adiv5_raw_read(adiv5_debug_port_s *const dp)
@@ -269,14 +269,14 @@ static uint32_t jlink_adiv5_raw_access(
 	/* Set up to repeatedly try the initial request */
 	platform_timeout_s timeout;
 	platform_timeout_set(&timeout, 250);
-	uint8_t ack = SWDP_ACK_WAIT;
+	uint8_t ack = SWD_ACK_WAIT;
 	bool first_try = true;
 	do {
 		/* Try making a request to the device */
 		if (!jlink_transfer(rnw ? 11U : 13U, jlink_adiv5_request, request, result))
 			raise_exception(EXCEPTION_ERROR, "jlink_adiv5_raw_access failed\n");
 		ack = result[1] & 7U;
-		if (ack != SWDP_ACK_OK && rnw) {
+		if (ack != SWD_ACK_OK && rnw) {
 			/*
 			 * When setting up for a read, and getting something other than OK, run an input-to-output
 			 * turnaround to re-legalise everything, otherwise we'll end up out of step with the hardware
@@ -285,7 +285,7 @@ static uint32_t jlink_adiv5_raw_access(
 				raise_exception(EXCEPTION_ERROR, "jlink_adiv5_raw_access failed\n");
 		}
 		/* If we got a fault first try, do a proper retry */
-		if (ack == SWDP_ACK_FAULT && first_try) {
+		if (ack == SWD_ACK_FAULT && first_try) {
 			DEBUG_ERROR("SWD access resulted in fault, retrying\n");
 			/* On fault, abort the request and repeat */
 			/* Yes, this is self-recursive.. no, we can't think of a better option */
@@ -293,18 +293,18 @@ static uint32_t jlink_adiv5_raw_access(
 				ADIV5_DP_ABORT_ORUNERRCLR | ADIV5_DP_ABORT_WDERRCLR | ADIV5_DP_ABORT_STKERRCLR |
 					ADIV5_DP_ABORT_STKCMPCLR);
 			first_try = false;
-			ack = SWDP_ACK_WAIT;
+			ack = SWD_ACK_WAIT;
 		}
-	} while (ack == SWDP_ACK_WAIT && !platform_timeout_is_expired(&timeout));
+	} while (ack == SWD_ACK_WAIT && !platform_timeout_is_expired(&timeout));
 
-	if (ack == SWDP_ACK_WAIT) {
+	if (ack == SWD_ACK_WAIT) {
 		DEBUG_WARN("SWD access resulted in wait, aborting\n");
 		dp->abort(dp, ADIV5_DP_ABORT_DAPABORT);
 		dp->fault = ack;
 		return 0;
 	}
 
-	if (ack == SWDP_ACK_FAULT) {
+	if (ack == SWD_ACK_FAULT) {
 		DEBUG_ERROR("SWD access resulted in fault\n");
 		/* On fault, abort the request */
 		jlink_adiv5_raw_write_no_check(ADIV5_DP_ABORT,
@@ -313,13 +313,13 @@ static uint32_t jlink_adiv5_raw_access(
 		return 0;
 	}
 
-	if (ack == SWDP_ACK_NO_RESPONSE) {
+	if (ack == SWD_ACK_NO_RESPONSE) {
 		DEBUG_ERROR("SWD access resulted in no response\n");
 		dp->fault = ack;
 		return 0;
 	}
 
-	if (ack != SWDP_ACK_OK) {
+	if (ack != SWD_ACK_OK) {
 		DEBUG_ERROR("SWD access has invalid ack %x\n", ack);
 		raise_exception(EXCEPTION_ERROR, "SWD invalid ACK");
 	}

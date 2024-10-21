@@ -178,10 +178,10 @@
 #define DEVARCH_ARCHID_ROMTABLE_V0 0x0af7U
 #define DEVARCH_PRESENT            (1U << 20U)
 
-#define SWDP_ACK_OK          0x01U
-#define SWDP_ACK_WAIT        0x02U
-#define SWDP_ACK_FAULT       0x04U
-#define SWDP_ACK_NO_RESPONSE 0x07U
+#define SWD_ACK_OK          0x01U
+#define SWD_ACK_WAIT        0x02U
+#define SWD_ACK_FAULT       0x04U
+#define SWD_ACK_NO_RESPONSE 0x07U
 
 /* Constants to make RnW parameters more clear in code */
 #define ADIV5_LOW_WRITE 0

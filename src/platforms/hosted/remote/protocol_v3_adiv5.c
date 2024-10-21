@@ -57,7 +57,7 @@ bool remote_v3_adiv5_check_error(
 			 * If we're not handling errors for a function where no-response is non-fatal,
 			 * then turn any no-response fault codes into a fatal exception.
 			 */
-			if (dp->fault == SWDP_ACK_NO_RESPONSE && strcmp(func, "remote_v3_adiv5_raw_access") != 0)
+			if (dp->fault == SWD_ACK_NO_RESPONSE && strcmp(func, "remote_v3_adiv5_raw_access") != 0)
 				raise_exception(EXCEPTION_ERROR, "SWD invalid ACK");
 		}
 		/* If the error part indicates an exception had occurred, make that happen here too */
