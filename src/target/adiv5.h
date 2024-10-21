@@ -206,7 +206,18 @@
 #define JTAG_IDCODE_DESIGNER_JEP106_CONT_MASK   (0xfU << ADIV5_DP_DESIGNER_JEP106_CONT_OFFSET)
 #define JTAG_IDCODE_DESIGNER_JEP106_CODE_MASK   (0x7fU)
 
-#define JTAG_IDCODE_PARTNO_DPV0 0xba00U
+/*
+ * ARM JTAG PARTNO values from CoreSight SoC-400 TRM (ARM document ID 100536, issue 0302-09)
+ * §4.9.6.3 Identification Code register, IDCODE, Table 4-236 pg273
+ */
+#define JTAG_IDCODE_PARTNO_SOC400_4BIT 0xba00U
+#define JTAG_IDCODE_PARTNO_SOC400_8BIT 0xba03U
+/*
+ * ARM JTAG PARTNO values from CoreSight SoC-600 TRM (ARM document ID 101883, issue 0101-00)
+ * §10.2.2 css600_dp register descriptions, Table 10-2 pg90
+ */
+#define JTAG_IDCODE_PARTNO_SOC600_4BIT 0xba06U
+#define JTAG_IDCODE_PARTNO_SOC600_8BIT 0xba07U
 
 /* Constants for the DP's quirks field */
 #define ADIV5_DP_QUIRK_MINDP    (1U << 0U) /* DP is a minimal DP implementation */

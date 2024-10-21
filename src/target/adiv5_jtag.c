@@ -25,6 +25,7 @@
 
 #include "general.h"
 #include "exception.h"
+#include "jep106.h"
 #include "adiv5.h"
 #include "jtag_scan.h"
 #include "jtagtap.h"
@@ -77,7 +78,17 @@ void adiv5_jtag_dp_handler(const uint8_t dev_index)
 		((designer & ADIV5_DP_DESIGNER_JEP106_CONT_MASK) << 1U) | (designer & ADIV5_DP_DESIGNER_JEP106_CODE_MASK);
 	dp->partno = (idcode & JTAG_IDCODE_PARTNO_MASK) >> JTAG_IDCODE_PARTNO_OFFSET;
 
-	if (dp->partno == JTAG_IDCODE_PARTNO_DPV0)
+	/* Check which version of DP we have here, if it's an ARM-made DP, and set up `dp->version` accordingly */
+	if (dp->designer_code == JEP106_MANUFACTURER_ARM) {
+		if (dp->partno == JTAG_IDCODE_PARTNO_SOC400_4BIT || dp->partno == JTAG_IDCODE_PARTNO_SOC400_8BIT)
+			dp->version = 0U;
+		else if (dp->partno == JTAG_IDCODE_PARTNO_SOC600_4BIT || dp->partno == JTAG_IDCODE_PARTNO_SOC600_8BIT)
+			dp->version = 3U;
+		else
+			DEBUG_WARN("Unknown JTAG-DP found, please report partno code %04x\n", dp->partno);
+	}
+
+	if (dp->version == 0)
 		adiv5_dp_error(dp);
 	else
 		adiv5_dp_abort(dp, ADIV5_DP_ABORT_STKERRCLR);
