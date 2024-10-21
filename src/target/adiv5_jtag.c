@@ -129,7 +129,16 @@ uint32_t adiv5_jtag_raw_access(
 	if (ack == JTAG_ACK_WAIT) {
 		DEBUG_ERROR("JTAG access resulted in wait, aborting\n");
 		dp->abort(dp, ADIV5_DP_ABORT_DAPABORT);
-		dp->fault = 1;
+		/* Use the SWD ack codes for the fault code to be completely consistent between JTAG-vs-SWD */
+		dp->fault = SWD_ACK_WAIT;
+		return 0;
+	}
+
+	/* If this is an ADIv6 JTAG-DPv1, check for fault */
+	if (dp->version > 0 && ack == JTAG_ADIv6_ACK_FAULT) {
+		DEBUG_ERROR("JTAG access resulted in fault\n");
+		/* Use the SWD ack codes for the fault code to be completely consistent between JTAG-vs-SWD */
+		dp->fault = SWD_ACK_FAULT;
 		return 0;
 	}
 
