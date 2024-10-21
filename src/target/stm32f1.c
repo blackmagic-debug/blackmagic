@@ -243,6 +243,7 @@ static bool stm32f1_configure_dbgmcu(target_s *const target, const target_addr32
 	return true;
 }
 
+#ifdef CONFIG_GD32
 /* Identify GD32F1, GD32F2, GD32F3, GD32E230 and GD32E5 chips */
 bool gd32f1_probe(target_s *target)
 {
@@ -360,6 +361,7 @@ static void gd32vf1_detach(target_s *const target)
 	/* Now defer to the normal Cortex-M detach routine to complete the detach */
 	riscv_detach(target);
 }
+#endif
 #endif
 
 static bool at32f40_is_dual_bank(const uint16_t part_id)
@@ -481,6 +483,7 @@ bool at32f40x_probe(target_s *target)
 	return false;
 }
 
+#ifdef CONFIG_MM32
 /* Pack data from the source value into a uint32_t based on data alignment */
 const void *mm32l0_pack_data(const void *const src, uint32_t *const data, const align_e align)
 {
@@ -640,6 +643,7 @@ bool mm32f3xx_probe(target_s *target)
 	/* Now we have a stable debug environment, make sure the WDTs + WFI and WFE instructions can't cause problems */
 	return stm32f1_configure_dbgmcu(target, MM32F3_DBGMCU_CONFIG);
 }
+#endif
 
 /* Identify real STM32F0/F1/F3 devices */
 bool stm32f1_probe(target_s *target)

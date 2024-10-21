@@ -75,10 +75,13 @@ if is_firmware_build
 		'riscv64': 'RISC-V 64-bit support',
 		'at32f4': 'Arterytek parts',
 		'apollo3': 'Ambiq Apollo3 parts',
-		'ch579': 'WinChipHead CH579',
+		'ch32': 'WinChipHead CH32 parts',
+		'ch579': 'WinChipHead CH579 parts',
 		'efm': 'Energy Micro parts',
+		'gd32': 'GigaDevice parts',
 		'hc32': 'HC32 parts',
 		'lpc': 'LPC series parts',
+		'mm32': 'MindMotion parts',
 		'nrf': 'nRF series parts',
 		'nxp': 'Kinetis series parts',
 		'puya': 'Puya PY32 series parts',
@@ -94,15 +97,13 @@ if is_firmware_build
 	# firmware is to be built for a STM32F1 based probe (requires a restriction)
 	if probe in ['bluepill', 'native', 'stlink', 'swlink'] and enabled_targets.length() == target_names.keys().length()
 		warning('Disabling some targets as your build will not fit the target probe otherwise')
-		enabled_targets = ['cortexm', 'efm', 'hc32', 'lpc', 'nrf', 'nxp', 'renesas', 'rp', 'sam', 'stm', 'ti']
+		enabled_targets = ['cortexm', 'lpc', 'nrf', 'nxp', 'renesas', 'rp', 'sam', 'stm', 'ti']
 	elif probe in ['f072'] and enabled_targets.length() == target_names.keys().length()
 		warning('Disabling some targets as your build will not fit the target probe otherwise')
 		enabled_targets = [
 			'cortexm',
 			'riscv32',
 			'riscv64',
-			'efm',
-			'hc32',
 			'lpc',
 			'nrf',
 			'nxp',
@@ -254,17 +255,41 @@ target_sam = declare_dependency(
 	dependencies: target_cortexm,
 )
 
-target_stm_deps = [target_cortexm]
+target_stm_common = declare_dependency(
+	sources: files(
+		'stm32_common.c',
+	)
+)
+
+target_stm32f1_deps = [target_cortexm, target_stm_common]
 # If the 32-bit RISC-V target is not enabled, don't enable GD32VF103 support
 if not is_firmware_build or enabled_targets.contains('riscv32')
-	target_stm_deps += [target_riscv32]
+	target_stm32f1_deps += [target_riscv32]
 endif
+
+target_stm32f1 = declare_dependency(
+	sources: files(
+		'stm32f1.c',
+	),
+	dependencies: target_stm32f1_deps,
+)
+
+target_stm32f4 = declare_dependency(
+	sources: files(
+		'stm32f4.c',
+	),
+	dependencies: [target_cortexm, target_stm_common],
+)
+
+target_ch32 = declare_dependency(
+	sources: files(
+		'ch32f1.c',
+	),
+	dependencies: target_stm32f1,
+)
 
 target_stm = declare_dependency(
 	sources: files(
-		'ch32f1.c',
-		'stm32f1.c',
-		'stm32f4.c',
 		'stm32g0.c',
 		'stm32h5.c',
 		'stm32h7.c',
@@ -272,9 +297,18 @@ target_stm = declare_dependency(
 		'stm32l4.c',
 		'stm32mp15.c',
 		'stm32wb0.c',
-		'stm32_common.c',
 	),
-	dependencies: target_stm_deps,
+	dependencies: [target_cortexm, target_stm_common, target_stm32f1, target_stm32f4],
+)
+
+target_gd32 = declare_dependency(
+	dependencies: [target_stm32f1, target_stm32f4],
+	compile_args: ['-DCONFIG_GD32=1'],
+)
+
+target_mm32 = declare_dependency(
+	dependencies: target_stm32f1,
+	compile_args: ['-DCONFIG_MM32=1'],
 )
 
 target_at32f4 = declare_dependency(
@@ -309,12 +343,20 @@ if is_firmware_build
 	endforeach
 
 	# Check if we should enable the RISC-V Debug remote protocol acceleration and do so if required
-	if get_option('enable_riscv_accel')
+	enable_riscv_accel = get_option('enable_riscv_accel')
+	if enable_riscv_accel
 		enabled_target_deps += declare_dependency(
 			compile_args: ['-DCONFIG_RISCV_ACCEL=1'],
 			dependencies: riscv_jtag_dtm,
 		)
 	endif
+
+	summary(
+		'RISC-V acceleration',
+		enable_riscv_accel,
+		bool_yn: true,
+		section: 'Remote Protocol',
+	)
 
 	# BMD target dependency
 	bmd_targets = declare_dependency(
@@ -333,10 +375,13 @@ libbmd_target_deps = [
 	# Enable all targets for libbmd
 	target_apollo3,
 	target_at32f4,
+	target_ch32,
 	target_ch579,
 	target_efm,
+	target_gd32,
 	target_hc32,
 	target_lpc,
+	target_mm32,
 	target_nrf,
 	target_nxp,
 	target_puya,

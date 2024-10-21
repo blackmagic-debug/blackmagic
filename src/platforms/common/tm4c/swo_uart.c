@@ -105,7 +105,7 @@ uint32_t swo_uart_get_baudrate(void)
 #define FIFO_SIZE 256U
 
 /* RX Fifo buffer */
-static volatile uint8_t buf_rx[FIFO_SIZE];
+static uint8_t buf_rx[FIFO_SIZE];
 /* Fifo in pointer, writes assumed to be atomic, should be only incremented within RX ISR */
 static volatile uint32_t buf_rx_in = 0;
 /* Fifo out pointer, writes assumed to be atomic, should be only incremented outside RX ISR */

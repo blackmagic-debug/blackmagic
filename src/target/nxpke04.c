@@ -335,8 +335,11 @@ static bool ke04_flash_write(target_flash_s *f, target_addr_t dest, const void *
 	/* Ensure we don't write something horrible over the security byte */
 	target_s *t = f->t;
 	const uint8_t *data = src;
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-qual"
 	if (!t->unsafe_enabled && dest <= FLASH_SECURITY_BYTE_ADDRESS && dest + len > FLASH_SECURITY_BYTE_ADDRESS)
 		((uint8_t *)data)[FLASH_SECURITY_BYTE_ADDRESS - dest] = FLASH_SECURITY_BYTE_UNSECURED;
+#pragma GCC diagnostic pop
 
 	for (size_t offset = 0; offset < len; offset += KE04_WRITE_LEN) {
 		if (!ke04_command(f->t, CMD_PROGRAM_FLASH, dest + offset, data + offset))

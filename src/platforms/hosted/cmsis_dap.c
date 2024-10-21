@@ -493,8 +493,11 @@ ssize_t dbg_dap_cmd_bulk(const uint8_t *const request_data, const size_t request
 	const size_t response_length)
 {
 	int transferred = 0;
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-qual"
 	const int request_result = libusb_bulk_transfer(
 		usb_handle, out_ep, (uint8_t *)request_data, (int)request_length, &transferred, TRANSFER_TIMEOUT_MS);
+#pragma GCC diagnostic push
 	if (request_result < 0) {
 		DEBUG_ERROR("CMSIS-DAP write error: %s (%d)\n", libusb_strerror(request_result), request_result);
 		return request_result;
