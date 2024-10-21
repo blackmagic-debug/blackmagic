@@ -148,6 +148,9 @@ uint32_t adiv5_jtag_raw_access(
 		raise_exception(EXCEPTION_ERROR, "JTAG-DP invalid ACK");
 	}
 
+	/* ADIv6 needs 8 idle cycles run after we get done to ensure the state machine is idle */
+	if (dp->version > 0)
+		jtag_proc.jtagtap_cycle(false, false, 8);
 	return result;
 }
 
