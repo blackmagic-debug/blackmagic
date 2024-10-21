@@ -373,13 +373,13 @@ void adiv5_dp_init(adiv5_debug_port_s *const dp)
 #endif
 
 	/*
-	 * Start by assuming DP v1 or later.
-	 * this may not be true for JTAG-DP (we attempt to detect this with the part ID code)
-	 * in such cases (DPv0) DPIDR is not implemented and reads are UNPREDICTABLE.
+	 * Unless we've got an ARM SoC-400 JTAG-DP, which must be ADIv5 and so DPv0, we can safely assume
+	 * that the DPIDR exists to read and find out what DP version we're working with here.
 	 *
-	 * for SWD-DP, we are guaranteed to be DP v1 or later.
+	 * If the part ID code indicates it is a SoC-400 JTAG-DP, however, it is DPv0. In this case, DPIDR
+	 * is not implemented and attempting to read is is UNPREDICTABLE so we want to avoid doing that.
 	 */
-	if (dp->designer_code != JEP106_MANUFACTURER_ARM || dp->partno != JTAG_IDCODE_PARTNO_DPV0) {
+	if (dp->designer_code != JEP106_MANUFACTURER_ARM || dp->partno != JTAG_IDCODE_PARTNO_SOC400_4BIT) {
 		const uint32_t dpidr = adiv5_dp_read_dpidr(dp);
 		if (!dpidr) {
 			DEBUG_ERROR("Failed to read DPIDR\n");
