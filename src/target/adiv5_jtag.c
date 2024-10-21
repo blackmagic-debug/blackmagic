@@ -30,8 +30,8 @@
 #include "jtagtap.h"
 #include "morse.h"
 
-#define JTAGDP_ACK_OK   0x02U
-#define JTAGDP_ACK_WAIT 0x01U
+#define JTAG_ADIv5_ACK_OK   0x02U
+#define JTAG_ADIv5_ACK_WAIT 0x01U
 
 /* 35-bit registers that control the ADIv5 DP */
 #define IR_ABORT 0x8U
@@ -115,16 +115,16 @@ uint32_t adiv5_jtag_raw_access(adiv5_debug_port_s *dp, uint8_t rnw, uint16_t add
 		jtag_dev_shift_dr(dp->dev_index, (uint8_t *)&response, (const uint8_t *)&request, 35);
 		result = response >> 3U;
 		ack = response & 0x07U;
-	} while (!platform_timeout_is_expired(&timeout) && ack == JTAGDP_ACK_WAIT);
+	} while (!platform_timeout_is_expired(&timeout) && ack == JTAG_ADIv5_ACK_WAIT);
 
-	if (ack == JTAGDP_ACK_WAIT) {
+	if (ack == JTAG_ADIv5_ACK_WAIT) {
 		DEBUG_ERROR("JTAG access resulted in wait, aborting\n");
 		dp->abort(dp, ADIV5_DP_ABORT_DAPABORT);
 		dp->fault = 1;
 		return 0;
 	}
 
-	if (ack != JTAGDP_ACK_OK) {
+	if (ack != JTAG_ADIv5_ACK_OK) {
 		DEBUG_ERROR("JTAG access resulted in: %" PRIx32 ":%x\n", result, ack);
 		raise_exception(EXCEPTION_ERROR, "JTAG-DP invalid ACK");
 	}
