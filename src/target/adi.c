@@ -364,8 +364,6 @@ bool adi_configure_ap(adiv5_access_port_s *const ap)
 		/* This reads the lower half of BASE */
 		ap->base = adiv5_ap_read(ap, ADIV5_AP_BASE_LOW);
 		const uint8_t base_flags = (uint8_t)ap->base & (ADIV5_AP_BASE_FORMAT | ADIV5_AP_BASE_PRESENT);
-		/* Make sure we only pay attention to the base address, not the presence and format bits */
-		ap->base &= ADIV5_AP_BASE_BASEADDR;
 		/* Check if this is a 64-bit AP */
 		if (cfg & ADIV5_AP_CFG_LARGE_ADDRESS) {
 			/* If this base value is invalid for a LPAE MEM-AP, bomb out here */
@@ -384,10 +382,18 @@ bool adi_configure_ap(adiv5_access_port_s *const ap)
 			 * Debug Base Address not present in this MEM-AP
 			 * No debug entries... useless AP
 			 * AP0 on STM32MP157C reads 0x00000002
+			 *
+			 * NB: MSPM0 parts erroneously set BASE.P = 0 despite there being
+			 * valid debug components on AP0, so we have to have an exception
+			 * for this part family.
 			 */
-			DEBUG_INFO(" -> Not Present\n");
-			return false;
+			if (ap->dp->target_designer_code != JEP106_MANUFACTURER_TEXAS || ap->base != 0xf0000002U) {
+				DEBUG_INFO(" -> Not Present\n");
+				return false;
+			}
 		}
+		/* Make sure we only pay attention to the base address, not the presence and format bits */
+		ap->base &= ADIV5_AP_BASE_BASEADDR;
 		/* Check if the AP is disabled, skipping it if that is the case */
 		if ((ap->csw & ADIV5_AP_CSW_AP_ENABLED) == 0U) {
 			DEBUG_INFO(" -> Disabled\n");

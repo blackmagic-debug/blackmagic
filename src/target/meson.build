@@ -327,6 +327,7 @@ target_ti = declare_dependency(
 		'lmi.c',
 		'msp432e4.c',
 		'msp432p4.c',
+		'mspm0.c'
 	) + lmi_stub,
 	dependencies: target_cortexm,
 )
