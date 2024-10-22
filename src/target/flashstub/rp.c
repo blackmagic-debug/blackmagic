@@ -71,8 +71,7 @@ static gpio_qspi_s *const gpio_qspi = (gpio_qspi_s *)RP_GPIO_QSPI_BASE_ADDR;
 
 #define MIN(x, y) (((x) < (y)) ? (x) : (y))
 
-void __attribute__((naked, used, section(".entry")))
-rp_flash_write_stub(const uint16_t command, const uint32_t dest, const uint8_t *const src, const uint32_t length)
+void __attribute__((naked, used, section(".entry"))) rp_flash_write_stub()
 {
 	/* Create a stack for our own sanity */
 	__asm__("ldr r4, =#0x20042000\n"

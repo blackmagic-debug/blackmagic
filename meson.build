@@ -156,6 +156,11 @@ endif
 probe_host = disabler()
 probe_bootloader = disabler()
 
+# Deal with the print memory usage option before recursing so the Flash stubs don't screw things up
+if is_firmware_build and get_option('print_memory_usage')
+	add_project_link_arguments('-Wl,--print-memory-usage', language: 'c')
+endif
+
 subdir('src')
 
 ## Black Magic Firmware (BMF) targets
@@ -170,10 +175,6 @@ if is_firmware_build
 If you did not touch the build system this is not your fault, please report it
 ''',
 	)
-
-	if get_option('print_memory_usage')
-		add_project_link_arguments('-Wl,--print-memory-usage', language: 'c')
-	endif
 
 	# System binary utilities
 	size = find_program('size')

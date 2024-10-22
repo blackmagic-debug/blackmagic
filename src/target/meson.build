@@ -31,6 +31,8 @@
 
 target_common_includes = include_directories('.')
 
+subdir('flashstub')
+
 target_common_sources = files(
 	'adi.c',
 	'adiv5.c',
@@ -241,7 +243,7 @@ target_rp = declare_dependency(
 	sources: files(
 		'rp2040.c',
 		'rp2350.c',
-	),
+	) + rp2040_stub,
 	dependencies: target_cortexm,
 )
 

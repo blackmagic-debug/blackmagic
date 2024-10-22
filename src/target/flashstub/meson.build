@@ -28,19 +28,24 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-hexdump = find_program('hexdump', native: true, required: false)
+# Default definitions of the resulting stubs for all this that are harmless for, eg, BMDA
+rp2040_stub = []
 
-write_stub = generator(
-	hexdump,
-	arguments: [
-		'-v',
-		'-e', '/2 "0x%04X, "',
-		'@INPUT@'
-	],
-	ouptut: '@CURRENT_SOURCE_DIR@/@BASENAME@.stub'
-	capture: true,
-)
+# If we're doing a firmware build, type to find hexdump
+if is_firmware_build
+	hexdump = find_program('hexdump', required: false)
+else
+	hexdump = disabler()
+endif
+# If we cannot or we're not a firmware build, we're done
+if not hexdump.found()
+	subdir_done()
+endif
 
+# We found hexdump, so build the stubs and their conversions to text files containing suitably formatted
+# hexadecimal of their code, ready to go onto a target.
+
+# Default options for all stub builds
 stub_build_args = [
 	'-mthumb',
 	'-nostartfiles',
@@ -49,26 +54,53 @@ stub_build_args = [
 	'-ffreestanding',
 ]
 
-lmi_stub_elf = executable(
-	'lmi_stub',
-	'lmi.c',
-	c_args: [
-		'-mcpu=cortexm-m4',
-		stub_build_args,
-	]
-)
+# Flash stub for Stellaris/Tiva-C parts
+# lmi_stub_elf = executable(
+# 	'lmi_stub',
+# 	'lmi.c',
+# 	c_args: [
+# 		'-mcpu=cortex-m4',
+# 		stub_build_args,
+# 	]
+# )
 
-efm32_stub_elf = executable(
-	'efm32_stub'
-	'efm32.c',
-	c_args: stub_build_args,
-)
+# Flash stub for EFM32 parts
+# efm32_stub_elf = executable(
+# 	'efm32_stub',
+# 	'efm32.c',
+# 	c_args: [
+# 		'-mcpu=cortex-m3',
+# 		stub_build_args,
+# 	]
+# )
 
+# Flash stub for the RP2040
 rp2040_stub_elf = executable(
 	'rp_stub',
 	'rp.c',
 	c_args: [
-		'-mcpu=cortexm-m0plus',
+		'-mcpu=cortex-m0plus',
 		stub_build_args
 	],
+	link_args: [
+		'-mcpu=cortex-m0plus',
+		stub_build_args,
+		'-T', '@0@/rp.ld'.format(meson.current_source_dir()),
+	],
+	link_depends: files('rp.ld'),
+	pie: false,
+	install: false,
+)
+
+rp2040_stub = custom_target(
+	'rp_stub-hex',
+	command: [
+		hexdump,
+		'-v',
+		'-e', '/2 "0x%04X, "',
+		'@INPUT@'
+	],
+	input: rp2040_stub_elf,
+	output: 'rp.stub',
+	capture: true,
 )
