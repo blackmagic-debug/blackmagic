@@ -49,6 +49,7 @@ option(
 		'ti',
 		'xilinx'
 	],
+	value: [],
 	description: 'Enabled debug targets'
 )
 option(
