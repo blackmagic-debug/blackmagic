@@ -95,28 +95,6 @@ if is_firmware_build
 		'ti': 'Texas Instruments parts',
 		'xilinx': 'Xilinx parts',
 	}
-
-	# Check to see if the set of enabled targets is all of them and the
-	# firmware is to be built for a STM32F1 based probe (requires a restriction)
-	if probe in ['bluepill', 'native', 'stlink', 'swlink'] and enabled_targets.length() == target_names.keys().length()
-		warning('Disabling some targets as your build will not fit the target probe otherwise')
-		enabled_targets = ['cortexm', 'lpc', 'nrf', 'nxp', 'renesas', 'rp', 'sam', 'stm', 'ti']
-	elif probe in ['f072'] and enabled_targets.length() == target_names.keys().length()
-		warning('Disabling some targets as your build will not fit the target probe otherwise')
-		enabled_targets = [
-			'cortexm',
-			'riscv32',
-			'riscv64',
-			'lpc',
-			'nrf',
-			'nxp',
-			'renesas',
-			'rp',
-			'sam',
-			'stm',
-			'ti'
-		]
-	endif
 endif
 
 # Conditional file compilation based on target selection
