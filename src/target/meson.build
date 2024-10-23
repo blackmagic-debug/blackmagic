@@ -466,35 +466,11 @@ if is_firmware_build
 	)
 endif
 
-libbmd_target_deps = [
-	# Enable all architectures for libbmd
-	target_cortexar,
-	target_cortexm,
-	target_cortexa_armv8,
-	target_riscv32,
-	target_riscv64,
-	# Enable all targets for libbmd
-	target_apollo3,
-	target_at32f4,
-	target_ch32,
-	target_ch32v,
-	target_ch579,
-	target_efm,
-	target_gd32,
-	target_hc32,
-	target_lpc,
-	target_mm32,
-	target_nrf,
-	target_nxp,
-	target_puya,
-	target_renesas_ra,
-	target_renesas_rz,
-	target_rp,
-	target_sam,
-	target_stm,
-	target_ti,
-	target_xilinx,
-]
+# Enable all architectures and targets for libbmd
+libbmd_target_deps = []
+foreach target : target_names
+	libbmd_target_deps += get_variable(f'target_@target@')
+endforeach
 
 # Define the libbmd target dependency
 libbmd_targets = declare_dependency(
