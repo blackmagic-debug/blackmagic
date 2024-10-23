@@ -29,6 +29,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 # Default definitions of the resulting stubs for all this that are harmless for, eg, BMDA
+lmi_stub = []
 efm32_stub = []
 rp2040_stub = []
 
@@ -56,14 +57,35 @@ stub_build_args = [
 ]
 
 # Flash stub for Stellaris/Tiva-C parts
-# lmi_stub_elf = executable(
-# 	'lmi_stub',
-# 	'lmi.c',
-# 	c_args: [
-# 		'-mcpu=cortex-m4',
-# 		stub_build_args,
-# 	]
-# )
+lmi_stub_elf = executable(
+	'lmi_stub',
+	'lmi.c',
+	c_args: [
+		'-mcpu=cortex-m3',
+		stub_build_args,
+	],
+	link_args: [
+		'-mcpu=cortex-m3',
+		stub_build_args,
+		'-T', '@0@/lmi.ld'.format(meson.current_source_dir()),
+	],
+	link_depends: files('lmi.ld'),
+	pie: false,
+	install: false,
+)
+
+lmi_stub = custom_target(
+	'lmi_stub-hex',
+	command: [
+		hexdump,
+		'-v',
+		'-e', '/2 "0x%04X, "',
+		'@INPUT@'
+	],
+	input: lmi_stub_elf,
+	output: 'lmi.stub',
+	capture: true,
+)
 
 # Flash stub for EFM32 parts
 efm32_stub_elf = executable(
