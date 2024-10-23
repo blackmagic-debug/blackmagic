@@ -68,39 +68,14 @@ if is_firmware_build
 	See the 'targets' option for a list of available targets.
 	''',
 	)
-
-	# Build a dictionary mapping all target short names to proper textual naming
-	target_names = {
-		'cortexar': 'Cortex-A/R support',
-		'cortexm': 'Cortex-M support',
-		'riscv32': 'RISC-V 32-bit support',
-		'riscv64': 'RISC-V 64-bit support',
-		'at32f4': 'Arterytek parts',
-		'apollo3': 'Ambiq Apollo3 parts',
-		'ch32': 'WinChipHead CH32 ARM Cortex parts',
-		'ch32v': 'WinChipHead CH32 RISC-V parts',
-		'ch579': 'WinChipHead CH579 parts',
-		'efm': 'Energy Micro parts',
-		'gd32': 'GigaDevice parts',
-		'hc32': 'HC32 parts',
-		'lpc': 'LPC series parts',
-		'mm32': 'MindMotion parts',
-		'nrf': 'nRF series parts',
-		'nxp': 'Kinetis series parts',
-		'puya': 'Puya PY32 series parts',
-		'renesas': 'Renesas parts',
-		'rp': 'Raspberry Pi MCUs (RP2040, RP2350)',
-		'sam': 'ATSAM series parts',
-		'stm': 'STM32 (and clones) parts',
-		'ti': 'Texas Instruments parts',
-		'xilinx': 'Xilinx parts',
-	}
 endif
 
 # Conditional file compilation based on target selection
 # We declare a dependency for each target group with the source files required
 # these dependencies are then added to the BMD core, conditinal on the targets option
 # NOTE: sourceset module might be an alternative to this method (unexplored)
+target_names = [] # List of all target names
+
 target_arm_coresight = declare_dependency(
 	sources: files('arm_coresight_cti.c'),
 )
@@ -113,18 +88,30 @@ target_cortexar = declare_dependency(
 	sources: files('cortexar.c'),
 	dependencies: target_cortex,
 	compile_args: ['-DCONFIG_CORTEXAR=1'],
+	variables: {
+		'description': 'Cortex-A/R support'
+	}
 )
+target_names += 'cortexar'
 
 target_cortexm = declare_dependency(
 	sources: files('cortexm.c'),
 	dependencies: target_cortex,
 	compile_args: ['-DCONFIG_CORTEXM=1'],
+	variables: {
+		'description': 'Cortex-M support'
+	}
 )
+target_names += 'cortexm'
 
 target_cortexa_armv8 = declare_dependency(
 	sources: files('cortexa_armv8.c'),
 	dependencies: [target_cortex, target_arm_coresight],
+	variables: {
+		'description': 'Cortex-A armv8 support'
+	}
 )
+target_names += 'cortexa_armv8'
 
 riscv_jtag_dtm = declare_dependency(
 	sources: files(
@@ -144,24 +131,40 @@ target_riscv = declare_dependency(
 target_riscv32 = declare_dependency(
 	sources: files('riscv32.c'),
 	dependencies: target_riscv,
+	variables: {
+		'description': 'RISC-V 32-bit support'
+	},
 )
+target_names += 'riscv32'
 
 target_riscv64 = declare_dependency(
 	sources: files('riscv64.c'),
 	dependencies: target_riscv,
+	variables: {
+		'description': 'RISC-V 64-bit support'
+	},
 )
+target_names += 'riscv64'
 
 target_apollo3 = declare_dependency(
 	sources: files('apollo3.c'),
 	compile_args: ['-DCONFIG_APOLLO3=1'],
 	dependencies: target_cortexm,
+	variables: {
+		'description': 'Ambiq Apollo3 parts'
+	},
 )
+target_names += 'apollo3'
 
 target_ch579 = declare_dependency(
 	sources: files('ch579.c'),
 	compile_args: ['-DCONFIG_CH579=1'],
 	dependencies: target_cortexm,
+	variables: {
+		'description': 'WinChipHead CH579'
+	},
 )
+target_names += 'ch579'
 
 target_efm = declare_dependency(
 	sources: files(
@@ -169,13 +172,21 @@ target_efm = declare_dependency(
 	) + efm32_stub,
 	compile_args: ['-DCONFIG_EFM32=1'],
 	dependencies: target_cortexm,
+	variables: {
+		'description': 'Energy Micro parts'
+	},
 )
+target_names += 'efm'
 
 target_hc32 = declare_dependency(
 	sources: files('hc32l110.c'),
 	compile_args: ['-DCONFIG_HC32=1'],
 	dependencies: target_cortexm,
+	variables: {
+		'description': 'HC32 parts'
+	},
 )
+target_names += 'hc32'
 
 target_lpc = declare_dependency(
 	sources: files(
@@ -190,7 +201,11 @@ target_lpc = declare_dependency(
 	),
 	compile_args: ['-DCONFIG_LPC=1'],
 	dependencies: target_cortexm,
+	variables: {
+		'description': 'LPC series parts'
+	},
 )
+target_names += 'lpc'
 
 target_nrf = declare_dependency(
 	sources: files(
@@ -200,7 +215,11 @@ target_nrf = declare_dependency(
 	),
 	compile_args: ['-DCONFIG_NRF=1'],
 	dependencies: target_cortexm,
+	variables: {
+		'description': 'nRF series parts'
+	},
 )
+target_names += 'nrf'
 
 target_nxp = declare_dependency(
 	sources: files(
@@ -211,13 +230,21 @@ target_nxp = declare_dependency(
 	),
 	compile_args: ['-DCONFIG_NXP=1'],
 	dependencies: target_cortexm,
+	variables: {
+		'description': 'Kinetis series parts'
+	},
 )
+target_names += 'nxp'
 
 target_puya = declare_dependency(
 	sources: files('puya.c'),
 	compile_args: ['-DCONFIG_PUYA=1'],
 	dependencies: target_cortexm,
+	variables: {
+		'description': 'Puya PY32 series parts'
+	},
 )
+target_names += 'puya'
 
 target_renesas_ra = declare_dependency(
 	sources: files('renesas_ra.c'),
@@ -233,13 +260,20 @@ target_renesas_rz = declare_dependency(
 
 # If the Cortex-A/R target is not enabled, don't enable Renesas RZ part support
 if not is_firmware_build or enabled_targets.contains('cortexar')
-target_renesas = [
+target_renesas_deps = [
 	target_renesas_ra,
 	target_renesas_rz,
 ]
 else
-target_renesas = target_renesas_ra
+target_renesas_deps = target_renesas_ra
 endif
+target_renesas = declare_dependency(
+	dependencies: target_renesas_deps,
+	variables: {
+		'description': 'Renesas parts'
+	},
+)
+target_names += 'renesas'
 
 target_rp = declare_dependency(
 	sources: files(
@@ -248,7 +282,11 @@ target_rp = declare_dependency(
 	) + rp2040_stub,
 	compile_args: ['-DCONFIG_RP=1'],
 	dependencies: target_cortexm,
+	variables: {
+		'description': 'Raspberry Pi MCUs (RP2040, RP2350)'
+	},
 )
+target_names += 'rp'
 
 target_sam = declare_dependency(
 	sources: files(
@@ -259,7 +297,11 @@ target_sam = declare_dependency(
 	),
 	compile_args: ['-DCONFIG_SAM=1'],
 	dependencies: target_cortexm,
+	variables: {
+		'description': 'ATSAM series parts'
+	},
 )
+target_names += 'sam'
 
 target_stm_common = declare_dependency(
 	sources: files(
@@ -278,14 +320,22 @@ target_stm32f1 = declare_dependency(
 		'stm32f1.c',
 	),
 	dependencies: target_stm32f1_deps,
+	variables: {
+		'description': 'STM32F1 parts'
+	},
 )
+target_names += 'stm32f1'
 
 target_stm32f4 = declare_dependency(
 	sources: files(
 		'stm32f4.c',
 	),
 	dependencies: [target_cortexm, target_stm_common],
+	variables: {
+		'description': 'STM32F4 parts'
+	},
 )
+target_names += 'stm32f4'
 
 target_ch32 = declare_dependency(
 	sources: files(
@@ -293,14 +343,22 @@ target_ch32 = declare_dependency(
 	),
 	compile_args: ['-DCONFIG_CH32=1'],
 	dependencies: target_stm32f1,
+	variables: {
+		'description': 'WinChipHead CH32 ARM Cortex parts'
+	},
 )
+target_names += 'ch32'
 
 target_ch32v = declare_dependency(
 	sources: files(
 		'ch32vx.c',
 	),
 	dependencies: target_riscv32,
+	variables: {
+		'description': 'WinChipHead CH32 RISC-V parts'
+	},
 )
+target_names += 'ch32v'
 
 target_stm = declare_dependency(
 	sources: files(
@@ -314,25 +372,41 @@ target_stm = declare_dependency(
 	),
 	compile_args: ['-DCONFIG_STM=1'],
 	dependencies: [target_cortexm, target_stm_common, target_stm32f1, target_stm32f4],
+	variables: {
+		'description': 'STM32 parts'
+	},
 )
+target_names += 'stm'
 
 target_gd32 = declare_dependency(
 	dependencies: [target_stm32f1, target_stm32f4],
 	compile_args: ['-DCONFIG_GD32=1'],
+	variables: {
+		'description': 'GigaDevice parts'
+	},
 )
+target_names += 'gd32'
 
 target_mm32 = declare_dependency(
 	dependencies: target_stm32f1,
 	compile_args: ['-DCONFIG_MM32=1'],
+	variables: {
+		'description': 'MindMotion parts'
+	},
 )
+target_names += 'mm32'
 
 target_at32f4 = declare_dependency(
 	sources: files(
 		'at32f43x.c',
 	),
 	compile_args: ['-DCONFIG_AT32=1'],
-	dependencies: [target_cortexm, target_stm_common]
+	dependencies: [target_cortexm, target_stm_common],
+	variables: {
+		'description': 'Arterytek parts'
+	},
 )
+target_names += 'at32f4'
 
 target_ti = declare_dependency(
 	sources: files(
@@ -343,7 +417,11 @@ target_ti = declare_dependency(
 	) + lmi_stub,
 	compile_args: ['-DCONFIG_TI=1'],
 	dependencies: target_cortexm,
+	variables: {
+		'description': 'Texas Instruments parts'
+	},
 )
+target_names += 'ti'
 
 target_xilinx = declare_dependency(
 	sources: files(
@@ -351,7 +429,11 @@ target_xilinx = declare_dependency(
 	),
 	dependencies: target_cortexar,
 	compile_args: ['-DCONFIG_XILINX=1'],
+	variables: {
+		'description': 'Xilinx parts'
+	},
 )
+target_names += 'xilinx'
 
 if is_firmware_build
 	# Convert targets option list into a list of dependencies
@@ -423,14 +505,22 @@ libbmd_targets = declare_dependency(
 
 if is_firmware_build
 	# Build a dictionary of the targets that have been selected for the firmware build
-	target_states = {}
-	foreach target_id, target_name : target_names
-		target_states += {target_name: target_id in enabled_targets}
+	target_summary = {}
+	foreach target : target_names
+		# Get the target dependency object
+		target_dep = get_variable(f'target_@target@')
+
+		# Get the target description, defaulting to the base target name if not set
+		target_description = target_dep.get_variable('description', default_value: target)
+
+		# Add the target enabled status to the summary
+		target_enabled = target in enabled_targets
+		target_summary += {target_description: target_enabled}
 	endforeach
 
 	# Include the target enable list in the summary output
 	summary(
-		target_states,
+		target_summary,
 		bool_yn: true,
 		section: 'Targets',
 	)
