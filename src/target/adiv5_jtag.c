@@ -91,6 +91,7 @@ void adiv5_jtag_dp_handler(const uint8_t dev_index)
 		else
 			DEBUG_WARN("Unknown JTAG-DP found, please report partno code %04x\n", dp->partno);
 	}
+	dp->quirks |= ADIV5_DP_JTAG;
 
 	if (dp->version == 0)
 		adiv5_dp_error(dp);
