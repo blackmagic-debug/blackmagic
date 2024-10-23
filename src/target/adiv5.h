@@ -85,7 +85,7 @@
 #define ADIV5_DP_CTRLSTAT_CDBGRSTREQ   (1U << 26U)
 /* Bits 25:24 - Reserved */
 /* Bits 23:12 - TRNCNT */
-#define ADIV5_DP_CTRLSTAT_TRNCNT(x) (((x)&0xfffU) << 12U)
+#define ADIV5_DP_CTRLSTAT_TRNCNT(x) (((x) & 0xfffU) << 12U)
 /* Bits 11:8 - MASKLANE */
 #define ADIV5_DP_CTRLSTAT_MASKLANE
 /* Bits 7:6 - Reserved in JTAG-DP */
@@ -153,19 +153,19 @@
 /* AP Identification Register (IDR) */
 #define ADIV5_AP_IDR_REVISION_OFFSET 28U
 #define ADIV5_AP_IDR_REVISION_MASK   0xf0000000U
-#define ADIV5_AP_IDR_REVISION(idr)   (((idr)&ADIV5_AP_IDR_REVISION_MASK) >> ADIV5_AP_IDR_REVISION_OFFSET)
+#define ADIV5_AP_IDR_REVISION(idr)   (((idr) & ADIV5_AP_IDR_REVISION_MASK) >> ADIV5_AP_IDR_REVISION_OFFSET)
 #define ADIV5_AP_IDR_DESIGNER_OFFSET 17U
 #define ADIV5_AP_IDR_DESIGNER_MASK   0x0ffe0000U
-#define ADIV5_AP_IDR_DESIGNER(idr)   (((idr)&ADIV5_AP_IDR_DESIGNER_MASK) >> ADIV5_AP_IDR_DESIGNER_OFFSET)
+#define ADIV5_AP_IDR_DESIGNER(idr)   (((idr) & ADIV5_AP_IDR_DESIGNER_MASK) >> ADIV5_AP_IDR_DESIGNER_OFFSET)
 #define ADIV5_AP_IDR_CLASS_OFFSET    13U
 #define ADIV5_AP_IDR_CLASS_MASK      0x0001e000U
-#define ADIV5_AP_IDR_CLASS(idr)      (((idr)&ADIV5_AP_IDR_CLASS_MASK) >> ADIV5_AP_IDR_CLASS_OFFSET)
+#define ADIV5_AP_IDR_CLASS(idr)      (((idr) & ADIV5_AP_IDR_CLASS_MASK) >> ADIV5_AP_IDR_CLASS_OFFSET)
 #define ADIV5_AP_IDR_VARIANT_OFFSET  4U
 #define ADIV5_AP_IDR_VARIANT_MASK    0x000000f0U
-#define ADIV5_AP_IDR_VARIANT(idr)    (((idr)&ADIV5_AP_IDR_VARIANT_MASK) >> ADIV5_AP_IDR_VARIANT_OFFSET)
+#define ADIV5_AP_IDR_VARIANT(idr)    (((idr) & ADIV5_AP_IDR_VARIANT_MASK) >> ADIV5_AP_IDR_VARIANT_OFFSET)
 #define ADIV5_AP_IDR_TYPE_OFFSET     0U
 #define ADIV5_AP_IDR_TYPE_MASK       0x0000000fU
-#define ADIV5_AP_IDR_TYPE(idr)       ((idr)&ADIV5_AP_IDR_TYPE_MASK)
+#define ADIV5_AP_IDR_TYPE(idr)       ((idr) & ADIV5_AP_IDR_TYPE_MASK)
 
 #define ADIV5_AP_IDR_CLASS_JTAG 0U
 #define ADIV5_AP_IDR_CLASS_COM  1U
@@ -212,6 +212,12 @@
  */
 #define JTAG_IDCODE_PARTNO_SOC400_4BIT 0xba00U
 #define JTAG_IDCODE_PARTNO_SOC400_8BIT 0xba03U
+/*
+ * This PARTNO value comes from the LPC43xx parts which have a bugged pair of TAPs.
+ * This value is actually reserved as a SWD-DPv1 value, but appears anyway on those devices
+ * for the second and third JTAG-DPs which are still JTAG-DPv0.
+ */
+#define JTAG_IDCODE_PARTNO_SOC400_4BIT_ERRATA 0xba01U
 /*
  * ARM JTAG PARTNO values from CoreSight SoC-600 TRM (ARM document ID 101883, issue 0101-00)
  * §10.2.2 css600_dp register descriptions, Table 10-2 pg90
