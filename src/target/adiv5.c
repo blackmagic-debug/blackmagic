@@ -267,13 +267,18 @@ uint32_t adiv5_dp_read_dpidr(adiv5_debug_port_s *const dp)
 {
 	if (dp->read_no_check)
 		return adiv5_read_no_check(dp, ADIV5_DP_DPIDR);
-	volatile uint32_t dpidr = 0;
+	volatile uint32_t dpidr = 0U;
 	TRY (EXCEPTION_ALL) {
-		dpidr = adiv5_dp_low_access(dp, ADIV5_LOW_READ, ADIV5_DP_DPIDR, 0U);
+		/* JTAG has a clean DP read routine, so use that as that handles the RDBUFF quirk of the physical protocol */
+		if (dp->quirks & ADIV5_DP_JTAG)
+			dpidr = adiv5_dp_read(dp, ADIV5_DP_DPIDR);
+		/* Otherwise, if we're talking over SWD, issue a raw access for the register to avoid protocol recovery */
+		else
+			dpidr = adiv5_dp_low_access(dp, ADIV5_LOW_READ, ADIV5_DP_DPIDR, 0U);
 	}
 	CATCH () {
 	default:
-		return 0;
+		return 0U;
 	}
 	return dpidr;
 }
