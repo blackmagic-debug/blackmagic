@@ -385,6 +385,8 @@ void adiv5_dp_init(adiv5_debug_port_s *const dp)
 	 * is not implemented and attempting to read is is UNPREDICTABLE so we want to avoid doing that.
 	 */
 	if (dp->designer_code != JEP106_MANUFACTURER_ARM || dp->partno != JTAG_IDCODE_PARTNO_SOC400_4BIT) {
+		/* Ensure that DPIDR is definitely selected */
+		adiv5_dp_write(dp, ADIV5_DP_SELECT, ADIV5_DP_BANK0);
 		const uint32_t dpidr = adiv5_dp_read_dpidr(dp);
 		if (!dpidr) {
 			DEBUG_ERROR("Failed to read DPIDR\n");
