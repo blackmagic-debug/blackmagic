@@ -29,6 +29,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 # Default definitions of the resulting stubs for all this that are harmless for, eg, BMDA
+efm32_stub = []
 rp2040_stub = []
 
 # If we're doing a firmware build, type to find hexdump
@@ -65,14 +66,35 @@ stub_build_args = [
 # )
 
 # Flash stub for EFM32 parts
-# efm32_stub_elf = executable(
-# 	'efm32_stub',
-# 	'efm32.c',
-# 	c_args: [
-# 		'-mcpu=cortex-m3',
-# 		stub_build_args,
-# 	]
-# )
+efm32_stub_elf = executable(
+	'efm32_stub',
+	'efm32.c',
+	c_args: [
+		'-mcpu=cortex-m0plus',
+		stub_build_args,
+	],
+	link_args: [
+		'-mcpu=cortex-m0plus',
+		stub_build_args,
+		'-T', '@0@/efm32.ld'.format(meson.current_source_dir()),
+	],
+	link_depends: files('efm32.ld'),
+	pie: false,
+	install: false,
+)
+
+efm32_stub = custom_target(
+	'efm32_stub-hex',
+	command: [
+		hexdump,
+		'-v',
+		'-e', '/2 "0x%04X, "',
+		'@INPUT@'
+	],
+	input: efm32_stub_elf,
+	output: 'efm32.stub',
+	capture: true,
+)
 
 # Flash stub for the RP2040
 rp2040_stub_elf = executable(

@@ -173,7 +173,9 @@ target_ch579 = declare_dependency(
 )
 
 target_efm = declare_dependency(
-	sources: files('efm32.c'),
+	sources: files(
+		'efm32.c'
+	) + efm32_stub,
 	dependencies: target_cortexm,
 )
 
