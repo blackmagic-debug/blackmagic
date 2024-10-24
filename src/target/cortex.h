@@ -48,6 +48,7 @@
 #define CORTEX_M7  0xc270U
 #define CORTEX_M23 0xd200U
 #define CORTEX_M33 0xd210U
+#define CORTEX_M55 0xd220U
 #define STAR_MC1   0x1320U
 
 /* Cortex-R CPU IDs */
