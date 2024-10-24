@@ -391,22 +391,18 @@ static bool flash_blank_check(target_flash_s *flash, target_addr_t src, size_t l
 	platform_timeout_s timeout;
 	platform_timeout_set(&timeout, 500);
 
-	while (len) {
-		const size_t offset = src % flash->writebufsize;
-		const size_t local_len = MIN(flash->writebufsize - offset, len);
+	for (size_t offset = 0U; offset < len; offset += flash->writebufsize) {
 		/* Fetch chunk into sector buffer */
-		target_mem32_read(target, flash->buf, src, local_len);
+		target_mem32_read(target, flash->buf, src + offset, flash->writebufsize);
 
 		/* Compare bytewise with erased value */
 		const uint8_t erased = flash->erased;
-		for (size_t i = 0; i < local_len; i++) {
+		for (size_t i = 0; i < flash->writebufsize; i++) {
 			if (flash->buf[i] != erased) {
 				*mismatch = src + i;
 				return false;
 			}
 		}
-		src += local_len;
-		len -= local_len;
 		target_print_progress(&timeout);
 	}
 	return result;
