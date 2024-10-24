@@ -120,6 +120,10 @@ void cortex_read_cpuid(target_s *const target)
 		target->core = "M23";
 		target->target_options |= CORTEXM_TOPT_FLAVOUR_V8M;
 		break;
+	case CORTEX_M55:
+		target->core = "M55";
+		target->target_options |= CORTEXM_TOPT_FLAVOUR_V8M;
+		break;
 	case CORTEX_M3:
 		target->core = "M3";
 		break;
