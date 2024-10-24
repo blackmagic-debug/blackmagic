@@ -29,4 +29,3 @@ scripts/swolisten
 
 /deps/*
 !/deps/*.wrap
-!/deps/libopencm3
