@@ -18,6 +18,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "general.h"
+#include "remote.h"
+#include "bmp_hosted.h"
+#include "utils.h"
+#include "cortexm.h"
+
 #include <sys/stat.h>
 #include <sys/select.h>
 #include <dirent.h>
@@ -31,12 +37,6 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netdb.h>
-
-#include "general.h"
-#include "remote.h"
-#include "bmp_hosted.h"
-#include "utils.h"
-#include "cortexm.h"
 
 #define READ_BUFFER_LENGTH 4096U
 
