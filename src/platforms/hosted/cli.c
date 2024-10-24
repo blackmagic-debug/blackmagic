@@ -421,6 +421,7 @@ void cl_init(bmda_cli_options_s *opt, int argc, char **argv)
 		case 'g':
 			if (optarg)
 				opt->opt_gpio_map = optarg;
+			break;
 #endif
 		case 'k':
 			opt->opt_cmsisdap_allow_fallback = true;
