@@ -4,6 +4,8 @@
  * Copyright (C) 2011  Black Sphere Technologies Ltd.
  * Written by Gareth McMullin <gareth@blacksphere.co.nz>
  *
+ * Implementation for ctxLink by Sid Price sid@sidprice.com
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -363,35 +365,37 @@ void platform_target_clk_output_enable(bool enable)
 // With a 3V3 reference voltage and using a 12 bit ADC each bit represents 0.8mV
 //  Note the battery voltage is divided by 2 with resistor divider
 //
-// No battery voltage 1 == 2.0v or a count of 1250
-// No battery voltage 2 == 4.268v or a count of 2668
-// Battery present (report voltage) < 4.268v or a count of 2667
-// Low batter voltage == 3.6v or a count of 2250
+// No battery voltage 1 == 2.0v
+// No battery voltage 2 == 4.268v
+// Battery present (report voltage) < 4.268v
+// Low batter voltage == 3.6v
 //
-#define uiBattVoltage_1 1250
-#define uiBattVoltage_2 2668
-#define uiLowBattery    2250
+#define BATTERY_VOLTAGE_1 2000
+#define BATTERY_VOLTAGE_2 4268
+#define BATTERY_LOW       3600
 
-volatile uint32_t retVal;
-volatile uint32_t batteryVoltage = 0;
-
-bool fLastState = true;
-bool fBatteryPresent = false;
-
-#define voltagePerBit 0.000806
+bool last_battery_state = true;
+bool battery_present = false;
 
 const char *platform_battery_voltage(void)
 {
 	static char ret[64] = {0};
-	if (fBatteryPresent == true) {
-		double batteryVoltageAsDouble = (batteryVoltage * voltagePerBit) * 2;
-		sprintf(&ret[0], "\n      Battery : %.3f", batteryVoltageAsDouble);
+	if (battery_present == true) {
+		uint32_t battery_voltage = input_voltages[CTXLINK_ADC_BATTERY];
 		//
-		// Let's truncate to 2 places
+		// Format the return string, this will be appened to the target voltage string
 		//
-		ret[21] = 'V';
-		ret[22] = '\n';
-		ret[23] = 0x00;
+		strcpy(ret, "\n      Battery : ");
+		uint32_t append_index = strlen(ret);
+		ret[append_index++] = '0' + battery_voltage / 1000U;
+		ret[append_index++] = '.';
+		battery_voltage = battery_voltage % 1000;
+		ret[append_index++] = '0' + battery_voltage / 100U;
+		battery_voltage = battery_voltage % 100;
+		ret[append_index++] = '0' + battery_voltage / 10U;
+		ret[append_index++] = 'V';
+		ret[append_index++] = '\n';
+		ret[append_index] = 0x00;
 	} else {
 		sprintf(&ret[0], "\n      Battery : Not present");
 	}
@@ -402,23 +406,23 @@ bool platform_check_battery_voltage(void)
 {
 	bool fResult;
 	platform_adc_read();
-	batteryVoltage = input_voltages[CTXLINK_ADC_BATTERY];
-	fResult = fLastState;
+	fResult = last_battery_state;
 	//
 	// Is battery connected?
 	//
-	if ((batteryVoltage <= uiBattVoltage_1) || (batteryVoltage >= uiBattVoltage_2)) {
-		fBatteryPresent = false;
-		fLastState = fResult = true;
+	if ((input_voltages[CTXLINK_ADC_BATTERY] <= BATTERY_VOLTAGE_1) ||
+		(input_voltages[CTXLINK_ADC_BATTERY] >= BATTERY_VOLTAGE_2)) {
+		battery_present = false;
+		last_battery_state = fResult = true;
 	} else {
-		fBatteryPresent = true;
+		battery_present = true;
 		//
 		// Is the voltage good?
 		//
-		if (batteryVoltage <= uiLowBattery) {
-			fLastState = fResult = false;
+		if (input_voltages[CTXLINK_ADC_BATTERY] <= BATTERY_LOW) {
+			last_battery_state = fResult = false;
 		} else {
-			fLastState = fResult = true;
+			last_battery_state = fResult = true;
 		}
 	}
 	return fResult;
