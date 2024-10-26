@@ -1239,8 +1239,6 @@ void app_task(void)
 		}
 		break;
 	}
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wimplicit-fallthrough"
 
 	case app_state_error: {
 		/* Indicate error */
@@ -1248,6 +1246,7 @@ void app_task(void)
 		app_state = app_state_spin;
 
 		/* Intentional fall */
+		BMD_FALLTHROUGH
 	}
 
 	case app_state_spin: {
@@ -1271,7 +1270,6 @@ void app_task(void)
 		}
 		break;
 	}
-#pragma GCC diagnostic pop
 
 	default: {
 		DEBUG_WARN("APP_TASK[%d]: Unknown state.\r\n", app_state);
