@@ -45,6 +45,12 @@
 
 #define SPI_TRANSFER_BUFFER_SIZE 256U
 
+tpfAppSocketCb app_socket_cb = NULL;
+tpfAppWifiCb app_wifi_cb = NULL;
+
+static int interrupt_enabled = 1;
+static _Atomic uint32_t one_ms_counter = 0;
+
 //==============================================================================
 // GPIO Stub Functions:
 // --------------------
@@ -80,8 +86,6 @@ void m2mStub_PinSet_SPI_SS(t_m2mWifiPinAction action)
 //    - The Host MCU should be configured to trigger an interrupt on a falling edge.
 //==============================================================================
 
-static int interrupt_enabled = 1;
-
 /* NOLINTNEXTLINE(readability-identifier-naming) */
 void m2mStub_EintEnable(void)
 {
@@ -108,9 +112,6 @@ void m2mStub_EintDisable(void)
 
 // A TMR peripheral can be set to interrupt every 1ms. The timer ISR increments
 // a global counter.
-
-static _Atomic uint32_t one_ms_counter = 0;
-
 //
 // Implement this timer ISR or call this function in your timer ISR to
 // increment one_ms_counter variable as below:
@@ -177,8 +178,6 @@ void m2mStub_SpiTxRx(uint8_t *p_txBuf, uint16_t txLen, uint8_t *p_rxBuf, uint16_
 //      - Error Events
 //==============================================================================
 
-tpfAppWifiCb app_wifi_cb = NULL;
-
 /* NOLINTNEXTLINE(readability-identifier-naming) */
 void registerWifiCallback(tpfAppWifiCb pfAppWifiCb)
 {
@@ -194,8 +193,6 @@ void m2m_wifi_handle_events(t_m2mWifiEventType eventCode, t_wifiEventData *p_eve
 }
 
 //             --------------- * end of wifi event block * ---------------
-
-volatile tpfAppSocketCb app_socket_cb = NULL;
 
 /* NOLINTNEXTLINE(readability-identifier-naming) */
 void registerSocketCallback(tpfAppSocketCb pfAppSocketCb)
