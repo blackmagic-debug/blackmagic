@@ -43,6 +43,8 @@
 
 #include "platform.h"
 
+#define SPI_TRANSFER_BUFFER_SIZE 256U
+
 //==============================================================================
 // GPIO Stub Functions:
 // --------------------
@@ -135,18 +137,19 @@ uint32_t m2mStub_GetOneMsTimer(void)
 void m2mStub_SpiTxRx(uint8_t *p_txBuf, uint16_t txLen, uint8_t *p_rxBuf, uint16_t rxLen)
 {
 	uint16_t byteCount;
-	uint16_t i;
 	//
 	// The following are intermediate buffers used to ensure
-	// the TX and RX message sizes handked by the transfer routine
+	// the TX and RX message sizes handled by the transfer routine
 	// are the same size.
 	//
-	uint8_t outputBuffer[256] = {0};
-	uint8_t inputBuffer[256] = {0};
+	uint8_t outputBuffer[SPI_TRANSFER_BUFFER_SIZE] = {0};
+	uint8_t inputBuffer[SPI_TRANSFER_BUFFER_SIZE] = {0};
 	/*
      *	total number of byte to clock is whichever is larger, txLen or rxLen
      */
-	byteCount = (txLen >= rxLen) ? txLen : rxLen;
+	byteCount = txLen >= rxLen ? txLen : rxLen;
+	if (txLen > SPI_TRANSFER_BUFFER_SIZE || rxLen > SPI_TRANSFER_BUFFER_SIZE)
+		return; // No way to communicate error, silently ignore data
 	//
 	// Copy the input data to the outputBuffer
 	//
@@ -154,11 +157,11 @@ void m2mStub_SpiTxRx(uint8_t *p_txBuf, uint16_t txLen, uint8_t *p_rxBuf, uint16_
 	//
 	// Do the transfer
 	//
-	for (i = 0; i < byteCount; i++) {
+	for (uint16_t i = 0; i < byteCount; i++) {
 		inputBuffer[i] = spi_xfer(WINC1500_SPI_CHANNEL, outputBuffer[i]);
 	}
 	//
-	// If we ewxpected to receive bytes copy them to the rx buffer
+	// If we expected to receive bytes copy them to the rx buffer
 	//
 	if (rxLen > 0) {
 		memcpy(p_rxBuf, &inputBuffer[0], rxLen);
