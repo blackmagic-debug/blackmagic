@@ -27,7 +27,7 @@
 #include "timing.h"
 #include "timing_stm32.h"
 
-#define PLATFORM_HAS_TRACESWO
+// #define PLATFORM_HAS_TRACESWO
 #define PLATFORM_HAS_POWER_SWITCH
 
 #define PLATFORM_IDENT "(ctxLink) "
@@ -43,16 +43,61 @@
  * nRST		= A2	(output)
  * PWR_BR	= PB1	(output) - supply power to the target, active low
  *
+ * USB_PU   = PA8   (output)
  * TDI =      PA3	(output)
  * TMS =      PA4	(input/output for SWDIO)
  * TCK =      PA5	(output SWCLK)
  * TDO =      PC7	(input SWO)
  * TMS_DIR = PA1	(output) controls target buffer direction
- * TPWR =	 PB0		(analog input)
- * VBAT =	 PA0		(analog input)
+ * nRST_SNS = PA7   (input)
+
+ * TPWR =	 PB0	(analog input)
+ * VBAT =	 PA0	(analog input)
  *
  * SW_BOOTLOADER	PB12	(input) System Bootloader button
  */
+
+//
+// Define the network name for the probe
+//
+//	TODO, use part or all of the MAC address to make this unique.
+//
+
+#define ctxLink_NetName "ctxLink_0001"
+
+// Port definitions for WINC1500 wireless module
+//
+//		The WINC1500 is attached to SPI_2
+//
+#define WINC1500_SPI_CHANNEL SPI2
+#define WINC1500_RCC_SPI     RCC_SPI2
+
+#define WINC1500_PORT    GPIOB  // Port for CS and IRQ
+#define WINC1500_SPI_NCS GPIO15 // Chip select
+#define WINC1500_IRQ     GPIO9  // IRQ input
+//
+// Reset port and pin
+//
+#define WINC1500_RESET_PORT GPIOB
+#define WINC1500_RESET      GPIO14 // Reset output
+
+//
+// Chip enable port and pin
+//
+#define WINC1500_CHIP_EN_PORT GPIOB
+#define WINC1500_CHIP_EN      GPIO13
+
+//
+// SPI clock port
+//
+#define WINC1500_SPI_CLK_PORT GPIOB
+#define WINC1500_SPI_CLK      GPIO10
+//
+// SPI Data port
+//
+#define WINC1500_SPI_DATA_PORT GPIOC
+#define WINC1500_SPI_MISO      GPIO2
+#define WINC1500_SPI_MOSI      GPIO3
 
 /* Hardware definitions... */
 #define JTAG_PORT    GPIOA
@@ -100,6 +145,20 @@
 #define VBAT_PIN    GPIO0
 #define PWR_BR_PORT GPIOB
 #define PWR_BR_PIN  GPIO1
+
+//
+// SWO UART definitions
+//
+#define SWO_UART        USART6
+#define SWO_UART_CR1    USART6_CR1
+#define SWO_UART_DR     USART6_DR
+#define SWO_UART_CLK    RCC_USART6
+#define SWO_UART_PORT   GPIOC
+#define SWO_UART_RX_PIN GPIO7
+#define SWO_UART_ISR    usart6_isr
+#define SWO_UART_IRQ    NVIC_USART6_IRQ
+
+#define TRACESWO_PROTOCOL 1 /* 1 = Manchester, 2 = NRZ / async */
 
 /* USB pin definitions */
 #define USB_PU_PORT GPIOA
@@ -180,8 +239,8 @@
 #define IRQ_PRI_USB          (1U << 4U)
 #define IRQ_PRI_USBUSART     (2U << 4U)
 #define IRQ_PRI_USBUSART_DMA (2U << 4U)
-#define IRQ_PRI_SWO_TIM      (0U << 4U)
-#define IRQ_PRI_SWO_DMA      (0U << 4U)
+#define IRQ_PRI_SWO_TIM      (3U << 4U)
+#define IRQ_PRI_SWO_DMA      (1U << 4U)
 
 /* Use TIM3 Input 2 from PC7/TDO, AF2, trigger on rising edge */
 #define SWO_TIM             TIM3
@@ -228,5 +287,11 @@
 	{                                             \
 		gpio_set_val(LED_PORT, LED_ERROR, state); \
 	}
+
+void platform_tasks(void);
+const char *platform_battery_voltage(void);
+bool platform_check_battery_voltage(void);
+bool platform_has_network_client(uint8_t *lpBuf_rx, uint8_t *lpBuf_rx_in, uint8_t *lpBuf_rx_out, unsigned fifoSize);
+bool platform_configure_uart(char *configurationString);
 
 #endif /* PLATFORMS_CTXLINK_PLATFORM_H */
