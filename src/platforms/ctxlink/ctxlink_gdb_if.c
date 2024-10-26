@@ -40,9 +40,9 @@ static char buffer_in[CDCACM_PACKET_SIZE];
 static volatile uint32_t count_new;
 static char double_buffer_out[CDCACM_PACKET_SIZE];
 
-void gdb_usb_putchar(const char c, const int flush)
+void gdb_usb_putchar(const char ch, const int flush)
 {
-	buffer_in[count_in++] = c;
+	buffer_in[count_in++] = ch;
 	if (flush || count_in == CDCACM_PACKET_SIZE) {
 		/* Refuse to send if USB isn't configured, and
 		 * don't bother if nobody's listening */
@@ -138,39 +138,44 @@ char gdb_usb_getchar_to(const uint32_t timeout)
 
 	if (out_ptr < count_out)
 		return buffer_out[out_ptr++];
-	/* XXX: Need to find a better way to error return than this. This provides '\xff' characters. */
+	/* TODO Need to find a better way to error return than this. This provides '\xff' characters. */
 	return -1;
 }
 
-void gdb_if_putchar(char c, int flush)
+void gdb_if_putchar(char ch, int flush)
 {
 	if (is_gdb_client_connected() == true) {
-		wifi_gdb_putchar(c, flush);
+		wifi_gdb_putchar(ch, flush);
 	} else {
-		gdb_usb_putchar(c, flush);
+		gdb_usb_putchar(ch, flush);
 	}
 }
 
 char gdb_if_getchar(void)
 {
+	char ch;
 	platform_tasks();
 	if (is_gdb_client_connected() == true) {
-		return wifi_get_next();
+		ch = wifi_get_next();
 	} else {
 		if (usb_get_config() == 1) {
-			return gdb_usb_getchar();
+			ch = gdb_usb_getchar();
 		} else {
-			return (0xFF);
+			ch = 0xFF;
 		}
 	}
+	return ch;
 }
 
 char gdb_if_getchar_to(uint32_t timeout)
 {
+	char ch;
 	platform_tasks();
+	/* NOLINTNEXTLINE(bugprone-branch-clone) */
 	if (is_gdb_client_connected() == true) {
-		return wifi_get_next_to(timeout);
+		ch = wifi_get_next_to(timeout);
 	} else {
-		return gdb_usb_getchar_to(timeout);
+		ch = gdb_usb_getchar_to(timeout);
 	}
+	return ch;
 }

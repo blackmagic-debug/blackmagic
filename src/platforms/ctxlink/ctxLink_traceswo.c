@@ -63,7 +63,7 @@ static uint32_t bufferSelect = 0;
 //
 static uint8_t swoData[BUFFER_SIZE];
 
-void traceSendData(void)
+void trace_send_data(void)
 {
 	if (is_swo_trace_client_connected()) {
 		uint32_t dataCount;
