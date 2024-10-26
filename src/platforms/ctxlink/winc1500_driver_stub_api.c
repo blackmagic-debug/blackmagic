@@ -157,15 +157,13 @@ void m2mStub_SpiTxRx(uint8_t *p_txBuf, uint16_t txLen, uint8_t *p_rxBuf, uint16_
 	//
 	// Do the transfer
 	//
-	for (uint16_t i = 0; i < byteCount; i++) {
+	for (uint16_t i = 0; i < byteCount; i++)
 		inputBuffer[i] = spi_xfer(WINC1500_SPI_CHANNEL, outputBuffer[i]);
-	}
 	//
 	// If we expected to receive bytes copy them to the rx buffer
 	//
-	if (rxLen > 0) {
+	if (rxLen > 0)
 		memcpy(p_rxBuf, &inputBuffer[0], rxLen);
-	}
 }
 
 //==============================================================================
