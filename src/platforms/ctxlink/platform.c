@@ -106,8 +106,8 @@ bool platform_configure_uart(char *configurationString)
 				parityValue = USART_PARITY_EVEN;
 				break;
 			}
-				usart_set_parity(USBUSART, parityValue);
 			}
+			usart_set_parity(USBUSART, parityValue);
 			fResult = true;
 		}
 	} else {
