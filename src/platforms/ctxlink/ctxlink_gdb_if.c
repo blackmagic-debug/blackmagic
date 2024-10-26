@@ -144,38 +144,28 @@ char gdb_usb_getchar_to(const uint32_t timeout)
 
 void gdb_if_putchar(char ch, int flush)
 {
-	if (is_gdb_client_connected() == true) {
+	if (is_gdb_client_connected())
 		wifi_gdb_putchar(ch, flush);
-	} else {
+	else
 		gdb_usb_putchar(ch, flush);
-	}
 }
 
 char gdb_if_getchar(void)
 {
-	char ch;
 	platform_tasks();
-	if (is_gdb_client_connected() == true) {
-		ch = wifi_get_next();
-	} else {
-		if (usb_get_config() == 1) {
-			ch = gdb_usb_getchar();
-		} else {
-			ch = 0xFF;
-		}
-	}
-	return ch;
+	if (is_gdb_client_connected())
+		return wifi_get_next();
+	else if (usb_get_config() == 1)
+		return gdb_usb_getchar();
+	else
+		return 0xff;
 }
 
 char gdb_if_getchar_to(uint32_t timeout)
 {
-	char ch;
 	platform_tasks();
 	/* NOLINTNEXTLINE(bugprone-branch-clone) */
-	if (is_gdb_client_connected() == true) {
-		ch = wifi_get_next_to(timeout);
-	} else {
-		ch = gdb_usb_getchar_to(timeout);
-	}
-	return ch;
+	if (is_gdb_client_connected())
+		return wifi_get_next_to(timeout);
+	return gdb_usb_getchar_to(timeout);
 }
