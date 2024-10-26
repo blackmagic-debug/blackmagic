@@ -253,14 +253,13 @@ void platform_init(void)
 	//
 	m2mStub_PinSet_CE(M2M_WIFI_PIN_LOW);
 	m2mStub_PinSet_RESET(M2M_WIFI_PIN_LOW);
-	DelayMs(100);
+	platform_delay(100);
 	m2mStub_PinSet_CE(M2M_WIFI_PIN_HIGH);
-	DelayMs(10);
+	platform_delay(10);
 	m2mStub_PinSet_RESET(M2M_WIFI_PIN_HIGH);
-	DelayMs(10);
-	while (1) {
-		;
-	}
+	platform_delay(10);
+	while (true)
+		continue;
 #endif
 
 	blackmagic_usb_init();
