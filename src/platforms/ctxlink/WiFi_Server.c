@@ -50,12 +50,12 @@ void trace_send_data(void);
 #define SWO_TRACE_SERVER_PORT  2161
 
 #define INPUT_BUFFER_SIZE 2048
-static unsigned char input_buffer[INPUT_BUFFER_SIZE] = {0}; ///< The input buffer[ input buffer size]
-static volatile uint32_t input_index = 0;                   ///< Zero-based index of the input
-static volatile uint32_t output_index = 0;                  ///< Zero-based index of the output
-static volatile uint32_t buffer_count = 0;                  ///< Number of buffers
+static uint8_t input_buffer[INPUT_BUFFER_SIZE] = {0}; ///< The input buffer[ input buffer size]
+static volatile uint32_t input_index = 0;             ///< Zero-based index of the input
+static volatile uint32_t output_index = 0;            ///< Zero-based index of the output
+static volatile uint32_t buffer_count = 0;            ///< Number of buffers
 
-static unsigned char local_buffer[INPUT_BUFFER_SIZE] = {0}; ///< The local buffer[ input buffer size]
+static uint8_t local_buffer[INPUT_BUFFER_SIZE] = {0}; ///< The local buffer[ input buffer size]
 
 static bool driver_init_complete = false;     ///< True to driver initialize complete
 static bool g_wifi_connected = false;         ///< True if WiFi connected
@@ -69,8 +69,7 @@ static SOCKET gdb_server_socket = SOCK_ERR_INVALID; ///< The main gdb server soc
 static SOCKET gdb_client_socket = SOCK_ERR_INVALID; ///< The gdb client socket
 
 #define UART_DEBUG_INPUT_BUFFER_SIZE 32
-static unsigned char local_uart_debug_buffer[UART_DEBUG_INPUT_BUFFER_SIZE] = {
-	0}; ///< The local buffer[ input buffer size]
+static uint8_t local_uart_debug_buffer[UART_DEBUG_INPUT_BUFFER_SIZE] = {0}; ///< The local buffer[ input buffer size]
 
 static SOCKET uart_debug_server_socket = SOCK_ERR_INVALID;
 static SOCKET uart_debug_client_socket = SOCK_ERR_INVALID;
@@ -86,8 +85,7 @@ static bool swo_trace_server_is_running = false;
 static bool new_swo_trace_client_conncted = false;
 
 #define SWO_TRACE_INPUT_BUFFER_SIZE 32
-static unsigned char local_swo_trace_buffer[SWO_TRACE_INPUT_BUFFER_SIZE] = {
-	0}; ///< The local buffer[ input buffer size]
+static uint8_t local_swo_trace_buffer[SWO_TRACE_INPUT_BUFFER_SIZE] = {0}; ///< The local buffer[ input buffer size]
 
 #define WPS_LOCAL_TIMEOUT 30 // Timeout value in seconds
 
@@ -128,26 +126,26 @@ app_states_e app_state; ///< State of the application
 #define BUTTON_PRESS_MODE_CANCEL       7500
 
 typedef struct {
-	unsigned char packet[SEND_QUEUE_BUFFER_SIZE]; ///< The packet[ send queue buffer size]
-	unsigned len;                                 ///< The length
+	uint8_t packet[SEND_QUEUE_BUFFER_SIZE]; ///< The packet[ send queue buffer size]
+	uint32_t len;                           ///< The length
 } send_queue_entry_s;
 
 send_queue_entry_s gdb_send_queue[SEND_QUEUE_SIZE] = {0}; ///< The send queue[ send queue size]
-unsigned volatile gdb_send_queue_in = 0;                  ///< The send queue in
-unsigned volatile gdb_send_queue_out = 0;                 ///< The send queue out
-unsigned volatile gdb_send_queue_length = 0;              ///< Length of the send queue
+uint32_t volatile gdb_send_queue_in = 0;                  ///< The send queue in
+uint32_t volatile gdb_send_queue_out = 0;                 ///< The send queue out
+uint32_t volatile gdb_send_queue_length = 0;              ///< Length of the send queue
 void do_gdb_send(void);
 
 send_queue_entry_s uart_debug_send_queue[SEND_QUEUE_SIZE] = {0}; ///< The send queue[ send queue size]
-unsigned volatile uart_debug_send_queue_in = 0;                  ///< The send queue in
-unsigned volatile uart_debug_send_queue_out = 0;                 ///< The send queue out
-unsigned volatile uart_debug_send_queue_length = 0;              ///< Length of the send queue
+uint32_t volatile uart_debug_send_queue_in = 0;                  ///< The send queue in
+uint32_t volatile uart_debug_send_queue_out = 0;                 ///< The send queue out
+uint32_t volatile uart_debug_send_queue_length = 0;              ///< Length of the send queue
 void do_uart_debug_send(void);
 
 send_queue_entry_s swo_trace_send_queue[SEND_QUEUE_SIZE] = {0}; ///< The send queue[ send queue size]
-unsigned volatile swo_trace_send_queue_in = 0;                  ///< The send queue in
-unsigned volatile swo_trace_send_queue_out = 0;                 ///< The send queue out
-unsigned volatile swo_trace_send_queue_length = 0;              ///< Length of the send queue
+uint32_t volatile swo_trace_send_queue_in = 0;                  ///< The send queue in
+uint32_t volatile swo_trace_send_queue_out = 0;                 ///< The send queue out
+uint32_t volatile swo_trace_send_queue_length = 0;              ///< Length of the send queue
 void do_awo_trace_send(void);
 
 static bool press_active = false; ///< True to press active
@@ -1393,9 +1391,9 @@ int wifi_have_input(void)
 	return result;
 }
 
-unsigned char wifi_get_next(void)
+uint8_t wifi_get_next(void)
 {
-	unsigned char result = 0x00;
+	uint8_t result = 0x00;
 	//
 	// The buffer count is also managed in an ISR so protect this code
 	//
@@ -1409,10 +1407,10 @@ unsigned char wifi_get_next(void)
 	return result;
 }
 
-unsigned char wifi_get_next_to(uint32_t timeout)
+uint8_t wifi_get_next_to(uint32_t timeout)
 {
 	platform_timeout_s t;
-	unsigned char count = 0;
+	uint8_t count = 0;
 	int input_count = 0;
 	platform_timeout_set(&t, timeout);
 
@@ -1489,10 +1487,10 @@ void send_swo_trace_data(uint8_t *buffer, uint8_t length)
 	}
 }
 
-static unsigned char send_buffer[1024] = {0}; ///< The send buffer[ 1024]
-static unsigned int send_count = 0;           ///< Number of sends
+static uint8_t send_buffer[1024] = {0}; ///< The send buffer[ 1024]
+static uint32_t send_count = 0;     ///< Number of sends
 
-void wifi_gdb_putchar(unsigned char theChar, int flush)
+void wifi_gdb_putchar(uint8_t theChar, int flush)
 {
 	send_buffer[send_count++] = theChar;
 	if (flush != 0) {
