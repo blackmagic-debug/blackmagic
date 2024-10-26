@@ -290,7 +290,6 @@
 void platform_tasks(void);
 const char *platform_battery_voltage(void);
 bool platform_check_battery_voltage(void);
-bool platform_has_network_client(uint8_t *lpBuf_rx, uint8_t *lpBuf_rx_in, uint8_t *lpBuf_rx_out, unsigned fifoSize);
-bool platform_configure_uart(char *configurationString);
+bool platform_configure_uart(char *configuration_string);
 
 #endif /* PLATFORMS_CTXLINK_PLATFORM_H */

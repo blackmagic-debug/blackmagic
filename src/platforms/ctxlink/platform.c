@@ -91,15 +91,15 @@ static void adc_init(void)
 // Use the passed string to configure the USB UART
 //
 // e.g. 38400,8,N,1
-bool platform_configure_uart(char *configurationString)
+bool platform_configure_uart(char *configuration_string)
 {
-	if (strlen(configurationString) > 5) {
+	if (strlen(configuration_string) > 5) {
 		uint32_t baudRate;
 		uint32_t bits;
 		uint32_t stopBits;
 		char parity;
-		int count =
-			sscanf(configurationString, "%" SCNd32 ",%" SCNd32 ",%c,%" SCNd32 "", &baudRate, &bits, &parity, &stopBits);
+		int count = sscanf(
+			configuration_string, "%" SCNd32 ",%" SCNd32 ",%c,%" SCNd32 "", &baudRate, &bits, &parity, &stopBits);
 		if (count == 4) {
 			uint32_t parityValue;
 			usart_set_baudrate(USBUSART, baudRate);
