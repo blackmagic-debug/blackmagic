@@ -527,14 +527,14 @@ static void AppWifiCallback(uint8_t msg_type, void *pvMsg)
 			if (httpActive == true && waitingAccessPoint == true) {
 				waitingAccessPoint = false; // Next event is the ctxLink to AP event
 			} else {
-				dprintf("APP_WIFI_CB[%d]: Connected to AP\r\n", msg_type);
+				DEBUG_WARN("APP_WIFI_CB[%d]: Connected to AP\r\n", msg_type);
 				g_wifi_connected = true;
 			}
 		} else if (pstrWifiState->u8CurrState == M2M_WIFI_DISCONNECTED) {
-			dprintf("APP_WIFI_CB[%d]: Disconnected from AP\r\n", msg_type);
+			DEBUG_WARN("APP_WIFI_CB[%d]: Disconnected from AP\r\n", msg_type);
 			g_wifi_connected = false;
 		} else {
-			dprintf("APP_WIFI_CB[%d]: Unknown WiFi state change\r\n", msg_type);
+			DEBUG_WARN("APP_WIFI_CB[%d]: Unknown WiFi state change\r\n", msg_type);
 		}
 		break;
 	}
@@ -550,18 +550,18 @@ static void AppWifiCallback(uint8_t msg_type, void *pvMsg)
 
 	case M2M_WIFI_WPS_EVENT: {
 		tstrM2MWPSInfo *p_wfWpsInfo = (tstrM2MWPSInfo *)pvMsg;
-		dprintf("Wi-Fi request WPS\r\n");
-		dprintf(
+		DEBUG_WARN("Wi-Fi request WPS\r\n");
+		DEBUG_WARN(
 			"SSID : %s, authtyp : %d pw : %s\n", p_wfWpsInfo->au8SSID, p_wfWpsInfo->u8AuthType, p_wfWpsInfo->au8PSK);
 		if (p_wfWpsInfo->u8AuthType == 0) {
-			dprintf("WPS is not enabled OR Timedout\r\n");
+			DEBUG_WARN("WPS is not enabled OR Timedout\r\n");
 			/*
 					WPS monitor timeout.
 				 */
 			m2m_wifi_wps_disable();
 			wpsActive = false;
 		} else {
-			dprintf("Request Wi-Fi connect\r\n");
+			DEBUG_WARN("Request Wi-Fi connect\r\n");
 			m2m_wifi_connect_sc((char *)p_wfWpsInfo->au8SSID, strlen((char *)p_wfWpsInfo->au8SSID),
 				p_wfWpsInfo->u8AuthType, p_wfWpsInfo->au8PSK, p_wfWpsInfo->u8Ch);
 		}
@@ -580,7 +580,7 @@ static void AppWifiCallback(uint8_t msg_type, void *pvMsg)
 	}
 	case M2M_WIFI_DEFAULT_CONNNECT_EVENT: {
 		//tstrM2MDefaultConnResp *pDefaultConnResp = (tstrM2MDefaultConnResp *) pvMsg;
-		dprintf("APP_WIFI_CB[%d]: Un-implemented state\r\n", msg_type);
+		DEBUG_WARN("APP_WIFI_CB[%d]: Un-implemented state\r\n", msg_type);
 		break;
 	}
 		/* Unused states. Can be implemented if needed  */
@@ -592,12 +592,12 @@ static void AppWifiCallback(uint8_t msg_type, void *pvMsg)
 	case M2M_WIFI_IP_CONFLICT_EVENT:
 	case M2M_WIFI_INVALID_WIFI_EVENT:
 	case M2M_WIFI_RSSI_EVENT: {
-		dprintf("APP_WIFI_CB[%d]: Un-implemented state\r\n", msg_type);
+		DEBUG_WARN("APP_WIFI_CB[%d]: Un-implemented state\r\n", msg_type);
 		break;
 	}
 
 	default: {
-		dprintf("APP_WIFI_CB[%d]: Unknown WiFi state\r\n", msg_type);
+		DEBUG_WARN("APP_WIFI_CB[%d]: Unknown WiFi state\r\n", msg_type);
 		break;
 	}
 	}
@@ -659,7 +659,7 @@ void handleSocketAcceptEvent(t_socketAccept *lpAcceptData, SOCKET *lpClientSocke
 			 * close the new client socket, refusing connection
 			 *
 			 */
-			dprintf("APP_SOCK_CB[%d]: Second connection rejected\r\n", msgType);
+			DEBUG_WARN("APP_SOCK_CB[%d]: Second connection rejected\r\n", msgType);
 			close(lpAcceptData->sock);
 		} else {
 			*lpClientSocket = lpAcceptData->sock;
@@ -698,7 +698,7 @@ void processRecvError(SOCKET socket, t_socketRecv *lpRecvData, uint8_t msgType)
 			swoTraceClientSocket = SOCK_ERR_INVALID; // Mark socket invalid
 			g_swoTraceClientConnected = false;       // No longer connected
 		}
-		dprintf("APP_SOCK_CB[%d]: Connection closed by peer\r\n", msgType);
+		DEBUG_WARN("APP_SOCK_CB[%d]: Connection closed by peer\r\n", msgType);
 		break;
 	}
 	case SOCK_ERR_INVALID_ADDRESS:
@@ -712,7 +712,7 @@ void processRecvError(SOCKET socket, t_socketRecv *lpRecvData, uint8_t msgType)
 	case SOCK_ERR_TIMEOUT:
 	case SOCK_ERR_BUFFER_FULL:
 	default: {
-		dprintf("APP_SOCK_CB[%d]: Unknown/unhandled error code %d bytes\r\n", msgType, lpRecvData->bufSize);
+		DEBUG_WARN("APP_SOCK_CB[%d]: Unknown/unhandled error code %d bytes\r\n", msgType, lpRecvData->bufSize);
 		break;
 	}
 	}
@@ -755,7 +755,7 @@ static void AppSocketCallback(SOCKET sock, uint8_t msgType, void *pvMsg)
 			//
 			// Unknown server ... TODO
 			//
-			dprintf("APP_SOCK_CB[%d]: Bind for unknown server\r\n", msgType);
+			DEBUG_WARN("APP_SOCK_CB[%d]: Bind for unknown server\r\n", msgType);
 		}
 		break;
 	}
@@ -773,7 +773,7 @@ static void AppSocketCallback(SOCKET sock, uint8_t msgType, void *pvMsg)
 			//
 			// Unknown server ... TODO
 			//
-			dprintf("APP_SOCK_CB[%d]: Listen event for unknown server\r\n", msgType);
+			DEBUG_WARN("APP_SOCK_CB[%d]: Listen event for unknown server\r\n", msgType);
 		}
 		break;
 	}
@@ -800,7 +800,7 @@ static void AppSocketCallback(SOCKET sock, uint8_t msgType, void *pvMsg)
 			//
 			// Unknown server ... TODO
 			//
-			dprintf("APP_SOCK_CB[%d]: Connection from unknown server\r\n", msgType);
+			DEBUG_WARN("APP_SOCK_CB[%d]: Connection from unknown server\r\n", msgType);
 			close(pAcceptData->sock);
 		}
 		break;
@@ -828,7 +828,7 @@ static void AppSocketCallback(SOCKET sock, uint8_t msgType, void *pvMsg)
 					inputBuffer[uiInputIndex] = localBuffer[i];
 				}
 				uiBufferCount += pRecvData->bufSize;
-				dprintf("Received -> %d, queued -> %ld\r\n", pRecvData->bufSize, uiBufferCount);
+				DEBUG_WARN("Received -> %d, queued -> %ld\r\n", pRecvData->bufSize, uiBufferCount);
 				//
 				// Start another receive operation so we always get data
 				//
@@ -876,13 +876,13 @@ static void AppSocketCallback(SOCKET sock, uint8_t msgType, void *pvMsg)
 			//
 			// Unknown server ... TODO
 			//
-			dprintf("APP_SOCK_CB[%d]: Data from unknown server\r\n", msgType);
+			DEBUG_WARN("APP_SOCK_CB[%d]: Data from unknown server\r\n", msgType);
 		}
 		break;
 	}
 	case M2M_SOCKET_SEND_EVENT: {
 		int bytesSent = m2m_wifi_get_socket_event_data()->numSendBytes;
-		dprintf("Send event -> %d\r\n", bytesSent);
+		DEBUG_WARN("Send event -> %d\r\n", bytesSent);
 		//
 		// Disable interrupts to protect the send queue processing
 		//
@@ -908,7 +908,7 @@ static void AppSocketCallback(SOCKET sock, uint8_t msgType, void *pvMsg)
 			//
 			// Unknown server ... TODO
 			//
-			dprintf("APP_SOCK_CB[%d]: Send event from unknown server\r\n", msgType);
+			DEBUG_WARN("APP_SOCK_CB[%d]: Send event from unknown server\r\n", msgType);
 		}
 		//
 		// Re-enable interrupts
@@ -919,12 +919,12 @@ static void AppSocketCallback(SOCKET sock, uint8_t msgType, void *pvMsg)
 	case M2M_SOCKET_SENDTO_EVENT:
 	case M2M_SOCKET_RECVFROM_EVENT:
 	case M2M_SOCKET_PING_RESPONSE_EVENT: {
-		dprintf("APP_SOCK_CB[%d]: Un-implemented state\r\n", msgType);
+		DEBUG_WARN("APP_SOCK_CB[%d]: Un-implemented state\r\n", msgType);
 		break;
 	}
 
 	default: {
-		dprintf("APP_SOCK_CB[%d]: Unknown socket state\r\n", msgType);
+		DEBUG_WARN("APP_SOCK_CB[%d]: Unknown socket state\r\n", msgType);
 		break;
 	}
 	}
@@ -1052,7 +1052,7 @@ void APP_Task(void)
 	switch (appState) {
 	case APP_STATE_WAIT_FOR_DRIVER_INIT: {
 		if (isDriverInitComplete()) {
-			dprintf("APP_TASK[%d]: WINC1500 driver initialized!\r\n", appState);
+			DEBUG_WARN("APP_TASK[%d]: WINC1500 driver initialized!\r\n", appState);
 			//
 			// Set default device name
 			//
@@ -1076,18 +1076,18 @@ void APP_Task(void)
 
 		m2m_wifi_get_otp_mac_address(mac_addr, &result);
 		if (!result) {
-			dprintf("APP_TASK[%d]: USER MAC Address : ", appState);
+			DEBUG_WARN("APP_TASK[%d]: USER MAC Address : ", appState);
 			/* Cannot found MAC Address from OTP. Set user define MAC address. */
 			m2m_wifi_set_mac_address((uint8_t *)user_define_mac_address);
 		} else {
-			dprintf("APP_TASK[%d]: OTP MAC Address : ", appState);
+			DEBUG_WARN("APP_TASK[%d]: OTP MAC Address : ", appState);
 		}
 
 		/* Get MAC Address. */
 		m2m_wifi_get_mac_address(mac_addr);
-		dprintf("%02X:%02X:%02X:%02X:%02X:%02X\r\n", mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4],
+		DEBUG_WARN("%02X:%02X:%02X:%02X:%02X:%02X\r\n", mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4],
 			mac_addr[5]);
-		dprintf("APP_TASK[%d]: Done.\r\n", appState);
+		DEBUG_WARN("APP_TASK[%d]: Done.\r\n", appState);
 		m2m_wifi_default_connect();
 		appState = APP_STATE_WAIT_FOR_WIFI_CONNECT;
 		break;
@@ -1270,13 +1270,14 @@ void APP_Task(void)
 #pragma GCC diagnostic pop
 
 	default: {
-		dprintf("APP_TASK[%d]: Unknown state.\r\n", appState);
+		DEBUG_WARN("APP_TASK[%d]: Unknown state.\r\n", appState);
 	}
 	}
 	//
 	// Check for swo trace data
 	//
-	traceSendData();
+	// TODO Restore this when TRACESWO is implemented
+	// traceSendData();
 	//
 	// Run the mode led task?
 	//
@@ -1485,10 +1486,10 @@ void WiFi_gdb_putchar(unsigned char theChar, int flush)
 	if (flush != 0) {
 		int len = sendCount;
 		if (sendCount <= 0) {
-			dprintf("WiFi_putchar bad count\r\n");
+			DEBUG_WARN("WiFi_putchar bad count\r\n");
 		}
 		sendCount = 0;
-		dprintf("Wifi_putchar %c\r\n", sendBuffer[0]);
+		DEBUG_WARN("Wifi_putchar %c\r\n", sendBuffer[0]);
 		send(gdbClientSocket, &sendBuffer[0], len, 0);
 		memset(&sendBuffer[0], 0x00, sizeof(sendBuffer));
 	}
