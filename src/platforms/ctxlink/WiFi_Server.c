@@ -49,6 +49,13 @@ void trace_send_data(void);
 #define UART_DEBUG_SERVER_PORT 2160
 #define SWO_TRACE_SERVER_PORT  2161
 
+//
+// TIMER2 is used to provide a 1mS tick
+//
+#define TIMER2_COMPARE_VALUE 50
+
+#define TIMEOUT_TICK_COUNT 1000
+
 #define INPUT_BUFFER_SIZE 2048
 static uint8_t input_buffer[INPUT_BUFFER_SIZE] = {0}; ///< The input buffer[ input buffer size]
 static volatile uint32_t input_index = 0;             ///< Zero-based index of the input
@@ -56,6 +63,37 @@ static volatile uint32_t output_index = 0;            ///< Zero-based index of t
 static volatile uint32_t buffer_count = 0;            ///< Number of buffers
 
 static uint8_t local_buffer[INPUT_BUFFER_SIZE] = {0}; ///< The local buffer[ input buffer size]
+
+static uint8_t send_buffer[1024] = {0}; ///< The send buffer[ 1024]
+static uint32_t send_count = 0;         ///< Number of sends
+
+static uint32_t timeout_seconds = 0;      // Used to perform a countdown in seconds for app tasks
+static uint32_t timeout_tick_counter = 0; // counts Timer1 ticks (1mS) for an active timeout
+static bool timeout = false;              // Asserted at end of timeout
+
+typedef enum server_state {
+	sm_home = 0,  ///< State of the TCP server
+	sm_listening, ///< An enum constant representing the sm listening option
+	sm_closing,   ///< An enum constant representing the sm closing option
+	sm_idle,      ///< An enum constant representing the sm idle option
+} server_state_e;
+
+static server_state_e gdb_tcp_server_state = sm_idle;
+static server_state_e uart_debug_tcp_server_state = sm_idle;
+static server_state_e swo_trace_tcp_serverstate = sm_idle;
+
+struct sockaddr_in gdb_addr = {0};
+
+struct sockaddr_in uart_debug_addr = {0};
+struct sockaddr_in swo_trace_addr = {0};
+
+static volatile SOCKET socket_parameter = 0;
+
+//
+// Flag used to run the MODE LED state machine
+//
+static bool run_mode_led_task = false; ///< True to run mode LED task
+static uint32_t press_timer = 0;       ///< The press timer
 
 static bool driver_init_complete = false;     ///< True to driver initialize complete
 static bool g_wifi_connected = false;         ///< True if WiFi connected
@@ -92,8 +130,9 @@ static uint8_t local_swo_trace_buffer[SWO_TRACE_INPUT_BUFFER_SIZE] = {0}; ///< T
 //
 // Sign-on message for new UART data clients
 //
-static char uart_client_signon[] = "\r\nctxLink UART connection.\r\nPlease enter the UART setup as baud, bits, parity, "
-								   "stop.\r\ne.g. 38400,8,N,1\r\n\r\n";
+static const char uart_client_signon[] = "\r\nctxLink UART connection.\r\nPlease enter the UART setup as baud, bits, "
+										 "parity, "
+										 "stop.\r\ne.g. 38400,8,N,1\r\n\r\n";
 
 typedef enum wi_fi_app_states {
 	app_state_wait_for_driver_init,          ///< 0
@@ -166,18 +205,6 @@ void exti9_5_isr(void)
 	}
 }
 
-//
-// TIMER2 is used to provide a 1mS tick
-//
-#define TIMER2_COMPARE_VALUE 50
-
-//
-// Flag used to run the MODE LED state machine
-//
-static bool run_mode_led_task = false; ///< True to run mode LED task
-
-static uint32_t press_timer = 0; ///< The press timer
-
 void start_press_timer(void)
 {
 	timer_disable_irq(TIM2, TIM_DIER_CC1IE);
@@ -192,11 +219,6 @@ uint32_t get_press_timer(void)
 	timer_enable_irq(TIM2, TIM_DIER_CC1IE);
 	return tmp;
 }
-
-static uint32_t timeout_seconds = 0;      // Used to perform a countdown in seconds for app tasks
-static uint32_t timeout_tick_counter = 0; // counts Timer1 ticks (1mS) for an active timeout
-static bool timeout = false;              // Asserted at end of timeout
-#define TIMEOUT_TICK_COUNT 1000
 
 void tim2_start_seconds_timeout(uint32_t timeout)
 {
@@ -300,15 +322,6 @@ void timer_init(void)
 	timer_enable_irq(TIM2, TIM_DIER_CC1IE);
 }
 
-static enum {
-	sm_home = 0,  ///< State of the TCP server
-	sm_listening, ///< An enum constant representing the sm listening option
-	sm_closing,   ///< An enum constant representing the sm closing option
-	sm_idle,      ///< An enum constant representing the sm idle option
-} gdb_tcp_server_state = sm_idle, uart_debug_tcp_server_state = sm_idle, swo_trace_tcp_serverstate = sm_idle;
-
-struct sockaddr_in gdb_addr = {0};
-
 void do_wifi_disconnect(void)
 {
 	//
@@ -394,9 +407,6 @@ void gdb_tcp_server(void)
 	}
 }
 
-struct sockaddr_in uart_debug_addr = {0};
-struct sockaddr_in swo_trace_addr = {0};
-
 void data_tcp_server(void)
 {
 	//
@@ -411,9 +421,8 @@ void data_tcp_server(void)
 		// Allocate a socket for this server to listen and accept connections on
 		//
 		uart_debug_server_socket = socket(AF_INET, SOCK_STREAM, 0);
-		if (uart_debug_server_socket < SOCK_ERR_NO_ERROR) {
+		if (uart_debug_server_socket < SOCK_ERR_NO_ERROR)
 			return;
-		}
 		//
 		// Bind the socket
 		//
@@ -421,9 +430,8 @@ void data_tcp_server(void)
 		uart_debug_addr.sin_family = AF_INET;
 		uart_debug_addr.sin_port = _htons(UART_DEBUG_SERVER_PORT);
 		int8_t result = bind(uart_debug_server_socket, (struct sockaddr *)&uart_debug_addr, sizeof(uart_debug_addr));
-		if (result != SOCK_ERR_NO_ERROR) {
+		if (result != SOCK_ERR_NO_ERROR)
 			return;
-		}
 		uart_debug_tcp_server_state = sm_listening;
 		break;
 	}
@@ -440,7 +448,8 @@ void data_tcp_server(void)
 		close(uart_debug_server_socket);
 		uart_debug_server_socket = SOCK_ERR_INVALID;
 		uart_debug_tcp_server_state = sm_idle;
-	} break;
+		break;
+	}
 	}
 	//
 	// SWO Trace Data server
@@ -454,9 +463,8 @@ void data_tcp_server(void)
 		// Allocate a socket for this server to listen and accept connections on
 		//
 		swo_trace_server_socket = socket(AF_INET, SOCK_STREAM, 0);
-		if (swo_trace_server_socket < SOCK_ERR_NO_ERROR) {
+		if (swo_trace_server_socket < SOCK_ERR_NO_ERROR)
 			return;
-		}
 		//
 		// Bind the socket
 		//
@@ -464,9 +472,8 @@ void data_tcp_server(void)
 		swo_trace_addr.sin_family = AF_INET;
 		swo_trace_addr.sin_port = _htons(SWO_TRACE_SERVER_PORT);
 		int8_t result = bind(swo_trace_server_socket, (struct sockaddr *)&swo_trace_addr, sizeof(swo_trace_addr));
-		if (result != SOCK_ERR_NO_ERROR) {
+		if (result != SOCK_ERR_NO_ERROR)
 			return;
-		}
 		swo_trace_tcp_serverstate = sm_listening;
 		break;
 	}
@@ -534,27 +541,26 @@ static void app_wifi_callback(uint8_t msg_type, void *msg)
 			//
 			// Otherwise it is a valid ctxLink-> AP connection
 			//
-			if (http_active && waiting_access_point) {
+			if (http_active && waiting_access_point)
 				waiting_access_point = false; // Next event is the ctxLink to AP event
-			} else {
+			else {
 				DEBUG_WARN("APP_WIFI_CB[%d]: Connected to AP\r\n", msg_type);
 				g_wifi_connected = true;
 			}
 		} else if (wifi_state->u8CurrState == M2M_WIFI_DISCONNECTED) {
 			DEBUG_WARN("APP_WIFI_CB[%d]: Disconnected from AP\r\n", msg_type);
 			g_wifi_connected = false;
-		} else {
+		} else
 			DEBUG_WARN("APP_WIFI_CB[%d]: Unknown WiFi state change\r\n", msg_type);
-		}
 		break;
 	}
 
 	case M2M_WIFI_IP_ADDRESS_ASSIGNED_EVENT: {
 		t_wifiEventData *wifi_event_data = (t_wifiEventData *)msg;
-		if (wifi_event_data != NULL) {
+		if (wifi_event_data != NULL)
 			ip_address_assigned = true;
-		}
-		ip_address_assigned = true;
+		else
+			ip_address_assigned = false;
 		break;
 	}
 
@@ -580,12 +586,11 @@ static void app_wifi_callback(uint8_t msg_type, void *msg)
 	}
 	case M2M_WIFI_PROVISION_INFO_EVENT: {
 		tstrM2MProvisionInfo *provision_info = (tstrM2MProvisionInfo *)msg;
-		if (provision_info->u8Status == M2M_SUCCESS) {
+		if (provision_info->u8Status == M2M_SUCCESS)
 			m2m_wifi_connect_sc((char *)provision_info->au8SSID, strlen((char const *)provision_info->au8SSID),
 				provision_info->u8SecType, provision_info->au8Password, M2M_WIFI_CH_ALL);
-		} else {
+		else
 			m2m_wifi_stop_provision_mode();
-		}
 		break;
 	}
 	case M2M_WIFI_DEFAULT_CONNNECT_EVENT: {
@@ -634,62 +639,62 @@ bool is_ip_address_assigned(void)
 	return res;
 }
 
-void handle_socket_bind_event(SOCKET *lpSocket, bool *lpRunningState)
+void handle_socket_bind_event(SOCKET *sock, bool *running_state)
 {
-	if (m2m_wifi_get_socket_event_data()->bindStatus == 0) {
-		listen(*lpSocket, 0);
-	} else {
-		close(*lpSocket);
-		*lpSocket = SOCK_ERR_INVALID;
-		*lpRunningState = false;
+	if (m2m_wifi_get_socket_event_data()->bindStatus == 0)
+		listen(*sock, 0);
+	else {
+		close(*sock);
+		*sock = SOCK_ERR_INVALID;
+		*running_state = false;
 	}
 }
 
-void handle_socket_listen_event(SOCKET *lpSocket, bool *lpRunningState)
+void handle_socket_listen_event(SOCKET *sock, bool *running_state)
 {
 	if (m2m_wifi_get_socket_event_data()->listenStatus == 0) {
-		accept(*lpSocket, NULL, NULL);
-		*lpRunningState = true;
+		accept(*sock, NULL, NULL);
+		*running_state = true;
 	} else {
-		close(*lpSocket);
-		*lpSocket = SOCK_ERR_INVALID;
-		*lpRunningState = false;
+		close(*sock);
+		*sock = SOCK_ERR_INVALID;
+		*running_state = false;
 	}
 }
 
-void handle_socket_accept_event(t_socketAccept *lpAcceptData, SOCKET *lpClientSocket, bool *lpClientConnectedState,
-	bool *lpNewClientConnected, uint8_t msgType)
+void handle_socket_accept_event(t_socketAccept *accept_data, SOCKET *client_socket, bool *client_connected_state,
+	bool *new_client_connected, uint8_t msg_type)
 {
-	(void)msgType;
-	if (lpAcceptData->sock >= 0) {
+	(void)msg_type;
+	if (accept_data->sock >= 0) {
 		//
 		// Only allow a single client connection
 		//
-		if (*lpClientSocket >= 0) {
+		if (*client_socket >= 0) {
 			/*
 			 * close the new client socket, refusing connection
 			 *
 			 */
 			DEBUG_WARN("APP_SOCK_CB[%d]: Second connection rejected\r\n", msgType);
-			close(lpAcceptData->sock);
+			close(accept_data->sock);
 		} else {
-			*lpClientSocket = lpAcceptData->sock;
-			*lpClientConnectedState = true;
-			*lpNewClientConnected = true;
+			*client_socket = accept_data->sock;
+			*client_connected_state = true;
+			*new_client_connected = true;
 		}
 	} else {
-		*lpClientSocket = SOCK_ERR_INVALID;
-		*lpClientConnectedState = false;
+		*client_socket = SOCK_ERR_INVALID;
+		*client_connected_state = false;
 	}
 }
 
-void process_recv_error(SOCKET socket, t_socketRecv *lpRecvData, uint8_t msgType)
+void process_recv_error(SOCKET socket, t_socketRecv *recv_data, uint8_t msg_type)
 {
-	(void)msgType;
+	(void)msg_type;
 	//
 	// Process socket recv errors
 	//
-	switch (lpRecvData->bufSize) // error is in the buffer size element
+	switch (recv_data->bufSize) // error is in the buffer size element
 	{
 	case SOCK_ERR_CONN_ABORTED: // Peer closed connection
 	{
@@ -730,14 +735,12 @@ void process_recv_error(SOCKET socket, t_socketRecv *lpRecvData, uint8_t msgType
 	}
 }
 
-static volatile SOCKET socket_parameter = 0;
-
 /* NOLINTNEXTLINE(readability-function-cognitive-complexity) */
-static void app_socket_callback(SOCKET sock, uint8_t msgType, void *pvMsg)
+static void app_socket_callback(SOCKET sock, uint8_t msg_type, void *msg)
 {
-	(void)pvMsg;
+	(void)msg;
 	socket_parameter = sock;
-	switch (msgType) {
+	switch (msg_type) {
 	case M2M_SOCKET_DNS_RESOLVE_EVENT: {
 		dns_resolved = true;
 		break;
@@ -758,69 +761,70 @@ static void app_socket_callback(SOCKET sock, uint8_t msgType, void *pvMsg)
 		//
 		// Route the evenbt according to which server sent it
 		//
-		if (sock == gdb_server_socket) {
+		if (sock == gdb_server_socket)
 			handle_socket_bind_event(&gdb_server_socket, &gdb_client_connected);
-		} else if (sock == uart_debug_server_socket) {
+		else if (sock == uart_debug_server_socket)
 			handle_socket_bind_event(&uart_debug_server_socket, &uart_debug_server_is_running);
-		} else if (sock == swo_trace_server_socket) {
+		else if (sock == swo_trace_server_socket)
 			handle_socket_bind_event(&swo_trace_server_socket, &swo_trace_server_is_running);
-		} else {
+		else
 			//
 			// Unknown server ... TODO
 			//
 			DEBUG_WARN("APP_SOCK_CB[%d]: Bind for unknown server\r\n", msgType);
-		}
 		break;
 	}
 	case M2M_SOCKET_LISTEN_EVENT: {
 		//
 		// Route the event according to which server sent it
 		//
-		if (sock == gdb_server_socket) {
+		if (sock == gdb_server_socket)
 			handle_socket_listen_event(&gdb_server_socket, &gdb_server_is_running);
-		} else if (sock == uart_debug_server_socket) {
+		else if (sock == uart_debug_server_socket)
 			handle_socket_listen_event(&uart_debug_server_socket, &uart_debug_server_is_running);
-		} else if (sock == swo_trace_server_socket) {
+		else if (sock == swo_trace_server_socket)
 			handle_socket_listen_event(&swo_trace_server_socket, &swo_trace_server_is_running);
-		} else {
+		else
 			//
 			// Unknown server ... TODO
 			//
 			DEBUG_WARN("APP_SOCK_CB[%d]: Listen event for unknown server\r\n", msgType);
-		}
 		break;
 	}
 	case M2M_SOCKET_ACCEPT_EVENT: {
-		t_socketAccept *pAcceptData = (t_socketAccept *)pvMsg; // recover the message data
+		t_socketAccept *accept_data = (t_socketAccept *)msg; // recover the message data
 		//
 		// Process for the specific server
 		//
 		/* NOLINTNEXTLINE(bugprone-branch-clone) */
-		if (sock == gdb_server_socket) {
+		if (sock == gdb_server_socket)
 			handle_socket_accept_event(
-				pAcceptData, &gdb_client_socket, &gdb_client_connected, &new_gdb_client_connected, msgType);
-		} else if (sock == uart_debug_server_socket) {
+				accept_data, &gdb_client_socket, &gdb_client_connected, &new_gdb_client_connected, msg_type);
+		else if (sock == uart_debug_server_socket) {
 			//
 			// Disable any active UART setup by killing the baud rate
 			//
 			usart_set_baudrate(USBUSART, 0);
-			handle_socket_accept_event(pAcceptData, &uart_debug_client_socket, &uart_debug_client_connected,
-				&new_uart_debug_client_conncted, msgType);
-			send(uart_debug_client_socket, &uart_client_signon[0], strlen(&uart_client_signon[0]), 0);
-		} else if (sock == swo_trace_server_socket) {
-			handle_socket_accept_event(pAcceptData, &swo_trace_client_socket, &swo_trace_client_connected,
-				&new_swo_trace_client_conncted, msgType);
-		} else {
+			handle_socket_accept_event(accept_data, &uart_debug_client_socket, &uart_debug_client_connected,
+				&new_uart_debug_client_conncted, msg_type);
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-qual"
+			send(uart_debug_client_socket, (void *)&uart_client_signon[0], strlen(&uart_client_signon[0]), 0);
+#pragma GCC diagnostic pop
+		} else if (sock == swo_trace_server_socket)
+			handle_socket_accept_event(accept_data, &swo_trace_client_socket, &swo_trace_client_connected,
+				&new_swo_trace_client_conncted, msg_type);
+		else {
 			//
 			// Unknown server ... TODO
 			//
-			DEBUG_WARN("APP_SOCK_CB[%d]: Connection from unknown server\r\n", msgType);
-			close(pAcceptData->sock);
+			DEBUG_WARN("APP_SOCK_CB[%d]: Connection from unknown server\r\n", msg_type);
+			close(accept_data->sock);
 		}
 		break;
 	}
 	case M2M_SOCKET_RECV_EVENT: {
-		t_socketRecv *pRecvData = (t_socketRecv *)pvMsg;
+		t_socketRecv *recv_data = (t_socketRecv *)msg;
 		//
 		// Process the data for the specific server's client
 		//
@@ -829,11 +833,11 @@ static void app_socket_callback(SOCKET sock, uint8_t msgType, void *pvMsg)
 			// if we have good data copy it to the input_buffer
 			// circular buffer
 			//
-			if (pRecvData->bufSize > 0) {
+			if (recv_data->bufSize > 0) {
 				//
 				// Got good data, copy to circular buffer
 				//
-				int16_t local_count = pRecvData->bufSize;
+				int16_t local_count = recv_data->bufSize;
 				//
 				// Copy data to circular input buffer
 				//
@@ -841,33 +845,31 @@ static void app_socket_callback(SOCKET sock, uint8_t msgType, void *pvMsg)
 					 i++, local_count--, input_index = (input_index + 1) % INPUT_BUFFER_SIZE) {
 					input_buffer[input_index] = local_buffer[i];
 				}
-				buffer_count += pRecvData->bufSize;
+				buffer_count += recv_data->bufSize;
 				DEBUG_WARN("Received -> %d, queued -> %ld\r\n", pRecvData->bufSize, buffer_count);
 				//
 				// Start another receive operation so we always get data
 				//
 				recv(gdb_client_socket, &local_buffer[0], INPUT_BUFFER_SIZE, 0);
-			} else {
-				process_recv_error(sock, pRecvData, msgType);
-			}
+			} else
+				process_recv_error(sock, recv_data, msg_type);
 		} else if (sock == uart_debug_client_socket) {
-			if (pRecvData->bufSize > 0) {
+			if (recv_data->bufSize > 0) {
 				if (!user_configured_uart) {
-					if (!platform_configure_uart((char *)&local_uart_debug_buffer[0])) {
+					if (!platform_configure_uart((char *)&local_uart_debug_buffer[0]))
 						//
 						// Setup failed, tell user
 						//
 						send(uart_debug_client_socket, "Syntax error in setup string\r\n",
 							strlen("Syntax error in setup string\r\n"), 0);
-					} else {
+					else
 						user_configured_uart = true;
-					}
 				} else {
 					//
 					// Forward data to target MCU
 					//
 					gpio_set(LED_PORT_UART, LED_UART);
-					for (int i = 0; i < pRecvData->bufSize; i++)
+					for (int i = 0; i < recv_data->bufSize; i++)
 						usart_send_blocking(USBUSART, local_uart_debug_buffer[i]);
 					gpio_clear(LED_PORT_UART, LED_UART);
 				}
@@ -878,20 +880,18 @@ static void app_socket_callback(SOCKET sock, uint8_t msgType, void *pvMsg)
 				recv(uart_debug_client_socket, &local_uart_debug_buffer[0], UART_DEBUG_INPUT_BUFFER_SIZE, 0);
 			}
 		} else if (sock == swo_trace_client_socket) {
-			if (pRecvData->bufSize > 0) {
+			if (recv_data->bufSize > 0)
 				//
 				// Setup to receive future data
 				//
 				recv(swo_trace_client_socket, &local_swo_trace_buffer[0], SWO_TRACE_INPUT_BUFFER_SIZE, 0);
-			} else {
-				process_recv_error(sock, pRecvData, msgType);
-			}
-		} else {
+			else
+				process_recv_error(sock, recv_data, msg_type);
+		} else
 			//
 			// Unknown server ... TODO
 			//
-			DEBUG_WARN("APP_SOCK_CB[%d]: Data from unknown server\r\n", msgType);
-		}
+			DEBUG_WARN("APP_SOCK_CB[%d]: Data from unknown server\r\n", msg_type);
 		break;
 	}
 	case M2M_SOCKET_SEND_EVENT: {
@@ -906,25 +906,21 @@ static void app_socket_callback(SOCKET sock, uint8_t msgType, void *pvMsg)
 		// Process for the specific server
 		//
 		if (sock == gdb_server_socket) {
-			if (gdb_send_queue_length != 0) {
+			if (gdb_send_queue_length != 0)
 				do_gdb_send();
-			}
 		} else if (sock == uart_debug_client_socket) {
-			if (uart_debug_send_queue_length != 0) {
+			if (uart_debug_send_queue_length != 0)
 				do_uart_debug_send();
-			}
 		} else if (sock == swo_trace_client_socket) {
 			swo_trace_send_queue_out = (swo_trace_send_queue_out + 1) % SEND_QUEUE_SIZE;
 			swo_trace_send_queue_length -= 1;
-			if (swo_trace_send_queue_length != 0) {
+			if (swo_trace_send_queue_length != 0)
 				do_awo_trace_send();
-			}
-		} else {
+		} else
 			//
 			// Unknown server ... TODO
 			//
-			DEBUG_WARN("APP_SOCK_CB[%d]: Send event from unknown server\r\n", msgType);
-		}
+			DEBUG_WARN("APP_SOCK_CB[%d]: Send event from unknown server\r\n", msg_type);
 		//
 		// Re-enable interrupts
 		//
@@ -934,12 +930,12 @@ static void app_socket_callback(SOCKET sock, uint8_t msgType, void *pvMsg)
 	case M2M_SOCKET_SENDTO_EVENT:
 	case M2M_SOCKET_RECVFROM_EVENT:
 	case M2M_SOCKET_PING_RESPONSE_EVENT: {
-		DEBUG_WARN("APP_SOCK_CB[%d]: Un-implemented state\r\n", msgType);
+		DEBUG_WARN("APP_SOCK_CB[%d]: Un-implemented state\r\n", msg_type);
 		break;
 	}
 
 	default: {
-		DEBUG_WARN("APP_SOCK_CB[%d]: Unknown socket state\r\n", msgType);
+		DEBUG_WARN("APP_SOCK_CB[%d]: Unknown socket state\r\n", msg_type);
 		break;
 	}
 	}
@@ -1095,9 +1091,8 @@ void app_task(void)
 			DEBUG_WARN("APP_TASK[%d]: USER MAC Address : ", app_state);
 			/* Cannot found MAC Address from OTP. Set user define MAC address. */
 			m2m_wifi_set_mac_address(user_define_mac_address);
-		} else {
+		} else
 			DEBUG_WARN("APP_TASK[%d]: OTP MAC Address : ", app_state);
-		}
 
 		/* Get MAC Address. */
 		m2m_wifi_get_mac_address(mac_addr);
@@ -1246,9 +1241,8 @@ void app_task(void)
 		break;
 	}
 	case app_state_wait_for_server: {
-		if (is_gdb_server_running()) {
+		if (is_gdb_server_running())
 			app_state = app_state_spin;
-		}
 		break;
 	}
 
@@ -1319,17 +1313,16 @@ void app_task(void)
 					/*
 					Cancel mode and revert
 					*/
-					if (app_state == app_state_wait_wps_event) {
+					if (app_state == app_state_wait_wps_event)
 						/*
 							Cancel WPS mode
 						*/
 						m2m_wifi_wps_disable();
-					} else {
+					else
 						/*
 							Cancel HTTP provisioning mode
 						*/
 						m2m_wifi_stop_provision_mode();
-					}
 					mode_task_state = mode_led_idle_state;
 					led_mode = mode_led_idle;
 					m2m_wifi_default_connect(); // We may have had a prevous connection to an AP
@@ -1356,10 +1349,9 @@ void app_task(void)
 						do_wifi_disconnect();
 						m2m_wifi_disconnect();
 						app_state = app_state_wait_wifi_disconnect_for_http;
-					} else {
+					} else
 						// Enter http provisioning mode
 						app_state = app_state_http_provision;
-					}
 					led_mode = mode_led_http_provisioning;
 					mode_task_state = mode_led_idle_state;
 				} else if (timeDown >= BUTTON_PRESS_WPS) {
@@ -1370,10 +1362,9 @@ void app_task(void)
 						do_wifi_disconnect();
 						m2m_wifi_disconnect();
 						app_state = app_state_wait_wifi_disconnect_for_wps;
-					} else {
+					} else
 						// enter WPS mode
 						app_state = app_state_connect_wps;
-					}
 					mode_task_state = mode_led_idle_state;
 					led_mode = mode_led_wps_active;
 				}
@@ -1416,9 +1407,8 @@ uint8_t wifi_get_next_to(uint32_t timeout)
 
 	do {
 		input_count = wifi_have_input();
-		if (input_count != 0) {
+		if (input_count != 0)
 			break;
-		}
 		//
 		// We must run the platform tasks or incomming data will not be transferred
 		// to the input buffers
@@ -1428,9 +1418,8 @@ uint8_t wifi_get_next_to(uint32_t timeout)
 
 	} while (!platform_timeout_is_expired(&t));
 
-	if (input_count != 0) {
+	if (input_count != 0)
 		count = wifi_get_next();
-	}
 	return count;
 }
 
@@ -1472,33 +1461,26 @@ void send_uart_data(uint8_t *buffer, uint8_t length)
 
 void send_swo_trace_data(uint8_t *buffer, uint8_t length)
 {
-	bool sendIt = false;
-
 	m2mStub_EintDisable();
 	memcpy(swo_trace_send_queue[swo_trace_send_queue_in].packet, buffer, length);
 	swo_trace_send_queue[swo_trace_send_queue_in].len = length;
 	swo_trace_send_queue_in = (swo_trace_send_queue_in + 1) % SEND_QUEUE_SIZE;
 	swo_trace_send_queue_length += 1;
-	sendIt = swo_trace_send_queue_length == 1 ? true : false;
+	const bool send_it = swo_trace_send_queue_length == 1;
 
 	m2mStub_EintEnable();
-	if (sendIt) {
+	if (send_it)
 		do_awo_trace_send();
-	}
 }
 
-static uint8_t send_buffer[1024] = {0}; ///< The send buffer[ 1024]
-static uint32_t send_count = 0;     ///< Number of sends
-
-void wifi_gdb_putchar(uint8_t theChar, int flush)
+void wifi_gdb_putchar(uint8_t ch, int flush)
 {
-	send_buffer[send_count++] = theChar;
-	if (flush != 0) {
+	send_buffer[send_count++] = ch;
+	if (flush != 0 || send_count >= sizeof(send_buffer)) {
 		// TODO is this check required now, looks like a debug test left in place?
 		int len = (int)send_count;
-		if (send_count <= 0) {
+		if (len <= 0)
 			DEBUG_WARN("WiFi_putchar bad count\r\n");
-		}
 		send_count = 0;
 		DEBUG_WARN("Wifi_putchar %c\r\n", send_buffer[0]);
 		send(gdb_client_socket, &send_buffer[0], len, 0);
