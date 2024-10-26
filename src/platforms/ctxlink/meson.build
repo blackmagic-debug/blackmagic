@@ -30,6 +30,9 @@
 
 probe_ctxlink_includes = include_directories('.')
 
+subdir('../deps/winc1500')
+subdir('../deps/winc1500/src')
+
 probe_ctxlink_sources = files(
 	'platform.c',
 	'ctxlink_gdb_if.c ',
