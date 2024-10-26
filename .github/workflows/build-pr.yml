@@ -34,6 +34,9 @@ jobs:
           - '12.2.Rel1'
         probe:
           - '96b_carbon'
+          - 'blackpill-f401cc'
+          - 'blackpill-f401ce'
+          - 'blackpill-f411ce'
           - 'bluepill'
           - 'ctxlink'
           - 'f072'
