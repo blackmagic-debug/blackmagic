@@ -291,7 +291,15 @@ uint8_t platform_spi_xfer(const spi_bus_e bus, const uint8_t value)
 	}
 }
 
-void platform_spi_xfer_block(const spi_bus_e bus, uint8_t *const data, const size_t count)
+/**
+ * @brief Run a full-duplex SPI transfer
+ * @param bus Which BMP SPI bus to use (internal/external)
+ * @param tx_buf Transmit data buffer of at least `count` size (nonempty)
+ * @param rx_buf Receive data buffer of same size (can alias, can be NULL)
+ * @param count Byte count for the transfer, and each buffer size.
+ */
+void platform_spi_xfer_block(
+	const spi_bus_e bus, const uint8_t *const tx_buf, uint8_t *const rx_buf, const size_t count)
 {
 	uint32_t spi_base = OB_SPI;
 	switch (bus) {
@@ -308,8 +316,9 @@ void platform_spi_xfer_block(const spi_bus_e bus, uint8_t *const data, const siz
 #if 0
 	/* Put a byte on MOSI, wait entire transfer, grab the byte from MOSI into buffer, repeat. */
 	for (size_t i = 0; i < count; i++) {
-		uint8_t resp = spi_xfer(spi_base, data[i]);
-		data[i] = resp;
+		uint8_t resp = spi_xfer(spi_base, tx_buf[i]);
+		if (rx_buf)
+			rx_buf[i] = resp;
 	}
 #else
 	CM_ATOMIC_CONTEXT();
@@ -318,18 +327,22 @@ void platform_spi_xfer_block(const spi_bus_e bus, uint8_t *const data, const siz
 	 * from which it falls immediately into the shadow register
 	 * (pipelined polling version with inter-byte-gaps removed, no IRQ, no DMA)
 	 */
-	spi_write(spi_base, data[0]);
+	spi_write(spi_base, tx_buf[0]);
 	/*
 	 * Put the next MOSI byte into TXDR,
 	 * wait for previous byte from MOSI to appear in RXDR and copy it into buffer,
 	 * repeat N-2 times
 	 */
 	for (size_t i = 0; i < count - 1; i++) {
-		spi_send(spi_base, data[i + 1]);
-		data[i] = spi_read(spi_base);
+		spi_send(spi_base, tx_buf[i + 1]);
+		uint8_t resp = spi_read(spi_base);
+		if (rx_buf)
+			rx_buf[i] = resp;
 	}
 	/* Once the last MOSI byte comes out, grab the last MISO byte */
-	data[count - 1] = spi_read(spi_base);
+	uint8_t resp = spi_read(spi_base);
+	if (rx_buf)
+		rx_buf[count - 1] = resp;
 #endif
 }
 

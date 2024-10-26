@@ -72,7 +72,7 @@ void bmp_spi_read(const spi_bus_e bus, const uint8_t device, const uint16_t comm
 		/* Do a write to read */
 		data[i] = platform_spi_xfer(bus, 0);
 #else
-	platform_spi_xfer_block(bus, data, length);
+	platform_spi_xfer_block(bus, data, data, length);
 #endif
 	/* Deselect the Flash */
 	platform_spi_chip_select(device);
@@ -90,7 +90,7 @@ void bmp_spi_write(const spi_bus_e bus, const uint8_t device, const uint16_t com
 		/* Do a write to read */
 		platform_spi_xfer(bus, data[i]);
 #else
-	platform_spi_xfer_block(bus, data, length);
+	platform_spi_xfer_block(bus, data, NULL, length);
 #endif
 	/* Deselect the Flash */
 	platform_spi_chip_select(device);
