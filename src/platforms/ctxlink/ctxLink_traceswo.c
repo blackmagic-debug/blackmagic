@@ -45,13 +45,12 @@
 /* For speed this is set to the USB transfer size */
 #define FULL_SWO_PACKET (64)
 /* Default line rate....used as default for a request without baudrate */
-#define DEFAULTSPEED (2250000)
 
 #define BUFFER_SIZE 1024
 
 static volatile uint32_t input_buffer = 0;  // input buffer index
 static volatile uint32_t output_buffer = 0; // output buffer index
-volatile uint32_t buffer_size = 0;          // Number of bytes in the buffer
+_Atomic uint32_t buffer_size = 0;           // Number of bytes in the buffer
 
 static uint8_t trace_rx_buf[BUFFER_SIZE] = {0};
 #define NUM_PINGPONG_BUFFERS 2
@@ -66,41 +65,39 @@ static uint8_t swo_data[BUFFER_SIZE];
 void trace_send_data(void)
 {
 	if (is_swo_trace_client_connected()) {
-		uint32_t dataCount;
-		__atomic_load(&buffer_size, &dataCount, __ATOMIC_RELAXED);
+		uint32_t dataCount = buffer_size;
 		if (dataCount >= FULL_SWO_PACKET) {
 			//
 			// Copy the data
 			//
 			for (uint32_t i = 0; i < dataCount; i++) {
 				swo_data[i] = trace_rx_buf[output_buffer++];
-				if (output_buffer >= BUFFER_SIZE) {
+				if (output_buffer >= BUFFER_SIZE)
 					output_buffer = 0;
-				}
 			}
 			send_swo_trace_data(&swo_data[0], dataCount);
-			__atomic_fetch_sub(&buffer_size, dataCount, __ATOMIC_RELAXED);
+			buffer_count -= datasize;
 		}
 	}
 }
 
+// TODO Will address the functions leading underscore when Wi-Fi SWO is implemented against base platform
+#if 0
 void _trace_buf_drain(usbd_device *dev, uint8_t ep)
 {
 	uint32_t outCount;
 	uint8_t *bufferPointer, *bufferStart;
 
 	__atomic_load(&buffer_size, &outCount, __ATOMIC_RELAXED);
-	if (outCount == 0) {
+	if (outCount == 0)
 		return;
-	}
 	//
 	// If we have an SWO network client there is no more
 	// to do. The network code will pick up the data
 	// and deal with it directly out of the trace_rx_buf
 	//
-	if (is_swo_trace_client_connected()) {
+	if (is_swo_trace_client_connected())
 		return;
-	}
 	//
 	// Set up the pointer to grab the data
 	//
@@ -121,7 +118,7 @@ void _trace_buf_drain(usbd_device *dev, uint8_t ep)
 	usbd_ep_write_packet(dev, ep, bufferStart, outCount);
 	__atomic_fetch_sub(&buffer_size, outCount, __ATOMIC_RELAXED);
 }
-
+#endif
 /* TODO Address this */
 void trace_buf_drain(usbd_device *dev, uint8_t ep)
 {
