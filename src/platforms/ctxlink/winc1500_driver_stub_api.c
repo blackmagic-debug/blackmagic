@@ -177,7 +177,7 @@ void m2mStub_SpiTxRx(uint8_t *p_txBuf, uint16_t txLen, uint8_t *p_rxBuf, uint16_
 //      - Error Events
 //==============================================================================
 
-volatile tpfAppWifiCb app_wifi_cb = NULL;
+tpfAppWifiCb app_wifi_cb = NULL;
 
 /* NOLINTNEXTLINE(readability-identifier-naming) */
 void registerWifiCallback(tpfAppWifiCb pfAppWifiCb)
