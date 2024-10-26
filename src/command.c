@@ -67,6 +67,9 @@ static bool cmd_tdi_low_reset(target_s *target, int argc, const char **argv);
 #ifdef PLATFORM_HAS_POWER_SWITCH
 static bool cmd_target_power(target_s *target, int argc, const char **argv);
 #endif
+#ifdef PLATFORM_HAS_BATTERY
+static bool cmd_target_battery(target_s *t, int argc, const char **argv);
+#endif
 #ifdef PLATFORM_HAS_TRACESWO
 static bool cmd_swo(target_s *target, int argc, const char **argv);
 #endif
@@ -102,6 +105,9 @@ const command_s cmd_list[] = {
 		"Pulse nRST with TDI set low to attempt to wake certain targets up (eg LPC82x)"},
 #ifdef PLATFORM_HAS_POWER_SWITCH
 	{"tpwr", cmd_target_power, "Supplies power to the target: [enable|disable]"},
+#endif
+#ifdef PLATFORM_HAS_BATTERY
+	{"battery", cmd_target_battery, "Reads the battery state"},
 #endif
 #ifdef ENABLE_RTT
 	{"rtt", cmd_rtt,
@@ -523,6 +529,16 @@ static bool cmd_target_power(target_s *target, int argc, const char **argv)
 }
 #endif
 
+#ifdef PLATFORM_HAS_BATTERY
+static bool cmd_target_battery(target_s *t, int argc, const char **argv)
+{
+	(void)t ;
+	(void)argc ;
+	(void) argv ;
+	gdb_out(platform_battery_voltage()) ;
+	return true;
+}
+#endif
 #ifdef ENABLE_RTT
 static const char *on_or_off(const bool value)
 {
