@@ -342,7 +342,7 @@ void doWiFiDisconnect(void)
 	}
 }
 
-void GDB_TCPServer(void)
+void gdb_tcp_server(void)
 {
 	switch (GDB_TCPServerState) {
 	case SM_IDLE:
@@ -388,7 +388,7 @@ void GDB_TCPServer(void)
 struct sockaddr_in uart_debug_addr = {0};
 struct sockaddr_in swo_trace_addr = {0};
 
-void DATA_TCPServer(void)
+void data_tcp_server(void)
 {
 	//
 	// UART Server
@@ -479,7 +479,7 @@ void DATA_TCPServer(void)
 	}
 }
 
-void WiFi_setupSwoTraceServer(void)
+void wifi_setup_swo_trace_server(void)
 {
 	//
 	// Is there a UART client connected?
@@ -650,6 +650,7 @@ void handleSocketListenEvent(SOCKET *lpSocket, bool *lpRunningState)
 void handleSocketAcceptEvent(t_socketAccept *lpAcceptData, SOCKET *lpClientSocket, bool *lpClientConnectedState,
 	bool *lpNewClientConnected, uint8_t msgType)
 {
+	(void)msgType;
 	if (lpAcceptData->sock >= 0) {
 		//
 		// Only allow a single client connection
@@ -674,6 +675,7 @@ void handleSocketAcceptEvent(t_socketAccept *lpAcceptData, SOCKET *lpClientSocke
 
 void processRecvError(SOCKET socket, t_socketRecv *lpRecvData, uint8_t msgType)
 {
+	(void)msgType;
 	//
 	// Process socket recv errors
 	//
@@ -935,7 +937,7 @@ bool isGDBServerRunning(void)
 	return g_gdbServerIsRunning;
 }
 
-bool swoTraceServerActive(void)
+bool swo_trace_server_active(void)
 {
 	return swoTraceServerSocket != SOCK_ERR_INVALID;
 }
@@ -947,24 +949,24 @@ bool isDnsResolved(void)
 	return res;
 }
 
-bool isGDBClientConnected(void)
+bool is_gdb_client_connected(void)
 {
 	bool res = g_gdbClientConnected;
 	// no need to reset flag "g_clientConnected" to false. App will do that.
 	return res;
 }
 
-bool isUARTClientConnected(void)
+bool is_uart_client_connected(void)
 {
 	return g_userConfiguredUart;
 }
 
-bool isSwoTraceClientConnected(void)
+bool is_swo_trace_client_connected(void)
 {
 	return g_swoTraceClientConnected;
 }
 
-void APP_Initialize(void)
+void app_initialize(void)
 {
 	/* register callback functions for Wi-Fi and Socket events */
 	registerWifiCallback(AppWifiCallback);
@@ -1047,7 +1049,7 @@ void APP_Initialize(void)
 	timer_init();
 }
 
-void APP_Task(void)
+void app_task(void)
 {
 	switch (appState) {
 	case APP_STATE_WAIT_FOR_DRIVER_INIT: {
@@ -1377,7 +1379,7 @@ int WiFi_HaveInput(void)
 	return (iResult);
 }
 
-unsigned char WiFi_GetNext(void)
+unsigned char wifi_get_next(void)
 {
 	unsigned char cReturn = 0x00;
 	//
@@ -1393,7 +1395,7 @@ unsigned char WiFi_GetNext(void)
 	return (cReturn);
 }
 
-unsigned char WiFi_GetNext_to(uint32_t timeout)
+unsigned char wifi_get_next_to(uint32_t timeout)
 {
 	platform_timeout_s t;
 	unsigned char c = 0;
@@ -1414,7 +1416,7 @@ unsigned char WiFi_GetNext_to(uint32_t timeout)
 	} while (!platform_timeout_is_expired(&t));
 
 	if (inputCount != 0) {
-		c = WiFi_GetNext();
+		c = wifi_get_next();
 	}
 	return (c);
 }
@@ -1444,7 +1446,7 @@ void DoSwoTraceSend(void)
 		swoTraceSendQueue[uiSwoTraceSendQueueOut].len, 0);
 }
 
-void SendUartData(uint8_t *lpBuffer, uint8_t length)
+void send_uart_data(uint8_t *lpBuffer, uint8_t length)
 {
 	m2mStub_EintDisable();
 	memcpy(uartDebugSendQueue[uiUartDebugSendQueueIn].packet, lpBuffer, length);
@@ -1455,12 +1457,12 @@ void SendUartData(uint8_t *lpBuffer, uint8_t length)
 	DoUartDebugSend();
 }
 
-void SendSwoTraceData(uint8_t *lpBuffer, uint8_t length)
+void send_swo_trace_data(uint8_t *buffer, uint8_t length)
 {
 	bool sendIt = false;
 
 	m2mStub_EintDisable();
-	memcpy(swoTraceSendQueue[uiSwoTraceSendQueueIn].packet, lpBuffer, length);
+	memcpy(swoTraceSendQueue[uiSwoTraceSendQueueIn].packet, buffer, length);
 	swoTraceSendQueue[uiSwoTraceSendQueueIn].len = length;
 	uiSwoTraceSendQueueIn = (uiSwoTraceSendQueueIn + 1) % SEND_QUEUE_SIZE;
 	uiSwoTraceSendQueueLength += 1;
@@ -1480,7 +1482,7 @@ void SendSwoTraceData(uint8_t *lpBuffer, uint8_t length)
 static unsigned char sendBuffer[1024] = {0}; ///< The send buffer[ 1024]
 static unsigned int sendCount = 0;           ///< Number of sends
 
-void WiFi_gdb_putchar(unsigned char theChar, int flush)
+void wifi_gdb_putchar(unsigned char theChar, int flush)
 {
 	sendBuffer[sendCount++] = theChar;
 	if (flush != 0) {

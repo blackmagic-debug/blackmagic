@@ -144,8 +144,8 @@ char gdb_usb_getchar_to(const uint32_t timeout)
 
 void gdb_if_putchar(char c, int flush)
 {
-	if (isGDBClientConnected() == true) {
-		WiFi_gdb_putchar(c, flush);
+	if (is_gdb_client_connected() == true) {
+		wifi_gdb_putchar(c, flush);
 	} else {
 		gdb_usb_putchar(c, flush);
 	}
@@ -154,8 +154,8 @@ void gdb_if_putchar(char c, int flush)
 char gdb_if_getchar(void)
 {
 	platform_tasks();
-	if (isGDBClientConnected() == true) {
-		return WiFi_GetNext();
+	if (is_gdb_client_connected() == true) {
+		return wifi_get_next();
 	} else {
 		if (usb_get_config() == 1) {
 			return gdb_usb_getchar();
@@ -168,8 +168,8 @@ char gdb_if_getchar(void)
 char gdb_if_getchar_to(uint32_t timeout)
 {
 	platform_tasks();
-	if (isGDBClientConnected() == true) {
-		return WiFi_GetNext_to(timeout);
+	if (is_gdb_client_connected() == true) {
+		return wifi_get_next_to(timeout);
 	} else {
 		return gdb_usb_getchar_to(timeout);
 	}

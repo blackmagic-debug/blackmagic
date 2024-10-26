@@ -3,25 +3,25 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-void APP_Initialize(void);
-void APP_Task(void);
+void app_initialize(void);
+void app_task(void);
 //
-void GDB_TCPServer(void);
-bool isGDBClientConnected(void);
+void gdb_tcp_server(void);
+bool is_gdb_client_connected(void);
 
-void DATA_TCPServer(void);
-bool isUARTClientConnected(void);
-void SendUartData(uint8_t *lpBuffer, uint8_t length);
+void data_tcp_server(void);
+bool is_uart_client_connected(void);
+void send_uart_data(uint8_t *lpBuffer, uint8_t length);
 
-bool swoTraceServerActive(void);
-void WiFi_setupSwoTraceServer(void);
-bool isSwoTraceClientConnected(void);
-void SendSwoTraceData(uint8_t *lpBuffer, uint8_t length);
+bool swo_trace_server_active(void);
+void wifi_setup_swo_trace_server(void);
+bool is_swo_trace_client_connected(void);
+void send_swo_trace_data(uint8_t *buffer, uint8_t length);
 
-void WiFi_gdb_putchar(unsigned char c, int flush);
-bool WiFi_GotClient(void);
-unsigned char WiFi_GetNext(void);
-unsigned char WiFi_GetNext_to(uint32_t timeout);
+void wifi_gdb_putchar(unsigned char c, int flush);
+bool wifi_got_client(void);
+unsigned char wifi_get_next(void);
+unsigned char wifi_get_next_to(uint32_t timeout);
 #ifdef __cplusplus
 }
 #endif /*  __cplusplus */
