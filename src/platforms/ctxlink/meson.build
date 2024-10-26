@@ -30,7 +30,9 @@
 
 probe_ctxlink_includes = include_directories('.')
 
-probe_ctxlink_sources = files('platform.c')
+probe_ctxlink_sources = files(
+	'platform.c',
+	'ctxlink_gdb_if.c')
 
 probe_ctxlink_args = [
 	'-DDFU_SERIAL_LENGTH=13',
