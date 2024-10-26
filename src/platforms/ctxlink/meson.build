@@ -28,26 +28,18 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-probe_ctxlink_includes = include_directories('.')
-
-subdir('../deps/winc1500')
-subdir('../deps/winc1500/src')
+probe_ctxlink_includes = include_directories(
+	'.',
+	'../../../deps/winc1500',
+	'../../../deps/winc1500/src'
+)
 
 probe_ctxlink_sources = files(
 	'platform.c',
-	'ctxlink_gdb_if.c ',
+	'ctxlink_gdb_if.c',
 	'WiFi_Server.c',
 	'ctxLink_mode_led.c',
-	'ctxLink_traceswo.c',
-	'winc1500_driver_stub_api.c',
-	'wf_asic.c',
-	'wf_hif.c',
-	'wf_ota.c',
-	'wf_socket.c',
-	'wf_spi.c',
-	'wf_spi_flash.c',
-	'wf_utils.c',
-	'wf_wifi.c'
+	'ctxLink_traceswo.c'
 )
 
 probe_ctxlink_args = [
