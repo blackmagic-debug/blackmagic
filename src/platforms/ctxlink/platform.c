@@ -44,12 +44,6 @@
 #include "WiFi_Server.h"
 #include "winc1500_api.h"
 
-#define CTXLINK_BATTERY_INPUT        0 // ADC Channel for battery input
-#define CTXLINK_TARGET_VOLTAGE_INPUT 8 // ADC Chanmel for target voltage
-
-#define CTXLINK_ADC_BATTERY 0
-#define CTXLINK_ADC_TARGET  1
-
 //
 // With a 3V3 reference voltage and using a 12 bit ADC each bit represents 0.8mV
 //  Note the battery voltage is divided by 2 with resistor divider
@@ -62,6 +56,12 @@
 #define BATTERY_VOLTAGE_1 2000U
 #define BATTERY_VOLTAGE_2 4268U
 #define BATTERY_LOW       3600U
+
+#define CTXLINK_BATTERY_INPUT        0 // ADC Channel for battery input
+#define CTXLINK_TARGET_VOLTAGE_INPUT 8 // ADC Chanmel for target voltage
+
+#define CTXLINK_ADC_BATTERY 0
+#define CTXLINK_ADC_TARGET  1
 
 bool last_battery_state = true;
 bool battery_present = false;
