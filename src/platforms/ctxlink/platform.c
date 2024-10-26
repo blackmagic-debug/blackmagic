@@ -50,6 +50,22 @@
 #define CTXLINK_ADC_BATTERY 0
 #define CTXLINK_ADC_TARGET  1
 
+//
+// With a 3V3 reference voltage and using a 12 bit ADC each bit represents 0.8mV
+//  Note the battery voltage is divided by 2 with resistor divider
+//
+// No battery voltage 1 == 2.0v
+// No battery voltage 2 == 4.268v
+// Battery present (report voltage) < 4.268v
+// Low batter voltage == 3.6v
+//
+#define BATTERY_VOLTAGE_1 2000U
+#define BATTERY_VOLTAGE_2 4268U
+#define BATTERY_LOW       3600U
+
+bool last_battery_state = true;
+bool battery_present = false;
+
 static uint32_t input_voltages[2] = {0};
 static uint8_t adc_channels[] = {CTXLINK_BATTERY_INPUT, CTXLINK_TARGET_VOLTAGE_INPUT}; /// ADC channels used by ctxLink
 
@@ -318,9 +334,9 @@ const char *platform_target_voltage(void)
 	uint32_t val = platform_target_voltage_sense();
 	target[0] = '0' + val / 1000U;
 	target[1] = '.';
-	val = val % 1000;
+	val = val % 1000U;
 	target[2] = '0' + val / 100U;
-	val = val % 100;
+	val = val % 100U;
 	target[3] = '0' + val / 10U;
 	target[4] = 'V';
 	strcat(target, platform_battery_voltage());
@@ -355,22 +371,6 @@ void platform_target_clk_output_enable(bool enable)
 {
 	(void)enable;
 }
-
-//
-// With a 3V3 reference voltage and using a 12 bit ADC each bit represents 0.8mV
-//  Note the battery voltage is divided by 2 with resistor divider
-//
-// No battery voltage 1 == 2.0v
-// No battery voltage 2 == 4.268v
-// Battery present (report voltage) < 4.268v
-// Low batter voltage == 3.6v
-//
-#define BATTERY_VOLTAGE_1 2000U
-#define BATTERY_VOLTAGE_2 4268U
-#define BATTERY_LOW       3600U
-
-bool last_battery_state = true;
-bool battery_present = false;
 
 const char *platform_battery_voltage(void)
 {
