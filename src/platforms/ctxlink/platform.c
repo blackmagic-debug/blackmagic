@@ -130,19 +130,18 @@ void platform_adc_read(void)
 	/* Wait for end of conversion. */
 	while (!adc_eoc(ADC1))
 		continue;
-	input_voltages[CTXLINK_ADC_BATTERY] = adc_read_regular(ADC1);
+	input_voltages[CTXLINK_ADC_BATTERY] = ((adc_read_regular(ADC1) * 16) / 10);
 	adc_set_regular_sequence(ADC1, 1, &adc_channels[CTXLINK_ADC_TARGET]);
 	adc_start_conversion_regular(ADC1);
 	/* Wait for end of conversion. */
 	while (!adc_eoc(ADC1))
 		continue;
-	input_voltages[CTXLINK_ADC_TARGET] = adc_read_regular(ADC1);
+	input_voltages[CTXLINK_ADC_TARGET] = ((adc_read_regular(ADC1) * 16) / 10);
 }
 
-// TODO Fix this to return the target voltage
 uint32_t platform_target_voltage_sense(void)
 {
-	return 0;
+	return input_voltages[CTXLINK_ADC_TARGET];
 }
 
 int platform_hwversion(void)
@@ -318,7 +317,17 @@ bool platform_nrst_get_val(void)
 
 const char *platform_target_voltage(void)
 {
-	return "Unknown";
+	static char target[64] = {0};
+	uint32_t val = platform_target_voltage_sense();
+	target[0] = '0' + val / 1000U;
+	target[1] = '.';
+	val = val % 1000;
+	target[2] = '0' + val / 100U;
+	val = val % 100;
+	target[3] = '0' + val / 10U;
+	target[4] = 'V';
+	strcat(target, platform_battery_voltage());
+	return target;
 }
 
 #pragma GCC diagnostic push
