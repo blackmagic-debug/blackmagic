@@ -8,8 +8,8 @@
 #include "platform.h"
 #include "ctxLink_mode_led.h"
 
-MODE_LED_MODES led_mode = MODE_LED_IDLE; // Initial state of the mode led
-MODE_LED_TASK_STATES modeTaskState = MODE_LED_STATE_IDLE;
+mode_led_modes_e led_mode = mode_led_idle; // Initial state of the mode led
+mode_led_task_states_e mode_task_state = mode_led_idle_state;
 
 u_int32_t led_mode_timeout = 0;       // Used to time the on/off state of the led
 u_int32_t led_mode_reset_timeout = 0; // Used to time the on/off state of the led
@@ -19,33 +19,33 @@ u_int32_t led_mode_pulse_count = 0;   // Counts the number of led pulses each cy
 #define MODE_LED_PULSE_OFF_TIME MODE_LED_ON_TIME
 #define MODE_LED_OFF_TIME       3000
 
-void mode_set_parameters(MODE_LED_MODES led_mode)
+void mode_set_parameters(mode_led_modes_e led_mode)
 {
 	switch (led_mode) {
-	case MODE_LED_IDLE: {
+	case mode_led_idle: {
 		led_mode_reset_timeout = led_mode_timeout = 0; // LED off
-		led_mode_pulse_count = MODE_LED_IDLE;          // No pulsing
+		led_mode_pulse_count = mode_led_idle;          // No pulsing
 		// LED OFF
 		break;
 	}
-	case MODE_LED_BATTERY_LOW: {
+	case mode_led_battery_low: {
 		led_mode_reset_timeout = led_mode_timeout = MODE_LED_ON_TIME;
-		led_mode_pulse_count = MODE_LED_BATTERY_LOW;
+		led_mode_pulse_count = mode_led_battery_low;
 		break;
 	}
-	case MODE_LED_AP_CONNECTED: {
+	case mode_led_ap_connected: {
 		led_mode_reset_timeout = led_mode_timeout = MODE_LED_ON_TIME;
-		led_mode_pulse_count = MODE_LED_AP_CONNECTED;
+		led_mode_pulse_count = mode_led_ap_connected;
 		break;
 	}
-	case MODE_LED_WPS_ACTIVE: {
+	case mode_led_wps_active: {
 		led_mode_reset_timeout = led_mode_timeout = MODE_LED_ON_TIME;
-		led_mode_pulse_count = MODE_LED_WPS_ACTIVE;
+		led_mode_pulse_count = mode_led_wps_active;
 		break;
 	}
-	case MODE_LED_HTTP_PROVISIONING: {
+	case mode_led_http_provisioning: {
 		led_mode_reset_timeout = led_mode_timeout = MODE_LED_ON_TIME;
-		led_mode_pulse_count = MODE_LED_HTTP_PROVISIONING;
+		led_mode_pulse_count = mode_led_http_provisioning;
 		break;
 	}
 	default: {
@@ -71,7 +71,7 @@ bool mode_check_timeout()
 /// <remarks> Sid Price, 3/21/2018.</remarks>
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static MODE_LED_MODES saved_mode = MODE_LED_INVALID;
+static mode_led_modes_e saved_mode = mode_led_invalid;
 
 void mode_led_task(void)
 {
@@ -79,26 +79,26 @@ void mode_led_task(void)
 	// Use this periodic task to check the battery voltage
 	//
 	if (platform_check_battery_voltage() == false) {
-		if (saved_mode == MODE_LED_INVALID) {
+		if (saved_mode == mode_led_invalid) {
 			saved_mode = led_mode;
-			led_mode = MODE_LED_BATTERY_LOW;
+			led_mode = mode_led_battery_low;
 		}
 	} else {
-		if (saved_mode != MODE_LED_INVALID) {
+		if (saved_mode != mode_led_invalid) {
 			led_mode = saved_mode;
-			saved_mode = MODE_LED_INVALID;
+			saved_mode = mode_led_invalid;
 		}
 	}
-	switch (modeTaskState) {
-	case MODE_LED_STATE_IDLE: {
+	switch (mode_task_state) {
+	case mode_led_idle_state: {
 		/*
 			 * Get the mode setting and check if still idle
 			 */
-		if (led_mode != MODE_LED_IDLE) {
+		if (led_mode != mode_led_idle) {
 			/*
 				 * Set up the led control registers according to the requested mode
 				 */
-			modeTaskState = MODE_LED_STATE_ON;
+			mode_task_state = mode_led_state_on;
 #ifndef INSTRUMENT
 			gpio_set(LED_PORT, LED_MODE);
 #endif
@@ -106,8 +106,8 @@ void mode_led_task(void)
 		mode_set_parameters(led_mode);
 		break;
 	}
-	case MODE_LED_STATE_ON: {
-		if (mode_check_timeout() == true) {
+	case mode_led_state_on: {
+		if (mode_check_timeout()) {
 			/*
 				 * check if pulse count is zero and pulsing is done
 				 */
@@ -115,10 +115,10 @@ void mode_led_task(void)
 				/*
 					 * End of pulse cycle, turn LED off for long period
 					 */
-				modeTaskState = MODE_LED_STATE_LED_OFF;
+				mode_task_state = mode_led_state_led_off;
 				led_mode_timeout = MODE_LED_OFF_TIME;
 			} else {
-				modeTaskState = MODE_LED_STATE_PULSE_OFF;
+				mode_task_state = mode_led_state_pulse_off;
 				led_mode_timeout = MODE_LED_PULSE_OFF_TIME;
 			}
 #ifndef INSTRUMENT
@@ -127,9 +127,9 @@ void mode_led_task(void)
 		}
 		break;
 	}
-	case MODE_LED_STATE_PULSE_OFF: {
-		if (mode_check_timeout() == true) {
-			modeTaskState = MODE_LED_STATE_ON;
+	case mode_led_state_pulse_off: {
+		if (mode_check_timeout()) {
+			mode_task_state = mode_led_state_on;
 			led_mode_timeout = MODE_LED_ON_TIME;
 #ifndef INSTRUMENT
 			gpio_set(LED_PORT, LED_MODE);
@@ -137,9 +137,9 @@ void mode_led_task(void)
 		}
 		break;
 	}
-	case MODE_LED_STATE_LED_OFF: {
-		if (mode_check_timeout() == true) {
-			modeTaskState = MODE_LED_STATE_ON;
+	case mode_led_state_led_off: {
+		if (mode_check_timeout()) {
+			mode_task_state = mode_led_state_on;
 			led_mode_timeout = MODE_LED_ON_TIME;
 			mode_set_parameters(led_mode); // Reset registers for next cycle
 #ifndef INSTRUMENT

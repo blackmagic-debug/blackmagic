@@ -1126,11 +1126,11 @@ void app_task(void)
 			//
 			// Change the LED mode to Connected to AP mode
 			//
-			led_mode = MODE_LED_AP_CONNECTED;
+			led_mode = mode_led_ap_connected;
 		} else if (!wps_active) // Did WPS timeout?
 		{
-			modeTaskState = MODE_LED_STATE_IDLE;
-			led_mode = MODE_LED_IDLE;
+			mode_task_state = mode_led_idle_state;
+			led_mode = mode_led_idle;
 			app_state = app_state_spin;
 		} else if (tim2_is_seconds_timeout()) // Did we timeout waiting for WPS?
 		{
@@ -1138,8 +1138,8 @@ void app_task(void)
 				Cancel WPS mode
 				*/
 			m2m_wifi_wps_disable();
-			modeTaskState = MODE_LED_STATE_IDLE;
-			led_mode = MODE_LED_IDLE;
+			mode_task_state = mode_led_idle_state;
+			led_mode = mode_led_idle;
 			m2m_wifi_default_connect(); // We may have had a prevous connection to an AP
 			app_state = app_state_wait_for_wifi_connect;
 		}
@@ -1180,11 +1180,11 @@ void app_task(void)
 			//
 			// Change the LED mode to Connected to AP mode
 			//
-			led_mode = MODE_LED_AP_CONNECTED;
+			led_mode = mode_led_ap_connected;
 		} else if (!http_active) // Did provisioning timeout?
 		{
-			modeTaskState = MODE_LED_STATE_IDLE;
-			led_mode = MODE_LED_IDLE;
+			mode_task_state = mode_led_idle_state;
+			led_mode = mode_led_idle;
 			app_state = app_state_spin;
 		}
 		break;
@@ -1201,7 +1201,7 @@ void app_task(void)
 			//
 			// Change the LED mode to Connected to AP mode
 			//
-			led_mode = MODE_LED_AP_CONNECTED;
+			led_mode = mode_led_ap_connected;
 		}
 		break;
 	}
@@ -1209,8 +1209,8 @@ void app_task(void)
 		if (!is_wifi_connected()) {
 			// enter WPS mode
 			app_state = app_state_connect_wps;
-			modeTaskState = MODE_LED_STATE_IDLE;
-			led_mode = MODE_LED_WPS_ACTIVE;
+			mode_task_state = mode_led_idle_state;
+			led_mode = mode_led_wps_active;
 		}
 		break;
 	}
@@ -1218,8 +1218,8 @@ void app_task(void)
 		if (!is_wifi_connected()) {
 			// enter HTTP provisioning mode
 			app_state = app_state_http_provision;
-			modeTaskState = MODE_LED_STATE_IDLE;
-			led_mode = MODE_LED_HTTP_PROVISIONING;
+			mode_task_state = mode_led_idle_state;
+			led_mode = mode_led_http_provisioning;
 		}
 		break;
 	}
@@ -1295,7 +1295,7 @@ void app_task(void)
 		If the LED mode is in Low Battery mode then there is no reason to
 		check any further button presses or mode changes
 	*/
-	if (led_mode != MODE_LED_BATTERY_LOW) {
+	if (led_mode != mode_led_battery_low) {
 		//
 		// Process the Mode button here.
 		//
@@ -1320,8 +1320,8 @@ void app_task(void)
 						*/
 						m2m_wifi_stop_provision_mode();
 					}
-					modeTaskState = MODE_LED_STATE_IDLE;
-					led_mode = MODE_LED_IDLE;
+					mode_task_state = mode_led_idle_state;
+					led_mode = mode_led_idle;
 					m2m_wifi_default_connect(); // We may have had a prevous connection to an AP
 					app_state = app_state_wait_for_wifi_connect;
 				} else {
@@ -1350,8 +1350,8 @@ void app_task(void)
 						// Enter http provisioning mode
 						app_state = app_state_http_provision;
 					}
-					led_mode = MODE_LED_HTTP_PROVISIONING;
-					modeTaskState = MODE_LED_STATE_IDLE;
+					led_mode = mode_led_http_provisioning;
+					mode_task_state = mode_led_idle_state;
 				} else if (timeDown >= BUTTON_PRESS_WPS) {
 					/*
 					If we have a connection, disconnect and wait for disconnect event
@@ -1364,8 +1364,8 @@ void app_task(void)
 						// enter WPS mode
 						app_state = app_state_connect_wps;
 					}
-					modeTaskState = MODE_LED_STATE_IDLE;
-					led_mode = MODE_LED_WPS_ACTIVE;
+					mode_task_state = mode_led_idle_state;
+					led_mode = mode_led_wps_active;
 				}
 			}
 		}
