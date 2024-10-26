@@ -186,11 +186,11 @@ static uint32_t timeout_tick_counter = 0; // counts Timer1 ticks (1mS) for an ac
 static bool timeout = false;              // Asserted at end of timeout
 #define TIMEOUT_TICK_COUNT 1000
 
-void tim2_start_seconds_timeout(uint32_t uiSeconds)
+void tim2_start_seconds_timeout(uint32_t timeout)
 {
 	timer_disable_irq(TIM2, TIM_DIER_CC1IE);
 	timeout_tick_counter = TIMEOUT_TICK_COUNT;
-	timeout_seconds = uiSeconds;
+	timeout_seconds = timeout;
 	timeout = false;
 	timer_enable_irq(TIM2, TIM_DIER_CC1IE);
 }
