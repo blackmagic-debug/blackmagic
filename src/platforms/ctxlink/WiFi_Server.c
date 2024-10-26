@@ -1,8 +1,22 @@
-//
-//	File:	WiFi_Server.c
-//
-//	TCP/IP client/server for WBMP
-//
+/*
+ * This file is part of the Black Magic Debug project.
+ *
+ * Copyright (C) 2024 Sid Price <sid@sidprice.com>
+ * Written by Sid Price <sid@sidprice.com>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 #include "general.h"
 #include "morse.h"
@@ -1447,10 +1461,10 @@ void do_awo_trace_send(void)
 		swo_trace_send_queue[swo_trace_send_queue_out].len, 0);
 }
 
-void send_uart_data(uint8_t *lpBuffer, uint8_t length)
+void send_uart_data(uint8_t *buffer, uint8_t length)
 {
 	m2mStub_EintDisable();
-	memcpy(uart_debug_send_queue[uart_debug_send_queue_in].packet, lpBuffer, length);
+	memcpy(uart_debug_send_queue[uart_debug_send_queue_in].packet, buffer, length);
 	uart_debug_send_queue[uart_debug_send_queue_in].len = length;
 	uart_debug_send_queue_in = (uart_debug_send_queue_in + 1) % SEND_QUEUE_SIZE;
 	uart_debug_send_queue_length += 1;
