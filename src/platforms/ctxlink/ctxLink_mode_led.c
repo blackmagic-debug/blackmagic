@@ -11,9 +11,9 @@
 mode_led_modes_e led_mode = mode_led_idle; // Initial state of the mode led
 mode_led_task_states_e mode_task_state = mode_led_idle_state;
 
-u_int32_t led_mode_timeout = 0;       // Used to time the on/off state of the led
-u_int32_t led_mode_reset_timeout = 0; // Used to time the on/off state of the led
-u_int32_t led_mode_pulse_count = 0;   // Counts the number of led pulses each cycle
+uint32_t led_mode_timeout = 0;       // Used to time the on/off state of the led
+uint32_t led_mode_reset_timeout = 0; // Used to time the on/off state of the led
+uint32_t led_mode_pulse_count = 0;   // Counts the number of led pulses each cycle
 
 #define MODE_LED_ON_TIME        200 // LED on time in 1  milliseconds ticks
 #define MODE_LED_PULSE_OFF_TIME MODE_LED_ON_TIME
@@ -56,13 +56,11 @@ void mode_set_parameters(mode_led_modes_e led_mode)
 
 bool mode_check_timeout()
 {
-	bool fResult = false;
-
 	if (--led_mode_timeout == 0) {
 		led_mode_timeout = led_mode_reset_timeout;
-		fResult = true;
+		return true;
 	}
-	return (fResult);
+	return false;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -78,7 +76,7 @@ void mode_led_task(void)
 	//
 	// Use this periodic task to check the battery voltage
 	//
-	if (platform_check_battery_voltage() == false) {
+	if (!platform_check_battery_voltage()) {
 		if (saved_mode == mode_led_invalid) {
 			saved_mode = led_mode;
 			led_mode = mode_led_battery_low;
