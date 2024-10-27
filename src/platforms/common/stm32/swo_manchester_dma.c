@@ -515,7 +515,17 @@ void SWO_TIM_ISR(void)
 			// 11 - more than 2.25x of the original, "too long" pulse
 			// an overflow automatically means the pulse is too long
 			pulse_multiplier = ~0u / 3 / pulse_length;
-			bit_buffer = 1 << 31;
+
+			if (bit_buffer) {
+				// align the bit buffer to 8-bits (i.e. cut any outstanding garbage)
+				// 31 - CTZ(bit_buffer) == number of bits shifted into the buffer (because of the terminator bit)
+				unsigned bit_count = 31 - __builtin_ctz(bit_buffer);
+				unsigned unaligned_count = bit_count & 7;
+				// push back the unaligned bits
+				bit_buffer <<= unaligned_count;
+			} else {
+				bit_buffer = 1 << 31;
+			}
 		}
 	} while (--samples_available);
 
