@@ -499,6 +499,8 @@ static bool cmd_tdi_low_reset(target_s *target, int argc, const char **argv)
 	(void)target;
 	(void)argc;
 	(void)argv;
+	if (!jtag_proc.jtagtap_next)
+		return false;
 	jtag_proc.jtagtap_next(true, false);
 	cmd_reset(NULL, 0, NULL);
 	return true;
