@@ -58,9 +58,13 @@
 #define REMOTE_ACCEL_RISCV     (1U << 2U)
 #define REMOTE_ACCEL_ADIV6     (1U << 3U)
 
+/* This version of the protocol introduces an ADIv5 command for setting the version of the DP being talked to */
+#define REMOTE_DP_VERSION 'V'
+
 /* This version of the protocol introduces 64-bit support for the ADIv5 acceleration protocol */
-#define REMOTE_UINT64       '%', '0', '1', '6', 'l', 'l', 'x'
-#define REMOTE_ADIV5_ADDR64 REMOTE_UINT64
+#define REMOTE_UINT64           '%', '0', '1', '6', 'l', 'l', 'x'
+#define REMOTE_ADIV5_ADDR64     REMOTE_UINT64
+#define REMOTE_ADIV5_DP_VERSION REMOTE_UINT8
 
 /* ADIv5 remote protocol memory I/O messages */
 #define REMOTE_ADIV5_MEM_READ_STR                                                                      \
@@ -82,6 +86,11 @@
  * 16 for the address and 8 for the count and one trailer gives 42 bytes request overhead
  */
 #define REMOTE_ADIV5_MEM_WRITE_LENGTH 42U
+#define REMOTE_DP_VERSION_STR                                                                      \
+	(char[])                                                                                       \
+	{                                                                                              \
+		REMOTE_SOM, REMOTE_ADIV5_PACKET, REMOTE_DP_VERSION, REMOTE_ADIV5_DP_VERSION, REMOTE_EOM, 0 \
+	}
 
 /* ADIv6 acceleration protocol elements */
 #define REMOTE_ADIV6_PACKET '6'

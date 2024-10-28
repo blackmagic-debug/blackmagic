@@ -39,6 +39,27 @@
 #include "hex_utils.h"
 #include "exception.h"
 
+static bool remote_v4_have_dp_version_command = true;
+
+static void remote_v4_adiv5_dp_version(adiv5_debug_port_s *const dp)
+{
+	/* Check if the probe actually has this command, skip if it does not */
+	if (!remote_v4_have_dp_version_command)
+		return;
+	/* Create the request and send it to the remote */
+	char buffer[REMOTE_MAX_MSG_SIZE];
+	ssize_t length = snprintf(buffer, REMOTE_MAX_MSG_SIZE, REMOTE_DP_VERSION_STR, dp->version);
+	platform_buffer_write(buffer, length);
+	/* Now read back the answer and note any errors */
+	length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
+	if (length < 1)
+		DEBUG_ERROR("%s comms error: %zd\n", __func__, length);
+	else if (buffer[0] != REMOTE_RESP_OK) {
+		DEBUG_WARN("Please upgrade your firmware to allow ADIv6 devices to work properly\n");
+		remote_v4_have_dp_version_command = false;
+	}
+}
+
 void remote_v4_adiv5_mem_read_bytes(
 	adiv5_access_port_s *const ap, void *const dest, const target_addr64_t src, const size_t read_length)
 {
