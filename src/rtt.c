@@ -204,9 +204,9 @@ static void find_rtt(target_s *const cur_target)
 		else
 			rtt_cbaddr = memory_search(cur_target, rtt_ram_start, rtt_ram_end);
 	}
-	DEBUG_INFO("rtt: match at 0x%" PRIx32 "\r\n", rtt_cbaddr);
 
 	if (rtt_cbaddr) {
+		DEBUG_INFO("rtt: match at 0x%" PRIx32 "\n", rtt_cbaddr);
 		/* read number of rtt up and down channels from target */
 		uint32_t num_buf[2];
 		if (target_mem32_read(cur_target, num_buf, rtt_cbaddr + 16U, sizeof(num_buf)))
