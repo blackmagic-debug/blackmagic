@@ -97,10 +97,10 @@ bool remote_v4_init(void)
 
 bool remote_v4_adiv5_init(adiv5_debug_port_s *const dp)
 {
-	dp->low_access = remote_v3_adiv5_raw_access;
-	dp->dp_read = remote_v3_adiv5_dp_read;
-	dp->ap_read = remote_v3_adiv5_ap_read;
-	dp->ap_write = remote_v3_adiv5_ap_write;
+	dp->low_access = remote_v4_adiv5_raw_access;
+	dp->dp_read = remote_v4_adiv5_dp_read;
+	dp->ap_read = remote_v4_adiv5_ap_read;
+	dp->ap_write = remote_v4_adiv5_ap_write;
 	dp->mem_read = remote_v4_adiv5_mem_read_bytes;
 	dp->mem_write = remote_v4_adiv5_mem_write_bytes;
 	return true;

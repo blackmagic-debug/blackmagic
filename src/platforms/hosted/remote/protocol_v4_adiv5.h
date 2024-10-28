@@ -38,6 +38,15 @@
 #include <stddef.h>
 #include "adiv5.h"
 
+/*
+ * NB, only the implementations for the memory commands are v4 specific/special, the rest of these exist
+ * so as to allow calling the DP version setting command v4 introduces to ensure the probe accelerates
+ * things correctly.
+ */
+uint32_t remote_v4_adiv5_raw_access(adiv5_debug_port_s *dp, uint8_t rnw, uint16_t addr, uint32_t request_value);
+uint32_t remote_v4_adiv5_dp_read(adiv5_debug_port_s *dp, uint16_t addr);
+uint32_t remote_v4_adiv5_ap_read(adiv5_access_port_s *ap, uint16_t addr);
+void remote_v4_adiv5_ap_write(adiv5_access_port_s *ap, uint16_t addr, uint32_t value);
 void remote_v4_adiv5_mem_read_bytes(adiv5_access_port_s *ap, void *dest, target_addr64_t src, size_t read_length);
 void remote_v4_adiv5_mem_write_bytes(
 	adiv5_access_port_s *ap, target_addr64_t dest, const void *src, size_t write_length, align_e align);

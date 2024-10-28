@@ -40,11 +40,15 @@
 #include "exception.h"
 
 static bool remote_v4_have_dp_version_command = true;
+static uint8_t remote_v4_current_dp_version = UINT8_MAX;
 
 static void remote_v4_adiv5_dp_version(adiv5_debug_port_s *const dp)
 {
-	/* Check if the probe actually has this command, skip if it does not */
-	if (!remote_v4_have_dp_version_command)
+	/*
+	 * Check if the probe actually has this command, skip if it does not.
+	 * Likewise check if the DP version has changed since last call.
+	 */
+	if (!remote_v4_have_dp_version_command || remote_v4_current_dp_version == dp->version)
 		return;
 	/* Create the request and send it to the remote */
 	char buffer[REMOTE_MAX_MSG_SIZE];
@@ -60,12 +64,38 @@ static void remote_v4_adiv5_dp_version(adiv5_debug_port_s *const dp)
 	}
 }
 
+uint32_t remote_v4_adiv5_raw_access(
+	adiv5_debug_port_s *const dp, const uint8_t rnw, const uint16_t addr, const uint32_t request_value)
+{
+	remote_v4_adiv5_dp_version(dp);
+	return remote_v3_adiv5_raw_access(dp, rnw, addr, request_value);
+}
+
+uint32_t remote_v4_adiv5_dp_read(adiv5_debug_port_s *const dp, const uint16_t addr)
+{
+	remote_v4_adiv5_dp_version(dp);
+	return remote_v3_adiv5_dp_read(dp, addr);
+}
+
+uint32_t remote_v4_adiv5_ap_read(adiv5_access_port_s *const ap, const uint16_t addr)
+{
+	remote_v4_adiv5_dp_version(ap->dp);
+	return remote_v3_adiv5_ap_read(ap, addr);
+}
+
+void remote_v4_adiv5_ap_write(adiv5_access_port_s *const ap, const uint16_t addr, const uint32_t value)
+{
+	remote_v4_adiv5_dp_version(ap->dp);
+	remote_v3_adiv5_ap_write(ap, addr, value);
+}
+
 void remote_v4_adiv5_mem_read_bytes(
 	adiv5_access_port_s *const ap, void *const dest, const target_addr64_t src, const size_t read_length)
 {
 	/* Check if we have anything to do */
 	if (!read_length)
 		return;
+	remote_v4_adiv5_dp_version(ap->dp);
 	char *const data = (char *)dest;
 	DEBUG_PROBE("%s: @%08" PRIx64 "+%zx\n", __func__, src, read_length);
 	char buffer[REMOTE_MAX_MSG_SIZE];
@@ -100,6 +130,7 @@ void remote_v4_adiv5_mem_write_bytes(adiv5_access_port_s *const ap, const target
 	/* Check if we have anything to do */
 	if (!write_length)
 		return;
+	remote_v4_adiv5_dp_version(ap->dp);
 	const char *data = (const char *)src;
 	DEBUG_PROBE("%s: @%08" PRIx64 "+%zx alignment %u\n", __func__, dest, write_length, align);
 	/* + 1 for terminating NUL character */
