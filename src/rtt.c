@@ -45,7 +45,7 @@ rtt_channel_s rtt_channel[MAX_RTT_CHAN];
 uint32_t rtt_min_poll_ms = 8;   /* 8 ms */
 uint32_t rtt_max_poll_ms = 256; /* 0.256 s */
 uint32_t rtt_max_poll_errs = 10;
-static uint32_t poll_ms;
+uint32_t rtt_poll_ms;
 static uint32_t poll_errs;
 static uint32_t last_poll_ms;
 /* flags for data from host to target */
@@ -177,7 +177,7 @@ static uint32_t memory_search(target_s *const cur_target, const uint32_t ram_sta
 static void find_rtt(target_s *const cur_target)
 {
 	rtt_found = false;
-	poll_ms = rtt_max_poll_ms;
+	rtt_poll_ms = rtt_max_poll_ms;
 	poll_errs = 0;
 	last_poll_ms = 0;
 
@@ -388,7 +388,7 @@ void poll_rtt(target_s *const cur_target)
 	/* target present and rtt enabled */
 	uint32_t now = platform_time_ms();
 
-	if (last_poll_ms + poll_ms <= now || now < last_poll_ms) {
+	if (last_poll_ms + rtt_poll_ms <= now || now < last_poll_ms) {
 		if (!rtt_found)
 			/* check if target needs to be halted during memory access */
 			rtt_halt = target_mem_access_needs_halt(cur_target);
@@ -457,14 +457,14 @@ void poll_rtt(target_s *const cur_target)
 
 		/* rtt polling frequency goes up and down with rtt activity */
 		if (rtt_busy && !rtt_err)
-			poll_ms /= 2U;
+			rtt_poll_ms /= 2U;
 		else
-			poll_ms *= 2U;
+			rtt_poll_ms *= 2U;
 
-		if (poll_ms > rtt_max_poll_ms)
-			poll_ms = rtt_max_poll_ms;
-		else if (poll_ms < rtt_min_poll_ms)
-			poll_ms = rtt_min_poll_ms;
+		if (rtt_poll_ms > rtt_max_poll_ms)
+			rtt_poll_ms = rtt_max_poll_ms;
+		else if (rtt_poll_ms < rtt_min_poll_ms)
+			rtt_poll_ms = rtt_min_poll_ms;
 
 		if (rtt_err) {
 			gdb_out("rtt: err\r\n");

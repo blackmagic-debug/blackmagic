@@ -39,6 +39,7 @@ extern uint32_t rtt_num_up_chan;               // number of 'up' channels
 extern uint32_t rtt_num_down_chan;             // number of 'down' channels
 extern uint32_t rtt_min_poll_ms;               // min time between polls (ms)
 extern uint32_t rtt_max_poll_ms;               // max time between polls (ms)
+extern uint32_t rtt_poll_ms;                   // current amount of time between polls (ms)
 extern uint32_t rtt_max_poll_errs;             // max number of errors before disconnect
 extern bool rtt_flag_ram;                      // limit ram scanned by rtt to range rtt_ram_start .. rtt_ram_end
 extern uint32_t rtt_ram_start;                 // if rtt_flag_ram set, lower limit of ram scanned by rtt
