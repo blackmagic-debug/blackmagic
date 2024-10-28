@@ -384,6 +384,25 @@ static void remote_adiv5_respond(const void *const data, const size_t length)
 
 static void remote_packet_process_adiv5(const char *const packet, const size_t packet_len)
 {
+	/* Check there's at least an ADI command byte */
+	if (packet_len < 2U) {
+		remote_respond(REMOTE_RESP_ERR, REMOTE_ERROR_WRONGLEN);
+		return;
+	}
+
+	/* Check if this is a DP version packet and handle it if it is */
+	if (packet[1] == REMOTE_DP_VERSION) {
+		/* Check there are enough bytes for the request */
+		if (packet_len == 4U) {
+			/* Extract the new version information into the DP */
+			remote_dp.version = hex_string_to_num(2U, packet + 2U);
+			remote_respond(REMOTE_RESP_OK, 0);
+		} else
+			/* There weren't enough bytes, so tell the host and get out of here */
+			remote_respond(REMOTE_RESP_ERR, REMOTE_ERROR_WRONGLEN);
+		return;
+	}
+
 	/* Our shortest ADIv5 packet is 8 bytes long, check that we have at least that */
 	if (packet_len < 8U) {
 		remote_respond(REMOTE_RESP_PARERR, 0);
@@ -814,6 +833,11 @@ void remote_packet_process_spi(const char *const packet, const size_t packet_len
 
 void remote_packet_process(char *const packet, const size_t packet_length)
 {
+	/* Check there's at least a request byte */
+	if (packet_length < 1U) {
+		remote_respond(REMOTE_RESP_ERR, REMOTE_ERROR_WRONGLEN);
+		return;
+	}
 	switch (packet[0]) {
 	case REMOTE_SWDP_PACKET:
 		remote_packet_process_swd(packet, packet_length);

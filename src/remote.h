@@ -261,15 +261,17 @@
 #define REMOTE_ADIV5_RAW_ACCESS 'R'
 #define REMOTE_MEM_READ         'm'
 #define REMOTE_MEM_WRITE        'M'
+#define REMOTE_DP_VERSION       'V'
 
-#define REMOTE_ADIV5_DEV_INDEX REMOTE_UINT8
-#define REMOTE_ADIV5_AP_SEL    REMOTE_UINT8
-#define REMOTE_ADIV5_ADDR16    REMOTE_UINT16
-#define REMOTE_ADIV5_ADDR64    REMOTE_UINT64
-#define REMOTE_ADIV5_DATA      REMOTE_UINT32
-#define REMOTE_ADIV5_CSW       REMOTE_UINT32
-#define REMOTE_ADIV5_ALIGNMENT REMOTE_UINT8
-#define REMOTE_ADIV5_COUNT     REMOTE_UINT32
+#define REMOTE_ADIV5_DEV_INDEX  REMOTE_UINT8
+#define REMOTE_ADIV5_AP_SEL     REMOTE_UINT8
+#define REMOTE_ADIV5_ADDR16     REMOTE_UINT16
+#define REMOTE_ADIV5_ADDR64     REMOTE_UINT64
+#define REMOTE_ADIV5_DATA       REMOTE_UINT32
+#define REMOTE_ADIV5_CSW        REMOTE_UINT32
+#define REMOTE_ADIV5_ALIGNMENT  REMOTE_UINT8
+#define REMOTE_ADIV5_COUNT      REMOTE_UINT32
+#define REMOTE_ADIV5_DP_VERSION REMOTE_UINT8
 
 #define REMOTE_ADIV5_APnDP 0x0100U
 
@@ -316,6 +318,11 @@
  * 16 for the address and 8 for the count and one trailer gives 42 bytes request overhead
  */
 #define REMOTE_ADIV5_MEM_WRITE_LENGTH 42U
+#define REMOTE_DP_VERSION_STR                                                                      \
+	(char[])                                                                                       \
+	{                                                                                              \
+		REMOTE_SOM, REMOTE_ADIV5_PACKET, REMOTE_DP_VERSION, REMOTE_ADIV5_DP_VERSION, REMOTE_EOM, 0 \
+	}
 
 /* ADIv6 acceleration protocol elements */
 #define REMOTE_ADIV6_PACKET '6'
