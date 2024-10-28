@@ -220,12 +220,12 @@ static void find_rtt(target_s *const cur_target)
 
 		/* sanity checks */
 		if (rtt_num_up_chan > 255U || rtt_num_down_chan > 255U) {
-			gdb_out("rtt: bad cblock\r\n");
+			gdb_out("rtt: bad cblock\n");
 			rtt_enabled = false;
 			return;
 		}
 		if (rtt_num_up_chan == 0 && rtt_num_down_chan == 0) {
-			gdb_out("rtt: empty cblock\r\n");
+			gdb_out("rtt: empty cblock\n");
 			rtt_enabled = false;
 			return;
 		}
