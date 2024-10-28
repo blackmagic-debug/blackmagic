@@ -34,18 +34,27 @@ char hex_digit(const uint8_t value)
 	return digit;
 }
 
-char *hexify(char *const hex, const void *const buf, const size_t size)
+char *hexify(char *const dst, const void *const buf, const size_t size)
 {
-	char *dst = hex;
-	const uint8_t *const src = buf;
+	/*
+	 * Convert the source buffer to something we can work with and define a
+	 * counter for the destination buffer indexing
+	 */
+	const uint8_t *const src = (const uint8_t *)buf;
+	size_t dst_idx = 0U;
 
-	for (size_t idx = 0; idx < size; ++idx) {
-		*dst++ = hex_digit(src[idx] >> 4U);
-		*dst++ = hex_digit(src[idx] & 0xfU);
+	/*
+	 * Loop through each byte in the input buffer and convert it to hex,
+	 * writing it to consecutive pairs of bytes in the destination
+	 */
+	for (size_t src_idx = 0U; src_idx < size; ++src_idx) {
+		dst[dst_idx++] = hex_digit(src[src_idx] >> 4U);
+		dst[dst_idx++] = hex_digit(src[src_idx] & 0xfU);
 	}
-	*dst = 0;
 
-	return hex;
+	/* Make sure the result is NUL terminated */
+	dst[dst_idx] = '\0';
+	return dst;
 }
 
 uint8_t unhex_digit(const char hex)
@@ -91,13 +100,13 @@ uint64_t hex_string_to_num(const size_t max_digits, const char *const str)
  * this following character.
  * This routine also accepts a base to operate on as it is the common function used by the two
  * wrappers read_hex32 and read_dec32 for hexadecimal and decimal numbers respectively.
- * 
+ *
  * This routine uses strtoul internally so all the number parsing behaviour of that apply,
  * it will accept a leading + or - and perform negation of the read number correctly.
  * If passed 0 as the base it will accept hex numbers prefixed with 0x or 0X and octal numbers
  * prefixed with 0, otherwise it will assume decimal.
  * It will skip white space preceding the number to be read.
- * 
+ *
  * The resturn value indicates whether a number has been successfully read, if the function returns
  * true then rest and val have been assigned if non-NULL.
  */
