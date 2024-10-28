@@ -48,7 +48,7 @@ static void remote_packet_process_adiv6(const char *packet, size_t packet_len);
 /* hex-ify and send a buffer of data */
 static void remote_send_buf(const void *const buffer, const size_t len)
 {
-	char hex[2] = {0};
+	char hex[3] = {0};
 	const uint8_t *const data = (const uint8_t *)buffer;
 	for (size_t offset = 0; offset < len; ++offset) {
 		hexify(hex, data + offset, 1U);
