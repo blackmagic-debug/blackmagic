@@ -236,13 +236,19 @@ static void swdptap_linereset_measured(bool no_delay)
 	/* for robustness, we use 60 HIGH cycles and 4 idle cycles */
 	swd_proc.seq_out(0xffffffffU, 32U);
 	swd_proc.seq_out(0x0fffffffU, 32U);
+	swd_proc.seq_out(0xffffffffU, 32U);
+	swd_proc.seq_out(0x0fffffffU, 32U);
+	swd_proc.seq_out(0xffffffffU, 32U);
+	swd_proc.seq_out(0x0fffffffU, 32U);
+	swd_proc.seq_out(0xffffffffU, 32U);
+	swd_proc.seq_out(0x0fffffffU, 32U);
 	const uint32_t ts_post = dwt_read_cycle_counter();
 	const uint32_t cycles_spent = ts_post - ts_pre;
 	/* Subtract the overhead of function calls */
-	const uint32_t fncall_corr = no_delay ? (88U) : (140U);
-	/* Split the *64 into 16*4 for 216-240MHz clocks to not overflow a uint32_t */
-	const uint32_t freq_measured = rcc_ahb_frequency * 16U / (cycles_spent - fncall_corr) * 4U;
-	gdb_outf("Estimating %lu Hz (%lu cycles - %ld corr)\n", freq_measured, cycles_spent, fncall_corr);
+	const uint32_t fncall_corr = no_delay ? (243U) : (133U);
+	/* Split the 64*4 into 16*16 for 216-240MHz clocks to not overflow a uint32_t */
+	const uint32_t freq_measured = rcc_ahb_frequency * 16U / (cycles_spent - fncall_corr) * 16U;
+	gdb_outf("Estimated %7lu Hz (%5lu cycles - %ld corr)\n", freq_measured, cycles_spent, fncall_corr);
 }
 
 static bool cmd_swdptap_calibration(target_s *target, int argc, const char **argv)

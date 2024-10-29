@@ -151,11 +151,16 @@ uint32_t platform_time_ms(void)
 #define USED_SWD_CYCLES_NODELAY 12
 #define USED_SWD_CYCLES         24
 #define CYCLES_PER_CNT          12
-#elif defined(STM32F1)
-/* Values for STM32F103 at 72 MHz */
+#elif defined(GD32F1)
+/* Values for GD32F103 at 72 MHz */
 #define USED_SWD_CYCLES_NODELAY 14
 #define USED_SWD_CYCLES         30
 #define CYCLES_PER_CNT          14
+#elif defined(STM32F1)
+/* Values for STM32F103 at 72 MHz */
+#define USED_SWD_CYCLES_NODELAY 16
+#define USED_SWD_CYCLES         34
+#define CYCLES_PER_CNT          17
 #elif defined(STM32F0)
 /* Values for STM32F072 at 48 MHz */
 #define USED_SWD_CYCLES_NODELAY 24
