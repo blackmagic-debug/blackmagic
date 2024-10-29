@@ -21,19 +21,17 @@
 #include "general.h"
 #include "platform.h"
 #include "usb_serial.h"
-#if ENABLE_DEBUG != 1
 #include <sys/stat.h>
 #include <string.h>
 
 typedef struct stat stat_s;
-#endif
+
 #include <errno.h>
 
 extern uint8_t heap_start;
 extern uint8_t heap_end;
 static uint8_t *heap_current = &heap_start;
 
-#if ENABLE_DEBUG == 1
 /*
  * newlib defines _write as a weak link'd function for user code to override.
  *
@@ -55,66 +53,7 @@ __attribute__((used)) int _write(const int file, const void *const ptr, const si
 	return len;
 }
 
-/*
- * newlib defines isatty as a weak link'd function for user code to override.
- *
- * The result of this function is always 'true'.
- */
-__attribute__((used)) int isatty(const int file)
-{
-	(void)file;
-	return true;
-}
-
-#define RDI_SYS_OPEN 0x01U
-
-typedef struct ex_frame {
-	uint32_t r0;
-	const uint32_t *params;
-	uint32_t r2;
-	uint32_t r3;
-	uint32_t r12;
-	uintptr_t lr;
-	uintptr_t return_address;
-} ex_frame_s;
-
-/*
- * This implements the other half of the newlib syscall puzzle.
- * When newlib is built for ARM, various calls that do file IO
- * such as printf end up calling [_swiwrite](https://github.com/mirror/newlib-cygwin/blob/master/newlib/libc/sys/arm/syscalls.c#L317)
- * and other similar low-level implementation functions. These
- * generate `swi` instructions for the "RDI Monitor" and that lands us.. here.
- *
- * The RDI calling convention sticks the file number in r0, the buffer pointer in r1, and length in r2.
- * ARMv7-M's SWI (SVC) instruction then takes all that and maps it into an exception frame on the stack.
- */
-void debug_monitor_handler(void)
-{
-	ex_frame_s *frame;
-	__asm__("mov %[frame], sp" : [frame] "=r"(frame));
-
-	/* Make sure to return to the instruction after the SWI/BKPT */
-	frame->return_address += 2U;
-
-	switch (frame->r0) {
-	case RDI_SYS_OPEN:
-		frame->r0 = 1;
-		break;
-	default:
-		frame->r0 = UINT32_MAX;
-	}
-	__asm__("bx lr");
-}
-#else
 /* This defines stubs for the newlib fake file IO layer for compatibility with GCC 12 `-specs=nosys.specs` */
-
-/* NOLINTNEXTLINE(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp) */
-__attribute__((used)) int _write(const int file, const void *const buffer, const size_t length)
-{
-	(void)file;
-	(void)buffer;
-	return length;
-}
 
 /* NOLINTNEXTLINE(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp) */
 __attribute__((used)) int _read(const int file, void *const buffer, const size_t length)
@@ -168,7 +107,6 @@ __attribute__((used)) int _kill(const int pid, const int signal)
 	(void)signal;
 	return 0;
 }
-#endif
 
 __attribute__((used)) void *_sbrk(const ptrdiff_t alloc_size)
 {
