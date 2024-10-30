@@ -765,16 +765,16 @@ static bool stm32lx_cmd_option(target_s *const target, const int argc, const cha
 	const size_t read_protection = stm32lx_prot_level(options);
 	if (stm32lx_is_stm32l1(target)) {
 		tc_printf(target,
-			"OPTR: 0x%08" PRIx32 ", RDPRT %" PRIu32 ", SPRMD %u, BOR %" PRIu32 " , WDG_SW %u"
+			"OPTR: 0x%08" PRIx32 ", RDPRT %" PRIu32 ", SPRMD %u, BOR %" PRIu32 ", WDG_SW %u"
 			", nRST_STP %u, nRST_STBY %u, nBFB2 %u\n",
-			options, (uint32_t)read_protection, (options & STM32L1_FLASH_OPTR_SPRMOD) ? 1 : 0,
+			options, (uint32_t)read_protection, (options & STM32L1_FLASH_OPTR_SPRMOD) ? 1U : 0U,
 			(options >> STM32L1_FLASH_OPTR_BOR_LEV_SHIFT) & STM32L1_FLASH_OPTR_BOR_LEV_MASK,
-			(options & STM32Lx_FLASH_OPTR_WDG_SW) ? 1 : 0, (options & STM32L1_FLASH_OPTR_nRST_STOP) ? 1 : 0,
-			(options & STM32L1_FLASH_OPTR_nRST_STDBY) ? 1 : 0, (options & STM32L1_FLASH_OPTR_nBFB2) ? 1 : 0);
+			(options & STM32Lx_FLASH_OPTR_WDG_SW) ? 1U : 0U, (options & STM32L1_FLASH_OPTR_nRST_STOP) ? 1U : 0U,
+			(options & STM32L1_FLASH_OPTR_nRST_STDBY) ? 1U : 0U, (options & STM32L1_FLASH_OPTR_nBFB2) ? 1U : 0U);
 	} else {
-		tc_printf(target, "OPTR: 0x%08" PRIx32 ", RDPROT %" PRIu32 ", WPRMOD %" PRIu16 ", WDG_SW %u, BOOT1 %u\n",
-			options, (uint32_t)read_protection, (options & STM32L0_FLASH_OPTR_WPRMOD) ? 1 : 0,
-			(options & STM32Lx_FLASH_OPTR_WDG_SW) ? 1 : 0, (options & STM32L0_FLASH_OPTR_BOOT1) ? 1 : 0);
+		tc_printf(target, "OPTR: 0x%08" PRIx32 ", RDPROT %" PRIu32 ", WPRMOD %u, WDG_SW %u, BOOT1 %u\n", options,
+			(uint32_t)read_protection, (options & STM32L0_FLASH_OPTR_WPRMOD) ? 1U : 0U,
+			(options & STM32Lx_FLASH_OPTR_WDG_SW) ? 1U : 0U, (options & STM32L0_FLASH_OPTR_BOOT1) ? 1U : 0U);
 	}
 
 	goto done;
