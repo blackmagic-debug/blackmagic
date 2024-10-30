@@ -48,7 +48,9 @@ typedef int_least16_t char16_t;
 #include "utils.h"
 #include "hex_utils.h"
 
-#define NO_SERIAL_NUMBER "<no serial number>"
+#define NO_SERIAL_NUMBER          "<no serial number>"
+#define BMP_PRODUCT_STRING        "Black Magic Probe"
+#define BMP_PRODUCT_STRING_LENGTH ARRAY_LENGTH(BMP_PRODUCT_STRING)
 
 void bmp_read_product_version(libusb_device_descriptor_s *device_descriptor, libusb_device *device,
 	libusb_device_handle *handle, char **product, char **manufacturer, char **serial, char **version);
@@ -157,27 +159,58 @@ void bmp_read_product_version(libusb_device_descriptor_s *device_descriptor, lib
 	(void)device;
 	(void)serial;
 	(void)manufacturer;
-	*product = get_device_descriptor_string(handle, device_descriptor->iProduct);
+	const char *const description = get_device_descriptor_string(handle, device_descriptor->iProduct);
+	const size_t description_len = strlen(description) + 1U;
 
-	/* Check if the product name does not contain a version string */
-	if (strcmp(*product, "Black Magic Probe") == 0) {
-		*version = strdup("Unknown");
-		return;
+	/*
+	 * Black Magic Debug product strings are in one of the following forms:
+	 * Recent: Black Magic Probe v1.10.0-1273-g2b1ce9aee
+	 *       : Black Magic Probe (ST-Link v2) v1.10.0-1273-g2b1ce9aee
+	 *   Old : Black Magic Probe
+	 * From this we want to extract two main things: version (if available), and the product name
+	 */
+
+	/* Let's start out easy - check to see if the string contains an opening paren (alternate platform) */
+	const char *const opening_paren = strchr(description + BMP_PRODUCT_STRING_LENGTH, '(');
+	/* If there isn't one, we're dealing with nominally a native probe */
+	if (!opening_paren) {
+		/* Knowing this, let's see if there are enough bytes for a version string, and if there are.. extract it */
+		if (description_len > BMP_PRODUCT_STRING_LENGTH) {
+			const char *version_begin = strrchr(description, ' ');
+			/* Thankfully, this can't fail, so just grab the version string from what we got */
+			*version = strdup(version_begin + 1U);
+			/* Now extract the remaining chunk of the description as the product string */
+			*product = strndup(description, version_begin - description);
+		} else {
+			/* We don't know the version (pre v1.7) and the description string is the product string */
+			*version = strdup("Unknown");
+			*product = strdup(description);
+		}
+	} else {
+		/* Otherwise, we've got a non-native probe, so find the closing paren for the probe type */
+		const char *const closing_paren = strchr(opening_paren, ')');
+		/* If we didn't find one, we've got a problem */
+		if (!closing_paren) {
+			DEBUG_ERROR("Production description for device is invalid, founding opening '(' but no closing ')'\n");
+			*version = strdup("Unknown");
+			*product = strdup("Invalid");
+		} else {
+			/* If we did find the closing ')', then see if we've got a version string*/
+			const char *const version_begin = strchr(closing_paren, ' ');
+			/* If we do, then extract whatever's left of the string as the version string */
+			if (version_begin)
+				*version = strdup(version_begin + 1U);
+			else
+				*version = strdup("Unknown");
+			/* Now we've dealt with the version information, use everything up to the ')' as the product string */
+			*product = strndup(description, (closing_paren - description) + 1U);
+		}
 	}
 
-	char *start_of_version = strrchr(*product, ' ');
-	if (start_of_version == NULL) {
-		*version = NULL;
-		return;
-	}
-
-	while (start_of_version[0] == ' ' && start_of_version != *product)
-		--start_of_version;
-	start_of_version[1U] = '\0';
-	start_of_version += 2U;
-	while (start_of_version[0] == ' ')
-		++start_of_version;
-	*version = strdup(start_of_version);
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-qual"
+	free((void *)description);
+#pragma GCC diagnostic pop
 }
 
 /*
