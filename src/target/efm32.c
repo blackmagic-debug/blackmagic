@@ -30,7 +30,8 @@
  * * EFR32BG13P532F512GM32 (EFR Blue Gecko)
  */
 
-/* Refer to the family reference manuals:
+/*
+ * Refer to the family reference manuals:
  *
  * Also refer to AN0062 "Programming Internal Flash Over the Serial Wire Debug Interface"
  * http://www.silabs.com/Support%20Documents/TechnicalDocs/an0062.pdf
@@ -98,7 +99,7 @@ const command_s efm32_cmd_list[] = {
 /* Flash Information Area                                                      */
 /* -------------------------------------------------------------------------- */
 
-#define EFM32_INFO      0x0fe00000U
+#define EFM32_INFO      UINT32_C(0x0fe00000)
 #define EFM32_USER_DATA (EFM32_INFO + 0x0000U)
 #define EFM32_LOCK_BITS (EFM32_INFO + 0x4000U)
 #define EFM32_V1_DI     (EFM32_INFO + 0x8000U)
@@ -766,11 +767,11 @@ static bool efm32_cmd_efm_info(target_s *t, int argc, const char **argv)
 
 	switch (di_version) {
 	case 1:
-		tc_printf(t, "DI version 1 (silabs remix?) base 0x%08" PRIx16 "\n\n", EFM32_V1_DI);
+		tc_printf(t, "DI version 1 (silabs remix?) base 0x%08" PRIx32 "\n\n", EFM32_V1_DI);
 		break;
 
 	case 2:
-		tc_printf(t, "DI version 2 (energy micro remix?) base 0x%08" PRIx16 "\n\n", EFM32_V2_DI);
+		tc_printf(t, "DI version 2 (energy micro remix?) base 0x%08" PRIx32 "\n\n", EFM32_V2_DI);
 		break;
 
 	default:
