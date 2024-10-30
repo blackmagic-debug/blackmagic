@@ -744,8 +744,8 @@ static bool stm32l4_attach(target_s *const target)
 	if (!cortexm_attach(target) || !stm32l4_configure_dbgmcu(target, NULL))
 		return false;
 
-	/* Retrieve device information, and locate the device ID register */
-	const stm32l4_device_info_s *device = stm32l4_get_device_info(target->part_id);
+	/* Extract the device structure from the priv storage and enable the Flash if on an L55 part */
+	const stm32l4_device_info_s *const device = ((stm32l4_priv_s *)target->priv)->device;
 	if (device->family == STM32L4_FAMILY_L55x)
 		stm32l5_flash_enable(target);
 
