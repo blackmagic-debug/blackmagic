@@ -333,6 +333,7 @@ bool platform_nrst_get_val(void)
 const char *platform_target_voltage(void)
 {
 	static char target[64] = {0};
+	memset(target, 0, sizeof(target));
 	uint32_t val = platform_target_voltage_sense();
 	target[0] = '0' + val / 1000U;
 	target[1] = '.';
