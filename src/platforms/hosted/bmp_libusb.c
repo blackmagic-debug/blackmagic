@@ -142,6 +142,12 @@ void bmp_read_product_version(libusb_device_descriptor_s *device_descriptor, lib
 	(void)manufacturer;
 	*product = get_device_descriptor_string(handle, device_descriptor->iProduct);
 
+	/* Check if the product name does not contain a version string */
+	if (strcmp(*product, "Black Magic Probe") == 0) {
+		*version = strdup("Unknown");
+		return;
+	}
+
 	char *start_of_version = strrchr(*product, ' ');
 	if (start_of_version == NULL) {
 		*version = NULL;
