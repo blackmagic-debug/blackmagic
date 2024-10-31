@@ -213,7 +213,7 @@ static bool adiv6_parse_coresight_v0_rom_table(
 		}
 		/* Got a good entry? great! Figure out if it has a power domain to cycle and what the address offset is */
 		const target_addr64_t offset = entry & CORESIGHT_ROM_ROMENTRY_OFFSET_MASK;
-		if ((rom_table->base.flags & ADIV6_DP_FLAGS_HAS_PWRCTRL) & entry & CORESIGHT_ROM_ROMENTRY_POWERID_VALID) {
+		if ((rom_table->base.flags & ADIV6_DP_FLAGS_HAS_PWRCTRL) && (entry & CORESIGHT_ROM_ROMENTRY_POWERID_VALID)) {
 			const uint8_t power_domain_offset =
 				((entry & CORESIGHT_ROM_ROMENTRY_POWERID_MASK) >> CORESIGHT_ROM_ROMENTRY_POWERID_SHIFT) << 2U;
 			/* Check if the power control register for this domain is present */
