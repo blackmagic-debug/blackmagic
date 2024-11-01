@@ -386,6 +386,9 @@ bool adi_configure_ap(adiv5_access_port_s *const ap)
 		ap->csw |= ADIV5_AP_CSW_DBGSWENABLE;
 
 		switch (ap_type) {
+		case ADIV5_AP_IDR_TYPE_APB2_3:
+			/* We have no prot modes on APB2 and APB3 */
+			break;
 		case ADIV5_AP_IDR_TYPE_AXI3_4:
 			/* XXX: Handle AXI4 w/ ACE-Lite which makes Mode and Type do ~things~™ (§E1.3.1, pg237) */
 			/* Clear any existing prot modes and disable memory tagging */
