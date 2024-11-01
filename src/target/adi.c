@@ -103,6 +103,7 @@ static const arm_coresight_component_s arm_component_lut[] = {
 	{0x4c4, 0x00, 0, aa_nosupport, cidc_unknown, ARM_COMPONENT_STR("Cortex-M4 ROM", "(Cortex-M4 ROM)")},
 	{0x4c7, 0x00, 0, aa_nosupport, cidc_unknown, ARM_COMPONENT_STR("Cortex-M7 PPB", "(Cortex-M7 PPB ROM Table)")},
 	{0x4c8, 0x00, 0, aa_nosupport, cidc_unknown, ARM_COMPONENT_STR("Cortex-M7 ROM", "(Cortex-M7 ROM)")},
+	{0x4e4, 0x00, 0x0af7, aa_nosupport, cidc_dc, ARM_COMPONENT_STR("CoreSight ROM", "(ROM Table)")},
 	{0x906, 0x14, 0, aa_nosupport, cidc_unknown, ARM_COMPONENT_STR("CoreSight CTI", "(Cross Trigger)")},
 	{0x907, 0x21, 0, aa_nosupport, cidc_unknown, ARM_COMPONENT_STR("CoreSight ETB", "(Trace Buffer)")},
 	{0x908, 0x12, 0, aa_nosupport, cidc_unknown, ARM_COMPONENT_STR("CoreSight CSTF", "(Trace Funnel)")},
