@@ -185,6 +185,7 @@ static const arm_coresight_component_s arm_component_lut[] = {
 	{0x9e4, 0x00, 0x0a17, aa_nosupport, cidc_dc, ARM_COMPONENT_STR("CoreSight MTE", "(Memory Tagging Extensioon)")},
 	{0x9e7, 0x11, 0x0000, aa_nosupport, cidc_dc, ARM_COMPONENT_STR("CoreSight TPIU", "(Trace Port Interface Unit)")},
 	{0x9e8, 0x21, 0x0000, aa_nosupport, cidc_dc, ARM_COMPONENT_STR("CoreSight TCM", "(Trace Memory Controller)")},
+	{0x909, 0x22, 0x0000, aa_nosupport, cidc_dc, ARM_COMPONENT_STR("CoreSight ATBR", "(ATB Replicator)")},
 	{0x9eb, 0x12, 0x0000, aa_nosupport, cidc_dc, ARM_COMPONENT_STR("CoreSight ATBF", "(ATB Funnel)")},
 	{0x9ec, 0x22, 0x0000, aa_nosupport, cidc_dc, ARM_COMPONENT_STR("CoreSight ATBR", "(ATB Replicator)")},
 	{0x9ed, 0x14, 0x1a14, aa_nosupport, cidc_dc, ARM_COMPONENT_STR("CoreSight CTI", "(Cross Trigger Interface)")},
