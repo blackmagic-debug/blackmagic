@@ -795,7 +795,8 @@ static target_s *cortexar_probe(
 	target->halt_resume = cortexar_halt_resume;
 
 	/* Ensure the core is powered up and we can talk to it */
-	cortexar_ensure_core_powered(target);
+	if (cortexar_ensure_core_powered(target))
+		return false;
 
 	/* Try to halt the target core */
 	target_halt_request(target);
