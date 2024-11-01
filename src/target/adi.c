@@ -539,6 +539,11 @@ uint32_t adi_mem_read32(adiv5_access_port_s *const ap, const target_addr32_t add
 	return ret;
 }
 
+void adi_mem_write32(adiv5_access_port_s *const ap, const target_addr32_t addr, const uint32_t value)
+{
+	adiv5_mem_write(ap, addr, &value, sizeof(value));
+}
+
 static void adi_parse_adi_rom_table(adiv5_access_port_s *const ap, const target_addr32_t base_address,
 	const size_t recursion_depth, const char *const indent, const uint64_t pidr)
 {
@@ -597,6 +602,139 @@ static void adi_parse_adi_rom_table(adiv5_access_port_s *const ap, const target_
 		/* Probe recursively */
 		adi_ap_component_probe(ap, base_address + (entry & ADIV5_ROM_ROMENTRY_OFFSET), recursion_depth + 1U, i);
 	}
+	DEBUG_INFO("%sROM Table: END\n", indent);
+}
+
+static bool adi_reset_resources(adiv5_access_port_s *const ap, const target_addr64_t base_address)
+{
+	/* Read out power request ID register 0 and check if power control is actually implemented */
+	const uint8_t pridr0 = adi_mem_read32(ap, base_address + CORESIGHT_ROM_PRIDR0) & 0x3fU;
+	if ((pridr0 & CORESIGHT_ROM_PRIDR0_VERSION_MASK) != CORESIGHT_ROM_PRIDR0_VERSION_NOT_IMPL)
+		ap->flags |= ADIV6_DP_FLAGS_HAS_PWRCTRL;
+	/* Now try and perform a debug reset request */
+	if (pridr0 & CORESIGHT_ROM_PRIDR0_HAS_DBG_RESET_REQ) {
+		platform_timeout_s timeout;
+		platform_timeout_set(&timeout, 250);
+
+		adi_mem_write32(ap, base_address + CORESIGHT_ROM_DBGRSTRR, CORESIGHT_ROM_DBGRST_REQ);
+		/* While the reset request is in progress */
+		while (adi_mem_read32(ap, base_address + CORESIGHT_ROM_DBGRSTRR) & CORESIGHT_ROM_DBGRST_REQ) {
+			/* Check if it's been acknowledge, and if it has, deassert the request */
+			if (adi_mem_read32(ap, base_address + CORESIGHT_ROM_DBGRSTAR) & CORESIGHT_ROM_DBGRST_REQ)
+				adi_mem_write32(ap, base_address + CORESIGHT_ROM_DBGRSTRR, 0U);
+			/* Check if the reset has timed out */
+			if (platform_timeout_is_expired(&timeout)) {
+				DEBUG_WARN("adi: debug reset failed\n");
+				adi_mem_write32(ap, base_address + CORESIGHT_ROM_DBGRSTRR, 0U);
+				break;
+			}
+		}
+	}
+	/* Regardless of what happened, extract whether system reset is supported this way */
+	if (pridr0 & CORESIGHT_ROM_PRIDR0_HAS_SYS_RESET_REQ)
+		ap->flags |= ADIV6_DP_FLAGS_HAS_SYSRESETREQ;
+	return true;
+}
+
+static inline uint64_t adi_read_coresight_rom_entry(
+	adiv5_access_port_s *const ap, const uint8_t rom_format, const target_addr64_t entry_address)
+{
+	const uint32_t entry_lower = adi_mem_read32(ap, entry_address);
+	if (rom_format == CORESIGHT_ROM_DEVID_FORMAT_32BIT)
+		return entry_lower;
+	const uint32_t entry_upper = adi_mem_read32(ap, entry_address + 4U);
+	return ((uint64_t)entry_upper << 32U) | (uint64_t)entry_lower;
+}
+
+static void adi_parse_coresight_v0_rom_table(adiv5_access_port_s *const ap, const target_addr64_t base_address,
+	const uint64_t recursion_depth, const char *const indent, const uint64_t pidr)
+{
+	/* Extract the designer code and part number from the part ID register */
+	const uint16_t designer_code = adi_designer_from_pidr(pidr);
+	const uint16_t part_number = pidr & PIDR_PN_MASK;
+
+#if defined(DEBUG_INFO_IS_NOOP)
+	(void)indent;
+	(void)designer_code;
+	(void)part_number;
+#endif
+
+	/* Now we know we're in a CoreSight v0 ROM table, read out the device ID field and set up the memory flag on the AP */
+	const uint8_t dev_id = adi_mem_read32(ap, base_address + CORESIGHT_ROM_DEVID) & 0x7fU;
+
+	if (adiv5_dp_error(ap->dp))
+		DEBUG_ERROR("Fault reading ROM table DEVID\n");
+
+	if (dev_id & CORESIGHT_ROM_DEVID_SYSMEM)
+		ap->flags |= ADIV5_AP_FLAGS_HAS_MEM;
+	const uint8_t rom_format = dev_id & CORESIGHT_ROM_DEVID_FORMAT;
+
+	/* Check if the power control registers are available, and if they are try to reset all debug resources */
+	if ((dev_id & CORESIGHT_ROM_DEVID_HAS_POWERREQ) && !adi_reset_resources(ap, base_address))
+		return;
+
+	DEBUG_INFO("%sROM Table: BASE=0x%0" PRIx32 "%08" PRIx32 " SYSMEM=%u, Manufacturer %03x Partno %03x (PIDR = "
+			   "0x%02" PRIx32 "%08" PRIx32 ")\n",
+		indent, (uint32_t)(base_address >> 32U), (uint32_t)base_address, 0U, designer_code, part_number,
+		(uint32_t)(pidr >> 32U), (uint32_t)pidr);
+
+	/* ROM table has at most 512 entries when 32-bit and 256 entries when 64-bit */
+	const uint32_t max_entries = rom_format == CORESIGHT_ROM_DEVID_FORMAT_32BIT ? 512U : 256U;
+	const size_t entry_shift = rom_format == CORESIGHT_ROM_DEVID_FORMAT_32BIT ? 2U : 3U;
+	for (uint32_t index = 0; index < max_entries; ++index) {
+		adiv5_dp_error(ap->dp);
+
+		/* Start by reading out the entry */
+		const uint64_t entry = adi_read_coresight_rom_entry(ap, rom_format, base_address + (index << entry_shift));
+
+		if (adiv5_dp_error(ap->dp)) {
+			DEBUG_ERROR("Fault reading ROM table entry %" PRIu32 "\n", index);
+			break;
+		}
+
+		const uint8_t presence = entry & CORESIGHT_ROM_ROMENTRY_ENTRY_MASK;
+		/* Check if the entry is valid */
+		if (presence == CORESIGHT_ROM_ROMENTRY_ENTRY_FINAL)
+			break;
+		/* Check for an entry to skip */
+		if (presence == CORESIGHT_ROM_ROMENTRY_ENTRY_NOT_PRESENT) {
+			DEBUG_INFO("%s%" PRIu32 " Entry 0x%0" PRIx32 "%08" PRIx32 " -> Not present\n", indent, index,
+				(uint32_t)(entry >> 32U), (uint32_t)entry);
+			continue;
+		}
+		/* Check that the entry isn't invalid */
+		if (presence == CORESIGHT_ROM_ROMENTRY_ENTRY_INVALID) {
+			DEBUG_INFO("%s%" PRIu32 " Entry invalid\n", indent, index);
+			continue;
+		}
+		/* Got a good entry? great! Figure out if it has a power domain to cycle and what the address offset is */
+		const target_addr64_t offset = entry & CORESIGHT_ROM_ROMENTRY_OFFSET_MASK;
+		if ((ap->flags & ADIV6_DP_FLAGS_HAS_PWRCTRL) & entry & CORESIGHT_ROM_ROMENTRY_POWERID_VALID) {
+			const uint8_t power_domain_offset =
+				((entry & CORESIGHT_ROM_ROMENTRY_POWERID_MASK) >> CORESIGHT_ROM_ROMENTRY_POWERID_SHIFT) << 2U;
+			/* Check if the power control register for this domain is present */
+			if (adi_mem_read32(ap, base_address + CORESIGHT_ROM_DBGPCR_BASE + power_domain_offset) &
+				CORESIGHT_ROM_DBGPCR_PRESENT) {
+				/* And if it is, ask the domain to power up */
+				adi_mem_write32(
+					ap, base_address + CORESIGHT_ROM_DBGPCR_BASE + power_domain_offset, CORESIGHT_ROM_DBGPCR_PWRREQ);
+				/* Then spin for a little waiting for the domain to become powered usefully */
+				platform_timeout_s timeout;
+				platform_timeout_set(&timeout, 250);
+				while (!(adi_mem_read32(ap, base_address + CORESIGHT_ROM_DBGPSR_BASE + power_domain_offset) &
+					CORESIGHT_ROM_DBGPSR_STATUS_ON)) {
+					if (platform_timeout_is_expired(&timeout)) {
+						DEBUG_WARN("adi: power-up failed\n");
+						return;
+					}
+				}
+			}
+		}
+
+		/* Now recursively probe the component */
+		adi_ap_component_probe(ap, base_address + offset, recursion_depth + 1U, index);
+	}
+
 	DEBUG_INFO("%sROM Table: END\n", indent);
 }
 
@@ -701,6 +839,16 @@ void adi_ap_component_probe(
 			default:
 				break;
 			}
+		}
+
+		/* Check if this is a CoreSight component ROM table */
+		if (cid_class == cidc_dc && arch_id == DEVARCH_ARCHID_ROMTABLE_V0) {
+			if (pidr & PIDR_SIZE_MASK) {
+				DEBUG_ERROR("Fault reading ROM table\n");
+				return;
+			}
+
+			adi_parse_coresight_v0_rom_table(ap, base_address, recursion, indent, pidr);
 		}
 	}
 }
