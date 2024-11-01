@@ -746,6 +746,9 @@ static bool cortexar_ensure_core_powered(target_s *const target)
 	if (status & CORTEXAR_DBG_PRSR_DOUBLE_LOCK)
 		return false;
 
+	/* Read CPUID now that the core is powered and there is no OS double lock */
+	cortex_read_cpuid(target);
+
 	/*
 	 * Finally, check for the normal OS Lock and clear it if it's set prior to halting the core.
 	 * Trying to do this after target_halt_request() does not function over JTAG and triggers
@@ -805,7 +808,6 @@ static target_s *cortexar_probe(
 	if (reason == TARGET_HALT_FAULT || reason == TARGET_HALT_ERROR)
 		return false;
 
-	cortex_read_cpuid(target);
 	/* The format of the debug identification register is described in DDI0406C §C11.11.15 pg2217 */
 	const uint32_t debug_id = cortex_dbg_read32(target, CORTEXAR_DBG_IDR);
 	/* Reserve the last available breakpoint for our use to implement single-stepping */
