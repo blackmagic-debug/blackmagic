@@ -673,8 +673,8 @@ void adi_ap_component_probe(
 		uint16_t arch_id = 0;
 		if (cid_class == cidc_dc) {
 			/* Read out the component's identification information */
-			const uint32_t devarch = adi_mem_read32(ap, base_address + DEVARCH_OFFSET);
-			dev_type = adi_mem_read32(ap, base_address + DEVTYPE_OFFSET) & DEVTYPE_MASK;
+			const uint32_t devarch = adi_mem_read32(ap, base_address + CORESIGHT_ROM_DEVARCH);
+			dev_type = adi_mem_read32(ap, base_address + CORESIGHT_ROM_DEVTYPE) & DEVTYPE_MASK;
 
 			if (devarch & DEVARCH_PRESENT)
 				arch_id = devarch & DEVARCH_ARCHID_MASK;
