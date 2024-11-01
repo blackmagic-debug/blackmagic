@@ -56,10 +56,11 @@
 #define CORTEX_R5 0xc150U
 
 /* Cortex-A CPU IDs */
-#define CORTEX_A5 0xc050U
-#define CORTEX_A7 0xc070U
-#define CORTEX_A8 0xc080U
-#define CORTEX_A9 0xc090U
+#define CORTEX_A5  0xc050U
+#define CORTEX_A7  0xc070U
+#define CORTEX_A8  0xc080U
+#define CORTEX_A9  0xc090U
+#define CORTEX_A55 0xd050U
 
 /* Cortex general purpose register offsets */
 #define CORTEX_REG_SP      13U
