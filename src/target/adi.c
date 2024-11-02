@@ -574,7 +574,7 @@ static void adi_parse_adi_rom_table(adiv5_access_port_s *const ap, const target_
 	}
 
 	/* Check SYSMEM bit */
-	const bool memtype = adi_mem_read32(ap, base_address + ADIV5_ROM_MEMTYPE) & ADIV5_ROM_MEMTYPE_SYSMEM;
+	const bool memtype = adi_mem_read32(ap, base_address + ADI_ROM_MEMTYPE) & ADI_ROM_MEMTYPE_SYSMEM;
 	if (adiv5_dp_error(ap->dp))
 		DEBUG_ERROR("Fault reading ROM table entry\n");
 	else if (memtype)
@@ -595,13 +595,13 @@ static void adi_parse_adi_rom_table(adiv5_access_port_s *const ap, const target_
 		if (entry == 0)
 			break;
 
-		if (!(entry & ADIV5_ROM_ROMENTRY_PRESENT)) {
+		if (!(entry & ADI_ROM_ROMENTRY_PRESENT)) {
 			DEBUG_INFO("%s%" PRIu32 " Entry 0x%08" PRIx32 " -> Not present\n", indent, i, entry);
 			continue;
 		}
 
 		/* Probe recursively */
-		adi_ap_component_probe(ap, base_address + (entry & ADIV5_ROM_ROMENTRY_OFFSET), recursion_depth + 1U, i);
+		adi_ap_component_probe(ap, base_address + (entry & ADI_ROM_ROMENTRY_OFFSET), recursion_depth + 1U, i);
 	}
 	DEBUG_INFO("%sROM Table: END\n", indent);
 }
