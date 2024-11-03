@@ -858,31 +858,31 @@ void adi_ap_component_probe(
 		/* Look the component up and dispatch to a probe routine accordingly */
 		const arm_coresight_component_s *const component =
 			adi_lookup_component(base_address, entry_number, indent, cid_class, pidr, dev_type, arch_id);
+		if (component == NULL)
+			return;
 
-		if (component) {
-			switch (component->arch) {
-			case aa_cortexm:
-				DEBUG_INFO("%s-> cortexm_probe\n", indent + 1);
-				cortexm_probe(ap);
-				break;
-			case aa_cortexa:
-				DEBUG_INFO("%s-> cortexa_probe\n", indent + 1);
-				cortexa_probe(ap, base_address);
-				break;
-			case aa_cortexr:
-				DEBUG_INFO("%s-> cortexr_probe\n", indent + 1);
-				cortexr_probe(ap, base_address);
-				break;
-			/* Handle when the component is a CoreSight component ROM table */
-			case aa_rom_table:
-				if (pidr & PIDR_SIZE_MASK)
-					DEBUG_ERROR("Fault reading ROM table\n");
-				else
-					adi_parse_coresight_v0_rom_table(ap, base_address, recursion, indent, pidr);
-				break;
-			default:
-				break;
-			}
+		switch (component->arch) {
+		case aa_cortexm:
+			DEBUG_INFO("%s-> cortexm_probe\n", indent + 1);
+			cortexm_probe(ap);
+			break;
+		case aa_cortexa:
+			DEBUG_INFO("%s-> cortexa_probe\n", indent + 1);
+			cortexa_probe(ap, base_address);
+			break;
+		case aa_cortexr:
+			DEBUG_INFO("%s-> cortexr_probe\n", indent + 1);
+			cortexr_probe(ap, base_address);
+			break;
+		/* Handle when the component is a CoreSight component ROM table */
+		case aa_rom_table:
+			if (pidr & PIDR_SIZE_MASK)
+				DEBUG_ERROR("Fault reading ROM table\n");
+			else
+				adi_parse_coresight_v0_rom_table(ap, base_address, recursion, indent, pidr);
+			break;
+		default:
+			break;
 		}
 	}
 }
