@@ -80,6 +80,23 @@ static const debugger_device_s debugger_devices[] = {
 	{0, 0, PROBE_TYPE_NONE, NULL, ""},
 };
 
+#if defined(_WIN32) || defined(__CYGWIN__)
+static char *strndup(const char *const src, const size_t size)
+{
+	/* Determine how many bytes to copy to the new string, including the NULL terminator */
+	const size_t length = MIN(size, strlen(src)) + 1U;
+	/* Try to allocate storage for the new string */
+	char *result = malloc(length);
+	if (!result)
+		return NULL;
+	/* Now we have storage, copy the bytes over */
+	memcpy(result, src, length - 1U);
+	/* And finally terminate the string to return */
+	result[length - 1U] = '\0';
+	return result;
+}
+#endif
+
 const debugger_device_s *get_debugger_device_from_vid_pid(const uint16_t probe_vid, const uint16_t probe_pid)
 {
 	/* Iterate over the list excluding the last entry (PROBE_TYPE_NONE) */
