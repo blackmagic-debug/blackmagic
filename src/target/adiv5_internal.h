@@ -276,6 +276,7 @@ typedef enum arm_arch {
 	aa_cortexm,
 	aa_cortexa,
 	aa_cortexr,
+	aa_rom_table,
 	aa_access_port,
 	aa_end
 } arm_arch_e;
