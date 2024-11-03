@@ -87,6 +87,12 @@ option(
 	description: 'Use the BMD bootloader (not always applicable)'
 )
 option(
+	'stlink_v2_isol',
+	type: 'boolean',
+	value: false,
+	description: 'Build for the ISOL variant of ST-Link v2'
+)
+option(
 	'stlink_swim_nrst_as_uart',
 	type: 'boolean',
 	value: false,

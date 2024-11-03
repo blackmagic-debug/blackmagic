@@ -40,6 +40,8 @@ probe_stlink_dfu_sources = files(
 	'usbdfu.c',
 )
 
+stlink_v2_isol = get_option('stlink_v2_isol')
+
 bmd_bootloader = get_option('bmd_bootloader')
 
 probe_stlink_dfu_serial_length = bmd_bootloader ? '9' : '25'
@@ -48,6 +50,9 @@ probe_stlink_load_address = bmd_bootloader ? '0x8002000' : '0x8004000'
 probe_stlink_args = [
 	f'-DDFU_SERIAL_LENGTH=@probe_stlink_dfu_serial_length@',
 ]
+if stlink_v2_isol
+	probe_stlink_args += ['-DSTLINK_V2_ISOL']
+endif
 if not bmd_bootloader
 	probe_stlink_args += ['-DST_BOOTLOADER']
 endif
