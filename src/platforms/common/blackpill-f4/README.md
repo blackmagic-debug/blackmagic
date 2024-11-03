@@ -40,20 +40,21 @@ In the example command lines for building and flashing the firmware to the Black
 ```sh
 git clone https://github.com/blackmagic-debug/blackmagic.git
 cd blackmagic
-git submodule update --init
 ```
 
 1. Create a build configuration for specific platform (WeActStudio F401CC, F401CE, or F411CE) with specific options (enable BMD bootloader flags and offsets -- this is the default)
 
 ```sh
-meson setup build_blackpill_xxxxxx --cross-file=cross-file/blackpill-xxxxxx.ini -Dbmd_bootloader=true
+meson setup build --cross-file=cross-file/blackpill-xxxxxx.ini -Dbmd_bootloader=true
 ```
+
+  Note: While the above command uses the 'build' directory, the name used is arbitrary, meaning, should a user wish to have multiple platforms built, they may use a more descriptive folder name.
 
 2. Compile the firmware and bootloader
 
 ```sh
-ninja -C build_blackpill_xxxxxx blackmagic_blackpill_xxxxxx_firmware.bin
-ninja -C build_blackpill_xxxxxx boot-bin
+ninja -C build
+ninja -C build boot-bin
 ```
 
 ### Firmware upgrade with dfu-util
@@ -68,7 +69,7 @@ ninja -C build_blackpill_xxxxxx boot-bin
   - Release BOOT0
 - Upload the bootloader
 ```sh
-dfu-util -d 0483:df11 --alt 0 -s 0x08000000:leave -D build_blackpill_xxxxxx/blackmagic_blackpill_xxxxxx_bootloader.bin
+dfu-util -d 0483:df11 --alt 0 -s 0x08000000:leave -D build/blackmagic_blackpill_xxxxxx_bootloader.bin
 ```
 - Force the F4 into system bootloader mode:
   - Push NRST and BOOT0
@@ -78,12 +79,23 @@ dfu-util -d 0483:df11 --alt 0 -s 0x08000000:leave -D build_blackpill_xxxxxx/blac
   - Release BOOT0
 - Upload the firmware:
 ```
-./dfu-util -d 0483:df11 --alt 0 -s 0x08000000:leave -D build_blackpill_xxxxxx/blackmagic_blackpill_xxxxxx_firmware.bin
+./dfu-util -d 0483:df11 --alt 0 -s 0x08004000:leave -D build/blackmagic_blackpill_xxxxxx_firmware.bin
 ```
 
 - Exit dfu mode: press and release nRST. The newly flashed Black Magic Probe should boot and enumerate.
 
 For other firmware upgrade instructions see the [Firmware Upgrade](https://black-magic.org/upgrade.html) section.
+
+### Using the BMD Bootloader
+If you flashed the bootloader using the above instructions, it may be invoked using the following:
+- Force the F4 into BMD bootloader mode:
+  - Push NRST and KEY
+  - Wait a moment
+  - Release NRST
+  - Wait a moment
+  - Release KEY
+
+Once activated the BMD bootloader may be used to flash the device using 'bmputil,' available [here](https://github.com/blackmagic-debug/bmputil).
 
 ## SWD/JTAG frequency setting
 
