@@ -58,60 +58,48 @@ if get_option('no_own_ll')
 	)
 endif
 
-if is_firmware_build
-	enabled_targets = get_option('targets')
-
-	# Check that at least one target is enabled
-	assert(
-		enabled_targets.length() > 0,
-		'''No debug targets enabled, please enable at least one target to build.
-	See the 'targets' option for a list of available targets.
-	''',
-	)
-endif
-
 # Conditional file compilation based on target selection
 # We declare a dependency for each target group with the source files required
 # these dependencies are then added to the BMD core, conditinal on the targets option
 # NOTE: sourceset module might be an alternative to this method (unexplored)
-target_names = [] # List of all target names
+all_targets = []
 
-target_arm_coresight = declare_dependency(
+arm_coresight = declare_dependency(
 	sources: files('arm_coresight_cti.c'),
 )
 
-target_cortex = declare_dependency(
+cortex_common = declare_dependency(
 	sources: files('cortex.c'),
 )
 
 target_cortexar = declare_dependency(
 	sources: files('cortexar.c'),
-	dependencies: target_cortex,
+	dependencies: cortex_common,
 	compile_args: ['-DCONFIG_CORTEXAR=1'],
 	variables: {
 		'description': 'Cortex-A/R support'
 	}
 )
-target_names += 'cortexar'
+all_targets += target_cortexar
 
 target_cortexm = declare_dependency(
 	sources: files('cortexm.c'),
-	dependencies: target_cortex,
+	dependencies: cortex_common,
 	compile_args: ['-DCONFIG_CORTEXM=1'],
 	variables: {
 		'description': 'Cortex-M support'
 	}
 )
-target_names += 'cortexm'
+all_targets += target_cortexm
 
 target_cortexa_armv8 = declare_dependency(
 	sources: files('cortexa_armv8.c'),
-	dependencies: [target_cortex, target_arm_coresight],
+	dependencies: [cortex_common, arm_coresight],
 	variables: {
 		'description': 'Cortex-A armv8 support'
 	}
 )
-target_names += 'cortexa_armv8'
+all_targets += target_cortexa_armv8
 
 riscv_jtag_dtm = declare_dependency(
 	sources: files(
@@ -119,7 +107,7 @@ riscv_jtag_dtm = declare_dependency(
 	),
 )
 
-target_riscv = declare_dependency(
+riscv_common = declare_dependency(
 	sources: files(
 		'riscv_debug.c',
 		'riscv_adi_dtm.c',
@@ -130,21 +118,21 @@ target_riscv = declare_dependency(
 
 target_riscv32 = declare_dependency(
 	sources: files('riscv32.c'),
-	dependencies: target_riscv,
+	dependencies: riscv_common,
 	variables: {
 		'description': 'RISC-V 32-bit support'
 	},
 )
-target_names += 'riscv32'
+all_targets += target_riscv32
 
 target_riscv64 = declare_dependency(
 	sources: files('riscv64.c'),
-	dependencies: target_riscv,
+	dependencies: riscv_common,
 	variables: {
 		'description': 'RISC-V 64-bit support'
 	},
 )
-target_names += 'riscv64'
+all_targets += target_riscv64
 
 target_apollo3 = declare_dependency(
 	sources: files('apollo3.c'),
@@ -154,7 +142,7 @@ target_apollo3 = declare_dependency(
 		'description': 'Ambiq Apollo3 parts'
 	},
 )
-target_names += 'apollo3'
+all_targets += target_apollo3
 
 target_ch579 = declare_dependency(
 	sources: files('ch579.c'),
@@ -164,7 +152,7 @@ target_ch579 = declare_dependency(
 		'description': 'WinChipHead CH579'
 	},
 )
-target_names += 'ch579'
+all_targets += target_ch579
 
 target_efm = declare_dependency(
 	sources: files(
@@ -176,7 +164,7 @@ target_efm = declare_dependency(
 		'description': 'Energy Micro parts'
 	},
 )
-target_names += 'efm'
+all_targets += target_efm
 
 target_hc32 = declare_dependency(
 	sources: files('hc32l110.c'),
@@ -186,7 +174,7 @@ target_hc32 = declare_dependency(
 		'description': 'HC32 parts'
 	},
 )
-target_names += 'hc32'
+all_targets += target_hc32
 
 target_lpc = declare_dependency(
 	sources: files(
@@ -205,7 +193,7 @@ target_lpc = declare_dependency(
 		'description': 'LPC series parts'
 	},
 )
-target_names += 'lpc'
+all_targets += target_lpc
 
 target_nrf = declare_dependency(
 	sources: files(
@@ -219,7 +207,7 @@ target_nrf = declare_dependency(
 		'description': 'nRF series parts'
 	},
 )
-target_names += 'nrf'
+all_targets += target_nrf
 
 target_nxp = declare_dependency(
 	sources: files(
@@ -234,7 +222,7 @@ target_nxp = declare_dependency(
 		'description': 'Kinetis series parts'
 	},
 )
-target_names += 'nxp'
+all_targets += target_nxp
 
 target_puya = declare_dependency(
 	sources: files('puya.c'),
@@ -244,36 +232,29 @@ target_puya = declare_dependency(
 		'description': 'Puya PY32 series parts'
 	},
 )
-target_names += 'puya'
+all_targets += target_puya
 
 target_renesas_ra = declare_dependency(
 	sources: files('renesas_ra.c'),
 	compile_args: ['-DCONFIG_RA=1'],
 	dependencies: target_cortexm,
+	variables: {
+		'description': 'Renesas RA parts'
+	},
 )
+all_targets += target_renesas_ra
 
 target_renesas_rz = declare_dependency(
 	sources: files('renesas_rz.c'),
 	compile_args: ['-DCONFIG_RZ=1'],
 	dependencies: target_cortexar,
-)
-
-# If the Cortex-A/R target is not enabled, don't enable Renesas RZ part support
-if not is_firmware_build or enabled_targets.contains('cortexar')
-target_renesas_deps = [
-	target_renesas_ra,
-	target_renesas_rz,
-]
-else
-target_renesas_deps = target_renesas_ra
-endif
-target_renesas = declare_dependency(
-	dependencies: target_renesas_deps,
 	variables: {
-		'description': 'Renesas parts'
+		'description': 'Renesas RZ parts'
 	},
 )
-target_names += 'renesas'
+all_targets += target_renesas_rz
+
+target_renesas = [target_renesas_ra, target_renesas_rz]
 
 target_rp = declare_dependency(
 	sources: files(
@@ -286,7 +267,7 @@ target_rp = declare_dependency(
 		'description': 'Raspberry Pi MCUs (RP2040, RP2350)'
 	},
 )
-target_names += 'rp'
+all_targets += target_rp
 
 target_sam = declare_dependency(
 	sources: files(
@@ -301,41 +282,35 @@ target_sam = declare_dependency(
 		'description': 'ATSAM series parts'
 	},
 )
-target_names += 'sam'
+all_targets += target_sam
 
-target_stm_common = declare_dependency(
+stm_common = declare_dependency(
 	sources: files(
 		'stm32_common.c',
 	)
 )
 
-target_stm32f1_deps = [target_cortexm, target_stm_common]
-# If the 32-bit RISC-V target is not enabled, don't enable GD32VF103 support
-if not is_firmware_build or enabled_targets.contains('riscv32')
-	target_stm32f1_deps += [target_riscv32]
-endif
-
 target_stm32f1 = declare_dependency(
 	sources: files(
 		'stm32f1.c',
 	),
-	dependencies: target_stm32f1_deps,
+	dependencies: [target_cortexm, stm_common],
 	variables: {
 		'description': 'STM32F1 parts'
 	},
 )
-target_names += 'stm32f1'
+all_targets += target_stm32f1
 
 target_stm32f4 = declare_dependency(
 	sources: files(
 		'stm32f4.c',
 	),
-	dependencies: [target_cortexm, target_stm_common],
+	dependencies: [target_cortexm, stm_common],
 	variables: {
 		'description': 'STM32F4 parts'
 	},
 )
-target_names += 'stm32f4'
+all_targets += target_stm32f4
 
 target_ch32 = declare_dependency(
 	sources: files(
@@ -347,7 +322,7 @@ target_ch32 = declare_dependency(
 		'description': 'WinChipHead CH32 ARM Cortex parts'
 	},
 )
-target_names += 'ch32'
+all_targets += target_ch32
 
 target_ch32v = declare_dependency(
 	sources: files(
@@ -358,7 +333,7 @@ target_ch32v = declare_dependency(
 		'description': 'WinChipHead CH32 RISC-V parts'
 	},
 )
-target_names += 'ch32v'
+all_targets += target_ch32v
 
 target_stm = declare_dependency(
 	sources: files(
@@ -371,12 +346,12 @@ target_stm = declare_dependency(
 		'stm32wb0.c',
 	),
 	compile_args: ['-DCONFIG_STM=1'],
-	dependencies: [target_cortexm, target_stm_common, target_stm32f1, target_stm32f4],
+	dependencies: [target_cortexm, stm_common, target_stm32f1, target_stm32f4],
 	variables: {
 		'description': 'STM32 parts'
 	},
 )
-target_names += 'stm'
+all_targets += target_stm
 
 target_gd32 = declare_dependency(
 	dependencies: [target_stm32f1, target_stm32f4],
@@ -385,7 +360,16 @@ target_gd32 = declare_dependency(
 		'description': 'GigaDevice parts'
 	},
 )
-target_names += 'gd32'
+all_targets += target_gd32
+
+target_gd32_rv = declare_dependency(
+	dependencies: [target_gd32, target_riscv32],
+	compile_args: ['-DCONFIG_GD32=1'],
+	variables: {
+		'description': 'GigaDevice Risc-V parts'
+	},
+)
+all_targets += target_gd32_rv
 
 target_mm32 = declare_dependency(
 	dependencies: target_stm32f1,
@@ -394,19 +378,19 @@ target_mm32 = declare_dependency(
 		'description': 'MindMotion parts'
 	},
 )
-target_names += 'mm32'
+all_targets += target_mm32
 
 target_at32f4 = declare_dependency(
 	sources: files(
 		'at32f43x.c',
 	),
 	compile_args: ['-DCONFIG_AT32=1'],
-	dependencies: [target_cortexm, target_stm_common],
+	dependencies: [target_cortexm, stm_common],
 	variables: {
 		'description': 'Arterytek parts'
 	},
 )
-target_names += 'at32f4'
+all_targets += target_at32f4
 
 target_ti = declare_dependency(
 	sources: files(
@@ -421,7 +405,7 @@ target_ti = declare_dependency(
 		'description': 'Texas Instruments parts'
 	},
 )
-target_names += 'ti'
+all_targets += target_ti
 
 target_xilinx = declare_dependency(
 	sources: files(
@@ -433,49 +417,47 @@ target_xilinx = declare_dependency(
 		'description': 'Xilinx parts'
 	},
 )
-target_names += 'xilinx'
+all_targets += target_xilinx
 
 if is_firmware_build
 	# Convert targets option list into a list of dependencies
-	enabled_target_deps = []
-	foreach target : enabled_targets
-		enabled_target_deps += get_variable(f'target_@target@')
+	enabled_bmd_targets = []
+	foreach target : get_option('targets')
+		enabled_bmd_targets += get_variable(f'target_@target@')
 	endforeach
+
+	# Check that at least one target is enabled
+	assert(
+		enabled_bmd_targets.length() > 0,
+		'''No debug targets enabled, please enable at least one target to build.
+	See the 'targets' option for a list of available targets.
+	''',
+	)
 
 	# BMD target dependency
 	bmd_targets = declare_dependency(
 		include_directories: target_common_includes,
 		sources: target_common_sources,
-		dependencies: enabled_target_deps,
+		dependencies: enabled_bmd_targets,
 	)
 endif
 
-# Enable all architectures and targets for libbmd
-libbmd_target_deps = []
-foreach target : target_names
-	libbmd_target_deps += get_variable(f'target_@target@')
-endforeach
-
-# Define the libbmd target dependency
+# Define the libbmd target dependency, enable all architectures and targets
 libbmd_targets = declare_dependency(
 	include_directories: target_common_includes,
 	sources: target_common_sources,
-	dependencies: libbmd_target_deps,
+	dependencies: all_targets,
 )
 
 if is_firmware_build
 	# Build a dictionary of the targets that have been selected for the firmware build
 	target_summary = {}
-	foreach target : target_names
-		# Get the target dependency object
-		target_dep = get_variable(f'target_@target@')
-
-		# Get the target description, defaulting to the base target name if not set
-		target_description = target_dep.get_variable('description', default_value: target)
+	foreach target : all_targets
+		# Get the target description
+		target_description = target.get_variable('description')
 
 		# Add the target enabled status to the summary
-		target_enabled = target in enabled_targets
-		target_summary += {target_description: target_enabled}
+		target_summary += {target_description: target in enabled_bmd_targets}
 	endforeach
 
 	# Include the target enable list in the summary output
