@@ -64,6 +64,7 @@
 #include <hidapi.h>
 #include <wchar.h>
 #include <sys/stat.h>
+#include <assert.h>
 
 #include "bmp_hosted.h"
 #include "dap.h"
@@ -512,6 +513,13 @@ ssize_t dbg_dap_cmd_bulk(const uint8_t *const request_data, const size_t request
 			return response_result;
 		}
 	} while (response_data[0] != request_data[0]);
+	/* If the response requested is the size of the packet size for the adaptor, generate a ZLP read to clean state */
+	if (transferred == (int)dap_packet_size) {
+		uint8_t zlp;
+		int zlp_read = 0;
+		libusb_bulk_transfer(usb_handle, in_ep, &zlp, sizeof(zlp), &zlp_read, TRANSFER_TIMEOUT_MS);
+		assert(zlp_read == 0);
+	}
 	return transferred;
 }
 
