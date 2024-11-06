@@ -561,6 +561,23 @@ bool dap_run_cmd(const void *const request_data, const size_t request_length, vo
 	return (size_t)result >= response_length;
 }
 
+bool dap_run_transfer(const void *const request_data, const size_t request_length, void *const response_data,
+	const size_t response_length, size_t *const actual_length)
+{
+	/*
+	 * This function works almost exactly the same as dap_run_cmd(), but captures and preserves the resulting
+	 * response length if the result is not an outright failure. It sets the actual response length to 0 when it is.
+	 */
+	const ssize_t result =
+		dap_run_cmd_raw((const uint8_t *)request_data, request_length, (uint8_t *)response_data, response_length) - 1U;
+	if (result < 0) {
+		*actual_length = 0U;
+		return false;
+	}
+	*actual_length = (size_t)result;
+	return *actual_length >= response_length;
+}
+
 static void dap_adiv5_mem_read(adiv5_access_port_s *ap, void *dest, target_addr64_t src, size_t len)
 {
 	if (len == 0U)

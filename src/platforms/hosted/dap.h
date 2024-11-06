@@ -95,6 +95,8 @@ bool dap_mem_read_block(adiv5_access_port_s *target_ap, void *dest, target_addr6
 bool dap_mem_write_block(
 	adiv5_access_port_s *target_ap, target_addr64_t dest, const void *src, size_t len, align_e align);
 bool dap_run_cmd(const void *request_data, size_t request_length, void *response_data, size_t response_length);
+bool dap_run_transfer(const void *request_data, size_t request_length, void *response_data, size_t response_length,
+	size_t *actual_length);
 bool dap_jtag_configure(void);
 
 void dap_dp_abort(adiv5_debug_port_s *target_dp, uint32_t abort);
