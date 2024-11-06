@@ -79,7 +79,7 @@ typedef struct cortexm_priv {
 	bool stepping;
 	bool on_bkpt;
 	/* Flash Patch controller configuration */
-	uint32_t flash_patch_revision;
+	uint8_t flash_patch_revision;
 	/* Copy of DEMCR for vector-catch */
 	uint32_t demcr;
 } cortexm_priv_s;
@@ -1090,7 +1090,7 @@ static int cortexm_breakwatch_set(target_s *target, breakwatch_s *breakwatch)
 
 	switch (breakwatch->type) {
 	case TARGET_BREAK_HARD:
-		if (priv->flash_patch_revision == 0) {
+		if (priv->flash_patch_revision == 0U) {
 			val &= 0x1ffffffcU;
 			val |= (breakwatch->addr & 2U) ? 0x80000000U : 0x40000000U;
 		}
