@@ -207,7 +207,7 @@ bool perform_dap_transfer_block_write(
 
 	dap_transfer_block_response_write_s response;
 	/* Run the request having set up the request buffer */
-	if (!dap_run_cmd(&request, DAP_CMD_BLOCK_WRITE_HDR_LEN + (block_count * 4U), &response, sizeof(response)))
+	if (!dap_run_cmd(&request, DAP_CMD_BLOCK_WRITE_HDR_LEN + (size_t)(block_count * 4U), &response, sizeof(response)))
 		return false;
 
 	/* Check the response over */
