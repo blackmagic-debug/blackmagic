@@ -161,9 +161,16 @@ bool perform_dap_transfer_block_read(
 	write_le2(request.block_count, 0, block_count);
 
 	dap_transfer_block_response_read_s response;
+	size_t response_length;
 	/* Run the request having set up the request buffer */
-	if (!dap_run_cmd(&request, sizeof(request), &response, 3U + (block_count * 4U)))
+	if (!dap_run_transfer(&request, sizeof(request), &response, 3U + (block_count * 4U), &response_length)) {
+		/* Check if we got any response bytes back and if we got enough, extract the status. */
+		if (response_length < 3U)
+			exit(1);
+		/* We got enough response bytes back for the status to be valid, so put that in the DP's fault member */
+		target_dp->fault = response.status & DAP_TRANSFER_STATUS_MASK;
 		return false;
+	}
 
 	/* Check the response over */
 	const uint16_t blocks_read = read_le2(response.count, 0);
