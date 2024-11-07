@@ -58,84 +58,34 @@ if get_option('no_own_ll')
 	)
 endif
 
-if is_firmware_build
-	enabled_targets = get_option('targets')
-
-	# Check that at least one target is enabled
-	assert(
-		enabled_targets.length() > 0,
-		'''No debug targets enabled, please enable at least one target to build.
-	See the 'targets' option for a list of available targets.
-	''',
-	)
-
-	# Build a dictionary mapping all target short names to proper textual naming
-	target_names = {
-		'cortexar': 'Cortex-A/R support',
-		'cortexm': 'Cortex-M support',
-		'riscv32': 'RISC-V 32-bit support',
-		'riscv64': 'RISC-V 64-bit support',
-		'at32f4': 'Arterytek parts',
-		'apollo3': 'Ambiq Apollo3 parts',
-		'ch32': 'WinChipHead CH32 parts',
-		'ch579': 'WinChipHead CH579 parts',
-		'efm': 'Energy Micro parts',
-		'gd32': 'GigaDevice parts',
-		'hc32': 'HC32 parts',
-		'lpc': 'LPC series parts',
-		'mm32': 'MindMotion parts',
-		'nrf': 'nRF series parts',
-		'nxp': 'Kinetis series parts',
-		'puya': 'Puya PY32 series parts',
-		'renesas': 'Renesas parts',
-		'rp': 'Raspberry Pi MCUs (RP2040, RP2350)',
-		'sam': 'ATSAM series parts',
-		'stm': 'STM32 (and clones) parts',
-		'ti': 'Texas Instruments parts',
-		'xilinx': 'Xilinx parts',
-	}
-
-	# Check to see if the set of enabled targets is all of them and the
-	# firmware is to be built for a STM32F1 based probe (requires a restriction)
-	if probe in ['bluepill', 'native', 'stlink', 'swlink'] and enabled_targets.length() == target_names.keys().length()
-		warning('Disabling some targets as your build will not fit the target probe otherwise')
-		enabled_targets = ['cortexm', 'lpc', 'nrf', 'nxp', 'renesas', 'rp', 'sam', 'stm', 'ti']
-	elif probe in ['f072'] and enabled_targets.length() == target_names.keys().length()
-		warning('Disabling some targets as your build will not fit the target probe otherwise')
-		enabled_targets = [
-			'cortexm',
-			'riscv32',
-			'riscv64',
-			'lpc',
-			'nrf',
-			'nxp',
-			'renesas',
-			'rp',
-			'sam',
-			'stm',
-			'ti'
-		]
-	endif
-endif
-
 # Conditional file compilation based on target selection
 # We declare a dependency for each target group with the source files required
 # these dependencies are then added to the BMD core, conditinal on the targets option
 # NOTE: sourceset module might be an alternative to this method (unexplored)
-target_cortex = declare_dependency(
+all_targets = []
+
+cortex_common = declare_dependency(
 	sources: files('cortex.c'),
 )
 
 target_cortexar = declare_dependency(
 	sources: files('cortexar.c'),
-	dependencies: target_cortex,
+	dependencies: cortex_common,
 	compile_args: ['-DCONFIG_CORTEXAR=1'],
+	variables: {
+		'description': 'Cortex-A/R support'
+	}
 )
+all_targets += target_cortexar
 
 target_cortexm = declare_dependency(
 	sources: files('cortexm.c'),
-	dependencies: target_cortex,
+	dependencies: cortex_common,
+	variables: {
+		'description': 'Cortex-M support'
+	},
 )
+all_targets += target_cortexm
 
 riscv_jtag_dtm = declare_dependency(
 	sources: files(
@@ -143,7 +93,7 @@ riscv_jtag_dtm = declare_dependency(
 	),
 )
 
-target_riscv = declare_dependency(
+riscv_common = declare_dependency(
 	sources: files(
 		'riscv_debug.c',
 		'riscv_adi_dtm.c',
@@ -154,35 +104,59 @@ target_riscv = declare_dependency(
 
 target_riscv32 = declare_dependency(
 	sources: files('riscv32.c'),
-	dependencies: target_riscv,
+	dependencies: riscv_common,
+	variables: {
+		'description': 'RISC-V 32-bit support'
+	},
 )
+all_targets += target_riscv32
 
 target_riscv64 = declare_dependency(
 	sources: files('riscv64.c'),
-	dependencies: target_riscv,
+	dependencies: riscv_common,
+	variables: {
+		'description': 'RISC-V 64-bit support'
+	},
 )
+all_targets += target_riscv64
 
 target_apollo3 = declare_dependency(
 	sources: files('apollo3.c'),
 	dependencies: target_cortexm,
+	variables: {
+		'description': 'Ambiq Apollo3 parts'
+	},
 )
+all_targets += target_apollo3
 
 target_ch579 = declare_dependency(
 	sources: files('ch579.c'),
 	dependencies: target_cortexm,
+	variables: {
+		'description': 'WinChipHead CH579'
+	},
 )
+all_targets += target_ch579
 
 target_efm = declare_dependency(
 	sources: files(
 		'efm32.c'
 	) + efm32_stub,
 	dependencies: target_cortexm,
+	variables: {
+		'description': 'Energy Micro parts'
+	},
 )
+all_targets += target_efm
 
 target_hc32 = declare_dependency(
 	sources: files('hc32l110.c'),
 	dependencies: target_cortexm,
+	variables: {
+		'description': 'HC32 parts'
+	},
 )
+all_targets += target_hc32
 
 target_lpc = declare_dependency(
 	sources: files(
@@ -196,7 +170,11 @@ target_lpc = declare_dependency(
 		'lpc_common.c',
 	),
 	dependencies: target_cortexm,
+	variables: {
+		'description': 'LPC series parts'
+	},
 )
+all_targets += target_lpc
 
 target_nrf = declare_dependency(
 	sources: files(
@@ -204,7 +182,11 @@ target_nrf = declare_dependency(
 		'nrf91.c',
 	),
 	dependencies: target_cortexm,
+	variables: {
+		'description': 'nRF series parts'
+	},
 )
+all_targets += target_nrf
 
 target_nxp = declare_dependency(
 	sources: files(
@@ -214,32 +196,40 @@ target_nxp = declare_dependency(
 		's32k3xx.c',
 	),
 	dependencies: target_cortexm,
+	variables: {
+		'description': 'Kinetis series parts'
+	},
 )
+all_targets += target_nxp
 
 target_puya = declare_dependency(
 	sources: files('puya.c'),
 	dependencies: target_cortexm,
+	variables: {
+		'description': 'Puya PY32 series parts'
+	},
 )
+all_targets += target_puya
 
 target_renesas_ra = declare_dependency(
 	sources: files('renesas_ra.c'),
 	dependencies: target_cortexm,
+	variables: {
+		'description': 'Renesas RA parts'
+	},
 )
+all_targets += target_renesas_ra
 
 target_renesas_rz = declare_dependency(
 	sources: files('renesas_rz.c'),
 	dependencies: target_cortexar,
+	variables: {
+		'description': 'Renesas RZ parts'
+	},
 )
+all_targets += target_renesas_rz
 
-# If the Cortex-A/R target is not enabled, don't enable Renesas RZ part support
-if not is_firmware_build or enabled_targets.contains('cortexar')
-target_renesas = [
-	target_renesas_ra,
-	target_renesas_rz,
-]
-else
-target_renesas = target_renesas_ra
-endif
+target_renesas = [target_renesas_ra, target_renesas_rz]
 
 target_rp = declare_dependency(
 	sources: files(
@@ -247,7 +237,11 @@ target_rp = declare_dependency(
 		'rp2350.c',
 	) + rp2040_stub,
 	dependencies: target_cortexm,
+	variables: {
+		'description': 'Raspberry Pi MCUs (RP2040, RP2350)'
+	},
 )
+all_targets += target_rp
 
 target_sam = declare_dependency(
 	sources: files(
@@ -257,40 +251,50 @@ target_sam = declare_dependency(
 		'samx5x.c',
 	),
 	dependencies: target_cortexm,
+	variables: {
+		'description': 'ATSAM series parts'
+	},
 )
+all_targets += target_sam
 
-target_stm_common = declare_dependency(
+stm_common = declare_dependency(
 	sources: files(
 		'stm32_common.c',
 	)
 )
 
-target_stm32f1_deps = [target_cortexm, target_stm_common]
-# If the 32-bit RISC-V target is not enabled, don't enable GD32VF103 support
-if not is_firmware_build or enabled_targets.contains('riscv32')
-	target_stm32f1_deps += [target_riscv32]
-endif
-
 target_stm32f1 = declare_dependency(
 	sources: files(
 		'stm32f1.c',
 	),
-	dependencies: target_stm32f1_deps,
+	dependencies: [target_cortexm, stm_common],
+	variables: {
+		'description': 'STM32F1 parts'
+	},
 )
+all_targets += target_stm32f1
 
 target_stm32f4 = declare_dependency(
 	sources: files(
 		'stm32f4.c',
 	),
-	dependencies: [target_cortexm, target_stm_common],
+	dependencies: [target_cortexm, stm_common],
+	variables: {
+		'description': 'STM32F4 parts'
+	},
 )
+all_targets += target_stm32f4
 
 target_ch32 = declare_dependency(
 	sources: files(
 		'ch32f1.c',
 	),
 	dependencies: target_stm32f1,
+	variables: {
+		'description': 'WinChipHead CH32 parts'
+	},
 )
+all_targets += target_ch32
 
 target_stm = declare_dependency(
 	sources: files(
@@ -302,25 +306,50 @@ target_stm = declare_dependency(
 		'stm32mp15.c',
 		'stm32wb0.c',
 	),
-	dependencies: [target_cortexm, target_stm_common, target_stm32f1, target_stm32f4],
+	dependencies: [target_cortexm, stm_common, target_stm32f1, target_stm32f4],
+	variables: {
+		'description': 'STM32 parts'
+	},
 )
+all_targets += target_stm
 
 target_gd32 = declare_dependency(
 	dependencies: [target_stm32f1, target_stm32f4],
 	compile_args: ['-DCONFIG_GD32=1'],
+	variables: {
+		'description': 'GigaDevice parts'
+	},
 )
+all_targets += target_gd32
+
+target_gd32_rv = declare_dependency(
+	dependencies: [target_gd32, target_riscv32],
+	compile_args: ['-DCONFIG_GD32=1'],
+	variables: {
+		'description': 'GigaDevice Risc-V parts'
+	},
+)
+all_targets += target_gd32_rv
 
 target_mm32 = declare_dependency(
 	dependencies: target_stm32f1,
 	compile_args: ['-DCONFIG_MM32=1'],
+	variables: {
+		'description': 'MindMotion parts'
+	},
 )
+all_targets += target_mm32
 
 target_at32f4 = declare_dependency(
 	sources: files(
 		'at32f43x.c',
 	),
 	dependencies: target_cortexm,
+	variables: {
+		'description': 'Arterytek parts'
+	},
 )
+all_targets += target_at32f4
 
 target_ti = declare_dependency(
 	sources: files(
@@ -329,7 +358,11 @@ target_ti = declare_dependency(
 		'msp432p4.c',
 	) + lmi_stub,
 	dependencies: target_cortexm,
+	variables: {
+		'description': 'Texas Instruments parts'
+	},
 )
+all_targets += target_ti
 
 target_xilinx = declare_dependency(
 	sources: files(
@@ -337,84 +370,56 @@ target_xilinx = declare_dependency(
 	),
 	dependencies: target_cortexar,
 	compile_args: ['-DCONFIG_XILINX=1'],
+	variables: {
+		'description': 'Xilinx parts'
+	},
 )
+all_targets += target_xilinx
 
 if is_firmware_build
 	# Convert targets option list into a list of dependencies
-	enabled_target_deps = []
-	foreach target : enabled_targets
-		enabled_target_deps += get_variable(f'target_@target@')
+	enabled_bmd_targets = []
+	foreach target : get_option('targets')
+		enabled_bmd_targets += get_variable(f'target_@target@')
 	endforeach
 
-	# Check if we should enable the RISC-V Debug remote protocol acceleration and do so if required
-	enable_riscv_accel = get_option('enable_riscv_accel')
-	if enable_riscv_accel
-		enabled_target_deps += declare_dependency(
-			compile_args: ['-DCONFIG_RISCV_ACCEL=1'],
-			dependencies: riscv_jtag_dtm,
-		)
-	endif
-
-	summary(
-		'RISC-V acceleration',
-		enable_riscv_accel,
-		bool_yn: true,
-		section: 'Remote Protocol',
+	# Check that at least one target is enabled
+	assert(
+		enabled_bmd_targets.length() > 0,
+		'''No debug targets enabled, please enable at least one target to build.
+	See the 'targets' option for a list of available targets.
+	''',
 	)
 
 	# BMD target dependency
 	bmd_targets = declare_dependency(
 		include_directories: target_common_includes,
 		sources: target_common_sources,
-		dependencies: enabled_target_deps,
+		dependencies: enabled_bmd_targets,
 	)
 endif
 
-libbmd_target_deps = [
-	# Enable all architectures for libbmd
-	target_cortexar,
-	target_cortexm,
-	target_riscv32,
-	target_riscv64,
-	# Enable all targets for libbmd
-	target_apollo3,
-	target_at32f4,
-	target_ch32,
-	target_ch579,
-	target_efm,
-	target_gd32,
-	target_hc32,
-	target_lpc,
-	target_mm32,
-	target_nrf,
-	target_nxp,
-	target_puya,
-	target_renesas_ra,
-	target_renesas_rz,
-	target_rp,
-	target_sam,
-	target_stm,
-	target_ti,
-	target_xilinx,
-]
-
-# Define the libbmd target dependency
+# Define the libbmd target dependency, enable all architectures and targets
 libbmd_targets = declare_dependency(
 	include_directories: target_common_includes,
 	sources: target_common_sources,
-	dependencies: libbmd_target_deps,
+	dependencies: all_targets,
 )
 
 if is_firmware_build
 	# Build a dictionary of the targets that have been selected for the firmware build
-	target_states = {}
-	foreach target_id, target_name : target_names
-		target_states += {target_name: target_id in enabled_targets}
+	target_summary = {}
+	foreach target : all_targets
+		# Get the target description
+		target_description = target.get_variable('description')
+
+		# Add the target enabled status to the summary
+		target_summary += {target_description: target in enabled_bmd_targets}
 	endforeach
 
 	# Include the target enable list in the summary output
 	summary(
-		target_states,
+		target_summary,
 		bool_yn: true,
 		section: 'Targets',
 	)
