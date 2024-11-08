@@ -193,10 +193,10 @@ static const arm_coresight_component_s arm_component_lut[] = {
 		ARM_COMPONENT_STR("CoreSight CATU", "(CoreSight Address Translation Unit)")},
 
 	{0xd05, 0x13, 0x4a13, aa_nosupport, cidc_dc, ARM_COMPONENT_STR("Cortex-A55 ETM", "(Embedded Trace)")},
-	{0xd05, 0x14, 0x1a14, aa_nosupport, cidc_dc, ARM_COMPONENT_STR("Cortex-A55 CTI", "(Cross Trigger)")},
+	{0xd05, 0x14, 0x1a14, aa_cti_armv8, cidc_dc, ARM_COMPONENT_STR("Cortex-A55 CTI", "(Cross Trigger)")},
 	{0xd05, 0x16, 0x2a16, aa_nosupport, cidc_unknown,
 		ARM_COMPONENT_STR("Cortex-A55 PMU", "(Performance Monitor Unit)")},
-	{0xd05, 0x15, 0x8a15, aa_nosupport, cidc_dc, ARM_COMPONENT_STR("Cortex-A55", "(Debug Unit)")},
+	{0xd05, 0x15, 0x8a15, aa_cortexa_armv8, cidc_dc, ARM_COMPONENT_STR("Cortex-A55", "(Debug Unit)")},
 
 	{0xfff, 0x00, 0, aa_end, cidc_unknown, ARM_COMPONENT_STR("end", "end")},
 };
