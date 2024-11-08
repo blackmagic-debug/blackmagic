@@ -69,7 +69,7 @@ struct target_flash {
 	uint8_t operation;                /* Current Flash operation (none means it's idle/unprepared) */
 	flash_prepare_func prepare;       /* Prepare for flash operations */
 	flash_erase_func erase;           /* Erase a range of flash */
-	flash_mass_erase_func mass_erase; /* Mass erase flash (this flash only) */
+	flash_mass_erase_func mass_erase; /* Mass erase flash (this flash only¹) */
 	flash_write_func write;           /* Write to flash */
 	flash_done_func done;             /* Finish flash operations */
 	uint8_t *buf;                     /* Buffer for flash operations */
@@ -78,6 +78,11 @@ struct target_flash {
 	target_addr32_t buf_addr_high;    /* Address of highest byte written */
 	target_flash_s *next;             /* Next flash in list */
 };
+
+/*
+ * ¹the mass_erase method must not cause any side effects outside the scope/address space of the flash 
+ * consider using the target mass_erase method instead for such cases
+ */
 
 typedef bool (*cmd_handler_fn)(target_s *target, int argc, const char **argv);
 

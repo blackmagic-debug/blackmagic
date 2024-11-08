@@ -157,7 +157,7 @@ bool target_flash_erase(target_s *target, target_addr_t addr, size_t len)
 		/* Align the start address to the erase block size */
 		const target_addr_t local_start_addr = addr & ~(flash->blocksize - 1U);
 
-		/* Check if we can use mass erase */
+		/* Check if we can use mass erase, i.e. if the erase range covers the entire flash address space */
 		const bool can_use_mass_erase =
 			flash->mass_erase != NULL && local_start_addr == flash->start && addr + len >= flash->start + flash->length;
 
