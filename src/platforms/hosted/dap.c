@@ -340,21 +340,14 @@ static size_t dap_adiv5_mem_access_build(const adiv5_access_port_s *const target
 	}
 }
 
-void dap_adiv5_mem_access_setup(adiv5_access_port_s *const target_ap, const target_addr64_t addr, const align_e align)
+bool dap_adiv5_mem_access_setup(adiv5_access_port_s *const target_ap, const target_addr64_t addr, const align_e align)
 {
 	/* Start by setting up the transfer and attempting it */
 	dap_transfer_request_s requests[4];
 	const size_t requests_count = dap_adiv5_mem_access_build(target_ap, requests, addr, align);
 	adiv5_debug_port_s *const target_dp = target_ap->dp;
-	const bool result = perform_dap_transfer_recoverable(target_dp, requests, requests_count, NULL, 0U);
-	/* If it didn't go well, say something and abort */
-	if (!result) {
-		if (target_dp->fault != DAP_TRANSFER_NO_RESPONSE)
-			DEBUG_ERROR("Transport error (%u), aborting\n", target_dp->fault);
-		else
-			DEBUG_ERROR("Transaction unrecoverably failed\n");
-		exit(-1);
-	}
+	/* The result of this call is then fed up the stack for proper handling */
+	return perform_dap_transfer_recoverable(target_dp, requests, requests_count, NULL, 0U);
 }
 
 static size_t dap_adiv6_mem_access_build(const adiv6_access_port_s *const target_ap,
@@ -398,21 +391,14 @@ static size_t dap_adiv6_mem_access_build(const adiv6_access_port_s *const target
 	}
 }
 
-void dap_adiv6_mem_access_setup(adiv6_access_port_s *const target_ap, const target_addr64_t addr, const align_e align)
+bool dap_adiv6_mem_access_setup(adiv6_access_port_s *const target_ap, const target_addr64_t addr, const align_e align)
 {
 	/* Start by setting up the transfer and attempting it */
 	dap_transfer_request_s requests[6];
 	const size_t requests_count = dap_adiv6_mem_access_build(target_ap, requests, addr, align);
 	adiv5_debug_port_s *const target_dp = target_ap->base.dp;
-	const bool result = perform_dap_transfer_recoverable(target_dp, requests, requests_count, NULL, 0U);
-	/* If it didn't go well, say something and abort */
-	if (!result) {
-		if (target_dp->fault != DAP_TRANSFER_NO_RESPONSE)
-			DEBUG_ERROR("Transport error (%u), aborting\n", target_dp->fault);
-		else
-			DEBUG_ERROR("Transaction unrecoverably failed\n");
-		exit(-1);
-	}
+	/* The result of this call is then fed up the stack for proper handling */
+	return perform_dap_transfer_recoverable(target_dp, requests, requests_count, NULL, 0U);
 }
 
 uint32_t dap_adiv5_ap_read(adiv5_access_port_s *const target_ap, const uint16_t addr)
