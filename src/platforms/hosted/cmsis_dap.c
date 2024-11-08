@@ -602,7 +602,8 @@ static void dap_adiv5_mem_read(adiv5_access_port_s *ap, void *dest, target_addr6
 	uint8_t *const data = (uint8_t *)dest;
 	for (size_t offset = 0; offset < len;) {
 		/* Setup AP_TAR every loop as failing to do so results in it wrapping */
-		dap_adiv5_mem_access_setup(ap, src + offset, align);
+		if (!dap_adiv5_mem_access_setup(ap, src + offset, align))
+			return;
 		/*
 		 * src can start out unaligned to a 1024 byte chunk size,
 		 * so we have to calculate how much is left of the chunk.
@@ -640,7 +641,8 @@ static void dap_adiv5_mem_write(
 	const uint8_t *const data = (const uint8_t *)src;
 	for (size_t offset = 0; offset < len;) {
 		/* Setup AP_TAR every loop as failing to do so results in it wrapping */
-		dap_adiv5_mem_access_setup(ap, dest + offset, align);
+		if (!dap_adiv5_mem_access_setup(ap, dest + offset, align))
+			return;
 		/*
 		 * dest can start out unaligned to a 1024 byte chunk size,
 		 * so we have to calculate how much is left of the chunk.
@@ -683,7 +685,8 @@ static void dap_adiv6_mem_read(
 	uint8_t *const data = (uint8_t *)dest;
 	for (size_t offset = 0; offset < len;) {
 		/* Setup AP_TAR every loop as failing to do so results in it wrapping */
-		dap_adiv6_mem_access_setup(ap, src + offset, align);
+		if (!dap_adiv6_mem_access_setup(ap, src + offset, align))
+			return;
 		/*
 		 * src can start out unaligned to a 1024 byte chunk size,
 		 * so we have to calculate how much is left of the chunk.
@@ -722,7 +725,8 @@ static void dap_adiv6_mem_write(
 	const uint8_t *const data = (const uint8_t *)src;
 	for (size_t offset = 0; offset < len;) {
 		/* Setup AP_TAR every loop as failing to do so results in it wrapping */
-		dap_adiv6_mem_access_setup(ap, dest + offset, align);
+		if (!dap_adiv6_mem_access_setup(ap, dest + offset, align))
+			return;
 		/*
 		 * dest can start out unaligned to a 1024 byte chunk size,
 		 * so we have to calculate how much is left of the chunk.
