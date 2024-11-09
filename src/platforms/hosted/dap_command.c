@@ -167,8 +167,17 @@ bool perform_dap_transfer_block_read(
 		/* Check if we got any response bytes back and if we got enough, extract the status. */
 		if (response_length < 3U)
 			exit(1);
+		/* Extract the number of blocks of data we got back and copy them out into the block buffer */
+		const uint16_t blocks_read = read_le2(response.count, 0);
+		for (size_t i = 0U; i < blocks_read; ++i)
+			blocks[i] = read_le4(response.data[i], 0);
 		/* We got enough response bytes back for the status to be valid, so put that in the DP's fault member */
 		target_dp->fault = response.status & DAP_TRANSFER_STATUS_MASK;
+		/* If the reason we're here is a WAIT timeout, abort the ongoing transaction to bring the AP back to sanity */
+		if (target_dp->fault == DAP_TRANSFER_WAIT) {
+			DEBUG_ERROR("SWD access resulted in wait, aborting\n");
+			target_dp->abort(target_dp, ADIV5_DP_ABORT_DAPABORT);
+		}
 		return false;
 	}
 
@@ -177,7 +186,7 @@ bool perform_dap_transfer_block_read(
 	const uint8_t result = response.status & DAP_TRANSFER_STATUS_MASK;
 	/* If the request went okay */
 	if (result == DAP_TRANSFER_OK) {
-		/* Extract what data we can */
+		/* Extract what data we can to the block buffer */
 		const uint16_t blocks_copy = MIN(blocks_read, block_count);
 		for (size_t i = 0U; i < blocks_copy; ++i)
 			blocks[i] = read_le4(response.data[i], 0);
@@ -216,6 +225,7 @@ bool perform_dap_transfer_block_write(
 	const uint16_t blocks_written = read_le2(response.count, 0);
 	if (blocks_written == block_count && (response.status & DAP_TRANSFER_STATUS_MASK) == DAP_TRANSFER_OK)
 		return true;
+	/* If the target didn't like something about what we asked it to do, mark the DP with the status code */
 	if ((response.status & DAP_TRANSFER_STATUS_MASK) != DAP_TRANSFER_OK)
 		target_dp->fault = response.status & DAP_TRANSFER_STATUS_MASK;
 	else

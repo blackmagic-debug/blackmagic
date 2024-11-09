@@ -265,13 +265,12 @@ void dap_write_reg(adiv5_debug_port_s *target_dp, const uint8_t reg, const uint3
 bool dap_mem_read_block(
 	adiv5_access_port_s *const target_ap, void *dest, target_addr64_t src, const size_t len, const align_e align)
 {
+	/* Try to read the 32-bit blocks requested */
 	const size_t blocks = len >> MIN(align, 2U);
-	uint32_t data[256];
-	if (!perform_dap_transfer_block_read(target_ap->dp, SWD_AP_DRW, blocks, data)) {
-		DEBUG_ERROR("dap_read_block failed\n");
-		return false;
-	}
+	uint32_t data[256U] = {0U};
+	const bool result = perform_dap_transfer_block_read(target_ap->dp, SWD_AP_DRW, blocks, data);
 
+	/* Unpack the data from those blocks */
 	if (align > ALIGN_16BIT)
 		memcpy(dest, data, len);
 	else {
@@ -280,15 +279,20 @@ bool dap_mem_read_block(
 			src += 1U << align;
 		}
 	}
-	return true;
+
+	/* Report if it actually failed and then propagate the failure up accordingly */
+	if (!result)
+		DEBUG_ERROR("dap_read_block failed\n");
+	return result;
 }
 
 bool dap_mem_write_block(
 	adiv5_access_port_s *const target_ap, target_addr64_t dest, const void *src, const size_t len, const align_e align)
 {
 	const size_t blocks = len >> MAX(align, 2U);
-	uint32_t data[256];
+	uint32_t data[256U];
 
+	/* Pack the data to send into 32-bit blocks */
 	if (align > ALIGN_16BIT)
 		memcpy(data, src, len);
 	else {
@@ -298,7 +302,9 @@ bool dap_mem_write_block(
 		}
 	}
 
+	/* Try to write the blocks to the target's memory */
 	const bool result = perform_dap_transfer_block_write(target_ap->dp, SWD_AP_DRW, blocks, data);
+	/* Report if it actually failed and then propagate the failure up accordingly */
 	if (!result)
 		DEBUG_ERROR("dap_write_block failed\n");
 	return result;
