@@ -678,9 +678,9 @@ bool at32f40x_probe(target_s *target)
 
 	const bool read_protected = target_mem32_read32(target, FLASH_OBR) & FLASH_OBR_RDPRT;
 	if (read_protected)
-		DEBUG_TARGET("%s: Read protection enabled, UID reads as 0x%02x\n", __func__, project_id);
+		DEBUG_TARGET("%s: Read protection enabled, UID reads as 0x%02" PRIx32 "\n", __func__, project_id);
 
-	DEBUG_TARGET("%s: idcode = %08" PRIx32 ", project_id = %02x\n", __func__, idcode, project_id);
+	DEBUG_TARGET("%s: idcode = %08" PRIx32 ", project_id = %02" PRIx32 "\n", __func__, idcode, project_id);
 
 	/* 0x08: F407 (has EMAC), 0x07: F403A (only CAN+USB). 0x02 is the older F403 (200MHz). */
 	if (series == AT32F40_SERIES) {
