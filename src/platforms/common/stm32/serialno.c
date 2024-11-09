@@ -7,7 +7,7 @@
  * Written by Gareth McMullin <gareth@blacksphere.co.nz>
  * Modified by Uwe Bonnes <bon@elektron.ikp.physik.tu-darmstadt.de>
  * Modified by Rachel Mant <git@dragonmux.network>
- * Modified by ALTracer <tolstov_den@mail.ru>
+ * Modified by ALTracer <11005378+ALTracer@users.noreply.github.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
