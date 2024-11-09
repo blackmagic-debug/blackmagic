@@ -103,6 +103,9 @@ void cortex_read_cpuid(target_s *const target)
 	case CORTEX_A9:
 		target->core = "A9";
 		break;
+	case CORTEX_A55:
+		target->core = "A55";
+		break;
 	case CORTEX_R4:
 		target->core = "R4";
 		break;
