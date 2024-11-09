@@ -1,6 +1,7 @@
 /*
- * Copyright (c) 2013-2015, Alex Taradov <alex@taradov.com>
- * Copyright (C) 2023 1BitSquared <info@1bitsquared.com>
+ * Copyright (C) 2013-2015 Alex Taradov <alex@taradov.com>
+ * Copyright (C) 2020-2021 Uwe Bonnes <bon@elektron.ikp.physik.tu-darmstadt.de>
+ * Copyright (C) 2023-2024 1BitSquared <info@1bitsquared.com>
  * Modified by Rachel Mant <git@dragonmux.network>
  * All rights reserved.
  *
@@ -26,10 +27,6 @@
  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- */
-
-/* Modified for Blackmagic Probe
- * Copyright (c) 2020-21 Uwe Bonnes bon@elektron.ikp.physik.tu-darmstadt.de
  */
 
 #include <string.h>
