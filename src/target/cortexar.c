@@ -792,8 +792,8 @@ static target_s *cortexar_probe(
 	target->halt_resume = cortexar_halt_resume;
 
 	/* Ensure the core is powered up and we can talk to it */
-	if (cortexar_ensure_core_powered(target))
-		return false;
+	if (!cortexar_ensure_core_powered(target))
+		return NULL;
 
 	/* Try to halt the target core */
 	target_halt_request(target);
@@ -804,7 +804,7 @@ static target_s *cortexar_probe(
 		reason = target_halt_poll(target, NULL);
 	/* If we did not succeed, we must abort at this point. */
 	if (reason == TARGET_HALT_FAULT || reason == TARGET_HALT_ERROR)
-		return false;
+		return NULL;
 
 	cortex_read_cpuid(target);
 	/* The format of the debug identification register is described in DDI0406C §C11.11.15 pg2217 */
