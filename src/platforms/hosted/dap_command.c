@@ -172,20 +172,22 @@ bool perform_dap_transfer_block_read(
 		return false;
 	}
 
-	/* Check the response over */
+	/* Check the response over, starting by extracting how much data was returned and the response status */
 	const uint16_t blocks_read = read_le2(response.count, 0);
-	if (blocks_read == block_count && (response.status & DAP_TRANSFER_STATUS_MASK) == DAP_TRANSFER_OK) {
-		for (size_t i = 0; i < block_count; ++i)
+	const uint8_t result = response.status & DAP_TRANSFER_STATUS_MASK;
+	/* If the request went okay */
+	if (result == DAP_TRANSFER_OK) {
+		/* Extract what data we can */
+		const uint16_t blocks_copy = MIN(blocks_read, block_count);
+		for (size_t i = 0U; i < blocks_copy; ++i)
 			blocks[i] = read_le4(response.data[i], 0);
-		return true;
+	} else {
+		/* If the target didn't like something about what we asked it to do, mark the DP with the status code */
+		target_dp->fault = result & DAP_TRANSFER_STATUS_MASK;
+		DEBUG_PROBE("-> transfer failed with %u after processing %u blocks\n", response.status, blocks_read);
 	}
-	if ((response.status & DAP_TRANSFER_STATUS_MASK) != DAP_TRANSFER_OK)
-		target_dp->fault = response.status & DAP_TRANSFER_STATUS_MASK;
-	else
-		target_dp->fault = 0;
-
-	DEBUG_PROBE("-> transfer failed with %u after processing %u blocks\n", response.status, blocks_read);
-	return false;
+	/* Let the caller know if things went okay or not */
+	return result == DAP_TRANSFER_OK;
 }
 
 bool perform_dap_transfer_block_write(
