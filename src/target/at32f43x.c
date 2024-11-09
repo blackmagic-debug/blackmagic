@@ -35,11 +35,14 @@
 #include "target.h"
 #include "target_internal.h"
 #include "cortexm.h"
+#include "stm32_common.h"
 
 static bool at32f43_cmd_option(target_s *target, int argc, const char **argv);
+static bool at32f43_cmd_uid(target_s *target, int argc, const char **argv);
 
 const command_s at32f43_cmd_list[] = {
 	{"option", at32f43_cmd_option, "Manipulate option bytes"},
+	{"uid", at32f43_cmd_uid, "Print unique device ID"},
 	{NULL, NULL, NULL},
 };
 
@@ -126,8 +129,10 @@ static bool at32f43_mass_erase(target_s *target);
 #define AT32F423_SERIES_256KB      0x700a3000U
 #define AT32F423_SERIES_128KB      0x700a2000U
 #define AT32F423_SERIES_64KB       0x70032000U
-#define AT32F4x_PROJECT_ID         0x1ffff7f3U
-#define AT32F4x_FLASHSIZE          0x1ffff7e0U
+
+#define AT32F4x_UID_BASE   0x1ffff7e8U
+#define AT32F4x_PROJECT_ID 0x1ffff7f3U
+#define AT32F4x_FLASHSIZE  0x1ffff7e0U
 
 typedef struct at32f43_flash {
 	target_flash_s target_flash;
@@ -707,4 +712,11 @@ static bool at32f43_cmd_option(target_s *target, int argc, const char **argv)
 	}
 
 	return true;
+}
+
+static bool at32f43_cmd_uid(target_s *target, int argc, const char **argv)
+{
+	(void)argc;
+	(void)argv;
+	return stm32_uid(target, AT32F4x_UID_BASE);
 }

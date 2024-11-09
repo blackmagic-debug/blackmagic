@@ -319,7 +319,7 @@ target_at32f4 = declare_dependency(
 	sources: files(
 		'at32f43x.c',
 	),
-	dependencies: target_cortexm,
+	dependencies: [target_cortexm, target_stm_common]
 )
 
 target_ti = declare_dependency(
