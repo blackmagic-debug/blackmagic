@@ -39,9 +39,11 @@
 #include <libopencm3/cm3/cortex.h>
 #include <libopencm3/usb/dwc/otg_fs.h>
 #include <libopencm3/stm32/spi.h>
+#include <libopencm3/stm32/adc.h>
 
 jmp_buf fatal_error_jmpbuf;
 volatile uint32_t magic[2] __attribute__((section(".noinit")));
+static void adc_init();
 
 void platform_init(void)
 {
@@ -144,6 +146,7 @@ void platform_init(void)
 
 	/* By default, do not drive the SWD bus too fast. */
 	platform_max_frequency_set(2000000);
+	adc_init();
 }
 
 void platform_nrst_set_val(bool assert)
@@ -156,9 +159,41 @@ bool platform_nrst_get_val(void)
 	return gpio_get(NRST_PORT, NRST_PIN) == 0;
 }
 
+static void adc_init(void)
+{
+	rcc_periph_clock_enable(RCC_ADC1);
+	gpio_mode_setup(GPIOA, GPIO_MODE_ANALOG, GPIO_PUPD_NONE, GPIO0);
+	adc_power_off(ADC1);
+	adc_disable_scan_mode(ADC1);
+	adc_set_sample_time(ADC1, ADC_CHANNEL0, ADC_SMPR_SMP_480CYC);
+	adc_power_on(ADC1);
+}
+
+static uint16_t platform_adc_read(void)
+{
+	const uint8_t channel = ADC_CHANNEL0;
+	adc_set_regular_sequence(ADC1, 1, &channel);
+	adc_start_conversion_regular(ADC1);
+	while (!adc_eoc(ADC1))
+		continue;
+	uint32_t value = adc_read_regular(ADC1);
+	return value;
+}
+
 const char *platform_target_voltage(void)
 {
-	return "Unknown";
+	static char msg[8] = "0.000V";
+	const uint16_t vtref_sample = platform_adc_read();
+	/* Convert 0-4095 full-scale code to 0-3300 integer millivolts */
+	const uint32_t vtref_mv = vtref_sample * 3300U / 4095U;
+	/* Avoid printf_float */
+	//utoa_upper(vtref_mv, vtref_dec, 10);
+	msg[0] = '0' + vtref_mv / 1000U;
+	msg[1] = '.';
+	msg[2] = '0' + vtref_mv % 1000U / 100U;
+	msg[3] = '0' + vtref_mv % 100U / 10U;
+	msg[4] = '0' + vtref_mv % 10U;
+	return msg;
 }
 
 /*
