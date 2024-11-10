@@ -165,19 +165,27 @@ static void adc_init(void)
 	gpio_mode_setup(VTREF_PORT, GPIO_MODE_ANALOG, GPIO_PUPD_NONE, VTREF_PIN);
 	adc_power_off(ADC1);
 	adc_disable_scan_mode(ADC1);
+	adc_set_resolution(ADC1, ADC_CR1_RES_12BIT);
 	adc_set_sample_time(ADC1, VTREF_CHANNEL, ADC_SMPR_SMP_480CYC);
+	adc_set_sample_time(ADC1, ADC_CHANNEL_VREF, ADC_SMPR_SMP_480CYC);
+	adc_enable_temperature_sensor();
 	adc_power_on(ADC1);
 }
 
 static uint16_t platform_adc_read(void)
 {
-	const uint8_t channel = VTREF_CHANNEL;
-	adc_set_regular_sequence(ADC1, 1, &channel);
+	const uint8_t channels[] = {ADC_CHANNEL_VREF, VTREF_CHANNEL};
+	adc_set_regular_sequence(ADC1, ARRAY_LENGTH(channels), channels);
 	adc_start_conversion_regular(ADC1);
 	while (!adc_eoc(ADC1))
 		continue;
-	uint32_t value = adc_read_regular(ADC1);
-	return value;
+	const uint16_t vrefint_sample = adc_read_regular(ADC1);
+	const uint16_t value = adc_read_regular(ADC1);
+	/* Vrefint = 1.21V typ, Vdda = 3.3V, expected code of 1501 */
+	const uint16_t vrefint_expected = 1210U * 4095U / 3300U;
+	const uint16_t value_adj = value * vrefint_expected / vrefint_sample;
+	DEBUG_INFO("%s: Vrefint=%u, VTref=%u, returning %u", __func__, vrefint_sample, value, value_adj);
+	return value_adj;
 }
 
 const char *platform_target_voltage(void)
