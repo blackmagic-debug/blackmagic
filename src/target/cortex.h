@@ -62,6 +62,7 @@
 #define CORTEX_A9  0xc090U
 #define CORTEX_A55 0xd050U
 
+#define CORTEX_A53 0xd030U
 #define CORTEX_A55 0xd050U
 
 /* Cortex general purpose register offsets */
