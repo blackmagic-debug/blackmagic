@@ -162,16 +162,16 @@ bool platform_nrst_get_val(void)
 static void adc_init(void)
 {
 	rcc_periph_clock_enable(RCC_ADC1);
-	gpio_mode_setup(GPIOA, GPIO_MODE_ANALOG, GPIO_PUPD_NONE, GPIO0);
+	gpio_mode_setup(VTREF_PORT, GPIO_MODE_ANALOG, GPIO_PUPD_NONE, VTREF_PIN);
 	adc_power_off(ADC1);
 	adc_disable_scan_mode(ADC1);
-	adc_set_sample_time(ADC1, ADC_CHANNEL0, ADC_SMPR_SMP_480CYC);
+	adc_set_sample_time(ADC1, VTREF_CHANNEL, ADC_SMPR_SMP_480CYC);
 	adc_power_on(ADC1);
 }
 
 static uint16_t platform_adc_read(void)
 {
-	const uint8_t channel = ADC_CHANNEL0;
+	const uint8_t channel = VTREF_CHANNEL;
 	adc_set_regular_sequence(ADC1, 1, &channel);
 	adc_start_conversion_regular(ADC1);
 	while (!adc_eoc(ADC1))
