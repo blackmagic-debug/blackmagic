@@ -193,20 +193,28 @@ bool bmd_crc32(target_s *const target, uint32_t *const result, const uint32_t ba
 #if !defined(STM32F0) && !defined(STM32F1) && !defined(STM32F2) && !defined(STM32F3) && !defined(STM32F4) && \
 	!defined(STM32F7) && !defined(STM32L0) && !defined(STM32L1) && !defined(STM32G0) && !defined(STM32G4)
 	const bool status = generic_crc32(target, result, base, len);
+	const char *const func = "generic_crc32";
 #else
 	const bool status = stm32_crc32(target, result, base, len);
+	const char *const func = "stm32_crc32";
 #endif
 #ifndef DEBUG_INFO_IS_NOOP
-	/* "generic_crc32: 08000110+75272 -> 1353ms, 54 KiB/s" */
-	/* "stm32_crc32: 08000110+75272 -> 237ms, 310 KiB/s" */
+	/* "generic_crc32: 0x08000110+75272 -> 1353ms, 54 KiB/s" */
+	/* "stm32_crc32: 0x08000110+75272 -> 237ms, 310 KiB/s" */
 	const uint32_t end_time = platform_time_ms();
 	const uint32_t time_elapsed = end_time - start_time;
-	DEBUG_INFO("%s: 0x%08" PRIx32 "+%" PRIu32 " -> %" PRIu32 "ms", __func__, base, (uint32_t)len, time_elapsed);
-	if (len >= 512U) {
+	char logbuf[64] = {0};
+	const size_t logcap = ARRAY_LENGTH(logbuf);
+	size_t loglen = (size_t)snprintf(
+		logbuf, logcap, "%s: 0x%08" PRIx32 "+%" PRIu32 " -> %" PRIu32 "ms", func, base, (uint32_t)len, time_elapsed);
+	if (len >= 512U && time_elapsed > 0U) {
 		const uint32_t speed = len * 1000U / time_elapsed / 1024U;
-		DEBUG_INFO(", %" PRIu32 " KiB/s", speed);
+		loglen += (size_t)snprintf(logbuf + loglen, logcap - loglen, ", %" PRIu32 " KiB/s", speed);
 	}
-	DEBUG_INFO("\n");
+	DEBUG_INFO("%s\n", logbuf);
+	(void)loglen; //cert-err33-c
+#else
+	(void)func;
 #endif
 	return status;
 }
