@@ -264,7 +264,7 @@ bool dap_mem_read_block(
 {
 	/* Try to read the 32-bit blocks requested */
 	const size_t blocks = len >> MIN(align, 2U);
-	uint32_t data[256U] = {0U};
+	uint32_t data[127U] = {0U};
 	const bool result = perform_dap_transfer_block_read(target_ap->dp, SWD_AP_DRW, blocks, data);
 
 	/* Unpack the data from those blocks */
@@ -287,7 +287,7 @@ bool dap_mem_write_block(
 	adiv5_access_port_s *const target_ap, target_addr64_t dest, const void *src, const size_t len, const align_e align)
 {
 	const size_t blocks = len >> MIN(align, 2U);
-	uint32_t data[256U];
+	uint32_t data[126U];
 
 	/* Pack the data to send into 32-bit blocks */
 	if (align > ALIGN_16BIT)
