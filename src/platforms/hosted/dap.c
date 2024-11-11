@@ -286,7 +286,7 @@ bool dap_mem_read_block(
 bool dap_mem_write_block(
 	adiv5_access_port_s *const target_ap, target_addr64_t dest, const void *src, const size_t len, const align_e align)
 {
-	const size_t blocks = len >> MAX(align, 2U);
+	const size_t blocks = len >> MIN(align, 2U);
 	uint32_t data[256U];
 
 	/* Pack the data to send into 32-bit blocks */
