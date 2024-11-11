@@ -182,6 +182,8 @@ static void lpc546xx_reset_attach(target_s *t)
 
 static bool lpc546xx_cmd_erase_sector(target_s *t, int argc, const char **argv)
 {
+	tc_printf(t, "This command is deprecated in favor of erase_range and may be removed in the future\n");
+
 	if (argc > 1) {
 		uint32_t sector_addr = strtoul(argv[1], NULL, 0);
 		sector_addr *= t->flash->blocksize;
