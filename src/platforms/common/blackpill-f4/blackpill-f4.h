@@ -39,6 +39,8 @@
 extern bool debug_bmp;
 #endif
 
+#define PLATFORM_HAS_CUSTOM_COMMANDS
+
 /*
  * If the SHIELD macro is passed to make, other macros are defined.
  * Build the code using `make PROBE_HOST=blackpill-f4x1cx SHIELD=1` to define the SHIELD macro.
