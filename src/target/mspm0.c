@@ -17,14 +17,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <assert.h>
-#include <limits.h>
 #include "general.h"
 #include "target.h"
 #include "target_internal.h"
 #include "buffer_utils.h"
 #include "jep106.h"
 #include "cortex.h"
+#include <assert.h>
 
 #define MSPM0_CONFIG_FLASH_DUMP_SUPPORT (CONFIG_BMDA == 1 || ENABLE_DEBUG == 1)
 
@@ -95,7 +94,7 @@ typedef struct mspm0_flash {
 
 static bool mspm0_flash_erase(target_flash_s *flash, target_addr_t addr, size_t length);
 static bool mspm0_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t length);
-static bool mspm0_mass_erase(target_s *target);
+static bool mspm0_mass_erase(target_s *target, platform_timeout_s *print_progess);
 
 #if MSPM0_CONFIG_FLASH_DUMP_SUPPORT
 static bool mspm0_dump_factory_config(target_s *const target, const int argc, const char **const argv);
@@ -110,7 +109,7 @@ static command_s mspm0_cmds_list[] = {
 typedef struct conf_register {
 	uint16_t reg_offset;
 	uint16_t size_words;
-	char const *id;
+	const char *id;
 } conf_register_s;
 
 static conf_register_s mspm0_factory_regs[] = {
@@ -159,11 +158,11 @@ static conf_register_s mspm0_bcr_regs[] = {
 
 static void mspm0_dump_regs(target_s *const target, const conf_register_s *regs, uint32_t base)
 {
-	for (conf_register_s const *r = regs; r->id; ++r) {
-		tc_printf(target, "%15s: ", r->id);
-		for (size_t i = 0; i < r->size_words; ++i) {
-			uint32_t value = target_mem32_read32(target, base + r->reg_offset + i * 4U);
-			tc_printf(target, "0x%08" PRIx32 "%s", value, i == r->size_words - 1U ? "\n" : " ");
+	for (const conf_register_s *reg = regs; reg->id; ++reg) {
+		tc_printf(target, "%15s: ", reg->id);
+		for (size_t i = 0; i < reg->size_words; ++i) {
+			uint32_t value = target_mem32_read32(target, base + reg->reg_offset + i * 4U);
+			tc_printf(target, "0x%08" PRIx32 "%s", value, i == reg->size_words - 1U ? "\n" : " ");
 		}
 	}
 }
@@ -185,7 +184,7 @@ static bool mspm0_dump_bcr_config(target_s *const target, const int argc, const 
 }
 #endif
 
-static void mspm0_add_flash(target_s *const target, const uint32_t base, const size_t length, uint32_t banks)
+static void mspm0_add_flash(target_s *const target, const uint32_t base, const size_t length, const uint32_t banks)
 {
 	mspm0_flash_s *const flash = calloc(1, sizeof(*flash));
 	if (flash == NULL) {
@@ -207,13 +206,13 @@ static void mspm0_add_flash(target_s *const target, const uint32_t base, const s
 
 bool mspm0_probe(target_s *const target)
 {
-	uint32_t const deviceid = target_mem32_read32(target, MSPM0_FACTORYREGION_DEVICEID);
+	const uint32_t deviceid = target_mem32_read32(target, MSPM0_FACTORYREGION_DEVICEID);
 
-	uint32_t manufacturer = (deviceid & MSPM0_DEVICEID_MANUFACTURER_MASK) >> MSPM0_DEVICEID_MANUFACTURER_SHIFT;
+	const uint32_t manufacturer = (deviceid & MSPM0_DEVICEID_MANUFACTURER_MASK) >> MSPM0_DEVICEID_MANUFACTURER_SHIFT;
 	if (manufacturer != JEP106_MANUFACTURER_TEXAS)
 		return false;
 
-	uint32_t partnum = (deviceid & MSPM0_DEVICEID_PARTNUM_MASK) >> MSPM0_DEVICEID_PARTNUM_SHIFT;
+	const uint32_t partnum = (deviceid & MSPM0_DEVICEID_PARTNUM_MASK) >> MSPM0_DEVICEID_PARTNUM_SHIFT;
 	if (partnum != TI_DEVID_MSPM0C && partnum != TI_DEVID_MSPM0L && partnum != TI_DEVID_MSPM0L_1227_2228 &&
 		partnum != TI_DEVID_MSPM0G)
 		return false;
@@ -222,7 +221,7 @@ bool mspm0_probe(target_s *const target)
 	target->target_options |= TOPT_INHIBIT_NRST;
 	target->mass_erase = mspm0_mass_erase;
 
-	uint32_t const sramflash = target_mem32_read32(target, MSPM0_FACTORYREGION_SRAMFLASH);
+	const uint32_t sramflash = target_mem32_read32(target, MSPM0_FACTORYREGION_SRAMFLASH);
 	const uint32_t mainflash_size = 1024U *
 		((sramflash & MSPM0_FACTORYREGION_SRAMFLASH_MAINFLASH_SZ_MASK) >>
 			MSPM0_FACTORYREGION_SRAMFLASH_MAINFLASH_SZ_SHIFT);
@@ -341,11 +340,8 @@ static bool mspm0_flash_write(
 	return statcmd & MSPM0_FLASHCTL_STAT_CMDPASS;
 }
 
-static bool mspm0_mass_erase(target_s *const target)
+static bool mspm0_mass_erase(target_s *target, platform_timeout_s *print_progess)
 {
-	platform_timeout_s timeout;
-	platform_timeout_set(&timeout, 500);
-
 	bool success = true;
 	for (mspm0_flash_s *flash = (mspm0_flash_s *)target->flash; flash && success;
 		 flash = (mspm0_flash_s *)flash->target_flash.next) {
@@ -369,7 +365,8 @@ static bool mspm0_mass_erase(target_s *const target)
 				statcmd = target_mem32_read32(target, MSPM0_FLASHCTL_STATCMD);
 				if (statcmd & MSPM0_FLASHCTL_STAT_DONE)
 					break;
-				target_print_progress(&timeout);
+				if (print_progess)
+					target_print_progress(print_progess);
 			}
 
 			if (!(statcmd & MSPM0_FLASHCTL_STAT_CMDPASS))
