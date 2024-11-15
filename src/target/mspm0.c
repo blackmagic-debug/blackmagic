@@ -23,7 +23,6 @@
 #include "buffer_utils.h"
 #include "jep106.h"
 #include "cortex.h"
-#include <assert.h>
 
 #define MSPM0_CONFIG_FLASH_DUMP_SUPPORT (CONFIG_BMDA == 1 || ENABLE_DEBUG == 1)
 
@@ -292,8 +291,9 @@ static void mspm0_flash_unprotect_sector(target_flash_s *const target_flash, con
 
 static bool mspm0_flash_erase(target_flash_s *const target_flash, const target_addr_t addr, const size_t length)
 {
+#ifdef DEBUG_TARGET_IS_NOOP
 	(void)length;
-	assert(length == target_flash->blocksize);
+#endif
 
 	target_s *const target = target_flash->t;
 
@@ -318,8 +318,9 @@ static bool mspm0_flash_erase(target_flash_s *const target_flash, const target_a
 static bool mspm0_flash_write(
 	target_flash_s *const target_flash, target_addr_t dest, const void *const src, const size_t length)
 {
+#ifdef DEBUG_TARGET_IS_NOOP
 	(void)length;
-	assert(length == target_flash->writesize);
+#endif
 
 	target_s *const target = target_flash->t;
 
