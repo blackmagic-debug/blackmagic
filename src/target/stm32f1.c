@@ -494,6 +494,8 @@ static bool at32f403a_407_detect(target_s *target, const uint16_t part_id)
 	}
 	// All parts have 96 KiB SRAM
 	target_add_ram32(target, STM32F1_SRAM_BASE, 96U * 1024U);
+	/* On AT32F403A/F407 SoC, Cortex-M4F allows SRAM access without halting */
+	target->target_options |= TOPT_NON_HALTING_MEM_IO;
 	target->driver = "AT32F403A/407";
 	target->part_id = part_id;
 	target->target_options |= STM32F1_TOPT_32BIT_WRITES;
