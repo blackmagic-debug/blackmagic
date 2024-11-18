@@ -96,8 +96,8 @@ static bool mspm0_flash_write(target_flash_s *flash, target_addr_t dest, const v
 static bool mspm0_mass_erase(target_s *target, platform_timeout_s *print_progess);
 
 #if MSPM0_CONFIG_FLASH_DUMP_SUPPORT
-static bool mspm0_dump_factory_config(target_s *const target, const int argc, const char **const argv);
-static bool mspm0_dump_bcr_config(target_s *const target, const int argc, const char **const argv);
+static bool mspm0_dump_factory_config(target_s *target, int argc, const char **argv);
+static bool mspm0_dump_bcr_config(target_s *target, int argc, const char **argv);
 
 static command_s mspm0_cmds_list[] = {
 	{"dump_factory", mspm0_dump_factory_config, "Display FACTORY registers"},
