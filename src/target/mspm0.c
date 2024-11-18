@@ -250,16 +250,14 @@ static uint32_t mspm0_flash_wait_done(target_s *const target)
 	platform_timeout_s timeout;
 	platform_timeout_set(&timeout, 500U);
 
-	uint32_t statcmd;
-	while (true) {
-		statcmd = target_mem32_read32(target, MSPM0_FLASHCTL_STATCMD);
-		if (statcmd & MSPM0_FLASHCTL_STAT_DONE)
-			break;
+	uint32_t status = 0U;
+	while (!(status & MSPM0_FLASHCTL_STAT_DONE)) {
+		status = target_mem32_read32(target, MSPM0_FLASHCTL_STATCMD);
 		if (platform_timeout_is_expired(&timeout))
-			return UINT32_MAX;
+			return 0U;
 	};
 
-	return statcmd;
+	return status;
 }
 
 static void mspm0_flash_unprotect(target_flash_s *const target_flash)
@@ -307,12 +305,12 @@ static bool mspm0_flash_erase(target_flash_s *const target_flash, const target_a
 	target_mem32_write32(target, MSPM0_FLASHCTL_CMDADDR, addr);
 	target_mem32_write32(target, MSPM0_FLASHCTL_CMDEXEC, MSPM0_FLASHCTL_CMDEXEC_EXEC);
 
-	uint32_t statcmd = mspm0_flash_wait_done(target);
-	if (statcmd == UINT32_MAX || !(statcmd & MSPM0_FLASHCTL_STAT_CMDPASS))
+	const uint32_t status = mspm0_flash_wait_done(target);
+	if (!(status & MSPM0_FLASHCTL_STAT_CMDPASS))
 		DEBUG_TARGET("%s: Failed to erase flash, status %08" PRIx32 " addr %08" PRIx32 " length %08" PRIx32 "\n",
-			__func__, statcmd, addr, (uint32_t)length);
+			__func__, status, addr, (uint32_t)length);
 
-	return statcmd & MSPM0_FLASHCTL_STAT_CMDPASS;
+	return status & MSPM0_FLASHCTL_STAT_CMDPASS;
 }
 
 static bool mspm0_flash_write(
@@ -333,12 +331,12 @@ static bool mspm0_flash_write(
 	target_mem32_write32(target, MSPM0_FLASHCTL_CMDDATA1, read_le4((const uint8_t *)src, 4U));
 	target_mem32_write32(target, MSPM0_FLASHCTL_CMDEXEC, MSPM0_FLASHCTL_CMDEXEC_EXEC);
 
-	uint32_t statcmd = mspm0_flash_wait_done(target);
-	if (statcmd == UINT32_MAX || !(statcmd & MSPM0_FLASHCTL_STAT_CMDPASS))
+	const uint32_t status = mspm0_flash_wait_done(target);
+	if (!(status & MSPM0_FLASHCTL_STAT_CMDPASS))
 		DEBUG_TARGET("%s: Failed to write to flash, status %08" PRIx32 " addr %08" PRIx32 " length %08" PRIx32 "\n",
-			__func__, statcmd, dest, (uint32_t)length);
+			__func__, status, dest, (uint32_t)length);
 
-	return statcmd & MSPM0_FLASHCTL_STAT_CMDPASS;
+	return status & MSPM0_FLASHCTL_STAT_CMDPASS;
 }
 
 static bool mspm0_mass_erase(target_s *target, platform_timeout_s *print_progess)
@@ -361,21 +359,19 @@ static bool mspm0_mass_erase(target_s *target, platform_timeout_s *print_progess
 			target_mem32_write32(target, MSPM0_FLASHCTL_CMDADDR, bank_address);
 			target_mem32_write32(target, MSPM0_FLASHCTL_CMDEXEC, MSPM0_FLASHCTL_CMDEXEC_EXEC);
 
-			uint32_t statcmd;
-			while (true) {
-				statcmd = target_mem32_read32(target, MSPM0_FLASHCTL_STATCMD);
-				if (statcmd & MSPM0_FLASHCTL_STAT_DONE)
-					break;
+			uint32_t status = 0U;
+			while (status & MSPM0_FLASHCTL_STAT_DONE) {
+				status = target_mem32_read32(target, MSPM0_FLASHCTL_STATCMD);
 				if (print_progess)
 					target_print_progress(print_progess);
 			}
 
-			if (!(statcmd & MSPM0_FLASHCTL_STAT_CMDPASS))
+			if (!(status & MSPM0_FLASHCTL_STAT_CMDPASS))
 				DEBUG_TARGET("%s: Failed to mass erase flash, status %08" PRIx32 " start %08" PRIx32 " length "
 							 "%08" PRIx32 "\n",
-					__func__, statcmd, bank_address, (uint32_t)bank_size);
+					__func__, status, bank_address, (uint32_t)bank_size);
 
-			success &= (statcmd & MSPM0_FLASHCTL_STAT_CMDPASS) == MSPM0_FLASHCTL_STAT_CMDPASS;
+			success &= (status & MSPM0_FLASHCTL_STAT_CMDPASS) == MSPM0_FLASHCTL_STAT_CMDPASS;
 		}
 	}
 
