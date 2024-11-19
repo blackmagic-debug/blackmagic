@@ -42,10 +42,70 @@
 #define PUYA_FLASH_START     0x08000000U
 #define PUYA_FLASH_PAGE_SIZE 128
 
-/* Pile of timing parameters needed to make sure flash works,
- * see section "4.4. Flash configuration bytes" of the RM.
+/*
+ * Pile of timing parameters needed to make sure flash works, see section "4.5. Flash configuration bytes" of the RM.
+ *
+ * The layout is very similar across devices. The start address differs and sometimes the entries are 64-bit aligned
+ * rather than just 32-bit but otherwise the offsets are identical for entries that are present.
  */
-#define PUYA_FLASH_TIMING_CAL_BASE 0x1fff0f1cU
+/* PY32F002A, PY32F003 */
+#define PUYA_TIMING_INFO_START_002A_003 0x1fff0f00u
+
+/* PY32F002B (starting at page 2) */
+#define PUYA_TIMING_INFO_START_002B 0x1fff0100u
+
+/* PY32[FM]07x */
+#define PUYA_TIMING_INFO_START_07X 0x1fff3200u
+
+/* Start index for HSI_TRIM calibration values. */
+#define PUYA_FLASH_TIMING_HSITRIM_IDX 0x00U
+
+/* Start index for EPPARA0…4 entries. */
+#define PUYA_FLASH_TIMING_EPPARA0_IDX 0x07U
+
+/* PY32F002A, PY32F003 and PY32[FM]07x have the same layout. */
+#define PY32F0XX_EPPARA0_TS0_SHIFT     0U
+#define PY32F0XX_EPPARA0_TS0_MASK      0xffU
+#define PY32F0XX_EPPARA0_TS3_SHIFT     8U
+#define PY32F0XX_EPPARA0_TS3_MASK      0xffU
+#define PY32F0XX_EPPARA0_TS1_SHIFT     16U
+#define PY32F0XX_EPPARA0_TS1_MASK      0x1ffU
+#define PY32F0XX_EPPARA1_TS2P_SHIFT    0U
+#define PY32F0XX_EPPARA1_TS2P_MASK     0xffU
+#define PY32F0XX_EPPARA1_TPS3_SHIFT    16U
+#define PY32F0XX_EPPARA1_TPS3_MASK     0x7ffU
+#define PY32F0XX_EPPARA2_PERTPE_SHIFT  0U
+#define PY32F0XX_EPPARA2_PERTPE_MASK   0x1ffffU
+#define PY32F0XX_EPPARA3_SMERTPE_SHIFT 0U
+#define PY32F0XX_EPPARA3_SMERTPE_MASK  0x1ffffU
+#define PY32F0XX_EPPARA4_PRGTPE_SHIFT  0U
+#define PY32F0XX_EPPARA4_PRGTPE_MASK   0xffffU
+#define PY32F0XX_EPPARA4_PRETPE_SHIFT  16U
+/* The English version of PY32F002A Reference Manual says EPPARA4 26:16 (11 bit) are PRETPE[11:0] (12 bit) and
+ * FLASH_PRETPE is 14 bit wide (0:13). However the Chinese version consistently has 14 bits for PRETPE everywhere and
+ * that's also how the hardware behaves. */
+#define PY32F0XX_EPPARA4_PRETPE_MASK 0x3fffU
+
+/* PY32F002B has a layout different from the other supported models. */
+#define PY32F002B_EPPARA0_TS0_SHIFT     0U
+#define PY32F002B_EPPARA0_TS0_MASK      0x1ffU
+#define PY32F002B_EPPARA0_TS3_SHIFT     9U
+#define PY32F002B_EPPARA0_TS3_MASK      0x1ffU
+#define PY32F002B_EPPARA0_TS1_SHIFT     18U
+#define PY32F002B_EPPARA0_TS1_MASK      0x3ffU
+#define PY32F002B_EPPARA1_TS2P_SHIFT    0U
+#define PY32F002B_EPPARA1_TS2P_MASK     0x1ffU
+#define PY32F002B_EPPARA1_TPS3_SHIFT    16U
+#define PY32F002B_EPPARA1_TPS3_MASK     0xfffU
+#define PY32F002B_EPPARA2_PERTPE_SHIFT  0U
+#define PY32F002B_EPPARA2_PERTPE_MASK   0x3ffffU
+#define PY32F002B_EPPARA3_SMERTPE_SHIFT 0U
+#define PY32F002B_EPPARA3_SMERTPE_MASK  0x3ffffU
+#define PY32F002B_EPPARA4_PRGTPE_SHIFT  0U
+#define PY32F002B_EPPARA4_PRGTPE_MASK   0xffffU
+#define PY32F002B_EPPARA4_PRETPE_SHIFT  16U
+#define PY32F002B_EPPARA4_PRETPE_MASK   0x3fffU
+
 /* This config word is undocumented, but the Puya-ISP boot code
  * uses it to determine the valid flash/ram size.
  * (yes, this *does* include undocumented free extra flash/ram in the 002A)
@@ -91,14 +151,44 @@
 #define PUYA_RAM_START 0x20000000U
 
 /* RCC */
-#define PUYA_RCC_BASE               0x40021000U
-#define PUYA_RCC_ICSCR              (PUYA_RCC_BASE + 0x04U)
-#define PUYA_RCC_ICSCR_HSI_FS_SHIFT 13U
-#define PUYA_RCC_ICSCR_HSI_FS_MASK  7U
+#define PUYA_RCC_BASE                 0x40021000U
+#define PUYA_RCC_ICSCR                (PUYA_RCC_BASE + 0x04U)
+#define PUYA_RCC_ICSCR_HSI_FS_SHIFT   13U
+#define PUYA_RCC_ICSCR_HSI_FS_MASK    7U
+#define PUYA_RCC_ICSCR_HSI_TRIM_SHIFT 0U
+#define PUYA_RCC_ICSCR_HSI_TRIM_MASK  0x1fffU
 
 /* DBG */
 #define PUYA_DBG_BASE   0x40015800U
 #define PUYA_DBG_IDCODE (PUYA_DBG_BASE + 0x00U)
+/*
+ * The format and values of the IDCODE register are undocumented but the vendor SDK splits IDCODE into 11:0 DEV_ID and
+ * 31:16 REV_ID.
+ */
+#define PUYA_DBG_IDCODE_DEV_ID_SHIFT 0U
+#define PUYA_DBG_IDCODE_DEV_ID_MASK  0xfffU
+#define PUYA_DBG_IDCODE_REV_ID_SHIFT 16U
+#define PUYA_DBG_IDCODE_REV_ID_MASK  0xffffU
+
+/*
+ * Observed IDCODE (0x40015800) and FLASH_RAM_SZ (0x1fff0ffc) values:
+ *
+ * | Model                     | IDCODE     | FLASH_RAM_SZ |
+ * |---------------------------+------------+--------------|
+ * | PY32F002AF15P6            | 0x60001000 | 0xffec0013   |
+ * | PY32F002AL15S6            | 0x60001000 | 0xffec0013   |
+ * | PY32F002AW15U?            | 0x60001000 | ?            |
+ * | PY32F002BD15S6            | 0x20220064 | 0x00000000   |
+ * | PY32F002BF15P6            | 0x20220064 | 0x00000000   |
+ * | PY32F003L24D6             | 0x60001000 | 0xfffe0001   |
+ * | PY32F030F18P6             | 0x60001000 | 0xffc80037   |
+ * | PY32F030F38P6             | 0x60001000 | 0xffc80037   |
+ * | PY32M070K1BU7-C           | 0x06188061 | n/a          |
+ */
+/* PY32F002A, PY32F003, PY32F030 */
+#define PUYA_DEV_ID_PY32F0XX  0x000U
+#define PUYA_DEV_ID_PY32F002B 0x064U
+#define PUYA_DEV_ID_PY32X07X  0x061U
 
 /*
  * Flash functions
@@ -114,18 +204,40 @@ bool puya_probe(target_s *target)
 	size_t flash_size = 0U;
 
 	const uint32_t dbg_idcode = target_mem32_read32(target, PUYA_DBG_IDCODE);
-	if ((dbg_idcode & 0xfffU) == 0) {
+	const uint16_t dev_id = (dbg_idcode >> PUYA_DBG_IDCODE_DEV_ID_SHIFT) & PUYA_DBG_IDCODE_DEV_ID_MASK;
+	switch (dev_id) {
+	case PUYA_DEV_ID_PY32F0XX: {
 		const uint32_t flash_ram_sz = target_mem32_read32(target, PUYA_FLASH_RAM_SZ);
 		flash_size = (((flash_ram_sz >> PUYA_FLASH_SZ_SHIFT) & PUYA_FLASH_SZ_MASK) + 1) << PUYA_FLASH_UNIT_SHIFT;
 		ram_size = (((flash_ram_sz >> PUYA_RAM_SZ_SHIFT) & PUYA_RAM_SZ_MASK) + 1) << PUYA_RAM_UNIT_SHIFT;
-		// TODO: which part families does this actually correspond to?
-		// Tested with a PY32F002AW15U which returns 0x60001000 in IDCODE
-		target->driver = "PY32Fxxx";
-	} else {
+		target->driver = "PY32F0xx";
+		break;
+	}
+	case PUYA_DEV_ID_PY32F002B:
+		/*
+		 * 0x1fff0ffc contains 0; did not find any other location that looks like it might contain the flash
+		 * and RAM sizes. We'll hard-code the datasheet values for now. Both flash size and RAM size actually
+		 * match the datasheet value, unlike PY32F002A which (sometimes?) has more RAM and flash than
+		 * documented.
+		 */
+		flash_size = 24U * 1024U;
+		ram_size = 3U * 1024U;
+		target->driver = "PY32F002B";
+		break;
+	case PUYA_DEV_ID_PY32X07X:
+		/* 0x1fff0ffc is in boot loader code. The vendor BSP references 0x1fff31fc as FLASHSIZE_BASE for
+		 * PY32[FM]07x but that location contains 0xffffffff on the PY32M070K1BU7. Hardcode the values for
+		 * now. */
+		flash_size = 128U * 1024U;
+		ram_size = 16U * 1024U;
+		target->driver = "PY32x07x";
+		break;
+	default:
 		DEBUG_TARGET("Unknown PY32 device %08" PRIx32 "\n", dbg_idcode);
 		return false;
 	}
 
+	target->part_id = dev_id;
 	target_add_ram32(target, PUYA_RAM_START, ram_size);
 	target_flash_s *flash = calloc(1, sizeof(*flash));
 	if (!flash) { /* calloc failed: heap exhaustion */
@@ -151,33 +263,102 @@ static bool puya_flash_prepare(target_flash_s *flash)
 	target_mem32_write32(flash->t, PUYA_FLASH_KEYR, PUYA_FLASH_KEYR_KEY1);
 	target_mem32_write32(flash->t, PUYA_FLASH_KEYR, PUYA_FLASH_KEYR_KEY2);
 
-	uint8_t hsi_fs =
-		(target_mem32_read32(flash->t, PUYA_RCC_ICSCR) >> PUYA_RCC_ICSCR_HSI_FS_SHIFT) & PUYA_RCC_ICSCR_HSI_FS_MASK;
+	target_s *target = flash->t;
+	uint32_t cal_base;
+	/* On most models the configuration "bytes" are 32-bit aligned. Exceptions (64-bit alignment) are handled
+	 * below. */
+	uint8_t cal_shift = 2;
+
+	switch (target->part_id) {
+	case PUYA_DEV_ID_PY32F0XX: {
+		cal_base = PUYA_TIMING_INFO_START_002A_003;
+		break;
+	}
+	case PUYA_DEV_ID_PY32F002B:
+		cal_base = PUYA_TIMING_INFO_START_002B;
+		break;
+	case PUYA_DEV_ID_PY32X07X:
+		cal_base = PUYA_TIMING_INFO_START_07X;
+		/* configuration bytes are 64-bit aligned rather than just 32-bit */
+		cal_shift = 3;
+		break;
+	default:
+		/* Should have never made it past probe */
+		DEBUG_TARGET("Unknown PY32 device %08" PRIx32 "\n", target->part_id);
+		return false;
+	}
+
+	const uint32_t icscr_old = target_mem32_read32(flash->t, PUYA_RCC_ICSCR);
+	/* Not all models support all frequencies but the mapping is
+	 * the same for all of them. */
+	uint8_t hsi_fs = (icscr_old >> PUYA_RCC_ICSCR_HSI_FS_SHIFT) & PUYA_RCC_ICSCR_HSI_FS_MASK;
 	if (hsi_fs > 4)
 		hsi_fs = 0;
+	if (target->part_id == PUYA_DEV_ID_PY32F002B) {
+		/* PY32F002B only supports 24MHz HSI. The HSI_TRIM and EPPARA0 entries for 24MHz are at offset 0,
+		 * disregarding the HSI_FS value. */
+		hsi_fs = 0;
+	}
 	DEBUG_TARGET("HSI frequency selection is %d\n", hsi_fs);
 
-	const uint32_t eppara0 = target_mem32_read32(flash->t, PUYA_FLASH_TIMING_CAL_BASE + hsi_fs * 20 + 0);
-	const uint32_t eppara1 = target_mem32_read32(flash->t, PUYA_FLASH_TIMING_CAL_BASE + hsi_fs * 20 + 4);
-	const uint32_t eppara2 = target_mem32_read32(flash->t, PUYA_FLASH_TIMING_CAL_BASE + hsi_fs * 20 + 8);
-	const uint32_t eppara3 = target_mem32_read32(flash->t, PUYA_FLASH_TIMING_CAL_BASE + hsi_fs * 20 + 12);
-	const uint32_t eppara4 = target_mem32_read32(flash->t, PUYA_FLASH_TIMING_CAL_BASE + hsi_fs * 20 + 16);
-	DEBUG_TARGET("PY32 flash timing cal 0: %08" PRIx32 "\n", eppara0);
-	DEBUG_TARGET("PY32 flash timing cal 1: %08" PRIx32 "\n", eppara1);
-	DEBUG_TARGET("PY32 flash timing cal 2: %08" PRIx32 "\n", eppara2);
-	DEBUG_TARGET("PY32 flash timing cal 3: %08" PRIx32 "\n", eppara3);
-	DEBUG_TARGET("PY32 flash timing cal 4: %08" PRIx32 "\n", eppara4);
+	const uint32_t hsi_trim =
+		target_mem32_read32(flash->t, cal_base + ((PUYA_FLASH_TIMING_HSITRIM_IDX + (hsi_fs * 5) + 0) << cal_shift));
+	uint32_t eppara[5];
+	for (uint32_t idx = 0; idx < 5; idx++) {
+		eppara[idx] = target_mem32_read32(
+			flash->t, cal_base + ((PUYA_FLASH_TIMING_EPPARA0_IDX + (hsi_fs * 5) + idx) << cal_shift));
+	}
+	DEBUG_TARGET("PY32 HSI trim value: %08" PRIx32 "\n", hsi_trim);
+	DEBUG_TARGET("PY32 flash timing cal 0: %08" PRIx32 "\n", eppara[0]);
+	DEBUG_TARGET("PY32 flash timing cal 1: %08" PRIx32 "\n", eppara[1]);
+	DEBUG_TARGET("PY32 flash timing cal 2: %08" PRIx32 "\n", eppara[2]);
+	DEBUG_TARGET("PY32 flash timing cal 3: %08" PRIx32 "\n", eppara[3]);
+	DEBUG_TARGET("PY32 flash timing cal 4: %08" PRIx32 "\n", eppara[4]);
 
-	target_mem32_write32(flash->t, PUYA_FLASH_TS0, eppara0 & 0xffU);
-	target_mem32_write32(flash->t, PUYA_FLASH_TS1, (eppara0 >> 16U) & 0x1ffU);
-	target_mem32_write32(flash->t, PUYA_FLASH_TS3, (eppara0 >> 8U) & 0xffU);
-	target_mem32_write32(flash->t, PUYA_FLASH_TS2P, eppara1 & 0xffU);
-	target_mem32_write32(flash->t, PUYA_FLASH_TPS3, (eppara1 >> 16U) & 0x7ffU);
-	target_mem32_write32(flash->t, PUYA_FLASH_PERTPE, eppara2 & 0x1ffffU);
-	target_mem32_write32(flash->t, PUYA_FLASH_SMERTPE, eppara3 & 0x1ffffU);
-	target_mem32_write32(flash->t, PUYA_FLASH_PRGTPE, eppara4 & 0xffffU);
-	target_mem32_write32(flash->t, PUYA_FLASH_PRETPE, (eppara4 >> 16U) & 0x3fffU);
-
+	target_mem32_write32(flash->t, PUYA_RCC_ICSCR,
+		(icscr_old & ~PUYA_RCC_ICSCR_HSI_TRIM_MASK) | (hsi_trim & PUYA_RCC_ICSCR_HSI_TRIM_MASK));
+	switch (target->part_id) {
+	case PUYA_DEV_ID_PY32F002B:
+		target_mem32_write32(
+			flash->t, PUYA_FLASH_TS0, (eppara[0] >> PY32F002B_EPPARA0_TS0_SHIFT) & PY32F002B_EPPARA0_TS0_MASK);
+		target_mem32_write32(
+			flash->t, PUYA_FLASH_TS1, (eppara[0] >> PY32F002B_EPPARA0_TS1_SHIFT) & PY32F002B_EPPARA0_TS1_MASK);
+		target_mem32_write32(
+			flash->t, PUYA_FLASH_TS3, (eppara[0] >> PY32F002B_EPPARA0_TS3_SHIFT) & PY32F002B_EPPARA0_TS3_MASK);
+		target_mem32_write32(
+			flash->t, PUYA_FLASH_TS2P, (eppara[1] >> PY32F002B_EPPARA1_TS2P_SHIFT) & PY32F002B_EPPARA1_TS2P_MASK);
+		target_mem32_write32(
+			flash->t, PUYA_FLASH_TPS3, (eppara[1] >> PY32F002B_EPPARA1_TPS3_SHIFT) & PY32F002B_EPPARA1_TPS3_MASK);
+		target_mem32_write32(
+			flash->t, PUYA_FLASH_PERTPE, (eppara[2] >> PY32F002B_EPPARA2_PERTPE_SHIFT) & PY32F002B_EPPARA2_PERTPE_MASK);
+		target_mem32_write32(flash->t, PUYA_FLASH_SMERTPE,
+			(eppara[3] >> PY32F002B_EPPARA3_SMERTPE_SHIFT) & PY32F002B_EPPARA3_SMERTPE_MASK);
+		target_mem32_write32(
+			flash->t, PUYA_FLASH_PRGTPE, (eppara[4] >> PY32F002B_EPPARA4_PRGTPE_SHIFT) & PY32F002B_EPPARA4_PRGTPE_MASK);
+		target_mem32_write32(
+			flash->t, PUYA_FLASH_PRETPE, (eppara[4] >> PY32F002B_EPPARA4_PRETPE_SHIFT) & PY32F002B_EPPARA4_PRETPE_MASK);
+		break;
+	default:
+		target_mem32_write32(
+			flash->t, PUYA_FLASH_TS0, (eppara[0] >> PY32F0XX_EPPARA0_TS0_SHIFT) & PY32F0XX_EPPARA0_TS0_MASK);
+		target_mem32_write32(
+			flash->t, PUYA_FLASH_TS1, (eppara[0] >> PY32F0XX_EPPARA0_TS1_SHIFT) & PY32F0XX_EPPARA0_TS1_MASK);
+		target_mem32_write32(
+			flash->t, PUYA_FLASH_TS3, (eppara[0] >> PY32F0XX_EPPARA0_TS3_SHIFT) & PY32F0XX_EPPARA0_TS3_MASK);
+		target_mem32_write32(
+			flash->t, PUYA_FLASH_TS2P, (eppara[1] >> PY32F0XX_EPPARA1_TS2P_SHIFT) & PY32F0XX_EPPARA1_TS2P_MASK);
+		target_mem32_write32(
+			flash->t, PUYA_FLASH_TPS3, (eppara[1] >> PY32F0XX_EPPARA1_TPS3_SHIFT) & PY32F0XX_EPPARA1_TPS3_MASK);
+		target_mem32_write32(
+			flash->t, PUYA_FLASH_PERTPE, (eppara[2] >> PY32F0XX_EPPARA2_PERTPE_SHIFT) & PY32F0XX_EPPARA2_PERTPE_MASK);
+		target_mem32_write32(flash->t, PUYA_FLASH_SMERTPE,
+			(eppara[3] >> PY32F0XX_EPPARA3_SMERTPE_SHIFT) & PY32F0XX_EPPARA3_SMERTPE_MASK);
+		target_mem32_write32(
+			flash->t, PUYA_FLASH_PRGTPE, (eppara[4] >> PY32F0XX_EPPARA4_PRGTPE_SHIFT) & PY32F0XX_EPPARA4_PRGTPE_MASK);
+		target_mem32_write32(
+			flash->t, PUYA_FLASH_PRETPE, (eppara[4] >> PY32F0XX_EPPARA4_PRETPE_SHIFT) & PY32F0XX_EPPARA4_PRETPE_MASK);
+		break;
+	}
 	return true;
 }
 
