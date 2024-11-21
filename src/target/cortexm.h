@@ -143,10 +143,12 @@ extern unsigned cortexm_wait_timeout;
 #define CORTEXM_DEMCR_VC_CORERESET (1U << 0U)
 
 /* Flash Patch and Breakpoint Control Register (FP_CTRL) */
-/* Bits 32:15 - Reserved */
-/* Bits 14:12 - NUM_CODE2 */ /* v7m only */
-/* Bits 11:8 - NUM_LIT */    /* v7m only */
-/* Bits 7:4 - NUM_CODE1 */
+#define CORTEXM_FPB_CTRL_REV_MASK  0xfU
+#define CORTEXM_FPB_CTRL_REV_SHIFT 28U
+/* Bits 28:15 - Reserved */
+#define CORTEXM_FPB_CTRL_NUM_CODE_H (0x7U << 12U)
+#define CORTEXM_FPB_CTRL_NUM_LIT    (0xfU << 8U)
+#define CORTEXM_FPB_CTRL_NUM_CODE_L (0xfU << 4U)
 /* Bits 3:2 - Unspecified */
 #define CORTEXM_FPB_CTRL_KEY    (1U << 1U)
 #define CORTEXM_FPB_CTRL_ENABLE (1U << 0U)

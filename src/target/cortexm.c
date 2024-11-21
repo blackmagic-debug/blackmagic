@@ -523,16 +523,25 @@ bool cortexm_attach(target_s *target)
 	/* Reset DFSR flags */
 	target_mem32_write32(target, CORTEXM_DFSR, CORTEXM_DFSR_RESETALL);
 
-	/* size the break/watchpoint units */
+	/* Find out how many breakpoint slots there are */
 	priv->base.breakpoints_available = CORTEX_MAX_BREAKPOINTS;
 	const uint32_t flash_break_cfg = target_mem32_read32(target, CORTEXM_FPB_CTRL);
-	const uint32_t breakpoints = ((flash_break_cfg >> 4U) & 0xfU);
-	if (breakpoints < priv->base.breakpoints_available) /* only look at NUM_COMP1 */
+	/*
+	 * Extract and reconstruct the full NUM_CODE 7-bit value so we don't break and do bad things on
+	 * parts with higher slot counts
+	 */
+	const uint8_t breakpoints = (uint8_t)(((flash_break_cfg & CORTEXM_FPB_CTRL_NUM_CODE_H) >> 8U) |
+		((flash_break_cfg & CORTEXM_FPB_CTRL_NUM_CODE_L) >> 4U));
+	/* If there are less breakpoints than we have slots for, then truncate the number of slots we use */
+	if (breakpoints < priv->base.breakpoints_available)
 		priv->base.breakpoints_available = breakpoints;
-	priv->flash_patch_revision = flash_break_cfg >> 28U;
+	/* Extract the revision number of the unit so we can alter our behavior on use as necessary */
+	priv->flash_patch_revision = (flash_break_cfg >> CORTEXM_FPB_CTRL_REV_SHIFT) & CORTEXM_FPB_CTRL_REV_MASK;
 
+	/* Now find out how many watchpoint slots there are */
 	priv->base.watchpoints_available = CORTEX_MAX_WATCHPOINTS;
 	const uint32_t watchpoints = target_mem32_read32(target, CORTEXM_DWT_CTRL);
+	/* If the number of watchpoints available is fewer than we can handle, truncate to that number */
 	if ((watchpoints >> 28U) < priv->base.watchpoints_available)
 		priv->base.watchpoints_available = watchpoints >> 28U;
 
@@ -554,7 +563,7 @@ bool cortexm_attach(target_s *target)
 		platform_nrst_set_val(false);
 		platform_timeout_s timeout;
 		platform_timeout_set(&timeout, 1000);
-		while (1) {
+		while (true) {
 			const uint32_t reset_status = target_mem32_read32(target, CORTEXM_DHCSR);
 			if (!(reset_status & CORTEXM_DHCSR_S_RESET_ST))
 				break;
