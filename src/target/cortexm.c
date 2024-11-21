@@ -51,9 +51,11 @@
 #define CORTEXM_MAX_REG_COUNT (CORTEXM_GENERAL_REG_COUNT + CORTEX_FLOAT_REG_COUNT + CORTEXM_TRUSTZONE_REG_COUNT)
 
 static bool cortexm_vector_catch(target_s *target, int argc, const char **argv);
+static bool cortexm_mem_nohalt(target_s *target, int argc, const char **argv);
 
 const command_s cortexm_cmd_list[] = {
 	{"vector_catch", cortexm_vector_catch, "Catch exception vectors"},
+	{"mem_nohalt", cortexm_mem_nohalt, "Toggle halting during memory accesses (affects RTT)"},
 	{NULL, NULL, NULL},
 };
 
@@ -1269,6 +1271,25 @@ static bool cortexm_vector_catch(target_s *target, int argc, const char **argv)
 			tc_printf(target, "%s ", vectors[i]);
 	}
 	tc_printf(target, "\n");
+	return true;
+}
+
+static bool cortexm_mem_nohalt(target_s *target, int argc, const char **argv)
+{
+	bool enable = false;
+	if (argc > 2) {
+		tc_printf(target, "Usage: monitor mem_nohalt <enable|disable>");
+		return false;
+	}
+	if ((argc == 2) && parse_enable_or_disable(argv[1], &enable)) {
+		if (enable)
+			target->target_options |= TOPT_NON_HALTING_MEM_IO;
+		else
+			target->target_options &= ~TOPT_NON_HALTING_MEM_IO;
+		return true;
+	}
+	tc_printf(target, "Target allows non-halting memory IO: %s\n",
+		target->target_options & TOPT_NON_HALTING_MEM_IO ? "yes" : "no");
 	return true;
 }
 
