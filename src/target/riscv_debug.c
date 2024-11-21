@@ -132,6 +132,8 @@
 #define RV_DCSR_CAUSE_MASK     0x000001c0U
 #define RV_DCSR_STEPIE         0x00000800U
 #define RV_DCSR_EBREAK_MACHINE 0x00008000U
+#define RV_DCSR_STOP_TIME      (1U << 9)
+#define RV_DCSR_STOP_COUNT     (1U << 10)
 
 #define RV_GPRS_COUNT 32U
 
@@ -1014,9 +1016,9 @@ static void riscv_halt_resume(target_s *target, const bool step)
 	if (!riscv_csr_read(hart, RV_DCSR | RV_CSR_FORCE_32_BIT, &stepping_config))
 		return;
 	if (step)
-		stepping_config |= RV_DCSR_STEP | RV_DCSR_STEPIE;
+		stepping_config |= RV_DCSR_STEP | RV_DCSR_STOP_TIME | RV_DCSR_STOP_COUNT;
 	else {
-		stepping_config &= ~(RV_DCSR_STEP | RV_DCSR_STEPIE);
+		stepping_config &= ~(RV_DCSR_STEP);
 		stepping_config |= RV_DCSR_EBREAK_MACHINE;
 	}
 	if (!riscv_csr_write(hart, RV_DCSR | RV_CSR_FORCE_32_BIT, &stepping_config))
