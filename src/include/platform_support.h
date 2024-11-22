@@ -77,7 +77,7 @@ bool platform_spi_deinit(spi_bus_e bus);
 
 bool platform_spi_chip_select(uint8_t device_select);
 uint8_t platform_spi_xfer(spi_bus_e bus, uint8_t value);
-void platform_spi_xfer_block(spi_bus_e bus, const uint8_t *const tx_buf, uint8_t *const rx_buf, size_t count);
+void platform_spi_xfer_block(spi_bus_e bus, const uint8_t *tx_buf, uint8_t *rx_buf, size_t count);
 #endif
 
 #ifdef PLATFORM_IDENT_DYNAMIC
