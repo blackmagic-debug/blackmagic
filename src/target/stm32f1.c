@@ -965,35 +965,35 @@ bool stm32f1_probe(target_s *target)
 
 	case 0x444U: /* STM32F03 RM0091 Rev. 7, STM32F030x[4|6] RM0360 Rev. 4 */
 		target->driver = "STM32F03";
-		ram_size = 0x5000;
+		ram_size = 0x1000;
 		flash_size = 0x8000;
 		block_size = 0x400;
 		break;
 
 	case 0x445U: /* STM32F04 RM0091 Rev. 7, STM32F070x6 RM0360 Rev. 4 */
 		target->driver = "STM32F04/F070x6";
-		ram_size = 0x5000;
+		ram_size = 0x1800;
 		flash_size = 0x8000;
 		block_size = 0x400;
 		break;
 
 	case 0x440U: /* STM32F05 RM0091 Rev. 7, STM32F030x8 RM0360 Rev. 4 */
 		target->driver = "STM32F05/F030x8";
-		ram_size = 0x5000;
+		ram_size = 0x2000;
 		flash_size = 0x10000;
 		block_size = 0x400;
 		break;
 
 	case 0x448U: /* STM32F07 RM0091 Rev. 7, STM32F070xb RM0360 Rev. 4 */
 		target->driver = "STM32F07";
-		ram_size = 0x5000;
+		ram_size = 0x4000;
 		flash_size = 0x20000;
 		block_size = 0x800;
 		break;
 
 	case 0x442U: /* STM32F09 RM0091 Rev. 7, STM32F030xc RM0360 Rev. 4 */
 		target->driver = "STM32F09/F030xc";
-		ram_size = 0x5000;
+		ram_size = 0x8000;
 		flash_size = 0x40000;
 		block_size = 0x800;
 		break;
