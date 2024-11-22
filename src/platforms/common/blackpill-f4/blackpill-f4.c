@@ -313,14 +313,6 @@ void platform_spi_xfer_block(
 		return;
 	}
 
-#if 0
-	/* Put a byte on MOSI, wait entire transfer, grab the byte from MOSI into buffer, repeat. */
-	for (size_t i = 0; i < count; i++) {
-		uint8_t resp = spi_xfer(spi_base, tx_buf[i]);
-		if (rx_buf)
-			rx_buf[i] = resp;
-	}
-#else
 	CM_ATOMIC_CONTEXT();
 	/*
 	 * Start the waveform by putting first MOSI byte into TXDR
@@ -343,7 +335,6 @@ void platform_spi_xfer_block(
 	uint8_t resp = spi_read(spi_base);
 	if (rx_buf)
 		rx_buf[count - 1] = resp;
-#endif
 }
 
 int platform_hwversion(void)
