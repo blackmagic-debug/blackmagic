@@ -516,12 +516,15 @@ bool cortexm_attach(target_s *target)
 	/* Clear any pending fault condition (and switch to this core) */
 	target_check_error(target);
 
+	/* Try to halt the core, and then check that it worked (which also resets the halt reason) */
 	target_halt_request(target);
+	const target_halt_reason_e halt_result = target_halt_poll(target, NULL);
+	/* If we failed to halt the target somehow, bail */
+	if (halt_result == TARGET_HALT_ERROR || halt_result == TARGET_HALT_RUNNING)
+		return false;
+
 	/* Request halt on reset */
 	target_mem32_write32(target, CORTEXM_DEMCR, priv->demcr);
-
-	/* Reset DFSR flags */
-	target_mem32_write32(target, CORTEXM_DFSR, CORTEXM_DFSR_RESETALL);
 
 	/* Find out how many breakpoint slots there are */
 	priv->base.breakpoints_available = CORTEX_MAX_BREAKPOINTS;
