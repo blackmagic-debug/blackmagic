@@ -32,6 +32,7 @@ extern unsigned cortexm_wait_timeout;
 
 #define CORTEXM_CPUID   (CORTEXM_SCS_BASE + 0xd00U)
 #define CORTEXM_AIRCR   (CORTEXM_SCS_BASE + 0xd0cU)
+#define CORTEXM_CCR     (CORTEXM_SCS_BASE + 0xd14U)
 #define CORTEXM_CFSR    (CORTEXM_SCS_BASE + 0xd28U)
 #define CORTEXM_HFSR    (CORTEXM_SCS_BASE + 0xd2cU)
 #define CORTEXM_DFSR    (CORTEXM_SCS_BASE + 0xd30U)
@@ -49,9 +50,10 @@ extern unsigned cortexm_wait_timeout;
 #define CORTEXM_CSSELR (CORTEXM_SCS_BASE + 0xd84U)
 
 /* Cache maintenance operations */
-#define CORTEXM_ICIALLU  (CORTEXM_SCS_BASE + 0xf50U)
-#define CORTEXM_DCCMVAC  (CORTEXM_SCS_BASE + 0xf68U)
-#define CORTEXM_DCCIMVAC (CORTEXM_SCS_BASE + 0xf70U)
+#define CORTEXM_ICIALLU  (CORTEXM_SCS_BASE + 0xf50U) /* I-Cache Invalidate All to Point of Unification */
+#define CORTEXM_DCCMVAU  (CORTEXM_SCS_BASE + 0xf64U) /* D-Cache Clean by Address to Point of Unification */
+#define CORTEXM_DCCMVAC  (CORTEXM_SCS_BASE + 0xf68U) /* D-Cache Clean by Address to Point of Coherency */
+#define CORTEXM_DCCIMVAC (CORTEXM_SCS_BASE + 0xf70U) /* D-Cache Clean and Invalidate by Address to Point of Coherency */
 
 #define CORTEXM_FPB_BASE (CORTEXM_PPB_BASE + 0x2000U)
 
@@ -77,6 +79,10 @@ extern unsigned cortexm_wait_timeout;
 #define CORTEXM_AIRCR_SYSRESETREQ   (1U << 2U)
 #define CORTEXM_AIRCR_VECTCLRACTIVE (1U << 1U)
 #define CORTEXM_AIRCR_VECTRESET     (1U << 0U)
+
+/* Configuration and Control Register (CCR) */
+#define CORTEXM_CCR_DCACHE_ENABLE (1U << 16U)
+#define CORTEXM_CCR_ICACHE_ENABLE (1U << 17U)
 
 /* HardFault Status Register (HFSR) */
 #define CORTEXM_HFSR_DEBUGEVT (1U << 31U)

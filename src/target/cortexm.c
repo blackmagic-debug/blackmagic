@@ -78,6 +78,8 @@ typedef struct cortexm_priv {
 	cortex_priv_s base;
 	bool stepping;
 	bool on_bkpt;
+	bool icache_enabled;
+	bool dcache_enabled;
 	/* Flash Patch controller configuration */
 	uint8_t flash_patch_revision;
 	/* Copy of DEMCR for vector-catch */
@@ -193,7 +195,8 @@ static void cortexm_cache_clean(
 	target_s *const target, const target_addr32_t addr, const size_t len, const bool invalidate)
 {
 	const cortexm_priv_s *const priv = (const cortexm_priv_s *)target->priv;
-	if (!priv->base.dcache_line_length)
+	/* Check if there is a data cache and if it's even actually enabled */
+	if (!priv->base.dcache_line_length || !priv->dcache_enabled)
 		return;
 	const target_addr32_t cache_reg = invalidate ? CORTEXM_DCCIMVAC : CORTEXM_DCCMVAC;
 	const size_t minline = priv->base.dcache_line_length << 2U;
@@ -849,8 +852,14 @@ static target_halt_reason_e cortexm_halt_poll(target_s *target, target_addr_t *w
 		return TARGET_HALT_RUNNING;
 
 	/* Read out the status register to determine why */
-	uint32_t dfsr = target_mem32_read32(target, CORTEXM_DFSR);
-	target_mem32_write32(target, CORTEXM_DFSR, dfsr); /* write back to reset */
+	const uint32_t dfsr = target_mem32_read32(target, CORTEXM_DFSR);
+	/* Write the same value back to clear the register */
+	target_mem32_write32(target, CORTEXM_DFSR, dfsr);
+
+	/* Check what caches are currently enabled */
+	const uint32_t ccr = target_mem32_read32(target, CORTEXM_CCR);
+	priv->dcache_enabled = ccr & CORTEXM_CCR_DCACHE_ENABLE;
+	priv->icache_enabled = ccr & CORTEXM_CCR_ICACHE_ENABLE;
 
 	if ((dfsr & CORTEXM_DFSR_VCATCH) && cortexm_fault_unwind(target))
 		return TARGET_HALT_FAULT;
