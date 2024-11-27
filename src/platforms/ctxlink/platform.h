@@ -293,5 +293,6 @@ void platform_tasks(void);
 const char *platform_battery_voltage(void);
 bool platform_check_battery_voltage(void);
 bool platform_configure_uart(char *configuration_string);
+void platform_read_adc(void);
 
 #endif /* PLATFORMS_CTXLINK_PLATFORM_H */

@@ -57,6 +57,7 @@ void trace_send_data(void);
 #define TIMEOUT_TICK_COUNT 1000
 
 #define INPUT_BUFFER_SIZE 2048
+
 static uint8_t input_buffer[INPUT_BUFFER_SIZE] = {0}; ///< The input buffer[ input buffer size]
 static volatile uint32_t input_index = 0;             ///< Zero-based index of the input
 static volatile uint32_t output_index = 0;            ///< Zero-based index of the output
@@ -274,6 +275,7 @@ void tim2_isr(void)
 		else
 			timeout_tick_counter = TIMEOUT_TICK_COUNT;
 	}
+	platform_read_adc();
 }
 
 void timer_init(void)

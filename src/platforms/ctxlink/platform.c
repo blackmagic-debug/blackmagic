@@ -29,6 +29,7 @@
 #include "morse.h"
 #include "exception.h"
 #include <string.h>
+#include <stdatomic.h>
 
 #include <libopencm3/stm32/rcc.h>
 #include <libopencm3/cm3/scb.h>
@@ -67,7 +68,13 @@
 bool last_battery_state = true;
 bool battery_present = false;
 
-static uint32_t input_voltages[2] = {0};
+#define READ_ADC_PERIOD 100 //< ms count
+static uint32_t read_adc_period = READ_ADC_PERIOD;
+
+#define MAX_ADC_PHASE 4
+static uint8_t adc_phase;
+
+_Atomic uint32_t input_voltages[2] = {0};
 static uint8_t adc_channels[] = {CTXLINK_BATTERY_INPUT, CTXLINK_TARGET_VOLTAGE_INPUT}; /// ADC channels used by ctxLink
 
 typedef void (*irq_function_t)(void);
@@ -139,25 +146,9 @@ void wifi_init(void)
 	app_initialize();
 }
 
-void platform_adc_read(void)
-{
-	adc_set_regular_sequence(ADC1, 1, &adc_channels[CTXLINK_ADC_BATTERY]);
-	adc_start_conversion_regular(ADC1);
-	/* Wait for end of conversion. */
-	while (!adc_eoc(ADC1))
-		continue;
-	input_voltages[CTXLINK_ADC_BATTERY] = ((adc_read_regular(ADC1) * 16U) / 10U);
-	adc_set_regular_sequence(ADC1, 1, &adc_channels[CTXLINK_ADC_TARGET]);
-	adc_start_conversion_regular(ADC1);
-	/* Wait for end of conversion. */
-	while (!adc_eoc(ADC1))
-		continue;
-	input_voltages[CTXLINK_ADC_TARGET] = (adc_read_regular(ADC1) * 16U) / 10U;
-}
-
 uint32_t platform_target_voltage_sense(void)
 {
-	return input_voltages[CTXLINK_ADC_TARGET];
+	return atomic_load_explicit(&input_voltages[CTXLINK_ADC_TARGET], memory_order_relaxed);
 }
 
 int platform_hwversion(void)
@@ -330,6 +321,49 @@ bool platform_nrst_get_val(void)
 	return false;
 }
 
+void platform_read_adc(void)
+{
+	if (--read_adc_period != 0)
+		return;
+	read_adc_period = READ_ADC_PERIOD;
+	//
+	// The ADC is read here; there are two channels read for the target
+	// and battery. A 4-phase system is used:
+	//	phase 0 -> start target voltage conversion
+	//	phase 1 -> Read and update the cached target voltage
+	//	phase 2 -> start the battery voltage conversion
+	//	phase 3 -> read and update the cached battery voltage
+	switch (adc_phase) {
+	default: {
+		//
+		// Something went wrong, reset the phase and start again
+		//
+		adc_phase = 0;
+		BMD_FALLTHROUGH;
+	}
+	case 0: {
+		adc_set_regular_sequence(ADC1, 1, &adc_channels[CTXLINK_ADC_TARGET]);
+		adc_start_conversion_regular(ADC1);
+		break;
+	}
+	case 1: {
+		atomic_store_explicit(
+			&input_voltages[CTXLINK_ADC_TARGET], (adc_read_regular(ADC1) * 16U) / 10U, memory_order_relaxed);
+		break;
+	}
+	case 2: {
+		adc_set_regular_sequence(ADC1, 1, &adc_channels[CTXLINK_ADC_BATTERY]);
+		adc_start_conversion_regular(ADC1);
+		break;
+	}
+	case 3:
+		atomic_store_explicit(
+			&input_voltages[CTXLINK_ADC_BATTERY], (adc_read_regular(ADC1) * 16U) / 10U, memory_order_relaxed);
+		break;
+	}
+	adc_phase = (adc_phase + 1) % MAX_ADC_PHASE;
+}
+
 const char *platform_target_voltage(void)
 {
 	static char target[64] = {0};
@@ -401,12 +435,11 @@ const char *platform_battery_voltage(void)
 
 bool platform_check_battery_voltage(void)
 {
-	platform_adc_read();
 	//
 	// Is battery connected?
 	//
-	if (input_voltages[CTXLINK_ADC_BATTERY] <= BATTERY_VOLTAGE_1 ||
-		input_voltages[CTXLINK_ADC_BATTERY] >= BATTERY_VOLTAGE_2) {
+	uint32_t voltage = atomic_load_explicit(&input_voltages[CTXLINK_ADC_BATTERY], memory_order_relaxed);
+	if (voltage <= BATTERY_VOLTAGE_1 || voltage >= BATTERY_VOLTAGE_2) {
 		battery_present = false;
 		last_battery_state = true;
 	} else {
@@ -414,7 +447,7 @@ bool platform_check_battery_voltage(void)
 		//
 		// Is the voltage good?
 		//
-		last_battery_state = input_voltages[CTXLINK_ADC_BATTERY] > BATTERY_LOW;
+		last_battery_state = voltage > BATTERY_LOW;
 	}
 	return last_battery_state;
 }
