@@ -347,7 +347,7 @@ static void adi_display_ap(const adiv5_access_port_s *const ap)
 #endif
 }
 
-bool adi_configure_mem_ap(adiv5_access_port_s *const ap)
+static bool adi_configure_mem_ap(adiv5_access_port_s *const ap)
 {
 	const uint8_t ap_type = ADIV5_AP_IDR_TYPE(ap->idr);
 
