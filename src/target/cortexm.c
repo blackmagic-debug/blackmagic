@@ -1184,20 +1184,29 @@ static int cortexm_breakwatch_set(target_s *const target, breakwatch_s *const br
 	}
 }
 
-static int cortexm_breakwatch_clear(target_s *target, breakwatch_s *breakwatch)
+static int cortexm_breakwatch_clear(target_s *const target, breakwatch_s *const breakwatch)
 {
-	cortexm_priv_s *priv = target->priv;
-	uint32_t slot = breakwatch->reserved[0];
+	cortexm_priv_s *const priv = target->priv;
+	const uint32_t slot = breakwatch->reserved[0];
+
 	switch (breakwatch->type) {
 	case TARGET_BREAK_HARD:
+		/* Unmark the slot this breakpoint uses as used */
 		priv->base.breakpoints_mask &= ~(1U << slot);
-		target_mem32_write32(target, CORTEXM_FPB_COMP(slot), 0);
+		/*
+		 * Disable the breakpoint, but also crucially make sure we keep the Flash patch system disabled(!).
+		 * BE is bit 0, FE is bit 31. Bits 29 and 30 are reserved and must be zero when BE is 0.
+		 * The ARMv8-M ARM requires this be a write to 0, specifically, as called out in §D1.2.107, FP_COMPn,
+		 * Flash Patch Comparator Register, pg1653
+		 */
+		target_mem32_write32(target, CORTEXM_FPB_COMP(slot), 0U);
 		return 0;
 	case TARGET_WATCH_WRITE:
 	case TARGET_WATCH_READ:
 	case TARGET_WATCH_ACCESS:
+		/* Unmark the slot this watchpoint uses as used and disable the watchpoint */
 		priv->base.watchpoints_mask &= ~(1U << slot);
-		target_mem32_write32(target, CORTEXM_DWT_FUNC(slot), 0);
+		target_mem32_write32(target, CORTEXM_DWT_FUNC(slot), 0U);
 		return 0;
 	default:
 		return 1;
