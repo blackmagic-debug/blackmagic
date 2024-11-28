@@ -1111,10 +1111,17 @@ static int cortexm_breakwatch_set(target_s *target, breakwatch_s *breakwatch)
 
 	switch (breakwatch->type) {
 	case TARGET_BREAK_HARD:
+		/* If this is a FPB that can only set breakpoints in the first 512MiB of address space (version 1) */
 		if (priv->flash_patch_revision == 0U) {
+			/* Make sure all the reserved and special bits are cleared */
 			val &= 0x1ffffffcU;
+			/*
+			 * And then set whether the breakpoint should be for the lower or upper 16 bits of the 32 bit block
+			 * pointed to by the truncated address (masking the bottom nibble by `c` 4 byte aligns the address)
+			 */
 			val |= (breakwatch->addr & 2U) ? 0x80000000U : 0x40000000U;
 		}
+		/* Make sure the enable bit is set for the slot we're about to write */
 		val |= 1U;
 
 		/* Find the first available breakpoint slot */
@@ -1123,9 +1130,11 @@ static int cortexm_breakwatch_set(target_s *target, breakwatch_s *breakwatch)
 				break;
 		}
 
+		/* If we could not find any slots, inform the GDB server that we could not set the breakpoint */
 		if (i == priv->base.breakpoints_available)
 			return -1;
 
+		/* Otherwise, mark the slot chosen as used, and write it with the computed value */
 		priv->base.breakpoints_mask |= 1U << i;
 		target_mem32_write32(target, CORTEXM_FPB_COMP(i), val);
 		breakwatch->reserved[0] = i;
