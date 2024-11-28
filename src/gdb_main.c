@@ -341,7 +341,8 @@ int32_t gdb_main_loop(target_controller_s *tc, char *pbuf, size_t pbuf_size, siz
 		break;
 
 	case 'X': { /* 'X addr,len:XX': Write binary data to addr */
-		uint32_t addr, len;
+		target_addr32_t addr;
+		uint32_t len;
 		ERROR_IF_NO_TARGET();
 		if (read_hex32(pbuf + 1, &rest, &addr, ',') && read_hex32(rest, &rest, &len, ':')) {
 			if (len > (size - (size_t)(rest - pbuf))) {
@@ -405,10 +406,10 @@ static void exec_q_rcmd(const char *packet, const size_t length)
 	unhexify(data, packet, datalen);
 	data[datalen] = 0; /* add terminating null */
 
-	const int c = command_process(cur_target, data);
-	if (c < 0)
+	const int result = command_process(cur_target, data);
+	if (result < 0)
 		gdb_putpacketz("");
-	else if (c == 0)
+	else if (result == 0)
 		gdb_putpacketz("OK");
 	else {
 		const char *const response = "Failed\n";
@@ -757,6 +758,8 @@ static void exec_v_cont(const char *packet, const size_t length)
 		target_halt_resume(cur_target, single_step);
 		SET_RUN_STATE(true);
 		gdb_target_running = true;
+		break;
+	default:
 		break;
 	}
 }
