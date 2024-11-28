@@ -1139,12 +1139,38 @@ static int cortexm_breakpoint_set(target_s *const target, breakwatch_s *const br
 	return 0;
 }
 
-static int cortexm_breakwatch_set(target_s *target, breakwatch_s *breakwatch)
+static int cortexm_watchpoint_set(target_s *const target, breakwatch_s *const breakwatch)
 {
-	cortexm_priv_s *priv = target->priv;
-	size_t slot;
-	uint32_t val = breakwatch->addr;
+	cortexm_priv_s *const priv = target->priv;
 
+	/* Find the first available watchpoint slot */
+	uint32_t slot = 0U;
+	for (; slot < priv->base.watchpoints_available; slot++) {
+		if (!(priv->base.watchpoints_mask & (1U << slot)))
+			break;
+	}
+
+	/* If we could not find any slots, inform the GDB server that we could not set the watchpoint */
+	if (slot == priv->base.watchpoints_available)
+		return -1;
+
+	/* Otherwise, mark the slot chosen as used */
+	priv->base.watchpoints_mask |= 1U << slot;
+	/* Then set the watchpoint hardware up to observe the requested address in the requested way */
+	if ((target->target_options & CORTEXM_TOPT_FLAVOUR_V8M)) {
+		target_mem32_write32(target, CORTEXM_DWT_COMP(slot), breakwatch->addr);
+		target_mem32_write32(target, CORTEXM_DWT_FUNC(slot), cortexm_dwtv2_func(breakwatch->type, breakwatch->size));
+	} else {
+		target_mem32_write32(target, CORTEXM_DWT_COMP(slot), breakwatch->addr);
+		target_mem32_write32(target, CORTEXM_DWT_MASK(slot), cortexm_dwt_mask(breakwatch->size));
+		target_mem32_write32(target, CORTEXM_DWT_FUNC(slot), cortexm_dwt_func(target, breakwatch->type));
+	}
+	breakwatch->reserved[0] = slot;
+	return 0;
+}
+
+static int cortexm_breakwatch_set(target_s *const target, breakwatch_s *const breakwatch)
+{
 	switch (breakwatch->type) {
 	case TARGET_BREAK_HARD:
 		return cortexm_breakpoint_set(target, breakwatch);
@@ -1152,27 +1178,7 @@ static int cortexm_breakwatch_set(target_s *target, breakwatch_s *breakwatch)
 	case TARGET_WATCH_WRITE:
 	case TARGET_WATCH_READ:
 	case TARGET_WATCH_ACCESS:
-		/* Find the first available watchpoint slot */
-		for (slot = 0; slot < priv->base.watchpoints_available; slot++) {
-			if (!(priv->base.watchpoints_mask & (1U << slot)))
-				break;
-		}
-
-		if (slot == priv->base.watchpoints_available)
-			return -1;
-
-		priv->base.watchpoints_mask |= 1U << slot;
-		if ((target->target_options & CORTEXM_TOPT_FLAVOUR_V8M)) {
-			target_mem32_write32(target, CORTEXM_DWT_COMP(slot), val);
-			target_mem32_write32(
-				target, CORTEXM_DWT_FUNC(slot), cortexm_dwtv2_func(breakwatch->type, breakwatch->size));
-		} else {
-			target_mem32_write32(target, CORTEXM_DWT_COMP(slot), val);
-			target_mem32_write32(target, CORTEXM_DWT_MASK(slot), cortexm_dwt_mask(breakwatch->size));
-			target_mem32_write32(target, CORTEXM_DWT_FUNC(slot), cortexm_dwt_func(target, breakwatch->type));
-		}
-		breakwatch->reserved[0] = slot;
-		return 0;
+		return cortexm_watchpoint_set(target, breakwatch);
 	default:
 		return 1;
 	}
