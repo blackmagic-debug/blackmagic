@@ -122,6 +122,10 @@ endif
 # We declare a dependency for each target group with the source files required
 # these dependencies are then added to the BMD core, conditinal on the targets option
 # NOTE: sourceset module might be an alternative to this method (unexplored)
+target_arm_coresight = declare_dependency(
+	sources: files('arm_coresight_cti.c'),
+)
+
 target_cortex = declare_dependency(
 	sources: files('cortex.c'),
 )
