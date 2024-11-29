@@ -50,6 +50,7 @@ bool adiv5_swd_scan(uint32_t targetid);
 bool jtag_scan(void);
 
 size_t target_foreach(void (*callback)(size_t index, target_s *target, void *context), void *context);
+target_s *target_list_get_last();
 void target_list_free(void);
 
 target_s *target_new(void);

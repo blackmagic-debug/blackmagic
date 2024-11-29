@@ -76,6 +76,17 @@ target_s *target_new(void)
 	return target;
 }
 
+target_s *target_list_get_last()
+{
+	if (!target_list)
+		return NULL;
+
+	target_s *last_target = target_list;
+	while (last_target->next)
+		last_target = last_target->next;
+	return last_target;
+}
+
 size_t target_foreach(void (*callback)(size_t index, target_s *target, void *context), void *context)
 {
 	size_t idx = 0;
