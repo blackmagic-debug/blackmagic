@@ -164,6 +164,13 @@ extern unsigned cortexm_wait_timeout;
 #define CORTEXM_DWT_FUNC_FUNC_READ      (5U << 0U)
 #define CORTEXM_DWT_FUNC_FUNC_WRITE     (6U << 0U)
 #define CORTEXM_DWT_FUNC_FUNC_ACCESS    (7U << 0U)
+/* Variant for DWTv2 */
+#define CORTEXM_DWTv2_FUNC_MATCH_READ         (6U << 0U)
+#define CORTEXM_DWTv2_FUNC_MATCH_WRITE        (5U << 0U)
+#define CORTEXM_DWTv2_FUNC_MATCH_ACCESS       (4U << 0U)
+#define CORTEXM_DWTv2_FUNC_ACTION_TRIGGER     (0U << 4U)
+#define CORTEXM_DWTv2_FUNC_ACTION_DEBUG_EVENT (1U << 4U)
+#define CORTEXM_DWTv2_FUNC_LEN_VALUE(len)     (((len) >> 1) << 10U)
 
 #define CORTEXM_XPSR_THUMB          (1U << 24U)
 #define CORTEXM_XPSR_EXCEPTION_MASK 0x0000001fU

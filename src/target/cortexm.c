@@ -1063,6 +1063,25 @@ static uint32_t cortexm_dwt_func(target_s *target, target_breakwatch_e type)
 	}
 }
 
+static uint32_t cortexm_dwtv2_func(target_breakwatch_e type, size_t len)
+{
+	uint32_t value = CORTEXM_DWTv2_FUNC_ACTION_DEBUG_EVENT | CORTEXM_DWTv2_FUNC_LEN_VALUE(len);
+	switch (type) {
+	case TARGET_WATCH_WRITE:
+		value |= CORTEXM_DWTv2_FUNC_MATCH_WRITE;
+		break;
+	case TARGET_WATCH_READ:
+		value |= CORTEXM_DWTv2_FUNC_MATCH_READ;
+		break;
+	case TARGET_WATCH_ACCESS:
+		value |= CORTEXM_DWTv2_FUNC_MATCH_ACCESS;
+		break;
+	default:
+		return 0U;
+	}
+	return value;
+}
+
 static int cortexm_breakwatch_set(target_s *target, breakwatch_s *breakwatch)
 {
 	cortexm_priv_s *priv = target->priv;
@@ -1104,11 +1123,14 @@ static int cortexm_breakwatch_set(target_s *target, breakwatch_s *breakwatch)
 			return -1;
 
 		priv->base.watchpoints_mask |= 1U << i;
-
-		target_mem32_write32(target, CORTEXM_DWT_COMP(i), val);
-		target_mem32_write32(target, CORTEXM_DWT_MASK(i), cortexm_dwt_mask(breakwatch->size));
-		target_mem32_write32(target, CORTEXM_DWT_FUNC(i), cortexm_dwt_func(target, breakwatch->type));
-
+		if ((target->target_options & CORTEXM_TOPT_FLAVOUR_V8M)) {
+			target_mem32_write32(target, CORTEXM_DWT_COMP(i), val);
+			target_mem32_write32(target, CORTEXM_DWT_FUNC(i), cortexm_dwtv2_func(breakwatch->type, breakwatch->size));
+		} else {
+			target_mem32_write32(target, CORTEXM_DWT_COMP(i), val);
+			target_mem32_write32(target, CORTEXM_DWT_MASK(i), cortexm_dwt_mask(breakwatch->size));
+			target_mem32_write32(target, CORTEXM_DWT_FUNC(i), cortexm_dwt_func(target, breakwatch->type));
+		}
 		breakwatch->reserved[0] = i;
 		return 0;
 	default:
