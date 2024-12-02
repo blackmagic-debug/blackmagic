@@ -514,28 +514,31 @@ void adiv5_dp_init(adiv5_debug_port_s *const dp)
 
 		kinetis_mdm_probe(ap);
 		nrf51_mdm_probe(ap);
+		nrf54l_ctrl_ap_probe(ap);
 		efm32_aap_probe(ap);
 		lpc55_dmap_probe(ap);
 
-		/* Try to prepare the AP if it seems to be a AHB3 MEM-AP */
-		if (!ap->apsel && ADIV5_AP_IDR_CLASS(ap->idr) == 8U && ADIV5_AP_IDR_TYPE(ap->idr) == ARM_AP_TYPE_AHB3) {
-			if (!cortexm_prepare(ap))
-				DEBUG_WARN("adiv5: Failed to prepare AP, results may be unpredictable\n");
-		}
+		if (ADIV5_AP_IDR_CLASS(ap->idr) == ADIV5_AP_IDR_CLASS_MEM) {
+			/* Try to prepare the AP if it seems to be a AHB3 MEM-AP */
+			if (!ap->apsel && ADIV5_AP_IDR_TYPE(ap->idr) == ARM_AP_TYPE_AHB3) {
+				if (!cortexm_prepare(ap))
+					DEBUG_WARN("adiv5: Failed to prepare AP, results may be unpredictable\n");
+			}
 
-		/* The rest should only be added after checking ROM table */
-		adi_ap_component_probe(ap, ap->base, 0, 0);
-		/* Having completed discovery on this AP, try to resume any halted cores */
-		adi_ap_resume_cores(ap);
+			/* The rest should only be added after checking ROM table */
+			adi_ap_component_probe(ap, ap->base, 0, 0);
+			/* Having completed discovery on this AP, try to resume any halted cores */
+			adi_ap_resume_cores(ap);
 
-		/*
-		 * Due to the Tiva TM4C1294KCDT (among others) repeating the single AP ad-nauseum,
-		 * this check is needed so that we bail rather than repeating the same AP ~256 times.
-		 */
-		if (ap->dp->quirks & ADIV5_DP_QUIRK_DUPED_AP) {
-			adiv5_ap_unref(ap);
-			adiv5_dp_unref(dp);
-			return;
+			/*
+			* Due to the Tiva TM4C1294KCDT (among others) repeating the single AP ad-nauseum,
+			* this check is needed so that we bail rather than repeating the same AP ~256 times.
+			*/
+			if (ap->dp->quirks & ADIV5_DP_QUIRK_DUPED_AP) {
+				adiv5_ap_unref(ap);
+				adiv5_dp_unref(dp);
+				return;
+			}
 		}
 
 		adiv5_ap_unref(ap);

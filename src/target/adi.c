@@ -371,6 +371,7 @@ bool adi_configure_mem_ap(adiv5_access_port_s *const ap)
 	/* Check the Debug Base Address register for not-present. See ADIv5 Specification C2.6.1 */
 	if (base_flags == (ADIV5_AP_BASE_FORMAT_ADIV5 | ADIV5_AP_BASE_PRESENT_NO_ENTRY) ||
 		(!(ap->flags & ADIV5_AP_FLAGS_64BIT) && (uint32_t)ap->base == ADIV5_AP_BASE_NOT_PRESENT)) {
+		bool ignore_not_present = false;
 		/*
 			 * Debug Base Address not present in this MEM-AP
 			 * No debug entries... useless AP
@@ -380,7 +381,13 @@ bool adi_configure_mem_ap(adiv5_access_port_s *const ap)
 			 * valid debug components on AP0, so we have to have an exception
 			 * for this part family.
 			 */
-		if (ap->dp->target_designer_code != JEP106_MANUFACTURER_TEXAS || ap->base != 0xf0000002U) {
+		if (ap->dp->target_designer_code == JEP106_MANUFACTURER_TEXAS && ap->base == 0xf0000002U)
+			ignore_not_present = true;
+
+		else if (ap->dp->target_designer_code == JEP106_MANUFACTURER_NORDIC && ap->base != 0x00000002U)
+			ignore_not_present = true;
+
+		if (!ignore_not_present) {
 			DEBUG_INFO(" -> Not Present\n");
 			return false;
 		}

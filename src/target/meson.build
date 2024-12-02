@@ -201,6 +201,7 @@ target_lpc = declare_dependency(
 target_nrf = declare_dependency(
 	sources: files(
 		'nrf51.c',
+		'nrf54l.c',
 		'nrf91.c',
 	),
 	dependencies: target_cortexm,
