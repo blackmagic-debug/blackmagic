@@ -513,7 +513,7 @@ void adiv5_dp_init(adiv5_debug_port_s *const dp)
 		}
 
 		kinetis_mdm_probe(ap);
-		nrf51_mdm_probe(ap);
+		nrf51_ctrl_ap_probe(ap);
 		nrf54l_ctrl_ap_probe(ap);
 		efm32_aap_probe(ap);
 		lpc55_dmap_probe(ap);

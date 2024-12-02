@@ -48,7 +48,7 @@ bool riscv64_probe(target_s *target);
 bool efm32_aap_probe(adiv5_access_port_s *ap);
 bool kinetis_mdm_probe(adiv5_access_port_s *ap);
 bool lpc55_dmap_probe(adiv5_access_port_s *ap);
-bool nrf51_mdm_probe(adiv5_access_port_s *ap);
+bool nrf51_ctrl_ap_probe(adiv5_access_port_s *ap);
 bool nrf54l_ctrl_ap_probe(adiv5_access_port_s *ap);
 bool rp2040_rescue_probe(adiv5_access_port_s *ap);
 

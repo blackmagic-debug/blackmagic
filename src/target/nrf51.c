@@ -400,20 +400,20 @@ static bool nrf51_cmd_read(target_s *t, int argc, const char **argv)
 	return nrf51_cmd_read_help(t, 0, NULL);
 }
 
-#define NRF52_MDM_IDR 0x02880000U
+#define NRF52_CTRL_AP_IDR 0x02880000U
 
-static bool nrf51_mdm_mass_erase(target_s *t, platform_timeout_s *print_progess);
+static bool nrf51_ctrl_ap_mass_erase(target_s *t, platform_timeout_s *print_progess);
 
-#define MDM_POWER_EN  ADIV5_DP_REG(0x01U)
-#define MDM_SELECT_AP ADIV5_DP_REG(0x02U)
-#define MDM_STATUS    ADIV5_AP_REG(0x08U)
-#define MDM_CONTROL   ADIV5_AP_REG(0x04U)
-#define MDM_PROT_EN   ADIV5_AP_REG(0x0cU)
+#define CTRL_AP_POWER_EN  ADIV5_DP_REG(0x01U)
+#define CTRL_AP_SELECT_AP ADIV5_DP_REG(0x02U)
+#define CTRL_AP_STATUS    ADIV5_AP_REG(0x08U)
+#define CTRL_AP_CONTROL   ADIV5_AP_REG(0x04U)
+#define CTRL_AP_PROT_EN   ADIV5_AP_REG(0x0cU)
 
-bool nrf51_mdm_probe(adiv5_access_port_s *ap)
+bool nrf51_ctrl_ap_probe(adiv5_access_port_s *ap)
 {
 	switch (ap->idr) {
-	case NRF52_MDM_IDR:
+	case NRF52_CTRL_AP_IDR:
 		break;
 	default:
 		return false;
@@ -424,13 +424,13 @@ bool nrf51_mdm_probe(adiv5_access_port_s *ap)
 		return false;
 
 	t->enter_flash_mode = target_enter_flash_mode_stub;
-	t->mass_erase = nrf51_mdm_mass_erase;
+	t->mass_erase = nrf51_ctrl_ap_mass_erase;
 	adiv5_ap_ref(ap);
 	t->priv = ap;
 	t->priv_free = (void *)adiv5_ap_unref;
 
-	uint32_t status = adiv5_ap_read(ap, MDM_PROT_EN);
-	status = adiv5_ap_read(ap, MDM_PROT_EN);
+	uint32_t status = adiv5_ap_read(ap, CTRL_AP_PROT_EN);
+	status = adiv5_ap_read(ap, CTRL_AP_PROT_EN);
 	if (status)
 		t->driver = "Nordic nRF52 Access Port";
 	else
@@ -440,24 +440,24 @@ bool nrf51_mdm_probe(adiv5_access_port_s *ap)
 	return true;
 }
 
-static bool nrf51_mdm_mass_erase(target_s *const t, platform_timeout_s *const print_progess)
+static bool nrf51_ctrl_ap_mass_erase(target_s *const t, platform_timeout_s *const print_progess)
 {
 	adiv5_access_port_s *const ap = t->priv;
 
-	uint32_t status = adiv5_ap_read(ap, MDM_STATUS);
-	adiv5_dp_write(ap->dp, MDM_POWER_EN, 0x50000000U);
-	adiv5_dp_write(ap->dp, MDM_SELECT_AP, 0x01000000U);
-	adiv5_ap_write(ap, MDM_CONTROL, 0x00000001U);
+	uint32_t status = adiv5_ap_read(ap, CTRL_AP_STATUS);
+	adiv5_dp_write(ap->dp, CTRL_AP_POWER_EN, 0x50000000U);
+	adiv5_dp_write(ap->dp, CTRL_AP_SELECT_AP, 0x01000000U);
+	adiv5_ap_write(ap, CTRL_AP_CONTROL, 0x00000001U);
 
 	// Read until 0, probably should have a timeout here...
 	do {
-		status = adiv5_ap_read(ap, MDM_STATUS);
+		status = adiv5_ap_read(ap, CTRL_AP_STATUS);
 		target_print_progress(print_progess);
 	} while (status);
 
 	// The second read will provide true prot status
-	status = adiv5_ap_read(ap, MDM_PROT_EN);
-	status = adiv5_ap_read(ap, MDM_PROT_EN);
+	status = adiv5_ap_read(ap, CTRL_AP_PROT_EN);
+	status = adiv5_ap_read(ap, CTRL_AP_PROT_EN);
 
 	// Should we return the prot status here?
 	return true;
