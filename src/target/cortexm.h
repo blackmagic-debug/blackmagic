@@ -107,20 +107,25 @@ extern unsigned cortexm_wait_timeout;
 /* This key must be written to bits 31:16 for write to take effect */
 #define CORTEXM_DHCSR_DBGKEY 0xa05f0000U
 /* Bits 31:26 - Reserved */
-#define CORTEXM_DHCSR_S_RESET_ST  (1U << 25U)
-#define CORTEXM_DHCSR_S_RETIRE_ST (1U << 24U)
-/* Bits 23:20 - Reserved */
-#define CORTEXM_DHCSR_S_LOCKUP (1U << 19U)
-#define CORTEXM_DHCSR_S_SLEEP  (1U << 18U)
-#define CORTEXM_DHCSR_S_HALT   (1U << 17U)
-#define CORTEXM_DHCSR_S_REGRDY (1U << 16U)
-/* Bits 15:6 - Reserved */
-#define CORTEXM_DHCSR_C_SNAPSTALL (1U << 5U) /* v7m only */
+#define CORTEXM_DHCSR_S_RESET_ST  (1U << 25U) /* 1 if at least one reset happened since last read */
+#define CORTEXM_DHCSR_S_RETIRE_ST (1U << 24U) /* 1 if at least one instruction completed since last read */
+#define CORTEXM_DHCSR_S_FPD       (1U << 23U) /* Floating Point Debuggable? (ARMv8-M+, 1 if false) */
+#define CORTEXM_DHCSR_S_SUIDE     (1U << 22U) /* Secure invasive halting enabled? (ARMv8-M+, requires SE + UDE) */
+#define CORTEXM_DHCSR_S_NSUIDE    (1U << 21U) /* Non-Secure invasive halting enabled? (ARMv8-M+, requires SE + UDE) */
+#define CORTEXM_DHCSR_S_SDE       (1U << 20U) /* Secure debug enabled? (ARMv8-M+, requires SE) */
+#define CORTEXM_DHCSR_S_LOCKUP    (1U << 19U) /* 1 if the CPU is in the loocked up state */
+#define CORTEXM_DHCSR_S_SLEEP     (1U << 18U) /* 1 if the CPU is in a sleeping state pending IRQ or Event */
+#define CORTEXM_DHCSR_S_HALT      (1U << 17U) /* 1 if the CPU is halted in debug state */
+#define CORTEXM_DHCSR_S_REGRDY    (1U << 16U) /* 1 if DCRSR is ready for further writes */
+/* Bits 15:7 - Reserved */
+#define CORTEXM_DHCSR_C_PMOV (1U << 6U) /* 1 if C_DEBUGEN and a PMU overflow occcurs (ARMv8-M+) */
+#define CORTEXM_DHCSR_C_SNAPSTALL \
+	(1U << 5U) /* 1 if debug state can be netered imprecisely by forcing load/store to be abandoned ARMv7-M+ */
 /* Bit 4 - Reserved */
-#define CORTEXM_DHCSR_C_MASKINTS (1U << 3U)
-#define CORTEXM_DHCSR_C_STEP     (1U << 2U)
-#define CORTEXM_DHCSR_C_HALT     (1U << 1U)
-#define CORTEXM_DHCSR_C_DEBUGEN  (1U << 0U)
+#define CORTEXM_DHCSR_C_MASKINTS (1U << 3U) /* 1 if all maskable interrupts are masked (disabled) by the debugger */
+#define CORTEXM_DHCSR_C_STEP     (1U << 2U) /* 1 if the CPU should step one instruction when next unhalted */
+#define CORTEXM_DHCSR_C_HALT     (1U << 1U) /* 1 if the CPU should halt and enter debug state */
+#define CORTEXM_DHCSR_C_DEBUGEN  (1U << 0U) /* 1 if debugging is enabled on the CPU */
 
 /* Debug Core Register Selector Register (DCRSR) */
 #define CORTEXM_DCRSR_REGWnR      0x00010000U
