@@ -241,9 +241,9 @@ int32_t gdb_main_loop(target_controller_s *tc, char *pbuf, size_t pbuf_size, siz
 				gdb_putpacketz("EFF");
 			else {
 				uint8_t val[8];
-				size_t s = target_reg_read(cur_target, reg, val, sizeof(val));
-				if (s != 0)
-					gdb_putpacket(hexify(pbuf, val, s), s * 2U);
+				const size_t length = target_reg_read(cur_target, reg, val, sizeof(val));
+				if (length != 0)
+					gdb_putpacket(hexify(pbuf, val, length), length * 2U);
 				else
 					gdb_putpacketz("EFF");
 			}
