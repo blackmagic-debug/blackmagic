@@ -922,7 +922,7 @@ void cortexm_halt_resume(target_s *const target, const bool step)
 	}
 
 	if (priv->base.icache_line_length)
-		target_mem32_write32(target, CORTEXM_ICIALLU, 0);
+		target_mem32_write32(target, CORTEXM_ICIALLU, 0U);
 
 	/* Release C_HALT to resume the core in whichever mode is selected */
 	target_mem32_write32(target, CORTEXM_DHCSR, dhcsr);
@@ -1060,9 +1060,9 @@ bool cortexm_run_stub(target_s *target, uint32_t loadaddr, uint32_t r0, uint32_t
  */
 static uint32_t cortexm_dwt_mask(size_t len)
 {
-	if (len < 2)
-		return 0;
-	return MIN(ulog2(len - 1), 31);
+	if (len < 2U)
+		return 0U;
+	return MIN(ulog2(len - 1U), 31U);
 }
 
 static uint32_t cortexm_dwt_func(target_s *target, target_breakwatch_e type)
