@@ -852,7 +852,7 @@ static void handle_v_packet(char *packet, const size_t plen)
 	 */
 	if (strcmp(packet, "vMustReplyEmpty") != 0)
 		DEBUG_GDB("*** Unsupported packet: %s\n", packet);
-	gdb_putpacket("", 0);
+	gdb_putpacketz("");
 }
 
 static void handle_z_packet(char *packet, const size_t plen)
@@ -890,7 +890,7 @@ void gdb_main(char *pbuf, size_t pbuf_size, size_t size)
 	gdb_main_loop(&gdb_controller, pbuf, pbuf_size, size, false);
 }
 
-/* halt target */
+/* Request halt on the active target */
 void gdb_halt_target(void)
 {
 	if (cur_target)
@@ -900,7 +900,7 @@ void gdb_halt_target(void)
 		gdb_putpacketz("W00");
 }
 
-/* poll running target */
+/* Poll the running target to see if it halted yet */
 void gdb_poll_target(void)
 {
 	if (!cur_target) {
