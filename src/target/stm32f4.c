@@ -130,7 +130,6 @@ typedef struct stm32f4_flash {
 } stm32f4_flash_s;
 
 typedef struct stm32f4_priv {
-	uint32_t dbgmcu_config;
 	align_e psize;
 } stm32f4_priv_s;
 
@@ -245,26 +244,23 @@ static bool stm32f4_configure_dbgmcu(target_s *const target)
 			return false;
 		}
 		target->target_storage = priv_storage;
-		/* Get the current value of the debug control register (and store it for later) */
-		priv_storage->dbgmcu_config = target_mem32_read32(target, STM32F4_DBGMCU_CTRL);
-		/* Set up the Flash write/erase parallelism to 32-bit */
 		priv_storage->psize = ALIGN_32BIT;
 
 		target->detach = stm32f4_detach;
 	}
 
-	const stm32f4_priv_s *const priv = (stm32f4_priv_s *)target->target_storage;
 	/* Enable debugging during all low power modes */
 	target_mem32_write32(target, STM32F4_DBGMCU_CTRL,
-		priv->dbgmcu_config | STM32F4_DBGMCU_CTRL_DBG_SLEEP | STM32F4_DBGMCU_CTRL_DBG_STANDBY |
-			STM32F4_DBGMCU_CTRL_DBG_STOP);
+		target_mem32_read32(target, STM32F4_DBGMCU_CTRL) | STM32F4_DBGMCU_CTRL_DBG_SLEEP |
+			STM32F4_DBGMCU_CTRL_DBG_STANDBY | STM32F4_DBGMCU_CTRL_DBG_STOP);
 	/* And make sure the WDTs stay synchronised to the run state of the processor */
-	target_mem32_write32(
-		target, STM32F4_DBGMCU_APB1FREEZE, STM32F4_DBGMCU_APB1FREEZE_WWDG | STM32F4_DBGMCU_APB1FREEZE_IWDG);
+	target_mem32_write32(target, STM32F4_DBGMCU_APB1FREEZE,
+		target_mem32_read32(target, STM32F4_DBGMCU_APB1FREEZE) | STM32F4_DBGMCU_APB1FREEZE_WWDG |
+			STM32F4_DBGMCU_APB1FREEZE_IWDG);
 	return true;
 }
 
-bool stm32f4_probe(target_s *target)
+bool stm32f4_probe(target_s *const target)
 {
 	const uint16_t device_id = stm32f4_read_idcode(target);
 	switch (device_id) {
@@ -300,7 +296,7 @@ bool stm32f4_probe(target_s *target)
 }
 
 #ifdef CONFIG_GD32
-bool gd32f4_probe(target_s *target)
+bool gd32f4_probe(target_s *const target)
 {
 	if (target->part_id != ID_GD32F450 && target->part_id != ID_GD32F470 && target->part_id != ID_GD32F405)
 		return false;
@@ -367,7 +363,7 @@ static uint32_t stm32f4_remaining_bank_length(const uint32_t bank_length, const 
  * XXX: It would definitely be nice if all this soup of logic could reasonably be refactored and moved into
  * the stm32f4_probe() routine as this is doing work that should not be repeated every attach.
  */
-static bool stm32f4_attach(target_s *target)
+static bool stm32f4_attach(target_s *const target)
 {
 	/* First try and figure out the Flash size (if we don't know the part ID, warn and return false) */
 	uint16_t max_flashsize = 0;
@@ -510,11 +506,15 @@ static bool gd32f4_attach(target_s *const target)
 }
 #endif
 
-static void stm32f4_detach(target_s *target)
+static void stm32f4_detach(target_s *const target)
 {
-	const stm32f4_priv_s *const priv = (stm32f4_priv_s *)target->target_storage;
-	/* Reverse all changes to STM32F4_DBGMCU_CTRL */
-	target_mem32_write32(target, STM32F4_DBGMCU_CTRL, priv->dbgmcu_config);
+	/* Reverse all changes to the DBGMCU control and freeze registers */
+	target_mem32_write32(target, STM32F4_DBGMCU_CTRL,
+		target_mem32_read32(target, STM32F4_DBGMCU_CTRL) &
+			~(STM32F4_DBGMCU_CTRL_DBG_SLEEP | STM32F4_DBGMCU_CTRL_DBG_STANDBY | STM32F4_DBGMCU_CTRL_DBG_STOP));
+	target_mem32_write32(target, STM32F4_DBGMCU_APB1FREEZE,
+		target_mem32_read32(target, STM32F4_DBGMCU_APB1FREEZE) &
+			~(STM32F4_DBGMCU_APB1FREEZE_WWDG | STM32F4_DBGMCU_APB1FREEZE_IWDG));
 	/* Now defer to the normal Cortex-M detach routine to complete the detach */
 	cortexm_detach(target);
 }
