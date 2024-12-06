@@ -2,7 +2,7 @@
  * This file is part of the Black Magic Debug project.
  *
  * Copyright (C) 2017-2020 Uwe Bonnes bon@elektron.ikp.physik.tu-darmstadt.de
- * Copyright (C) 2022-2023 1BitSquared <info@1bitsquared.com>
+ * Copyright (C) 2022-2024 1BitSquared <info@1bitsquared.com>
  * Modified by Rachel Mant <git@dragonmux.network>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -187,7 +187,6 @@ typedef struct stm32h7_flash {
 } stm32h7_flash_s;
 
 typedef struct stm32h7_priv {
-	uint32_t dbgmcu_config;
 	char name[STM32H7_NAME_MAX_LENGTH];
 } stm32h7_priv_s;
 
@@ -273,32 +272,31 @@ bool stm32h7_probe(target_s *target)
 	target->part_id = ap->partno;
 
 	/* Save private storage */
-	stm32h7_priv_s *priv_storage = calloc(1, sizeof(*priv_storage));
-	if (!priv_storage) { /* calloc failed: heap exhaustion */
+	stm32h7_priv_s *priv = calloc(1, sizeof(*priv));
+	if (!priv) { /* calloc failed: heap exhaustion */
 		DEBUG_ERROR("calloc: failed in %s\n", __func__);
 		return false;
 	}
-	priv_storage->dbgmcu_config = target_mem32_read32(target, STM32H7_DBGMCU_CONFIG);
-	target->target_storage = priv_storage;
+	target->target_storage = priv;
 
-	memcpy(priv_storage->name, "STM32", 5U);
+	memcpy(priv->name, "STM32", 5U);
 	switch (target->part_id) {
 	case ID_STM32H72x:
-		write_be4((uint8_t *)priv_storage->name, 5U, target_mem32_read32(target, STM32H7_CHIP_IDENT));
-		priv_storage->name[9] = '\0';
+		write_be4((uint8_t *)priv->name, 5U, target_mem32_read32(target, STM32H7_CHIP_IDENT));
+		priv->name[9] = '\0';
 		break;
 	case ID_STM32H74x:
-		memcpy(priv_storage->name + 5U, "H74x", 5U); /* H742/H743/H753/H750 */
+		memcpy(priv->name + 5U, "H74x", 5U); /* H742/H743/H753/H750 */
 		break;
 	case ID_STM32H7Bx:
-		memcpy(priv_storage->name + 5U, "H7Bx", 5U); /* H7A3/H7B3/H7B0 */
+		memcpy(priv->name + 5U, "H7Bx", 5U); /* H7A3/H7B3/H7B0 */
 		break;
 	default:
-		memcpy(priv_storage->name + 5U, "H7", 3U);
+		memcpy(priv->name + 5U, "H7", 3U);
 		break;
 	}
 
-	target->driver = priv_storage->name;
+	target->driver = priv->name;
 	target->attach = stm32h7_attach;
 	target->detach = stm32h7_detach;
 	target->mass_erase = stm32h7_mass_erase;
@@ -312,8 +310,9 @@ bool stm32h7_probe(target_s *target)
 	 * debugging through sleep, stop and standby states for domain D1
 	 */
 	target_mem32_write32(target, STM32H7_DBGMCU_CONFIG,
-		priv_storage->dbgmcu_config | STM32H7_DBGMCU_CONFIG_DBGSLEEP_D1 | STM32H7_DBGMCU_CONFIG_DBGSTOP_D1 |
-			STM32H7_DBGMCU_CONFIG_DBGSTBY_D1 | STM32H7_DBGMCU_CONFIG_D1DBGCKEN | STM32H7_DBGMCU_CONFIG_D3DBGCKEN);
+		target_mem32_read32(target, STM32H7_DBGMCU_CONFIG) | STM32H7_DBGMCU_CONFIG_DBGSLEEP_D1 |
+			STM32H7_DBGMCU_CONFIG_DBGSTOP_D1 | STM32H7_DBGMCU_CONFIG_DBGSTBY_D1 | STM32H7_DBGMCU_CONFIG_D1DBGCKEN |
+			STM32H7_DBGMCU_CONFIG_D3DBGCKEN);
 	stm32h7_configure_wdts(target);
 
 	/* Build the RAM map */
@@ -422,8 +421,10 @@ static bool stm32h7_attach(target_s *target)
 
 static void stm32h7_detach(target_s *target)
 {
-	stm32h7_priv_s *priv = (stm32h7_priv_s *)target->target_storage;
-	target_mem32_write32(target, STM32H7_DBGMCU_CONFIG, priv->dbgmcu_config);
+	target_mem32_write32(target, STM32H7_DBGMCU_CONFIG,
+		target_mem32_read32(target, STM32H7_DBGMCU_CONFIG) &
+			~(STM32H7_DBGMCU_CONFIG_DBGSLEEP_D1 | STM32H7_DBGMCU_CONFIG_DBGSTOP_D1 | STM32H7_DBGMCU_CONFIG_DBGSTBY_D1 |
+				STM32H7_DBGMCU_CONFIG_D1DBGCKEN | STM32H7_DBGMCU_CONFIG_D3DBGCKEN));
 	cortexm_detach(target);
 }
 
