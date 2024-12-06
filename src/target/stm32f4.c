@@ -233,22 +233,24 @@ static uint16_t stm32f4_read_idcode(target_s *const target)
 	return idcode;
 }
 
-static bool stm32f4_configure_dbgmcu(target_s *const target)
+static bool stm32f4_setup_priv(target_s *const target)
 {
-	/* If we're in the probe phase */
-	if (target->target_storage == NULL) {
-		/* Allocate target-specific storage */
-		stm32f4_priv_s *const priv_storage = calloc(1, sizeof(*priv_storage));
-		if (!priv_storage) { /* calloc failed: heap exhaustion */
-			DEBUG_ERROR("calloc: failed in %s\n", __func__);
-			return false;
-		}
-		target->target_storage = priv_storage;
-		priv_storage->psize = ALIGN_32BIT;
-
-		target->detach = stm32f4_detach;
+	/* Allocate target-specific storage */
+	stm32f4_priv_s *const priv = calloc(1, sizeof(*priv));
+	if (!priv) { /* calloc failed: heap exhaustion */
+		DEBUG_ERROR("calloc: failed in %s\n", __func__);
+		return false;
 	}
+	target->target_storage = priv;
+	/* Set the default parallelism to 32-bit */
+	priv->psize = ALIGN_32BIT;
 
+	target->detach = stm32f4_detach;
+	return true;
+}
+
+static void stm32f4_configure_dbgmcu(target_s *const target)
+{
 	/* Enable debugging during all low power modes */
 	target_mem32_write32(target, STM32F4_DBGMCU_CTRL,
 		target_mem32_read32(target, STM32F4_DBGMCU_CTRL) | STM32F4_DBGMCU_CTRL_DBG_SLEEP |
@@ -257,7 +259,6 @@ static bool stm32f4_configure_dbgmcu(target_s *const target)
 	target_mem32_write32(target, STM32F4_DBGMCU_APB1FREEZE,
 		target_mem32_read32(target, STM32F4_DBGMCU_APB1FREEZE) | STM32F4_DBGMCU_APB1FREEZE_WWDG |
 			STM32F4_DBGMCU_APB1FREEZE_IWDG);
-	return true;
 }
 
 bool stm32f4_probe(target_s *const target)
@@ -283,9 +284,11 @@ bool stm32f4_probe(target_s *const target)
 		return false;
 	}
 
-	/* Now we have a stable debug environment, make sure the WDTs + WFI and WFE instructions can't cause problems */
-	if (!stm32f4_configure_dbgmcu(target))
+	/* Set up the priv structure for the target */
+	if (!stm32f4_setup_priv(target))
 		return false;
+	/* Now we have a stable debug environment, make sure the WDTs + WFI and WFE instructions can't cause problems */
+	stm32f4_configure_dbgmcu(target);
 
 	target->attach = stm32f4_attach;
 	target->mass_erase = stm32f4_mass_erase;
@@ -301,9 +304,11 @@ bool gd32f4_probe(target_s *const target)
 	if (target->part_id != ID_GD32F450 && target->part_id != ID_GD32F470 && target->part_id != ID_GD32F405)
 		return false;
 
-	/* Now we have a stable debug environment, make sure the WDTs + WFI and WFE instructions can't cause problems */
-	if (!stm32f4_configure_dbgmcu(target))
+	/* Set up the priv structure for the target */
+	if (!stm32f4_setup_priv(target))
 		return false;
+	/* Now we have a stable debug environment, make sure the WDTs + WFI and WFE instructions can't cause problems */
+	stm32f4_configure_dbgmcu(target);
 
 	target->attach = gd32f4_attach;
 	target->mass_erase = stm32f4_mass_erase;
@@ -403,8 +408,9 @@ static bool stm32f4_attach(target_s *const target)
 	 * Try to attach now we've determined it's a part we can work with, and then ensure the
 	 * WDTs + WFI and WFE instructions can't cause problems (this is duplicated as it's undone by detach.)
 	 */
-	if (!cortexm_attach(target) || !stm32f4_configure_dbgmcu(target))
+	if (!cortexm_attach(target))
 		return false;
+	stm32f4_configure_dbgmcu(target);
 
 	/* And then grab back all the part properties used to configure the memory map */
 	const bool dual_bank = stm32f4_device_is_dual_bank(target->part_id);
@@ -502,7 +508,10 @@ static bool gd32f4_attach(target_s *const target)
 	 * Try to attach to the part, and then ensure that the WDTs + WFI and WFE
 	 * instructions can't cause problems (this is duplicated as it's undone by detach.)
 	 */
-	return cortexm_attach(target) && stm32f4_configure_dbgmcu(target);
+	if (!cortexm_attach(target))
+		return false;
+	stm32f4_configure_dbgmcu(target);
+	return true;
 }
 #endif
 
