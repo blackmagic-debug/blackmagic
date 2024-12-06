@@ -185,12 +185,15 @@ target_s *target_attach(target_s *target, target_controller_s *controller)
 
 	target->tc = controller;
 	platform_target_clk_output_enable(true);
+	DEBUG_TARGET("Attaching to target..\n");
 
 	if (target->attach && !target->attach(target)) {
+		DEBUG_TARGET("Attach failed\n");
 		platform_target_clk_output_enable(false);
 		return NULL;
 	}
 
+	DEBUG_TARGET("Attach success\n");
 	target->attached = true;
 	return target;
 }
@@ -281,6 +284,7 @@ void target_print_progress(platform_timeout_s *const timeout)
 /* Wrapper functions */
 void target_detach(target_s *target)
 {
+	DEBUG_TARGET("Detaching from target\n");
 	if (target->detach)
 		target->detach(target);
 	platform_target_clk_output_enable(false);
@@ -384,26 +388,59 @@ void target_regs_write(target_s *target, const void *data)
 /* Halt/resume functions */
 void target_reset(target_s *target)
 {
+	DEBUG_TARGET("Resetting target\n");
 	if (target->reset)
 		target->reset(target);
 }
 
 void target_halt_request(target_s *target)
 {
+	DEBUG_TARGET("Halting target\n");
 	if (target->halt_request)
 		target->halt_request(target);
 }
 
+#ifndef DEBUG_TARGET_IS_NOOP
+static const char *target_halt_reason_str(const target_halt_reason_e reason)
+{
+	switch (reason) {
+	case TARGET_HALT_RUNNING:
+		return "Target is still running";
+	case TARGET_HALT_ERROR:
+		return "An error occured";
+	case TARGET_HALT_REQUEST:
+		return "Halt requested";
+	case TARGET_HALT_STEPPING:
+		return "Step complete";
+	case TARGET_HALT_BREAKPOINT:
+		return "Breakpoint hit";
+	case TARGET_HALT_WATCHPOINT:
+		return "Watchpoint hit";
+	case TARGET_HALT_FAULT:
+		return "A fault occured on the target";
+	default:
+		return "Unknown halt reason";
+	}
+}
+#endif
+
 target_halt_reason_e target_halt_poll(target_s *target, target_addr_t *watch)
 {
-	if (target->halt_poll)
-		return target->halt_poll(target, watch);
+	if (target->halt_poll) {
+		const target_halt_reason_e reason = target->halt_poll(target, watch);
+#ifndef DEBUG_TARGET_IS_NOOP
+		if (reason != TARGET_HALT_RUNNING)
+			DEBUG_TARGET("Target halted: %s\n", target_halt_reason_str(reason));
+#endif
+		return reason;
+	}
 	/* XXX: Is this actually the desired fallback behaviour? */
 	return TARGET_HALT_RUNNING;
 }
 
 void target_halt_resume(target_s *target, bool step)
 {
+	DEBUG_TARGET("%s target\n", step ? "Single stepping" : "Resuming");
 	if (target->halt_resume)
 		target->halt_resume(target, step);
 }
