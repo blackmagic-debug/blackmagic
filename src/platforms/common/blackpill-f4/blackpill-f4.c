@@ -108,6 +108,11 @@ void platform_init(void)
 	gpio_set_output_options(TCK_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_25MHZ, TCK_PIN);
 	gpio_set_output_options(TMS_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_25MHZ, TMS_PIN);
 
+	/* Pull up TRST pin */
+	gpio_set(TRST_PORT, TRST_PIN);
+	gpio_mode_setup(TRST_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_PULLUP, TRST_PIN);
+	gpio_set_output_options(TRST_PORT, GPIO_OTYPE_OD, GPIO_OSPEED_2MHZ, TRST_PIN);
+
 	/* Set up LED pins */
 	gpio_mode_setup(LED_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, LED_IDLE_RUN | LED_ERROR | LED_BOOTLOADER);
 	gpio_mode_setup(LED_PORT_UART, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, LED_UART);
