@@ -34,16 +34,18 @@ however below is a brief guide for both the firmware and BMDA.
 
 ### Black Magic Debug Firmware
 
+When built as firmware and put on a probe, the project is used like as follows:
+
 ```console
 > arm-none-eabi-gdb gpio.elf
 ...<GDB Copyright message>
 (gdb) tar ext /dev/ttyBmpGdb
 Remote debugging using /dev/ttyBmpGdb
-(gdb) mon s
+(gdb) mon a
 Target voltage: 2.94V
 Available Targets:
 No. Att Driver
- 1      STM32F40x M3/M4
+ 1      STM32F40x M4
 (gdb) att 1
 Attaching to program: /devel/en_apps/gpio/f4_discovery/gpio.elf, Remote target
 0x08002298 in UsartIOCtl ()
@@ -68,13 +70,12 @@ Breakpoint 1, main () at /devel/en_apps/gpio/f4_discovery/../gpio.c:70
 
 You can also build the Black Magic Debug suite as a PC program called Black Magic Debug App (BMDA).
 
-This builds the same GDB server that is running on the Black Magic Probe.
-While connection to the Black Magic Probe GDB server is via serial line,
-connection to the Black Magic Debug App is via TCP port 2000 for the first
-GDB server and higher for more invocations. Use "tar(get) ext(ented) :2000"
-to connect.
+This builds the same GDB server that is running on the Black Magic Probe. While connection to the
+firmware GDB server is via virtual serial port, connection to the Black Magic Debug App is via
+TCP port 2000 for the first GDB server and higher for more invocations. Use `tar ext :2000`
+(`target extended-remote :2000`) to connect.
 
-Black Magic Debug App can talk to
+Black Magic Debug App can talk to:
 
 * Black Magic Probe firmware probes via the USB-serial port
 * ST-Link v2, v2.1 and v3 with recent firmware
