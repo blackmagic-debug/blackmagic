@@ -314,23 +314,22 @@ static bool adiv6_component_probe(adiv5_debug_port_s *const dp, const target_add
 				arch_id = dev_arch & DEVARCH_ARCHID_MASK;
 		}
 
-		/* Check if this is a CoreSight component ROM table */
-		if (cid_class == cidc_dc && arch_id == DEVARCH_ARCHID_ROMTABLE_V0) {
-			if (pidr & PIDR_SIZE_MASK) {
-				DEBUG_ERROR("Fault reading ROM table\n");
-				return false;
-			}
-			return adiv6_parse_coresight_v0_rom_table(&base_ap, base_address, pidr);
-		}
-
 		/* If it's an ARM component of some kind, look it up in the ARM component table */
-		if (designer_code == JEP106_MANUFACTURER_ARM) {
+		if (designer_code == JEP106_MANUFACTURER_ARM || arch_id == DEVARCH_ARCHID_ROMTABLE_V0) {
 			const arm_coresight_component_s *const component =
 				adi_lookup_component(base_address, entry_number, " ", cid_class, pidr, dev_type, arch_id);
 			if (component == NULL)
 				return true;
 
 			switch (component->arch) {
+			/* Handle when the component is a CoreSight component ROM table */
+			case aa_rom_table:
+				if (pidr & PIDR_SIZE_MASK)
+					DEBUG_ERROR("Fault reading ROM table\n");
+				else
+					return adiv6_parse_coresight_v0_rom_table(&base_ap, base_address, pidr);
+				break;
+			/* Handle when the component is an AP */
 			case aa_access_port: {
 				/* We've got an ADIv6 APv2, so try and set up to use it */
 				adiv6_access_port_s *ap = adiv6_new_ap(dp, base_address, entry_number);

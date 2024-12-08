@@ -103,7 +103,7 @@ static const arm_coresight_component_s arm_component_lut[] = {
 	{0x4c4, 0x00, 0, aa_nosupport, cidc_unknown, ARM_COMPONENT_STR("Cortex-M4 ROM", "(Cortex-M4 ROM)")},
 	{0x4c7, 0x00, 0, aa_nosupport, cidc_unknown, ARM_COMPONENT_STR("Cortex-M7 PPB", "(Cortex-M7 PPB ROM Table)")},
 	{0x4c8, 0x00, 0, aa_nosupport, cidc_unknown, ARM_COMPONENT_STR("Cortex-M7 ROM", "(Cortex-M7 ROM)")},
-	{0x4e4, 0x00, 0x0af7, aa_nosupport, cidc_dc, ARM_COMPONENT_STR("CoreSight ROM", "(ROM Table)")},
+	{0x000, 0x00, 0x0af7, aa_rom_table, cidc_dc, ARM_COMPONENT_STR("CoreSight ROM", "(ROM Table)")},
 	{0x906, 0x14, 0, aa_nosupport, cidc_unknown, ARM_COMPONENT_STR("CoreSight CTI", "(Cross Trigger)")},
 	{0x907, 0x21, 0, aa_nosupport, cidc_unknown, ARM_COMPONENT_STR("CoreSight ETB", "(Trace Buffer)")},
 	{0x908, 0x12, 0, aa_nosupport, cidc_unknown, ARM_COMPONENT_STR("CoreSight CSTF", "(Trace Funnel)")},
@@ -302,7 +302,7 @@ const arm_coresight_component_s *adi_lookup_component(const target_addr64_t base
 	(void)entry_number;
 #endif
 
-	const uint16_t part_number = pidr & PIDR_PN_MASK;
+	const uint16_t part_number = arch_id == DEVARCH_ARCHID_ROMTABLE_V0 ? 0U : (pidr & PIDR_PN_MASK);
 	for (size_t index = 0; arm_component_lut[index].arch != aa_end; ++index) {
 		if (arm_component_lut[index].part_number != part_number || arm_component_lut[index].dev_type != dev_type ||
 			arm_component_lut[index].arch_id != arch_id)
@@ -347,7 +347,7 @@ static void adi_display_ap(const adiv5_access_port_s *const ap)
 #endif
 }
 
-bool adi_configure_mem_ap(adiv5_access_port_s *const ap)
+static bool adi_configure_mem_ap(adiv5_access_port_s *const ap)
 {
 	const uint8_t ap_type = ADIV5_AP_IDR_TYPE(ap->idr);
 
@@ -858,34 +858,31 @@ void adi_ap_component_probe(
 		/* Look the component up and dispatch to a probe routine accordingly */
 		const arm_coresight_component_s *const component =
 			adi_lookup_component(base_address, entry_number, indent, cid_class, pidr, dev_type, arch_id);
+		if (component == NULL)
+			return;
 
-		if (component) {
-			switch (component->arch) {
-			case aa_cortexm:
-				DEBUG_INFO("%s-> cortexm_probe\n", indent + 1);
-				cortexm_probe(ap);
-				break;
-			case aa_cortexa:
-				DEBUG_INFO("%s-> cortexa_probe\n", indent + 1);
-				cortexa_probe(ap, base_address);
-				break;
-			case aa_cortexr:
-				DEBUG_INFO("%s-> cortexr_probe\n", indent + 1);
-				cortexr_probe(ap, base_address);
-				break;
-			default:
-				break;
-			}
-		}
-
-		/* Check if this is a CoreSight component ROM table */
-		if (cid_class == cidc_dc && arch_id == DEVARCH_ARCHID_ROMTABLE_V0) {
-			if (pidr & PIDR_SIZE_MASK) {
+		switch (component->arch) {
+		case aa_cortexm:
+			DEBUG_INFO("%s-> cortexm_probe\n", indent + 1);
+			cortexm_probe(ap);
+			break;
+		case aa_cortexa:
+			DEBUG_INFO("%s-> cortexa_probe\n", indent + 1);
+			cortexa_probe(ap, base_address);
+			break;
+		case aa_cortexr:
+			DEBUG_INFO("%s-> cortexr_probe\n", indent + 1);
+			cortexr_probe(ap, base_address);
+			break;
+		/* Handle when the component is a CoreSight component ROM table */
+		case aa_rom_table:
+			if (pidr & PIDR_SIZE_MASK)
 				DEBUG_ERROR("Fault reading ROM table\n");
-				return;
-			}
-
-			adi_parse_coresight_v0_rom_table(ap, base_address, recursion, indent, pidr);
+			else
+				adi_parse_coresight_v0_rom_table(ap, base_address, recursion, indent, pidr);
+			break;
+		default:
+			break;
 		}
 	}
 }

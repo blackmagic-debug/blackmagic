@@ -78,11 +78,11 @@ static void dormant_to_swd_sequence(void)
 	/* Send at least 8 SWCLKTCK cycles with SWDIOTMS HIGH */
 	swd_line_reset_sequence(false);
 
-	/* 
-	 * If the target is both JTAG and SWD with JTAG as default, switch JTAG->DS first. 
+	/*
+	 * If the target is both JTAG and SWD with JTAG as default, switch JTAG->DS first.
 	 * See B5.3.2
 	 */
-	DEBUG_INFO("Switching from JTAG do dormant\n");
+	DEBUG_INFO("Switching from JTAG to dormant\n");
 	swd_proc.seq_out(ADIV5_JTAG_TO_DORMANT_SEQUENCE0, 5U);
 	swd_proc.seq_out(ADIV5_JTAG_TO_DORMANT_SEQUENCE1, 31U);
 	swd_proc.seq_out(ADIV5_JTAG_TO_DORMANT_SEQUENCE2, 8U);

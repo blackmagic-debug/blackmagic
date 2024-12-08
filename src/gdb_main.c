@@ -241,9 +241,9 @@ int32_t gdb_main_loop(target_controller_s *tc, char *pbuf, size_t pbuf_size, siz
 				gdb_putpacketz("EFF");
 			else {
 				uint8_t val[8];
-				size_t s = target_reg_read(cur_target, reg, val, sizeof(val));
-				if (s != 0)
-					gdb_putpacket(hexify(pbuf, val, s), s * 2U);
+				const size_t length = target_reg_read(cur_target, reg, val, sizeof(val));
+				if (length != 0)
+					gdb_putpacket(hexify(pbuf, val, length), length * 2U);
 				else
 					gdb_putpacketz("EFF");
 			}
@@ -341,7 +341,8 @@ int32_t gdb_main_loop(target_controller_s *tc, char *pbuf, size_t pbuf_size, siz
 		break;
 
 	case 'X': { /* 'X addr,len:XX': Write binary data to addr */
-		uint32_t addr, len;
+		target_addr32_t addr;
+		uint32_t len;
 		ERROR_IF_NO_TARGET();
 		if (read_hex32(pbuf + 1, &rest, &addr, ',') && read_hex32(rest, &rest, &len, ':')) {
 			if (len > (size - (size_t)(rest - pbuf))) {
@@ -405,10 +406,10 @@ static void exec_q_rcmd(const char *packet, const size_t length)
 	unhexify(data, packet, datalen);
 	data[datalen] = 0; /* add terminating null */
 
-	const int c = command_process(cur_target, data);
-	if (c < 0)
+	const int result = command_process(cur_target, data);
+	if (result < 0)
 		gdb_putpacketz("");
-	else if (c == 0)
+	else if (result == 0)
 		gdb_putpacketz("OK");
 	else {
 		const char *const response = "Failed\n";
@@ -633,7 +634,7 @@ static void exec_v_attach(const char *packet, const size_t length)
 			 * https://sourceware.org/pipermail/gdb-patches/2022-April/188058.html
 			 * https://sourceware.org/pipermail/gdb-patches/2022-July/190869.html
 			 */
-			gdb_putpacketz("T05thread:1;");
+			gdb_putpacket_f("T%02Xthread:1;", GDB_SIGTRAP);
 		} else
 			gdb_putpacketz("E01");
 
@@ -758,6 +759,8 @@ static void exec_v_cont(const char *packet, const size_t length)
 		SET_RUN_STATE(true);
 		gdb_target_running = true;
 		break;
+	default:
+		break;
 	}
 }
 
@@ -849,7 +852,7 @@ static void handle_v_packet(char *packet, const size_t plen)
 	 */
 	if (strcmp(packet, "vMustReplyEmpty") != 0)
 		DEBUG_GDB("*** Unsupported packet: %s\n", packet);
-	gdb_putpacket("", 0);
+	gdb_putpacketz("");
 }
 
 static void handle_z_packet(char *packet, const size_t plen)
@@ -887,7 +890,7 @@ void gdb_main(char *pbuf, size_t pbuf_size, size_t size)
 	gdb_main_loop(&gdb_controller, pbuf, pbuf_size, size, false);
 }
 
-/* halt target */
+/* Request halt on the active target */
 void gdb_halt_target(void)
 {
 	if (cur_target)
@@ -897,7 +900,7 @@ void gdb_halt_target(void)
 		gdb_putpacketz("W00");
 }
 
-/* poll running target */
+/* Poll the running target to see if it halted yet */
 void gdb_poll_target(void)
 {
 	if (!cur_target) {
@@ -923,15 +926,15 @@ void gdb_poll_target(void)
 		morse("TARGET LOST.", true);
 		break;
 	case TARGET_HALT_REQUEST:
-		gdb_putpacket_f("T%02X", GDB_SIGINT);
+		gdb_putpacket_f("T%02Xthread:1;", GDB_SIGINT);
 		break;
 	case TARGET_HALT_WATCHPOINT:
 		gdb_putpacket_f("T%02Xwatch:%08" PRIX32 ";", GDB_SIGTRAP, watch);
 		break;
 	case TARGET_HALT_FAULT:
-		gdb_putpacket_f("T%02X", GDB_SIGSEGV);
+		gdb_putpacket_f("T%02Xthread:1;", GDB_SIGSEGV);
 		break;
 	default:
-		gdb_putpacket_f("T%02X", GDB_SIGTRAP);
+		gdb_putpacket_f("T%02Xthread:1;", GDB_SIGTRAP);
 	}
 }

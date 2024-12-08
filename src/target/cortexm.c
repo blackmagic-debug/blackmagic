@@ -78,8 +78,10 @@ typedef struct cortexm_priv {
 	cortex_priv_s base;
 	bool stepping;
 	bool on_bkpt;
+	bool icache_enabled;
+	bool dcache_enabled;
 	/* Flash Patch controller configuration */
-	uint32_t flash_patch_revision;
+	uint8_t flash_patch_revision;
 	/* Copy of DEMCR for vector-catch */
 	uint32_t demcr;
 } cortexm_priv_s;
@@ -193,7 +195,8 @@ static void cortexm_cache_clean(
 	target_s *const target, const target_addr32_t addr, const size_t len, const bool invalidate)
 {
 	const cortexm_priv_s *const priv = (const cortexm_priv_s *)target->priv;
-	if (!priv->base.dcache_line_length)
+	/* Check if there is a data cache and if it's even actually enabled */
+	if (!priv->base.dcache_line_length || !priv->dcache_enabled)
 		return;
 	const target_addr32_t cache_reg = invalidate ? CORTEXM_DCCIMVAC : CORTEXM_DCCMVAC;
 	const size_t minline = priv->base.dcache_line_length << 2U;
@@ -516,23 +519,35 @@ bool cortexm_attach(target_s *target)
 	/* Clear any pending fault condition (and switch to this core) */
 	target_check_error(target);
 
+	/* Try to halt the core, and then check that it worked (which also resets the halt reason) */
 	target_halt_request(target);
+	const target_halt_reason_e halt_result = target_halt_poll(target, NULL);
+	/* If we failed to halt the target somehow, bail */
+	if (halt_result == TARGET_HALT_ERROR || halt_result == TARGET_HALT_RUNNING)
+		return false;
+
 	/* Request halt on reset */
 	target_mem32_write32(target, CORTEXM_DEMCR, priv->demcr);
 
-	/* Reset DFSR flags */
-	target_mem32_write32(target, CORTEXM_DFSR, CORTEXM_DFSR_RESETALL);
-
-	/* size the break/watchpoint units */
+	/* Find out how many breakpoint slots there are */
 	priv->base.breakpoints_available = CORTEX_MAX_BREAKPOINTS;
 	const uint32_t flash_break_cfg = target_mem32_read32(target, CORTEXM_FPB_CTRL);
-	const uint32_t breakpoints = ((flash_break_cfg >> 4U) & 0xfU);
-	if (breakpoints < priv->base.breakpoints_available) /* only look at NUM_COMP1 */
+	/*
+	 * Extract and reconstruct the full NUM_CODE 7-bit value so we don't break and do bad things on
+	 * parts with higher slot counts
+	 */
+	const uint8_t breakpoints = (uint8_t)(((flash_break_cfg & CORTEXM_FPB_CTRL_NUM_CODE_H) >> 8U) |
+		((flash_break_cfg & CORTEXM_FPB_CTRL_NUM_CODE_L) >> 4U));
+	/* If there are less breakpoints than we have slots for, then truncate the number of slots we use */
+	if (breakpoints < priv->base.breakpoints_available)
 		priv->base.breakpoints_available = breakpoints;
-	priv->flash_patch_revision = flash_break_cfg >> 28U;
+	/* Extract the revision number of the unit so we can alter our behavior on use as necessary */
+	priv->flash_patch_revision = (flash_break_cfg >> CORTEXM_FPB_CTRL_REV_SHIFT) & CORTEXM_FPB_CTRL_REV_MASK;
 
+	/* Now find out how many watchpoint slots there are */
 	priv->base.watchpoints_available = CORTEX_MAX_WATCHPOINTS;
 	const uint32_t watchpoints = target_mem32_read32(target, CORTEXM_DWT_CTRL);
+	/* If the number of watchpoints available is fewer than we can handle, truncate to that number */
 	if ((watchpoints >> 28U) < priv->base.watchpoints_available)
 		priv->base.watchpoints_available = watchpoints >> 28U;
 
@@ -554,7 +569,7 @@ bool cortexm_attach(target_s *target)
 		platform_nrst_set_val(false);
 		platform_timeout_s timeout;
 		platform_timeout_set(&timeout, 1000);
-		while (1) {
+		while (true) {
 			const uint32_t reset_status = target_mem32_read32(target, CORTEXM_DHCSR);
 			if (!(reset_status & CORTEXM_DHCSR_S_RESET_ST))
 				break;
@@ -837,8 +852,14 @@ static target_halt_reason_e cortexm_halt_poll(target_s *target, target_addr_t *w
 		return TARGET_HALT_RUNNING;
 
 	/* Read out the status register to determine why */
-	uint32_t dfsr = target_mem32_read32(target, CORTEXM_DFSR);
-	target_mem32_write32(target, CORTEXM_DFSR, dfsr); /* write back to reset */
+	const uint32_t dfsr = target_mem32_read32(target, CORTEXM_DFSR);
+	/* Write the same value back to clear the register */
+	target_mem32_write32(target, CORTEXM_DFSR, dfsr);
+
+	/* Check what caches are currently enabled */
+	const uint32_t ccr = target_mem32_read32(target, CORTEXM_CCR);
+	priv->dcache_enabled = ccr & CORTEXM_CCR_DCACHE_ENABLE;
+	priv->icache_enabled = ccr & CORTEXM_CCR_ICACHE_ENABLE;
 
 	if ((dfsr & CORTEXM_DFSR_VCATCH) && cortexm_fault_unwind(target))
 		return TARGET_HALT_FAULT;
@@ -901,7 +922,7 @@ void cortexm_halt_resume(target_s *const target, const bool step)
 	}
 
 	if (priv->base.icache_line_length)
-		target_mem32_write32(target, CORTEXM_ICIALLU, 0);
+		target_mem32_write32(target, CORTEXM_ICIALLU, 0U);
 
 	/* Release C_HALT to resume the core in whichever mode is selected */
 	target_mem32_write32(target, CORTEXM_DHCSR, dhcsr);
@@ -1039,9 +1060,9 @@ bool cortexm_run_stub(target_s *target, uint32_t loadaddr, uint32_t r0, uint32_t
  */
 static uint32_t cortexm_dwt_mask(size_t len)
 {
-	if (len < 2)
-		return 0;
-	return MIN(ulog2(len - 1), 31);
+	if (len < 2U)
+		return 0U;
+	return MIN(ulog2(len - 1U), 31U);
 }
 
 static uint32_t cortexm_dwt_func(target_s *target, target_breakwatch_e type)
@@ -1082,76 +1103,110 @@ static uint32_t cortexm_dwtv2_func(target_breakwatch_e type, size_t len)
 	return value;
 }
 
-static int cortexm_breakwatch_set(target_s *target, breakwatch_s *breakwatch)
+static int cortexm_breakpoint_set(target_s *const target, breakwatch_s *const breakwatch)
 {
-	cortexm_priv_s *priv = target->priv;
-	size_t i;
-	uint32_t val = breakwatch->addr;
+	cortexm_priv_s *const priv = target->priv;
 
+	target_addr32_t breakpoint = breakwatch->addr;
+	/* If this is a FPB that can only set breakpoints in the first 512MiB of address space (version 1) */
+	if (priv->flash_patch_revision == 0U) {
+		/* Make sure all the reserved and special bits are cleared */
+		breakpoint &= 0x1ffffffcU;
+		/*
+			* And then set whether the breakpoint should be for the lower or upper 16 bits of the 32 bit block
+			* pointed to by the truncated address (masking the bottom nibble by `c` 4 byte aligns the address)
+			*/
+		breakpoint |= (breakwatch->addr & 2U) ? 0x80000000U : 0x40000000U;
+	}
+	/* Make sure the enable bit is set for the slot we're about to write */
+	breakpoint |= 1U;
+
+	/* Find the first available breakpoint slot */
+	uint32_t slot = 0U;
+	for (; slot < priv->base.breakpoints_available; ++slot) {
+		if (!(priv->base.breakpoints_mask & (1U << slot)))
+			break;
+	}
+
+	/* If we could not find any slots, inform the GDB server that we could not set the breakpoint */
+	if (slot == priv->base.breakpoints_available)
+		return -1;
+
+	/* Otherwise, mark the slot chosen as used, and write it with the computed value */
+	priv->base.breakpoints_mask |= 1U << slot;
+	target_mem32_write32(target, CORTEXM_FPB_COMP(slot), breakpoint);
+	breakwatch->reserved[0] = slot;
+	return 0;
+}
+
+static int cortexm_watchpoint_set(target_s *const target, breakwatch_s *const breakwatch)
+{
+	cortexm_priv_s *const priv = target->priv;
+
+	/* Find the first available watchpoint slot */
+	uint32_t slot = 0U;
+	for (; slot < priv->base.watchpoints_available; slot++) {
+		if (!(priv->base.watchpoints_mask & (1U << slot)))
+			break;
+	}
+
+	/* If we could not find any slots, inform the GDB server that we could not set the watchpoint */
+	if (slot == priv->base.watchpoints_available)
+		return -1;
+
+	/* Otherwise, mark the slot chosen as used */
+	priv->base.watchpoints_mask |= 1U << slot;
+	/* Then set the watchpoint hardware up to observe the requested address in the requested way */
+	if ((target->target_options & CORTEXM_TOPT_FLAVOUR_V8M)) {
+		target_mem32_write32(target, CORTEXM_DWT_COMP(slot), breakwatch->addr);
+		target_mem32_write32(target, CORTEXM_DWT_FUNC(slot), cortexm_dwtv2_func(breakwatch->type, breakwatch->size));
+	} else {
+		target_mem32_write32(target, CORTEXM_DWT_COMP(slot), breakwatch->addr);
+		target_mem32_write32(target, CORTEXM_DWT_MASK(slot), cortexm_dwt_mask(breakwatch->size));
+		target_mem32_write32(target, CORTEXM_DWT_FUNC(slot), cortexm_dwt_func(target, breakwatch->type));
+	}
+	breakwatch->reserved[0] = slot;
+	return 0;
+}
+
+static int cortexm_breakwatch_set(target_s *const target, breakwatch_s *const breakwatch)
+{
 	switch (breakwatch->type) {
 	case TARGET_BREAK_HARD:
-		if (priv->flash_patch_revision == 0) {
-			val &= 0x1ffffffcU;
-			val |= (breakwatch->addr & 2U) ? 0x80000000U : 0x40000000U;
-		}
-		val |= 1U;
-
-		/* Find the first available breakpoint slot */
-		for (i = 0; i < priv->base.breakpoints_available; i++) {
-			if (!(priv->base.breakpoints_mask & (1U << i)))
-				break;
-		}
-
-		if (i == priv->base.breakpoints_available)
-			return -1;
-
-		priv->base.breakpoints_mask |= 1U << i;
-		target_mem32_write32(target, CORTEXM_FPB_COMP(i), val);
-		breakwatch->reserved[0] = i;
-		return 0;
+		return cortexm_breakpoint_set(target, breakwatch);
 
 	case TARGET_WATCH_WRITE:
 	case TARGET_WATCH_READ:
 	case TARGET_WATCH_ACCESS:
-		/* Find the first available watchpoint slot */
-		for (i = 0; i < priv->base.watchpoints_available; i++) {
-			if (!(priv->base.watchpoints_mask & (1U << i)))
-				break;
-		}
-
-		if (i == priv->base.watchpoints_available)
-			return -1;
-
-		priv->base.watchpoints_mask |= 1U << i;
-		if ((target->target_options & CORTEXM_TOPT_FLAVOUR_V8M)) {
-			target_mem32_write32(target, CORTEXM_DWT_COMP(i), val);
-			target_mem32_write32(target, CORTEXM_DWT_FUNC(i), cortexm_dwtv2_func(breakwatch->type, breakwatch->size));
-		} else {
-			target_mem32_write32(target, CORTEXM_DWT_COMP(i), val);
-			target_mem32_write32(target, CORTEXM_DWT_MASK(i), cortexm_dwt_mask(breakwatch->size));
-			target_mem32_write32(target, CORTEXM_DWT_FUNC(i), cortexm_dwt_func(target, breakwatch->type));
-		}
-		breakwatch->reserved[0] = i;
-		return 0;
+		return cortexm_watchpoint_set(target, breakwatch);
 	default:
 		return 1;
 	}
 }
 
-static int cortexm_breakwatch_clear(target_s *target, breakwatch_s *breakwatch)
+static int cortexm_breakwatch_clear(target_s *const target, breakwatch_s *const breakwatch)
 {
-	cortexm_priv_s *priv = target->priv;
-	unsigned i = breakwatch->reserved[0];
+	cortexm_priv_s *const priv = target->priv;
+	const uint32_t slot = breakwatch->reserved[0];
+
 	switch (breakwatch->type) {
 	case TARGET_BREAK_HARD:
-		priv->base.breakpoints_mask &= ~(1U << i);
-		target_mem32_write32(target, CORTEXM_FPB_COMP(i), 0);
+		/* Unmark the slot this breakpoint uses as used */
+		priv->base.breakpoints_mask &= ~(1U << slot);
+		/*
+		 * Disable the breakpoint, but also crucially make sure we keep the Flash patch system disabled(!).
+		 * BE is bit 0, FE is bit 31. Bits 29 and 30 are reserved and must be zero when BE is 0.
+		 * The ARMv8-M ARM requires this be a write to 0, specifically, as called out in §D1.2.107, FP_COMPn,
+		 * Flash Patch Comparator Register, pg1653
+		 */
+		target_mem32_write32(target, CORTEXM_FPB_COMP(slot), 0U);
 		return 0;
 	case TARGET_WATCH_WRITE:
 	case TARGET_WATCH_READ:
 	case TARGET_WATCH_ACCESS:
-		priv->base.watchpoints_mask &= ~(1U << i);
-		target_mem32_write32(target, CORTEXM_DWT_FUNC(i), 0);
+		/* Unmark the slot this watchpoint uses as used and disable the watchpoint */
+		priv->base.watchpoints_mask &= ~(1U << slot);
+		target_mem32_write32(target, CORTEXM_DWT_FUNC(slot), 0U);
 		return 0;
 	default:
 		return 1;
