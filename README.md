@@ -1,18 +1,16 @@
-# Black Magic Probe
+# Black Magic Debug
 
-Firmware for the Black Magic Debug Probe.
+The Black Magic Debug suite is a self-contained debugger for microcontrollers which needs no config
+files and auto-detects plus configures the connected targets. It is designed to be fast and easy to use.
 
-The Black Magic Probe is a modern, in-application debugging tool for
-embedded microprocessors. It allows you see what is going on 'inside' an
-application running on an embedded microprocessor while it executes. It is
-able to control and examine the state of the target microprocessor using a
-JTAG or Serial Wire Debugging (SWD) port and on-chip debug logic provided
-by the microprocessor. The probe connects to a host computer using a
-standard USB interface. The user is able to control exactly what happens
-using the GNU source level debugging software, GDB.
-Serial Wire Output (SWO) allows the target to write tracing and logging to the host
-without using usb or serial port. Decoding SWO in the probe itself
-makes [SWO viewing as simple as connecting to a serial port](https://black-magic.org/usage/swo.html).
+The project can be built as either firmware for
+[Black Magic Probe](https://1bitsquared.com/products/black-magic-probe) -
+a debugger-in-a-dongle that provides multi-voltage debug with no other external tools than GDB required -
+or as Black Magic Debug App which is the project built for the host machine, more details below.
+
+The project allows debugging of devices connected over JTAG or SWD, and via the companion tool
+[bmpflash](https://github.com/blackmagic-debug/bmpflash) the programming of SPI Flash devices.
+This includes support for ARM and RISC-V devices, the complete list can be found on the website.
 
 ## Resources
 
@@ -28,8 +26,8 @@ makes [SWO viewing as simple as connecting to a serial port](https://black-magic
 ```console
 > arm-none-eabi-gdb gpio.elf
 ...<GDB Copyright message>
-(gdb) tar ext /dev/ttyACM0
-Remote debugging using /dev/ttyACM0
+(gdb) tar ext /dev/ttyBmpGdb
+Remote debugging using /dev/ttyBmpGdb
 (gdb) mon s
 Target voltage: 2.94V
 Available Targets:
