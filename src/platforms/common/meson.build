@@ -34,6 +34,7 @@ platform_common_sources = files(
 	'aux_serial.c',
 	'jtagtap.c',
 	'swdptap.c',
+	'rvswd.c',
 	'usb.c',
 	'usb_dfu_stub.c',
 	'usb_serial.c',
