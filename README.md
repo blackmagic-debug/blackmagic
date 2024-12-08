@@ -35,16 +35,18 @@ however below is a brief guide for both the firmware and BMDA.
 
 ### Black Magic Debug Firmware
 
+When built as firmware and put on a probe, the project is used like as follows:
+
 ```console
 > arm-none-eabi-gdb gpio.elf
 ...<GDB Copyright message>
 (gdb) tar ext /dev/ttyBmpGdb
 Remote debugging using /dev/ttyBmpGdb
-(gdb) mon s
+(gdb) mon a
 Target voltage: 2.94V
 Available Targets:
 No. Att Driver
- 1      STM32F40x M3/M4
+ 1      STM32F40x M4
 (gdb) att 1
 Attaching to program: /devel/en_apps/gpio/f4_discovery/gpio.elf, Remote target
 0x08002298 in UsartIOCtl ()
@@ -65,17 +67,20 @@ Breakpoint 1, main () at /devel/en_apps/gpio/f4_discovery/../gpio.c:70
 (gdb)
 ```
 
+Note: this presumes on Linux that you have installed the project's udev rules.
+
 ### Black Magic Debug App
 
-You can also build the Black Magic Debug suite as a PC program called Black Magic Debug App (BMDA).
+When built as BMDA, usage differs a bit - principally as instead of using a virtual serial interface,
+BMDA makes the GDB server available over TCP/IP on a port that it will print to its console (typically
+2000 though). This means replacing `tar ext /dev/ttyBmpGdb` in the firmware example, with `tar ext :2000`.
 
-This builds the same GDB server that is running on the Black Magic Probe.
-While connection to the Black Magic Probe GDB server is via serial line,
-connection to the Black Magic Debug App is via TCP port 2000 for the first
-GDB server and higher for more invocations. Use "tar(get) ext(ented) :2000"
-to connect.
+To bring the GDB server up, you will need a probe it can talk to, the BMDA binary, and an extra console to
+the one you want to run GDB from. Verbosity of BMDA can be increased with the `-v` option such as running
+`blackmagic -v 5` which sets the server to emit INFO and TARGET diagnostic level information in addition to
+ERROR and WARNING output.
 
-Black Magic Debug App can talk to
+Black Magic Debug App can talk to:
 
 * Black Magic Probe firmware probes via the USB-serial port
 * ST-Link v2, v2.1 and v3 with recent firmware
@@ -83,40 +88,42 @@ Black Magic Debug App can talk to
 * J-Link probes
 * FTDI MPSSE based probes
 
-When connected to a single BMP supported probe, starting `blackmagic` w/o any
-arguments starts the server. When several BMP supported probes are connected,
-their types, position and serial number is displayed and the program exits.
-Add `-P (position)` to the next invocation to select one.
+When connected to a single BMDA-supported probe, starting `blackmagic` w/o any arguments starts the server.
+When several BMDA-supported probes are connected, their types, serial numbers and version information is
+displayed and the program exits. Add `-s <serial>` to the next invocation to select one.
+
 For the setup from the sample session above:
 
 In another terminal:
 
 ```console
 > blackmagic
-Black Magic Debug App v1.9.2
+Black Magic Debug App v1.10.2
  for Black Magic Probe, ST-Link v2 and v3, CMSIS-DAP, J-Link and FTDI (MPSSE)
 Using 1d50:6018 8BB20A03 Black Magic Debug
- Black Magic Probe  v1.9.2
+ Black Magic Probe v1.10.2
+Setting V6ONLY to off for dual stack listening.
 Listening on TCP: 2000
 ```
 
 And in the GDB terminal:
 
 ```console
+...
 (gdb) tar ext :2000
 Remote debugging using :2000
-(gdb) mon s
+(gdb) mon a
 ...
 ```
 
 Black Magic Debug App also provides for Flashing, reading and verification of a binary file,
-by default starting at lowest flash address. The `-t` argument displays information about the
+by default starting at lowest Flash address. The `-t` argument displays information about the
 connected target. Use `-h`/`--help` to get a list of supported options.
 
 #### OS specific remarks
 
-On *BSD and macOS, you should use `/dev/cu.usbmodemXXX`. There are unresolved issues with trying to
-use the `/dev/tty.usbmodemXXX` device node involving how it operates under the hood.
+On *BSD and macOS, you should use `/dev/cu.usbmodemXXX1`. There are unresolved issues with trying to
+use the `/dev/tty.usbmodemXXX1` device node involving how it operates under the hood.
 
 ## Getting started
 
