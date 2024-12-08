@@ -995,7 +995,7 @@ static bool cortexar_check_error(target_s *const target)
 {
 	cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
 	const bool fault = priv->core_status & (CORTEXAR_STATUS_DATA_FAULT | CORTEXAR_STATUS_MMU_FAULT);
-	priv->core_status = (uint8_t) ~(CORTEXAR_STATUS_DATA_FAULT | CORTEXAR_STATUS_MMU_FAULT);
+	priv->core_status &= (uint8_t) ~(CORTEXAR_STATUS_DATA_FAULT | CORTEXAR_STATUS_MMU_FAULT);
 	return fault || cortex_check_error(target);
 }
 
