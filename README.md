@@ -6,7 +6,7 @@ files and auto-detects plus configures the connected targets. It is designed to 
 The project can be built as either firmware for
 [Black Magic Probe](https://1bitsquared.com/products/black-magic-probe) -
 a debugger-in-a-dongle that provides multi-voltage debug with no other external tools than GDB required -
-or as Black Magic Debug App which is the project built for the host machine, more details below.
+or as Black Magic Debug App (BMDA) which is the project built for the host machine, more details below.
 
 The project allows debugging of devices connected over JTAG or SWD, and via the companion tool
 [bmpflash](https://github.com/blackmagic-debug/bmpflash) the programming of SPI Flash devices.
@@ -16,12 +16,22 @@ This includes support for ARM and RISC-V devices, the complete list can be found
 [![Current release](https://img.shields.io/github/v/release/blackmagic-debug/blackmagic.svg?logo=github)](https://github.com/blackmagic-debug/blackmagic/releases)
 [![CI flow status](https://github.com/blackmagic-debug/blackmagic/actions/workflows/build-and-upload.yml/badge.svg)](https://github.com/blackmagic-debug/blackmagic/actions/workflows/build-and-upload.yml)
 
+Table of contents:
+
+* [Resources](#resources)
+* [Usage](#usage)
+* [Build quick-start](#getting-started)
+* [Contribution information](#contributing-and-reporting-issues)
+
 ## Resources
 
 * [Official website](https://black-magic.org/index.html)
 * [Binary builds](https://github.com/blackmagic-debug/blackmagic/releases)
 
 ## Usage
+
+There is a more detailed [getting started guide](https://black-magic.org/getting-started.html) on the website,
+however below is a brief guide for both the firmware and BMDA.
 
 ### Black Magic Debug Firmware
 
@@ -52,6 +62,7 @@ Note: automatically using hardware breakpoints for read-only addresses.
 
 Breakpoint 1, main () at /devel/en_apps/gpio/f4_discovery/../gpio.c:70
 70      {
+(gdb)
 ```
 
 ### Black Magic Debug App
