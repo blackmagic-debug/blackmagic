@@ -1220,10 +1220,15 @@ static bool cortexar_mem_write_slow(
  * This writes memory by jumping from the debug unit bus to the system bus.
  * NB: This requires the core to be halted! Uses instruction launches on
  * the core and requires we're in debug mode to work. Trashes r0.
+ * If core is not halted, temporarily halts target and resumes at the end
+ * of the function.
  */
 static void cortexar_mem_write(
 	target_s *const target, const target_addr64_t dest, const void *const src, const size_t len)
 {
+	/* If system is not halted, halt temporarily within this function. */
+	const bool halted_in_function = cortexar_halt_and_wait(target);
+
 	cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
 	DEBUG_PROTO("%s: Writing %zu bytes @0x%" PRIx64 ":", __func__, len, dest);
 #ifndef DEBUG_PROTO_IS_NOOP
@@ -1257,6 +1262,9 @@ static void cortexar_mem_write(
 		cortexar_mem_write_slow(target, dest, (const uint8_t *)src, len);
 	/* Deal with any data faults that occurred */
 	cortexar_mem_handle_fault(target, __func__);
+
+	if (halted_in_function)
+		cortexar_halt_resume(target, false);
 }
 
 static void cortexar_regs_read(target_s *const target, void *const data)
