@@ -81,11 +81,8 @@ static bool rram_mass_erase(target_s *const target, platform_timeout_s *const pr
 {
 	target_mem32_write32(target, NRF54L_RRAMC_ERASE_ERASEALL, NRF54L_RRAMC_ERASE_ERASEALL_ERASE);
 
-	uint32_t ready;
-	do {
-		ready = target_mem32_read32(target, NRF54L_RRAMC_READY);
+	while (target_mem32_read32(target, NRF54L_RRAMC_READY) == NRF54L_RRAMC_READY_BUSY)
 		target_print_progress(print_progess);
-	} while (ready == NRF54L_RRAMC_READY_BUSY);
 
 	return true;
 }
@@ -119,7 +116,7 @@ bool nrf54l_probe(target_s *target)
 
 	switch (ap->dp->target_partno) {
 	case NRF54L_PARTNO:
-		target->driver = "Nordic nRF54L";
+		target->driver = "nRF54L";
 		target->target_options |= TOPT_INHIBIT_NRST;
 		break;
 	default:
@@ -149,7 +146,7 @@ bool nrf54l_ctrl_ap_probe(adiv5_access_port_s *ap)
 		return false;
 	}
 
-	target_s *target = target_new();
+	target_s *const target = target_new();
 	if (!target)
 		return false;
 
@@ -158,14 +155,14 @@ bool nrf54l_ctrl_ap_probe(adiv5_access_port_s *ap)
 	target->priv = ap;
 	target->priv_free = (void *)adiv5_ap_unref;
 
-	uint32_t status = adiv5_ap_read(ap, NRF54L_CTRL_AP_APPROTECT_STATUS);
+	const uint32_t status = adiv5_ap_read(ap, NRF54L_CTRL_AP_APPROTECT_STATUS);
 
 	if (!(status &
 			(NRF54L_CTRL_AP_APPROTECT_STATUS_APPROTECT_ENABLED |
 				NRF54L_CTRL_AP_APPROTECT_STATUS_SECUREAPPROTECT_ENABLED)))
-		target->driver = "Nordic nRF54L Access Port";
+		target->driver = "nRF54L Access Port";
 	else
-		target->driver = "Nordic nRF54L Access Port (protected)";
+		target->driver = "nRF54L Access Port (protected)";
 	target->regs_size = 0U;
 
 	return true;
@@ -180,11 +177,8 @@ static bool nrf54l_ctrl_ap_mass_erase(target_s *const target, platform_timeout_s
 
 	adiv5_ap_write(ap, NRF54L_CTRL_AP_ERASEALL, NRF54L_CTRL_AP_ERASEALL_ERASE);
 
-	uint32_t status;
-	do {
-		status = adiv5_ap_read(ap, NRF54L_CTRL_AP_ERASEALLSTATUS);
+	while (adiv5_ap_read(ap, NRF54L_CTRL_AP_ERASEALLSTATUS) == NRF54L_CTRL_AP_ERASEALLSTATUS_BUSY)
 		target_print_progress(print_progess);
-	} while (status == NRF54L_CTRL_AP_ERASEALLSTATUS_BUSY);
 
 	// Assert reset.
 	adiv5_ap_write(ap, NRF54L_CTRL_AP_RESET, NRF54L_CTRL_AP_RESET_HARDRESET);

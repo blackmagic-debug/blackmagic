@@ -142,14 +142,14 @@ bool nrf51_probe(target_s *t)
 	uint32_t info_part = target_mem32_read32(t, NRF52_PART_INFO);
 	if (info_part != 0xffffffffU && info_part != 0 && (info_part & 0x00ff000U) == 0x52000U) {
 		uint32_t ram_size = target_mem32_read32(t, NRF52_INFO_RAM);
-		t->driver = "Nordic nRF52";
+		t->driver = "nRF52";
 		t->target_options |= TOPT_INHIBIT_NRST;
 		target_add_ram32(t, 0x20000000U, ram_size * 1024U);
 		nrf51_add_flash(t, 0, page_size * code_size, page_size);
 		nrf51_add_flash(t, NRF51_UICR, page_size, page_size);
 		target_add_commands(t, nrf51_cmd_list, "nRF52");
 	} else {
-		t->driver = "Nordic nRF51";
+		t->driver = "nRF51";
 		/*
 		 * Use the biggest RAM size seen in NRF51 fammily.
 		 * IDCODE is kept as '0', as deciphering is hard and there is later no usage.
@@ -429,12 +429,12 @@ bool nrf51_ctrl_ap_probe(adiv5_access_port_s *ap)
 	t->priv = ap;
 	t->priv_free = (void *)adiv5_ap_unref;
 
-	uint32_t status = adiv5_ap_read(ap, CTRL_AP_PROT_EN);
-	status = adiv5_ap_read(ap, CTRL_AP_PROT_EN);
+	adiv5_ap_read(ap, CTRL_AP_PROT_EN);
+	const uint32_t status = adiv5_ap_read(ap, CTRL_AP_PROT_EN);
 	if (status)
-		t->driver = "Nordic nRF52 Access Port";
+		t->driver = "nRF52 Access Port";
 	else
-		t->driver = "Nordic nRF52 Access Port (protected)";
+		t->driver = "nRF52 Access Port (protected)";
 	t->regs_size = 0;
 
 	return true;
