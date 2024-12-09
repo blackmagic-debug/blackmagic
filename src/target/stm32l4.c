@@ -270,7 +270,6 @@ typedef struct stm32l4_flash {
 
 typedef struct stm32l4_priv {
 	const stm32l4_device_info_s *device;
-	uint32_t dbgmcu_config;
 } stm32l4_priv_s;
 
 typedef struct stm32l4_option_bytes_info {
@@ -645,11 +644,6 @@ static bool stm32l4_configure_dbgmcu(target_s *const target, const stm32l4_devic
 		}
 		/* Save the device we're configuring for */
 		priv_storage->device = device;
-		/* Get the current value of the debug config register (and store it for later) */
-		const target_addr32_t dbgmcu_config_taddr =
-			(device->family == STM32L4_FAMILY_L55x || device->family == STM32L4_FAMILY_U5xx) ? STM32L5_DBGMCU_CONFIG :
-																							   STM32L4_DBGMCU_CONFIG;
-		priv_storage->dbgmcu_config = target_mem32_read32(target, dbgmcu_config_taddr);
 		target->target_storage = priv_storage;
 
 		target->attach = stm32l4_attach;
@@ -662,18 +656,43 @@ static bool stm32l4_configure_dbgmcu(target_s *const target, const stm32l4_devic
 	 * then Reconfigure the config register to prevent WFI/WFE from cutting debug access
 	 */
 	if (priv->device->family == STM32L4_FAMILY_L55x || priv->device->family == STM32L4_FAMILY_U5xx) {
-		target_mem32_write32(
-			target, STM32L5_DBGMCU_APB1FREEZE1, STM32L4_DBGMCU_APB1FREEZE1_IWDG | STM32L4_DBGMCU_APB1FREEZE1_WWDG);
+		target_mem32_write32(target, STM32L5_DBGMCU_APB1FREEZE1,
+			target_mem32_read32(target, STM32L5_DBGMCU_APB1FREEZE1) | STM32L4_DBGMCU_APB1FREEZE1_IWDG |
+				STM32L4_DBGMCU_APB1FREEZE1_WWDG);
 		target_mem32_write32(target, STM32L5_DBGMCU_CONFIG,
-			priv->dbgmcu_config | STM32L4_DBGMCU_CONFIG_DBG_STANDBY | STM32L4_DBGMCU_CONFIG_DBG_STOP);
+			target_mem32_read32(target, STM32L5_DBGMCU_CONFIG) | STM32L4_DBGMCU_CONFIG_DBG_STANDBY |
+				STM32L4_DBGMCU_CONFIG_DBG_STOP);
 	} else {
-		target_mem32_write32(
-			target, STM32L4_DBGMCU_APB1FREEZE1, STM32L4_DBGMCU_APB1FREEZE1_IWDG | STM32L4_DBGMCU_APB1FREEZE1_WWDG);
+		target_mem32_write32(target, STM32L4_DBGMCU_APB1FREEZE1,
+			target_mem32_read32(target, STM32L4_DBGMCU_APB1FREEZE1) | STM32L4_DBGMCU_APB1FREEZE1_IWDG |
+				STM32L4_DBGMCU_APB1FREEZE1_WWDG);
 		target_mem32_write32(target, STM32L4_DBGMCU_CONFIG,
-			priv->dbgmcu_config | STM32L4_DBGMCU_CONFIG_DBG_STANDBY | STM32L4_DBGMCU_CONFIG_DBG_STOP |
-				STM32L4_DBGMCU_CONFIG_DBG_SLEEP);
+			target_mem32_read32(target, STM32L4_DBGMCU_CONFIG) | STM32L4_DBGMCU_CONFIG_DBG_STANDBY |
+				STM32L4_DBGMCU_CONFIG_DBG_STOP | STM32L4_DBGMCU_CONFIG_DBG_SLEEP);
 	}
 	return true;
+}
+
+static void stm32l4_deconfigure_dbgmcu(target_s *const target)
+{
+	const stm32l4_priv_s *const priv = (stm32l4_priv_s *)target->target_storage;
+	/* Reverse all changes to the DBGMCU control and freeze registers */
+	if (priv->device->family == STM32L4_FAMILY_L55x || priv->device->family == STM32L4_FAMILY_U5xx) {
+		target_mem32_write32(target, STM32L5_DBGMCU_APB1FREEZE1,
+			target_mem32_read32(target, STM32L5_DBGMCU_APB1FREEZE1) &
+				~(STM32L4_DBGMCU_APB1FREEZE1_IWDG | STM32L4_DBGMCU_APB1FREEZE1_WWDG));
+		target_mem32_write32(target, STM32L5_DBGMCU_CONFIG,
+			target_mem32_read32(target, STM32L5_DBGMCU_CONFIG) &
+				~(STM32L4_DBGMCU_CONFIG_DBG_STANDBY | STM32L4_DBGMCU_CONFIG_DBG_STOP));
+	} else {
+		target_mem32_write32(target, STM32L4_DBGMCU_APB1FREEZE1,
+			target_mem32_read32(target, STM32L4_DBGMCU_APB1FREEZE1) &
+				~(STM32L4_DBGMCU_APB1FREEZE1_IWDG | STM32L4_DBGMCU_APB1FREEZE1_WWDG));
+		target_mem32_write32(target, STM32L4_DBGMCU_CONFIG,
+			target_mem32_read32(target, STM32L4_DBGMCU_CONFIG) &
+				~(STM32L4_DBGMCU_CONFIG_DBG_STANDBY | STM32L4_DBGMCU_CONFIG_DBG_STOP |
+					STM32L4_DBGMCU_CONFIG_DBG_SLEEP));
+	}
 }
 
 bool stm32l4_probe(target_s *const target)
@@ -835,14 +854,8 @@ static bool stm32l4_attach(target_s *const target)
 
 static void stm32l4_detach(target_s *const target)
 {
-	const stm32l4_priv_s *const priv = (stm32l4_priv_s *)target->target_storage;
-	const stm32l4_device_info_s *const device = priv->device;
-
 	/* Reverse all changes to the appropriate STM32Lx_DBGMCU_CONFIG */
-	target_mem32_write32(target,
-		device->family == STM32L4_FAMILY_L55x || device->family == STM32L4_FAMILY_U5xx ? STM32L5_DBGMCU_CONFIG :
-																						 STM32L4_DBGMCU_CONFIG,
-		priv->dbgmcu_config);
+	stm32l4_deconfigure_dbgmcu(target);
 	cortexm_detach(target);
 }
 

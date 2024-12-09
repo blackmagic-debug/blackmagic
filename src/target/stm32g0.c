@@ -4,6 +4,8 @@
  * MIT License
  *
  * Copyright (c) 2021-2023 Fabrice Prost-Boucle <fabalthazar@falbalab.fr>
+ * Copyright (C) 2022-2024 1BitSquared <info@1bitsquared.com>
+ * Modified by Rachel Mant <git@dragonmux.network>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -160,7 +162,6 @@
 #define ID_STM32G0B_C 0x467U
 
 typedef struct stm32g0_priv {
-	uint32_t dbgmcu_config;
 	bool irreversible_enabled;
 } stm32g0_priv_s;
 
@@ -213,8 +214,6 @@ static bool stm32g0_configure_dbgmcu(target_s *const target)
 			return false;
 		}
 		target->target_storage = priv_storage;
-		/* Get the current value of the debug control register (and store it for later) */
-		priv_storage->dbgmcu_config = target_mem32_read32(target, STM32G0_DBGMCU_CONFIG);
 		/* Mark irriversible operations disabled */
 		priv_storage->irreversible_enabled = false;
 
@@ -222,15 +221,16 @@ static bool stm32g0_configure_dbgmcu(target_s *const target)
 		target->detach = stm32g0_detach;
 	}
 
-	const stm32g0_priv_s *const priv = (stm32g0_priv_s *)target->target_storage;
 	/* Enable the clock for the DBGMCU if it's not already */
 	target_mem32_write32(target, RCC_APBENR1, target_mem32_read32(target, RCC_APBENR1) | RCC_APBENR1_DBGEN);
 	/* Enable debugging during all low power modes */
 	target_mem32_write32(target, STM32G0_DBGMCU_CONFIG,
-		priv->dbgmcu_config | (STM32G0_DBGMCU_CONFIG_STANDBY | STM32G0_DBGMCU_CONFIG_STOP));
+		target_mem32_read32(target, STM32G0_DBGMCU_CONFIG) | STM32G0_DBGMCU_CONFIG_STANDBY |
+			STM32G0_DBGMCU_CONFIG_STOP);
 	/* And make sure the WDTs stay synchronised to the run state of the processor */
-	target_mem32_write32(
-		target, STM32G0_DBGMCU_APBFREEZE1, STM32G0_DBGMCU_APBFREEZE1_IWDG | STM32G0_DBGMCU_APBFREEZE1_WWDG);
+	target_mem32_write32(target, STM32G0_DBGMCU_APBFREEZE1,
+		target_mem32_read32(target, STM32G0_DBGMCU_APBFREEZE1) | STM32G0_DBGMCU_APBFREEZE1_IWDG |
+			STM32G0_DBGMCU_APBFREEZE1_WWDG);
 	return true;
 }
 
@@ -321,13 +321,17 @@ static bool stm32g0_attach(target_s *target)
 
 static void stm32g0_detach(target_s *target)
 {
-	const stm32g0_priv_s *const priv = (stm32g0_priv_s *)target->target_storage;
 	/* Grab the current state of the clock enables */
 	const uint32_t apb_en1 = target_mem32_read32(target, RCC_APBENR1) & ~RCC_APBENR1_DBGEN;
 	/* Ensure that the DBGMCU is still clocked enabled */
 	target_mem32_write32(target, RCC_APBENR1, apb_en1 | RCC_APBENR1_DBGEN);
-	/* Reverse all changes to STM32F4_DBGMCU_CONFIG */
-	target_mem32_write32(target, STM32G0_DBGMCU_CONFIG, priv->dbgmcu_config);
+	/* Reverse all changes to the DBGMCU control and freeze registers */
+	target_mem32_write32(target, STM32G0_DBGMCU_CONFIG,
+		target_mem32_read32(target, STM32G0_DBGMCU_CONFIG) &
+			~(STM32G0_DBGMCU_CONFIG_STANDBY | STM32G0_DBGMCU_CONFIG_STOP));
+	target_mem32_write32(target, STM32G0_DBGMCU_APBFREEZE1,
+		target_mem32_read32(target, STM32G0_DBGMCU_APBFREEZE1) &
+			~(STM32G0_DBGMCU_APBFREEZE1_IWDG | STM32G0_DBGMCU_APBFREEZE1_WWDG));
 	/* Disable the DBGMCU clock */
 	target_mem32_write32(target, RCC_APBENR1, apb_en1);
 	/* Now defer to the normal Cortex-M detach routine to complete the detach */

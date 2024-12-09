@@ -1,7 +1,7 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
- * Copyright (C) 2023 1BitSquared <info@1bitsquared.com>
+ * Copyright (C) 2023-2024 1BitSquared <info@1bitsquared.com>
  * Written by Rachel Mant <git@dragonmux.network>
  * All rights reserved.
  *
@@ -132,10 +132,6 @@ typedef struct stm32h5_flash {
 	uint32_t bank_and_sector_count;
 } stm32h5_flash_s;
 
-typedef struct stm32h5_priv {
-	uint32_t dbgmcu_config;
-} stm32h5_priv_s;
-
 static bool stm32h5_cmd_uid(target_s *target, int argc, const char **argv);
 static bool stm32h5_cmd_rev(target_s *target, int argc, const char **argv);
 
@@ -175,29 +171,14 @@ static void stm32h5_add_flash(
 
 static bool stm32h5_configure_dbgmcu(target_s *const target)
 {
-	/* If we're in the probe phase */
-	if (target->target_storage == NULL) {
-		/* Allocate target-specific storage */
-		stm32h5_priv_s *const priv_storage = calloc(1, sizeof(*priv_storage));
-		if (!priv_storage) { /* calloc failed: heap exhaustion */
-			DEBUG_ERROR("calloc: failed in %s\n", __func__);
-			return false;
-		}
-		target->target_storage = priv_storage;
-		/* Get the current value of the debug config register (and store it for later) */
-		priv_storage->dbgmcu_config = target_mem32_read32(target, STM32H5_DBGMCU_CONFIG);
-
-		target->attach = stm32h5_attach;
-		target->detach = stm32h5_detach;
-	}
-
-	const stm32h5_priv_s *const priv = (stm32h5_priv_s *)target->target_storage;
 	/* Now we have a stable debug environment, make sure the WDTs can't bonk the processor out from under us */
-	target_mem32_write32(
-		target, STM32H5_DBGMCU_APB1LFREEZE, STM32H5_DBGMCU_APB1LFREEZE_IWDG | STM32H5_DBGMCU_APB1LFREEZE_WWDG);
+	target_mem32_write32(target, STM32H5_DBGMCU_APB1LFREEZE,
+		target_mem32_read32(target, STM32H5_DBGMCU_APB1LFREEZE) | STM32H5_DBGMCU_APB1LFREEZE_IWDG |
+			STM32H5_DBGMCU_APB1LFREEZE_WWDG);
 	/* Then Reconfigure the config register to prevent WFI/WFE from cutting debug access */
 	target_mem32_write32(target, STM32H5_DBGMCU_CONFIG,
-		priv->dbgmcu_config | STM32H5_DBGMCU_CONFIG_DBG_STANDBY | STM32H5_DBGMCU_CONFIG_DBG_STOP);
+		target_mem32_read32(target, STM32H5_DBGMCU_CONFIG) | STM32H5_DBGMCU_CONFIG_DBG_STANDBY |
+			STM32H5_DBGMCU_CONFIG_DBG_STOP);
 	return true;
 }
 
@@ -214,6 +195,8 @@ bool stm32h5_probe(target_s *const target)
 		return false;
 
 	target->driver = "STM32H5";
+	target->attach = stm32h5_attach;
+	target->detach = stm32h5_detach;
 	target->mass_erase = stm32h5_mass_erase;
 	target->enter_flash_mode = stm32h5_enter_flash_mode;
 	target->exit_flash_mode = stm32h5_exit_flash_mode;
@@ -267,9 +250,13 @@ static bool stm32h5_attach(target_s *const target)
 
 static void stm32h5_detach(target_s *target)
 {
-	const stm32h5_priv_s *const priv = (stm32h5_priv_s *)target->target_storage;
-	/* Reverse all changes to STM32F4_DBGMCU_CTRL */
-	target_mem32_write32(target, STM32H5_DBGMCU_CONFIG, priv->dbgmcu_config);
+	/* Reverse all changes to the DBGMCU control and freeze registers */
+	target_mem32_write32(target, STM32H5_DBGMCU_APB1LFREEZE,
+		target_mem32_read32(target, STM32H5_DBGMCU_APB1LFREEZE) &
+			~(STM32H5_DBGMCU_APB1LFREEZE_IWDG | STM32H5_DBGMCU_APB1LFREEZE_WWDG));
+	target_mem32_write32(target, STM32H5_DBGMCU_CONFIG,
+		target_mem32_read32(target, STM32H5_DBGMCU_CONFIG) &
+			~(STM32H5_DBGMCU_CONFIG_DBG_STANDBY | STM32H5_DBGMCU_CONFIG_DBG_STOP));
 	/* Now defer to the normal Cortex-M detach routine to complete the detach */
 	cortexm_detach(target);
 }

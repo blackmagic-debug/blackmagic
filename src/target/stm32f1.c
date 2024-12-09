@@ -3,7 +3,7 @@
  *
  * Copyright (C) 2011  Black Sphere Technologies Ltd.
  * Written by Gareth McMullin <gareth@blacksphere.co.nz>
- * Copyright (C) 2022-2023 1BitSquared <info@1bitsquared.com>
+ * Copyright (C) 2022-2024 1BitSquared <info@1bitsquared.com>
  * Modified by Rachel Mant <git@dragonmux.network>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -158,7 +158,6 @@
 
 typedef struct stm32f1_priv {
 	target_addr32_t dbgmcu_config_taddr;
-	uint32_t dbgmcu_config;
 } stm32f1_priv_s;
 
 static bool stm32f1_cmd_option(target_s *target, int argc, const char **argv);
@@ -221,9 +220,8 @@ static bool stm32f1_configure_dbgmcu(target_s *const target, const target_addr32
 			DEBUG_ERROR("calloc: failed in %s\n", __func__);
 			return false;
 		}
+		/* Store where the DBGMCU CR is on this part */
 		priv_storage->dbgmcu_config_taddr = dbgmcu_config;
-		/* Get the current value of the debug config register (and store it for later) */
-		priv_storage->dbgmcu_config = target_mem32_read32(target, dbgmcu_config);
 		target->target_storage = priv_storage;
 
 		target->attach = stm32f1_attach;
@@ -235,20 +233,46 @@ static bool stm32f1_configure_dbgmcu(target_s *const target, const target_addr32
 	/* Figure out which style of DBGMCU we're working with */
 	if (dbgmcu_config_taddr == STM32F0_DBGMCU_CONFIG) {
 		/* Now we have a stable debug environment, make sure the WDTs can't bonk the processor out from under us */
-		target_mem32_write32(
-			target, STM32F0_DBGMCU_APB1FREEZE, STM32F0_DBGMCU_APB1FREEZE_IWDG | STM32F0_DBGMCU_APB1FREEZE_WWDG);
+		target_mem32_write32(target, STM32F0_DBGMCU_APB1FREEZE,
+			target_mem32_read32(target, STM32F0_DBGMCU_APB1FREEZE) | STM32F0_DBGMCU_APB1FREEZE_IWDG |
+				STM32F0_DBGMCU_APB1FREEZE_WWDG);
 		/* Then Reconfigure the config register to prevent WFI/WFE from cutting debug access */
-		target_mem32_write32(
-			target, STM32F0_DBGMCU_CONFIG, STM32F0_DBGMCU_CONFIG_DBG_STANDBY | STM32F0_DBGMCU_CONFIG_DBG_STOP);
+		target_mem32_write32(target, STM32F0_DBGMCU_CONFIG,
+			target_mem32_read32(target, STM32F0_DBGMCU_CONFIG) | STM32F0_DBGMCU_CONFIG_DBG_STANDBY |
+				STM32F0_DBGMCU_CONFIG_DBG_STOP);
 	} else
 		/*
 		 * Reconfigure the DBGMCU to prevent the WDTs causing havoc and problems
 		 * and WFI/WFE from cutting debug access too
 		 */
 		target_mem32_write32(target, dbgmcu_config_taddr,
-			priv->dbgmcu_config | STM32F1_DBGMCU_CONFIG_WWDG_STOP | STM32F1_DBGMCU_CONFIG_IWDG_STOP |
-				STM32F1_DBGMCU_CONFIG_DBG_STANDBY | STM32F1_DBGMCU_CONFIG_DBG_STOP | STM32F1_DBGMCU_CONFIG_DBG_SLEEP);
+			target_mem32_read32(target, dbgmcu_config_taddr) | STM32F1_DBGMCU_CONFIG_WWDG_STOP |
+				STM32F1_DBGMCU_CONFIG_IWDG_STOP | STM32F1_DBGMCU_CONFIG_DBG_STANDBY | STM32F1_DBGMCU_CONFIG_DBG_STOP |
+				STM32F1_DBGMCU_CONFIG_DBG_SLEEP);
 	return true;
+}
+
+static void stm32f1_deconfigure_dbgmcu(target_s *const target)
+{
+	const stm32f1_priv_s *const priv = (stm32f1_priv_s *)target->target_storage;
+	const target_addr32_t dbgmcu_config_taddr = priv->dbgmcu_config_taddr;
+	/* Figure out which style of DBGMCU we're working with */
+	if (dbgmcu_config_taddr == STM32F0_DBGMCU_CONFIG) {
+		/* Power down the debug machinery we enabled before */
+		target_mem32_write32(target, STM32F0_DBGMCU_CONFIG,
+			target_mem32_read32(target, STM32F0_DBGMCU_CONFIG) &
+				~(STM32F0_DBGMCU_CONFIG_DBG_STANDBY | STM32F0_DBGMCU_CONFIG_DBG_STOP));
+		/* Re-allow the WDTs to bonk the processor regardless of debug */
+		target_mem32_write32(target, STM32F0_DBGMCU_APB1FREEZE,
+			target_mem32_read32(target, STM32F0_DBGMCU_APB1FREEZE) &
+				~(STM32F0_DBGMCU_APB1FREEZE_IWDG | STM32F0_DBGMCU_APB1FREEZE_WWDG));
+	} else
+		/* Put back the configuration of the DBGMCU to power down the debug machinery fully */
+		target_mem32_write32(target, dbgmcu_config_taddr,
+			target_mem32_read32(target, dbgmcu_config_taddr) &
+				~(STM32F1_DBGMCU_CONFIG_WWDG_STOP | STM32F1_DBGMCU_CONFIG_IWDG_STOP |
+					STM32F1_DBGMCU_CONFIG_DBG_STANDBY | STM32F1_DBGMCU_CONFIG_DBG_STOP |
+					STM32F1_DBGMCU_CONFIG_DBG_SLEEP));
 }
 
 #ifdef CONFIG_GD32
@@ -363,9 +387,8 @@ static bool gd32vf1_attach(target_s *const target)
 
 static void gd32vf1_detach(target_s *const target)
 {
-	const stm32f1_priv_s *const priv = (stm32f1_priv_s *)target->target_storage;
-	/* Reverse all changes to the DBGMCU config register */
-	target_mem32_write32(target, priv->dbgmcu_config_taddr, priv->dbgmcu_config);
+	/* Reverse all changes to the DBGMCU config registers */
+	stm32f1_deconfigure_dbgmcu(target);
 	/* Now defer to the normal Cortex-M detach routine to complete the detach */
 	riscv_detach(target);
 }
@@ -1000,9 +1023,8 @@ static bool stm32f1_attach(target_s *const target)
 
 static void stm32f1_detach(target_s *const target)
 {
-	const stm32f1_priv_s *const priv = (stm32f1_priv_s *)target->target_storage;
-	/* Reverse all changes to the DBGMCU config register */
-	target_mem32_write32(target, priv->dbgmcu_config_taddr, priv->dbgmcu_config);
+	/* Reverse all changes to the DBGMCU config registers */
+	stm32f1_deconfigure_dbgmcu(target);
 	/* Now defer to the normal Cortex-M detach routine to complete the detach */
 	cortexm_detach(target);
 }
