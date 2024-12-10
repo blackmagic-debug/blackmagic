@@ -114,14 +114,13 @@ target_controller_s gdb_controller = {
 };
 
 /* execute gdb remote command stored in 'pbuf'. returns immediately, no busy waiting. */
-int32_t gdb_main_loop(target_controller_s *const tc, const char *const pbuf, const size_t pbuf_size, const size_t size,
-	const bool in_syscall)
+int32_t gdb_main_loop(target_controller_s *const tc, const gdb_packet_s *const packet, const bool in_syscall)
 {
 	bool single_step = false;
 	const char *rest = NULL;
 
 	/* GDB protocol main loop */
-	switch (pbuf[0]) {
+	switch (packet->data[0]) {
 	/* Implementation of these is mandatory! */
 	case 'g': { /* 'g': Read general registers */
 		ERROR_IF_NO_TARGET();
@@ -138,8 +137,8 @@ int32_t gdb_main_loop(target_controller_s *const tc, const char *const pbuf, con
 	case 'm': { /* 'm addr,len': Read len bytes from addr */
 		uint32_t addr, len;
 		ERROR_IF_NO_TARGET();
-		if (read_hex32(pbuf + 1, &rest, &addr, ',') && read_hex32(rest, NULL, &len, READ_HEX_NO_FOLLOW)) {
-			if (len > pbuf_size / 2U) {
+		if (read_hex32(packet->data + 1, &rest, &addr, ',') && read_hex32(rest, NULL, &len, READ_HEX_NO_FOLLOW)) {
+			if (len > packet->size / 2U) {
 				gdb_putpacketz("E02");
 				break;
 			}
@@ -158,7 +157,7 @@ int32_t gdb_main_loop(target_controller_s *const tc, const char *const pbuf, con
 		const size_t reg_size = target_regs_size(cur_target);
 		if (reg_size) {
 			uint8_t *gp_regs = alloca(reg_size);
-			unhexify(gp_regs, &pbuf[1], reg_size);
+			unhexify(gp_regs, packet->data + 1, reg_size);
 			target_regs_write(cur_target, gp_regs);
 		}
 		gdb_putpacketz("OK");
@@ -168,8 +167,8 @@ int32_t gdb_main_loop(target_controller_s *const tc, const char *const pbuf, con
 		uint32_t addr = 0;
 		uint32_t len = 0;
 		ERROR_IF_NO_TARGET();
-		if (read_hex32(pbuf + 1, &rest, &addr, ',') && read_hex32(rest, &rest, &len, ':')) {
-			if (len > (size - (size_t)(rest - pbuf)) / 2U) {
+		if (read_hex32(packet->data + 1, &rest, &addr, ',') && read_hex32(rest, &rest, &len, ':')) {
+			if (len > (packet->size - (size_t)(rest - packet->data)) / 2U) {
 				gdb_putpacketz("E02");
 				break;
 			}
@@ -194,7 +193,7 @@ int32_t gdb_main_loop(target_controller_s *const tc, const char *const pbuf, con
 		 * Since we don't care about the operation just skip it but check there is at least 3 characters
 		 * in the packet.
 		 */
-		if (size >= 3 && read_hex32(pbuf + 2, NULL, &thread_id, READ_HEX_NO_FOLLOW) && thread_id <= 1)
+		if (packet->size >= 3 && read_hex32(packet->data + 2, NULL, &thread_id, READ_HEX_NO_FOLLOW) && thread_id <= 1)
 			gdb_putpacketz("OK");
 		else
 			gdb_putpacketz("E01");
@@ -238,7 +237,7 @@ int32_t gdb_main_loop(target_controller_s *const tc, const char *const pbuf, con
 		ERROR_IF_NO_TARGET();
 		if (cur_target->reg_read) {
 			uint32_t reg;
-			if (!read_hex32(pbuf + 1, NULL, &reg, READ_HEX_NO_FOLLOW))
+			if (!read_hex32(packet->data + 1, NULL, &reg, READ_HEX_NO_FOLLOW))
 				gdb_putpacketz("EFF");
 			else {
 				uint8_t val[8];
@@ -266,7 +265,7 @@ int32_t gdb_main_loop(target_controller_s *const tc, const char *const pbuf, con
 			uint32_t reg;
 
 			/* Extract the register number and check that '=' follows it */
-			if (!read_hex32(pbuf + 1, &rest, &reg, '=')) {
+			if (!read_hex32(packet->data + 1, &rest, &reg, '=')) {
 				gdb_putpacketz("EFF");
 				break;
 			}
@@ -292,9 +291,9 @@ int32_t gdb_main_loop(target_controller_s *const tc, const char *const pbuf, con
 	case 'F': /* Semihosting call finished */
 		if (in_syscall)
 			/* Trim off the 'F' before calling semihosting_reply so that it doesn't have to skip it */
-			return semihosting_reply(tc, pbuf + 1);
+			return semihosting_reply(tc, packet->data + 1);
 		else {
-			DEBUG_GDB("*** F packet when not in syscall! '%s'\n", pbuf);
+			DEBUG_GDB("*** F packet when not in syscall! '%s'\n", packet->data);
 			gdb_putpacketz("");
 		}
 		break;
@@ -320,7 +319,7 @@ int32_t gdb_main_loop(target_controller_s *const tc, const char *const pbuf, con
 			last_target = cur_target;
 			cur_target = NULL;
 		}
-		if (pbuf[0] == 'D')
+		if (packet->data[0] == 'D')
 			gdb_putpacketz("OK");
 		gdb_set_noackmode(false);
 		break;
@@ -345,8 +344,8 @@ int32_t gdb_main_loop(target_controller_s *const tc, const char *const pbuf, con
 		target_addr32_t addr;
 		uint32_t len;
 		ERROR_IF_NO_TARGET();
-		if (read_hex32(pbuf + 1, &rest, &addr, ',') && read_hex32(rest, &rest, &len, ':')) {
-			if (len > (size - (size_t)(rest - pbuf))) {
+		if (read_hex32(packet->data + 1, &rest, &addr, ',') && read_hex32(rest, &rest, &len, ':')) {
+			if (len > (packet->size - (size_t)(rest - packet->data))) {
 				gdb_putpacketz("E02");
 				break;
 			}
@@ -362,22 +361,22 @@ int32_t gdb_main_loop(target_controller_s *const tc, const char *const pbuf, con
 
 	case 'Q': /* General set packet */
 	case 'q': /* General query packet */
-		handle_q_packet(pbuf, size);
+		handle_q_packet(packet->data, packet->size);
 		break;
 
 	case 'v': /* Verbose command packet */
-		handle_v_packet(pbuf, size);
+		handle_v_packet(packet->data, packet->size);
 		break;
 
 	/* These packet implement hardware break-/watchpoints */
 	case 'Z': /* Z type,addr,len: Set breakpoint packet */
 	case 'z': /* z type,addr,len: Clear breakpoint packet */
 		ERROR_IF_NO_TARGET();
-		handle_z_packet(pbuf, size);
+		handle_z_packet(packet->data, packet->size);
 		break;
 
 	default: /* Packet not implemented */
-		DEBUG_GDB("*** Unsupported packet: %s\n", pbuf);
+		DEBUG_GDB("*** Unsupported packet: %s\n", packet->data);
 		gdb_putpacketz("");
 	}
 	return 0;
@@ -884,9 +883,9 @@ static void handle_z_packet(const char *const packet, const size_t plen)
 		gdb_putpacketz("E01");
 }
 
-void gdb_main(const char *const pbuf, const size_t pbuf_size, const size_t size)
+void gdb_main(const gdb_packet_s *const packet)
 {
-	gdb_main_loop(&gdb_controller, pbuf, pbuf_size, size, false);
+	gdb_main_loop(&gdb_controller, packet, false);
 }
 
 /* Request halt on the active target */

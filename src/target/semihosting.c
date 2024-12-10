@@ -175,20 +175,19 @@ int32_t semihosting_reply(target_controller_s *const tc, const char *const pbuf)
 
 static int32_t semihosting_get_gdb_response(target_controller_s *const tc)
 {
-	char *const packet_buffer = gdb_packet_buffer();
 	/* Still have to service normal 'X'/'m'-packets */
 	while (true) {
 		/* Get back the next packet to process and have the main loop handle it */
-		const size_t size = gdb_getpacket(packet_buffer, GDB_PACKET_BUFFER_SIZE);
+		const gdb_packet_s *const packet = gdb_packet_receive();
 		/* If this was an escape packet (or gdb_if reports link closed), fail the call */
-		if (size == 1U && packet_buffer[0] == '\x04')
+		if (packet->size == 1U && packet->data[0] == '\x04')
 			return -1;
 		/*
 		 * If this was an F-packet, we are done waiting.
 		 * Check before gdb_main_loop as it may clobber the packet buffer.
 		 */
-		const bool done = packet_buffer[0] == 'F';
-		const int32_t result = gdb_main_loop(tc, packet_buffer, GDB_PACKET_BUFFER_SIZE, size, true);
+		const bool done = packet->data[0] == 'F';
+		const int32_t result = gdb_main_loop(tc, packet, true);
 		if (done)
 			return result;
 	}
