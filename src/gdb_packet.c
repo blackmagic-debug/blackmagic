@@ -53,7 +53,7 @@ void gdb_set_noackmode(bool enable)
 	 * If we were asked after the connection was terminated, sending the ack will have no effect.
 	 */
 	if (!enable && noackmode)
-		gdb_if_putchar(GDB_PACKET_ACK, 1U);
+		gdb_if_putchar(GDB_PACKET_ACK, true);
 
 	/* Log only changes */
 	if (noackmode != enable)
@@ -209,7 +209,7 @@ size_t gdb_getpacket(char *const packet, const size_t size)
 				rx_checksum |= unhex_digit(rx_char); /* BITWISE OR lower nibble with upper nibble */
 
 				/* (N)Acknowledge packet */
-				gdb_if_putchar(rx_checksum == checksum ? GDB_PACKET_ACK : GDB_PACKET_NACK, 1U);
+				gdb_if_putchar(rx_checksum == checksum ? GDB_PACKET_ACK : GDB_PACKET_NACK, true);
 			}
 
 			if (noackmode || rx_checksum == checksum) {
@@ -255,11 +255,11 @@ static void gdb_next_char(const char value, uint8_t *const csum)
 		DEBUG_GDB("\\x%02X", (uint8_t)value);
 	if (value == GDB_PACKET_START || value == GDB_PACKET_END || value == GDB_PACKET_ESCAPE ||
 		value == GDB_PACKET_RUNLENGTH_START) {
-		gdb_if_putchar(GDB_PACKET_ESCAPE, 0);
-		gdb_if_putchar((char)((uint8_t)value ^ GDB_PACKET_ESCAPE_XOR), 0);
+		gdb_if_putchar(GDB_PACKET_ESCAPE, false);
+		gdb_if_putchar((char)((uint8_t)value ^ GDB_PACKET_ESCAPE_XOR), false);
 		*csum += GDB_PACKET_ESCAPE + ((uint8_t)value ^ GDB_PACKET_ESCAPE_XOR);
 	} else {
-		gdb_if_putchar(value, 0);
+		gdb_if_putchar(value, false);
 		*csum += value;
 	}
 }
@@ -272,17 +272,17 @@ void gdb_putpacket2(const char *const packet1, const size_t size1, const char *c
 	do {
 		DEBUG_GDB("%s: ", __func__);
 		uint8_t csum = 0;
-		gdb_if_putchar(GDB_PACKET_START, 0);
+		gdb_if_putchar(GDB_PACKET_START, false);
 
 		for (size_t i = 0; i < size1; ++i)
 			gdb_next_char(packet1[i], &csum);
 		for (size_t i = 0; i < size2; ++i)
 			gdb_next_char(packet2[i], &csum);
 
-		gdb_if_putchar(GDB_PACKET_END, 0);
+		gdb_if_putchar(GDB_PACKET_END, false);
 		snprintf(xmit_csum, sizeof(xmit_csum), "%02X", csum);
-		gdb_if_putchar(xmit_csum[0], 0);
-		gdb_if_putchar(xmit_csum[1], 1);
+		gdb_if_putchar(xmit_csum[0], false);
+		gdb_if_putchar(xmit_csum[1], true);
 		DEBUG_GDB("\n");
 	} while (!noackmode && gdb_if_getchar_to(2000) != GDB_PACKET_ACK && tries++ < 3U);
 }
@@ -295,13 +295,13 @@ void gdb_putpacket(const char *const packet, const size_t size)
 	do {
 		DEBUG_GDB("%s: ", __func__);
 		uint8_t csum = 0;
-		gdb_if_putchar(GDB_PACKET_START, 0);
+		gdb_if_putchar(GDB_PACKET_START, false);
 		for (size_t i = 0; i < size; ++i)
 			gdb_next_char(packet[i], &csum);
-		gdb_if_putchar(GDB_PACKET_END, 0);
+		gdb_if_putchar(GDB_PACKET_END, false);
 		snprintf(xmit_csum, sizeof(xmit_csum), "%02X", csum);
-		gdb_if_putchar(xmit_csum[0], 0);
-		gdb_if_putchar(xmit_csum[1], 1);
+		gdb_if_putchar(xmit_csum[0], false);
+		gdb_if_putchar(xmit_csum[1], true);
 		DEBUG_GDB("\n");
 	} while (!noackmode && gdb_if_getchar_to(2000) != GDB_PACKET_ACK && tries++ < 3U);
 }
@@ -312,13 +312,13 @@ void gdb_put_notification(const char *const packet, const size_t size)
 
 	DEBUG_GDB("%s: ", __func__);
 	uint8_t csum = 0;
-	gdb_if_putchar(GDB_PACKET_NOTIFICATION_START, 0);
+	gdb_if_putchar(GDB_PACKET_NOTIFICATION_START, false);
 	for (size_t i = 0; i < size; ++i)
 		gdb_next_char(packet[i], &csum);
-	gdb_if_putchar(GDB_PACKET_END, 0);
+	gdb_if_putchar(GDB_PACKET_END, false);
 	snprintf(xmit_csum, sizeof(xmit_csum), "%02X", csum);
-	gdb_if_putchar(xmit_csum[0], 0);
-	gdb_if_putchar(xmit_csum[1], 1);
+	gdb_if_putchar(xmit_csum[0], false);
+	gdb_if_putchar(xmit_csum[1], true);
 	DEBUG_GDB("\n");
 }
 
