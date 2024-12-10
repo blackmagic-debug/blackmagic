@@ -247,78 +247,125 @@ size_t gdb_getpacket(char *const packet, const size_t size)
 	}
 }
 
-static void gdb_next_char(const char value, uint8_t *const csum)
+static inline bool gdb_get_ack(const uint32_t timeout)
 {
+	/* Return true early if NoAckMode is enabled */
+	if (noackmode)
+		return true;
+
+	/* Wait for ACK/NACK */
+	return gdb_if_getchar_to(timeout) == GDB_PACKET_ACK;
+}
+
+static inline void gdb_putchar(const char value, uint8_t *const csum)
+{
+	/* Print the character to the debug console */
 	if (value >= ' ' && value < '\x7f')
 		DEBUG_GDB("%c", value);
 	else
 		DEBUG_GDB("\\x%02X", (uint8_t)value);
+
+	/* Add to checksum */
+	if (csum != NULL)
+		*csum += value;
+
+	/* Send the character to the GDB interface */
+	gdb_if_putchar(value, false);
+}
+
+static inline void gdb_putchar_escaped(const char value, uint8_t *const csum)
+{
+	/* Escape reserved characters */
 	if (value == GDB_PACKET_START || value == GDB_PACKET_END || value == GDB_PACKET_ESCAPE ||
 		value == GDB_PACKET_RUNLENGTH_START) {
-		gdb_if_putchar(GDB_PACKET_ESCAPE, false);
-		gdb_if_putchar((char)((uint8_t)value ^ GDB_PACKET_ESCAPE_XOR), false);
-		*csum += GDB_PACKET_ESCAPE + ((uint8_t)value ^ GDB_PACKET_ESCAPE_XOR);
+		gdb_putchar(GDB_PACKET_ESCAPE, csum);
+		gdb_putchar((char)((uint8_t)value ^ GDB_PACKET_ESCAPE_XOR), csum);
 	} else {
-		gdb_if_putchar(value, false);
-		*csum += value;
+		gdb_putchar(value, csum);
 	}
 }
 
-void gdb_putpacket2(const char *const packet1, const size_t size1, const char *const packet2, const size_t size2)
+static inline void gdb_putchar_hex(const char value, uint8_t *const csum)
 {
-	char xmit_csum[3];
-	size_t tries = 0;
-
-	do {
-		DEBUG_GDB("%s: ", __func__);
-		uint8_t csum = 0;
-		gdb_if_putchar(GDB_PACKET_START, false);
-
-		for (size_t i = 0; i < size1; ++i)
-			gdb_next_char(packet1[i], &csum);
-		for (size_t i = 0; i < size2; ++i)
-			gdb_next_char(packet2[i], &csum);
-
-		gdb_if_putchar(GDB_PACKET_END, false);
-		snprintf(xmit_csum, sizeof(xmit_csum), "%02X", csum);
-		gdb_if_putchar(xmit_csum[0], false);
-		gdb_if_putchar(xmit_csum[1], true);
-		DEBUG_GDB("\n");
-	} while (!noackmode && gdb_if_getchar_to(2000) != GDB_PACKET_ACK && tries++ < 3U);
+	/* Hex characters don't need to be escaped as no hex digit is a reserved character */
+	gdb_putchar(hex_digit(value >> 4U), csum);
+	gdb_putchar(hex_digit(value & 0xffU), csum);
 }
 
-void gdb_putpacket(const char *const packet, const size_t size)
+void gdb_putpacket(const char *const preamble, const size_t preamble_size, const char *const data,
+	const size_t data_size, const bool hexify)
 {
-	char xmit_csum[3];
-	size_t tries = 0;
-
-	do {
+	for (size_t attempt = 0U; attempt < GDB_PACKET_RETRIES; attempt++) {
+		/* Start debug print packet */
 		DEBUG_GDB("%s: ", __func__);
-		uint8_t csum = 0;
-		gdb_if_putchar(GDB_PACKET_START, false);
-		for (size_t i = 0; i < size; ++i)
-			gdb_next_char(packet[i], &csum);
+
+		uint8_t csum = 0; /* Checksum of packet data */
+
+		/* Write start of packet */
+		gdb_putchar(GDB_PACKET_START, NULL);
+
+		/*
+		 * Write packet preamble if present
+		 * The preamble in the context of GDB packets is nothing more than regular data
+		 * The distinction in this function is made for convenience as many packets have a constant
+		 * value at the start of the packet data, followed by variable data which may need transformation
+		 */
+		if (preamble != NULL) {
+			for (size_t i = 0; i < preamble_size; ++i)
+				gdb_putchar_escaped(preamble[i], &csum);
+		}
+
+		/* Write packet data, transforming if needed */
+		if (data != NULL) {
+			if (hexify) {
+				for (size_t i = 0; i < data_size; ++i)
+					gdb_putchar_hex(data[i], &csum);
+			} else {
+				for (size_t i = 0; i < data_size; ++i)
+					gdb_putchar_escaped(data[i], &csum);
+			}
+		}
+
+		/* Write end of packet */
 		gdb_if_putchar(GDB_PACKET_END, false);
-		snprintf(xmit_csum, sizeof(xmit_csum), "%02X", csum);
-		gdb_if_putchar(xmit_csum[0], false);
-		gdb_if_putchar(xmit_csum[1], true);
+
+		/* Write checksum and flush the buffer */
+		gdb_putchar_hex(csum, NULL);
+		gdb_if_flush();
+
+		/* Terminate debug print packet */
 		DEBUG_GDB("\n");
-	} while (!noackmode && gdb_if_getchar_to(2000) != GDB_PACKET_ACK && tries++ < 3U);
+
+		/* Wait for ACK/NACK  */
+		if (gdb_get_ack(2000U))
+			break;
+	}
 }
 
-void gdb_put_notification(const char *const packet, const size_t size)
+void gdb_put_notification(const char *const data, const size_t size)
 {
-	char xmit_csum[3];
-
+	/* Start debug print packet */
 	DEBUG_GDB("%s: ", __func__);
-	uint8_t csum = 0;
+
+	uint8_t csum = 0; /* Checksum of notification data */
+
+	/* Write start of notification */
 	gdb_if_putchar(GDB_PACKET_NOTIFICATION_START, false);
-	for (size_t i = 0; i < size; ++i)
-		gdb_next_char(packet[i], &csum);
+
+	/* Write notification data */
+	if (data != NULL) {
+		for (size_t i = 0; i < size; i++)
+			gdb_putchar_escaped(data[i], &csum);
+	}
+
+	/* Write end of notification */
 	gdb_if_putchar(GDB_PACKET_END, false);
-	snprintf(xmit_csum, sizeof(xmit_csum), "%02X", csum);
-	gdb_if_putchar(xmit_csum[0], false);
-	gdb_if_putchar(xmit_csum[1], true);
+
+	/* Write checksum and flush the buffer */
+	gdb_putchar_hex(csum, NULL);
+	gdb_if_flush();
+
+	/* Terminate debug print packet */
 	DEBUG_GDB("\n");
 }
 
@@ -333,22 +380,25 @@ void gdb_putpacket_f(const char *const fmt, ...)
 		/* Heap exhaustion. Report with puts() elsewhere. */
 		DEBUG_ERROR("gdb_putpacket_f: vasprintf failed\n");
 	} else {
-		gdb_putpacket(buf, size);
+		gdb_putpacket(NULL, 0, buf, size, false);
 		free(buf);
 	}
 	va_end(ap);
 }
 
-void gdb_out(const char *const buf)
+void gdb_out(const char *const str)
 {
-	const size_t buf_len = strlen(buf);
-	char *hexdata = calloc(1, 2U * buf_len + 1U);
-	if (!hexdata)
-		return;
-
-	hexify(hexdata, buf, buf_len);
-	gdb_putpacket2("O", 1, hexdata, 2U * buf_len);
-	free(hexdata);
+	/**
+     * Program console output packet
+     * See https://sourceware.org/gdb/current/onlinedocs/gdb.html/Stop-Reply-Packets.html#Stop-Reply-Packets
+     * 
+     * Format; ‘O XX…’
+     * ‘XX…’ is hex encoding of ASCII data, to be written as the program’s console output.
+     * 
+     * Can happen at any time while the program is running and the debugger should continue to wait for ‘W’, ‘T’, etc.
+     * This reply is not permitted in non-stop mode.
+     */
+	gdb_putpacket("O", 1U, str, strnlen(str, GDB_OUT_PACKET_MAX_SIZE), true);
 }
 
 void gdb_voutf(const char *const fmt, va_list ap)
