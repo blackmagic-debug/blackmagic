@@ -83,9 +83,9 @@ target_s *last_target;
 bool gdb_target_running = false;
 static bool gdb_needs_detach_notify = false;
 
-static void handle_q_packet(char *packet, size_t len);
-static void handle_v_packet(char *packet, size_t len);
-static void handle_z_packet(char *packet, size_t len);
+static void handle_q_packet(const char *packet, size_t len);
+static void handle_v_packet(const char *packet, size_t len);
+static void handle_z_packet(const char *packet, size_t len);
 static void handle_kill_target(void);
 
 static void gdb_target_destroy_callback(target_controller_s *tc, target_s *t)
@@ -114,7 +114,8 @@ target_controller_s gdb_controller = {
 };
 
 /* execute gdb remote command stored in 'pbuf'. returns immediately, no busy waiting. */
-int32_t gdb_main_loop(target_controller_s *tc, char *pbuf, size_t pbuf_size, size_t size, bool in_syscall)
+int32_t gdb_main_loop(target_controller_s *const tc, const char *const pbuf, const size_t pbuf_size, const size_t size,
+	const bool in_syscall)
 {
 	bool single_step = false;
 	const char *rest = NULL;
@@ -382,7 +383,7 @@ int32_t gdb_main_loop(target_controller_s *tc, char *pbuf, size_t pbuf_size, siz
 	return 0;
 }
 
-static bool exec_command(char *packet, const size_t length, const cmd_executer_s *exec)
+static bool exec_command(const char *const packet, const size_t length, const cmd_executer_s *exec)
 {
 	while (exec->cmd_prefix) {
 		const size_t prefix_length = strlen(exec->cmd_prefix);
@@ -605,7 +606,7 @@ static void handle_kill_target(void)
 	}
 }
 
-static void handle_q_packet(char *packet, const size_t length)
+static void handle_q_packet(const char *const packet, const size_t length)
 {
 	if (exec_command(packet, length, q_commands))
 		return;
@@ -613,7 +614,7 @@ static void handle_q_packet(char *packet, const size_t length)
 	gdb_putpacketz("");
 }
 
-static void exec_v_attach(const char *packet, const size_t length)
+static void exec_v_attach(const char *const packet, const size_t length)
 {
 	(void)length;
 
@@ -839,7 +840,7 @@ static const cmd_executer_s v_commands[] = {
 	{NULL, NULL},
 };
 
-static void handle_v_packet(char *packet, const size_t plen)
+static void handle_v_packet(const char *const packet, const size_t plen)
 {
 	if (exec_command(packet, plen, v_commands))
 		return;
@@ -853,7 +854,7 @@ static void handle_v_packet(char *packet, const size_t plen)
 	gdb_putpacketz("");
 }
 
-static void handle_z_packet(char *packet, const size_t plen)
+static void handle_z_packet(const char *const packet, const size_t plen)
 {
 	(void)plen;
 
@@ -883,7 +884,7 @@ static void handle_z_packet(char *packet, const size_t plen)
 		gdb_putpacketz("E01");
 }
 
-void gdb_main(char *pbuf, size_t pbuf_size, size_t size)
+void gdb_main(const char *const pbuf, const size_t pbuf_size, const size_t size)
 {
 	gdb_main_loop(&gdb_controller, pbuf, pbuf_size, size, false);
 }

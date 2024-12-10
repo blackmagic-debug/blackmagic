@@ -127,7 +127,7 @@ const char *const semihosting_names[] = {
 static semihosting_errno_e semihosting_errno(void);
 #endif
 
-int32_t semihosting_reply(target_controller_s *const tc, char *const pbuf)
+int32_t semihosting_reply(target_controller_s *const tc, const char *const pbuf)
 {
 	/*
 	 * File-I/O Remote Protocol Extension

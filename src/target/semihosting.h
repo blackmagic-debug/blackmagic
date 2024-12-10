@@ -28,6 +28,6 @@
 extern uint32_t semihosting_wallclock_epoch;
 
 int32_t semihosting_request(target_s *target, uint32_t syscall, uint32_t r1);
-int32_t semihosting_reply(target_controller_s *tc, char *packet);
+int32_t semihosting_reply(target_controller_s *tc, const char *packet);
 
 #endif /* TARGET_SEMIHOSTING_H */

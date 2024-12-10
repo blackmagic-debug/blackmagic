@@ -27,8 +27,8 @@ extern bool gdb_target_running;
 extern target_s *cur_target;
 
 void gdb_poll_target(void);
-void gdb_main(char *pbuf, size_t pbuf_size, size_t size);
-int32_t gdb_main_loop(target_controller_s *tc, char *pbuf, size_t pbuf_size, size_t size, bool in_syscall);
+void gdb_main(const char *pbuf, size_t pbuf_size, size_t size);
+int32_t gdb_main_loop(target_controller_s *tc, const char *pbuf, size_t pbuf_size, size_t size, bool in_syscall);
 char *gdb_packet_buffer(void);
 
 #endif /* INCLUDE_GDB_MAIN_H */
