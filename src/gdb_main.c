@@ -83,9 +83,9 @@ target_s *last_target;
 bool gdb_target_running = false;
 static bool gdb_needs_detach_notify = false;
 
-static void handle_q_packet(char *packet, size_t len);
-static void handle_v_packet(char *packet, size_t len);
-static void handle_z_packet(char *packet, size_t len);
+static void handle_q_packet(const char *packet, size_t len);
+static void handle_v_packet(const char *packet, size_t len);
+static void handle_z_packet(const char *packet, size_t len);
 static void handle_kill_target(void);
 
 static void gdb_target_destroy_callback(target_controller_s *tc, target_s *t)
@@ -114,13 +114,13 @@ target_controller_s gdb_controller = {
 };
 
 /* execute gdb remote command stored in 'pbuf'. returns immediately, no busy waiting. */
-int32_t gdb_main_loop(target_controller_s *tc, char *pbuf, size_t pbuf_size, size_t size, bool in_syscall)
+int32_t gdb_main_loop(target_controller_s *const tc, const gdb_packet_s *const packet, const bool in_syscall)
 {
 	bool single_step = false;
 	const char *rest = NULL;
 
 	/* GDB protocol main loop */
-	switch (pbuf[0]) {
+	switch (packet->data[0]) {
 	/* Implementation of these is mandatory! */
 	case 'g': { /* 'g': Read general registers */
 		ERROR_IF_NO_TARGET();
@@ -128,7 +128,7 @@ int32_t gdb_main_loop(target_controller_s *tc, char *pbuf, size_t pbuf_size, siz
 		if (reg_size) {
 			uint8_t *gp_regs = alloca(reg_size);
 			target_regs_read(cur_target, gp_regs);
-			gdb_putpacket(hexify(pbuf, gp_regs, reg_size), reg_size * 2U);
+			gdb_putpacketx(gp_regs, reg_size);
 		} else {
 			gdb_putpacketz("00");
 		}
@@ -137,8 +137,8 @@ int32_t gdb_main_loop(target_controller_s *tc, char *pbuf, size_t pbuf_size, siz
 	case 'm': { /* 'm addr,len': Read len bytes from addr */
 		uint32_t addr, len;
 		ERROR_IF_NO_TARGET();
-		if (read_hex32(pbuf + 1, &rest, &addr, ',') && read_hex32(rest, NULL, &len, READ_HEX_NO_FOLLOW)) {
-			if (len > pbuf_size / 2U) {
+		if (read_hex32(packet->data + 1, &rest, &addr, ',') && read_hex32(rest, NULL, &len, READ_HEX_NO_FOLLOW)) {
+			if (len > packet->size / 2U) {
 				gdb_putpacketz("E02");
 				break;
 			}
@@ -147,7 +147,7 @@ int32_t gdb_main_loop(target_controller_s *tc, char *pbuf, size_t pbuf_size, siz
 			if (target_mem32_read(cur_target, mem, addr, len))
 				gdb_putpacketz("E01");
 			else
-				gdb_putpacket(hexify(pbuf, mem, len), len * 2U);
+				gdb_putpacketx(mem, len);
 		} else
 			gdb_putpacketz("EFF");
 		break;
@@ -157,7 +157,7 @@ int32_t gdb_main_loop(target_controller_s *tc, char *pbuf, size_t pbuf_size, siz
 		const size_t reg_size = target_regs_size(cur_target);
 		if (reg_size) {
 			uint8_t *gp_regs = alloca(reg_size);
-			unhexify(gp_regs, &pbuf[1], reg_size);
+			unhexify(gp_regs, packet->data + 1, reg_size);
 			target_regs_write(cur_target, gp_regs);
 		}
 		gdb_putpacketz("OK");
@@ -167,8 +167,8 @@ int32_t gdb_main_loop(target_controller_s *tc, char *pbuf, size_t pbuf_size, siz
 		uint32_t addr = 0;
 		uint32_t len = 0;
 		ERROR_IF_NO_TARGET();
-		if (read_hex32(pbuf + 1, &rest, &addr, ',') && read_hex32(rest, &rest, &len, ':')) {
-			if (len > (size - (size_t)(rest - pbuf)) / 2U) {
+		if (read_hex32(packet->data + 1, &rest, &addr, ',') && read_hex32(rest, &rest, &len, ':')) {
+			if (len > (packet->size - (size_t)(rest - packet->data)) / 2U) {
 				gdb_putpacketz("E02");
 				break;
 			}
@@ -193,7 +193,7 @@ int32_t gdb_main_loop(target_controller_s *tc, char *pbuf, size_t pbuf_size, siz
 		 * Since we don't care about the operation just skip it but check there is at least 3 characters
 		 * in the packet.
 		 */
-		if (size >= 3 && read_hex32(pbuf + 2, NULL, &thread_id, READ_HEX_NO_FOLLOW) && thread_id <= 1)
+		if (packet->size >= 3 && read_hex32(packet->data + 2, NULL, &thread_id, READ_HEX_NO_FOLLOW) && thread_id <= 1)
 			gdb_putpacketz("OK");
 		else
 			gdb_putpacketz("E01");
@@ -237,13 +237,13 @@ int32_t gdb_main_loop(target_controller_s *tc, char *pbuf, size_t pbuf_size, siz
 		ERROR_IF_NO_TARGET();
 		if (cur_target->reg_read) {
 			uint32_t reg;
-			if (!read_hex32(pbuf + 1, NULL, &reg, READ_HEX_NO_FOLLOW))
+			if (!read_hex32(packet->data + 1, NULL, &reg, READ_HEX_NO_FOLLOW))
 				gdb_putpacketz("EFF");
 			else {
 				uint8_t val[8];
 				const size_t length = target_reg_read(cur_target, reg, val, sizeof(val));
 				if (length != 0)
-					gdb_putpacket(hexify(pbuf, val, length), length * 2U);
+					gdb_putpacketx(val, length);
 				else
 					gdb_putpacketz("EFF");
 			}
@@ -265,7 +265,7 @@ int32_t gdb_main_loop(target_controller_s *tc, char *pbuf, size_t pbuf_size, siz
 			uint32_t reg;
 
 			/* Extract the register number and check that '=' follows it */
-			if (!read_hex32(pbuf + 1, &rest, &reg, '=')) {
+			if (!read_hex32(packet->data + 1, &rest, &reg, '=')) {
 				gdb_putpacketz("EFF");
 				break;
 			}
@@ -291,9 +291,9 @@ int32_t gdb_main_loop(target_controller_s *tc, char *pbuf, size_t pbuf_size, siz
 	case 'F': /* Semihosting call finished */
 		if (in_syscall)
 			/* Trim off the 'F' before calling semihosting_reply so that it doesn't have to skip it */
-			return semihosting_reply(tc, pbuf + 1);
+			return semihosting_reply(tc, packet->data + 1);
 		else {
-			DEBUG_GDB("*** F packet when not in syscall! '%s'\n", pbuf);
+			DEBUG_GDB("*** F packet when not in syscall! '%s'\n", packet->data);
 			gdb_putpacketz("");
 		}
 		break;
@@ -319,7 +319,7 @@ int32_t gdb_main_loop(target_controller_s *tc, char *pbuf, size_t pbuf_size, siz
 			last_target = cur_target;
 			cur_target = NULL;
 		}
-		if (pbuf[0] == 'D')
+		if (packet->data[0] == 'D')
 			gdb_putpacketz("OK");
 		gdb_set_noackmode(false);
 		break;
@@ -344,8 +344,8 @@ int32_t gdb_main_loop(target_controller_s *tc, char *pbuf, size_t pbuf_size, siz
 		target_addr32_t addr;
 		uint32_t len;
 		ERROR_IF_NO_TARGET();
-		if (read_hex32(pbuf + 1, &rest, &addr, ',') && read_hex32(rest, &rest, &len, ':')) {
-			if (len > (size - (size_t)(rest - pbuf))) {
+		if (read_hex32(packet->data + 1, &rest, &addr, ',') && read_hex32(rest, &rest, &len, ':')) {
+			if (len > (packet->size - (size_t)(rest - packet->data))) {
 				gdb_putpacketz("E02");
 				break;
 			}
@@ -361,28 +361,28 @@ int32_t gdb_main_loop(target_controller_s *tc, char *pbuf, size_t pbuf_size, siz
 
 	case 'Q': /* General set packet */
 	case 'q': /* General query packet */
-		handle_q_packet(pbuf, size);
+		handle_q_packet(packet->data, packet->size);
 		break;
 
 	case 'v': /* Verbose command packet */
-		handle_v_packet(pbuf, size);
+		handle_v_packet(packet->data, packet->size);
 		break;
 
 	/* These packet implement hardware break-/watchpoints */
 	case 'Z': /* Z type,addr,len: Set breakpoint packet */
 	case 'z': /* z type,addr,len: Clear breakpoint packet */
 		ERROR_IF_NO_TARGET();
-		handle_z_packet(pbuf, size);
+		handle_z_packet(packet->data, packet->size);
 		break;
 
 	default: /* Packet not implemented */
-		DEBUG_GDB("*** Unsupported packet: %s\n", pbuf);
+		DEBUG_GDB("*** Unsupported packet: %s\n", packet->data);
 		gdb_putpacketz("");
 	}
 	return 0;
 }
 
-static bool exec_command(char *packet, const size_t length, const cmd_executer_s *exec)
+static bool exec_command(const char *const packet, const size_t length, const cmd_executer_s *exec)
 {
 	while (exec->cmd_prefix) {
 		const size_t prefix_length = strlen(exec->cmd_prefix);
@@ -413,9 +413,7 @@ static void exec_q_rcmd(const char *packet, const size_t length)
 		gdb_putpacketz("OK");
 	else {
 		const char *const response = "Failed\n";
-		const size_t response_length = strlen(response);
-		char *pbuf = alloca(response_length * 2 + 1);
-		gdb_putpacket(hexify(pbuf, response, response_length), 2 * response_length);
+		gdb_putpacketx(response, strlen(response));
 	}
 }
 
@@ -441,7 +439,7 @@ static void handle_q_string_reply(const char *reply, const char *param)
 	size_t output_len = reply_length - addr;
 	if (output_len > len)
 		output_len = len;
-	gdb_putpacket2("m", 1U, reply + addr, output_len);
+	gdb_putpacket("m", 1U, reply + addr, output_len, false);
 }
 
 static void exec_q_supported(const char *packet, const size_t length)
@@ -607,15 +605,15 @@ static void handle_kill_target(void)
 	}
 }
 
-static void handle_q_packet(char *packet, const size_t length)
+static void handle_q_packet(const char *const packet, const size_t length)
 {
 	if (exec_command(packet, length, q_commands))
 		return;
 	DEBUG_GDB("*** Unsupported packet: %s\n", packet);
-	gdb_putpacket("", 0);
+	gdb_putpacketz("");
 }
 
-static void exec_v_attach(const char *packet, const size_t length)
+static void exec_v_attach(const char *const packet, const size_t length)
 {
 	(void)length;
 
@@ -640,7 +638,7 @@ static void exec_v_attach(const char *packet, const size_t length)
 
 	} else {
 		DEBUG_GDB("*** Unsupported packet: %s\n", packet);
-		gdb_putpacket("", 0);
+		gdb_putpacketz("");
 	}
 }
 
@@ -841,7 +839,7 @@ static const cmd_executer_s v_commands[] = {
 	{NULL, NULL},
 };
 
-static void handle_v_packet(char *packet, const size_t plen)
+static void handle_v_packet(const char *const packet, const size_t plen)
 {
 	if (exec_command(packet, plen, v_commands))
 		return;
@@ -855,7 +853,7 @@ static void handle_v_packet(char *packet, const size_t plen)
 	gdb_putpacketz("");
 }
 
-static void handle_z_packet(char *packet, const size_t plen)
+static void handle_z_packet(const char *const packet, const size_t plen)
 {
 	(void)plen;
 
@@ -885,9 +883,9 @@ static void handle_z_packet(char *packet, const size_t plen)
 		gdb_putpacketz("E01");
 }
 
-void gdb_main(char *pbuf, size_t pbuf_size, size_t size)
+void gdb_main(const gdb_packet_s *const packet)
 {
-	gdb_main_loop(&gdb_controller, pbuf, pbuf_size, size, false);
+	gdb_main_loop(&gdb_controller, packet, false);
 }
 
 /* Request halt on the active target */

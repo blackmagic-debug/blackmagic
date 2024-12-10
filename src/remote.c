@@ -52,20 +52,20 @@ static void remote_send_buf(const void *const buffer, const size_t len)
 	const uint8_t *const data = (const uint8_t *)buffer;
 	for (size_t offset = 0; offset < len; ++offset) {
 		hexify(hex, data + offset, 1U);
-		gdb_if_putchar(hex[0], 0);
-		gdb_if_putchar(hex[1], 0);
+		gdb_if_putchar(hex[0], false);
+		gdb_if_putchar(hex[1], false);
 	}
 }
 
 /* Send a response with some data following */
 static void remote_respond_buf(const char response_code, const void *const buffer, const size_t len)
 {
-	gdb_if_putchar(REMOTE_RESP, 0);
-	gdb_if_putchar(response_code, 0);
+	gdb_if_putchar(REMOTE_RESP, false);
+	gdb_if_putchar(response_code, false);
 
 	remote_send_buf(buffer, len);
 
-	gdb_if_putchar(REMOTE_EOM, 1);
+	gdb_if_putchar(REMOTE_EOM, true);
 }
 
 /* Send a response with a simple result code parameter */
@@ -98,18 +98,18 @@ static void remote_respond(const char response_code, uint64_t param)
 /* Send a response with a string following */
 static void remote_respond_string(const char response_code, const char *const str)
 {
-	gdb_if_putchar(REMOTE_RESP, 0);
-	gdb_if_putchar(response_code, 0);
+	gdb_if_putchar(REMOTE_RESP, false);
+	gdb_if_putchar(response_code, false);
 	const size_t str_length = strlen(str);
 	for (size_t idx = 0; idx < str_length; ++idx) {
 		const char chr = str[idx];
 		/* Replace problematic/illegal characters with a space to not disturb the protocol */
 		if (chr == '$' || chr == REMOTE_SOM || chr == REMOTE_EOM)
-			gdb_if_putchar(' ', 0);
+			gdb_if_putchar(' ', false);
 		else
-			gdb_if_putchar(chr, 0);
+			gdb_if_putchar(chr, false);
 	}
-	gdb_if_putchar(REMOTE_EOM, 1);
+	gdb_if_putchar(REMOTE_EOM, true);
 }
 
 /*
