@@ -34,20 +34,31 @@ static uint32_t count_in = 0;
 static volatile char buffer_out[16 * CDCACM_PACKET_SIZE];
 static char buffer_in[CDCACM_PACKET_SIZE];
 
-void gdb_if_putchar(char c, int flush)
+void gdb_if_putchar(const char c, const bool flush)
 {
 	buffer_in[count_in++] = c;
-	if (flush || count_in == CDCACM_PACKET_SIZE) {
-		/* Refuse to send if USB isn't configured, and
-		 * don't bother if nobody's listening */
-		if (usb_get_config() != 1 || !gdb_serial_get_dtr()) {
-			count_in = 0;
-			return;
-		}
-		while (usbd_ep_write_packet(usbdev, CDCACM_GDB_ENDPOINT, buffer_in, count_in) <= 0)
-			continue;
-		count_in = 0;
+	if (flush || count_in == CDCACM_PACKET_SIZE)
+		gdb_if_flush(flush);
+}
+
+void gdb_if_flush(const bool force)
+{
+	(void)force;
+
+	/* Flush only if there is data to flush */
+	if (count_in == 0U)
+		return;
+
+	/* Refuse to send if USB isn't configured, and don't bother if nobody's listening */
+	if (usb_get_config() != 1U || !gdb_serial_get_dtr()) {
+		count_in = 0U;
+		return;
 	}
+	while (usbd_ep_write_packet(usbdev, CDCACM_GDB_ENDPOINT, buffer_in, count_in) <= 0U)
+		continue;
+
+	/* Reset the buffer */
+	count_in = 0U;
 }
 
 void gdb_usb_out_cb(usbd_device *dev, uint8_t ep)

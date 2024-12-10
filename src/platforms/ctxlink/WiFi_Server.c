@@ -1475,17 +1475,28 @@ void send_swo_trace_data(uint8_t *buffer, uint8_t length)
 		do_awo_trace_send();
 }
 
-void wifi_gdb_putchar(uint8_t ch, int flush)
+void wifi_gdb_putchar(const uint8_t ch, const bool flush)
 {
 	send_buffer[send_count++] = ch;
-	if (flush != 0 || send_count >= sizeof(send_buffer)) {
-		// TODO is this check required now, looks like a debug test left in place?
-		int len = (int)send_count;
-		if (len <= 0)
-			DEBUG_WARN("WiFi_putchar bad count\r\n");
-		send_count = 0;
-		DEBUG_WARN("Wifi_putchar %c\r\n", send_buffer[0]);
-		send(gdb_client_socket, &send_buffer[0], len, 0);
-		memset(&send_buffer[0], 0x00, sizeof(send_buffer));
-	}
+	if (flush || send_count >= sizeof(send_buffer))
+		wifi_gdb_flush(flush);
+}
+
+void wifi_gdb_flush(const bool force)
+{
+	(void)force;
+
+	/* Flush only if there is data to flush */
+	if (send_count == 0U)
+		return;
+
+	// TODO is this check required now, looks like a debug test left in place?
+	if (send_count <= 0U)
+		DEBUG_WARN("WiFi_putchar bad count\r\n");
+	DEBUG_WARN("Wifi_putchar %c\r\n", send_buffer[0]);
+	send(gdb_client_socket, &send_buffer[0], send_count, 0);
+
+	/* Reset the buffer */
+	send_count = 0U;
+	memset(&send_buffer[0], 0x00, sizeof(send_buffer));
 }

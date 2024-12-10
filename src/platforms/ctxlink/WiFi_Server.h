@@ -39,7 +39,8 @@ void wifi_setup_swo_trace_server(void);
 bool is_swo_trace_client_connected(void);
 void send_swo_trace_data(uint8_t *buffer, uint8_t length);
 
-void wifi_gdb_putchar(uint8_t ch, int flush);
+void wifi_gdb_putchar(uint8_t ch, bool flush);
+void wifi_gdb_flush(bool force);
 bool wifi_got_client(void);
 uint8_t wifi_get_next(void);
 uint8_t wifi_get_next_to(uint32_t timeout);

@@ -350,13 +350,32 @@ char gdb_if_getchar_to(uint32_t timeout)
 	return -1;
 }
 
-void gdb_if_putchar(char c, int flush)
+void gdb_if_putchar(const char c, const bool flush)
 {
 	if (gdb_if_conn == INVALID_SOCKET)
 		return;
 	gdb_buffer[gdb_buffer_used++] = c;
-	if (flush || gdb_buffer_used == GDB_BUFFER_LEN) {
-		send(gdb_if_conn, gdb_buffer, gdb_buffer_used, 0);
-		gdb_buffer_used = 0;
+	if (flush || gdb_buffer_used == GDB_BUFFER_LEN)
+		gdb_if_flush(flush);
+}
+
+void gdb_if_flush(const bool force)
+{
+	(void)force;
+
+	/* Flush only if there is data to flush */
+	if (gdb_buffer_used == 0U)
+		return;
+
+	/* Don't bother if the connection is not valid */
+	if (gdb_if_conn == INVALID_SOCKET) {
+		gdb_buffer_used = 0U;
+		return;
 	}
+
+	/* Send the data */
+	send(gdb_if_conn, gdb_buffer, gdb_buffer_used, 0);
+
+	/* Reset the buffer */
+	gdb_buffer_used = 0;
 }
