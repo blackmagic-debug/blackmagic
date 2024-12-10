@@ -128,7 +128,7 @@ int32_t gdb_main_loop(target_controller_s *tc, char *pbuf, size_t pbuf_size, siz
 		if (reg_size) {
 			uint8_t *gp_regs = alloca(reg_size);
 			target_regs_read(cur_target, gp_regs);
-			gdb_putpacket(hexify(pbuf, gp_regs, reg_size), reg_size * 2U);
+			gdb_putpacketx(gp_regs, reg_size);
 		} else {
 			gdb_putpacketz("00");
 		}
@@ -147,7 +147,7 @@ int32_t gdb_main_loop(target_controller_s *tc, char *pbuf, size_t pbuf_size, siz
 			if (target_mem32_read(cur_target, mem, addr, len))
 				gdb_putpacketz("E01");
 			else
-				gdb_putpacket(hexify(pbuf, mem, len), len * 2U);
+				gdb_putpacketx(mem, len);
 		} else
 			gdb_putpacketz("EFF");
 		break;
@@ -243,7 +243,7 @@ int32_t gdb_main_loop(target_controller_s *tc, char *pbuf, size_t pbuf_size, siz
 				uint8_t val[8];
 				const size_t length = target_reg_read(cur_target, reg, val, sizeof(val));
 				if (length != 0)
-					gdb_putpacket(hexify(pbuf, val, length), length * 2U);
+					gdb_putpacketx(val, length);
 				else
 					gdb_putpacketz("EFF");
 			}
@@ -413,9 +413,7 @@ static void exec_q_rcmd(const char *packet, const size_t length)
 		gdb_putpacketz("OK");
 	else {
 		const char *const response = "Failed\n";
-		const size_t response_length = strlen(response);
-		char *pbuf = alloca(response_length * 2 + 1);
-		gdb_putpacket(hexify(pbuf, response, response_length), 2 * response_length);
+		gdb_putpacketx(response, strlen(response));
 	}
 }
 
@@ -441,7 +439,7 @@ static void handle_q_string_reply(const char *reply, const char *param)
 	size_t output_len = reply_length - addr;
 	if (output_len > len)
 		output_len = len;
-	gdb_putpacket2("m", 1U, reply + addr, output_len);
+	gdb_putpacket("m", 1U, reply + addr, output_len, false);
 }
 
 static void exec_q_supported(const char *packet, const size_t length)
@@ -612,7 +610,7 @@ static void handle_q_packet(char *packet, const size_t length)
 	if (exec_command(packet, length, q_commands))
 		return;
 	DEBUG_GDB("*** Unsupported packet: %s\n", packet);
-	gdb_putpacket("", 0);
+	gdb_putpacketz("");
 }
 
 static void exec_v_attach(const char *packet, const size_t length)
@@ -640,7 +638,7 @@ static void exec_v_attach(const char *packet, const size_t length)
 
 	} else {
 		DEBUG_GDB("*** Unsupported packet: %s\n", packet);
-		gdb_putpacket("", 0);
+		gdb_putpacketz("");
 	}
 }
 
