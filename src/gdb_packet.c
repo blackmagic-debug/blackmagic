@@ -330,7 +330,7 @@ void gdb_packet_send(const gdb_packet_s *const packet)
 	}
 }
 
-void gdb_putpacket(const char *preamble, size_t preamble_size, const char *data, size_t data_size, bool hex_data)
+void gdb_put_packet(const char *preamble, size_t preamble_size, const char *data, size_t data_size, bool hex_data)
 {
 	/*
 	 * Create a packet using the internal packet buffer
@@ -376,7 +376,7 @@ void gdb_putpacket(const char *preamble, size_t preamble_size, const char *data,
 	gdb_packet_send(&packet_buffer);
 }
 
-void gdb_putpacket_f(const char *const fmt, ...)
+void gdb_putpacket_str_f(const char *const fmt, ...)
 {
 	/*
 	 * Create a packet using the internal packet buffer
@@ -404,7 +404,7 @@ void gdb_putpacket_f(const char *const fmt, ...)
 	gdb_packet_send(&packet_buffer);
 }
 
-void gdb_put_notificationz(const char *const str)
+void gdb_put_notification_str(const char *const str)
 {
 	/*
 	 * Create a packet using the internal packet buffer
@@ -432,7 +432,7 @@ void gdb_out(const char *const str)
      * Can happen at any time while the program is running and the debugger should continue to wait for ‘W’, ‘T’, etc.
      * This reply is not permitted in non-stop mode.
      */
-	gdb_putpacket("O", 1U, str, strnlen(str, GDB_OUT_PACKET_MAX_SIZE), true);
+	gdb_put_packet("O", 1U, str, strnlen(str, GDB_OUT_PACKET_MAX_SIZE), true);
 }
 
 void gdb_voutf(const char *const fmt, va_list ap)

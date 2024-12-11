@@ -211,7 +211,7 @@ static int32_t semihosting_remote_read(
 		return result;
 	}
 #endif
-	gdb_putpacket_f("Fread,%08X,%08" PRIX32 ",%08" PRIX32, (unsigned)fd, buf_taddr, count);
+	gdb_putpacket_str_f("Fread,%08X,%08" PRIX32 ",%08" PRIX32, (unsigned)fd, buf_taddr, count);
 	return semihosting_get_gdb_response(target->tc);
 }
 
@@ -254,7 +254,7 @@ static int32_t semihosting_remote_write(
 		return (int32_t)count;
 	}
 
-	gdb_putpacket_f("Fwrite,%08X,%08" PRIX32 ",%08" PRIX32, (unsigned)fd, buf_taddr, count);
+	gdb_putpacket_str_f("Fwrite,%08X,%08" PRIX32 ",%08" PRIX32, (unsigned)fd, buf_taddr, count);
 	return semihosting_get_gdb_response(target->tc);
 }
 
@@ -407,7 +407,7 @@ int32_t semihosting_open(target_s *const target, const semihosting_s *const requ
 	free((void *)file_name);
 #pragma GCC diagnostic pop
 #else
-	gdb_putpacket_f("Fopen,%08" PRIX32 "/%08" PRIX32 ",%08" PRIX32 ",%08X", file_name_taddr, file_name_length + 1U,
+	gdb_putpacket_str_f("Fopen,%08" PRIX32 "/%08" PRIX32 ",%08" PRIX32 ",%08X", file_name_taddr, file_name_length + 1U,
 		open_mode, 0644U);
 	const int32_t result = semihosting_get_gdb_response(target->tc);
 #endif
@@ -431,7 +431,7 @@ int32_t semihosting_close(target_s *const target, const semihosting_s *const req
 	target->tc->gdb_errno = semihosting_errno();
 	return result;
 #else
-	gdb_putpacket_f("Fclose,%08X", (unsigned)fd);
+	gdb_putpacket_str_f("Fclose,%08X", (unsigned)fd);
 	return semihosting_get_gdb_response(target->tc);
 #endif
 }
@@ -517,7 +517,7 @@ int32_t semihosting_isatty(target_s *const target, const semihosting_s *const re
 		return result;
 	}
 #endif
-	gdb_putpacket_f("Fisatty,%08X", (unsigned)fd);
+	gdb_putpacket_str_f("Fisatty,%08X", (unsigned)fd);
 	return semihosting_get_gdb_response(target->tc);
 }
 
@@ -540,7 +540,7 @@ int32_t semihosting_seek(target_s *const target, const semihosting_s *const requ
 		return result;
 	}
 #endif
-	gdb_putpacket_f("Flseek,%08X,%08lX,%08X", (unsigned)fd, (unsigned long)offset, SEEK_MODE_SET);
+	gdb_putpacket_str_f("Flseek,%08X,%08lX,%08X", (unsigned)fd, (unsigned long)offset, SEEK_MODE_SET);
 	return semihosting_get_gdb_response(target->tc) == offset ? 0 : -1;
 }
 
@@ -567,7 +567,7 @@ int32_t semihosting_rename(target_s *const target, const semihosting_s *const re
 #pragma GCC diagnostic pop
 	return result;
 #else
-	gdb_putpacket_f("Frename,%08" PRIX32 "/%08" PRIX32 ",%08" PRIX32 "/%08" PRIX32, request->params[0],
+	gdb_putpacket_str_f("Frename,%08" PRIX32 "/%08" PRIX32 ",%08" PRIX32 "/%08" PRIX32, request->params[0],
 		request->params[1] + 1U, request->params[2], request->params[3] + 1U);
 	return semihosting_get_gdb_response(target->tc);
 #endif
@@ -587,7 +587,7 @@ int32_t semihosting_remove(target_s *const target, const semihosting_s *const re
 #pragma GCC diagnostic pop
 	return result;
 #else
-	gdb_putpacket_f("Funlink,%08" PRIX32 "/%08" PRIX32, request->params[0], request->params[1] + 1U);
+	gdb_putpacket_str_f("Funlink,%08" PRIX32 "/%08" PRIX32, request->params[0], request->params[1] + 1U);
 	return semihosting_get_gdb_response(target->tc);
 #endif
 }
@@ -595,7 +595,7 @@ int32_t semihosting_remove(target_s *const target, const semihosting_s *const re
 int32_t semihosting_system(target_s *const target, const semihosting_s *const request)
 {
 	/* NB: Before use first enable system calls with the following gdb command: 'set remote system-call-allowed 1' */
-	gdb_putpacket_f("Fsystem,%08" PRIX32 "/%08" PRIX32, request->params[0], request->params[1] + 1U);
+	gdb_putpacket_str_f("Fsystem,%08" PRIX32 "/%08" PRIX32, request->params[0], request->params[1] + 1U);
 	return semihosting_get_gdb_response(target->tc);
 }
 
@@ -629,7 +629,7 @@ int32_t semihosting_file_length(target_s *const target, const semihosting_s *con
 	target->tc->semihosting_buffer_ptr = file_stat;
 	target->tc->semihosting_buffer_len = sizeof(file_stat);
 	/* Call GDB and ask for the file descriptor's stat info */
-	gdb_putpacket_f("Ffstat,%X,%08" PRIX32, (unsigned)fd, target->ram->start);
+	gdb_putpacket_str_f("Ffstat,%X,%08" PRIX32, (unsigned)fd, target->ram->start);
 	const int32_t stat_result = semihosting_get_gdb_response(target->tc);
 	target->target_options &= ~TOPT_IN_SEMIHOSTING_SYSCALL;
 	/* Extract the lower half of the file size from the buffer */
@@ -650,7 +650,7 @@ semihosting_time_s semihosting_get_time(target_s *const target)
 	target->tc->semihosting_buffer_ptr = time_value;
 	target->tc->semihosting_buffer_len = sizeof(time_value);
 	/* Call GDB and ask for the current time using gettimeofday() */
-	gdb_putpacket_f("Fgettimeofday,%08" PRIX32 ",%08" PRIX32, target->ram->start, (target_addr_t)NULL);
+	gdb_putpacket_str_f("Fgettimeofday,%08" PRIX32 ",%08" PRIX32, target->ram->start, (target_addr_t)NULL);
 	const int32_t result = semihosting_get_gdb_response(target->tc);
 	target->target_options &= ~TOPT_IN_SEMIHOSTING_SYSCALL;
 	/* Check if the GDB remote gettimeofday() failed */

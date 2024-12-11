@@ -67,10 +67,10 @@ typedef enum gdb_signal {
 	GDB_SIGLOST = 29,
 } gdb_signal_e;
 
-#define ERROR_IF_NO_TARGET()   \
-	if (!cur_target) {         \
-		gdb_putpacketz("EFF"); \
-		break;                 \
+#define ERROR_IF_NO_TARGET()         \
+	if (!cur_target) {               \
+		gdb_put_packet_error(0xffU); \
+		break;                       \
 	}
 
 typedef struct cmd_executer {
@@ -92,7 +92,7 @@ static void gdb_target_destroy_callback(target_controller_s *tc, target_s *t)
 {
 	(void)tc;
 	if (cur_target == t) {
-		gdb_put_notificationz("%Stop:W00");
+		gdb_put_notification_str("%Stop:W00");
 		gdb_out("You are now detached from the previous target.\n");
 		cur_target = NULL;
 		gdb_needs_detach_notify = true;
@@ -128,9 +128,9 @@ int32_t gdb_main_loop(target_controller_s *const tc, const gdb_packet_s *const p
 		if (reg_size) {
 			uint8_t *gp_regs = alloca(reg_size);
 			target_regs_read(cur_target, gp_regs);
-			gdb_putpacketx(gp_regs, reg_size);
+			gdb_put_packet_hex(gp_regs, reg_size);
 		} else {
-			gdb_putpacketz("00");
+			gdb_put_packet_str("00");
 		}
 		break;
 	}
@@ -139,17 +139,17 @@ int32_t gdb_main_loop(target_controller_s *const tc, const gdb_packet_s *const p
 		ERROR_IF_NO_TARGET();
 		if (read_hex32(packet->data + 1, &rest, &addr, ',') && read_hex32(rest, NULL, &len, READ_HEX_NO_FOLLOW)) {
 			if (len > packet->size / 2U) {
-				gdb_putpacketz("E02");
+				gdb_put_packet_error(2U);
 				break;
 			}
 			DEBUG_GDB("m packet: addr = %" PRIx32 ", len = %" PRIx32 "\n", addr, len);
 			uint8_t *mem = alloca(len);
 			if (target_mem32_read(cur_target, mem, addr, len))
-				gdb_putpacketz("E01");
+				gdb_put_packet_error(1U);
 			else
-				gdb_putpacketx(mem, len);
+				gdb_put_packet_hex(mem, len);
 		} else
-			gdb_putpacketz("EFF");
+			gdb_put_packet_error(0xffU);
 		break;
 	}
 	case 'G': { /* 'G XX': Write general registers */
@@ -160,7 +160,7 @@ int32_t gdb_main_loop(target_controller_s *const tc, const gdb_packet_s *const p
 			unhexify(gp_regs, packet->data + 1, reg_size);
 			target_regs_write(cur_target, gp_regs);
 		}
-		gdb_putpacketz("OK");
+		gdb_put_packet_ok();
 		break;
 	}
 	case 'M': { /* 'M addr,len:XX': Write len bytes to addr */
@@ -169,18 +169,18 @@ int32_t gdb_main_loop(target_controller_s *const tc, const gdb_packet_s *const p
 		ERROR_IF_NO_TARGET();
 		if (read_hex32(packet->data + 1, &rest, &addr, ',') && read_hex32(rest, &rest, &len, ':')) {
 			if (len > (packet->size - (size_t)(rest - packet->data)) / 2U) {
-				gdb_putpacketz("E02");
+				gdb_put_packet_error(2U);
 				break;
 			}
 			DEBUG_GDB("M packet: addr = %" PRIx32 ", len = %" PRIx32 "\n", addr, len);
 			uint8_t *mem = alloca(len);
 			unhexify(mem, rest, len);
 			if (target_mem32_write(cur_target, addr, mem, len))
-				gdb_putpacketz("E01");
+				gdb_put_packet_error(1U);
 			else
-				gdb_putpacketz("OK");
+				gdb_put_packet_ok();
 		} else
-			gdb_putpacketz("EFF");
+			gdb_put_packet_error(0xffU);
 		break;
 	}
 	/*
@@ -194,9 +194,9 @@ int32_t gdb_main_loop(target_controller_s *const tc, const gdb_packet_s *const p
 		 * in the packet.
 		 */
 		if (packet->size >= 3 && read_hex32(packet->data + 2, NULL, &thread_id, READ_HEX_NO_FOLLOW) && thread_id <= 1)
-			gdb_putpacketz("OK");
+			gdb_put_packet_ok();
 		else
-			gdb_putpacketz("E01");
+			gdb_put_packet_error(1U);
 		break;
 	}
 	case 's': /* 's [addr]': Single step [start at addr] */
@@ -205,7 +205,7 @@ int32_t gdb_main_loop(target_controller_s *const tc, const gdb_packet_s *const p
 	case 'c': /* 'c [addr]': Continue [at addr] */
 	case 'C': /* 'C sig[;addr]': Continue with signal [at addr] */
 		if (!cur_target) {
-			gdb_putpacketz("X1D");
+			gdb_put_packet_str("X1D");
 			break;
 		}
 
@@ -218,7 +218,7 @@ int32_t gdb_main_loop(target_controller_s *const tc, const gdb_packet_s *const p
 		 * but GDB doesn't work without it.
 		 */
 		if (!cur_target) {
-			gdb_putpacketz("W00"); /* Report "target exited" if no target */
+			gdb_put_packet_str("W00"); /* Report "target exited" if no target */
 			break;
 		}
 
@@ -238,17 +238,17 @@ int32_t gdb_main_loop(target_controller_s *const tc, const gdb_packet_s *const p
 		if (cur_target->reg_read) {
 			uint32_t reg;
 			if (!read_hex32(packet->data + 1, NULL, &reg, READ_HEX_NO_FOLLOW))
-				gdb_putpacketz("EFF");
+				gdb_put_packet_error(0xffU);
 			else {
 				uint8_t val[8];
 				const size_t length = target_reg_read(cur_target, reg, val, sizeof(val));
 				if (length != 0)
-					gdb_putpacketx(val, length);
+					gdb_put_packet_hex(val, length);
 				else
-					gdb_putpacketz("EFF");
+					gdb_put_packet_error(0xffU);
 			}
 		} else {
-			gdb_putpacketz("00");
+			gdb_put_packet_str("00");
 		}
 		break;
 	}
@@ -266,24 +266,24 @@ int32_t gdb_main_loop(target_controller_s *const tc, const gdb_packet_s *const p
 
 			/* Extract the register number and check that '=' follows it */
 			if (!read_hex32(packet->data + 1, &rest, &reg, '=')) {
-				gdb_putpacketz("EFF");
+				gdb_put_packet_error(0xffU);
 				break;
 			}
 			const size_t value_length = strlen(rest) / 2U;
 			/* If the value is bigger than 4 bytes report error */
 			if (value_length > 4U) {
-				gdb_putpacketz("EFF");
+				gdb_put_packet_error(0xffU);
 				break;
 			}
 			uint8_t value[4] = {0};
 			unhexify(value, rest, value_length);
 			/* Finally, write the converted value to the target */
 			if (target_reg_write(cur_target, reg, value, sizeof(value)) != 0)
-				gdb_putpacketz("OK");
+				gdb_put_packet_ok();
 			else
-				gdb_putpacketz("EFF");
+				gdb_put_packet_error(0xffU);
 		} else {
-			gdb_putpacketz("OK");
+			gdb_put_packet_ok();
 		}
 		break;
 	}
@@ -294,7 +294,7 @@ int32_t gdb_main_loop(target_controller_s *const tc, const gdb_packet_s *const p
 			return semihosting_reply(tc, packet->data + 1);
 		else {
 			DEBUG_GDB("*** F packet when not in syscall! '%s'\n", packet->data);
-			gdb_putpacketz("");
+			gdb_put_packet_empty();
 		}
 		break;
 
@@ -304,7 +304,7 @@ int32_t gdb_main_loop(target_controller_s *const tc, const gdb_packet_s *const p
 		 * protocol anyway, but GDB will never send us a 'R'
 		 * packet unless we answer 'OK' here.
 		 */
-		gdb_putpacketz("OK");
+		gdb_put_packet_ok();
 		break;
 
 	case '\x04':
@@ -320,7 +320,7 @@ int32_t gdb_main_loop(target_controller_s *const tc, const gdb_packet_s *const p
 			cur_target = NULL;
 		}
 		if (packet->data[0] == 'D')
-			gdb_putpacketz("OK");
+			gdb_put_packet_ok();
 		gdb_set_noackmode(false);
 		break;
 
@@ -346,16 +346,16 @@ int32_t gdb_main_loop(target_controller_s *const tc, const gdb_packet_s *const p
 		ERROR_IF_NO_TARGET();
 		if (read_hex32(packet->data + 1, &rest, &addr, ',') && read_hex32(rest, &rest, &len, ':')) {
 			if (len > (packet->size - (size_t)(rest - packet->data))) {
-				gdb_putpacketz("E02");
+				gdb_put_packet_error(2U);
 				break;
 			}
 			DEBUG_GDB("X packet: addr = %" PRIx32 ", len = %" PRIx32 "\n", addr, len);
 			if (target_mem32_write(cur_target, addr, rest, len))
-				gdb_putpacketz("E01");
+				gdb_put_packet_error(1U);
 			else
-				gdb_putpacketz("OK");
+				gdb_put_packet_ok();
 		} else
-			gdb_putpacketz("EFF");
+			gdb_put_packet_error(0xffU);
 		break;
 	}
 
@@ -377,7 +377,7 @@ int32_t gdb_main_loop(target_controller_s *const tc, const gdb_packet_s *const p
 
 	default: /* Packet not implemented */
 		DEBUG_GDB("*** Unsupported packet: %s\n", packet->data);
-		gdb_putpacketz("");
+		gdb_put_packet_empty();
 	}
 	return 0;
 }
@@ -408,12 +408,12 @@ static void exec_q_rcmd(const char *packet, const size_t length)
 
 	const int result = command_process(cur_target, data);
 	if (result < 0)
-		gdb_putpacketz("");
+		gdb_put_packet_empty();
 	else if (result == 0)
-		gdb_putpacketz("OK");
+		gdb_put_packet_ok();
 	else {
 		const char *const response = "Failed\n";
-		gdb_putpacketx(response, strlen(response));
+		gdb_put_packet_hex(response, strlen(response));
 	}
 }
 
@@ -425,21 +425,21 @@ static void handle_q_string_reply(const char *reply, const char *param)
 	const char *rest = NULL;
 
 	if (!read_hex32(param, &rest, &addr, ',') || !read_hex32(rest, NULL, &len, READ_HEX_NO_FOLLOW)) {
-		gdb_putpacketz("E01");
+		gdb_put_packet_error(1U);
 		return;
 	}
 	if (addr > reply_length) {
-		gdb_putpacketz("E01");
+		gdb_put_packet_error(1U);
 		return;
 	}
 	if (addr == reply_length) {
-		gdb_putpacketz("l");
+		gdb_put_packet_str("l");
 		return;
 	}
 	size_t output_len = reply_length - addr;
 	if (output_len > len)
 		output_len = len;
-	gdb_putpacket("m", 1U, reply + addr, output_len, false);
+	gdb_put_packet("m", 1U, reply + addr, output_len, false);
 }
 
 static void exec_q_supported(const char *packet, const size_t length)
@@ -453,8 +453,8 @@ static void exec_q_supported(const char *packet, const size_t length)
 	 */
 	gdb_set_noackmode(false);
 
-	gdb_putpacket_f("PacketSize=%X;qXfer:memory-map:read+;qXfer:features:read+;"
-					"vContSupported+" GDB_QSUPPORTED_NOACKMODE,
+	gdb_putpacket_str_f("PacketSize=%X;qXfer:memory-map:read+;qXfer:features:read+;"
+						"vContSupported+" GDB_QSUPPORTED_NOACKMODE,
 		GDB_PACKET_BUFFER_SIZE);
 }
 
@@ -467,7 +467,7 @@ static void exec_q_memory_map(const char *packet, const size_t length)
 	if (!target)
 		target = last_target;
 	if (!target) {
-		gdb_putpacketz("E01");
+		gdb_put_packet_error(1U);
 		return;
 	}
 	char buf[1024];
@@ -484,7 +484,7 @@ static void exec_q_feature_read(const char *packet, const size_t length)
 	if (!target)
 		target = last_target;
 	if (!target) {
-		gdb_putpacketz("E01");
+		gdb_put_packet_error(1U);
 		return;
 	}
 	const char *const description = target_regs_description(target);
@@ -503,14 +503,14 @@ static void exec_q_crc(const char *packet, const size_t length)
 	const char *rest = NULL;
 	if (read_hex32(packet, &rest, &addr, ',') && read_hex32(rest, NULL, &addr_length, READ_HEX_NO_FOLLOW)) {
 		if (!cur_target) {
-			gdb_putpacketz("E01");
+			gdb_put_packet_error(1U);
 			return;
 		}
 		uint32_t crc;
 		if (!bmd_crc32(cur_target, &crc, addr, addr_length))
-			gdb_putpacketz("E03");
+			gdb_put_packet_error(3U);
 		else
-			gdb_putpacket_f("C%" PRIx32, crc);
+			gdb_putpacket_str_f("C%" PRIx32, crc);
 	}
 }
 
@@ -522,7 +522,7 @@ static void exec_q_c(const char *packet, const size_t length)
 {
 	(void)packet;
 	(void)length;
-	gdb_putpacketz("QC1");
+	gdb_put_packet_str("QC1");
 }
 
 /*
@@ -536,9 +536,9 @@ static void exec_q_thread_info(const char *packet, const size_t length)
 {
 	(void)length;
 	if (packet[-11] == 'f' && cur_target)
-		gdb_putpacketz("m1");
+		gdb_put_packet_str("m1");
 	else
-		gdb_putpacketz("l");
+		gdb_put_packet_str("l");
 }
 
 /*
@@ -552,7 +552,7 @@ static void exec_q_noackmode(const char *packet, const size_t length)
 	(void)packet;
 	(void)length;
 	gdb_set_noackmode(true);
-	gdb_putpacketz("OK");
+	gdb_put_packet_ok();
 }
 
 /*
@@ -573,12 +573,12 @@ static void exec_q_attached(const char *packet, const size_t length)
 {
 	/* If the packet has a trailing PID, or we're not attached to anything, error response */
 	if ((length && packet[0] == ':') || !cur_target)
-		gdb_putpacketz("E01");
+		gdb_put_packet_error(1U);
 	/* Check if the target tollerates being reset */
 	else if (cur_target->target_options & TOPT_INHIBIT_NRST)
-		gdb_putpacketz("1"); /* It does not. */
+		gdb_put_packet_str("1"); /* It does not. */
 	else
-		gdb_putpacketz("0"); /* It does tolelrate reset */
+		gdb_put_packet_str("0"); /* It does tolelrate reset */
 }
 
 static const cmd_executer_s q_commands[] = {
@@ -610,7 +610,7 @@ static void handle_q_packet(const gdb_packet_s *const packet)
 	if (exec_command(packet->data, packet->size, q_commands))
 		return;
 	DEBUG_GDB("*** Unsupported packet: %s\n", packet->data);
-	gdb_putpacketz("");
+	gdb_put_packet_empty();
 }
 
 static void exec_v_attach(const char *const packet, const size_t length)
@@ -632,13 +632,13 @@ static void exec_v_attach(const char *const packet, const size_t length)
 			 * https://sourceware.org/pipermail/gdb-patches/2022-April/188058.html
 			 * https://sourceware.org/pipermail/gdb-patches/2022-July/190869.html
 			 */
-			gdb_putpacket_f("T%02Xthread:1;", GDB_SIGTRAP);
+			gdb_putpacket_str_f("T%02Xthread:1;", GDB_SIGTRAP);
 		} else
-			gdb_putpacketz("E01");
+			gdb_put_packet_error(1U);
 
 	} else {
 		DEBUG_GDB("*** Unsupported packet: %s\n", packet);
-		gdb_putpacketz("");
+		gdb_put_packet_empty();
 	}
 }
 
@@ -648,7 +648,7 @@ static void exec_v_kill(const char *packet, const size_t length)
 	(void)length;
 	/* Kill the target - we don't actually care about the PID that follows "vKill;" */
 	handle_kill_target();
-	gdb_putpacketz("OK");
+	gdb_put_packet_ok();
 }
 
 static void exec_v_run(const char *packet, const size_t length)
@@ -698,7 +698,7 @@ static void exec_v_run(const char *packet, const size_t length)
 	if (cur_target) {
 		target_set_cmdline(cur_target, cmdline, offset);
 		target_reset(cur_target);
-		gdb_putpacketz("T05");
+		gdb_put_packet_str("T05");
 	} else if (last_target) {
 		cur_target = target_attach(last_target, &gdb_controller);
 
@@ -707,12 +707,12 @@ static void exec_v_run(const char *packet, const size_t length)
 			target_set_cmdline(cur_target, cmdline, offset);
 			target_reset(cur_target);
 			morse(NULL, false);
-			gdb_putpacketz("T05");
+			gdb_put_packet_str("T05");
 		} else
-			gdb_putpacketz("E01");
+			gdb_put_packet_error(1U);
 
 	} else
-		gdb_putpacketz("E01");
+		gdb_put_packet_error(1U);
 }
 
 static void exec_v_cont(const char *packet, const size_t length)
@@ -731,13 +731,13 @@ static void exec_v_cont(const char *packet, const size_t length)
 		 *
 		 * TODO: Support the 't' (stop) action needed for non-stop debug so GDB can request a halt.
 		 */
-		gdb_putpacketz("vCont;c;C;s;t");
+		gdb_put_packet_str("vCont;c;C;s;t");
 		return;
 	}
 
 	/* Otherwise it's a standard `vCont` packet, check if we're presently attached to a target */
 	if (!cur_target) {
-		gdb_putpacketz("E01");
+		gdb_put_packet_error(1U);
 		return;
 	}
 
@@ -749,7 +749,7 @@ static void exec_v_cont(const char *packet, const size_t length)
 	case 'c': /* 'c': Continue */
 	case 'C': /* 'C sig': Continue with signal */
 		if (!cur_target) {
-			gdb_putpacketz("X1D");
+			gdb_put_packet_str("X1D");
 			break;
 		}
 
@@ -773,18 +773,18 @@ static void exec_v_flash_erase(const char *packet, const size_t length)
 		/* Erase Flash Memory */
 		DEBUG_GDB("Flash Erase %08" PRIX32 " %08" PRIX32 "\n", addr, len);
 		if (!cur_target) {
-			gdb_putpacketz("EFF");
+			gdb_put_packet_error(0xffU);
 			return;
 		}
 
 		if (target_flash_erase(cur_target, addr, len))
-			gdb_putpacketz("OK");
+			gdb_put_packet_ok();
 		else {
 			target_flash_complete(cur_target);
-			gdb_putpacketz("EFF");
+			gdb_put_packet_error(0xffU);
 		}
 	} else
-		gdb_putpacketz("EFF");
+		gdb_put_packet_error(0xffU);
 }
 
 static void exec_v_flash_write(const char *packet, const size_t length)
@@ -796,13 +796,13 @@ static void exec_v_flash_write(const char *packet, const size_t length)
 		const uint32_t count = length - (size_t)(rest - packet);
 		DEBUG_GDB("Flash Write %08" PRIX32 " %08" PRIX32 "\n", addr, count);
 		if (cur_target && target_flash_write(cur_target, addr, (const uint8_t *)rest, count))
-			gdb_putpacketz("OK");
+			gdb_put_packet_ok();
 		else {
 			target_flash_complete(cur_target);
-			gdb_putpacketz("EFF");
+			gdb_put_packet_error(0xffU);
 		}
 	} else
-		gdb_putpacketz("EFF");
+		gdb_put_packet_error(0xffU);
 }
 
 static void exec_v_flash_done(const char *packet, const size_t length)
@@ -811,9 +811,9 @@ static void exec_v_flash_done(const char *packet, const size_t length)
 	(void)length;
 	/* Commit flash operations. */
 	if (target_flash_complete(cur_target))
-		gdb_putpacketz("OK");
+		gdb_put_packet_ok();
 	else
-		gdb_putpacketz("EFF");
+		gdb_put_packet_error(0xffU);
 }
 
 static void exec_v_stopped(const char *packet, const size_t length)
@@ -821,10 +821,10 @@ static void exec_v_stopped(const char *packet, const size_t length)
 	(void)packet;
 	(void)length;
 	if (gdb_needs_detach_notify) {
-		gdb_putpacketz("W00");
+		gdb_put_packet_str("W00");
 		gdb_needs_detach_notify = false;
 	} else
-		gdb_putpacketz("OK");
+		gdb_put_packet_ok();
 }
 
 static const cmd_executer_s v_commands[] = {
@@ -853,7 +853,7 @@ static void handle_v_packet(const gdb_packet_s *const packet)
 	if (strncmp(packet->data, must_reply_empty, strlen(must_reply_empty)) != 0)
 		DEBUG_GDB("*** Unsupported packet: %s\n", packet->data);
 #endif
-	gdb_putpacketz("");
+	gdb_put_packet_empty();
 }
 
 static void handle_z_packet(const gdb_packet_s *const packet)
@@ -873,15 +873,15 @@ static void handle_z_packet(const gdb_packet_s *const packet)
 
 		/* If the target handler was unable to set/clear the break/watch-point, return an error */
 		if (ret < 0)
-			gdb_putpacketz("E01");
+			gdb_put_packet_error(1U);
 		/* If the handler does not support the kind requested, return empty string */
 		else if (ret > 0)
-			gdb_putpacketz("");
+			gdb_put_packet_empty();
 		/* Otherwise let GDB know that everything went well */
 		else
-			gdb_putpacketz("OK");
+			gdb_put_packet_ok();
 	} else
-		gdb_putpacketz("E01");
+		gdb_put_packet_error(1U);
 }
 
 void gdb_main(const gdb_packet_s *const packet)
@@ -896,7 +896,7 @@ void gdb_halt_target(void)
 		target_halt_request(cur_target);
 	else
 		/* Report "target exited" if no target */
-		gdb_putpacketz("W00");
+		gdb_put_packet_str("W00");
 }
 
 /* Poll the running target to see if it halted yet */
@@ -904,7 +904,7 @@ void gdb_poll_target(void)
 {
 	if (!cur_target) {
 		/* Report "target exited" if no target */
-		gdb_putpacketz("W00");
+		gdb_put_packet_str("W00");
 		return;
 	}
 
@@ -921,19 +921,19 @@ void gdb_poll_target(void)
 	/* Translate reason to GDB signal */
 	switch (reason) {
 	case TARGET_HALT_ERROR:
-		gdb_putpacket_f("X%02X", GDB_SIGLOST);
+		gdb_putpacket_str_f("X%02X", GDB_SIGLOST);
 		morse("TARGET LOST.", true);
 		break;
 	case TARGET_HALT_REQUEST:
-		gdb_putpacket_f("T%02Xthread:1;", GDB_SIGINT);
+		gdb_putpacket_str_f("T%02Xthread:1;", GDB_SIGINT);
 		break;
 	case TARGET_HALT_WATCHPOINT:
-		gdb_putpacket_f("T%02Xwatch:%08" PRIX32 ";", GDB_SIGTRAP, watch);
+		gdb_putpacket_str_f("T%02Xwatch:%08" PRIX32 ";", GDB_SIGTRAP, watch);
 		break;
 	case TARGET_HALT_FAULT:
-		gdb_putpacket_f("T%02Xthread:1;", GDB_SIGSEGV);
+		gdb_putpacket_str_f("T%02Xthread:1;", GDB_SIGSEGV);
 		break;
 	default:
-		gdb_putpacket_f("T%02Xthread:1;", GDB_SIGTRAP);
+		gdb_putpacket_str_f("T%02Xthread:1;", GDB_SIGTRAP);
 	}
 }

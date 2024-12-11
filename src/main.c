@@ -77,7 +77,7 @@ int main(void)
 		}
 		CATCH () {
 		default:
-			gdb_putpacketz("EFF");
+			gdb_put_packet_error(0xffU);
 			target_list_free();
 			gdb_outf("Uncaught exception: %s\n", exception_frame.msg);
 			morse("TARGET LOST.", true);

@@ -77,22 +77,66 @@ void gdb_packet_send(const gdb_packet_s *packet);
 char *gdb_packet_buffer(void);
 
 /* Convenience wrappers */
-void gdb_putpacket(const char *preamble, size_t preamble_size, const char *data, size_t data_size, bool hex_data);
+void gdb_put_packet(const char *preamble, size_t preamble_size, const char *data, size_t data_size, bool hex_data);
 
-static inline void gdb_putpacketz(const char *const str)
+static inline void gdb_put_packet_empty(void)
 {
-	gdb_putpacket(str, strlen(str), NULL, 0, false);
+	/**
+	 * Empty response packet
+	 * See https://sourceware.org/gdb/current/onlinedocs/gdb.html/Standard-Replies.html#Standard-Replies
+	 * 
+	 * An empty response (raw character sequence ‘$#00’) means the command is not supported by the stub.
+	 */
+	gdb_put_packet(NULL, 0, NULL, 0, false);
 }
 
-static inline void gdb_putpacketx(const void *const data, const size_t size)
+static inline void gdb_put_packet_str(const char *const str)
 {
-	gdb_putpacket(NULL, 0, (const char *)data, size, true);
+	gdb_put_packet(str, strlen(str), NULL, 0, false);
 }
 
-void gdb_put_notificationz(const char *const str);
+static inline void gdb_put_packet_hex(const void *const data, const size_t size)
+{
+	gdb_put_packet(NULL, 0, (const char *)data, size, true);
+}
+
+static inline void gdb_put_packet_ok(void)
+{
+	/**
+	 * OK response packet
+	 * 
+	 * This is a common response to acknowledge a command was successful.
+	 */
+	gdb_put_packet_str("OK");
+}
+
+static inline void gdb_put_packet_error(const uint8_t error)
+{
+	/*
+	 * Error response packet
+	 * See https://sourceware.org/gdb/current/onlinedocs/gdb.html/Standard-Replies.html#Standard-Replies
+	 *  
+	 * Format: ‘E xx’
+	 * xx is a two-digit hexadecimal error number. 
+	 * In almost all cases, the protocol does not specify the meaning of the error numbers
+	 * GDB usually ignores the numbers, or displays them to the user without further interpretation.
+	 * 
+	 * Textual error messages send the error text instead of the error number, but this response
+	 * is not guaranteed to be understood by GDB for all requests, the GDB feature error-message
+	 * lets us know if it is supported.
+	 * 
+	 * TODO: implement the error-message GDB feature, so we can send textual error messages.
+	 * 
+	 * Format: ‘E.errtext’
+     * errtext is the textual error message, encoded in ASCII.
+	 */
+	gdb_put_packet("E", 1U, (const char *)&error, 1U, true);
+}
+
+void gdb_put_notification_str(const char *const str);
 
 /* Formatted output */
-void gdb_putpacket_f(const char *fmt, ...) GDB_FORMAT_ATTR;
+void gdb_putpacket_str_f(const char *fmt, ...) GDB_FORMAT_ATTR;
 
 void gdb_out(const char *str);
 void gdb_voutf(const char *fmt, va_list ap);
