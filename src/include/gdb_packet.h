@@ -138,6 +138,11 @@ void gdb_put_notification_str(const char *const str);
 /* Formatted output */
 void gdb_putpacket_str_f(const char *fmt, ...) GDB_FORMAT_ATTR;
 
+/**
+ * Warning: gdb_(v)out(f) functions may truncate the output string if it is too long
+ * The output string is limited by the constant GDB_OUT_PACKET_MAX_SIZE derived from
+ * GDB_PACKET_BUFFER_SIZE. By default this is 511 characters.
+ */
 void gdb_out(const char *str);
 void gdb_voutf(const char *fmt, va_list ap);
 void gdb_outf(const char *fmt, ...) GDB_FORMAT_ATTR;
