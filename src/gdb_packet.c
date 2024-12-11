@@ -71,6 +71,22 @@ void gdb_set_noackmode(bool enable)
 	noackmode = enable;
 }
 
+#ifndef DEBUG_GDB_IS_NOOP
+static void gdb_packet_debug(const char *const func, const gdb_packet_s *const packet)
+{
+	/* Log packet for debugging */
+	DEBUG_GDB("%s: ", func);
+	for (size_t i = 0; i < packet->size; i++) {
+		const char value = packet->data[i];
+		if (value >= ' ' && value < '\x7f')
+			DEBUG_GDB("%c", value);
+		else
+			DEBUG_GDB("\\x%02X", (uint8_t)value);
+	}
+	DEBUG_GDB("\n");
+}
+#endif
+
 packet_state_e consume_remote_packet(char *const packet, const size_t size)
 {
 #if CONFIG_BMDA == 0
@@ -226,16 +242,10 @@ gdb_packet_s *gdb_packet_receive(void)
 				/* Null terminate packet */
 				packet_buffer.data[packet_buffer.size] = '\0';
 
+#ifndef DEBUG_GDB_IS_NOOP
 				/* Log packet for debugging */
-				DEBUG_GDB("%s: ", __func__);
-				for (size_t j = 0; j < packet_buffer.size; j++) {
-					const char value = packet_buffer.data[j];
-					if (value >= ' ' && value < '\x7f')
-						DEBUG_GDB("%c", value);
-					else
-						DEBUG_GDB("\\x%02X", (uint8_t)value);
-				}
-				DEBUG_GDB("\n");
+				gdb_packet_debug(__func__, &packet_buffer);
+#endif
 
 				/* Return packet captured size */
 				return &packet_buffer;
@@ -269,18 +279,12 @@ static inline bool gdb_get_ack(const uint32_t timeout)
 
 static inline void gdb_putchar(const char value, uint8_t *const csum)
 {
-	/* Print the character to the debug console */
-	if (value >= ' ' && value < '\x7f')
-		DEBUG_GDB("%c", value);
-	else
-		DEBUG_GDB("\\x%02X", (uint8_t)value);
+	/* Send the character to the GDB interface */
+	gdb_if_putchar(value, false);
 
 	/* Add to checksum */
 	if (csum != NULL)
 		*csum += value;
-
-	/* Send the character to the GDB interface */
-	gdb_if_putchar(value, false);
 }
 
 static inline void gdb_putchar_escaped(const char value, uint8_t *const csum)
@@ -299,9 +303,6 @@ void gdb_packet_send(const gdb_packet_s *const packet)
 {
 	/* Attempt packet transmission up to retries */
 	for (size_t attempt = 0U; attempt < GDB_PACKET_RETRIES; attempt++) {
-		/* Start debug print packet */
-		DEBUG_GDB("%s: ", __func__);
-
 		uint8_t csum = 0; /* Checksum of packet data */
 
 		/* Write start of packet */
@@ -319,8 +320,10 @@ void gdb_packet_send(const gdb_packet_s *const packet)
 		gdb_putchar(hex_digit(csum & 0xfU), NULL);
 		gdb_if_flush();
 
-		/* Terminate debug print packet */
-		DEBUG_GDB("\n");
+#ifndef DEBUG_GDB_IS_NOOP
+		/* Log packet for debugging */
+		gdb_packet_debug(__func__, packet);
+#endif
 
 		/* Wait for ACK/NACK on standard packets */
 		if (packet->notification || gdb_get_ack(2000U))
