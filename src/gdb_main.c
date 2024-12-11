@@ -426,8 +426,8 @@ static void exec_q_rcmd(const char *packet, const size_t length)
 	else if (result == 0)
 		gdb_put_packet_ok();
 	else {
-		const char *const response = "Failed\n";
-		gdb_put_packet_hex(response, strlen(response));
+		static const char response[] = "Failed\n";
+		gdb_put_packet_hex(response, ARRAY_LENGTH(response));
 	}
 }
 
@@ -863,8 +863,8 @@ static void handle_v_packet(const gdb_packet_s *const packet)
 	 * The vMustReplyEmpty is used as a feature test to check how gdbserver handles
 	 * unknown packets, don't print an error message for it.
 	 */
-	static const char *const must_reply_empty = "vMustReplyEmpty";
-	if (strncmp(packet->data, must_reply_empty, strlen(must_reply_empty)) != 0)
+	static const char must_reply_empty[] = "vMustReplyEmpty";
+	if (strncmp(packet->data, must_reply_empty, ARRAY_LENGTH(must_reply_empty) - 1U) != 0)
 		DEBUG_GDB("*** Unsupported packet: %s\n", packet->data);
 #endif
 	gdb_put_packet_empty();
