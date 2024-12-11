@@ -130,7 +130,14 @@ int32_t gdb_main_loop(target_controller_s *const tc, const gdb_packet_s *const p
 			target_regs_read(cur_target, gp_regs);
 			gdb_put_packet_hex(gp_regs, reg_size);
 		} else {
-			gdb_put_packet_str("00");
+			/**
+			 * Register data is unavailable
+			 * See: https://sourceware.org/gdb/current/onlinedocs/gdb.html/Packets.html#read-registers-packet
+			 * 
+			 * ... the stub may also return a string of literal ‘x’ in place of the register data digits,
+			 * to indicate that the corresponding register’s value is unavailable.
+			 */
+			gdb_put_packet_str("xx");
 		}
 		break;
 	}
@@ -248,7 +255,14 @@ int32_t gdb_main_loop(target_controller_s *const tc, const gdb_packet_s *const p
 					gdb_put_packet_error(0xffU);
 			}
 		} else {
-			gdb_put_packet_str("00");
+			/**
+			 * Register data is unavailable
+			 * See: https://sourceware.org/gdb/current/onlinedocs/gdb.html/Packets.html#read-registers-packet
+			 * 
+			 * ... the stub may also return a string of literal ‘x’ in place of the register data digits,
+			 * to indicate that the corresponding register’s value is unavailable.
+			 */
+			gdb_put_packet_str("xx");
 		}
 		break;
 	}
