@@ -83,9 +83,9 @@ target_s *last_target;
 bool gdb_target_running = false;
 static bool gdb_needs_detach_notify = false;
 
-static void handle_q_packet(const char *packet, size_t len);
-static void handle_v_packet(const char *packet, size_t len);
-static void handle_z_packet(const char *packet, size_t len);
+static void handle_q_packet(const gdb_packet_s *packet);
+static void handle_v_packet(const gdb_packet_s *packet);
+static void handle_z_packet(const gdb_packet_s *packet);
 static void handle_kill_target(void);
 
 static void gdb_target_destroy_callback(target_controller_s *tc, target_s *t)
@@ -361,18 +361,18 @@ int32_t gdb_main_loop(target_controller_s *const tc, const gdb_packet_s *const p
 
 	case 'Q': /* General set packet */
 	case 'q': /* General query packet */
-		handle_q_packet(packet->data, packet->size);
+		handle_q_packet(packet);
 		break;
 
 	case 'v': /* Verbose command packet */
-		handle_v_packet(packet->data, packet->size);
+		handle_v_packet(packet);
 		break;
 
 	/* These packet implement hardware break-/watchpoints */
 	case 'Z': /* Z type,addr,len: Set breakpoint packet */
 	case 'z': /* z type,addr,len: Clear breakpoint packet */
 		ERROR_IF_NO_TARGET();
-		handle_z_packet(packet->data, packet->size);
+		handle_z_packet(packet);
 		break;
 
 	default: /* Packet not implemented */
@@ -605,11 +605,11 @@ static void handle_kill_target(void)
 	}
 }
 
-static void handle_q_packet(const char *const packet, const size_t length)
+static void handle_q_packet(const gdb_packet_s *const packet)
 {
-	if (exec_command(packet, length, q_commands))
+	if (exec_command(packet->data, packet->size, q_commands))
 		return;
-	DEBUG_GDB("*** Unsupported packet: %s\n", packet);
+	DEBUG_GDB("*** Unsupported packet: %s\n", packet->data);
 	gdb_putpacketz("");
 }
 
@@ -839,33 +839,34 @@ static const cmd_executer_s v_commands[] = {
 	{NULL, NULL},
 };
 
-static void handle_v_packet(const char *const packet, const size_t plen)
+static void handle_v_packet(const gdb_packet_s *const packet)
 {
-	if (exec_command(packet, plen, v_commands))
+	if (exec_command(packet->data, packet->size, v_commands))
 		return;
 
+#ifndef DEBUG_GDB_IS_NOOP
 	/*
 	 * The vMustReplyEmpty is used as a feature test to check how gdbserver handles
 	 * unknown packets, don't print an error message for it.
 	 */
-	if (strcmp(packet, "vMustReplyEmpty") != 0)
-		DEBUG_GDB("*** Unsupported packet: %s\n", packet);
+	static const char *const must_reply_empty = "vMustReplyEmpty";
+	if (strncmp(packet->data, must_reply_empty, strlen(must_reply_empty)) != 0)
+		DEBUG_GDB("*** Unsupported packet: %s\n", packet->data);
+#endif
 	gdb_putpacketz("");
 }
 
-static void handle_z_packet(const char *const packet, const size_t plen)
+static void handle_z_packet(const gdb_packet_s *const packet)
 {
-	(void)plen;
-
 	uint32_t type;
 	uint32_t len;
 	uint32_t addr;
 	const char *rest = NULL;
 
-	if (read_dec32(packet + 1, &rest, &type, ',') && read_hex32(rest, &rest, &addr, ',') &&
+	if (read_dec32(packet->data + 1U, &rest, &type, ',') && read_hex32(rest, &rest, &addr, ',') &&
 		read_dec32(rest, NULL, &len, READ_HEX_NO_FOLLOW)) {
 		int ret = 0;
-		if (packet[0] == 'Z')
+		if (packet->data[0] == 'Z')
 			ret = target_breakwatch_set(cur_target, type, addr, len);
 		else
 			ret = target_breakwatch_clear(cur_target, type, addr, len);
