@@ -87,6 +87,27 @@ static void gdb_packet_debug(const char *const func, const gdb_packet_s *const p
 }
 #endif
 
+static inline bool gdb_packet_is_reserved(const char character)
+{
+	/* Check if the character is a reserved GDB packet character */
+	return character == GDB_PACKET_START || character == GDB_PACKET_END || character == GDB_PACKET_ESCAPE ||
+		character == GDB_PACKET_RUNLENGTH_START;
+}
+
+static uint8_t gdb_packet_checksum(const gdb_packet_s *const packet)
+{
+	/* Calculate the checksum of the packet */
+	uint8_t checksum = 0;
+	for (size_t i = 0; i < packet->size; i++) {
+		const char character = packet->data[i];
+		if (gdb_packet_is_reserved(character))
+			checksum += GDB_PACKET_ESCAPE + (character ^ GDB_PACKET_ESCAPE_XOR);
+		else
+			checksum += character;
+	}
+	return checksum;
+}
+
 packet_state_e consume_remote_packet(char *const packet, const size_t size)
 {
 #if CONFIG_BMDA == 0
@@ -145,8 +166,6 @@ packet_state_e consume_remote_packet(char *const packet, const size_t size)
 gdb_packet_s *gdb_packet_receive(void)
 {
 	packet_state_e state = PACKET_IDLE; /* State of the packet capture */
-
-	uint8_t checksum = 0;
 	uint8_t rx_checksum = 0;
 
 	while (true) {
@@ -158,7 +177,6 @@ gdb_packet_s *gdb_packet_receive(void)
 			if (rx_char == GDB_PACKET_START) {
 				/* Start of GDB packet */
 				state = PACKET_GDB_CAPTURE;
-				checksum = 0;
 				packet_buffer.size = 0;
 				packet_buffer.notification = false;
 			}
@@ -170,7 +188,6 @@ gdb_packet_s *gdb_packet_receive(void)
 				 * returns PACKET_IDLE or PACKET_GDB_CAPTURE if it detects the start of a GDB packet
 				 */
 				state = consume_remote_packet(packet_buffer.data, GDB_PACKET_BUFFER_SIZE);
-				checksum = 0;
 				packet_buffer.size = 0;
 			}
 #endif
@@ -186,7 +203,6 @@ gdb_packet_s *gdb_packet_receive(void)
 			if (rx_char == GDB_PACKET_START) {
 				/* Restart GDB packet capture */
 				packet_buffer.size = 0;
-				checksum = 0;
 				break;
 			}
 			if (rx_char == GDB_PACKET_END) {
@@ -196,9 +212,6 @@ gdb_packet_s *gdb_packet_receive(void)
 				state = PACKET_GDB_CHECKSUM_UPPER;
 				break;
 			}
-
-			/* Not start or end of packet, add to checksum */
-			checksum += rx_char;
 
 			/* Add to packet buffer, unless it is an escape char */
 			if (rx_char == GDB_PACKET_ESCAPE)
@@ -210,9 +223,6 @@ gdb_packet_s *gdb_packet_receive(void)
 			break;
 
 		case PACKET_GDB_ESCAPE:
-			/* Add to checksum */
-			checksum += rx_char;
-
 			/* Resolve escaped char */
 			packet_buffer.data[packet_buffer.size++] = rx_char ^ GDB_PACKET_ESCAPE_XOR;
 
@@ -235,25 +245,25 @@ gdb_packet_s *gdb_packet_receive(void)
 				rx_checksum |= unhex_digit(rx_char); /* BITWISE OR lower nibble with upper nibble */
 
 				/* (N)Acknowledge packet */
-				gdb_if_putchar(rx_checksum == checksum ? GDB_PACKET_ACK : GDB_PACKET_NACK, true);
+				const bool checksum_ok = gdb_packet_checksum(&packet_buffer) == rx_checksum;
+				gdb_if_putchar(checksum_ok ? GDB_PACKET_ACK : GDB_PACKET_NACK, true);
+				if (!checksum_ok) {
+					/* Checksum error, restart packet capture */
+					state = PACKET_IDLE;
+					break;
+				}
 			}
 
-			if (noackmode || rx_checksum == checksum) {
-				/* Null terminate packet */
-				packet_buffer.data[packet_buffer.size] = '\0';
+			/* Null terminate packet */
+			packet_buffer.data[packet_buffer.size] = '\0';
 
 #ifndef DEBUG_GDB_IS_NOOP
-				/* Log packet for debugging */
-				gdb_packet_debug(__func__, &packet_buffer);
+			/* Log packet for debugging */
+			gdb_packet_debug(__func__, &packet_buffer);
 #endif
 
-				/* Return packet captured size */
-				return &packet_buffer;
-			}
-
-			/* Restart packet capture */
-			state = PACKET_IDLE;
-			break;
+			/* Return captured packet */
+			return &packet_buffer;
 
 		default:
 			/* Something is not right, restart packet capture */
@@ -277,48 +287,37 @@ static inline bool gdb_get_ack(const uint32_t timeout)
 	return gdb_if_getchar_to(timeout) == GDB_PACKET_ACK;
 }
 
-static inline void gdb_putchar(const char value, uint8_t *const csum)
-{
-	/* Send the character to the GDB interface */
-	gdb_if_putchar(value, false);
-
-	/* Add to checksum */
-	if (csum != NULL)
-		*csum += value;
-}
-
-static inline void gdb_putchar_escaped(const char value, uint8_t *const csum)
+static inline void gdb_if_putchar_escaped(const char value)
 {
 	/* Escape reserved characters */
-	if (value == GDB_PACKET_START || value == GDB_PACKET_END || value == GDB_PACKET_ESCAPE ||
-		value == GDB_PACKET_RUNLENGTH_START) {
-		gdb_putchar(GDB_PACKET_ESCAPE, csum);
-		gdb_putchar((char)((uint8_t)value ^ GDB_PACKET_ESCAPE_XOR), csum);
+	if (gdb_packet_is_reserved(value)) {
+		gdb_if_putchar(GDB_PACKET_ESCAPE, false);
+		gdb_if_putchar((char)((uint8_t)value ^ GDB_PACKET_ESCAPE_XOR), false);
 	} else {
-		gdb_putchar(value, csum);
+		gdb_if_putchar(value, false);
 	}
 }
 
 void gdb_packet_send(const gdb_packet_s *const packet)
 {
+	/* Calculate checksum first to avoid re-calculation */
+	const uint8_t checksum = gdb_packet_checksum(packet);
+
 	/* Attempt packet transmission up to retries */
 	for (size_t attempt = 0U; attempt < GDB_PACKET_RETRIES; attempt++) {
-		uint8_t csum = 0; /* Checksum of packet data */
-
 		/* Write start of packet */
-		gdb_putchar(packet->notification ? GDB_PACKET_NOTIFICATION_START : GDB_PACKET_START, NULL);
+		gdb_if_putchar(packet->notification ? GDB_PACKET_NOTIFICATION_START : GDB_PACKET_START, false);
 
 		/* Write packet data */
 		for (size_t i = 0; i < packet->size; i++)
-			gdb_putchar_escaped(packet->data[i], &csum);
+			gdb_if_putchar_escaped(packet->data[i]);
 
 		/* Write end of packet */
 		gdb_if_putchar(GDB_PACKET_END, false);
 
 		/* Write checksum and flush the buffer */
-		gdb_putchar(hex_digit(csum >> 4U), NULL);
-		gdb_putchar(hex_digit(csum & 0xfU), NULL);
-		gdb_if_flush();
+		gdb_if_putchar(hex_digit(checksum >> 4U), false);
+		gdb_if_putchar(hex_digit(checksum & 0xfU), true);
 
 #ifndef DEBUG_GDB_IS_NOOP
 		/* Log packet for debugging */
