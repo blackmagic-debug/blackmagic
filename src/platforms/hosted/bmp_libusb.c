@@ -264,7 +264,7 @@ static probe_info_s *process_ftdi_probe(void)
 	}
 
 	probe_info_s *probe_list = NULL;
-	const char *probe_skip = NULL;
+	char *probe_skip = NULL;
 	bool use_serial = true;
 	/* Device list is loaded, iterate over the found probes */
 	for (size_t index = 0; index < ftdi_dev_count; ++index) {
@@ -285,7 +285,7 @@ static probe_info_s *process_ftdi_probe(void)
 
 				if (probe_skip) { // Clean up any previous serial number to skip
 					use_serial = true;
-					free((void *)probe_skip);
+					free(probe_skip);
 					probe_skip = NULL;
 				}
 
@@ -323,7 +323,7 @@ static probe_info_s *process_ftdi_probe(void)
 		}
 	}
 	if (probe_skip)
-		free((void *)probe_skip);
+		free(probe_skip);
 	free(dev_info);
 	return probe_list;
 }
