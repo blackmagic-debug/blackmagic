@@ -467,7 +467,12 @@ static void exec_q_supported(const char *packet, const size_t length)
 	 */
 	gdb_set_noackmode(false);
 
-	gdb_putpacket_str_f("PacketSize=%X;qXfer:memory-map:read+;qXfer:features:read+;"
+	/*
+	 * The Remote Protocol documentation is not clear on what format the PacketSize feature should be in,
+	 * according to the GDB source code (as of version 15.2) it should be a hexadecimal encoded number
+	 * to be parsed by strtoul() with a base of 16.
+	 */
+	gdb_putpacket_str_f("PacketSize=%x;qXfer:memory-map:read+;qXfer:features:read+;"
 						"vContSupported+" GDB_QSUPPORTED_NOACKMODE,
 		GDB_PACKET_BUFFER_SIZE);
 }
