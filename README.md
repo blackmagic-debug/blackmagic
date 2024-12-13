@@ -137,25 +137,29 @@ When developing this project, the following tools are required:
 
 Additionally, depending on if you want to build/work on the firmware or Black Magic Debug App (BMDA), you also need:
 
-#### Black Magic Debug Firmware
+#### Black Magic Debug Firmware Requirements
 
 * [`arm-none-eabi-gcc`](https://developer.arm.com/tools-and-software/open-source-software/developer-tools/gnu-toolchain/downloads) (from ARM, self-built and distro-supplied is currently broken)
 
-If you wish to use the older [gnu-rm](https://developer.arm.com/downloads/-/gnu-rm) ARM toolchain,
-this is fine and works well.
+The project is tested to work on the 12.2.Rel1 and 13.2.Rel1 releases. Newer releases may work but are not guaranteed.
+The old `gnu-rm` compiler series is no longer supported as the code generation performs way too badly.
 
 If you have a toolchain from other sources and find problems, check if it's an issue with your toolchain first,
 and if not then open an issue, or better, submit a pull request with a fix.
 
-#### Black Magic Debug App
+#### Black Magic Debug App Requirements
 
-* [GCC](https://gcc.gnu.org) or Clang (Clang is not officially supported)
-
-If you wish to enable support for 3rd party probes, and not only the official native hardware, you will also need:
-
+* [GCC](https://gcc.gnu.org) or Clang
+* pkg-config
 * libusb1
-* libftdi1
 * libhidapi
+
+On Linux and macOS (+ other non-Windows platforms):
+
+* libftdi1
+
+If you do not install the subsequent dependencies libusb1, libhidapi, and libftdi1, then the build system will
+do source builds of the dependencies using the information in `deps/` that will be statically linked into BMDA.
 
 ### Building
 
