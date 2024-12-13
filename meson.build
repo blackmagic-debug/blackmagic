@@ -43,7 +43,7 @@ project(
 		'werror=false',
 		'b_ndebug=if-release',
 	],
-	meson_version: '>= 0.61.0',
+	meson_version: '>= 0.63.0',
 	subproject_dir: 'deps',
 )
 
