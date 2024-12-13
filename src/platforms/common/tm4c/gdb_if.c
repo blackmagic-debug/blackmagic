@@ -43,8 +43,6 @@ void gdb_if_putchar(const char c, const bool flush)
 
 void gdb_if_flush(const bool force)
 {
-	(void)force;
-
 	/* Flush only if there is data to flush */
 	if (count_in == 0U)
 		return;
@@ -56,6 +54,16 @@ void gdb_if_flush(const bool force)
 	}
 	while (usbd_ep_write_packet(usbdev, CDCACM_GDB_ENDPOINT, buffer_in, count_in) <= 0U)
 		continue;
+
+	/* We need to send an empty packet for some hosts to accept this as a complete transfer. */
+	if (force && count_in == CDCACM_PACKET_SIZE) {
+		/* 
+		 * libopencm3 needs a change for us to confirm when that transfer is complete,
+		 * so we just send a packet containing a null character for now.
+		 */
+		while (usbd_ep_write_packet(usbdev, CDCACM_GDB_ENDPOINT, "\0", 1U) <= 0U)
+			continue;
+	}
 
 	/* Reset the buffer */
 	count_in = 0U;
