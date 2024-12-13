@@ -43,4 +43,9 @@
 #endif
 #define snprintf sniprintf
 
+#ifdef vsnprintf
+#undef vsnprintf
+#endif
+#define vsnprintf vsniprintf
+
 #endif /* STDIO_NEWLIB_H */
