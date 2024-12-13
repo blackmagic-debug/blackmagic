@@ -163,8 +163,8 @@ do source builds of the dependencies using the information in `deps/` that will 
 
 ### Building
 
-The project is configured and built using the Meson build system, you will need to create a build directory
-and then configure the build depending on what you want.
+The project is configured and built using the Meson build system, you will need to create a build
+directory using `meson setup`, and configure the build depending on what you want.
 
 The project has a couple of build options you may configure, which affect the resulting binaries.
 This is how you will configure the firmware for your respective probe, or enable certain features.
@@ -172,11 +172,12 @@ This is how you will configure the firmware for your respective probe, or enable
 A non-exhaustive list of project options:
 
 * `probe`: Hardware platform where the BMD firmware will run
-* `targets`: Enabled debug targets
+* `targets`: Targets and architectures enabled for debug and Flashing
 * `debug_output`: Enable debug output (for debugging the BMD stack, not debug targets)
 * `rtt_support`: Enable RTT (Real Time Transfer) support
 
-You may see all available project options and valid values under  `Project options` in the output of the `meson configure` command.
+You may see all available project options and valid values under `Project options` in the output
+of the `meson configure` command.
 
 The following commands are ran from the root of your clone of the `blackmagic` repository:
 
@@ -184,11 +185,13 @@ The following commands are ran from the root of your clone of the `blackmagic` r
 cd /path/to/repository/blackmagic
 ```
 
-#### Building Black Magic Debug Firmware
+#### Building the firmware
 
-To build the firmware you need to configure the probe hardware the firmware will run on, as well as the cross-compilation toolchain to be used.
+To build the firmware you need to configure the probe hardware the firmware will run on, as well as the
+cross-compilation toolchain to be used.
 
-For convenience, a cross-file for each supported hardware probe is available which provides a sane default configuration for it.
+For convenience, a cross-file for each supported hardware probe is available which provides a sane default
+configuration for it.
 
 The build configuration command for the native probe may look like:
 
@@ -196,17 +199,22 @@ The build configuration command for the native probe may look like:
 meson setup build --cross-file cross-file/native.ini
 ```
 
-Note that even if you are using the pre-configured cross-file, you may still override it's defaults with `-Doption=value` in the same configuration command, or later as highlighted in [Changing the build configuration](#changing-the-build-configuration).
+Note that even if you are using the pre-configured cross-file, you may still override it's defaults with
+`-Doption=value` in the same configuration command, or later as highlighted in
+[Changing the build configuration](#changing-the-build-configuration).
 
-Alternatively (for advanced users), if you wish to configure manually, for instance while writing support for a new probe, or a different toolchain, you can run:
+Alternatively (for advanced users), if you wish to configure manually, for instance while writing support
+for a new probe, or a different toolchain, you can run something similar to this:
 
 ```sh
 meson setup build --cross-file cross-file/arm-none-eabi.ini -Dprobe=native -Dtargets=cortexm,stm
 ```
 
-You now should have a `build` directory from where you can build the firmware, this is also where your binary files will appear.
+After following one of these two paths, you now should have a `build` directory from where you can build
+the firmware. This is also where your binary files will appear.
 
-The command `meson compile` will build the default targets, you may omit `-C build` if you run the command from within the `build` directory:
+The command `meson compile` will build the default targets, you may omit `-C build` if you run the command
+from within the `build` directory:
 
 ```sh
 meson compile -C build
@@ -221,7 +229,8 @@ These are the binary files you will use to flash to your probe.
 
 ##### region `rom' overflowed
 
-It may happen, while working with non default configurations or the project's latest version from Git, that the firmware does not fit in the available space for the configured probe, this could look something like:
+It may happen, while working with non default configurations or the project's latest version from Git,
+that the firmware does not fit in the available space for the configured probe, this could look something like:
 
 ```console
 arm-none-eabi/bin/ld: region `rom' overflowed by 4088 bytes
@@ -231,7 +240,8 @@ Memory region         Used Size  Region Size  %age Used
 collect2: error: ld returned 1 exit status
 ```
 
-This is not unexpected, as some hardware probe have limited space for firmware. You can get around it by disabling some features or targets support:
+This is not unexpected, as some hardware probe have limited space for firmware. You can get around it by
+disabling some features or targets support:
 
 ```sh
 meson configure build -Dtargets=cortexm,stm -Drtt_support=false
@@ -239,17 +249,21 @@ meson configure build -Dtargets=cortexm,stm -Drtt_support=false
 
 #### Building Black Magic Debug App
 
-The Black Magic Debug App (BMDA) is always built by default, even for firmware builds. So long as all its dependencies are found, you can find the executable under the `build` directory, named simply `blackmagic`.
+The Black Magic Debug App (BMDA) is always built by default, even for firmware builds. So long as all its
+dependencies are found, you can find the executable under the `build` directory, named simply `blackmagic`.
 
-If you wish to build only BMDA, you can set the hardware `probe` option to an empty string `-Dprobe=''`, this is the default value:
+If you wish to build only BMDA, you can set the hardware `probe` option to an empty string `-Dprobe=''`,
+this is the default value:
 
 ```sh
 meson setup build
 ```
 
-You now should have a `build` directory from where you can build the app, this is also where your executable will appear.
+You now should have a `build` directory from where you can build the app, this is also where your executable
+will appear.
 
-The command `meson compile` will build the default targets, you may omit `-C build` if you run the command from within the `build` directory:
+The command `meson compile` will build the default targets, you may omit `-C build` if you run the command
+from within the `build` directory:
 
 ```sh
 meson compile -C build
