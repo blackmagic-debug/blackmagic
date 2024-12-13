@@ -52,8 +52,7 @@ char *hexify(char *const dst, const void *const buf, const size_t size)
 		dst[dst_idx++] = hex_digit(src[src_idx] & 0xfU);
 	}
 
-	/* Make sure the result is NUL terminated */
-	dst[dst_idx] = '\0';
+	/* The hexifued string is *NOT* NUL terminated */
 	return dst;
 }
 
