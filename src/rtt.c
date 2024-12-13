@@ -394,7 +394,7 @@ void poll_rtt(target_s *const cur_target)
 			rtt_halt = target_mem_access_needs_halt(cur_target);
 
 		bool resume_target = false;
-		target_addr_t watch;
+		target_addr64_t watch;
 		if (rtt_halt && target_halt_poll(cur_target, &watch) == TARGET_HALT_RUNNING) {
 			/* briefly halt target during target memory access */
 			target_halt_request(cur_target);

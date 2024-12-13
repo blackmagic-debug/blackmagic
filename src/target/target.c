@@ -424,7 +424,7 @@ static const char *target_halt_reason_str(const target_halt_reason_e reason)
 }
 #endif
 
-target_halt_reason_e target_halt_poll(target_s *target, target_addr_t *watch)
+target_halt_reason_e target_halt_poll(target_s *target, target_addr64_t *watch)
 {
 	if (target->halt_poll) {
 		const target_halt_reason_e reason = target->halt_poll(target, watch);
