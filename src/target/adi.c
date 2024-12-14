@@ -253,7 +253,7 @@ static const char *adi_cid_class_string(const cid_class_e cid_class)
 	default:
 		return "Unknown component"; /* Noted as reserved in the spec */
 	}
-};
+}
 #endif
 
 uint16_t adi_designer_from_pidr(const uint64_t pidr)
