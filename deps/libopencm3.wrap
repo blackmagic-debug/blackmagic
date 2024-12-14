@@ -1,6 +1,6 @@
 [wrap-git]
 url = https://github.com/blackmagic-debug/libopencm3
-revision = head
+revision = a500e6a7
 depth = 1
 
 [provide]
