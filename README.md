@@ -275,7 +275,8 @@ You should now see the resulting executable in `build`:
 
 ### Changing the build configuration
 
-You may change the configuration at any time after configuring the project, if may also change the default options while configuring for the first time.
+You may change the configuration at any time after configuring the project, if may also change the default
+options while configuring for the first time.
 
 Changing options at configure time:
 
@@ -295,17 +296,25 @@ Alternatively, you can use the equivalent but more verbose `meson setup` command
 meson setup build --reconfigure -Dtargets=cortexm,stm
 ```
 
-Keep in mind that when changing the configured probe, the other default options will not change, and you may end up with a configuration that does not make sense for it. In such cases it's best to use the *cross-file* for the probe, not just change the `probe` option. For this you will need to use the `meson setup` command again:
+NB: Since about Meson v1.2.0, using this second form is the only way to change the active targets list. This is
+a known issue in Meson which has yet to be addressed in a release.
+
+Keep in mind that when changing the configured probe, the other default options will not change, and you may end
+up with a configuration that does not make sense for it. In such cases it's best to use the *cross-file* for the
+probe, not just change the `probe` option. For this you will need to use the `meson setup` command again:
 
 ```sh
 meson setup build --reconfigure --cross-file=cross-file/bluepill.ini
 ```
 
-When changing options after configuration, you may omit the argument `build` if you are running the command from within the `build` directory.
+When changing options after configuration, you may omit the argument `build` if you are running the command from
+within the `build` directory.
 
-You can have multiple build directories! So if you are regularly building firmware for multiple probes we would recommend keeping an individual build directory configured for each one.
+You can have multiple build directories! So if you are regularly building firmware for multiple probes we would
+recommend keeping an individual build directory configured for each one.
 
-If you are working with PowerShell you may have some issue while trying to configure some options like the enabled target list `-Dtargets=cortexm,stm`:
+If you are working with PowerShell you may have some issue while trying to configure some options like the enabled
+target list `-Dtargets=cortexm,stm`:
 
 ``` console
 PS C:\...\blackmagic\build> meson configure build -Dtargets=cortexm,stm
