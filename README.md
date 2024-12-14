@@ -330,32 +330,19 @@ To get around this you may wrap the options with double quotes `"`, in this exam
 meson configure build "-Dtargets=cortexm,stm"
 ```
 
-### Working with an existing clone (used before the new meson build system was introduced)
+### Working with an existing clone
 
-If you are working with an existing clone of the project where you used the old `make` build system,
-or simply initialized the submodules, you may encounter issues while trying the new Meson workflow,
-this may look something like:
+If you are working with an existing clone of the project, you may encounter a build issue with libopencm3 or
+one of the other dependencies in `deps/` - if this happens, you have one of two recourses:
 
-```console
-fatal: Fetched in submodule path 'deps/libopencm3', but it did not contain bed4a785eecb6c9e77e7491e196565feb96c617b. Direct fetching of that commit failed.
-```
+The first is to ensure the dependency is fully up to date (Meson manages them as Git clones but due to limitations
+is unaware of when the remote is newer than the local when using `revision = head` in the .wrap files) with the
+remote by doing a full fetch cycle (`git fetch --all --prune`, `git pull --tags --force`) within the dependency
+clone, and making sure the latest version is checked out (`git pull`). This is labour intensive but good if
+you have working copy changes
 
-To get around this try running the following commands:
-
-```sh
-cd deps/libopencm3
-git remote set-url origin https://github.com/blackmagic-debug/libopencm3
-cd ../..
-git submodule update
-```
-
-Alternatively, the nuclear option
-(**BEWARE, THIS WILL ERASE ANY CHANGES THAT HAVE NOT BEEN PUSHED UPSTREAM**)
-
-```sh
-git submodule deinit --force --all
-meson subprojects purge --confirm
-```
+The second, more nuclear option, is to blow away the clone of the dependency, eg `rm -rf deps/libopencm3` and rebuild.
+Meson will automatically detect this and re-clone the dependency at the version indicated by the .wrap files.
 
 ## Contributing and reporting issues
 
