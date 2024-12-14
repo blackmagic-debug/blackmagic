@@ -38,8 +38,7 @@ project(
 		'c_std=c11',
 		'optimization=s',
 		'debug=true',
-		# 'warning_level=3', # TODO: Enable by default when all warnings are fixed
-		'warning_level=2',
+		'warning_level=3',
 		'werror=false',
 		'b_ndebug=if-release',
 	],
