@@ -427,7 +427,7 @@ bool nrf51_ctrl_ap_probe(adiv5_access_port_s *ap)
 	t->mass_erase = nrf51_ctrl_ap_mass_erase;
 	adiv5_ap_ref(ap);
 	t->priv = ap;
-	t->priv_free = (void *)adiv5_ap_unref;
+	t->priv_free = (priv_free_func)adiv5_ap_unref;
 
 	adiv5_ap_read(ap, CTRL_AP_PROT_EN);
 	const uint32_t status = adiv5_ap_read(ap, CTRL_AP_PROT_EN);

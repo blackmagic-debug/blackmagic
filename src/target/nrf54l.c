@@ -153,7 +153,7 @@ bool nrf54l_ctrl_ap_probe(adiv5_access_port_s *ap)
 	target->mass_erase = nrf54l_ctrl_ap_mass_erase;
 	adiv5_ap_ref(ap);
 	target->priv = ap;
-	target->priv_free = (void *)adiv5_ap_unref;
+	target->priv_free = (priv_free_func)adiv5_ap_unref;
 
 	const uint32_t status = adiv5_ap_read(ap, NRF54L_CTRL_AP_APPROTECT_STATUS);
 

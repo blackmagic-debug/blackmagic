@@ -80,7 +80,7 @@ struct target_flash {
 };
 
 /*
- * ¹the mass_erase method must not cause any side effects outside the scope/address space of the flash 
+ * ¹the mass_erase method must not cause any side effects outside the scope/address space of the flash
  * consider using the target mass_erase method instead for such cases
  */
 
@@ -112,6 +112,8 @@ struct breakwatch {
 };
 
 #define MAX_CMDLINE 81
+
+typedef void (*priv_free_func)(void *flash);
 
 struct target {
 	target_controller_s *tc;
@@ -180,7 +182,7 @@ struct target {
 	target_s *next;
 
 	void *priv;
-	void (*priv_free)(void *);
+	priv_free_func priv_free;
 
 	/* Target designer and ID / partno */
 	uint16_t designer_code;
