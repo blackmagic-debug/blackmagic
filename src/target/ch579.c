@@ -92,10 +92,10 @@
 #define CH579_CONST_ROM_CMD_PROGRAM_INFO 0x99U
 
 /* Flash Protect base value; upper bits must be set*/
-#define CH579_RB_ROM_WE_MUST_10 0b10000000U
+#define CH579_RB_ROM_WE_MUST_10 (1U << 7U)
 /* Flash Protect Bitmasks */
-#define CH579_RB_ROM_CODE_WE 1U << 3U
-#define CH579_RB_ROM_DATA_WE 1U << 2U
+#define CH579_RB_ROM_CODE_WE (1U << 3U)
+#define CH579_RB_ROM_DATA_WE (1U << 2U)
 /* Flash Protect Standard value */
 #define CH579_RB_ROM_WRITE_ENABLE  CH579_RB_ROM_WE_MUST_10 | CH579_RB_ROM_CODE_WE | CH579_RB_ROM_DATA_WE
 #define CH579_RB_ROM_WRITE_DISABLE CH579_RB_ROM_WE_MUST_10
