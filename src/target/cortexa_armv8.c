@@ -95,14 +95,19 @@ typedef struct cortexa_armv8_priv {
 
 #define CORTEXA_ARMV8_TARGET_NAME ("ARM Cortex-A (ARMv8-A)")
 
-#define CORTEXA_DBG_EDECR     0x024U /* Debug Execution Control Register */
-#define CORTEXA_DBG_DTRRX_EL0 0x080U /* Debug Data Transfer Register, Receive */
-#define CORTEXA_DBG_EDITR     0x084U /* Debug Instruction Transfer Register */
-#define CORTEXA_DBG_EDSCR     0x088U /* Debug Status and Control Register */
-#define CORTEXA_DBG_DTRTX_EL0 0x08cU /* Debug Data Transfer Register, Transmit */
-#define CORTEXA_DBG_EDRCR     0x090U /* Debug Reserve Control Register */
-#define CORTEXA_DBG_OSLAR_EL1 0x300U /* OS Lock Access Register */
-#define CORTEXA_DBG_EDPRSR    0x314U /* Debug Processor Status Register */
+#define CORTEXA_DBG_EDECR      0x024U                   /* Debug Execution Control Register */
+#define CORTEXA_DBG_DTRRX_EL0  0x080U                   /* Debug Data Transfer Register, Receive */
+#define CORTEXA_DBG_EDITR      0x084U                   /* Debug Instruction Transfer Register */
+#define CORTEXA_DBG_EDSCR      0x088U                   /* Debug Status and Control Register */
+#define CORTEXA_DBG_DTRTX_EL0  0x08cU                   /* Debug Data Transfer Register, Transmit */
+#define CORTEXA_DBG_EDRCR      0x090U                   /* Debug Reserve Control Register */
+#define CORTEXA_DBG_OSLAR_EL1  0x300U                   /* OS Lock Access Register */
+#define CORTEXA_DBG_EDPRSR     0x314U                   /* Debug Processor Status Register */
+#define CORTEXA_DBG_BVR_EL1(n) (0x400U + ((n) * 0x10U)) /* Debug Breakpoint Value Register */
+#define CORTEXA_DBG_BCR_EL1(n) (0x408U + ((n) * 0x10U)) /* Debug Breakpoint Control Register */
+#define CORTEXA_DBG_WVR_EL1(n) (0x800U + ((n) * 0x10U)) /* Debug Watchpoint Value Register */
+#define CORTEXA_DBG_WCR_EL1(n) (0x808U + ((n) * 0x10U)) /* Debug Watchpoint Control Register */
+#define CORTEXA_DBG_EDDFR      0xd28U                   /* Debug Feature Register */
 
 #define CORTEXA_DBG_EDECR_SINGLE_STEP (1 << 2U)
 
@@ -144,6 +149,30 @@ typedef struct cortexa_armv8_priv {
 #define CORTEXA_DBG_EDPRSR_OS_LOCK              (1U << 5U)
 #define CORTEXA_DBG_EDPRSR_DOUBLE_LOCK          (1U << 6U)
 #define CORTEXA_DBG_EDPRSR_STICKY_DEBUG_RESTART (1U << 11U)
+
+#define CORTEXA_DBG_BCR_EL1_TYPE_UNLINKED_INSN_MATCH (0 << 20U)
+#define CORTEXA_DBG_BCR_EL1_HIGH_MODE_CONTROL        (1 << 13U)
+#define CORTEXA_DBG_BCR_EL1_PRIV_MODE_CONTROL(x)     ((x) << 1U)
+#define CORTEXA_DBG_BCR_EL1_BYTE_SELECT_LOW_HALF     (0x3 << 5U)
+#define CORTEXA_DBG_BCR_EL1_BYTE_SELECT_ALL          (0xf << 5U)
+#define CORTEXA_DBG_BCR_EL1_BYTE_SELECT_HIGH_HALF    (0xc << 5U)
+#define CORTEXA_DBG_BCR_EL1_ENABLE                   (1 << 0U)
+
+#define CORTEXA_DBG_WCR_EL1_ENABLE               (1 << 0U)
+#define CORTEXA_DBG_WCR_EL1_PRIV_MODE_CONTROL(x) ((x) << 1U)
+#define CORTEXA_DBG_WCR_EL1_MATCH_ON_LOAD        (1 << 3U)
+#define CORTEXA_DBG_WCR_EL1_MATCH_ON_STORE       (1 << 4U)
+#define CORTEXA_DBG_WCR_EL1_MATCH_ANY_ACCESS     (CORTEXA_DBG_WCR_EL1_MATCH_ON_LOAD | CORTEXA_DBG_WCR_EL1_MATCH_ON_STORE)
+#define CORTEXA_DBG_WCR_EL1_HIGH_MODE_CONTROL    (1 << 13U)
+#define CORTEXA_DBG_WCR_EL1_BYTE_SELECT_OFFSET   5U
+#define CORTEXA_DBG_WCR_EL1_BYTE_SELECT_MASK     0x00001fe0U
+#define CORTEXA_DBG_WCR_EL1_BYTE_SELECT(x) \
+	(((x) << CORTEXA_DBG_WCR_EL1_BYTE_SELECT_OFFSET) & CORTEXA_DBG_WCR_EL1_BYTE_SELECT_MASK)
+
+#define CORTEXA_DBG_EDDFR_BREAKPOINT_MASK  0xfUL
+#define CORTEXA_DBG_EDDFR_BREAKPOINT_SHIFT 12UL
+#define CORTEXA_DBG_EDDFR_WATCHPOINT_MASK  0xfUL
+#define CORTEXA_DBG_EDDFR_WATCHPOINT_SHIFT 20UL
 
 #define CORTEXA_CTI_CHANNEL_HALT_SINGLE      0U
 #define CORTEXA_CTI_CHANNEL_RESTART          1U
@@ -286,6 +315,9 @@ static bool cortexa_armv8_check_error(target_s *target);
 
 static void cortexa_armv8_mem_read(target_s *target, void *dest, target_addr64_t src, size_t len);
 static void cortexa_armv8_mem_write(target_s *target, target_addr64_t dest, const void *src, size_t len);
+
+static int cortexa_armv8_breakwatch_set(target_s *target, breakwatch_s *breakwatch);
+static int cortexa_armv8_breakwatch_clear(target_s *target, breakwatch_s *breakwatch);
 
 static void cortexa_armv8_priv_free(void *const priv)
 {
@@ -436,7 +468,18 @@ bool cortexa_armv8_cti_probe(adiv5_access_port_s *const ap, const target_addr_t 
 
 	cortex_read_cpuid(target);
 
-	/* XXX: Detect debug features */
+	/* Detect debug features */
+	const uint32_t eddfr_low = cortex_dbg_read32(target, CORTEXA_DBG_EDDFR);
+	const uint32_t eddfr_high = cortex_dbg_read32(target, CORTEXA_DBG_EDDFR + 4U);
+	const uint64_t eddfr = eddfr_low | ((uint64_t)eddfr_high << 32U);
+	priv->base.breakpoints_available =
+		((eddfr >> CORTEXA_DBG_EDDFR_BREAKPOINT_SHIFT) & CORTEXA_DBG_EDDFR_BREAKPOINT_MASK) + 1U;
+	priv->base.watchpoints_available =
+		((eddfr >> CORTEXA_DBG_EDDFR_WATCHPOINT_SHIFT) & CORTEXA_DBG_EDDFR_WATCHPOINT_MASK) + 1U;
+
+	DEBUG_TARGET("%s %s core has %u breakpoint and %u watchpoint units available\n", target->driver, target->core,
+		priv->base.breakpoints_available, priv->base.watchpoints_available);
+
 	/* XXX: Detect optional features */
 
 	target->attach = cortexa_armv8_attach;
@@ -453,7 +496,8 @@ bool cortexa_armv8_cti_probe(adiv5_access_port_s *const ap, const target_addr_t 
 	target->mem_read = cortexa_armv8_mem_read;
 	target->mem_write = cortexa_armv8_mem_write;
 
-	/* XXX: Breakpoint APIs */
+	target->breakwatch_set = cortexa_armv8_breakwatch_set;
+	target->breakwatch_clear = cortexa_armv8_breakwatch_clear;
 
 	target_check_error(target);
 
@@ -665,19 +709,42 @@ static bool cortexa_armv8_attach(target_s *target)
 
 	cortexa_armv8_priv_s *const priv = (cortexa_armv8_priv_s *)target->priv;
 
-	/* XXX: Clear any stale breakpoints */
+	/* Clear any stale breakpoints */
 	priv->base.breakpoints_mask = 0U;
+	for (size_t i = 0; i <= priv->base.breakpoints_available; ++i) {
+		cortex_dbg_write32(target, CORTEXA_DBG_BVR_EL1(i), 0U);
+		cortex_dbg_write32(target, CORTEXA_DBG_BVR_EL1(i) + 4U, 0U);
+		cortex_dbg_write32(target, CORTEXA_DBG_BCR_EL1(i), 0U);
+	}
 
-	/* XXX: Clear any stale watchpoints */
+	/* Clear any stale watchpoints */
 	priv->base.watchpoints_mask = 0U;
+	for (size_t i = 0; i < priv->base.watchpoints_available; ++i) {
+		cortex_dbg_write32(target, CORTEXA_DBG_WVR_EL1(i), 0U);
+		cortex_dbg_write32(target, CORTEXA_DBG_WVR_EL1(i) + 4U, 0U);
+		cortex_dbg_write32(target, CORTEXA_DBG_WCR_EL1(i), 0U);
+	}
 
 	return true;
 }
 
 static void cortexa_armv8_detach(target_s *target)
 {
-	/* XXX: Clear any set breakpoints */
-	/* XXX: Clear any set watchpoints */
+	const cortexa_armv8_priv_s *const priv = (cortexa_armv8_priv_s *)target->priv;
+
+	/* Clear any set breakpoints */
+	for (size_t i = 0; i <= priv->base.breakpoints_available; ++i) {
+		cortex_dbg_write32(target, CORTEXA_DBG_BVR_EL1(i), 0U);
+		cortex_dbg_write32(target, CORTEXA_DBG_BVR_EL1(i) + 4U, 0U);
+		cortex_dbg_write32(target, CORTEXA_DBG_BCR_EL1(i), 0U);
+	}
+
+	/* Clear any set watchpoints */
+	for (size_t i = 0; i < priv->base.watchpoints_available; ++i) {
+		cortex_dbg_write32(target, CORTEXA_DBG_WVR_EL1(i), 0U);
+		cortex_dbg_write32(target, CORTEXA_DBG_WVR_EL1(i) + 4U, 0U);
+		cortex_dbg_write32(target, CORTEXA_DBG_WCR_EL1(i), 0U);
+	}
 
 	target_halt_resume(target, false);
 }
@@ -1531,4 +1598,140 @@ static void cortexa_armv8_mem_write(
 
 	if (halted_in_function)
 		cortexa_armv8_halt_resume(target, false);
+}
+
+static void cortexa_armv8_config_breakpoint(
+	target_s *const target, const size_t slot, const breakwatch_s *const breakwatch)
+{
+	/* Enable breakpoint on all exception levels (DDI0487K §D2.8.4, pg6165) */
+	uint32_t control = CORTEXA_DBG_BCR_EL1_ENABLE | CORTEXA_DBG_BCR_EL1_TYPE_UNLINKED_INSN_MATCH |
+		CORTEXA_DBG_BCR_EL1_HIGH_MODE_CONTROL | CORTEXA_DBG_BCR_EL1_PRIV_MODE_CONTROL(2);
+
+	if (breakwatch->size == 4)
+		control |= CORTEXA_DBG_BCR_EL1_BYTE_SELECT_ALL;
+	else if ((breakwatch->addr & 2) && breakwatch->size == 2)
+		control |= CORTEXA_DBG_BCR_EL1_BYTE_SELECT_HIGH_HALF;
+	else if (breakwatch->size == 2)
+		control |= CORTEXA_DBG_BCR_EL1_BYTE_SELECT_LOW_HALF;
+	else {
+		DEBUG_ERROR("Invalid breakpoint size %ld\n", breakwatch->size);
+		return;
+	}
+
+	/* Configure the breakpoint slot */
+	cortex_dbg_write32(target, CORTEXA_DBG_BVR_EL1(slot), breakwatch->addr & ~3U);
+	cortex_dbg_write32(target, CORTEXA_DBG_BVR_EL1(slot) + 4U, breakwatch->addr >> 32);
+	cortex_dbg_write32(target, CORTEXA_DBG_BCR_EL1(slot), control);
+}
+
+static uint32_t cortexa_armv8_watchpoint_mode(const target_breakwatch_e type)
+{
+	switch (type) {
+	case TARGET_WATCH_READ:
+		return CORTEXA_DBG_WCR_EL1_MATCH_ON_LOAD;
+	case TARGET_WATCH_WRITE:
+		return CORTEXA_DBG_WCR_EL1_MATCH_ON_STORE;
+	case TARGET_WATCH_ACCESS:
+		return CORTEXA_DBG_WCR_EL1_MATCH_ANY_ACCESS;
+	default:
+		return 0U;
+	}
+}
+
+static void cortexa_armv8_config_watchpoint(
+	target_s *const target, const size_t slot, const breakwatch_s *const breakwatch)
+{
+	const uint32_t byte_mask = ((1U << breakwatch->size) - 1U) << (breakwatch->addr & 3U);
+
+	/* Enable watchpoint on all exception levels (DDI0487K §D2.8.4, pg6165) */
+	const uint32_t control = CORTEXA_DBG_WCR_EL1_ENABLE | CORTEXA_DBG_WCR_EL1_PRIV_MODE_CONTROL(2) |
+		CORTEXA_DBG_WCR_EL1_HIGH_MODE_CONTROL | cortexa_armv8_watchpoint_mode(breakwatch->type) |
+		CORTEXA_DBG_WCR_EL1_BYTE_SELECT(byte_mask);
+
+	/* Configure the watchpoint slot */
+	cortex_dbg_write32(target, CORTEXA_DBG_WVR_EL1(slot), breakwatch->addr & ~3U);
+	cortex_dbg_write32(target, CORTEXA_DBG_WVR_EL1(slot) + 4U, breakwatch->addr >> 32);
+	cortex_dbg_write32(target, CORTEXA_DBG_WCR_EL1(slot), control);
+}
+
+static int cortexa_armv8_breakwatch_set(target_s *const target, breakwatch_s *const breakwatch)
+{
+	cortexa_armv8_priv_s *const priv = (cortexa_armv8_priv_s *)target->priv;
+
+	switch (breakwatch->type) {
+	case TARGET_BREAK_HARD: {
+		/* First try and find a unused breakpoint slot */
+		size_t breakpoint = 0;
+		for (; breakpoint < priv->base.breakpoints_available; ++breakpoint) {
+			/* Check if the slot is presently in use, breaking if it is not */
+			if (!(priv->base.breakpoints_mask & (1U << breakpoint)))
+				break;
+		}
+		/* If none was available, return an error */
+		if (breakpoint == priv->base.breakpoints_available)
+			return -1;
+
+		/* Set the breakpoint slot up and mark it used */
+		cortexa_armv8_config_breakpoint(target, breakpoint, breakwatch);
+		priv->base.breakpoints_mask |= 1U << breakpoint;
+		breakwatch->reserved[0] = breakpoint;
+		/* Tell the debugger that it was successfully able to set the breakpoint */
+		return 0;
+	}
+	case TARGET_WATCH_READ:
+	case TARGET_WATCH_WRITE:
+	case TARGET_WATCH_ACCESS: {
+		/* First try and find an unused watchpoint slot */
+		size_t watchpoint = 0;
+		for (; watchpoint < priv->base.watchpoints_available; ++watchpoint) {
+			/* Check if the slot is presently in use, breaking if it is not */
+			if (!(priv->base.watchpoints_mask & (1U << watchpoint)))
+				break;
+		}
+		/* If none was available, return an error */
+		if (watchpoint == priv->base.watchpoints_available)
+			return -1;
+
+		/* Set the watchpoint slot up and mark it used */
+		cortexa_armv8_config_watchpoint(target, watchpoint, breakwatch);
+		priv->base.watchpoints_mask |= 1U << watchpoint;
+		breakwatch->reserved[0] = watchpoint;
+		/* Tell the debugger that it was successfully able to set the watchpoint */
+		return 0;
+	}
+	default:
+		/* If the breakwatch type is not one of the above, tell the debugger we don't support it */
+		return 1;
+	}
+
+	return 1;
+}
+
+static int cortexa_armv8_breakwatch_clear(target_s *const target, breakwatch_s *const breakwatch)
+{
+	cortexa_armv8_priv_s *const priv = (cortexa_armv8_priv_s *)target->priv;
+
+	switch (breakwatch->type) {
+	case TARGET_BREAK_HARD: {
+		/* Clear the breakpoint slot this used */
+		const size_t breakpoint = breakwatch->reserved[0];
+		cortex_dbg_write32(target, CORTEXA_DBG_BCR_EL1(breakpoint), 0);
+		priv->base.breakpoints_mask &= ~(1U << breakpoint);
+		/* Tell the debugger that it was successfully able to clear the breakpoint */
+		return 0;
+	}
+	case TARGET_WATCH_READ:
+	case TARGET_WATCH_WRITE:
+	case TARGET_WATCH_ACCESS: {
+		/* Clear the watchpoint slot this used */
+		const size_t watchpoint = breakwatch->reserved[0];
+		cortex_dbg_write32(target, CORTEXA_DBG_WCR_EL1(watchpoint), 0);
+		priv->base.watchpoints_mask &= ~(1U << watchpoint);
+		/* Tell the debugger that it was successfully able to clear the watchpoint */
+		return 0;
+	}
+	default:
+		/* If the breakwatch type is not one of the above, tell the debugger wed on't support it */
+		return 1;
+	}
 }
