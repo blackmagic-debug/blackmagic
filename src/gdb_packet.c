@@ -230,7 +230,7 @@ gdb_packet_s *gdb_packet_receive(void)
 
 		case PACKET_GDB_ESCAPE:
 			/* Resolve escaped char */
-			packet->data[packet->size++] = rx_char ^ GDB_PACKET_ESCAPE_XOR;
+			packet->data[packet->size++] = (char)((uint8_t)rx_char ^ GDB_PACKET_ESCAPE_XOR);
 
 			/* Return to normal packet capture */
 			state = PACKET_GDB_CAPTURE;
