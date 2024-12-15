@@ -24,6 +24,7 @@
 #include <stddef.h>
 #include <stdarg.h>
 #include <stdbool.h>
+#include <string.h>
 
 /* Allow override in other platforms if needed */
 #ifndef GDB_PACKET_BUFFER_SIZE
