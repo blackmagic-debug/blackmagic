@@ -1478,7 +1478,7 @@ void send_swo_trace_data(uint8_t *buffer, uint8_t length)
 void wifi_gdb_putchar(const uint8_t ch, const bool flush)
 {
 	send_buffer[send_count++] = ch;
-	if (flush || send_count >= sizeof(send_buffer))
+	if (flush || send_count == sizeof(send_buffer))
 		wifi_gdb_flush(flush);
 }
 
@@ -1490,13 +1490,9 @@ void wifi_gdb_flush(const bool force)
 	if (send_count == 0U)
 		return;
 
-	// TODO is this check required now, looks like a debug test left in place?
-	if (send_count <= 0U)
-		DEBUG_WARN("WiFi_putchar bad count\r\n");
-	DEBUG_WARN("Wifi_putchar %c\r\n", send_buffer[0]);
-	send(gdb_client_socket, &send_buffer[0], send_count, 0);
+	DEBUG_WARN("Wifi_putchar %c\n", send_buffer[0]);
+	send(gdb_client_socket, send_buffer, send_count, 0);
 
 	/* Reset the buffer */
 	send_count = 0U;
-	memset(&send_buffer[0], 0x00, sizeof(send_buffer));
 }
