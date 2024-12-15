@@ -381,20 +381,20 @@ static void remote_adiv5_respond(const void *const data, const size_t length)
 	}
 }
 
-static void remote_packet_process_adiv5(const char *const packet, const size_t packet_len)
+static void remote_packet_process_adiv5(gdb_packet_s *const packet)
 {
 	/* Check there's at least an ADI command byte */
-	if (packet_len < 2U) {
+	if (packet->size < 2U) {
 		remote_respond(REMOTE_RESP_ERR, REMOTE_ERROR_WRONGLEN);
 		return;
 	}
 
 	/* Check if this is a DP version packet and handle it if it is */
-	if (packet[1] == REMOTE_DP_VERSION) {
+	if (packet->data[1] == REMOTE_DP_VERSION) {
 		/* Check there are enough bytes for the request */
-		if (packet_len == 4U) {
+		if (packet->size == 4U) {
 			/* Extract the new version information into the DP */
-			remote_dp.version = hex_string_to_num(2U, packet + 2U);
+			remote_dp.version = hex_string_to_num(2U, packet->data + 2U);
 			remote_respond(REMOTE_RESP_OK, 0);
 		} else
 			/* There weren't enough bytes, so tell the host and get out of here */
@@ -403,30 +403,30 @@ static void remote_packet_process_adiv5(const char *const packet, const size_t p
 	}
 
 	/* Our shortest ADIv5 packet is 8 bytes long, check that we have at least that */
-	if (packet_len < 8U) {
+	if (packet->size < 8U) {
 		remote_respond(REMOTE_RESP_PARERR, 0);
 		return;
 	}
 
 	/* Check if this is actually an ADIv6 acceleration packet and dispatch */
-	if (packet[1] == REMOTE_ADIV6_PACKET) {
-		remote_packet_process_adiv6(packet, packet_len);
+	if (packet->data[1] == REMOTE_ADIV6_PACKET) {
+		remote_packet_process_adiv6(packet->data, packet->size);
 		return;
 	}
 
 	/* Set up the DP and a fake AP structure to perform the access with */
-	remote_dp.dev_index = hex_string_to_num(2, packet + 2);
+	remote_dp.dev_index = hex_string_to_num(2, packet->data + 2);
 	remote_dp.fault = 0U;
 	adiv5_access_port_s remote_ap;
-	remote_ap.apsel = hex_string_to_num(2, packet + 4);
+	remote_ap.apsel = hex_string_to_num(2, packet->data + 4);
 	remote_ap.dp = &remote_dp;
 
 	SET_IDLE_STATE(0);
-	switch (packet[1]) {
+	switch (packet->data[1]) {
 	/* DP access commands */
 	case REMOTE_DP_READ: { /* Ad = Read from DP register */
 		/* Grab the address to read from and try to perform the access */
-		const uint16_t addr = hex_string_to_num(4, packet + 6);
+		const uint16_t addr = hex_string_to_num(4, packet->data + 6);
 		const uint32_t data =
 			adiv5_dp_read(&remote_dp, (addr & REMOTE_ADIV5_APnDP ? ADIV5_APnDP : 0U) | (addr & 0x00ffU));
 		remote_adiv5_respond(&data, 4U);
@@ -435,8 +435,8 @@ static void remote_packet_process_adiv5(const char *const packet, const size_t p
 	/* Raw access comands */
 	case REMOTE_ADIV5_RAW_ACCESS: { /* AR = Perform a raw ADIv5 access */
 		/* Grab the address to perform an access against and the value to work with */
-		const uint16_t addr = hex_string_to_num(4, packet + 6);
-		const uint32_t value = hex_string_to_num(8, packet + 10);
+		const uint16_t addr = hex_string_to_num(4, packet->data + 6);
+		const uint32_t value = hex_string_to_num(8, packet->data + 10);
 		/* Try to perform the access using the AP selection value as R/!W */
 		const uint32_t data = adiv5_dp_low_access(
 			&remote_dp, remote_ap.apsel, (addr & REMOTE_ADIV5_APnDP ? ADIV5_APnDP : 0U) | (addr & 0x00ffU), value);
@@ -446,7 +446,7 @@ static void remote_packet_process_adiv5(const char *const packet, const size_t p
 	/* AP access commands */
 	case REMOTE_AP_READ: { /* Aa = Read from AP register */
 		/* Grab the AP address to read from and try to perform the access */
-		const uint16_t addr = hex_string_to_num(4, packet + 6);
+		const uint16_t addr = hex_string_to_num(4, packet->data + 6);
 		const uint32_t data =
 			adiv5_ap_read(&remote_ap, (addr & REMOTE_ADIV5_APnDP ? ADIV5_APnDP : 0U) | (addr & 0x00ffU));
 		remote_adiv5_respond(&data, 4U);
@@ -454,8 +454,8 @@ static void remote_packet_process_adiv5(const char *const packet, const size_t p
 	}
 	case REMOTE_AP_WRITE: { /* AA = Write to AP register */
 		/* Grab the AP address to write to and the data to write then try to perform the access */
-		const uint16_t addr = hex_string_to_num(4, packet + 6);
-		const uint32_t value = hex_string_to_num(8, packet + 10);
+		const uint16_t addr = hex_string_to_num(4, packet->data + 6);
+		const uint32_t value = hex_string_to_num(8, packet->data + 10);
 		adiv5_ap_write(&remote_ap, (addr & REMOTE_ADIV5_APnDP ? ADIV5_APnDP : 0U) | (addr & 0x00ffU), value);
 		remote_adiv5_respond(NULL, 0U);
 		break;
@@ -463,11 +463,11 @@ static void remote_packet_process_adiv5(const char *const packet, const size_t p
 	/* Memory access commands */
 	case REMOTE_MEM_READ: { /* Am = Read from memory */
 		/* Grab the CSW value to use in the access */
-		remote_ap.csw = hex_string_to_num(8, packet + 6);
+		remote_ap.csw = hex_string_to_num(8, packet->data + 6);
 		/* Grab the start address for the read */
-		const target_addr64_t address = hex_string_to_num(16, packet + 14U);
+		const target_addr64_t address = hex_string_to_num(16, packet->data + 14U);
 		/* And how many bytes to read, validating it for buffer overflows */
-		const uint32_t length = hex_string_to_num(8, packet + 30U);
+		const uint32_t length = hex_string_to_num(8, packet->data + 30U);
 		/* NB: Hex encoding on the response data halfs the available buffer capacity */
 		if (length > (GDB_PACKET_BUFFER_SIZE - REMOTE_ADIV5_MEM_READ_LENGTH) >> 1U) {
 			remote_respond(REMOTE_RESP_PARERR, 0);
@@ -482,13 +482,13 @@ static void remote_packet_process_adiv5(const char *const packet, const size_t p
 	}
 	case REMOTE_MEM_WRITE: { /* AM = Write to memory */
 		/* Grab the CSW value to use in the access */
-		remote_ap.csw = hex_string_to_num(8, packet + 6);
+		remote_ap.csw = hex_string_to_num(8, packet->data + 6);
 		/* Grab the alignment for the access */
-		const align_e align = hex_string_to_num(2, packet + 14U);
+		const align_e align = hex_string_to_num(2, packet->data + 14U);
 		/* Grab the start address for the write */
-		const target_addr64_t address = hex_string_to_num(16, packet + 16U);
+		const target_addr64_t address = hex_string_to_num(16, packet->data + 16U);
 		/* And how many bytes to read, validating it for buffer overflows */
-		const uint32_t length = hex_string_to_num(8, packet + 32U);
+		const uint32_t length = hex_string_to_num(8, packet->data + 32U);
 		/* NB: Hex encoding on the response data halfs the available buffer capacity */
 		if (length > (GDB_PACKET_BUFFER_SIZE - REMOTE_ADIV5_MEM_WRITE_LENGTH) >> 1U) {
 			remote_respond(REMOTE_RESP_PARERR, 0);
@@ -502,7 +502,7 @@ static void remote_packet_process_adiv5(const char *const packet, const size_t p
 		/* Get the aligned packet buffer to reuse for the data to write */
 		void *data = gdb_packet_buffer();
 		/* And decode the data from the packet into it */
-		unhexify(data, packet + 40U, length);
+		unhexify(data, packet->data + 40U, length);
 		/* Perform the write and report success/failures */
 		adiv5_mem_write_aligned(&remote_ap, address, data, length, align);
 		remote_adiv5_respond(NULL, 0);
@@ -857,7 +857,7 @@ void remote_packet_process(gdb_packet_s *const packet)
 	case REMOTE_ADIV5_PACKET: {
 		/* Setup an exception frame to try the ADIv5 operation in */
 		TRY (EXCEPTION_ALL) {
-			remote_packet_process_adiv5(packet->data, packet->size);
+			remote_packet_process_adiv5(packet);
 		}
 		CATCH () {
 		/* Handle any exception we've caught by translating it into a remote protocol response */
