@@ -25,6 +25,7 @@
 
 #include <stddef.h>
 #include "general.h"
+#include "gdb_packet.h"
 
 #define REMOTE_HL_VERSION 4
 
@@ -456,6 +457,6 @@
 			REMOTE_UINT24, REMOTE_EOM, 0                                                                  \
 	}
 
-void remote_packet_process(char *packet, size_t packet_length);
+void remote_packet_process(gdb_packet_s *packet);
 
 #endif /* REMOTE_H */
