@@ -128,11 +128,11 @@ static adiv5_debug_port_s remote_dp = {
 	.mem_write = adiv5_mem_write_bytes,
 };
 
-static void remote_packet_process_swd(const char *const packet, const size_t packet_len)
+static void remote_packet_process_swd(gdb_packet_s *const packet)
 {
-	switch (packet[1]) {
+	switch (packet->data[1]) {
 	case REMOTE_INIT: /* SS = initialise =============================== */
-		if (packet_len == 2) {
+		if (packet->size == 2) {
 			remote_dp.write_no_check = adiv5_swd_write_no_check;
 			remote_dp.read_no_check = adiv5_swd_read_no_check;
 			remote_dp.dp_read = adiv5_swd_read;
@@ -146,7 +146,7 @@ static void remote_packet_process_swd(const char *const packet, const size_t pac
 		break;
 
 	case REMOTE_IN_PAR: { /* SI = In parity ============================= */
-		const size_t clock_cycles = hex_string_to_num(2, packet + 2);
+		const size_t clock_cycles = hex_string_to_num(2, packet->data + 2);
 		uint32_t result = 0;
 		const bool parity_ok = swd_proc.seq_in_parity(&result, clock_cycles);
 		remote_respond(parity_ok ? REMOTE_RESP_OK : REMOTE_RESP_PARERR, result);
@@ -154,23 +154,23 @@ static void remote_packet_process_swd(const char *const packet, const size_t pac
 	}
 
 	case REMOTE_IN: { /* Si = In ======================================= */
-		const size_t clock_cycles = hex_string_to_num(2, packet + 2);
+		const size_t clock_cycles = hex_string_to_num(2, packet->data + 2);
 		const uint32_t result = swd_proc.seq_in(clock_cycles);
 		remote_respond(REMOTE_RESP_OK, result);
 		break;
 	}
 
 	case REMOTE_OUT: { /* So = Out ====================================== */
-		const size_t clock_cycles = hex_string_to_num(2, packet + 2);
-		const uint32_t data = hex_string_to_num(-1, packet + 4);
+		const size_t clock_cycles = hex_string_to_num(2, packet->data + 2);
+		const uint32_t data = hex_string_to_num(-1, packet->data + 4);
 		swd_proc.seq_out(data, clock_cycles);
 		remote_respond(REMOTE_RESP_OK, 0);
 		break;
 	}
 
 	case REMOTE_OUT_PAR: { /* SO = Out parity ========================== */
-		const size_t clock_cycles = hex_string_to_num(2, packet + 2);
-		const uint32_t data = hex_string_to_num(-1, packet + 4);
+		const size_t clock_cycles = hex_string_to_num(2, packet->data + 2);
+		const uint32_t data = hex_string_to_num(-1, packet->data + 4);
 		swd_proc.seq_out_parity(data, clock_cycles);
 		remote_respond(REMOTE_RESP_OK, 0);
 		break;
@@ -840,7 +840,7 @@ void remote_packet_process(gdb_packet_s *const packet)
 	}
 	switch (packet->data[0]) {
 	case REMOTE_SWDP_PACKET:
-		remote_packet_process_swd(packet->data, packet->size);
+		remote_packet_process_swd(packet);
 		break;
 
 	case REMOTE_JTAG_PACKET:
