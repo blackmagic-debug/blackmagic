@@ -628,33 +628,33 @@ static riscv_dmi_s remote_dmi = {
 	.write = NULL,
 };
 
-void remote_packet_process_riscv(const char *const packet, const size_t packet_len)
+void remote_packet_process_riscv(gdb_packet_s *const packet)
 {
 	/* Our shortest RISC-V Debug protocol packet is 2 bytes long, check that we have at least that */
-	if (packet_len < 2U) {
+	if (packet->size < 2U) {
 		remote_respond(REMOTE_RESP_PARERR, 0);
 		return;
 	}
 
 	/* Check for and handle the protocols packet */
-	if (packet[1U] == REMOTE_RISCV_PROTOCOLS) {
+	if (packet->data[1U] == REMOTE_RISCV_PROTOCOLS) {
 		/* Validate the length of the packet, then handle it if that checks out */
-		if (packet_len != 2U)
+		if (packet->size != 2U)
 			remote_respond(REMOTE_RESP_PARERR, 0);
 		else
 			remote_respond(REMOTE_RESP_OK, REMOTE_RISCV_PROTOCOL_JTAG);
 		return;
 	}
 	/* Check for and handle the initialisation packet */
-	else if (packet[1U] == REMOTE_INIT) {
+	else if (packet->data[1U] == REMOTE_INIT) {
 		/* Check the length of the packet */
-		if (packet_len != 3U) {
+		if (packet->size != 3U) {
 			remote_respond(REMOTE_RESP_PARERR, 0);
 			return;
 		}
 
 		/* We got a good packet, so handle initialisation accordingly */
-		switch (packet[2U]) {
+		switch (packet->data[2U]) {
 		case REMOTE_RISCV_JTAG:
 			remote_dmi.read = riscv_jtag_dmi_read;
 			remote_dmi.write = riscv_jtag_dmi_write;
@@ -668,21 +668,21 @@ void remote_packet_process_riscv(const char *const packet, const size_t packet_l
 		return;
 	}
 	/* Our shortest RISC-V protocol packet is 16 bytes long, check that we have at least that */
-	else if (packet_len < 16U) {
+	else if (packet->size < 16U) {
 		remote_respond(REMOTE_RESP_PARERR, 0);
 		return;
 	}
 
 	/* Having dealt with the other requests, set up the fake DMI structure to perform the access with */
-	remote_dmi.dev_index = hex_string_to_num(2, packet + 2);
-	remote_dmi.idle_cycles = hex_string_to_num(2, packet + 4);
-	remote_dmi.address_width = hex_string_to_num(2, packet + 6);
+	remote_dmi.dev_index = hex_string_to_num(2, packet->data + 2);
+	remote_dmi.idle_cycles = hex_string_to_num(2, packet->data + 4);
+	remote_dmi.address_width = hex_string_to_num(2, packet->data + 6);
 	remote_dmi.fault = 0U;
 
-	switch (packet[1U]) {
+	switch (packet->data[1U]) {
 	case REMOTE_RISCV_DMI_READ: {
 		/* Grab the DMI address to read from and try to perform the access */
-		const uint32_t addr = hex_string_to_num(8, packet + 8);
+		const uint32_t addr = hex_string_to_num(8, packet->data + 8);
 		uint32_t value = 0;
 		if (!remote_dmi.read(&remote_dmi, addr, &value))
 			/* If the request didn't work, and caused a fault, tell the host */
@@ -694,13 +694,13 @@ void remote_packet_process_riscv(const char *const packet, const size_t packet_l
 	}
 	case REMOTE_RISCV_DMI_WRITE: {
 		/* Write packets are 24 bytes long, verify we have enough bytes */
-		if (packet_len != 24U) {
+		if (packet->size != 24U) {
 			remote_respond(REMOTE_RESP_PARERR, 0);
 			break;
 		}
 		/* Grab the DMI address to write to and the data to write then try to perform the access */
-		const uint32_t addr = hex_string_to_num(8, packet + 8);
-		const uint32_t value = hex_string_to_num(8, packet + 16);
+		const uint32_t addr = hex_string_to_num(8, packet->data + 8);
+		const uint32_t value = hex_string_to_num(8, packet->data + 16);
 		if (!remote_dmi.write(&remote_dmi, addr, value))
 			/* If the request didn't work, and caused a fault, tell the host */
 			remote_respond(REMOTE_RESP_ERR, REMOTE_ERROR_FAULT | ((uint16_t)remote_dmi.fault << 8U));
@@ -869,7 +869,7 @@ void remote_packet_process(gdb_packet_s *const packet)
 
 #if defined(CONFIG_RISCV_ACCEL) && CONFIG_RISCV_ACCEL == 1
 	case REMOTE_RISCV_PACKET:
-		remote_packet_process_riscv(packet->data, packet->size);
+		remote_packet_process_riscv(packet);
 		break;
 #endif
 
