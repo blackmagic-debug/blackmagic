@@ -255,22 +255,21 @@ static void remote_packet_process_jtag(gdb_packet_s *const packet)
 	}
 }
 
-static void remote_packet_process_general(char *packet, const size_t packet_len)
+static void remote_packet_process_general(gdb_packet_s *const packet)
 {
-	(void)packet_len;
-	switch (packet[1]) {
+	switch (packet->data[1]) {
 	case REMOTE_VOLTAGE:
 		remote_respond_string(REMOTE_RESP_OK, platform_target_voltage());
 		break;
 	case REMOTE_NRST_SET:
-		platform_nrst_set_val(packet[2] == '1');
+		platform_nrst_set_val(packet->data[2] == '1');
 		remote_respond(REMOTE_RESP_OK, 0);
 		break;
 	case REMOTE_NRST_GET:
 		remote_respond(REMOTE_RESP_OK, platform_nrst_get_val());
 		break;
 	case REMOTE_FREQ_SET:
-		platform_max_frequency_set(hex_string_to_num(8U, packet + 2U));
+		platform_max_frequency_set(hex_string_to_num(8U, packet->data + 2U));
 		remote_respond(REMOTE_RESP_OK, 0);
 		break;
 	case REMOTE_FREQ_GET: {
@@ -280,14 +279,14 @@ static void remote_packet_process_general(char *packet, const size_t packet_len)
 	}
 	case REMOTE_PWR_SET:
 #ifdef PLATFORM_HAS_POWER_SWITCH
-		if (packet[2] == '1' && !platform_target_get_power() &&
+		if (packet->data[2] == '1' && !platform_target_get_power() &&
 			platform_target_voltage_sense() > POWER_CONFLICT_THRESHOLD) {
 			/* want to enable target power, but voltage > 0.5V sensed
 			 * on the pin -> cancel
 			 */
 			remote_respond(REMOTE_RESP_ERR, 0);
 		} else {
-			const bool result = platform_target_set_power(packet[2] == '1');
+			const bool result = platform_target_set_power(packet->data[2] == '1');
 			remote_respond(result ? REMOTE_RESP_OK : REMOTE_RESP_ERR, 0U);
 		}
 #else
@@ -308,12 +307,12 @@ static void remote_packet_process_general(char *packet, const size_t packet_len)
 #ifndef PLATFORM_IDENT_DYNAMIC
 		remote_respond_string(REMOTE_RESP_OK, BOARD_IDENT);
 #else
-		snprintf(packet, GDB_PACKET_BUFFER_SIZE, BOARD_IDENT, platform_ident());
-		remote_respond_string(REMOTE_RESP_OK, packet);
+		snprintf(packet->data, GDB_PACKET_BUFFER_SIZE, BOARD_IDENT, platform_ident());
+		remote_respond_string(REMOTE_RESP_OK, packet->data);
 #endif
 		break;
 	case REMOTE_TARGET_CLK_OE:
-		platform_target_clk_output_enable(packet[2] != '0');
+		platform_target_clk_output_enable(packet->data[2] != '0');
 		remote_respond(REMOTE_RESP_OK, 0);
 		break;
 	default:
@@ -848,7 +847,7 @@ void remote_packet_process(gdb_packet_s *const packet)
 		break;
 
 	case REMOTE_GEN_PACKET:
-		remote_packet_process_general(packet->data, packet->size);
+		remote_packet_process_general(packet);
 		break;
 
 	case REMOTE_HL_PACKET:
