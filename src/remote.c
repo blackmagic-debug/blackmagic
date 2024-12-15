@@ -321,29 +321,29 @@ static void remote_packet_process_general(gdb_packet_s *const packet)
 	}
 }
 
-static void remote_packet_process_high_level(const char *packet, const size_t packet_len)
+static void remote_packet_process_high_level(gdb_packet_s *const packet)
 {
 	SET_IDLE_STATE(0);
-	switch (packet[1]) {
+	switch (packet->data[1]) {
 	case REMOTE_HL_CHECK: /* HC = check the version of the protocol */
 		remote_respond(REMOTE_RESP_OK, REMOTE_HL_VERSION);
 		break;
 
 	case REMOTE_HL_ADD_JTAG_DEV: { /* HJ = fill firmware jtag_devs */
 		/* Check the packet is an appropriate length */
-		if (packet_len < 22U) {
+		if (packet->size < 22U) {
 			remote_respond(REMOTE_RESP_ERR, REMOTE_ERROR_WRONGLEN);
 			break;
 		}
 
 		jtag_dev_s jtag_dev = {0};
-		const uint8_t index = hex_string_to_num(2, packet + 2);
-		jtag_dev.dr_prescan = hex_string_to_num(2, packet + 4);
-		jtag_dev.dr_postscan = hex_string_to_num(2, packet + 6);
-		jtag_dev.ir_len = hex_string_to_num(2, packet + 8);
-		jtag_dev.ir_prescan = hex_string_to_num(2, packet + 10);
-		jtag_dev.ir_postscan = hex_string_to_num(2, packet + 12);
-		jtag_dev.current_ir = hex_string_to_num(8, packet + 14);
+		const uint8_t index = hex_string_to_num(2, packet->data + 2);
+		jtag_dev.dr_prescan = hex_string_to_num(2, packet->data + 4);
+		jtag_dev.dr_postscan = hex_string_to_num(2, packet->data + 6);
+		jtag_dev.ir_len = hex_string_to_num(2, packet->data + 8);
+		jtag_dev.ir_prescan = hex_string_to_num(2, packet->data + 10);
+		jtag_dev.ir_postscan = hex_string_to_num(2, packet->data + 12);
+		jtag_dev.current_ir = hex_string_to_num(8, packet->data + 14);
 		jtag_add_device(index, &jtag_dev);
 		remote_respond(REMOTE_RESP_OK, 0);
 		break;
@@ -851,7 +851,7 @@ void remote_packet_process(gdb_packet_s *const packet)
 		break;
 
 	case REMOTE_HL_PACKET:
-		remote_packet_process_high_level(packet->data, packet->size);
+		remote_packet_process_high_level(packet);
 		break;
 
 	case REMOTE_ADIV5_PACKET: {
