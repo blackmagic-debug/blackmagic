@@ -677,7 +677,7 @@ void handle_socket_accept_event(t_socketAccept *accept_data, SOCKET *client_sock
 			 * close the new client socket, refusing connection
 			 *
 			 */
-			DEBUG_WARN("APP_SOCK_CB[%d]: Second connection rejected\r\n", msgType);
+			DEBUG_WARN("APP_SOCK_CB[%d]: Second connection rejected\r\n", msg_type);
 			close(accept_data->sock);
 		} else {
 			*client_socket = accept_data->sock;
@@ -717,7 +717,7 @@ void process_recv_error(SOCKET socket, t_socketRecv *recv_data, uint8_t msg_type
 			swo_trace_client_socket = SOCK_ERR_INVALID; // Mark socket invalid
 			swo_trace_client_connected = false;         // No longer connected
 		}
-		DEBUG_WARN("APP_SOCK_CB[%d]: Connection closed by peer\r\n", msgType);
+		DEBUG_WARN("APP_SOCK_CB[%d]: Connection closed by peer\r\n", msg_type);
 		break;
 	}
 	case SOCK_ERR_INVALID_ADDRESS:
@@ -731,7 +731,7 @@ void process_recv_error(SOCKET socket, t_socketRecv *recv_data, uint8_t msg_type
 	case SOCK_ERR_TIMEOUT:
 	case SOCK_ERR_BUFFER_FULL:
 	default: {
-		DEBUG_WARN("APP_SOCK_CB[%d]: Unknown/unhandled error code %d bytes\r\n", msgType, lpRecvData->bufSize);
+		DEBUG_WARN("APP_SOCK_CB[%d]: Unknown/unhandled error code %d bytes\r\n", msg_type, recv_data->bufSize);
 		break;
 	}
 	}
@@ -773,7 +773,7 @@ static void app_socket_callback(SOCKET sock, uint8_t msg_type, void *msg)
 			//
 			// Unknown server ... TODO
 			//
-			DEBUG_WARN("APP_SOCK_CB[%d]: Bind for unknown server\r\n", msgType);
+			DEBUG_WARN("APP_SOCK_CB[%d]: Bind for unknown server\r\n", msg_type);
 		break;
 	}
 	case M2M_SOCKET_LISTEN_EVENT: {
@@ -790,7 +790,7 @@ static void app_socket_callback(SOCKET sock, uint8_t msg_type, void *msg)
 			//
 			// Unknown server ... TODO
 			//
-			DEBUG_WARN("APP_SOCK_CB[%d]: Listen event for unknown server\r\n", msgType);
+			DEBUG_WARN("APP_SOCK_CB[%d]: Listen event for unknown server\r\n", msg_type);
 		break;
 	}
 	case M2M_SOCKET_ACCEPT_EVENT: {
@@ -848,7 +848,7 @@ static void app_socket_callback(SOCKET sock, uint8_t msg_type, void *msg)
 					input_buffer[input_index] = local_buffer[i];
 				}
 				buffer_count += recv_data->bufSize;
-				DEBUG_WARN("Received -> %d, queued -> %ld\r\n", pRecvData->bufSize, buffer_count);
+				DEBUG_WARN("Received -> %d, queued -> %ld\r\n", recv_data->bufSize, buffer_count);
 				//
 				// Start another receive operation so we always get data
 				//
