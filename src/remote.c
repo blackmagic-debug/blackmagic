@@ -831,34 +831,34 @@ void remote_packet_process_spi(const char *const packet, const size_t packet_len
 	}
 }
 
-void remote_packet_process(char *const packet, const size_t packet_length)
+void remote_packet_process(gdb_packet_s *const packet)
 {
 	/* Check there's at least a request byte */
-	if (packet_length < 1U) {
+	if (packet->size < 1U) {
 		remote_respond(REMOTE_RESP_ERR, REMOTE_ERROR_WRONGLEN);
 		return;
 	}
-	switch (packet[0]) {
+	switch (packet->data[0]) {
 	case REMOTE_SWDP_PACKET:
-		remote_packet_process_swd(packet, packet_length);
+		remote_packet_process_swd(packet->data, packet->size);
 		break;
 
 	case REMOTE_JTAG_PACKET:
-		remote_packet_process_jtag(packet, packet_length);
+		remote_packet_process_jtag(packet->data, packet->size);
 		break;
 
 	case REMOTE_GEN_PACKET:
-		remote_packet_process_general(packet, packet_length);
+		remote_packet_process_general(packet->data, packet->size);
 		break;
 
 	case REMOTE_HL_PACKET:
-		remote_packet_process_high_level(packet, packet_length);
+		remote_packet_process_high_level(packet->data, packet->size);
 		break;
 
 	case REMOTE_ADIV5_PACKET: {
 		/* Setup an exception frame to try the ADIv5 operation in */
 		TRY (EXCEPTION_ALL) {
-			remote_packet_process_adiv5(packet, packet_length);
+			remote_packet_process_adiv5(packet->data, packet->size);
 		}
 		CATCH () {
 		/* Handle any exception we've caught by translating it into a remote protocol response */
@@ -870,12 +870,12 @@ void remote_packet_process(char *const packet, const size_t packet_length)
 
 #if defined(CONFIG_RISCV_ACCEL) && CONFIG_RISCV_ACCEL == 1
 	case REMOTE_RISCV_PACKET:
-		remote_packet_process_riscv(packet, packet_length);
+		remote_packet_process_riscv(packet->data, packet->size);
 		break;
 #endif
 
 	case REMOTE_SPI_PACKET:
-		remote_packet_process_spi(packet, packet_length);
+		remote_packet_process_spi(packet->data, packet->size);
 		break;
 
 	default: /* Oh dear, unrecognised, return an error */
