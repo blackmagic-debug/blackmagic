@@ -143,7 +143,7 @@ packet_state_e consume_remote_packet(gdb_packet_s *const packet)
 			/* Null terminate packet */
 			packet->data[packet->size] = '\0';
 			/* Handle packet */
-			remote_packet_process(packet->data, packet->size);
+			remote_packet_process(packet);
 
 			/* Restart packet capture */
 			return PACKET_IDLE;
