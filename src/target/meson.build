@@ -142,6 +142,11 @@ target_cortexm = declare_dependency(
 	compile_args: ['-DCONFIG_CORTEXM=1'],
 )
 
+target_cortexa_armv8 = declare_dependency(
+	sources: files('cortexa_armv8.c'),
+	dependencies: [target_cortex, target_arm_coresight],
+)
+
 riscv_jtag_dtm = declare_dependency(
 	sources: files(
 		'riscv_jtag_dtm.c',
@@ -397,6 +402,7 @@ libbmd_target_deps = [
 	# Enable all architectures for libbmd
 	target_cortexar,
 	target_cortexm,
+	target_cortexa_armv8,
 	target_riscv32,
 	target_riscv64,
 	# Enable all targets for libbmd

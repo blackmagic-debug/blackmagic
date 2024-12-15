@@ -90,6 +90,8 @@ static inline void lpc55_dp_prepare_nop(adiv5_debug_port_s *const debug_port)
 CORTEXAR_PROBE_WEAK_NOP(cortexa_probe)
 CORTEXAR_PROBE_WEAK_NOP(cortexr_probe)
 CORTEXM_PROBE_WEAK_NOP(cortexm_probe)
+CORTEXAR_PROBE_WEAK_NOP(cortexa_armv8_dc_probe)
+CORTEXAR_PROBE_WEAK_NOP(cortexa_armv8_cti_probe)
 
 TARGET_PROBE_WEAK_NOP(riscv32_probe)
 TARGET_PROBE_WEAK_NOP(riscv64_probe)

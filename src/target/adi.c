@@ -882,6 +882,14 @@ void adi_ap_component_probe(
 			DEBUG_INFO("%s-> cortexr_probe\n", indent + 1);
 			cortexr_probe(ap, base_address);
 			break;
+		case aa_cortexa_armv8:
+			DEBUG_INFO("%s-> cortexa_armv8_dc_probe\n", indent + 1);
+			cortexa_armv8_dc_probe(ap, base_address);
+			break;
+		case aa_cti_armv8:
+			DEBUG_INFO("%s-> cortexa_armv8_cti_probe\n", indent + 1);
+			cortexa_armv8_cti_probe(ap, base_address);
+			break;
 		/* Handle when the component is a CoreSight component ROM table */
 		case aa_rom_table:
 			if (pidr & PIDR_SIZE_MASK)

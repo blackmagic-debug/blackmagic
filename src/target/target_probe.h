@@ -41,6 +41,8 @@
 bool cortexa_probe(adiv5_access_port_s *ap, target_addr_t base_address);
 bool cortexr_probe(adiv5_access_port_s *ap, target_addr_t base_address);
 bool cortexm_probe(adiv5_access_port_s *ap);
+bool cortexa_armv8_dc_probe(adiv5_access_port_s *ap, target_addr_t base_address);
+bool cortexa_armv8_cti_probe(adiv5_access_port_s *ap, target_addr_t base_address);
 
 bool riscv32_probe(target_s *target);
 bool riscv64_probe(target_s *target);
