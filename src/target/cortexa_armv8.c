@@ -61,6 +61,11 @@
 #include <stdio.h>
 #include <string.h>
 
+typedef struct cortexa_armv8_priv_fault_state {
+	uint64_t status;
+	uint64_t address;
+} cortexa_armv8_priv_fault_state_s;
+
 typedef struct cortexa_armv8_priv {
 	/* Base core information */
 	cortex_priv_s base;
@@ -74,6 +79,9 @@ typedef struct cortexa_armv8_priv {
 
 		uint64_t spsr;
 	} core_regs;
+
+	/* Fault status/address cache */
+	cortexa_armv8_priv_fault_state_s fault_state;
 
 	/* Cached value of EDSCR */
 	uint32_t edscr;
@@ -142,7 +150,8 @@ typedef struct cortexa_armv8_priv {
 #define CORTEXA_CTI_EVENT_HALT_PE_SINGLE_IDX 0U
 #define CORTEXA_CTI_EVENT_RESTART_PE_IDX     1U
 
-#define CORTEXA_CORE_STATUS_ITR_ERR (1U << 0U)
+#define CORTEXA_CORE_STATUS_ITR_ERR           (1U << 0U)
+#define CORTEXA_CORE_STATUS_FAULT_CACHE_VALID (1U << 1U)
 
 /*
  * Instruction encodings for the system registers
@@ -159,6 +168,27 @@ typedef struct cortexa_armv8_priv {
 #define A64_READ_SP(sp, Rd)                A64_ADD_IMM(sp, Rd, 0x1fU, 0, 0)
 #define A64_WRITE_SP(sp, Rn)               A64_ADD_IMM(sp, 0x1fU, Rn, 0, 0)
 
+/*
+ * Instruction encodings for indirect loads and stores of data via the CPU
+ * LDRB -> Load Register Byte (immediate) (DDI0487K §C6.2.188, pg2085)
+ * LDRH -> Load Register Halfword (immediate) (DDI0487K §C6.2.190, pg2090)
+ * STRB -> Store Register Byte (immediate) (DDI0487K §C6.2.367, pg2447)
+ * STRH -> Store Register Halfword (immediate) (DDI0487K §C6.2.369, pg2452)
+ *
+ * The first is `LDRB W1, [X0], #1` to load a uint8_t from [X0] into W1 and increment the
+ * address in X0 by 1, writing the new address back to X0.
+ * The second is `LDRH W1, [X0], #2` to load a uint16_t from [X0] into W1 and increment
+ * the address in X0 by 2, writing the new address back to X0.
+ * The third is `STRB W1, [X0], #1` to store a uint8_t to [X0] from X1 and increment the
+ * address in X0 by 1, writing the new address back to X0.
+ * The fourth is `STRH W1, [X0], #2` to store a uint16_t to [X0] from X1 and increment
+ * the address in X0 by 2, writing the new address back to X0.
+ */
+#define ARM_LDRB_X0_X1_INSN 0x38401401U
+#define ARM_LDRH_X0_X1_INSN 0x78402401U
+#define ARM_STRB_X1_X0_INSN 0x38001401U
+#define ARM_STRH_X1_X0_INSN 0x78002401U
+
 #define A64_ENCODE_SYSREG(op0, op1, crn, crm, op2) \
 	(((op0) << 14U) | ((op1) << 11U) | ((crn) << 7U) | ((crm) << 3U) | ((op2) << 0U))
 
@@ -167,6 +197,16 @@ typedef struct cortexa_armv8_priv {
 #define A64_DBGDTRRX_EL0 A64_ENCODE_SYSREG(2, 3, 0, 5, 0) /* Debug Data Transfer Register, Receive */
 #define A64_DSPSR_EL0    A64_ENCODE_SYSREG(3, 3, 4, 5, 0) /* Debug Saved Program Status Register */
 #define A64_DLR_EL0      A64_ENCODE_SYSREG(3, 3, 4, 5, 1) /* Debug Link Register */
+#define A64_ESR_EL3      A64_ENCODE_SYSREG(3, 6, 5, 2, 0) /* Exception Syndrome Register (EL3) */
+#define A64_FAR_EL3      A64_ENCODE_SYSREG(3, 6, 6, 0, 0) /* Fault Address Register (EL3) */
+#define A64_ESR_EL2      A64_ENCODE_SYSREG(3, 4, 5, 2, 0) /* Exception Syndrome Register (EL2) */
+#define A64_FAR_EL2      A64_ENCODE_SYSREG(3, 4, 6, 0, 0) /* Fault Address Register (EL2) */
+#define A64_ESR_EL1      A64_ENCODE_SYSREG(3, 0, 5, 2, 0) /* Exception Syndrome Register (EL1) */
+#define A64_FAR_EL1      A64_ENCODE_SYSREG(3, 0, 6, 0, 0) /* Fault Address Register (EL1) */
+
+#define A64_DSPSR_EL0_M_EL_OFFSET   (2U)
+#define A64_DSPSR_EL0_M_EL_MASK     (0xcU)
+#define A64_DSPSR_EL0_EXTRACT_EL(x) (((x) & A64_DSPSR_EL0_M_EL_MASK) >> A64_DSPSR_EL0_M_EL_OFFSET)
 
 /*
  * Fields for Cortex-A special-purpose registers, used in the generation of GDB's target description XML.
@@ -243,6 +283,9 @@ static size_t cortexa_armv8_reg_write(target_s *target, uint32_t reg, const void
 static const char *cortexa_armv8_target_description(target_s *target);
 
 static bool cortexa_armv8_check_error(target_s *target);
+
+static void cortexa_armv8_mem_read(target_s *target, void *dest, target_addr64_t src, size_t len);
+static void cortexa_armv8_mem_write(target_s *target, target_addr64_t dest, const void *src, size_t len);
 
 static void cortexa_armv8_priv_free(void *const priv)
 {
@@ -407,7 +450,9 @@ bool cortexa_armv8_cti_probe(adiv5_access_port_s *const ap, const target_addr_t 
 	target->reg_write = cortexa_armv8_reg_write;
 	target->regs_size = sizeof(uint64_t) * CORTEXA_ARMV8_GENERAL_REG_COUNT;
 
-	/* XXX: Memory IO APIs */
+	target->mem_read = cortexa_armv8_mem_read;
+	target->mem_write = cortexa_armv8_mem_write;
+
 	/* XXX: Breakpoint APIs */
 
 	target_check_error(target);
@@ -561,7 +606,8 @@ static void cortexa_armv8_halt_resume(target_s *const target, const bool step)
 	/* Clear any possible error that might have happened */
 	cortex_dbg_write32(target, CORTEXA_DBG_EDRCR, CORTEXA_DBG_EDRCR_CLR_STICKY_ERR);
 
-	/* XXX: Mark the fault status and address cache invalid */
+	/* Mark the fault status and address cache invalid */
+	priv->core_status &= ~CORTEXA_CORE_STATUS_FAULT_CACHE_VALID;
 
 	/* We assume that halting channel do not pass events to the CTM */
 
@@ -675,6 +721,22 @@ static void cortexa_armv8_dcc_write64(target_s *const target, const uint64_t val
 		priv->edscr = cortex_dbg_read32(target, CORTEXA_DBG_EDSCR);
 }
 
+static void cortexa_armv8_dcc_write32(target_s *const target, const uint32_t value)
+{
+	cortexa_armv8_priv_s *const priv = (cortexa_armv8_priv_s *)target->priv;
+
+	/* Poll for empty data */
+	priv->edscr = cortex_dbg_read32(target, CORTEXA_DBG_EDSCR);
+	while (priv->edscr & CORTEXA_DBG_EDSCR_RX_FULL)
+		priv->edscr = cortex_dbg_read32(target, CORTEXA_DBG_EDSCR);
+
+	cortex_dbg_write32(target, CORTEXA_DBG_DTRRX_EL0, value);
+
+	/* Poll for the data to become ready in the DCC */
+	while (!(priv->edscr & CORTEXA_DBG_EDSCR_RX_FULL))
+		priv->edscr = cortex_dbg_read32(target, CORTEXA_DBG_EDSCR);
+}
+
 static void cortexa_armv8_dcc_read64(target_s *target, uint64_t *const value)
 {
 	cortexa_armv8_priv_s *const priv = (cortexa_armv8_priv_s *)target->priv;
@@ -688,6 +750,18 @@ static void cortexa_armv8_dcc_read64(target_s *target, uint64_t *const value)
 	const uint32_t high = cortex_dbg_read32(target, CORTEXA_DBG_DTRRX_EL0);
 
 	*value = low | ((uint64_t)high << 32U);
+}
+
+static void cortexa_armv8_dcc_read32(target_s *const target, uint32_t *const value)
+{
+	cortexa_armv8_priv_s *const priv = (cortexa_armv8_priv_s *)target->priv;
+
+	/* In case of no data, we wait */
+	priv->edscr = cortex_dbg_read32(target, CORTEXA_DBG_EDSCR);
+	while (!(priv->edscr & CORTEXA_DBG_EDSCR_TX_FULL))
+		priv->edscr = cortex_dbg_read32(target, CORTEXA_DBG_EDSCR);
+
+	*value = cortex_dbg_read32(target, CORTEXA_DBG_DTRTX_EL0);
 }
 
 static bool cortexa_armv8_run_insn(target_s *const target, const uint32_t insn)
@@ -745,6 +819,21 @@ static bool cortexa_armv8_core_reg_read64(target_s *const target, const uint8_t 
 	return false;
 }
 
+static bool cortexa_armv8_core_reg_read32(target_s *const target, const uint8_t reg, uint32_t *const result)
+{
+	if (reg < 31U) {
+		if (!cortexa_armv8_run_insn(target, A64_MSR(A64_DBGDTRTX_EL0, reg)))
+			return false;
+
+		cortexa_armv8_dcc_read32(target, result);
+		return true;
+	}
+
+	/* We do not allow read on special registers */
+	DEBUG_ERROR("%s: Unknown register %d", __func__, reg);
+	return false;
+}
+
 static inline bool cortexa_armv8_system_reg_write(
 	target_s *const target, const uint16_t system_reg, const uint64_t value)
 {
@@ -776,6 +865,18 @@ static bool cortexa_armv8_core_reg_write64(target_s *const target, const uint8_t
 		return cortexa_armv8_system_reg_write(target, A64_DSPSR_EL0, value);
 	}
 
+	DEBUG_ERROR("%s: Unknown register %d", __func__, reg);
+	return false;
+}
+
+static bool cortexa_armv8_core_reg_write32(target_s *const target, const uint8_t reg, const uint32_t value)
+{
+	if (reg < 31U) {
+		cortexa_armv8_dcc_write32(target, value);
+		return cortexa_armv8_run_insn(target, A64_MRS(reg, A64_DBGDTRTX_EL0));
+	}
+
+	/* We do not allow write on special registers */
 	DEBUG_ERROR("%s: Unknown register %d", __func__, reg);
 	return false;
 }
@@ -1071,4 +1172,363 @@ static const char *cortexa_armv8_target_description(target_s *const target)
 		(void)cortexa_armv8_build_target_description(description, description_length);
 
 	return description;
+}
+
+/*
+ * Halt the core and await halted status. This function should only return true when
+ * it is, itself, responsible for having halted the target. This allows storing of the
+ * returned value to later determine whether the target should be resumed.
+ */
+static bool cortexa_armv8_halt_and_wait(target_s *const target)
+{
+	/*
+	 * Check the target is already halted; return false as this function was not
+	 * responsible for halting the target.
+	 */
+	if (cortex_dbg_read32(target, CORTEXA_DBG_EDPRSR) & CORTEXA_DBG_EDPRSR_HALTED)
+		return false;
+
+	platform_timeout_s timeout;
+	target_halt_request(target);
+	platform_timeout_set(&timeout, 250);
+	target_halt_reason_e reason = TARGET_HALT_RUNNING;
+	while (!platform_timeout_is_expired(&timeout) && reason == TARGET_HALT_RUNNING)
+		reason = target_halt_poll(target, NULL);
+	if (reason != TARGET_HALT_REQUEST) {
+		DEBUG_ERROR("Failed to halt the core\n");
+		/* This function tried to halt the target but ultimately was not successful. */
+		return false;
+	}
+
+	/* Return true as this function successfully halted the target. */
+	return true;
+}
+
+static inline void cortexa_armv8_mem_read_fault_state(
+	target_s *const target, cortexa_armv8_priv_fault_state_s *const state)
+{
+	cortexa_armv8_priv_s *const priv = (cortexa_armv8_priv_s *)target->priv;
+
+	switch (A64_DSPSR_EL0_EXTRACT_EL(priv->core_regs.spsr)) {
+	case 3:
+		cortexa_armv8_system_reg_read(target, A64_ESR_EL3, &state->status);
+		cortexa_armv8_system_reg_read(target, A64_FAR_EL3, &state->address);
+		break;
+	case 2:
+		cortexa_armv8_system_reg_read(target, A64_ESR_EL2, &state->status);
+		cortexa_armv8_system_reg_read(target, A64_FAR_EL2, &state->address);
+		break;
+	default:
+		cortexa_armv8_system_reg_read(target, A64_ESR_EL1, &state->status);
+		cortexa_armv8_system_reg_read(target, A64_FAR_EL1, &state->address);
+		break;
+	}
+}
+
+static inline void cortexa_armv8_mem_restore_regs(target_s *const target, const char *const func)
+{
+	cortexa_armv8_priv_s *const priv = (cortexa_armv8_priv_s *)target->priv;
+	cortexa_armv8_priv_fault_state_s *const fault_state = &priv->fault_state;
+
+	/* In case of fault and if the data saved are valid, we restore appropriate system values */
+	if (!cortexa_armv8_check_itr_err(target) && priv->core_status & CORTEXA_CORE_STATUS_FAULT_CACHE_VALID) {
+		cortexa_armv8_priv_fault_state_s tmp;
+#ifndef DEBUG_WARN_IS_NOOP
+		cortexa_armv8_mem_read_fault_state(target, &tmp);
+		DEBUG_WARN("%s: Failed at 0x%08" PRIx64 " (%08" PRIx64 ")\n", func, tmp.address, tmp.status);
+#else
+		(void)func;
+#endif
+
+		switch (A64_DSPSR_EL0_EXTRACT_EL(priv->core_regs.spsr)) {
+		case 3:
+			cortexa_armv8_system_reg_write(target, A64_ESR_EL3, fault_state->status);
+			cortexa_armv8_system_reg_write(target, A64_FAR_EL3, fault_state->address);
+			break;
+		case 2:
+			cortexa_armv8_system_reg_write(target, A64_ESR_EL2, fault_state->status);
+			cortexa_armv8_system_reg_write(target, A64_FAR_EL2, fault_state->address);
+			break;
+		default:
+			cortexa_armv8_system_reg_write(target, A64_ESR_EL1, fault_state->status);
+			cortexa_armv8_system_reg_write(target, A64_FAR_EL1, fault_state->address);
+			break;
+		}
+	}
+}
+
+/* Fast path for cortexa_armv8_mem_read(). */
+static inline void cortexa_armv8_core_mem_read32(
+	target_s *const target, uint32_t *const dst, const target_addr64_t src, const size_t n)
+{
+	if (n == 0)
+		return;
+
+	cortexa_armv8_priv_s *const priv = (cortexa_armv8_priv_s *)target->priv;
+
+	/* Clear memory access mode (sanity) */
+	priv->edscr = cortex_dbg_read32(target, CORTEXA_DBG_EDSCR);
+	priv->edscr &= ~CORTEXA_DBG_EDSCR_MA;
+	cortex_dbg_write32(target, CORTEXA_DBG_EDSCR, priv->edscr);
+
+	/* Follows "Using memory access mode in AArch64" state (DDI0487K §K12.2, pg14564) */
+
+	/* 1.abc Setup address in X0 */
+	cortexa_armv8_core_reg_write64(target, 0U, src);
+
+	/* 1.d Do dummy operation */
+	cortexa_armv8_run_insn(target, A64_MSR(A64_DBGDTR_EL0, 0U));
+
+	/* 1.e Set memory access mode */
+	priv->edscr |= CORTEXA_DBG_EDSCR_MA;
+	cortex_dbg_write32(target, CORTEXA_DBG_EDSCR, priv->edscr);
+
+	/* 1.f Read DBGDTRTX_EL0 and discard */
+	cortex_dbg_read32(target, CORTEXA_DBG_DTRTX_EL0);
+
+	/* 2. Loop n-1 times and read all values except last one */
+	for (size_t i = 0; i < n - 1; i++)
+		dst[i] = cortex_dbg_read32(target, CORTEXA_DBG_DTRTX_EL0);
+
+	/* 3.a Clear memory access mode */
+	priv->edscr &= ~CORTEXA_DBG_EDSCR_MA;
+	cortex_dbg_write32(target, CORTEXA_DBG_EDSCR, priv->edscr);
+
+	/* 3.b Read the last value */
+	dst[n - 1] = cortex_dbg_read32(target, CORTEXA_DBG_DTRTX_EL0);
+
+	/* We defer 3.c to the caller of this function */
+}
+
+static inline void cortexa_armv8_core_mem_read(
+	target_s *const target, uint8_t *const dst, target_addr64_t src, const size_t dst_size)
+{
+	if (dst_size == 0)
+		return;
+
+	size_t offset = 0;
+	uint32_t tmp;
+
+	cortexa_armv8_core_reg_write64(target, 0U, src);
+
+	/* If the address is odd, read a byte to get onto an even address */
+	if (src & 1U) {
+		if (!cortexa_armv8_run_insn(target, ARM_LDRB_X0_X1_INSN))
+			return;
+
+		if (!cortexa_armv8_core_reg_read32(target, 1U, &tmp))
+			return;
+
+		dst[offset++] = (uint8_t)tmp;
+		++src;
+	}
+	/* If the address is now even but only 16-bit aligned, read a uint16_t to get onto 32-bit alignment */
+	if ((src & 2U) && dst_size - offset >= 2U) {
+		if (!cortexa_armv8_run_insn(target, ARM_LDRH_X0_X1_INSN))
+			return;
+
+		if (!cortexa_armv8_core_reg_read32(target, 1U, &tmp))
+			return;
+
+		write_le2(dst, offset, (uint16_t)tmp);
+		offset += 2U;
+		src += 2U;
+	}
+
+	/* Use the fast path to read as much as possible before doing a slow path fixup at the end */
+	cortexa_armv8_core_mem_read32(target, (uint32_t *)(dst + offset), src, (dst_size - offset) >> 2U);
+
+	const uint8_t remainder = (dst_size - offset) & 3U;
+	/* If the remainder needs at least 2 more bytes read, do this first */
+	if (remainder & 2U) {
+		if (!cortexa_armv8_run_insn(target, ARM_LDRH_X0_X1_INSN))
+			return;
+
+		if (!cortexa_armv8_core_reg_read32(target, 1U, &tmp))
+			return;
+
+		write_le2(dst, offset, tmp);
+		offset += 2U;
+	}
+	/* Finally, fix things up if a final byte is required. */
+	if (remainder & 1U) {
+		if (!cortexa_armv8_run_insn(target, ARM_LDRB_X0_X1_INSN))
+			return;
+
+		if (!cortexa_armv8_core_reg_read32(target, 1U, &tmp))
+			return;
+
+		dst[offset++] = (uint8_t)tmp;
+	}
+}
+
+/*
+ * This reads memory by jumping from the debug unit bus to the system bus.
+ * NB: This requires the core to be halted! Uses instruction launches on
+ * the core and requires we're in debug mode to work. Trashes x0.
+ * If core is not halted, temporarily halts target and resumes at the end
+ * of the function.
+ */
+static void cortexa_armv8_mem_read(
+	target_s *const target, void *const dest, const target_addr64_t src, const size_t len)
+{
+	/* If system is not halted, halt temporarily within this function. */
+	const bool halted_in_function = cortexa_armv8_halt_and_wait(target);
+
+	cortexa_armv8_priv_s *const priv = (cortexa_armv8_priv_s *)target->priv;
+
+	/* Cache current fault info */
+	if (!(priv->core_status & CORTEXA_CORE_STATUS_FAULT_CACHE_VALID)) {
+		cortexa_armv8_mem_read_fault_state(target, &priv->fault_state);
+		priv->core_status |= CORTEXA_CORE_STATUS_FAULT_CACHE_VALID;
+	}
+
+	/* Clear any existing fault state */
+	priv->core_status &= ~CORTEXA_CORE_STATUS_ITR_ERR;
+
+	cortexa_armv8_core_mem_read(target, (uint8_t *)dest, src, len);
+
+	/* Deal with any data faults that occurred */
+	cortexa_armv8_mem_restore_regs(target, __func__);
+
+	DEBUG_PROTO("%s: Reading %zu bytes @0x%" PRIx64 ":", __func__, len, src);
+#ifndef DEBUG_PROTO_IS_NOOP
+	const uint8_t *const data = (const uint8_t *)dest;
+#endif
+	for (size_t offset = 0; offset < len; ++offset) {
+		if (offset == 16U)
+			break;
+		DEBUG_PROTO(" %02x", data[offset]);
+	}
+	if (len > 16U)
+		DEBUG_PROTO(" ...");
+	DEBUG_PROTO("\n");
+
+	if (halted_in_function)
+		cortexa_armv8_halt_resume(target, false);
+}
+
+/* Fast path for cortexa_armv8_mem_write(). */
+static inline void cortexa_armv8_core_mem_write32(
+	target_s *const target, const target_addr64_t dst, const uint32_t *const src, const size_t n)
+{
+	if (n == 0)
+		return;
+
+	cortexa_armv8_priv_s *const priv = (cortexa_armv8_priv_s *)target->priv;
+
+	/* Clear memory access mode (sanity) */
+	priv->edscr = cortex_dbg_read32(target, CORTEXA_DBG_EDSCR);
+	priv->edscr &= ~CORTEXA_DBG_EDSCR_MA;
+	cortex_dbg_write32(target, CORTEXA_DBG_EDSCR, priv->edscr);
+
+	/* Follows "Using memory access mode in AArch64" state (DDI0487K §K12.1, pg14563) */
+
+	/* 1.abc Setup address in X0 */
+	cortexa_armv8_core_reg_write64(target, 0U, dst);
+
+	/* 1.d Do dummy operation */
+	cortexa_armv8_run_insn(target, A64_MSR(A64_DBGDTR_EL0, 0U));
+
+	/* 1.e Set memory access mode */
+	priv->edscr |= CORTEXA_DBG_EDSCR_MA;
+	cortex_dbg_write32(target, CORTEXA_DBG_EDSCR, priv->edscr);
+
+	/* 2. Loop n times and write all values */
+	for (size_t i = 0; i < n; i++)
+		cortex_dbg_write32(target, CORTEXA_DBG_DTRRX_EL0, src[i]);
+
+	/* 3.a Clear memory access mode */
+	priv->edscr &= ~CORTEXA_DBG_EDSCR_MA;
+	cortex_dbg_write32(target, CORTEXA_DBG_EDSCR, priv->edscr);
+
+	/* We defer 3.b to the caller of this function */
+}
+
+static void cortexa_armv8_core_mem_write(
+	target_s *const target, target_addr_t dst, const uint8_t *const src, const size_t src_size)
+{
+	if (src_size == 0)
+		return;
+
+	size_t offset = 0;
+
+	cortexa_armv8_core_reg_write64(target, 0U, dst);
+
+	/* If the address is odd, write a byte to get onto an even address */
+	if (dst & 1U) {
+		cortexa_armv8_core_reg_write32(target, 1U, src[offset++]);
+		if (!cortexa_armv8_run_insn(target, ARM_STRB_X1_X0_INSN))
+			return;
+		++dst;
+	}
+	/* If the address is now even but only 16-bit aligned, write a uint16_t to get onto 32-bit alignment */
+	if ((dst & 2U) && src_size - offset >= 2U) {
+		cortexa_armv8_core_reg_write32(target, 1U, read_le2(src, offset));
+		if (!cortexa_armv8_run_insn(target, ARM_STRH_X1_X0_INSN))
+			return;
+		offset += 2U;
+		dst += 2U;
+	}
+
+	/* Use the fast path to write as much as possible before doing a slow path fixup at the end */
+	cortexa_armv8_core_mem_write32(target, dst, (const uint32_t *)(src + offset), (src_size - offset) >> 2U);
+
+	const uint8_t remainder = (src_size - offset) & 3U;
+	/* If the remainder needs at least 2 more bytes write, do this first */
+	if (remainder & 2U) {
+		cortexa_armv8_core_reg_write32(target, 1U, read_le2(src, offset));
+		if (!cortexa_armv8_run_insn(target, ARM_STRH_X1_X0_INSN))
+			return;
+		offset += 2U;
+	}
+	/* Finally, fix things up if a final byte is required. */
+	if (remainder & 1U) {
+		cortexa_armv8_core_reg_write32(target, 1U, src[offset++]);
+		if (!cortexa_armv8_run_insn(target, ARM_STRB_X1_X0_INSN))
+			return;
+	}
+}
+
+/*
+ * This writes memory by jumping from the debug unit bus to the system bus.
+ * NB: This requires the core to be halted! Uses instruction launches on
+ * the core and requires we're in debug mode to work. Trashes x0.
+ */
+static void cortexa_armv8_mem_write(
+	target_s *const target, const target_addr64_t dest, const void *const src, const size_t len)
+{
+	/* If system is not halted, halt temporarily within this function. */
+	const bool halted_in_function = cortexa_armv8_halt_and_wait(target);
+
+	cortexa_armv8_priv_s *const priv = (cortexa_armv8_priv_s *)target->priv;
+	DEBUG_PROTO("%s: Writing %zu bytes @0x%" PRIx64 ":", __func__, len, dest);
+#ifndef DEBUG_PROTO_IS_NOOP
+	const uint8_t *const data = (const uint8_t *)src;
+#endif
+	for (size_t offset = 0; offset < len; ++offset) {
+		if (offset == 16U)
+			break;
+		DEBUG_PROTO(" %02x", data[offset]);
+	}
+	if (len > 16U)
+		DEBUG_PROTO(" ...");
+	DEBUG_PROTO("\n");
+
+	/* Cache current fault info */
+	if (!(priv->core_status & CORTEXA_CORE_STATUS_FAULT_CACHE_VALID)) {
+		cortexa_armv8_mem_read_fault_state(target, &priv->fault_state);
+		priv->core_status |= CORTEXA_CORE_STATUS_FAULT_CACHE_VALID;
+	}
+
+	/* Clear any existing fault state */
+	priv->core_status &= ~CORTEXA_CORE_STATUS_ITR_ERR;
+
+	cortexa_armv8_core_mem_write(target, dest, (const uint8_t *)src, len);
+
+	/* Deal with any data faults that occurred */
+	cortexa_armv8_mem_restore_regs(target, __func__);
+
+	if (halted_in_function)
+		cortexa_armv8_halt_resume(target, false);
 }
