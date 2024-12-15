@@ -117,36 +117,35 @@ static uint8_t gdb_packet_checksum(const gdb_packet_s *const packet)
 	return checksum;
 }
 
-packet_state_e consume_remote_packet(char *const packet, const size_t size)
+packet_state_e consume_remote_packet(gdb_packet_s *const packet)
 {
 #if CONFIG_BMDA == 0
 	/* We got what looks like probably a remote control packet */
-	size_t offset = 0;
+	packet->size = 0;
 	while (true) {
 		/* Consume bytes until we either have a complete remote control packet or have to leave this mode */
 		const char rx_char = gdb_if_getchar();
 
 		switch (rx_char) {
 		case '\x04':
-			packet[0] = rx_char;
+			packet->data[0] = rx_char;
 			/* EOT (end of transmission) - connection was closed */
 			return PACKET_IDLE;
 
 		case REMOTE_SOM:
 			/* Oh dear, restart remote packet capture */
-			offset = 0;
+			packet->size = 0;
 			break;
 
 		case REMOTE_EOM:
 			/* Complete packet for processing */
 
 			/* Null terminate packet */
-			packet[offset] = '\0';
+			packet->data[packet->size] = '\0';
 			/* Handle packet */
-			remote_packet_process(packet, offset);
+			remote_packet_process(packet->data, packet->size);
 
 			/* Restart packet capture */
-			packet[0] = '\0';
 			return PACKET_IDLE;
 
 		case GDB_PACKET_START:
@@ -154,18 +153,15 @@ packet_state_e consume_remote_packet(char *const packet, const size_t size)
 			return PACKET_GDB_CAPTURE;
 
 		default:
-			if (offset < size)
-				packet[offset++] = rx_char;
-			else {
-				packet[0] = '\0';
+			if (packet->size < GDB_PACKET_BUFFER_SIZE)
+				packet->data[packet->size++] = rx_char;
+			else
 				/* Buffer overflow, restart packet capture */
 				return PACKET_IDLE;
-			}
 		}
 	}
 #else
 	(void)packet;
-	(void)size;
 
 	/* Hosted builds ignore remote control packets */
 	return PACKET_IDLE;
@@ -197,7 +193,7 @@ gdb_packet_s *gdb_packet_receive(void)
 				 * Let consume_remote_packet handle this
 				 * returns PACKET_IDLE or PACKET_GDB_CAPTURE if it detects the start of a GDB packet
 				 */
-				state = consume_remote_packet(packet->data, GDB_PACKET_BUFFER_SIZE);
+				state = consume_remote_packet(packet);
 				packet->size = 0;
 			}
 #endif
@@ -439,10 +435,10 @@ void gdb_out(const char *const str)
 	/**
      * Program console output packet
      * See https://sourceware.org/gdb/current/onlinedocs/gdb.html/Stop-Reply-Packets.html#Stop-Reply-Packets
-     * 
+     *
      * Format: ‘O XX…’
      * ‘XX…’ is hex encoding of ASCII data, to be written as the program’s console output.
-     * 
+     *
      * Can happen at any time while the program is running and the debugger should continue to wait for ‘W’, ‘T’, etc.
      * This reply is not permitted in non-stop mode.
      */
@@ -455,7 +451,7 @@ void gdb_voutf(const char *const fmt, va_list ap)
 	 * We could technically do the formatting and transformation in a single buffer reducing stack usage
 	 * But it is a bit more complex and likely slower, we would need to spread the characters out such
 	 * that each occupies two bytes, and then we could hex them in place
-	 * 
+	 *
 	 * If this stack usage proves to be a problem, we can revisit this
 	 */
 	char str_scratch[GDB_OUT_PACKET_MAX_SIZE + 1U];
