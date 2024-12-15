@@ -130,6 +130,8 @@ typedef struct cortexa_armv8_priv {
 static void cortexa_armv8_halt_request(target_s *target);
 static target_halt_reason_e cortexa_armv8_halt_poll(target_s *target, target_addr64_t *watch);
 static void cortexa_armv8_halt_resume(target_s *target, bool step);
+static bool cortexa_armv8_attach(target_s *target);
+static void cortexa_armv8_detach(target_s *target);
 
 static void cortexa_armv8_priv_free(void *const priv)
 {
@@ -282,7 +284,10 @@ bool cortexa_armv8_cti_probe(adiv5_access_port_s *const ap, const target_addr_t 
 
 	/* XXX: Detect debug features */
 	/* XXX: Detect optional features */
-	/* XXX: Attach / Detach APIs */
+
+	target->attach = cortexa_armv8_attach;
+	target->detach = cortexa_armv8_detach;
+
 	/* XXX: Register IO APIs */
 	/* XXX: Memory IO APIs */
 	/* XXX: Breakpoint APIs */
@@ -467,4 +472,46 @@ static void cortexa_armv8_halt_resume(target_s *const target, const bool step)
 
 	if (edprsr & CORTEXA_DBG_EDPRSR_STICKY_DEBUG_RESTART)
 		DEBUG_ERROR("Failed to resume PE!\n");
+}
+
+static bool cortexa_armv8_attach(target_s *target)
+{
+	adiv5_access_port_s *ap = cortex_ap(target);
+	/* Mark the DP as being in fault so error recovery will switch to this core when in multi-drop mode */
+	ap->dp->fault = 1;
+
+	/* Clear any pending fault condition (and switch to this core) */
+	target_check_error(target);
+
+	/* Ensure the OS lock is unset just in case it was re-set between probe and attach */
+	cortexa_armv8_oslock_unlock(target);
+	/* Try to halt the core */
+	target_halt_request(target);
+	platform_timeout_s timeout;
+	platform_timeout_set(&timeout, 250);
+	target_halt_reason_e reason = TARGET_HALT_RUNNING;
+	while (!platform_timeout_is_expired(&timeout) && reason == TARGET_HALT_RUNNING)
+		reason = target_halt_poll(target, NULL);
+	if (reason != TARGET_HALT_REQUEST) {
+		DEBUG_ERROR("Failed to halt the core\n");
+		return false;
+	}
+
+	cortexa_armv8_priv_s *const priv = (cortexa_armv8_priv_s *)target->priv;
+
+	/* XXX: Clear any stale breakpoints */
+	priv->base.breakpoints_mask = 0U;
+
+	/* XXX: Clear any stale watchpoints */
+	priv->base.watchpoints_mask = 0U;
+
+	return true;
+}
+
+static void cortexa_armv8_detach(target_s *target)
+{
+	/* XXX: Clear any set breakpoints */
+	/* XXX: Clear any set watchpoints */
+
+	target_halt_resume(target, false);
 }
