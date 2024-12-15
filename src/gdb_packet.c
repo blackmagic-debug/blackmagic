@@ -41,14 +41,23 @@ typedef enum packet_state {
 
 static bool noackmode = false;
 
+#ifdef EXTERNAL_PACKET_BUFFER
+extern gdb_packet_s *gdb_full_packet_buffer(void);
+#else
 /* This has to be aligned so the remote protocol can re-use it without causing Problems */
 static gdb_packet_s BMD_ALIGN_DEF(8) packet_buffer;
+
+static inline gdb_packet_s *gdb_full_packet_buffer(void)
+{
+	return &packet_buffer;
+}
 
 char *gdb_packet_buffer(void)
 {
 	/* Return the static packet data buffer */
 	return packet_buffer.data;
 }
+#endif /* EXTERNAL_PACKET_BUFFER */
 
 /* https://sourceware.org/gdb/onlinedocs/gdb/Packet-Acknowledgment.html */
 void gdb_set_noackmode(bool enable)
@@ -167,18 +176,19 @@ gdb_packet_s *gdb_packet_receive(void)
 {
 	packet_state_e state = PACKET_IDLE; /* State of the packet capture */
 	uint8_t rx_checksum = 0;
+	gdb_packet_s *packet = gdb_full_packet_buffer();
 
 	while (true) {
 		const char rx_char = gdb_if_getchar();
 
 		switch (state) {
 		case PACKET_IDLE:
-			packet_buffer.data[0U] = rx_char;
+			packet->data[0U] = rx_char;
 			if (rx_char == GDB_PACKET_START) {
 				/* Start of GDB packet */
 				state = PACKET_GDB_CAPTURE;
-				packet_buffer.size = 0;
-				packet_buffer.notification = false;
+				packet->size = 0;
+				packet->notification = false;
 			}
 #if CONFIG_BMDA == 0
 			else if (rx_char == REMOTE_SOM) {
@@ -187,22 +197,22 @@ gdb_packet_s *gdb_packet_receive(void)
 				 * Let consume_remote_packet handle this
 				 * returns PACKET_IDLE or PACKET_GDB_CAPTURE if it detects the start of a GDB packet
 				 */
-				state = consume_remote_packet(packet_buffer.data, GDB_PACKET_BUFFER_SIZE);
-				packet_buffer.size = 0;
+				state = consume_remote_packet(packet->data, GDB_PACKET_BUFFER_SIZE);
+				packet->size = 0;
 			}
 #endif
 			/* EOT (end of transmission) - connection was closed */
 			else if (rx_char == '\x04') {
-				packet_buffer.data[1U] = '\0'; /* Null terminate */
-				packet_buffer.size = 1U;
-				return &packet_buffer;
+				packet->data[1U] = '\0'; /* Null terminate */
+				packet->size = 1U;
+				return packet;
 			}
 			break;
 
 		case PACKET_GDB_CAPTURE:
 			if (rx_char == GDB_PACKET_START) {
 				/* Restart GDB packet capture */
-				packet_buffer.size = 0;
+				packet->size = 0;
 				break;
 			}
 			if (rx_char == GDB_PACKET_END) {
@@ -219,12 +229,12 @@ gdb_packet_s *gdb_packet_receive(void)
 				state = PACKET_GDB_ESCAPE;
 			else
 				/* Add to packet buffer */
-				packet_buffer.data[packet_buffer.size++] = rx_char;
+				packet->data[packet->size++] = rx_char;
 			break;
 
 		case PACKET_GDB_ESCAPE:
 			/* Resolve escaped char */
-			packet_buffer.data[packet_buffer.size++] = rx_char ^ GDB_PACKET_ESCAPE_XOR;
+			packet->data[packet->size++] = rx_char ^ GDB_PACKET_ESCAPE_XOR;
 
 			/* Return to normal packet capture */
 			state = PACKET_GDB_CAPTURE;
@@ -245,7 +255,7 @@ gdb_packet_s *gdb_packet_receive(void)
 				rx_checksum |= unhex_digit(rx_char); /* BITWISE OR lower nibble with upper nibble */
 
 				/* (N)Acknowledge packet */
-				const bool checksum_ok = gdb_packet_checksum(&packet_buffer) == rx_checksum;
+				const bool checksum_ok = gdb_packet_checksum(packet) == rx_checksum;
 				gdb_if_putchar(checksum_ok ? GDB_PACKET_ACK : GDB_PACKET_NACK, true);
 				if (!checksum_ok) {
 					/* Checksum error, restart packet capture */
@@ -255,15 +265,15 @@ gdb_packet_s *gdb_packet_receive(void)
 			}
 
 			/* Null terminate packet */
-			packet_buffer.data[packet_buffer.size] = '\0';
+			packet->data[packet->size] = '\0';
 
 #ifndef DEBUG_GDB_IS_NOOP
 			/* Log packet for debugging */
-			gdb_packet_debug(__func__, &packet_buffer);
+			gdb_packet_debug(__func__, packet);
 #endif
 
 			/* Return captured packet */
-			return &packet_buffer;
+			return packet;
 
 		default:
 			/* Something is not right, restart packet capture */
@@ -271,7 +281,7 @@ gdb_packet_s *gdb_packet_receive(void)
 			break;
 		}
 
-		if (packet_buffer.size >= GDB_PACKET_BUFFER_SIZE)
+		if (packet->size >= GDB_PACKET_BUFFER_SIZE)
 			/* Buffer overflow, restart packet capture */
 			state = PACKET_IDLE;
 	}
@@ -332,13 +342,15 @@ void gdb_packet_send(const gdb_packet_s *const packet)
 
 void gdb_put_packet(const char *preamble, size_t preamble_size, const char *data, size_t data_size, bool hex_data)
 {
+	gdb_packet_s *packet = gdb_full_packet_buffer();
+
 	/*
 	 * Create a packet using the internal packet buffer
 	 * This destroys the previous packet in the buffer
 	 * any packets obtained from gdb_packet_receive() will be invalidated
 	 */
-	packet_buffer.notification = false;
-	packet_buffer.size = 0;
+	packet->notification = false;
+	packet->size = 0;
 
 	/*
 	 * Copy the preamble and data into the packet buffer, limited by the buffer size
@@ -350,8 +362,8 @@ void gdb_put_packet(const char *preamble, size_t preamble_size, const char *data
 	 */
 	if (preamble != NULL && preamble_size > 0) {
 		preamble_size = MIN(preamble_size, GDB_PACKET_BUFFER_SIZE);
-		memcpy(packet_buffer.data, preamble, preamble_size);
-		packet_buffer.size = preamble_size;
+		memcpy(packet->data, preamble, preamble_size);
+		packet->size = preamble_size;
 	}
 
 	/* Add the data to the packet buffer and transform it if needed */
@@ -361,29 +373,30 @@ void gdb_put_packet(const char *preamble, size_t preamble_size, const char *data
 			data_size *= 2U;
 
 		/* Limit the data size to the remaining space in the packet buffer */
-		const size_t remaining_size = GDB_PACKET_BUFFER_SIZE - packet_buffer.size;
+		const size_t remaining_size = GDB_PACKET_BUFFER_SIZE - packet->size;
 		data_size = MIN(data_size, remaining_size);
 
 		/* Copy the data into the packet buffer */
 		if (hex_data)
-			hexify(packet_buffer.data + packet_buffer.size, data, data_size / 2U);
+			hexify(packet->data + packet->size, data, data_size / 2U);
 		else
-			memcpy(packet_buffer.data + packet_buffer.size, data, data_size);
-		packet_buffer.size += data_size;
+			memcpy(packet->data + packet->size, data, data_size);
+		packet->size += data_size;
 	}
 
 	/* Transmit the packet */
-	gdb_packet_send(&packet_buffer);
+	gdb_packet_send(packet);
 }
 
 void gdb_putpacket_str_f(const char *const fmt, ...)
 {
+	gdb_packet_s *packet = gdb_full_packet_buffer();
 	/*
 	 * Create a packet using the internal packet buffer
 	 * This destroys the previous packet in the buffer
 	 * any packets obtained from gdb_packet_receive() will be invalidated
 	 */
-	packet_buffer.notification = false;
+	packet->notification = false;
 
 	/*
 	 * Format the string directly into the packet buffer
@@ -394,30 +407,31 @@ void gdb_putpacket_str_f(const char *const fmt, ...)
 	 */
 	va_list ap;
 	va_start(ap, fmt);
-	vsnprintf(packet_buffer.data, sizeof(packet_buffer.data), fmt, ap);
+	vsnprintf(packet->data, sizeof(packet->data), fmt, ap);
 	va_end(ap);
 
 	/* Get the size of the formatted string */
-	packet_buffer.size = strnlen(packet_buffer.data, GDB_PACKET_BUFFER_SIZE);
+	packet->size = strnlen(packet->data, GDB_PACKET_BUFFER_SIZE);
 
 	/* Transmit the packet */
-	gdb_packet_send(&packet_buffer);
+	gdb_packet_send(packet);
 }
 
 void gdb_put_notification_str(const char *const str)
 {
+	gdb_packet_s *packet = gdb_full_packet_buffer();
 	/*
 	 * Create a packet using the internal packet buffer
 	 * This destroys the previous packet in the buffer
 	 * any packets obtained from gdb_packet_receive() will be invalidated
 	 */
-	packet_buffer.notification = true;
+	packet->notification = true;
 
-	packet_buffer.size = strnlen(str, GDB_PACKET_BUFFER_SIZE);
-	memcpy(packet_buffer.data, str, packet_buffer.size);
+	packet->size = strnlen(str, GDB_PACKET_BUFFER_SIZE);
+	memcpy(packet->data, str, packet->size);
 
 	/* Transmit the packet */
-	gdb_packet_send(&packet_buffer);
+	gdb_packet_send(packet);
 }
 
 void gdb_out(const char *const str)
