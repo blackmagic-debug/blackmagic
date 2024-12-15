@@ -66,8 +66,20 @@ typedef struct cortexa_armv8_priv {
 	cortex_priv_s base;
 	arm_coresight_cti_s cti;
 
+	/* Core registers cache */
+	struct {
+		uint64_t x[CORTEXA_ARMV8_GENERAL_REG_COUNT];
+		uint64_t sp;
+		uint64_t pc;
+
+		uint64_t spsr;
+	} core_regs;
+
 	/* Cached value of EDSCR */
 	uint32_t edscr;
+
+	/* Control and status information */
+	uint8_t core_status;
 
 	/* Indicate if the DC was init properly */
 	bool dc_is_valid;
@@ -76,7 +88,10 @@ typedef struct cortexa_armv8_priv {
 #define CORTEXA_ARMV8_TARGET_NAME ("ARM Cortex-A (ARMv8-A)")
 
 #define CORTEXA_DBG_EDECR     0x024U /* Debug Execution Control Register */
+#define CORTEXA_DBG_DTRRX_EL0 0x080U /* Debug Data Transfer Register, Receive */
+#define CORTEXA_DBG_EDITR     0x084U /* Debug Instruction Transfer Register */
 #define CORTEXA_DBG_EDSCR     0x088U /* Debug Status and Control Register */
+#define CORTEXA_DBG_DTRTX_EL0 0x08cU /* Debug Data Transfer Register, Transmit */
 #define CORTEXA_DBG_EDRCR     0x090U /* Debug Reserve Control Register */
 #define CORTEXA_DBG_OSLAR_EL1 0x300U /* OS Lock Access Register */
 #define CORTEXA_DBG_EDPRSR    0x314U /* Debug Processor Status Register */
@@ -127,11 +142,107 @@ typedef struct cortexa_armv8_priv {
 #define CORTEXA_CTI_EVENT_HALT_PE_SINGLE_IDX 0U
 #define CORTEXA_CTI_EVENT_RESTART_PE_IDX     1U
 
+#define CORTEXA_CORE_STATUS_ITR_ERR (1U << 0U)
+
+/*
+ * Instruction encodings for the system registers
+ * MRS -> Move System Register to general-purpose register (DDI0487K §C6.2.247, pg2208)
+ * MSR -> Move general-purpose register to System register (DDI0487K §C6.2.250, pg2214)
+ * ADD -> Add immediate, used for the alias MOV (to/from SP) (DDI0487K §C6.2.5, pg1652)
+ */
+#define A64_MRS_INSN                       0xd5300000U
+#define A64_MSR_INSN                       0xd5100000U
+#define A64_ADD_IMM_INSN                   0x11000000U
+#define A64_MRS(Xt, systemreg)             (A64_MRS_INSN | ((systemreg) << 5U) | (Xt))
+#define A64_MSR(systemreg, Xt)             (A64_MSR_INSN | ((systemreg) << 5U) | (Xt))
+#define A64_ADD_IMM(sp, Rd, Rn, imm12, sh) (A64_ADD_IMM_INSN | ((sh) << 22U) | ((imm12) << 10U) | ((Rn) << 5U) | ((Rd)))
+#define A64_READ_SP(sp, Rd)                A64_ADD_IMM(sp, Rd, 0x1fU, 0, 0)
+#define A64_WRITE_SP(sp, Rn)               A64_ADD_IMM(sp, 0x1fU, Rn, 0, 0)
+
+#define A64_ENCODE_SYSREG(op0, op1, crn, crm, op2) \
+	(((op0) << 14U) | ((op1) << 11U) | ((crn) << 7U) | ((crm) << 3U) | ((op2) << 0U))
+
+#define A64_DBGDTR_EL0   A64_ENCODE_SYSREG(2, 3, 0, 4, 0) /* Debug Data Transfer Register, half-duplex */
+#define A64_DBGDTRTX_EL0 A64_ENCODE_SYSREG(2, 3, 0, 5, 0) /* Debug Data Transfer Register, Transmit */
+#define A64_DBGDTRRX_EL0 A64_ENCODE_SYSREG(2, 3, 0, 5, 0) /* Debug Data Transfer Register, Receive */
+#define A64_DSPSR_EL0    A64_ENCODE_SYSREG(3, 3, 4, 5, 0) /* Debug Saved Program Status Register */
+#define A64_DLR_EL0      A64_ENCODE_SYSREG(3, 3, 4, 5, 1) /* Debug Link Register */
+
+/*
+ * Fields for Cortex-A special-purpose registers, used in the generation of GDB's target description XML.
+ */
+
+struct cortexa_armv8_gdb_field_def {
+	const char *name;
+	const uint8_t start;
+	const uint8_t end;
+};
+
+struct cortexa_armv8_gdb_flags_def {
+	const char *id;
+	const struct cortexa_armv8_gdb_field_def *fields;
+	uint8_t fields_count;
+	uint8_t size;
+};
+
+struct cortexa_armv8_gdb_reg_def {
+	const char *name;
+	uint8_t bit_size;
+	const char *type_name;
+};
+
+/* Cortex-A custom flags */
+static const struct cortexa_armv8_gdb_field_def cortexa_armv8_cpsr_flags_fields[] = {
+	{.name = "SP", .start = 0, .end = 0},
+	{.name = "EL", .start = 2, .end = 3},
+	{.name = "nRW", .start = 4, .end = 4},
+	{.name = "F", .start = 6, .end = 6},
+	{.name = "I", .start = 7, .end = 7},
+	{.name = "A", .start = 8, .end = 8},
+	{.name = "D", .start = 9, .end = 9},
+	{.name = "BTYPE", .start = 10, .end = 11},
+	{.name = "SSBS", .start = 12, .end = 12},
+	{.name = "IL", .start = 20, .end = 20},
+	{.name = "SS", .start = 21, .end = 21},
+	{.name = "PAN", .start = 22, .end = 22},
+	{.name = "UAO", .start = 23, .end = 23},
+	{.name = "DIT", .start = 24, .end = 24},
+	{.name = "TCO", .start = 25, .end = 25},
+	{.name = "V", .start = 28, .end = 28},
+	{.name = "C", .start = 29, .end = 29},
+	{.name = "Z", .start = 30, .end = 30},
+	{.name = "N", .start = 31, .end = 31},
+};
+
+static const struct cortexa_armv8_gdb_flags_def cortexa_armv8_flags[] = {{.id = "cpsr_flags",
+	.size = 4,
+	.fields = cortexa_armv8_cpsr_flags_fields,
+	.fields_count = ARRAY_LENGTH(cortexa_armv8_cpsr_flags_fields)}};
+
+/* Cortex-A special-purpose registers */
+static const struct cortexa_armv8_gdb_reg_def cortexa_armv8_sprs[] = {
+	{.name = "sp", .bit_size = 64, .type_name = "data_ptr"},
+	{.name = "pc", .bit_size = 64, .type_name = "code_ptr"},
+	{.name = "cpsr", .bit_size = 32, .type_name = "cpsr_flags"},
+};
+
 static void cortexa_armv8_halt_request(target_s *target);
 static target_halt_reason_e cortexa_armv8_halt_poll(target_s *target, target_addr64_t *watch);
 static void cortexa_armv8_halt_resume(target_s *target, bool step);
 static bool cortexa_armv8_attach(target_s *target);
 static void cortexa_armv8_detach(target_s *target);
+
+static bool cortexa_armv8_core_reg_read64(target_s *target, uint8_t reg, uint64_t *result);
+static bool cortexa_armv8_core_reg_write64(target_s *target, uint8_t reg, uint64_t value);
+static void cortexa_armv8_regs_save(target_s *target);
+static void cortexa_armv8_regs_restore(target_s *target);
+static void cortexa_armv8_regs_read(target_s *target, void *data);
+static void cortexa_armv8_regs_write(target_s *target, const void *data);
+static size_t cortexa_armv8_reg_read(target_s *target, uint32_t reg, void *data, size_t max);
+static size_t cortexa_armv8_reg_write(target_s *target, uint32_t reg, const void *data, size_t max);
+static const char *cortexa_armv8_target_description(target_s *target);
+
+static bool cortexa_armv8_check_error(target_s *target);
 
 static void cortexa_armv8_priv_free(void *const priv)
 {
@@ -287,8 +398,15 @@ bool cortexa_armv8_cti_probe(adiv5_access_port_s *const ap, const target_addr_t 
 
 	target->attach = cortexa_armv8_attach;
 	target->detach = cortexa_armv8_detach;
+	target->check_error = cortexa_armv8_check_error;
 
-	/* XXX: Register IO APIs */
+	target->regs_description = cortexa_armv8_target_description;
+	target->regs_read = cortexa_armv8_regs_read;
+	target->regs_write = cortexa_armv8_regs_write;
+	target->reg_read = cortexa_armv8_reg_read;
+	target->reg_write = cortexa_armv8_reg_write;
+	target->regs_size = sizeof(uint64_t) * CORTEXA_ARMV8_GENERAL_REG_COUNT;
+
 	/* XXX: Memory IO APIs */
 	/* XXX: Breakpoint APIs */
 
@@ -358,7 +476,8 @@ static target_halt_reason_e cortexa_armv8_halt_poll(target_s *const target, targ
 	priv->edscr |= CORTEXA_DBG_EDSCR_HALTING_DBG_ENABLE;
 	cortex_dbg_write32(target, CORTEXA_DBG_EDSCR, priv->edscr);
 
-	/* XXX: Save the target core's registers as debugging operations clobber them */
+	/* Save the target core's registers as debugging operations clobber them */
+	cortexa_armv8_regs_save(target);
 
 	target_halt_reason_e reason = TARGET_HALT_FAULT;
 	/* Determine why we halted exactly from the Method Of Entry bits */
@@ -422,7 +541,8 @@ static void cortexa_armv8_halt_resume(target_s *const target, const bool step)
 	cortex_dbg_write32(
 		target, CORTEXA_DBG_EDECR, cortex_dbg_read32(target, CORTEXA_DBG_EDECR) & ~CORTEXA_DBG_EDECR_SINGLE_STEP);
 
-	/* XXX: Restore the core's registers so the running program doesn't know we've been in there */
+	/* Restore the core's registers so the running program doesn't know we've been in there */
+	cortexa_armv8_regs_restore(target);
 
 	/* First ensure that halting events are enabled */
 	priv->edscr = cortex_dbg_read32(target, CORTEXA_DBG_EDSCR);
@@ -514,4 +634,441 @@ static void cortexa_armv8_detach(target_s *target)
 	/* XXX: Clear any set watchpoints */
 
 	target_halt_resume(target, false);
+}
+
+static bool cortexa_armv8_check_error(target_s *const target)
+{
+	cortexa_armv8_priv_s *const priv = (cortexa_armv8_priv_s *)target->priv;
+	const bool fault = priv->core_status & CORTEXA_CORE_STATUS_ITR_ERR;
+	priv->core_status &= (uint8_t)~CORTEXA_CORE_STATUS_ITR_ERR;
+	return fault || cortex_check_error(target);
+}
+
+static bool cortexa_armv8_check_itr_err(target_s *const target)
+{
+	cortexa_armv8_priv_s *const priv = (cortexa_armv8_priv_s *)target->priv;
+
+	/* If the instruction triggered an error, signal failure having cleared it */
+	if (priv->edscr & CORTEXA_DBG_EDSCR_ERR) {
+		priv->core_status |= CORTEXA_CORE_STATUS_ITR_ERR;
+		cortex_dbg_write32(target, CORTEXA_DBG_EDRCR, CORTEXA_DBG_EDRCR_CLR_STICKY_ERR);
+	}
+
+	return !(priv->edscr & CORTEXA_DBG_EDSCR_ERR);
+}
+
+static void cortexa_armv8_dcc_write64(target_s *const target, const uint64_t value)
+{
+	cortexa_armv8_priv_s *const priv = (cortexa_armv8_priv_s *)target->priv;
+
+	/* Poll for empty data */
+	priv->edscr = cortex_dbg_read32(target, CORTEXA_DBG_EDSCR);
+	while (priv->edscr & CORTEXA_DBG_EDSCR_RX_FULL)
+		priv->edscr = cortex_dbg_read32(target, CORTEXA_DBG_EDSCR);
+
+	/* In case of 64-bit, we need to read RX and then TX (yes, that's not a typo here) */
+	cortex_dbg_write32(target, CORTEXA_DBG_DTRRX_EL0, value & UINT32_MAX);
+	cortex_dbg_write32(target, CORTEXA_DBG_DTRTX_EL0, value >> 32U);
+
+	/* Poll for the data to become ready in the DCC */
+	while (!(priv->edscr & CORTEXA_DBG_EDSCR_RX_FULL))
+		priv->edscr = cortex_dbg_read32(target, CORTEXA_DBG_EDSCR);
+}
+
+static void cortexa_armv8_dcc_read64(target_s *target, uint64_t *const value)
+{
+	cortexa_armv8_priv_s *const priv = (cortexa_armv8_priv_s *)target->priv;
+
+	/* In case of no data, we wait */
+	while (!(priv->edscr & CORTEXA_DBG_EDSCR_TX_FULL))
+		priv->edscr = cortex_dbg_read32(target, CORTEXA_DBG_EDSCR);
+
+	/* In case of 64-bit, we need to read TX and then RX (yes, that's not a typo here) */
+	const uint32_t low = cortex_dbg_read32(target, CORTEXA_DBG_DTRTX_EL0);
+	const uint32_t high = cortex_dbg_read32(target, CORTEXA_DBG_DTRRX_EL0);
+
+	*value = low | ((uint64_t)high << 32U);
+}
+
+static bool cortexa_armv8_run_insn(target_s *const target, const uint32_t insn)
+{
+	cortexa_armv8_priv_s *const priv = (cortexa_armv8_priv_s *)target->priv;
+	cortex_dbg_write32(target, CORTEXA_DBG_EDITR, insn);
+
+	while (!(priv->edscr & CORTEXA_DBG_EDSCR_ITE))
+		priv->edscr = cortex_dbg_read32(target, CORTEXA_DBG_EDSCR);
+
+	/* Poll for the operation to be complete */
+	priv->edscr = cortex_dbg_read32(target, CORTEXA_DBG_EDSCR);
+	while (!(priv->edscr & CORTEXA_DBG_EDSCR_ITE))
+		priv->edscr = cortex_dbg_read32(target, CORTEXA_DBG_EDSCR);
+
+	/* Check possible execution failures */
+	return cortexa_armv8_check_itr_err(target);
+}
+
+static inline bool cortexa_armv8_system_reg_read(
+	target_s *const target, const uint16_t system_reg, uint64_t *const result)
+{
+	if (!cortexa_armv8_run_insn(target, A64_MRS(0, system_reg)))
+		return false;
+
+	return cortexa_armv8_core_reg_read64(target, 0, result);
+}
+
+static bool cortexa_armv8_core_reg_read64(target_s *const target, const uint8_t reg, uint64_t *const result)
+{
+	if (reg < 31U) {
+		if (!cortexa_armv8_run_insn(target, A64_MSR(A64_DBGDTR_EL0, reg)))
+			return false;
+
+		cortexa_armv8_dcc_read64(target, result);
+		return true;
+	}
+	/* If the register is the stack pointer, we first have to extract it to x0 */
+	else if (reg == 31U) {
+		if (!cortexa_armv8_run_insn(target, A64_READ_SP(1, 0)))
+			return false;
+
+		return cortexa_armv8_core_reg_read64(target, 0, result);
+	}
+	/* If the register is the program counter, we first have to extract it to x0 */
+	else if (reg == 32U) {
+		return cortexa_armv8_system_reg_read(target, A64_DLR_EL0, result);
+	}
+	/* If the register is the SPSR, we first have to extract it to x0 */
+	else if (reg == 33U) {
+		return cortexa_armv8_system_reg_read(target, A64_DSPSR_EL0, result);
+	}
+
+	DEBUG_ERROR("%s: Unknown register %d", __func__, reg);
+	return false;
+}
+
+static inline bool cortexa_armv8_system_reg_write(
+	target_s *const target, const uint16_t system_reg, const uint64_t value)
+{
+	if (!cortexa_armv8_core_reg_write64(target, 0, value))
+		return false;
+
+	return cortexa_armv8_run_insn(target, A64_MSR(system_reg, 0));
+}
+
+static bool cortexa_armv8_core_reg_write64(target_s *const target, const uint8_t reg, const uint64_t value)
+{
+	if (reg < 31U) {
+		cortexa_armv8_dcc_write64(target, value);
+		return cortexa_armv8_run_insn(target, A64_MRS(reg, A64_DBGDTR_EL0));
+	}
+	/* If the register is the stack pointer, we first have to write it to x0 */
+	else if (reg == 31U) {
+		if (!cortexa_armv8_core_reg_write64(target, 0, value))
+			return false;
+
+		return cortexa_armv8_run_insn(target, A64_WRITE_SP(1, 0));
+	}
+	/* If the register is the program counter, we first have to write it to x0 */
+	else if (reg == 32U) {
+		return cortexa_armv8_system_reg_write(target, A64_DLR_EL0, value);
+	}
+	/* If the register is the SPSR, we first have to write it to x0 */
+	else if (reg == 33U) {
+		return cortexa_armv8_system_reg_write(target, A64_DSPSR_EL0, value);
+	}
+
+	DEBUG_ERROR("%s: Unknown register %d", __func__, reg);
+	return false;
+}
+
+static void cortexa_armv8_core_regs_save(target_s *const target)
+{
+	cortexa_armv8_priv_s *const priv = (cortexa_armv8_priv_s *)target->priv;
+
+	/* Save out x0-x30 in that order (clobbers x0 and x1) */
+	for (size_t i = 0U; i < ARRAY_LENGTH(priv->core_regs.x); ++i) {
+		bool success = cortexa_armv8_core_reg_read64(target, i, &priv->core_regs.x[i]);
+
+		if (!success)
+			DEBUG_ERROR("%s: Failed to read register x%lu\n", __func__, i);
+	}
+
+	/* Save SP/PC/SPSR registers */
+	cortexa_armv8_core_reg_read64(target, 31U, &priv->core_regs.sp);
+	cortexa_armv8_core_reg_read64(target, 32U, &priv->core_regs.pc);
+	cortexa_armv8_core_reg_read64(target, 33U, &priv->core_regs.spsr);
+
+	/* Adjust PC as it is given by the DLR register */
+	priv->core_regs.pc -= 0x4;
+}
+
+static void cortexa_armv8_regs_save(target_s *const target)
+{
+	cortexa_armv8_core_regs_save(target);
+	/* XXX: Save float registers */
+}
+
+static void cortexa_armv8_core_regs_restore(target_s *const target)
+{
+	cortexa_armv8_priv_s *const priv = (cortexa_armv8_priv_s *)target->priv;
+
+	/* Restore SP/PC/SPSR registers */
+	cortexa_armv8_core_reg_write64(target, 31U, priv->core_regs.sp);
+	cortexa_armv8_core_reg_write64(target, 32U, priv->core_regs.pc);
+	cortexa_armv8_core_reg_write64(target, 33U, priv->core_regs.spsr);
+
+	/* Restore x1-31 in that order. Ignore r0 for the moment as it gets clobbered repeatedly */
+	for (size_t i = 1U; i < ARRAY_LENGTH(priv->core_regs.x); ++i)
+		cortexa_armv8_core_reg_write64(target, i, priv->core_regs.x[i]);
+
+	/* Now we're done with the rest of the registers, restore x0 */
+	cortexa_armv8_core_reg_write64(target, 0U, priv->core_regs.x[0U]);
+}
+
+static void cortexa_armv8_regs_restore(target_s *const target)
+{
+	/* XXX: Restore float registers */
+	cortexa_armv8_core_regs_restore(target);
+}
+
+static void cortexa_armv8_regs_read(target_s *target, void *data)
+{
+	const cortexa_armv8_priv_s *const priv = (cortexa_armv8_priv_s *)target->priv;
+	uint64_t *const regs = (uint64_t *)data;
+
+	/* Copy the register values out from our cache */
+	memcpy(regs, priv->core_regs.x, sizeof(priv->core_regs.x));
+	regs[31U] = priv->core_regs.sp;
+	regs[32U] = priv->core_regs.pc;
+
+	/* GDB expects CPSR to be 32-bit, only copy the lower bits */
+	memcpy(regs + 33U, &priv->core_regs.spsr, sizeof(uint32_t));
+
+	/* XXX: float registers */
+}
+
+static void cortexa_armv8_regs_write(target_s *target, const void *data)
+{
+	cortexa_armv8_priv_s *const priv = (cortexa_armv8_priv_s *)target->priv;
+	const uint64_t *const regs = (const uint64_t *)data;
+
+	/* Copy the new register values into our cache */
+	memcpy(priv->core_regs.x, regs, sizeof(priv->core_regs.x));
+
+	priv->core_regs.sp = regs[31U];
+	priv->core_regs.pc = regs[32U];
+
+	/* GDB expects CPSR to be 32-bit, only copy the lower bits */
+	memcpy(&priv->core_regs.spsr, &regs[33U], sizeof(uint32_t));
+
+	/* XXX: float registers */
+}
+
+static void *cortexa_armv8_reg_ptr(target_s *const target, const size_t reg)
+{
+	cortexa_armv8_priv_s *const priv = (cortexa_armv8_priv_s *)target->priv;
+
+	/* x0-x30 */
+	if (reg < CORTEXA_ARMV8_GENERAL_REG_COUNT)
+		return &priv->core_regs.x[reg];
+
+	/* sp */
+	if (reg == 31U)
+		return &priv->core_regs.sp;
+
+	/* pc */
+	if (reg == 32U)
+		return &priv->core_regs.pc;
+
+	/* spsr */
+	if (reg == 33U)
+		return &priv->core_regs.spsr;
+
+	return NULL;
+}
+
+static size_t cortexa_armv8_reg_width(const size_t reg)
+{
+	/* GDB map SPSR to CPSR, we ignore the top bits in that case */
+	if (reg == 33U)
+		return 4U;
+
+	return 8U;
+}
+
+static size_t cortexa_armv8_reg_read(target_s *const target, const uint32_t reg, void *const data, const size_t max)
+{
+	/* Try to get a pointer to the storage for the requested register, and return -1 if that fails */
+	const void *const reg_ptr = cortexa_armv8_reg_ptr(target, reg);
+	if (!reg_ptr)
+		return 0;
+	/* Now we have a valid register, get its width in bytes, and check that against max */
+	const size_t reg_width = cortexa_armv8_reg_width(reg);
+	if (max < reg_width)
+		return 0;
+	/* Finally, copy the register data out and return the width */
+	memcpy(data, reg_ptr, reg_width);
+	return reg_width;
+}
+
+static size_t cortexa_armv8_reg_write(
+	target_s *const target, const uint32_t reg, const void *const data, const size_t max)
+{
+	/* Try to get a pointer to the storage for the requested register, and return -1 if that fails */
+	void *const reg_ptr = cortexa_armv8_reg_ptr(target, reg);
+	if (!reg_ptr)
+		return 0;
+	/* Now we have a valid register, get its width in bytes, and check that against max */
+	const size_t reg_width = cortexa_armv8_reg_width(reg);
+	if (max < reg_width)
+		return 0;
+	/* Finally, copy the new register data in and return the width */
+	memcpy(reg_ptr, data, reg_width);
+	return reg_width;
+}
+
+/*
+ * This function creates the target description XML string for a Cortex-A/R part.
+ * This is done this way to decrease string duplications and thus code size,
+ * making it unfortunately much less readable than the string literal it is
+ * equivalent to.
+ *
+ * The string it creates is approximately the following:
+ * <?xml version="1.0"?>
+ * <!DOCTYPE feature SYSTEM "gdb-target.dtd">
+ * <target>
+ *   <architecture>aarch64</architecture>
+ *   <feature name="org.gnu.gdb.aarch64.core">
+ *     <reg name="x0" bitsize="64"/>
+ *     <reg name="x1" bitsize="64"/>
+ *     <reg name="x2" bitsize="64"/>
+ *     <reg name="x3" bitsize="64"/>
+ *     <reg name="x4" bitsize="64"/>
+ *     <reg name="x5" bitsize="64"/>
+ *     <reg name="x6" bitsize="64"/>
+ *     <reg name="x7" bitsize="64"/>
+ *     <reg name="x8" bitsize="64"/>
+ *     <reg name="x9" bitsize="64"/>
+ *     <reg name="x10" bitsize="64"/>
+ *     <reg name="x11" bitsize="64"/>
+ *     <reg name="x12" bitsize="64"/>
+ *     <reg name="x13" bitsize="64"/>
+ *     <reg name="x14" bitsize="64"/>
+ *     <reg name="x15" bitsize="64"/>
+ *     <reg name="x16" bitsize="64"/>
+ *     <reg name="x17" bitsize="64"/>
+ *     <reg name="x18" bitsize="64"/>
+ *     <reg name="x19" bitsize="64"/>
+ *     <reg name="x20" bitsize="64"/>
+ *     <reg name="x21" bitsize="64"/>
+ *     <reg name="x22" bitsize="64"/>
+ *     <reg name="x23" bitsize="64"/>
+ *     <reg name="x24" bitsize="64"/>
+ *     <reg name="x25" bitsize="64"/>
+ *     <reg name="x26" bitsize="64"/>
+ *     <reg name="x27" bitsize="64"/>
+ *     <reg name="x28" bitsize="64"/>
+ *     <reg name="x29" bitsize="64"/>
+ *     <reg name="x30" bitsize="64"/>
+ *     <reg name="sp" bitsize="64" type="data_ptr"/>
+ *     <reg name="pc" bitsize="64" type="code_ptr"/>
+ *     <flags id="cpsr_flags" size="4">
+ *       <field name="SP" start="0" end="0"/>
+ *       <field name="EL" start="2" end="3"/>
+ *       <field name="nRW" start="4" end="4"/>
+ *       <field name="F" start="6" end="6"/>
+ *       <field name="I" start="7" end="7"/>
+ *       <field name="A" start="8" end="8"/>
+ *       <field name="D" start="9" end="9"/>
+ *       <field name="BTYPE" start="10" end="11"/>
+ *       <field name="SSBS" start="12" end="12"/>
+ *       <field name="IL" start="20" end="20"/>
+ *       <field name="SS" start="21" end="21"/>
+ *       <field name="PAN" start="22" end="22"/>
+ *       <field name="UAO" start="23" end="23"/>
+ *       <field name="DIT" start="24" end="24"/>
+ *       <field name="TCO" start="25" end="25"/>
+ *       <field name="V" start="28" end="28"/>
+ *       <field name="C" start="29" end="29"/>
+ *       <field name="Z" start="30" end="30"/>
+ *       <field name="N" start="31" end="31"/>
+ *     </flags>
+ *     <reg name="cpsr" bitsize="32" type="cpsr_flags"/>
+ *   </feature>
+ * </target>
+ */
+static size_t cortexa_armv8_build_target_description(char *const buffer, size_t max_length)
+{
+	size_t print_size = max_length;
+	/* Start with the "preamble" chunks which are mostly common across targets save for 2 words. */
+	int offset = snprintf(buffer, print_size, "%s target %saarch64%s <feature name=\"org.gnu.gdb.aarch64.core\">",
+		gdb_xml_preamble_first, gdb_xml_preamble_second, gdb_xml_preamble_third);
+
+	/* Then build the general purpose register descriptions for x0-x30 */
+	for (uint8_t i = 0; i < CORTEXA_ARMV8_GENERAL_REG_COUNT; ++i) {
+		if (max_length != 0)
+			print_size = max_length - (size_t)offset;
+
+		offset += snprintf(buffer + offset, print_size, "<reg name=\"x%u\" bitsize=\"64\"/>", i);
+	}
+
+	/* Then we build the flags that we have defined */
+	for (uint8_t i = 0; i < ARRAY_LENGTH(cortexa_armv8_flags); ++i) {
+		if (max_length != 0)
+			print_size = max_length - (size_t)offset;
+
+		const struct cortexa_armv8_gdb_flags_def *def = &cortexa_armv8_flags[i];
+
+		offset += snprintf(buffer + offset, print_size, "<flags id=\"%s\" size=\"%d\">", def->id, def->size);
+
+		if (max_length != 0)
+			print_size = max_length - (size_t)offset;
+
+		for (uint8_t y = 0; y < def->fields_count; ++y) {
+			if (max_length != 0)
+				print_size = max_length - (size_t)offset;
+
+			const struct cortexa_armv8_gdb_field_def *field = &def->fields[y];
+			offset += snprintf(buffer + offset, print_size, "<field name=\"%s\" start=\"%d\" end=\"%d\"/>", field->name,
+				field->start, field->end);
+		}
+
+		if (max_length != 0)
+			print_size = max_length - (size_t)offset;
+
+		offset += snprintf(buffer + offset, print_size, "</flags>");
+	}
+
+	/* Now build the special-purpose register descriptions using the arrays at the top of file */
+	for (uint8_t i = 0; i < ARRAY_LENGTH(cortexa_armv8_sprs); ++i) {
+		if (max_length != 0)
+			print_size = max_length - (size_t)offset;
+
+		const struct cortexa_armv8_gdb_reg_def *def = &cortexa_armv8_sprs[i];
+
+		/*
+		 * Create tag for each register
+		 */
+		offset += snprintf(buffer + offset, print_size, "<reg name=\"%s\" bitsize=\"%d\" type=\"%s\"/>", def->name,
+			def->bit_size, def->type_name);
+	}
+
+	/* Build the XML blob's termination */
+	if (max_length != 0)
+		print_size = max_length - (size_t)offset;
+
+	offset += snprintf(buffer + offset, print_size, "</feature></target>");
+	/* offset is now the total length of the string created, discard the sign and return it. */
+	return (size_t)offset;
+}
+
+static const char *cortexa_armv8_target_description(target_s *const target)
+{
+	(void)target;
+
+	const size_t description_length = cortexa_armv8_build_target_description(NULL, 0) + 1U;
+	char *const description = malloc(description_length);
+	if (description)
+		(void)cortexa_armv8_build_target_description(description, description_length);
+
+	return description;
 }
