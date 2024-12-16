@@ -393,6 +393,19 @@ dap_version_s dap_adaptor_version(const dap_info_e version_kind)
 	/* If that failed, return just the major */
 	if (!end)
 		return version;
+
+	/* Special-case the MCU-Link firmware to correct some version numbering mistakes they've made */
+	if (strncmp(bmda_probe_info.product, "MCU-Link", 8U) == 0) {
+		/* If this is a v1.10+ MCU-Link */
+		if (minor > 9U) {
+			/* Then unpack the version number - CMSIS-DAP v1.1.0 is (wrongly) encoded as v1.10 on these adaptors */
+			version.minor = minor / 10U;
+			version.revision = minor % 10U;
+			/* Now return early as we're now done */
+			return version;
+		}
+	}
+
 	version.minor = minor;
 	/* Check if it's worth trying to convert anything more */
 	if ((size_t)(end - version_str) >= version_length || end[0] != '.')
