@@ -35,6 +35,8 @@
 extern bool debug_bmp;
 #endif
 
+#define PLATFORM_HAS_CUSTOM_COMMANDS
+
 #define PLATFORM_IDENT "(SWLINK) "
 
 /* Hardware definitions... */
