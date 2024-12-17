@@ -107,7 +107,7 @@ bool platform_configure_uart(char *configuration_string)
 		uint32_t stopBits;
 		char parity;
 		int count = sscanf(
-			configuration_string, "%" SCNd32 ",%" SCNd32 ",%c,%" SCNd32 "", &baudRate, &bits, &parity, &stopBits);
+			configuration_string, "%" SCNu32 ",%" SCNu32 ",%c,%" SCNu32 "", &baudRate, &bits, &parity, &stopBits);
 		if (count == 4) {
 			uint32_t parityValue;
 			usart_set_baudrate(USBUSART, baudRate);
