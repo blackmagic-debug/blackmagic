@@ -103,12 +103,11 @@ struct target_command {
 typedef struct breakwatch breakwatch_s;
 
 struct breakwatch {
-	/* XXX: This needs adjusting for 64-bit operations */
 	breakwatch_s *next;
-	target_breakwatch_e type;
-	target_addr32_t addr;
+	target_addr64_t addr;
 	size_t size;
-	uint32_t reserved[4]; /* For use by the implementing driver */
+	target_breakwatch_e type;
+	uint32_t reserved[2]; /* For use by the implementing driver */
 };
 
 #define MAX_CMDLINE 81
@@ -137,7 +136,7 @@ struct target {
 	void (*reset)(target_s *target);
 	void (*extended_reset)(target_s *target);
 	void (*halt_request)(target_s *target);
-	target_halt_reason_e (*halt_poll)(target_s *target, target_addr_t *watch);
+	target_halt_reason_e (*halt_poll)(target_s *target, target_addr64_t *watch);
 	void (*halt_resume)(target_s *target, bool step);
 
 	/* Break-/watchpoint functions */
