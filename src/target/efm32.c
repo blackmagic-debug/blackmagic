@@ -954,7 +954,7 @@ bool efm32_aap_probe(adiv5_access_port_s *ap)
 
 	adiv5_ap_ref(ap);
 	t->priv = ap;
-	t->priv_free = (void *)adiv5_ap_unref;
+	t->priv_free = (priv_free_func)adiv5_ap_unref;
 
 	/* Read status */
 	DEBUG_INFO("EFM32: AAP STATUS=%08" PRIx32 "\n", adiv5_ap_read(ap, AAP_STATUS));
