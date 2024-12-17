@@ -208,7 +208,7 @@ static void stm32f723_ep_setup(usbd_device *usbd_dev, uint8_t addr, uint8_t type
 			OTG_DIEPCTL0_SNAK | (type << 18) | OTG_DIEPCTL0_USBAEP | OTG_DIEPCTLX_SD0PID | (addr << 22) | max_size;
 
 		if (callback)
-			usbd_dev->user_callback_ctr[addr][USB_TRANSACTION_IN] = (void *)callback;
+			usbd_dev->user_callback_ctr[addr][USB_TRANSACTION_IN] = callback;
 	}
 
 	if (!dir) {
@@ -218,7 +218,7 @@ static void stm32f723_ep_setup(usbd_device *usbd_dev, uint8_t addr, uint8_t type
 			(type << 18) | max_size;
 
 		if (callback)
-			usbd_dev->user_callback_ctr[addr][USB_TRANSACTION_OUT] = (void *)callback;
+			usbd_dev->user_callback_ctr[addr][USB_TRANSACTION_OUT] = callback;
 	}
 }
 
