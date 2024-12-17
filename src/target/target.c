@@ -76,6 +76,18 @@ target_s *target_new(void)
 	return target;
 }
 
+target_s *target_list_get_last()
+{
+	if (target_list) {
+		target_s *last_target = target_list;
+		while (last_target->next)
+			last_target = last_target->next;
+		return last_target;
+	}
+
+	return NULL;
+}
+
 size_t target_foreach(void (*callback)(size_t index, target_s *target, void *context), void *context)
 {
 	size_t idx = 0;
@@ -424,7 +436,7 @@ static const char *target_halt_reason_str(const target_halt_reason_e reason)
 }
 #endif
 
-target_halt_reason_e target_halt_poll(target_s *target, target_addr_t *watch)
+target_halt_reason_e target_halt_poll(target_s *target, target_addr64_t *watch)
 {
 	if (target->halt_poll) {
 		const target_halt_reason_e reason = target->halt_poll(target, watch);
