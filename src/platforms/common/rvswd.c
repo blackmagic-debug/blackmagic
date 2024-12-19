@@ -66,8 +66,8 @@ static uint32_t rvswd_seq_in_clk_delay(size_t clock_cycles) __attribute__((optim
 static uint32_t rvswd_seq_in_no_delay(size_t clock_cycles) __attribute__((optimize(3)));
 
 static void rvswd_seq_out(uint32_t dio_states, size_t clock_cycles) __attribute__((optimize(3)));
-static void rvswd_seq_out_clk_delay(uint32_t tms_states, size_t clock_cycles) __attribute__((optimize(3)));
-static void rvswd_seq_out_no_delay(uint32_t tms_states, size_t clock_cycles) __attribute__((optimize(3)));
+static void rvswd_seq_out_clk_delay(uint32_t dio_states, size_t clock_cycles) __attribute__((optimize(3)));
+static void rvswd_seq_out_no_delay(uint32_t dio_states, size_t clock_cycles) __attribute__((optimize(3)));
 
 static inline void __attribute__((always_inline)) rvswd_hold_period(void)
 {
@@ -133,13 +133,13 @@ static uint32_t rvswd_seq_in_clk_delay(const size_t clock_cycles)
 	uint32_t value = 0; /* Return value */
 
 	/* Shift clock_cycles bits in */
-	for (size_t cycle = 0; cycle < clock_cycles; ++cycle) {
+	for (size_t cycle = clock_cycles; cycle > 0; --cycle) {
 		/* Drive the CLK low and hold for a period */
 		gpio_clear(RVSWD_CLK_PORT, RVSWD_CLK_PIN);
 		rvswd_hold_period();
 
 		/* Sample the DIO line and raise the CLK, then hold for a period */
-		value |= gpio_get(RVSWD_DIO_PORT, RVSWD_DIO_PIN) ? 1U << cycle : 0U;
+		value |= gpio_get(RVSWD_DIO_PORT, RVSWD_DIO_PIN) ? (1U << (cycle - 1U)) : 0U;
 		gpio_set(RVSWD_CLK_PORT, RVSWD_CLK_PIN);
 		rvswd_hold_period();
 	}
@@ -154,12 +154,12 @@ static uint32_t rvswd_seq_in_no_delay(const size_t clock_cycles)
 	uint32_t value = 0U; /* Return value */
 
 	/* Shift clock_cycles bits in */
-	for (size_t cycle = 0U; cycle < clock_cycles; ++cycle) {
+	for (size_t cycle = clock_cycles; cycle > 0; --cycle) {
 		/* Drive the CLK low */
 		gpio_clear(RVSWD_CLK_PORT, RVSWD_CLK_PIN);
 
 		/* Sample the DIO line and raise the CLK */
-		value |= gpio_get(RVSWD_DIO_PORT, RVSWD_DIO_PIN) ? 1U << cycle : 0U;
+		value |= gpio_get(RVSWD_DIO_PORT, RVSWD_DIO_PIN) ? (1U << (cycle - 1U)) : 0U;
 		gpio_set(RVSWD_CLK_PORT, RVSWD_CLK_PIN);
 
 		__asm__("nop"); /* Ensure there's time for the CLK to settle */
@@ -185,10 +185,10 @@ static uint32_t rvswd_seq_in(size_t clock_cycles)
 static void rvswd_seq_out_clk_delay(const uint32_t dio_states, const size_t clock_cycles)
 {
 	/* Shift clock_cycles bits out */
-	for (size_t cycle = 0U; cycle < clock_cycles; ++cycle) {
+	for (size_t cycle = clock_cycles; cycle > 0; --cycle) {
 		/* Drive the CLK low and setup the DIO line, then hold for a period */
 		gpio_clear(RVSWD_CLK_PORT, RVSWD_CLK_PIN);
-		gpio_set_val(SWDIO_PORT, SWDIO_PIN, dio_states & (1U << cycle));
+		gpio_set_val(SWDIO_PORT, SWDIO_PIN, dio_states & (1U << (cycle - 1U)));
 		rvswd_hold_period();
 
 		/* Raise the CLK and hold for a period */
@@ -203,10 +203,10 @@ static void rvswd_seq_out_clk_delay(const uint32_t dio_states, const size_t cloc
 static void rvswd_seq_out_no_delay(const uint32_t dio_states, const size_t clock_cycles)
 {
 	/* Shift clock_cycles bits out */
-	for (size_t cycle = 0; cycle < clock_cycles; ++cycle) {
+	for (size_t cycle = clock_cycles; cycle > 0; --cycle) {
 		/* Drive the CLK low and setup the DIO line */
 		gpio_clear(RVSWD_CLK_PORT, RVSWD_CLK_PIN);
-		gpio_set_val(SWDIO_PORT, SWDIO_PIN, dio_states & (1U << cycle));
+		gpio_set_val(SWDIO_PORT, SWDIO_PIN, dio_states & (1U << (cycle - 1U)));
 
 		/* Raise the CLK */
 		gpio_set(RVSWD_CLK_PORT, RVSWD_CLK_PIN);
