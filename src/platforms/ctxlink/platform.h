@@ -35,6 +35,12 @@
 #define PLATFORM_IDENT "(ctxLink) "
 
 #define PLATFORM_HAS_BATTERY
+
+#if ENABLE_DEBUG == 1
+#define PLATFORM_HAS_DEBUG
+extern bool debug_bmp;
+#endif
+
 /*
  * Important pin mappings for STM32 implementation:
  *
