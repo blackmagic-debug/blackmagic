@@ -203,6 +203,18 @@ typedef struct riscv_hart {
 /* The FP base defines the starting register space address for the floating point registers */
 #define RV_FP_BASE 0x1020U
 
+/**
+ * The MXL (Machine XLEN) field encodes the native base integer ISA width
+ * 
+ * The RISC-V Machine ISA register is MXLEN bits wide so the MXL offset is not fixed
+ * To work around this we convert the register to it's canonical 32-bit form internally
+ */
+#define RV_ISA_MXL_SHIFT 30U                        /* misa Machine XLEN field shift (for 32-bit misa) */
+#define RV_ISA_MXL_MASK  (0x3U << RV_ISA_MXL_SHIFT) /* misa Machine XLEN field mask (for 32-bit misa) */
+#define RV_ISA_MXL_32    0x1U                       /* misa Machine XLEN field value for 32-bit ISA */
+#define RV_ISA_MXL_64    0x2U                       /* misa Machine XLEN field value for 64-bit ISA */
+#define RV_ISA_MXL_128   0x3U                       /* misa Machine XLEN field value for 128-bit ISA */
+
 /* 
  * The Extensions field encodes the presence of standard extensions, with a single bit per alphabet letter
  * (bit 0 encodes presence of extension “A” through to bit 25 which encodes “Z”)
@@ -211,6 +223,7 @@ typedef struct riscv_hart {
  * 
  * The list order is the canonical representation order in the ISA subset string
  */
+#define RV_ISA_EXTENSIONS_MASK 0x03ffffffU /* misa extensions field mask */
 
 /* Base ISA */
 #define RV_ISA_EXT_INTEGER  (1U << 8U) /* 'I': RV32I/64I/128I integer base ISA */

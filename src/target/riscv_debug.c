@@ -124,8 +124,6 @@
 #define RV_CSRW_A0 0x00051073U
 #define RV_EBREAK  0x00100073U
 
-#define RV_ISA_EXTENSIONS_MASK 0x03ffffffU
-
 #define RV_VENDOR_JEP106_CONT_MASK 0x7fffff80U
 #define RV_VENDOR_JEP106_CODE_MASK 0x7fU
 
@@ -383,18 +381,17 @@ static void riscv_dm_init(riscv_dm_s *const dbg_module)
 
 static uint8_t riscv_isa_address_width(const uint32_t isa)
 {
-	switch (isa >> 30U) {
-	case 1:
+	switch ((isa & RV_ISA_MXL_MASK) >> RV_ISA_MXL_SHIFT) {
+	case RV_ISA_MXL_32:
 		return 32U;
-	case 2:
+	case RV_ISA_MXL_64:
 		return 64U;
-	case 3:
+	case RV_ISA_MXL_128:
 		return 128U;
 	default:
-		break;
+		DEBUG_INFO("Unknown address width, defaulting to 32\n");
+		return 32U;
 	}
-	DEBUG_INFO("Unknown address width, defaulting to 32\n");
-	return 32U;
 }
 
 static void riscv_hart_read_ids(riscv_hart_s *const hart)
@@ -423,7 +420,7 @@ static void riscv_hart_read_ids(riscv_hart_s *const hart)
 }
 
 static size_t riscv_snprint_isa_subset(
-	char *const string_buffer, const size_t buffer_size, const uint32_t access_width, const uint32_t extensions)
+	char *const string_buffer, const size_t buffer_size, const uint8_t access_width, const uint32_t extensions)
 {
 	size_t offset = snprintf(string_buffer, buffer_size, "rv%" PRIu8, access_width);
 
