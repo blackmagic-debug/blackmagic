@@ -423,7 +423,7 @@ static void riscv_hart_read_ids(riscv_hart_s *const hart)
 }
 
 static size_t riscv_snprint_isa_subset(
-	char *const string_buffer, const size_t buffer_size, const uint32_t access_width, const uint32_t extensions)
+	char *const string_buffer, const size_t buffer_size, const uint8_t access_width, const uint32_t extensions)
 {
 	size_t offset = snprintf(string_buffer, buffer_size, "rv%" PRIu8, access_width);
 

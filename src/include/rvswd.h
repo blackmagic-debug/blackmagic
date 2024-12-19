@@ -27,14 +27,14 @@
 
 /* Functions interface talking RVSWD */
 typedef struct rvswd_proc {
+	/* Perform a start condition */
+	void (*start)(void);
+	/* Perform a start condition */
+	void (*stop)(void);
 	/* Perform a clock_cycles read */
 	uint32_t (*seq_in)(size_t clock_cycles);
-	/* Perform a clock_cycles read + parity */
-	bool (*seq_in_parity)(uint32_t *ret, size_t clock_cycles);
 	/* Perform a clock_cycles write with the provided data */
-	void (*seq_out)(uint32_t tms_states, size_t clock_cycles);
-	/* Perform a clock_cycles write + parity with the provided data */
-	void (*seq_out_parity)(uint32_t tms_states, size_t clock_cycles);
+	void (*seq_out)(uint32_t dio_states, size_t clock_cycles);
 } rvswd_proc_s;
 
 extern rvswd_proc_s rvswd_proc;

@@ -1,24 +1,41 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
- * Copyright (C) 2011  Black Sphere Technologies Ltd.
- * Written by Gareth McMullin <gareth@blacksphere.co.nz>
+ * Copyright (C) 2025 1BitSquared <info@1bitsquared.com>
+ * Written by Rafael Silva <perigoso@riseup.net>
+ * All rights reserved.
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * 1. Redistributions of source code must retain the above copyright notice, this
+ *    list of conditions and the following disclaimer.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
+ *
+ * 3. Neither the name of the copyright holder nor the names of its
+ *    contributors may be used to endorse or promote products derived from
+ *    this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+ * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/* This file implements the SW-DP interface. */
+/*
+ * This file implements the RVSWD interface
+ *
+ * It's mostly the same routines as the SWD interface, with some RVSWD specifics
+ */
 
 #include "general.h"
 #include "platform.h"
@@ -26,172 +43,187 @@
 #include "rvswd.h"
 #include "maths_utils.h"
 
-// FIXME: reusing the SWD macros for now
-#if !defined(SWDIO_IN_PORT)
-#define SWDIO_IN_PORT SWDIO_PORT
-#endif
-#if !defined(SWDIO_IN_PIN)
-#define SWDIO_IN_PIN SWDIO_PIN
-#endif
+/**
+ * RVSWD I/O is shared with SWD
+ */
+#define RVSWD_DIO_DIR_PORT SWDIO_DIR_PORT
+#define RVSWD_DIO_PORT     SWDIO_PORT
+#define RVSWD_CLK_PORT     SWCLK_PORT
+#define RVSWD_DIO_DIR_PIN  SWDIO_DIR_PIN
+#define RVSWD_DIO_PIN      SWDIO_PIN
+#define RVSWD_CLK_PIN      SWCLK_PIN
 
-// typedef enum swdio_status_e {
-// 	SWDIO_STATUS_FLOAT = 0,
-// 	SWDIO_STATUS_DRIVE
-// } swdio_status_t;
+#define RVSWD_DIO_MODE_FLOAT SWDIO_MODE_FLOAT
+#define RVSWD_DIO_MODE_DRIVE SWDIO_MODE_DRIVE
 
 rvswd_proc_s rvswd_proc;
 
-// static void swdptap_turnaround(swdio_status_t dir) __attribute__((optimize(3)));
-// static uint32_t swdptap_seq_in(size_t clock_cycles) __attribute__((optimize(3)));
-// static bool swdptap_seq_in_parity(uint32_t *ret, size_t clock_cycles) __attribute__((optimize(3)));
-// static void swdptap_seq_out(uint32_t tms_states, size_t clock_cycles) __attribute__((optimize(3)));
-// static void swdptap_seq_out_parity(uint32_t tms_states, size_t clock_cycles) __attribute__((optimize(3)));
+static void rvswd_start(void) __attribute__((optimize(3)));
+static void rvswd_stop(void) __attribute__((optimize(3)));
+
+static uint32_t rvswd_seq_in(size_t clock_cycles) __attribute__((optimize(3)));
+static uint32_t rvswd_seq_in_clk_delay(size_t clock_cycles) __attribute__((optimize(3)));
+static uint32_t rvswd_seq_in_no_delay(size_t clock_cycles) __attribute__((optimize(3)));
+
+static void rvswd_seq_out(uint32_t dio_states, size_t clock_cycles) __attribute__((optimize(3)));
+static void rvswd_seq_out_clk_delay(uint32_t tms_states, size_t clock_cycles) __attribute__((optimize(3)));
+static void rvswd_seq_out_no_delay(uint32_t tms_states, size_t clock_cycles) __attribute__((optimize(3)));
+
+static inline void __attribute__((always_inline)) rvswd_hold_period(void)
+{
+	/* Hold for a period */
+	for (volatile uint32_t counter = target_clk_divider + 1U; counter > 0U; --counter)
+		continue;
+}
 
 void rvswd_init(void)
 {
-	// rvswd_proc.seq_in = swdptap_seq_in;
-	// rvswd_proc.seq_in_parity = swdptap_seq_in_parity;
-	// rvswd_proc.seq_out = swdptap_seq_out;
-	// rvswd_proc.seq_out_parity = swdptap_seq_out_parity;
+	rvswd_proc.start = rvswd_start;
+	rvswd_proc.stop = rvswd_stop;
+	rvswd_proc.seq_in = rvswd_seq_in;
+	rvswd_proc.seq_out = rvswd_seq_out;
 }
 
-// static void swdptap_turnaround(const swdio_status_t dir)
-// {
-// 	static swdio_status_t olddir = SWDIO_STATUS_FLOAT;
-// 	/* Don't turnaround if direction not changing */
-// 	if (dir == olddir)
-// 		return;
-// 	olddir = dir;
+static void rvswd_start(void)
+{
+	/*
+	 * DIO falling edge while CLK is idle high marks a START condition
+	 */
 
-// #ifdef DEBUG_SWD_BITS
-// 	DEBUG_INFO("%s", dir ? "\n-> " : "\n<- ");
-// #endif
+	/* Setup for the start sequence by setting the bus to the idle state */
+	RVSWD_DIO_MODE_DRIVE();
+	gpio_set(RVSWD_CLK_PORT, RVSWD_CLK_PIN);
+	gpio_set(RVSWD_DIO_DIR_PORT, RVSWD_DIO_PIN);
 
-// 	if (dir == SWDIO_STATUS_FLOAT) {
-// 		SWDIO_MODE_FLOAT();
-// 	} else
-// 		gpio_clear(SWCLK_PORT, SWCLK_PIN);
+	/* Ensure the bus is idle for a period */
+	rvswd_hold_period();
 
-// 	for (volatile uint32_t counter = target_clk_divider + 1; counter > 0; --counter)
-// 		continue;
+	/* Generate the start condition */
+	gpio_clear(RVSWD_DIO_PORT, RVSWD_DIO_PIN);
+	rvswd_hold_period();
+}
 
-// 	gpio_set(SWCLK_PORT, SWCLK_PIN);
-// 	for (volatile uint32_t counter = target_clk_divider + 1; counter > 0; --counter)
-// 		continue;
+static void rvswd_stop(void)
+{
+	/*
+	 * DIO rising edge while CLK is idle high marks a STOP condition
+	 */
 
-// 	if (dir == SWDIO_STATUS_DRIVE) {
-// 		gpio_clear(SWCLK_PORT, SWCLK_PIN);
-// 		SWDIO_MODE_DRIVE();
-// 	}
-// }
+	/*
+	 * Setup for the stop condition by driving the CLK and DIO low
+	 *
+	 * It is likely that the previous sequence left the CLK low already
+	 * but a redundant low CLK set ensures we don't issue a start condition by mistake
+	 */
+	gpio_clear(RVSWD_CLK_PORT, RVSWD_CLK_PIN);
+	RVSWD_DIO_MODE_DRIVE();
+	gpio_clear(RVSWD_DIO_PORT, RVSWD_DIO_PIN);
 
-// static uint32_t swdptap_seq_in_clk_delay(size_t clock_cycles) __attribute__((optimize(3)));
+	/* Ensure setup for a period */
+	rvswd_hold_period();
 
-// static uint32_t swdptap_seq_in_clk_delay(const size_t clock_cycles)
-// {
-// 	uint32_t value = 0;
-// 	for (size_t cycle = 0; cycle < clock_cycles; ++cycle) {
-// 		gpio_clear(SWCLK_PORT, SWCLK_PIN);
-// 		value |= gpio_get(SWDIO_IN_PORT, SWDIO_IN_PIN) ? 1U << cycle : 0U;
-// 		for (volatile uint32_t counter = target_clk_divider; counter > 0; --counter)
-// 			continue;
-// 		gpio_set(SWCLK_PORT, SWCLK_PIN);
-// 		for (volatile uint32_t counter = target_clk_divider; counter > 0; --counter)
-// 			continue;
-// 	}
-// 	gpio_clear(SWCLK_PORT, SWCLK_PIN);
-// 	return value;
-// }
+	/* Generate the stop condition */
+	gpio_set(RVSWD_CLK_PORT, RVSWD_CLK_PIN);
+	rvswd_hold_period();
+	gpio_set(RVSWD_DIO_PORT, RVSWD_DIO_PIN);
+}
 
-// static uint32_t swdptap_seq_in_no_delay(size_t clock_cycles) __attribute__((optimize(3)));
+static uint32_t rvswd_seq_in_clk_delay(const size_t clock_cycles)
+{
+	uint32_t value = 0; /* Return value */
 
-// static uint32_t swdptap_seq_in_no_delay(const size_t clock_cycles)
-// {
-// 	uint32_t value = 0;
-// 	for (size_t cycle = 0; cycle < clock_cycles; ++cycle) {
-// 		gpio_clear(SWCLK_PORT, SWCLK_PIN);
-// 		value |= gpio_get(SWDIO_IN_PORT, SWDIO_IN_PIN) ? 1U << cycle : 0U;
-// 		gpio_set(SWCLK_PORT, SWCLK_PIN);
-// 		__asm__("nop");
-// 	}
-// 	gpio_clear(SWCLK_PORT, SWCLK_PIN);
-// 	return value;
-// }
+	/* Shift clock_cycles bits in */
+	for (size_t cycle = 0; cycle < clock_cycles; ++cycle) {
+		/* Drive the CLK low and hold for a period */
+		gpio_clear(RVSWD_CLK_PORT, RVSWD_CLK_PIN);
+		rvswd_hold_period();
 
-// static uint32_t swdptap_seq_in(size_t clock_cycles)
-// {
-// 	swdptap_turnaround(SWDIO_STATUS_FLOAT);
-// 	if (target_clk_divider != UINT32_MAX)
-// 		return swdptap_seq_in_clk_delay(clock_cycles);
-// 	else // NOLINT(readability-else-after-return)
-// 		return swdptap_seq_in_no_delay(clock_cycles);
-// }
+		/* Sample the DIO line and raise the CLK, then hold for a period */
+		value |= gpio_get(RVSWD_DIO_PORT, RVSWD_DIO_PIN) ? 1U << cycle : 0U;
+		gpio_set(RVSWD_CLK_PORT, RVSWD_CLK_PIN);
+		rvswd_hold_period();
+	}
 
-// static bool swdptap_seq_in_parity(uint32_t *ret, size_t clock_cycles)
-// {
-// 	const uint32_t result = swdptap_seq_in(clock_cycles);
-// 	for (volatile uint32_t counter = target_clk_divider + 1; counter > 0; --counter)
-// 		continue;
+	/* Leave the CLK low and return the value */
+	gpio_clear(RVSWD_CLK_PORT, RVSWD_CLK_PIN);
+	return value;
+}
 
-// 	const bool parity = calculate_odd_parity(result);
-// 	const bool bit = gpio_get(SWDIO_IN_PORT, SWDIO_IN_PIN);
+static uint32_t rvswd_seq_in_no_delay(const size_t clock_cycles)
+{
+	uint32_t value = 0U; /* Return value */
 
-// 	gpio_set(SWCLK_PORT, SWCLK_PIN);
-// 	for (volatile uint32_t counter = target_clk_divider + 1; counter > 0; --counter)
-// 		continue;
+	/* Shift clock_cycles bits in */
+	for (size_t cycle = 0U; cycle < clock_cycles; ++cycle) {
+		/* Drive the CLK low */
+		gpio_clear(RVSWD_CLK_PORT, RVSWD_CLK_PIN);
 
-// 	*ret = result;
-// 	/* Terminate the read cycle now */
-// 	swdptap_turnaround(SWDIO_STATUS_DRIVE);
-// 	return parity != bit;
-// }
+		/* Sample the DIO line and raise the CLK */
+		value |= gpio_get(RVSWD_DIO_PORT, RVSWD_DIO_PIN) ? 1U << cycle : 0U;
+		gpio_set(RVSWD_CLK_PORT, RVSWD_CLK_PIN);
 
-// static void swdptap_seq_out_clk_delay(uint32_t tms_states, size_t clock_cycles) __attribute__((optimize(3)));
+		__asm__("nop"); /* Ensure there's time for the CLK to settle */
+	}
 
-// static void swdptap_seq_out_clk_delay(const uint32_t tms_states, const size_t clock_cycles)
-// {
-// 	for (size_t cycle = 0; cycle < clock_cycles; ++cycle) {
-// 		gpio_clear(SWCLK_PORT, SWCLK_PIN);
-// 		gpio_set_val(SWDIO_PORT, SWDIO_PIN, tms_states & (1 << cycle));
-// 		for (volatile uint32_t counter = target_clk_divider; counter > 0; --counter)
-// 			continue;
-// 		gpio_set(SWCLK_PORT, SWCLK_PIN);
-// 		for (volatile uint32_t counter = target_clk_divider; counter > 0; --counter)
-// 			continue;
-// 	}
-// 	gpio_clear(SWCLK_PORT, SWCLK_PIN);
-// }
+	/* Leave the CLK low and return the value */
+	gpio_clear(RVSWD_CLK_PORT, RVSWD_CLK_PIN);
+	return value;
+}
 
-// static void swdptap_seq_out_no_delay(uint32_t tms_states, size_t clock_cycles) __attribute__((optimize(3)));
+static uint32_t rvswd_seq_in(size_t clock_cycles)
+{
+	/* Set the DIO line to float to give control to the target */
+	RVSWD_DIO_MODE_FLOAT();
 
-// static void swdptap_seq_out_no_delay(const uint32_t tms_states, const size_t clock_cycles)
-// {
-// 	for (size_t cycle = 0; cycle < clock_cycles; ++cycle) {
-// 		gpio_clear(SWCLK_PORT, SWCLK_PIN);
-// 		gpio_set_val(SWDIO_PORT, SWDIO_PIN, tms_states & (1 << cycle));
-// 		gpio_set(SWCLK_PORT, SWCLK_PIN);
-// 	}
-// 	gpio_clear(SWCLK_PORT, SWCLK_PIN);
-// }
+	/* Delegate to the appropriate sequence in routine depending on the clock divider */
+	if (target_clk_divider != UINT32_MAX)
+		return rvswd_seq_in_clk_delay(clock_cycles);
+	else
+		return rvswd_seq_in_no_delay(clock_cycles);
+}
 
-// static void swdptap_seq_out(const uint32_t tms_states, const size_t clock_cycles)
-// {
-// 	swdptap_turnaround(SWDIO_STATUS_DRIVE);
-// 	if (target_clk_divider != UINT32_MAX)
-// 		swdptap_seq_out_clk_delay(tms_states, clock_cycles);
-// 	else
-// 		swdptap_seq_out_no_delay(tms_states, clock_cycles);
-// }
+static void rvswd_seq_out_clk_delay(const uint32_t dio_states, const size_t clock_cycles)
+{
+	/* Shift clock_cycles bits out */
+	for (size_t cycle = 0U; cycle < clock_cycles; ++cycle) {
+		/* Drive the CLK low and setup the DIO line, then hold for a period */
+		gpio_clear(RVSWD_CLK_PORT, RVSWD_CLK_PIN);
+		gpio_set_val(SWDIO_PORT, SWDIO_PIN, dio_states & (1U << cycle));
+		rvswd_hold_period();
 
-// static void swdptap_seq_out_parity(const uint32_t tms_states, const size_t clock_cycles)
-// {
-// 	const bool parity = calculate_odd_parity(tms_states);
-// 	swdptap_seq_out(tms_states, clock_cycles);
-// 	gpio_set_val(SWDIO_PORT, SWDIO_PIN, parity);
-// 	for (volatile uint32_t counter = target_clk_divider + 1; counter > 0; --counter)
-// 		continue;
-// 	gpio_set(SWCLK_PORT, SWCLK_PIN);
-// 	for (volatile uint32_t counter = target_clk_divider + 1; counter > 0; --counter)
-// 		continue;
-// 	gpio_clear(SWCLK_PORT, SWCLK_PIN);
-// }
+		/* Raise the CLK and hold for a period */
+		gpio_set(RVSWD_CLK_PORT, RVSWD_CLK_PIN);
+		rvswd_hold_period();
+	}
+
+	/* Leave the CLK low */
+	gpio_clear(RVSWD_CLK_PORT, RVSWD_CLK_PIN);
+}
+
+static void rvswd_seq_out_no_delay(const uint32_t dio_states, const size_t clock_cycles)
+{
+	/* Shift clock_cycles bits out */
+	for (size_t cycle = 0; cycle < clock_cycles; ++cycle) {
+		/* Drive the CLK low and setup the DIO line */
+		gpio_clear(RVSWD_CLK_PORT, RVSWD_CLK_PIN);
+		gpio_set_val(SWDIO_PORT, SWDIO_PIN, dio_states & (1U << cycle));
+
+		/* Raise the CLK */
+		gpio_set(RVSWD_CLK_PORT, RVSWD_CLK_PIN);
+	}
+
+	/* Leave the CLK low */
+	gpio_clear(RVSWD_CLK_PORT, RVSWD_CLK_PIN);
+}
+
+static void rvswd_seq_out(const uint32_t dio_states, const size_t clock_cycles)
+{
+	/* Set the DIO line to drive to give us control */
+	RVSWD_DIO_MODE_DRIVE();
+
+	/* Delegate to the appropriate sequence in routine depending on the clock divider */
+	if (target_clk_divider != UINT32_MAX)
+		rvswd_seq_out_clk_delay(dio_states, clock_cycles);
+	else
+		rvswd_seq_out_no_delay(dio_states, clock_cycles);
+}
