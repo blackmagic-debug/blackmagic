@@ -84,6 +84,21 @@ void rvswd_init(void)
 	rvswd_proc.seq_out = rvswd_seq_out;
 }
 
+static void rvswd_set_dio_direction(bool output)
+{
+	/* Do nothing if the direction is already set */
+	static bool current_direction = false;
+	if (output == current_direction)
+		return;
+
+	/* Change the direction */
+	if (output)
+		RVSWD_DIO_MODE_DRIVE();
+	else
+		RVSWD_DIO_MODE_FLOAT();
+	current_direction = output;
+}
+
 static void rvswd_start(void)
 {
 	/*
@@ -91,7 +106,7 @@ static void rvswd_start(void)
 	 */
 
 	/* Setup for the start sequence by setting the bus to the idle state */
-	RVSWD_DIO_MODE_DRIVE();
+	rvswd_set_dio_direction(true);
 	gpio_set(RVSWD_CLK_PORT, RVSWD_CLK_PIN);
 	gpio_set(RVSWD_DIO_DIR_PORT, RVSWD_DIO_PIN);
 
@@ -116,7 +131,7 @@ static void rvswd_stop(void)
 	 * but a redundant low CLK set ensures we don't issue a start condition by mistake
 	 */
 	gpio_clear(RVSWD_CLK_PORT, RVSWD_CLK_PIN);
-	RVSWD_DIO_MODE_DRIVE();
+	rvswd_set_dio_direction(true);
 	gpio_clear(RVSWD_DIO_PORT, RVSWD_DIO_PIN);
 
 	/* Ensure setup for a period */
@@ -173,7 +188,7 @@ static uint32_t rvswd_seq_in_no_delay(const size_t clock_cycles)
 static uint32_t rvswd_seq_in(size_t clock_cycles)
 {
 	/* Set the DIO line to float to give control to the target */
-	RVSWD_DIO_MODE_FLOAT();
+	rvswd_set_dio_direction(false);
 
 	/* Delegate to the appropriate sequence in routine depending on the clock divider */
 	if (target_clk_divider != UINT32_MAX)
@@ -219,7 +234,7 @@ static void rvswd_seq_out_no_delay(const uint32_t dio_states, const size_t clock
 static void rvswd_seq_out(const uint32_t dio_states, const size_t clock_cycles)
 {
 	/* Set the DIO line to drive to give us control */
-	RVSWD_DIO_MODE_DRIVE();
+	rvswd_set_dio_direction(true);
 
 	/* Delegate to the appropriate sequence in routine depending on the clock divider */
 	if (target_clk_divider != UINT32_MAX)
