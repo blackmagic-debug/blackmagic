@@ -84,4 +84,11 @@ static inline uint64_t read_be8(const uint8_t *const buffer, const size_t offset
 		((uint64_t)buffer[offset + 6] << 8U) | buffer[offset + 7];
 }
 
+static inline size_t write_char(char *const buffer, const size_t buffer_size, const size_t offset, const char c)
+{
+	if (buffer && offset < buffer_size)
+		buffer[offset] = c;
+	return offset + 1U;
+}
+
 #endif /*INCLUDE_BUFFER_UTILS_H*/

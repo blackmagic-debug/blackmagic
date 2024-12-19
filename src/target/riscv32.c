@@ -40,11 +40,6 @@
 #include "gdb_packet.h"
 #include "adiv5.h"
 
-typedef struct riscv32_regs {
-	uint32_t gprs[32];
-	uint32_t pc;
-} riscv32_regs_s;
-
 /* This defines a match trigger that's for an address or data location */
 #define RV32_MATCH_ADDR_DATA_TRIGGER 0x20000000U
 /* A dmode of 1 restricts the writability of the trigger to debug mode only */
@@ -72,16 +67,19 @@ static size_t riscv32_reg_read(target_s *target, uint32_t reg, void *data, size_
 static size_t riscv32_reg_write(target_s *target, uint32_t reg, const void *data, size_t max);
 static void riscv32_regs_read(target_s *target, void *data);
 static void riscv32_regs_write(target_s *target, const void *data);
+static void riscv32_mem_read(target_s *target, void *dest, target_addr64_t src, size_t len);
+static void riscv32_mem_write(target_s *target, target_addr64_t dest, const void *src, size_t len);
 
 static int riscv32_breakwatch_set(target_s *target, breakwatch_s *breakwatch);
 static int riscv32_breakwatch_clear(target_s *target, breakwatch_s *breakwatch);
 
 bool riscv32_probe(target_s *const target)
 {
+	/* 'E' base ISA has 16 GPRs + PC, 'I' base ISA has 32 GPRs + PC */
+	riscv_hart_s *const hart = riscv_hart_struct(target);
+	target->regs_size = ((hart->extensions & RV_ISA_EXT_EMBEDDED ? 16U : 32U) + 1U) * sizeof(uint32_t);
+
 	/* Finish setting up the target structure with generic rv32 functions */
-	target->core = "rv32";
-	/* Provide the length of a suitable registers structure */
-	target->regs_size = sizeof(riscv32_regs_s);
 	target->regs_read = riscv32_regs_read;
 	target->regs_write = riscv32_regs_write;
 	target->reg_write = riscv32_reg_write;
@@ -101,6 +99,10 @@ bool riscv32_probe(target_s *const target)
 		break;
 	default:
 		break;
+	case NOT_JEP106_MANUFACTURER_WCH:
+		PROBE(ch32v003x_probe);
+		PROBE(ch32vx_probe);
+		break;
 	}
 
 #if CONFIG_BMDA == 0
@@ -115,30 +117,30 @@ static void riscv32_regs_read(target_s *const target, void *const data)
 {
 	/* Grab the hart structure and figure out how many registers need reading out */
 	riscv_hart_s *const hart = riscv_hart_struct(target);
-	riscv32_regs_s *const regs = (riscv32_regs_s *)data;
+	uint32_t *const regs = (uint32_t *)data;
 	const size_t gprs_count = hart->extensions & RV_ISA_EXT_EMBEDDED ? 16U : 32U;
 	/* Loop through reading out the GPRs */
 	for (size_t gpr = 0; gpr < gprs_count; ++gpr) {
 		// TODO: handle when this fails..
-		riscv_csr_read(hart, RV_GPR_BASE + gpr, &regs->gprs[gpr]);
+		riscv_csr_read(hart, RV_GPR_BASE + gpr, &regs[gpr]);
 	}
 	/* Special access to grab the program counter that would be executed on resuming the hart */
-	riscv_csr_read(hart, RV_DPC, &regs->pc);
+	riscv_csr_read(hart, RV_DPC, &regs[gprs_count]);
 }
 
 static void riscv32_regs_write(target_s *const target, const void *const data)
 {
 	/* Grab the hart structure and figure out how many registers need reading out */
 	riscv_hart_s *const hart = riscv_hart_struct(target);
-	const riscv32_regs_s *const regs = (const riscv32_regs_s *)data;
+	const uint32_t *const regs = (const uint32_t *)data;
 	const size_t gprs_count = hart->extensions & RV_ISA_EXT_EMBEDDED ? 16U : 32U;
 	/* Loop through writing out the GPRs, except for the first which is always 0 */
 	for (size_t gpr = 1; gpr < gprs_count; ++gpr) {
 		// TODO: handle when this fails..
-		riscv_csr_write(hart, RV_GPR_BASE + gpr, &regs->gprs[gpr]);
+		riscv_csr_write(hart, RV_GPR_BASE + gpr, &regs[gpr]);
 	}
 	/* Special access to poke in the program counter that will be executed on resuming the hart */
-	riscv_csr_write(hart, RV_DPC, &regs->pc);
+	riscv_csr_write(hart, RV_DPC, &regs[gprs_count]);
 }
 
 static inline size_t riscv32_bool_to_4(const bool ret)
@@ -564,7 +566,139 @@ static void riscv32_sysbus_mem_write(
 		riscv32_sysbus_mem_adjusted_write(hart, address, data, remainder, native_access_width, native_access_length);
 }
 
-void riscv32_mem_read(target_s *const target, void *const dest, const target_addr64_t src, const size_t len)
+static void riscv32_abstract_progbuf_mem_read(
+	riscv_hart_s *const hart, void *const dest, const target_addr_t src, const size_t len)
+{
+	if (!(hart->extensions & RV_ISA_EXT_COMPRESSED)) {
+		DEBUG_ERROR("This target does not implement the compressed ISA extension\n");
+		return;
+	}
+
+	/* Figure out the maximal width of access to perform, up to the bitness of the target */
+	const uint8_t access_width = riscv_mem_access_width(hart, src, len);
+	// const uint8_t access_length = 1U << access_width;
+	// /* Build the access command */
+	// const uint32_t command = RV_DM_ABST_CMD_ACCESS_MEM | RV_ABST_READ | (access_width << RV_ABST_MEM_ACCESS_SHIFT) |
+	// 	(access_length < len ? RV_ABST_MEM_ADDR_POST_INC : 0U);
+	// /* Write the address to read to arg1 */
+	// if (!riscv_dm_write(hart->dbg_module, RV_DM_DATA1, src))
+	// 	return;
+	// uint8_t *const data = (uint8_t *)dest;
+	// for (size_t offset = 0; offset < len; offset += access_length) {
+	// 	/* Execute the read */
+	// 	if (!riscv_dm_write(hart->dbg_module, RV_DM_ABST_COMMAND, command) || !riscv_command_wait_complete(hart))
+	// 		return;
+	// 	/* Extract back the data from arg0 */
+	// 	uint32_t value = 0;
+	// 	if (!riscv_dm_read(hart->dbg_module, RV_DM_DATA0, &value))
+	// 		return;
+	// 	riscv32_unpack_data(data + offset, value, access_width);
+	// }
+
+	/* Disable auto-exec */
+	// if (!riscv_dm_write(hart->dbg_module, RV_DM_ABST_AUTO, 0))
+	// 	return;
+
+	/* 
+	 * progbuf 0
+	 * c.lw x8,0(x11) // Pull the address from DATA1
+	 * c.lw x9,0(x8)  // Read the data at that location
+	 */
+	if (!riscv_dm_write(hart->dbg_module, RV_DM_PROGBUF0, 0x40044180U))
+		return;
+
+	/* 
+	 * progbuf 1
+	 * c.nop		  // alternately, `c.addi x8, 4` , for auto-increment (0xc1040411)
+	 * c.sw x9, 0(x10) // Write back to DATA0
+	 */
+	if (!riscv_dm_write(hart->dbg_module, RV_DM_PROGBUF1, 0xc1040001U))
+		return;
+
+	/* 
+	 * progbuf 2
+	 * c.sw x8, 0(x11) // Write addy to DATA1
+	 * c.ebreak
+	 */
+	if (!riscv_dm_write(hart->dbg_module, RV_DM_PROGBUF2, 0x9002c180U))
+		return;
+
+	/* StaticUpdatePROGBUFRegs */
+	uint32_t rr;
+	if (!riscv_dm_read(hart->dbg_module, 0x12U, &rr)) {
+		DEBUG_ERROR("Could not get hart info\n");
+		return;
+	}
+	DEBUG_INFO("rr: %08" PRIx32 "\n", rr);
+	const uint32_t data0_offset = 0xe0000000U | (rr & 0x7ffU);
+	if (!riscv_dm_write(hart->dbg_module, RV_DM_DATA0, data0_offset)) // DATA0's location in memory.
+		return;
+	if (!riscv_dm_write(hart->dbg_module, RV_DM_ABST_COMMAND, 0x0023100aU)) // Copy data to x10
+		return;
+	if (!riscv_dm_write(hart->dbg_module, RV_DM_DATA0, data0_offset + 4U)) // DATA1's location in memory.
+		return;
+	if (!riscv_dm_write(hart->dbg_module, RV_DM_ABST_COMMAND, 0x0023100bU)) // Copy data to x11
+		return;
+	// if (!riscv_dm_write(hart->dbg_module, RV_DM_DATA0, 0x40022010U)) // FLASH->CTLR
+	// 	return;
+	// if (!riscv_dm_write(hart->dbg_module, RV_DM_ABST_COMMAND, 0x0023100cU)) // Copy data to x12
+	// 	return;
+	// #define CR_PAGE_PG  ((uint32_t)0x00010000)
+	// #define CR_BUF_LOAD ((uint32_t)0x00040000)
+	// 	if (!riscv_dm_write(hart->dbg_module, RV_DM_DATA0, CR_PAGE_PG | CR_BUF_LOAD))
+	// 		return;
+	// 	if (!riscv_dm_write(hart->dbg_module, RV_DM_ABST_COMMAND, 0x0023100dU)) // Copy data to x13
+	// 		return;
+
+	/* Enable auto-exec */
+	// if (!riscv_dm_write(hart->dbg_module, RV_DM_ABST_AUTO, 1U))
+	// 	return;
+
+	if (!riscv_dm_write(hart->dbg_module, RV_DM_DATA1, src))
+		return;
+	if (!riscv_dm_write(hart->dbg_module, RV_DM_ABST_COMMAND, 0x00241000U) || !riscv_command_wait_complete(hart))
+		return;
+
+	/* Extract back the data from arg0 */
+	uint32_t value = 0;
+	if (!riscv_dm_read(hart->dbg_module, RV_DM_DATA0, &value))
+		return;
+
+	riscv32_unpack_data(dest, value, access_width);
+}
+
+static void riscv32_abstract_progbuf_mem_write(
+	riscv_hart_s *const hart, const target_addr_t dest, const void *const src, const size_t len)
+{
+	DEBUG_TARGET("Performing %zu byte write of %08" PRIx32 " using PROGBUF\n", len, dest);
+
+	(void)hart;
+	(void)dest;
+	(void)src;
+	(void)len;
+
+	// /* Figure out the maximal width of access to perform, up to the bitness of the target */
+	// const uint8_t access_width = riscv_mem_access_width(hart, dest, len);
+	// const uint8_t access_length = 1U << access_width;
+	// /* Build the access command */
+	// const uint32_t command = RV_DM_ABST_CMD_ACCESS_MEM | RV_ABST_WRITE | (access_width << RV_ABST_MEM_ACCESS_SHIFT) |
+	// 	(access_length < len ? RV_ABST_MEM_ADDR_POST_INC : 0U);
+	// /* Write the address to write to arg1 */
+	// if (!riscv_dm_write(hart->dbg_module, RV_DM_DATA1, dest))
+	// 	return;
+	// const uint8_t *const data = (const uint8_t *)src;
+	// for (size_t offset = 0; offset < len; offset += access_length) {
+	// 	/* Pack the data to write into arg0 */
+	// 	uint32_t value = riscv32_pack_data(data + offset, access_width);
+	// 	if (!riscv_dm_write(hart->dbg_module, RV_DM_DATA0, value))
+	// 		return;
+	// 	/* Execute the write */
+	// 	if (!riscv_dm_write(hart->dbg_module, RV_DM_ABST_COMMAND, command) || !riscv_command_wait_complete(hart))
+	// 		return;
+	// }
+}
+
+static void riscv32_mem_read(target_s *const target, void *const dest, const target_addr64_t src, const size_t len)
 {
 	/* If we're asked to do a 0-byte read, do nothing */
 	if (!len) {
@@ -575,8 +709,15 @@ void riscv32_mem_read(target_s *const target, void *const dest, const target_add
 	riscv_hart_s *const hart = riscv_hart_struct(target);
 	if (hart->flags & RV_HART_FLAG_MEMORY_SYSBUS)
 		riscv32_sysbus_mem_read(hart, dest, src, len);
-	else
+	else if (hart->flags & RV_HART_FLAG_MEMORY_ABSTRACT) {
 		riscv32_abstract_mem_read(hart, dest, src, len);
+		if (hart->status == RISCV_HART_NOT_SUPP) {
+			DEBUG_WARN("Abstract memory access not supported, falling back to prog buffer\n");
+			hart->flags &= (uint8_t)~RV_HART_FLAG_MEMORY_ABSTRACT;
+			riscv32_abstract_progbuf_mem_read(hart, dest, src, len);
+		}
+	} else
+		riscv32_abstract_progbuf_mem_read(hart, dest, src, len);
 
 #if ENABLE_DEBUG
 	DEBUG_PROTO("%s: @ %08" PRIx32 " len %zu:", __func__, (uint32_t)src, len);
@@ -594,7 +735,8 @@ void riscv32_mem_read(target_s *const target, void *const dest, const target_add
 #endif
 }
 
-void riscv32_mem_write(target_s *const target, const target_addr64_t dest, const void *const src, const size_t len)
+static void riscv32_mem_write(
+	target_s *const target, const target_addr64_t dest, const void *const src, const size_t len)
 {
 #if ENABLE_DEBUG
 	DEBUG_PROTO("%s: @ %" PRIx32 " len %zu:", __func__, (uint32_t)dest, len);
@@ -617,8 +759,15 @@ void riscv32_mem_write(target_s *const target, const target_addr64_t dest, const
 	riscv_hart_s *const hart = riscv_hart_struct(target);
 	if (hart->flags & RV_HART_FLAG_MEMORY_SYSBUS)
 		riscv32_sysbus_mem_write(hart, dest, src, len);
-	else
+	else if (hart->flags & RV_HART_FLAG_MEMORY_ABSTRACT) {
 		riscv32_abstract_mem_write(hart, dest, src, len);
+		if (hart->status == RISCV_HART_NOT_SUPP) {
+			DEBUG_WARN("Abstract memory access not supported, falling back to prog buffer\n");
+			hart->flags &= (uint8_t)~RV_HART_FLAG_MEMORY_ABSTRACT;
+			riscv32_abstract_progbuf_mem_write(hart, dest, src, len);
+		}
+	} else
+		riscv32_abstract_progbuf_mem_write(hart, dest, src, len);
 }
 
 /*
