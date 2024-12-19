@@ -81,6 +81,10 @@ void gdb_set_noackmode(bool enable)
 }
 
 #ifndef DEBUG_GDB_IS_NOOP
+/*
+ * To see what packets GDB is seeing you can enable remote protocol debugging with:
+ * `(gdb) set debug remote 1`
+ */
 static void gdb_packet_debug(const char *const func, const gdb_packet_s *const packet)
 {
 	/* Log packet for debugging */
