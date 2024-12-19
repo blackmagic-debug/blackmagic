@@ -42,7 +42,7 @@ target_common_sources = files(
 	'gdb_reg.c',
 	'jtag_devs.c',
 	'jtag_scan.c',
-	'rvswd_scan.c',
+	'rvswd_dtm.c',
 	'semihosting.c',
 	'sfdp.c',
 	'spi.c',
