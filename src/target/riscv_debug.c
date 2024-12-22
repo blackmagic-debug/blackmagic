@@ -176,7 +176,7 @@ static const riscv_csr_descriptor_s riscv_csrs[] = {
 	{"misa", RV_CSR_MISA},
 	{"mie", RV_CSR_MIE},
 	{"mtvec", RV_CSR_MTVEC},
-	{"tscratch", RV_CSR_MSCRATCH},
+	{"mscratch", RV_CSR_MSCRATCH},
 	{"mepc", RV_CSR_MEPC},
 	{"mcause", RV_CSR_MCAUSE},
 	{"mtval", RV_CSR_MTVAL},
