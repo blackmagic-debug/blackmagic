@@ -573,7 +573,7 @@ bool kinetis_mdm_probe(adiv5_access_port_s *ap)
 	t->mass_erase = kinetis_mdm_mass_erase;
 	adiv5_ap_ref(ap);
 	t->priv = ap;
-	t->priv_free = (void *)adiv5_ap_unref;
+	t->priv_free = (priv_free_func)adiv5_ap_unref;
 
 	t->driver = "Kinetis Recovery (MDM-AP)";
 	t->regs_size = 0;

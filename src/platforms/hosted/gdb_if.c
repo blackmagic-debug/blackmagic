@@ -140,7 +140,7 @@ static sockaddr_storage_s sockaddr_prepare(const uint16_t port)
 	addrinfo_s *results = NULL;
 	int res = getaddrinfo(NULL, "0", &hints, &results);
 	if (res || !results) {
-		DEBUG_WARN("getaddrinfo returned %d (errno = %d), results is %p\n", res, errno, results);
+		DEBUG_WARN("getaddrinfo returned %d (errno = %d), results is %p\n", res, errno, (void *)results);
 		return (sockaddr_storage_s){AF_UNSPEC};
 	}
 
