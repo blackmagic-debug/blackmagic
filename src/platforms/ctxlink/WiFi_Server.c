@@ -1072,9 +1072,9 @@ void app_task(void)
 			//
 			m2m_wifi_set_device_name(CTXLINK_NETWORK_NAME, strlen(CTXLINK_NETWORK_NAME));
 			//
-			// Select the "Deep Automatic" power mode
+			// Select the "Manual" power mode
 			//
-			m2m_wifi_set_sleep_mode(M2M_WIFI_PS_DEEP_AUTOMATIC, 1);
+			m2m_wifi_set_sleep_mode(M2M_WIFI_PS_MANUAL, 1);
 			//
 			// Move to reading the MAC address state
 			//
