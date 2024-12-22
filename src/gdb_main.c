@@ -928,7 +928,7 @@ void gdb_poll_target(void)
 	}
 
 	/* poll target */
-	target_addr_t watch;
+	target_addr64_t watch;
 	target_halt_reason_e reason = target_halt_poll(cur_target, &watch);
 	if (!reason)
 		return;
@@ -947,7 +947,8 @@ void gdb_poll_target(void)
 		gdb_putpacket_str_f("T%02Xthread:1;", GDB_SIGINT);
 		break;
 	case TARGET_HALT_WATCHPOINT:
-		gdb_putpacket_str_f("T%02Xwatch:%08" PRIX32 ";", GDB_SIGTRAP, watch);
+		gdb_putpacket_str_f(
+			"T%02Xwatch:%0" PRIX32 "%08" PRIX32 ";", GDB_SIGTRAP, (uint32_t)(watch >> 32U), (uint32_t)watch);
 		break;
 	case TARGET_HALT_FAULT:
 		gdb_putpacket_str_f("T%02Xthread:1;", GDB_SIGSEGV);
