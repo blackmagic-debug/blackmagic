@@ -42,6 +42,7 @@ target_common_sources = files(
 	'gdb_reg.c',
 	'jtag_devs.c',
 	'jtag_scan.c',
+	'rvswd_dtm.c',
 	'semihosting.c',
 	'sfdp.c',
 	'spi.c',
@@ -289,6 +290,7 @@ target_stm32f4 = declare_dependency(
 target_ch32 = declare_dependency(
 	sources: files(
 		'ch32f1.c',
+		'ch32vx.c',
 	),
 	dependencies: target_stm32f1,
 )
