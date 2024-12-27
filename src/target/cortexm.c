@@ -64,7 +64,7 @@ static size_t cortexm_reg_read(target_s *target, uint32_t reg, void *data, size_
 static size_t cortexm_reg_write(target_s *target, uint32_t reg, const void *data, size_t max);
 
 static void cortexm_reset(target_s *target);
-static target_halt_reason_e cortexm_halt_poll(target_s *target, target_addr_t *watch);
+static target_halt_reason_e cortexm_halt_poll(target_s *target, target_addr64_t *watch);
 static void cortexm_halt_request(target_s *target);
 static int cortexm_fault_unwind(target_s *target);
 
@@ -828,7 +828,7 @@ static void cortexm_halt_request(target_s *target)
 	}
 }
 
-static target_halt_reason_e cortexm_halt_poll(target_s *target, target_addr_t *watch)
+static target_halt_reason_e cortexm_halt_poll(target_s *target, target_addr64_t *watch)
 {
 	cortexm_priv_s *priv = target->priv;
 

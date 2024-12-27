@@ -98,7 +98,7 @@ typedef enum target_halt_reason {
 
 void target_reset(target_s *target);
 void target_halt_request(target_s *target);
-target_halt_reason_e target_halt_poll(target_s *target, target_addr_t *watch);
+target_halt_reason_e target_halt_poll(target_s *target, target_addr64_t *watch);
 void target_halt_resume(target_s *target, bool step);
 void target_set_cmdline(target_s *target, const char *cmdline, size_t cmdline_len);
 void target_set_heapinfo(target_s *target, target_addr_t heap_base, target_addr_t heap_limit, target_addr_t stack_base,
