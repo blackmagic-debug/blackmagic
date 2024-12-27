@@ -393,7 +393,7 @@ static size_t cortexar_reg_read(target_s *target, uint32_t reg, void *data, size
 static size_t cortexar_reg_write(target_s *target, uint32_t reg, const void *data, size_t max);
 
 static void cortexar_reset(target_s *target);
-static target_halt_reason_e cortexar_halt_poll(target_s *target, target_addr_t *watch);
+static target_halt_reason_e cortexar_halt_poll(target_s *target, target_addr64_t *watch);
 static void cortexar_halt_request(target_s *target);
 static void cortexar_halt_resume(target_s *target, bool step);
 static bool cortexar_halt_and_wait(target_s *target);
@@ -1405,7 +1405,7 @@ static void cortexar_halt_request(target_s *const target)
 	}
 }
 
-static target_halt_reason_e cortexar_halt_poll(target_s *const target, target_addr_t *const watch)
+static target_halt_reason_e cortexar_halt_poll(target_s *const target, target_addr64_t *const watch)
 {
 	volatile uint32_t dscr = 0;
 	TRY (EXCEPTION_ALL) {
