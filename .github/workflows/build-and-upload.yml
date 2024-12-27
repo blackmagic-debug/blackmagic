@@ -88,7 +88,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          submodules: true
+          fetch-tags: true
 
       # Build the firmware for all platform variants (currently available)
       - name: Build
@@ -208,6 +208,8 @@ jobs:
       # Checkout the repository and branch to build under the default location
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-tags: true
 
       # Build BMDA for Linux
       - name: Build Linux BMDA
@@ -304,6 +306,8 @@ jobs:
       # Checkout the repository and branch to build under the default location
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-tags: true
 
       # Build the default BMDA configuration
       - name: Build full BMDA
@@ -378,6 +382,8 @@ jobs:
       # Checkout the repository and branch to build under the default location
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-tags: true
 
       # Build the default BMDA configuration
       - name: Build full BMDA
