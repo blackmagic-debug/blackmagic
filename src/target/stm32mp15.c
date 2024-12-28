@@ -47,6 +47,8 @@
 #define STM32MP15_SYSRAM_SIZE            0x00040000U
 #define STM32MP15_CAN_SRAM_BASE          0x44011000U
 #define STM32MP15_CAN_SRAM_SIZE          0x00002800U
+#define STM32MP15_DRAM_BASE              0xc0000000U
+#define STM32MP15_CA7_BOOTROM_BASE       0x00000000U
 
 /* Access from processor address space.
  * Access via the debug APB is at 0xe0081000 over AP1. */
@@ -336,6 +338,12 @@ bool stm32mp15_ca7_probe(target_s *const target)
 	target_add_ram32(target, STM32MP15_CA7_AHBSRAM_ALIAS_BASE, STM32MP15_AHBSRAM_SIZE);
 	target_add_ram32(target, STM32MP15_SYSRAM_BASE, STM32MP15_SYSRAM_SIZE);
 	target_add_ram32(target, STM32MP15_CAN_SRAM_BASE, STM32MP15_CAN_SRAM_SIZE);
+
+	/* DRAM 512 MiB at identity mapping base */
+	target_add_ram32(target, STM32MP15_DRAM_BASE, 512U * 1024U * 1024U);
+	/* Boot ROM (CA7 stays here in Engi boot) */
+	target_add_ram32(target, STM32MP15_CA7_BOOTROM_BASE, 128U * 1024U);
+
 	return true;
 }
 #endif
