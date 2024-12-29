@@ -83,6 +83,9 @@ void adiv5_jtag_dp_handler(const uint8_t dev_index)
 		/* Correct the LPC43xx errata PARTNO values */
 		if (dp->partno == JTAG_IDCODE_PARTNO_SOC400_4BIT_ERRATA)
 			dp->partno = JTAG_IDCODE_PARTNO_SOC400_4BIT;
+		/* Correct the GD32E50x PARTNO value */
+		else if (dp->partno == JTAG_IDCODE_PARTNO_SOC400_4BIT_CM33)
+			dp->partno = JTAG_IDCODE_PARTNO_SOC400_4BIT;
 
 		if (dp->partno == JTAG_IDCODE_PARTNO_SOC400_4BIT || dp->partno == JTAG_IDCODE_PARTNO_SOC400_8BIT)
 			dp->version = 0U;

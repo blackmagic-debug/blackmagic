@@ -218,6 +218,14 @@
  * for the second and third JTAG-DPs which are still JTAG-DPv0.
  */
 #define JTAG_IDCODE_PARTNO_SOC400_4BIT_ERRATA 0xba01U
+
+/*
+ * ARM JTAG PARTNO values from Cortex-M33 TRM (ARM document ID 100230, issue 0100)
+ * A.4.2.2 Identification Code register, IDCODE, Table A-13 pg98
+ * (for TEALDAP/CM33DAP MINDP SWJ-DP/JTAG-DP)
+ */
+#define JTAG_IDCODE_PARTNO_SOC400_4BIT_CM33 0xba04U
+
 /*
  * ARM JTAG PARTNO values from CoreSight SoC-600 TRM (ARM document ID 101883, issue 0101-00)
  * §10.2.2 css600_dp register descriptions, Table 10-2 pg90
