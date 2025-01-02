@@ -150,6 +150,8 @@ typedef struct riscv_hart {
 	uint32_t implid;
 	uint32_t hartid;
 
+	char isa_name[32U];
+
 	uint32_t triggers;
 	uint32_t trigger_uses[RV_TRIGGERS_MAX];
 } riscv_hart_s;
@@ -201,11 +203,53 @@ typedef struct riscv_hart {
 /* The FP base defines the starting register space address for the floating point registers */
 #define RV_FP_BASE 0x1020U
 
-#define RV_ISA_EXT_EMBEDDED     0x00000010U
-#define RV_ISA_EXT_ANY_FLOAT    0x00010028U
-#define RV_ISA_EXT_SINGLE_FLOAT 0x00000020U
-#define RV_ISA_EXT_DOUBLE_FLOAT 0x00000008U
-#define RV_ISA_EXT_QUAD_FLOAT   0x00010000U
+/**
+ * The MXL (Machine XLEN) field encodes the native base integer ISA width
+ * 
+ * The RISC-V Machine ISA register is MXLEN bits wide so the MXL offset is not fixed
+ * To work around this we convert the register to it's canonical 32-bit form internally
+ */
+#define RV_ISA_MXL_SHIFT 30U                        /* misa Machine XLEN field shift (for 32-bit misa) */
+#define RV_ISA_MXL_MASK  (0x3U << RV_ISA_MXL_SHIFT) /* misa Machine XLEN field mask (for 32-bit misa) */
+#define RV_ISA_MXL_32    0x1U                       /* misa Machine XLEN field value for 32-bit ISA */
+#define RV_ISA_MXL_64    0x2U                       /* misa Machine XLEN field value for 64-bit ISA */
+#define RV_ISA_MXL_128   0x3U                       /* misa Machine XLEN field value for 128-bit ISA */
+
+/* 
+ * The Extensions field encodes the presence of standard extensions, with a single bit per alphabet letter
+ * (bit 0 encodes presence of extension “A” through to bit 25 which encodes “Z”)
+ * 
+ * This list is taken from the RISC-V Instruction Set Manual v2.2
+ * 
+ * The list order is the canonical representation order in the ISA subset string
+ */
+#define RV_ISA_EXTENSIONS_MASK 0x03ffffffU /* misa extensions field mask */
+
+/* Base ISA */
+#define RV_ISA_EXT_INTEGER  (1U << 8U) /* 'I': RV32I/64I/128I integer base ISA */
+#define RV_ISA_EXT_EMBEDDED (1U << 4U) /* 'E': RV32E reduced integer base ISA (Embedded) */
+
+/* Standard general-purpose ISA */
+#define RV_ISA_EXT_MUL_DIV_INT  (1U << 12U) /* 'M': Integer multiplication and division */
+#define RV_ISA_EXT_ATOMIC       (1U << 0U)  /* 'A': Atomic instructions */
+#define RV_ISA_EXT_SINGLE_FLOAT (1U << 5U)  /* 'F': Single-precision floating-point */
+#define RV_ISA_EXT_DOUBLE_FLOAT (1U << 3U)  /* 'D': Double-precision floating-point */
+
+/* 'G' standard general-purpose ISA abbreviation, representing 'IMAFD' */
+#define RV_ISA_EXT_GENERAL_PURPOSE                                                               \
+	(RV_ISA_EXT_INTEGER | RV_ISA_EXT_MUL_DIV_INT | RV_ISA_EXT_ATOMIC | RV_ISA_EXT_SINGLE_FLOAT | \
+		RV_ISA_EXT_DOUBLE_FLOAT)
+
+/* Standard Unprivileged Extensions */
+#define RV_ISA_EXT_QUAD_FLOAT      (1U << 16U) /* 'Q': Quad-precision floating-point */
+#define RV_ISA_EXT_DECIMAL_FLOAT   (1U << 11U) /* 'L': Decimal floating-point */
+#define RV_ISA_EXT_COMPRESSED      (1U << 2U)  /* 'C': 16-bit compressed instructions */
+#define RV_ISA_EXT_BIT_MANIP       (1U << 1U)  /* 'B': Bit manipulation */
+#define RV_ISA_EXT_DYNAMIC_LANG    (1U << 9U)  /* 'J': Dynamic languages  */
+#define RV_ISA_EXT_TRANSACT_MEM    (1U << 19U) /* 'T': Transactional memory */
+#define RV_ISA_EXT_PACKED_SIMD     (1U << 15U) /* 'P': Packed-SIMD */
+#define RV_ISA_EXT_VECTOR          (1U << 21U) /* 'V': Vector extensions */
+#define RV_ISA_EXT_USER_INTERRUPTS (1U << 13U) /* 'N': User-level interrupts */
 
 #define RV_TRIGGER_SUPPORT_MASK       0x0000fffeU
 #define RV_TRIGGER_MODE_MASK          0xffff0000U
@@ -215,16 +259,16 @@ typedef struct riscv_hart {
  * The CSR number when requested by GDB is shifted by RV_CSR_GDB_OFFSET so they cannot collide with
  * the GPRs. As a result, we have to subtract RV_CSR_GDB_OFFSET from the value received from GDB.
  */
-#define RV_CSR_GDB_OFFSET 128
-#define RV_CSR_STATUS     0x300
-#define RV_CSR_MISA       0x301
-#define RV_CSR_MIE        0x304
-#define RV_CSR_MTVEC      0x305
-#define RV_CSR_MSCRATCH   0x340
-#define RV_CSR_MEPC       0x341
-#define RV_CSR_MCAUSE     0x342
-#define RV_CSR_MTVAL      0x343
-#define RV_CSR_MIP        0x344
+#define RV_CSR_GDB_OFFSET 128U
+#define RV_CSR_STATUS     0x300U
+#define RV_CSR_MISA       0x301U
+#define RV_CSR_MIE        0x304U
+#define RV_CSR_MTVEC      0x305U
+#define RV_CSR_MSCRATCH   0x340U
+#define RV_CSR_MEPC       0x341U
+#define RV_CSR_MCAUSE     0x342U
+#define RV_CSR_MTVAL      0x343U
+#define RV_CSR_MIP        0x344U
 
 /*
  * These two lines are about allowing GDB to access FPU registers through fake registers offset by
