@@ -707,7 +707,7 @@ bool stm32l4_probe(target_s *const target)
 	 * part by using ap->partno, we try again reading the L4 DBGMCU_IDCODE address.
 	 */
 	const stm32l4_device_info_s *device = stm32l4_get_device_info(ap->partno);
-	if (!device)
+	if (!device->device_id)
 		device = stm32l4_get_device_info(target_mem32_read16(target, STM32L4_DBGMCU_IDCODE) & 0xfffU);
 
 	/*
@@ -764,7 +764,7 @@ static bool stm32l4_attach(target_s *const target)
 		return false;
 
 	/* Extract the device structure from the priv storage and enable the Flash if on an L55 part */
-	const stm32l4_device_info_s *const device = ((stm32l4_priv_s *)target->priv)->device;
+	const stm32l4_device_info_s *const device = ((stm32l4_priv_s *)target->target_storage)->device;
 	if (device->family == STM32L4_FAMILY_L55x)
 		stm32l5_flash_enable(target);
 
