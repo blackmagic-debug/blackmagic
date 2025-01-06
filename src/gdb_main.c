@@ -145,7 +145,7 @@ int32_t gdb_main_loop(target_controller_s *const tc, const gdb_packet_s *const p
 		uint32_t addr, len;
 		ERROR_IF_NO_TARGET();
 		if (read_hex32(packet->data + 1, &rest, &addr, ',') && read_hex32(rest, NULL, &len, READ_HEX_NO_FOLLOW)) {
-			if (len > packet->size / 2U) {
+			if (len > GDB_PACKET_BUFFER_SIZE / 2U) {
 				gdb_put_packet_error(2U);
 				break;
 			}
