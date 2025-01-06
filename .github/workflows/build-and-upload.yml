@@ -93,6 +93,7 @@ jobs:
       # Build the firmware for all platform variants (currently available)
       - name: Build
         run: |
+          git fetch --tags
           meson setup build --cross-file cross-file/${{ matrix.probe }}.ini
           meson compile -C build
           mkdir src/artefacts
@@ -214,6 +215,7 @@ jobs:
       # Build BMDA for Linux
       - name: Build Linux BMDA
         run: |
+          git fetch --tags
           meson setup build $BUILD_OPTS
           meson compile -C build
           mkdir src/artefacts
@@ -312,6 +314,7 @@ jobs:
       # Build the default BMDA configuration
       - name: Build full BMDA
         run: |
+          git fetch --tags
           meson setup build
           meson compile -C build
           mkdir src/artefacts
@@ -388,6 +391,7 @@ jobs:
       # Build the default BMDA configuration
       - name: Build full BMDA
         run: |
+          git fetch --tags
           meson setup build
           meson compile -C build
           mkdir src/artefacts
