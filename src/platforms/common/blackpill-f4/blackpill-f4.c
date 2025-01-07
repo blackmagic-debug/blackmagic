@@ -198,7 +198,13 @@ uint32_t platform_target_voltage_sense(void)
 
 void platform_target_clk_output_enable(bool enable)
 {
-	(void)enable;
+	if (enable) {
+		gpio_mode_setup(TCK_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, TCK_PIN);
+		SWDIO_MODE_DRIVE();
+	} else {
+		gpio_mode_setup(TCK_PORT, GPIO_MODE_INPUT, GPIO_PUPD_NONE, TCK_PIN);
+		SWDIO_MODE_FLOAT();
+	}
 }
 
 bool platform_spi_init(const spi_bus_e bus)
