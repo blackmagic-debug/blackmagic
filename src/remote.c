@@ -403,7 +403,7 @@ static void remote_packet_process_adiv5(const char *const packet, const size_t p
 		return;
 	}
 	/* Check if this is a DP targetsel packet and handle it if it is */
-	else if (packet[1] == REMOTE_DP_TARGETSEL) {
+	if (packet[1] == REMOTE_DP_TARGETSEL) {
 		/* Check if there are enough bytes for the request */
 		if (packet_len == 10U) {
 			/* Extract the new targetsel information into the DP */
