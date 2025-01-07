@@ -361,14 +361,25 @@ uint32_t adiv5_swd_clear_error(adiv5_debug_port_s *const dp, const bool protocol
 		swd_line_reset_sequence(true);
 		if (dp->version >= 2U)
 			adiv5_write_no_check(dp, ADIV5_DP_TARGETSEL, dp->targetsel);
-		adiv5_read_no_check(dp, ADIV5_DP_DPIDR);
-		/* Exception here is unexpected, so do not catch */
+		adiv5_dp_low_access(dp, ADIV5_LOW_READ, ADIV5_DP_DPIDR, 0U);
 	}
-	const uint32_t err = adiv5_read_no_check(dp, ADIV5_DP_CTRLSTAT) &
-		(ADIV5_DP_CTRLSTAT_STICKYORUN | ADIV5_DP_CTRLSTAT_STICKYCMP | ADIV5_DP_CTRLSTAT_STICKYERR |
-			ADIV5_DP_CTRLSTAT_WDATAERR);
-	uint32_t clr = 0;
+	/* Try to read the current target status */
+	const uint32_t err = adiv5_read_no_check(dp, ADIV5_DP_CTRLSTAT);
+	/* If the read failed for some reason */
+	if (err == 0U) {
+		/* We probably hit a protocol error.. */
+		if (!protocol_recovery)
+			/* So, restart this function, doing a full protocol recovery cycle */
+			return adiv5_swd_clear_error(dp, true);
+		/*
+		 * Otherwise if we tried and failed to recover the part, propagate an error value so
+		 * the caller doesn't think everything's fine and dandy
+		 */
+		return ADIV5_DP_CTRLSTAT_ERRMASK;
+	}
 
+	/* Hope we got a valid status.. unpack any errors that need clearing */
+	uint32_t clr = 0;
 	if (err & ADIV5_DP_CTRLSTAT_STICKYORUN)
 		clr |= ADIV5_DP_ABORT_ORUNERRCLR;
 	if (err & ADIV5_DP_CTRLSTAT_STICKYCMP)
@@ -378,10 +389,13 @@ uint32_t adiv5_swd_clear_error(adiv5_debug_port_s *const dp, const bool protocol
 	if (err & ADIV5_DP_CTRLSTAT_WDATAERR)
 		clr |= ADIV5_DP_ABORT_WDERRCLR;
 
+	/* If there are any, then clear them */
 	if (clr)
 		adiv5_write_no_check(dp, ADIV5_DP_ABORT, clr);
 	dp->fault = 0;
-	return err;
+	return err &
+		(ADIV5_DP_CTRLSTAT_STICKYORUN | ADIV5_DP_CTRLSTAT_STICKYCMP | ADIV5_DP_CTRLSTAT_STICKYERR |
+			ADIV5_DP_CTRLSTAT_WDATAERR);
 }
 
 uint32_t adiv5_swd_raw_access(adiv5_debug_port_s *dp, const uint8_t rnw, const uint16_t addr, const uint32_t value)
