@@ -262,6 +262,7 @@
 #define REMOTE_MEM_READ         'm'
 #define REMOTE_MEM_WRITE        'M'
 #define REMOTE_DP_VERSION       'V'
+#define REMOTE_DP_TARGETSEL     'T'
 
 #define REMOTE_ADIV5_DEV_INDEX  REMOTE_UINT8
 #define REMOTE_ADIV5_AP_SEL     REMOTE_UINT8
@@ -322,6 +323,11 @@
 	(char[])                                                                                       \
 	{                                                                                              \
 		REMOTE_SOM, REMOTE_ADIV5_PACKET, REMOTE_DP_VERSION, REMOTE_ADIV5_DP_VERSION, REMOTE_EOM, 0 \
+	}
+#define REMOTE_DP_TARGETSEL_STR                                                                \
+	(char[])                                                                                   \
+	{                                                                                          \
+		REMOTE_SOM, REMOTE_ADIV5_PACKET, REMOTE_DP_TARGETSEL, REMOTE_ADIV5_DATA, REMOTE_EOM, 0 \
 	}
 
 /* ADIv6 acceleration protocol elements */

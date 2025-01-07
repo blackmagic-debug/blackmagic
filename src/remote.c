@@ -402,6 +402,18 @@ static void remote_packet_process_adiv5(const char *const packet, const size_t p
 			remote_respond(REMOTE_RESP_ERR, REMOTE_ERROR_WRONGLEN);
 		return;
 	}
+	/* Check if this is a DP targetsel packet and handle it if it is */
+	else if (packet[1] == REMOTE_DP_TARGETSEL) {
+		/* Check if there are enough bytes for the request */
+		if (packet_len == 10U) {
+			/* Extract the new targetsel information into the DP */
+			remote_dp.targetsel = hex_string_to_num(8U, packet + 2U);
+			remote_respond(REMOTE_RESP_OK, 0);
+		} else
+			/* There weren't enough bytes, so tell the host and get out of here */
+			remote_respond(REMOTE_RESP_ERR, REMOTE_ERROR_WRONGLEN);
+		return;
+	}
 
 	/* Our shortest ADIv5 packet is 8 bytes long, check that we have at least that */
 	if (packet_len < 8U) {
