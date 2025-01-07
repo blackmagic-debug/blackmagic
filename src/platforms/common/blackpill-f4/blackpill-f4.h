@@ -137,7 +137,7 @@ extern bool debug_bmp;
 
 #define TMS_SET_MODE()                                                    \
 	gpio_mode_setup(TMS_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, TMS_PIN); \
-	gpio_set_output_options(TMS_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_2MHZ, TMS_PIN);
+	gpio_set_output_options(TMS_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_25MHZ, TMS_PIN);
 
 /* Perform SWDIO bus turnaround faster than a gpio_mode_setup() call */
 #define SWDIO_MODE_FLOAT()                       \
