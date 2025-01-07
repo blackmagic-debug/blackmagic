@@ -58,8 +58,12 @@
 #define REMOTE_ACCEL_RISCV     (1U << 2U)
 #define REMOTE_ACCEL_ADIV6     (1U << 3U)
 
-/* This version of the protocol introduces an ADIv5 command for setting the version of the DP being talked to */
-#define REMOTE_DP_VERSION 'V'
+/*
+ * This version of the protocol introduces ADIv5 commands for setting the version of the DP being talked to,
+ * and the TARGETSEL value for the DP for SWD multi-drop
+ */
+#define REMOTE_DP_VERSION   'V'
+#define REMOTE_DP_TARGETSEL 'T'
 
 /* This version of the protocol introduces 64-bit support for the ADIv5 acceleration protocol */
 #define REMOTE_UINT64           '%', '0', '1', '6', 'l', 'l', 'x'
@@ -90,6 +94,11 @@
 	(char[])                                                                                       \
 	{                                                                                              \
 		REMOTE_SOM, REMOTE_ADIV5_PACKET, REMOTE_DP_VERSION, REMOTE_ADIV5_DP_VERSION, REMOTE_EOM, 0 \
+	}
+#define REMOTE_DP_TARGETSEL_STR                                                                \
+	(char[])                                                                                   \
+	{                                                                                          \
+		REMOTE_SOM, REMOTE_ADIV5_PACKET, REMOTE_DP_TARGETSEL, REMOTE_ADIV5_DATA, REMOTE_EOM, 0 \
 	}
 
 /* ADIv6 acceleration protocol elements */
