@@ -3,10 +3,14 @@
 ## Contributing
 
 Contributions to this project are released under a mix of the [GPLv3+](COPYING) and [BSD-3-Clause](COPYING-BSD) licenses.
-Please respect the license of any existing files (specified at the top) and if adding a new file, make a value judgement which you prefer to use.
+Please respect the license of any existing files (specified at the top) and if adding a new file, make a value judgement
+which you prefer to use.
 
 Please note that this project is released under the [Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.md).
 By participating in this project you agree to abide by its terms.
+
+**Note** Contributions that were generated in whole or in-part from any language model or AI, such as ChatGPT, BARD,
+or any other such tool are explicitly forbidden and may result in your permanent ban from contributing to this project.
 
 ## Development and Testing
 
@@ -23,7 +27,8 @@ For instructions on how to build the project, please follow the **Building** sec
  1. Check against the latest version (`main` branch).
  2. If possible, and applicable, test against another target and/or debug probe.
  3. Consider broken USB cables and connectors.
- 4. Try to reproduce with BMDA with at least output verbosity bit 1 (INFO) set (`blackmagic -v 1 ...`), as debug messages will be dumped to the starting console.
+ 4. Try to reproduce with BMDA with at least output verbosity bit 1 (INFO) set (`blackmagic -v 1 ...`), as debug
+    messages will be dumped to the starting console.
 
 When reporting issues, be as specific as possible!
 
@@ -36,7 +41,8 @@ When reporting issues, be as specific as possible!
  3. Make your change
  4. Push to your fork and submit a [pull request](https://github.com/blackmagic-debug/blackmagic/compare)
 
-If you wish to fix a bug, `type` in the new branch name should be `fix`, otherwise if you wish to implement a new feature, `type` should be `feature`.
+If you wish to fix a bug, `type` in the new branch name should be `fix`, otherwise if you wish to implement a new
+feature, `type` should be `feature`.
 
 ### If you are working from an existing clone of the repository
 
@@ -55,15 +61,20 @@ if necessary, expand on the summary using description lines.
 
 When writing commit messages, please prefix the component being modified using the following rules:
 
-* If the commit modifies target support, prefix with the path under src/target including the name of the file minus its extension - for example, "adiv5:", "stm32f1:" or "flashstub/lmi:"
-* If the commit modifies a platform, prefix with the name of that platform followed by the file - for example, "hosted/cli:" or "native/platform:"
-* If the commit modifies a significant number of files, us the overarching theme - for example if it's a platform API change then use "platform:"
-* If the commit modifies files such as the build system, the main project readme, or any other files about the project that don't form the code for the project, please use "misc:"
+* If the commit modifies target support, prefix with the path under src/target including the name of the file minus
+  its extension - for example, "adiv5:", "stm32f1:" or "flashstub/lmi:"
+* If the commit modifies a platform, prefix with the name of that platform followed by the file - for example,
+  "hosted/cli:" or "native/platform:"
+* If the commit modifies a significant number of files, us the overarching theme - for example if it's a platform API
+  change then use "platform:"
+* If the commit modifies files such as the build system, the main project readme, or any other files about the project
+  that don't form the code for the project, please use "misc:"
 
 We would like to be able to look back through the commit history and tell what happened, when, and why without having
 to dip into the commit descriptions as this improves the general Git experience and improves everyone's lives.
 
-Try to keep commits focused on a single small and atomic change to ease review, and aid the process if we end up having to `git bisect` through your changes, or `git revert` in the extreme case something seriously broke.
+Try to keep commits focused on a single small and atomic change to ease review, and aid the process if we end up having
+to `git bisect` through your changes, or `git revert` in the extreme case something seriously broke.
 
 We use rebasing to merge pull requests, so please keep this in mind.
 
