@@ -122,6 +122,10 @@ endif
 # We declare a dependency for each target group with the source files required
 # these dependencies are then added to the BMD core, conditinal on the targets option
 # NOTE: sourceset module might be an alternative to this method (unexplored)
+target_arm_coresight = declare_dependency(
+	sources: files('arm_coresight_cti.c'),
+)
+
 target_cortex = declare_dependency(
 	sources: files('cortex.c'),
 )
@@ -135,6 +139,11 @@ target_cortexar = declare_dependency(
 target_cortexm = declare_dependency(
 	sources: files('cortexm.c'),
 	dependencies: target_cortex,
+)
+
+target_cortexa_armv8 = declare_dependency(
+	sources: files('cortexa_armv8.c'),
+	dependencies: [target_cortex, target_arm_coresight],
 )
 
 riscv_jtag_dtm = declare_dependency(
@@ -376,6 +385,7 @@ libbmd_target_deps = [
 	# Enable all architectures for libbmd
 	target_cortexar,
 	target_cortexm,
+	target_cortexa_armv8,
 	target_riscv32,
 	target_riscv64,
 	# Enable all targets for libbmd

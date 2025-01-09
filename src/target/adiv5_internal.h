@@ -278,6 +278,8 @@ typedef enum arm_arch {
 	aa_cortexr,
 	aa_rom_table,
 	aa_access_port,
+	aa_cortexa_armv8,
+	aa_cti_armv8,
 	aa_end
 } arm_arch_e;
 
