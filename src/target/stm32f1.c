@@ -1017,6 +1017,9 @@ bool stm32f1_probe(target_s *target)
 	stm32f1_add_flash(target, STM32F1_FLASH_BANK1_BASE, flash_size, block_size);
 	target_add_commands(target, stm32f1_cmd_list, target->driver);
 
+	/* On STM32F1 (F3, F0) SoC, Cortex-M3 (M4F, M0) allows SRAM access without halting */
+	target->target_options |= TOPT_NON_HALTING_MEM_IO;
+
 	/* Now we have a stable debug environment, make sure the WDTs + WFI and WFE instructions can't cause problems */
 	return stm32f1_configure_dbgmcu(target, dbgmcu_config_taddr);
 }
