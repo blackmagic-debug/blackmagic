@@ -88,6 +88,7 @@
 static bool dap_transfer_configure(uint8_t idle_cycles, uint16_t wait_retries, uint16_t match_retries);
 
 static uint32_t dap_current_clock_freq;
+static bool dap_nrst_state = false;
 
 bool dap_connect(void)
 {
@@ -213,6 +214,11 @@ size_t dap_info(const dap_info_e requested_info, void *const buffer, const size_
 	return result_length;
 }
 
+bool dap_nrst_get_val(void)
+{
+	return dap_nrst_state;
+}
+
 bool dap_nrst_set_val(const bool nrst_state)
 {
 	/* Setup the request for the pin state change request */
@@ -230,6 +236,8 @@ bool dap_nrst_set_val(const bool nrst_state)
 		DEBUG_PROBE("%s failed\n", __func__);
 		return false;
 	}
+	/* Extract the current pin state for the device, de-inverting it */
+	dap_nrst_state = !(response & DAP_SWJ_nRST);
 	return response == request.pin_values;
 }
 

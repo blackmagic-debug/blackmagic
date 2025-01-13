@@ -486,6 +486,9 @@ bool platform_nrst_get_val(void)
 
 	case PROBE_TYPE_FTDI:
 		return ftdi_nrst_get_val();
+
+	case PROBE_TYPE_CMSIS_DAP:
+		return dap_nrst_get_val();
 #endif
 
 	default:

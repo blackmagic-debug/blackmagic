@@ -35,6 +35,7 @@ bool dap_swd_init(adiv5_debug_port_s *dp);
 void dap_jtag_dp_init(adiv5_debug_port_s *dp);
 uint32_t dap_max_frequency(uint32_t clock);
 void dap_swd_configure(uint8_t cfg);
+bool dap_nrst_get_val(void);
 bool dap_nrst_set_val(bool assert);
 
 #endif /* PLATFORMS_HOSTED_CMSIS_DAP_H */
