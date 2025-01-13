@@ -441,7 +441,7 @@ const char *platform_target_voltage(void)
 	}
 }
 
-void platform_nrst_set_val(bool assert)
+void platform_nrst_set_val(const bool assert)
 {
 	switch (bmda_probe_info.type) {
 	case PROBE_TYPE_BMP:

@@ -32,6 +32,7 @@
 #include <string.h>
 #include "general.h"
 #include "exception.h"
+#include "cmsis_dap.h"
 #include "dap.h"
 #include "dap_command.h"
 #include "jtag_scan.h"
@@ -212,7 +213,7 @@ size_t dap_info(const dap_info_e requested_info, void *const buffer, const size_
 	return result_length;
 }
 
-bool dap_set_reset_state(const bool nrst_state)
+bool dap_nrst_set_val(const bool nrst_state)
 {
 	/* Setup the request for the pin state change request */
 	dap_swj_pins_request_s request = {

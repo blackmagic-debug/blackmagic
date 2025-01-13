@@ -422,11 +422,6 @@ dap_version_s dap_adaptor_version(const dap_info_e version_kind)
 	return version;
 }
 
-void dap_nrst_set_val(bool assert)
-{
-	dap_set_reset_state(assert);
-}
-
 void dap_dp_abort(adiv5_debug_port_s *const target_dp, const uint32_t abort)
 {
 	/* DP Write to Reg 0.*/
