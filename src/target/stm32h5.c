@@ -311,7 +311,7 @@ static bool stm32h5_flash_erase(target_flash_s *const target_flash, const target
 	target_s *const target = target_flash->t;
 	const stm32h5_flash_s *const flash = (stm32h5_flash_s *)target_flash;
 	/* Compute how many sectors should be erased (inclusive) and from which bank */
-	const uint32_t begin = target_flash->start - addr;
+	const uint32_t begin = addr - target_flash->start;
 	const uint32_t bank = flash->bank_and_sector_count & STM32H5_FLASH_BANK_MASK;
 	const size_t sector = begin / STM32H5_FLASH_SECTOR_SIZE;
 
