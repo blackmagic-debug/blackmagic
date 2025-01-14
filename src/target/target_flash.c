@@ -168,6 +168,7 @@ bool target_flash_erase(target_s *target, target_addr_t addr, size_t len)
 		if (!flash_prepare(flash, can_use_mass_erase ? FLASH_OPERATION_MASS_ERASE : FLASH_OPERATION_ERASE))
 			return false;
 
+		DEBUG_TARGET("%s: %08" PRIx32 "+%" PRIu32 "\n", __func__, local_start_addr, local_end_addr - local_start_addr);
 		/* Erase flash, either a single aligned block size or a full mass erase */
 		result &= can_use_mass_erase ? flash->mass_erase(flash, NULL) :
 									   flash->erase(flash, local_start_addr, flash->blocksize);
