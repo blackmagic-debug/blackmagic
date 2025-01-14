@@ -1,7 +1,7 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
- * Copyright (C) 2023-2024 1BitSquared <info@1bitsquared.com>
+ * Copyright (C) 2023-2025 1BitSquared <info@1bitsquared.com>
  * Written by Rachel Mant <git@dragonmux.network>
  * All rights reserved.
  *
@@ -307,25 +307,21 @@ static bool stm32h5_exit_flash_mode(target_s *const target)
 
 static bool stm32h5_flash_erase(target_flash_s *const target_flash, const target_addr_t addr, const size_t len)
 {
+	(void)len;
 	target_s *const target = target_flash->t;
 	const stm32h5_flash_s *const flash = (stm32h5_flash_s *)target_flash;
 	/* Compute how many sectors should be erased (inclusive) and from which bank */
 	const uint32_t begin = target_flash->start - addr;
 	const uint32_t bank = flash->bank_and_sector_count & STM32H5_FLASH_BANK_MASK;
-	const size_t end_sector = (begin + len - 1U) / STM32H5_FLASH_SECTOR_SIZE;
+	const size_t sector = begin / STM32H5_FLASH_SECTOR_SIZE;
 
-	/* For each sector in the requested address range */
-	for (size_t begin_sector = begin / STM32H5_FLASH_SECTOR_SIZE; begin_sector <= end_sector; ++begin_sector) {
-		/* Erase the current Flash sector */
-		const uint32_t ctrl = bank | STM32H5_FLASH_CTRL_SECTOR_ERASE | STM32H5_FLASH_CTRL_SECTOR(begin_sector);
-		target_mem32_write32(target, STM32H5_FLASH_CTRL, ctrl);
-		target_mem32_write32(target, STM32H5_FLASH_CTRL, ctrl | STM32H5_FLASH_CTRL_START);
+	/* Erase the current Flash sector */
+	const uint32_t ctrl = bank | STM32H5_FLASH_CTRL_SECTOR_ERASE | STM32H5_FLASH_CTRL_SECTOR(sector);
+	target_mem32_write32(target, STM32H5_FLASH_CTRL, ctrl);
+	target_mem32_write32(target, STM32H5_FLASH_CTRL, ctrl | STM32H5_FLASH_CTRL_START);
 
-		/* Wait for the operation to complete, reporting errors */
-		if (!stm32h5_flash_wait_complete(target, NULL))
-			return false;
-	}
-	return true;
+	/* Wait for the operation to complete, reporting errors */
+	return stm32h5_flash_wait_complete(target, NULL);
 }
 
 static bool stm32h5_flash_write(
