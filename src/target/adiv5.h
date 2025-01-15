@@ -220,8 +220,8 @@
 #define JTAG_IDCODE_PARTNO_SOC400_4BIT_ERRATA 0xba01U
 
 /*
- * ARM JTAG PARTNO values from Cortex-M33 TRM (ARM document ID 100230, issue 0100)
- * A.4.2.2 Identification Code register, IDCODE, Table A-13 pg98
+ * ARM JTAG PARTNO values from Cortex-M33 TRM (ARM document ID 100230, issue 0100_03)
+ * Appendix A, §A.4.2 Identification Code register, IDCODE, Table A-13 pg130
  * (for TEALDAP/CM33DAP MINDP SWJ-DP/JTAG-DP)
  */
 #define JTAG_IDCODE_PARTNO_SOC400_4BIT_CM33 0xba04U
