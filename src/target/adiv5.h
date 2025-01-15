@@ -213,11 +213,10 @@
 #define JTAG_IDCODE_PARTNO_SOC400_4BIT 0xba00U
 #define JTAG_IDCODE_PARTNO_SOC400_8BIT 0xba03U
 /*
- * This PARTNO value comes from the LPC43xx parts which have a bugged pair of TAPs.
- * This value is actually reserved as a SWD-DPv1 value, but appears anyway on those devices
- * for the second and third JTAG-DPs which are still JTAG-DPv0.
+ * This PARTNO value comes from the LPC43xx parts which have a pair of Cortex-M0's using DPv1 TAPs.
+ * Value lifted from UM10503, §50.9 JTAG TAP Identification, Table 1170, pg1355
  */
-#define JTAG_IDCODE_PARTNO_SOC400_4BIT_ERRATA 0xba01U
+#define JTAG_IDCODE_PARTNO_SOC400_4BIT_LPC43xx 0xba01U
 
 /*
  * ARM JTAG PARTNO values from Cortex-M33 TRM (ARM document ID 100230, issue 0100_03)

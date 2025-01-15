@@ -80,13 +80,10 @@ void adiv5_jtag_dp_handler(const uint8_t dev_index)
 
 	/* Check which version of DP we have here, if it's an ARM-made DP, and set up `dp->version` accordingly */
 	if (dp->designer_code == JEP106_MANUFACTURER_ARM) {
-		/* Correct the LPC43xx errata PARTNO values */
-		if (dp->partno == JTAG_IDCODE_PARTNO_SOC400_4BIT_ERRATA)
-			dp->partno = JTAG_IDCODE_PARTNO_SOC400_4BIT;
-
 		if (dp->partno == JTAG_IDCODE_PARTNO_SOC400_4BIT || dp->partno == JTAG_IDCODE_PARTNO_SOC400_8BIT)
 			dp->version = 0U;
-		else if (dp->partno == JTAG_IDCODE_PARTNO_SOC400_4BIT_CM33)
+		else if (dp->partno == JTAG_IDCODE_PARTNO_SOC400_4BIT_CM33 ||
+			dp->partno == JTAG_IDCODE_PARTNO_SOC400_4BIT_LPC43xx)
 			dp->version = 1U;
 		else if (dp->partno == JTAG_IDCODE_PARTNO_SOC600_4BIT || dp->partno == JTAG_IDCODE_PARTNO_SOC600_8BIT)
 			dp->version = 3U;
