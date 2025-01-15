@@ -154,7 +154,7 @@ uint32_t adiv5_jtag_raw_access(
 	}
 
 	/* If this is an ADIv6 JTAG-DPv1, check for fault */
-	if (dp->version > 0 && ack == JTAG_ADIv6_ACK_FAULT) {
+	if (dp->version > 2 && ack == JTAG_ADIv6_ACK_FAULT) {
 		DEBUG_ERROR("JTAG access resulted in fault\n");
 		/* Use the SWD ack codes for the fault code to be completely consistent between JTAG-vs-SWD */
 		dp->fault = SWD_ACK_FAULT;
@@ -162,13 +162,13 @@ uint32_t adiv5_jtag_raw_access(
 	}
 
 	/* Check for a not-OK ack under ADIv5 JTAG-DPv0, or ADIv6 JTAG-DPv1 */
-	if ((dp->version == 0 && ack != JTAG_ADIv5_ACK_OK) || (dp->version > 0 && ack != JTAG_ADIv6_ACK_OK)) {
+	if ((dp->version < 3 && ack != JTAG_ADIv5_ACK_OK) || (dp->version > 2 && ack != JTAG_ADIv6_ACK_OK)) {
 		DEBUG_ERROR("JTAG access resulted in: %" PRIx32 ":%x\n", result, ack);
 		raise_exception(EXCEPTION_ERROR, "JTAG-DP invalid ACK");
 	}
 
 	/* ADIv6 needs 8 idle cycles run after we get done to ensure the state machine is idle */
-	if (dp->version > 0)
+	if (dp->version > 2)
 		jtag_proc.jtagtap_cycle(false, false, 8);
 	return result;
 }
