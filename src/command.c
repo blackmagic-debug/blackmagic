@@ -56,6 +56,9 @@ static bool cmd_help(target_s *target, int argc, const char **argv);
 
 static bool cmd_jtag_scan(target_s *target, int argc, const char **argv);
 static bool cmd_swd_scan(target_s *target, int argc, const char **argv);
+#ifdef PLATFORM_HAS_RVSWD
+static bool cmd_rvswd_scan(target_s *target, int argc, const char **argv);
+#endif
 static bool cmd_auto_scan(target_s *target, int argc, const char **argv);
 static bool cmd_frequency(target_s *target, int argc, const char **argv);
 static bool cmd_targets(target_s *target, int argc, const char **argv);
@@ -94,6 +97,9 @@ const command_s cmd_list[] = {
 	{"jtag_scan", cmd_jtag_scan, "Scan JTAG chain for devices"},
 	{"swd_scan", cmd_swd_scan, "Scan SWD interface for devices: [TARGET_ID]"},
 	{"swdp_scan", cmd_swd_scan, "Deprecated: use swd_scan instead"},
+#ifdef PLATFORM_HAS_RVSWD
+	{"rvswd_scan", cmd_rvswd_scan, "Scan RVSWD for devices"},
+#endif
 	{"auto_scan", cmd_auto_scan, "Automatically scan all chain types for devices"},
 	{"frequency", cmd_frequency, "set minimum high and low times: [FREQ]"},
 	{"targets", cmd_targets, "Display list of available targets"},
@@ -316,6 +322,52 @@ bool cmd_swd_scan(target_s *target, int argc, const char **argv)
 	return true;
 }
 
+#ifdef PLATFORM_HAS_RVSWD
+bool cmd_rvswd_scan(target_s *target, int argc, const char **argv)
+{
+	(void)target;
+	(void)argc;
+	(void)argv;
+
+	if (platform_target_voltage())
+		gdb_outf("Target voltage: %s\n", platform_target_voltage());
+
+	if (connect_assert_nrst)
+		platform_nrst_set_val(true); /* will be deasserted after attach */
+
+	bool scan_result = false;
+	TRY (EXCEPTION_ALL) {
+#if CONFIG_BMDA == 1
+		scan_result = bmda_rvswd_scan();
+#else
+		scan_result = rvswd_scan();
+#endif
+	}
+	CATCH () {
+	case EXCEPTION_TIMEOUT:
+		gdb_outf("Timeout during scan. Is target stuck in WFI?\n");
+		break;
+	case EXCEPTION_ERROR:
+		gdb_outf("Exception: %s\n", exception_frame.msg);
+		break;
+	default:
+		break;
+	}
+
+	if (!scan_result) {
+		platform_target_clk_output_enable(false);
+		platform_nrst_set_val(false);
+		gdb_out("RVSWD scan failed!\n");
+		return false;
+	}
+
+	cmd_targets(NULL, 0, NULL);
+	platform_target_clk_output_enable(false);
+	morse(NULL, false);
+	return true;
+}
+#endif
+
 bool cmd_auto_scan(target_s *target, int argc, const char **argv)
 {
 	(void)target;
@@ -342,8 +394,18 @@ bool cmd_auto_scan(target_s *target, int argc, const char **argv)
 #else
 			scan_result = adiv5_swd_scan(0);
 #endif
-			if (!scan_result)
+			if (!scan_result) {
 				gdb_out("SWD scan found no devices.\n");
+#ifdef PLATFORM_HAS_RVSWD
+#if CONFIG_BMDA == 1
+				scan_result = bmda_rvswd_scan();
+#else
+				scan_result = rvswd_scan();
+#endif
+				if (!scan_result)
+					gdb_out("RVSWD scan found no devices.\n");
+#endif
+			}
 		}
 	}
 	CATCH () {

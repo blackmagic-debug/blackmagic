@@ -31,6 +31,7 @@
 #include "platform.h"
 #include "jtagtap.h"
 #include "swd.h"
+#include "rvswd.h"
 #include "target.h"
 #include "target_internal.h"
 #include "adiv5.h"
@@ -51,6 +52,7 @@
 #include "stlinkv2.h"
 #include "ftdi_bmp.h"
 #include "jlink.h"
+#include "wchlink.h"
 #include "cmsis_dap.h"
 #endif
 
@@ -63,6 +65,7 @@ bmda_probe_s bmda_probe_info;
 #ifndef ENABLE_GPIOD
 jtag_proc_s jtag_proc;
 swd_proc_s swd_proc;
+rvswd_proc_s rvswd_proc;
 #endif
 
 static uint32_t max_frequency = 4000000U;
@@ -162,6 +165,11 @@ void platform_init(int argc, char **argv)
 	case PROBE_TYPE_JLINK:
 		if (!jlink_init())
 			exit(1);
+		break;
+
+	case PROBE_TYPE_WCHLINK:
+		if (!wchlink_init())
+			exit(-1);
 		break;
 #endif
 
@@ -309,6 +317,21 @@ bool bmda_jtag_init(void)
 	}
 }
 
+bool bmda_rvswd_scan()
+{
+	bmda_probe_info.is_jtag = false;
+
+	switch (bmda_probe_info.type) {
+#if HOSTED_BMP_ONLY == 0
+	case PROBE_TYPE_WCHLINK:
+		return wchlink_rvswd_scan();
+#endif
+
+	default:
+		return false;
+	}
+}
+
 void bmda_adiv5_dp_init(adiv5_debug_port_s *const dp)
 {
 	switch (bmda_probe_info.type) {
@@ -410,6 +433,9 @@ char *bmda_adaptor_ident(void)
 
 	case PROBE_TYPE_JLINK:
 		return "J-Link";
+
+	case PROBE_TYPE_WCHLINK:
+		return "WCH-Link";
 
 	case PROBE_TYPE_GPIOD:
 		return "GPIOD";

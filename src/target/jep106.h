@@ -44,13 +44,26 @@
  *
  * |15     |11     |7|6           0|
  * | | | | | | | | |0| | | | | | | |
- *  |\____/ \______/|\_____________/
- *  |  V        V   |       V
- *  | Unused   Cont	|      code
- *  |          Code |
- *  \_ Legacy flag  \_ Parity bit (always 0)
+ *  | |\__/ \______/|\_____________/
+ *  | | V       V   |       V
+ *  | | Unused Cont	|      code
+ *  | |        Code |
+ *  | |             \_ Parity bit (always 0)
+ *  | \_ BMD internal flag
+ *  \_ Legacy flag  
  */
 #define ASCII_CODE_FLAG (1U << 15U) /* flag the code as legacy ASCII */
+
+/* 
+ * BMD internal flag
+ *
+ * This is used to mark codes that are not part of the JEP106 or any other standard but are used
+ * internally by BMD to identify targets that don't provide a usable identification code
+ * 
+ * These codes may be changed or removed at any time, and should not be relied upon outside of
+ * the context of BMD
+ */
+#define BMD_INTERNAL_FLAG (1U << 14U) /* flag the code as internal use in BMD */
 
 #define JEP106_MANUFACTURER_ARM          0x43bU /* ARM Ltd. */
 #define JEP106_MANUFACTURER_FREESCALE    0x00eU /* Freescale */
@@ -69,6 +82,11 @@
 #define JEP106_MANUFACTURER_RENESAS      0x423U /* Renesas */
 #define JEP106_MANUFACTURER_WCH          0x72aU /* "Nanjing Yihuo Technology", used by CH579 */
 #define JEP106_MANUFACTURER_XILINX       0x309U /* Xilinx - Technically 0x049, but they use Ikanos Communications' code */
+
+/* BMD internal codes */
+/* WCH AKA Nanjing Qinheng Microelectronics */
+#define NOT_JEP106_MANUFACTURER_WCH (BMD_INTERNAL_FLAG | 0x01U) /* WCH (WinChipHead) */
+
 /*
  * This JEP code should belong to "Andes Technology Corporation", but is used on RISC-V by GigaDevice,
  * so in the unlikely event we need to support chips by them, here be dragons.
