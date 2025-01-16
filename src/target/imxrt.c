@@ -57,14 +57,6 @@
 
 #define IMXRT117x_PART_ID 0x88c6U
 
-#define IMXRT117x_ITCM_BASE       0x00000000U /* FlexRAM */
-#define IMXRT117x_ITCM_SIZE       0x00080000U
-#define IMXRT117x_DTCM_BASE       0x20000000U /* FlexRAM */
-#define IMXRT117x_DTCM_SIZE       0x00080000U
-#define IMXRT117x_CODE_TCM_BASE   0x1ffe0000U
-#define IMXRT117x_CODE_TCM_SIZE   0x00020000U
-#define IMXRT117x_SYS_TCM_BASE    0x20000000U
-#define IMXRT117x_SYS_TCM_SIZE    0x00020000U
 #define IMXRT117x_OCRAM_M4_BASE   0x20200000U /* Only available when M4 is powered up */
 #define IMXRT117x_OCRAM_M4_SIZE   0x00040000U
 #define IMXRT117x_OCRAM1_BASE     0x20240000U
@@ -268,16 +260,7 @@ bool imxrt_probe(target_s *const target)
 	}
 
 	/* Build the RAM map for the part */
-	const uint16_t cpuid_partno = target->cpuid & CORTEX_CPUID_PARTNO_MASK;
 	if (target->part_id == IMXRT117x_PART_ID) {
-		/* Mapping depends on which core we're looking at */
-		if (cpuid_partno == CORTEX_M4) {
-			target_add_ram32(target, IMXRT117x_CODE_TCM_BASE, IMXRT117x_CODE_TCM_SIZE);
-			target_add_ram32(target, IMXRT117x_SYS_TCM_BASE, IMXRT117x_SYS_TCM_SIZE);
-		} else { /* CORTEX_M7 */
-			target_add_ram32(target, IMXRT117x_ITCM_BASE, IMXRT117x_ITCM_SIZE);
-			target_add_ram32(target, IMXRT117x_DTCM_BASE, IMXRT117x_DTCM_SIZE);
-		}
 		target_add_ram32(target, IMXRT117x_OCRAM_M4_BASE, IMXRT117x_OCRAM_M4_SIZE);
 		target_add_ram32(target, IMXRT117x_OCRAM1_BASE, IMXRT117x_OCRAM1_SIZE);
 		target_add_ram32(target, IMXRT117x_OCRAM2_BASE, IMXRT117x_OCRAM2_SIZE);
@@ -329,12 +312,7 @@ static bool imxrt_ident_device(target_s *const target)
 	const uint16_t cpuid_partno = target->cpuid & CORTEX_CPUID_PARTNO_MASK;
 	if (cpuid_partno == CORTEX_M33)
 		rom_location = IMXRTx00_ROM_FINGERPRINT_ADDR;
-	else if (cpuid_partno == CORTEX_M7) {
-		if (target->part_id == IMXRT117x_PART_ID)
-			rom_location = IMXRT11xx_ROM_FINGERPRINT_ADDR;
-		else
-			rom_location = IMXRT10xx_ROM_FINGERPRINT_ADDR;
-	} else if (cpuid_partno == CORTEX_M4) {
+	else if (cpuid_partno == CORTEX_M4 || cpuid_partno == CORTEX_M7) {
 		if (target->part_id == IMXRT117x_PART_ID)
 			rom_location = IMXRT11xx_ROM_FINGERPRINT_ADDR;
 		else
