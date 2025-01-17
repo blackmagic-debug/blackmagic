@@ -62,6 +62,11 @@ if blackpill_alternative_pinout != '0'
 	probe_blackpill_args += [f'-DALTERNATIVE_PINOUT=@blackpill_alternative_pinout@']
 endif
 
+blackpill_shield = get_option('shield')
+if blackpill_shield != '0'
+	probe_blackpill_args += [f'-DSHIELD=@blackpill_shield@']
+endif
+
 if on_carrier_board
 	probe_blackpill_args += ['-DON_CARRIER_BOARD']
 endif

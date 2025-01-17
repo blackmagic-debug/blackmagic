@@ -118,6 +118,13 @@ option(
 	description: 'Alternative pinout for probe (only applicable to blackpill-f4*)'
 )
 option(
+	'shield',
+	type: 'combo',
+	choices: ['0', '1'],
+	value: '0',
+	description: 'Select that blackpill-f4* is used with a shield (only applicable to blackpill-f4*)'
+)
+option(
 	'trace_protocol',
 	type: 'combo',
 	choices: ['1','2', '3'],
