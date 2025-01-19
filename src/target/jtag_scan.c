@@ -210,9 +210,17 @@ static void jtag_display_idcodes(void)
 
 static jtag_ir_quirks_s jtag_device_get_quirks(const uint32_t idcode)
 {
+	static size_t previous_idx = 0;
+
 	for (size_t idx = 0; dev_descr[idx].idcode; ++idx) {
 		if ((idcode & dev_descr[idx].idmask) == dev_descr[idx].idcode)
+		{
+			/* workaround for ESP32-P4 which has 2 different ir_value */
+			if (idcode == 0x12c25U && previous_idx == idx)
+				idx++;
+			previous_idx = idx;
 			return dev_descr[idx].ir_quirks;
+		}
 	}
 	return (jtag_ir_quirks_s){0};
 }
