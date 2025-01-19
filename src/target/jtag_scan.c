@@ -208,11 +208,16 @@ static void jtag_display_idcodes(void)
 #endif
 }
 
-static jtag_ir_quirks_s jtag_device_get_quirks(const uint32_t idcode)
+static jtag_ir_quirks_s jtag_device_get_quirks(const uint32_t idcode, size_t *previous_idx)
 {
 	for (size_t idx = 0; dev_descr[idx].idcode; ++idx) {
-		if ((idcode & dev_descr[idx].idmask) == dev_descr[idx].idcode)
+		if ((idcode & dev_descr[idx].idmask) == dev_descr[idx].idcode) {
+			/* workaround for ESP32-P4 which has 2 different ir_value */
+			if (idcode == 0x12c25U && *previous_idx == idx)
+				idx++;
+			*previous_idx = idx;
 			return dev_descr[idx].ir_quirks;
+		}
 	}
 	return (jtag_ir_quirks_s){0};
 }
@@ -228,8 +233,9 @@ static bool jtag_read_irs(void)
 	size_t prescan = 0U;
 	size_t device = 0U;
 	uint8_t ir_len = 0U;
+	size_t previous_idx = 0U;
 	/* Grab the first device's quirks, if any */
-	jtag_ir_quirks_s ir_quirks = jtag_device_get_quirks(jtag_devs[0].jd_idcode);
+	jtag_ir_quirks_s ir_quirks = jtag_device_get_quirks(jtag_devs[0].jd_idcode, &previous_idx);
 
 	/* Try scanning out the IR for the device */
 	while (ir_len <= JTAG_MAX_IR_LEN) {
@@ -272,7 +278,7 @@ static bool jtag_read_irs(void)
 			++device;
 			ir_len = overrun;
 			/* Grab the device quirks for this new device, if any */
-			ir_quirks = jtag_device_get_quirks(jtag_devs[device].jd_idcode);
+			ir_quirks = jtag_device_get_quirks(jtag_devs[device].jd_idcode, &previous_idx);
 		}
 	}
 
