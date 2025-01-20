@@ -264,7 +264,7 @@ gdb_packet_s *gdb_packet_receive(void)
 
 				/* (N)Acknowledge packet */
 				const bool checksum_ok = gdb_packet_checksum(packet) == rx_checksum;
-				gdb_if_putchar(checksum_ok ? GDB_PACKET_ACK : GDB_PACKET_NACK, true);
+				gdb_packet_ack(checksum_ok);
 				if (!checksum_ok) {
 					/* Checksum error, restart packet capture */
 					state = PACKET_IDLE;
@@ -295,14 +295,19 @@ gdb_packet_s *gdb_packet_receive(void)
 	}
 }
 
-static inline bool gdb_get_ack(const uint32_t timeout)
+void gdb_packet_ack(const bool ack)
 {
-	/* Return true early if NoAckMode is enabled */
-	if (noackmode)
-		return true;
+	/* Send ACK/NACK */
+	DEBUG_GDB("%s: %s\n", __func__, ack ? "ACK" : "NACK");
+	gdb_if_putchar(ack ? GDB_PACKET_ACK : GDB_PACKET_NACK, true);
+}
 
+bool gdb_packet_get_ack(const uint32_t timeout)
+{
 	/* Wait for ACK/NACK */
-	return gdb_if_getchar_to(timeout) == GDB_PACKET_ACK;
+	const bool ack = gdb_if_getchar_to(timeout) == GDB_PACKET_ACK;
+	DEBUG_GDB("%s: %s\n", __func__, ack ? "ACK" : "NACK");
+	return ack;
 }
 
 static inline void gdb_if_putchar_escaped(const char value)
@@ -343,7 +348,7 @@ void gdb_packet_send(const gdb_packet_s *const packet)
 #endif
 
 		/* Wait for ACK/NACK on standard packets */
-		if (packet->notification || gdb_get_ack(2000U))
+		if (packet->notification || noackmode || gdb_packet_get_ack(2000U))
 			break;
 	}
 }
