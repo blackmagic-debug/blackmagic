@@ -81,6 +81,14 @@ void gdb_set_noackmode(bool enable)
 }
 
 #ifndef DEBUG_GDB_IS_NOOP
+/*
+ * To debug packets from the perspective of GDB we can use the following command:
+ *     set debug remote on
+ * This will print packets sent and received by the GDB client
+ * 
+ * This is not directly related to BMD, but as it's hard to find this information
+ * and it is extremely useful for debugging, we included it here for reference.
+ */
 static void gdb_packet_debug(const char *const func, const gdb_packet_s *const packet)
 {
 	/* Log packet for debugging */
