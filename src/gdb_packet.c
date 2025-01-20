@@ -80,6 +80,11 @@ void gdb_set_noackmode(bool enable)
 	noackmode = enable;
 }
 
+bool gdb_noackmode(void)
+{
+	return noackmode;
+}
+
 #ifndef DEBUG_GDB_IS_NOOP
 /*
  * To debug packets from the perspective of GDB we can use the following command:
