@@ -335,7 +335,8 @@ int32_t gdb_main_loop(target_controller_s *const tc, const gdb_packet_s *const p
 		}
 		if (packet->data[0] == 'D')
 			gdb_put_packet_ok();
-		gdb_set_noackmode(false);
+		else /* packet->data[0] == '\x04' */
+			gdb_set_noackmode(false);
 		break;
 
 	case 'k': /* Kill the target */
@@ -462,10 +463,15 @@ static void exec_q_supported(const char *packet, const size_t length)
 	(void)length;
 
 	/*
-	 * This is the first packet sent by GDB, so we can reset the NoAckMode flag here in case
-	 * the previous session was terminated abruptly with NoAckMode enabled
+	 * This might be the first packet of a GDB connection, If NoAckMode is enabled it might
+	 * be because the previous session was terminated abruptly, and we need to acknowledge
+	 * the first packet of the new session.
+	 * 
+	 * If NoAckMode was intentionally enabled before (e.g. LLDB enables NoAckMode first),
+	 * the acknowledgment should be safely ignored.
 	 */
-	gdb_set_noackmode(false);
+	if (gdb_noackmode())
+		gdb_packet_ack(true);
 
 	/*
 	 * The Remote Protocol documentation is not clear on what format the PacketSize feature should be in,
@@ -475,6 +481,16 @@ static void exec_q_supported(const char *packet, const size_t length)
 	gdb_putpacket_str_f("PacketSize=%x;qXfer:memory-map:read+;qXfer:features:read+;"
 						"vContSupported+" GDB_QSUPPORTED_NOACKMODE,
 		GDB_PACKET_BUFFER_SIZE);
+
+	/*
+	 * If an acknowledgement was received in response while in NoAckMode, then NoAckMode is probably
+	 * not meant to be enabled and is likely a result of the previous session being terminated
+	 * abruptly. Disable NoAckMode to prevent any further issues.
+	 */
+	if (gdb_noackmode() && gdb_packet_get_ack(100U)) {
+		DEBUG_GDB("Received acknowledgment in NoAckMode, likely result of a session being terminated abruptly\n");
+		gdb_set_noackmode(false);
+	}
 }
 
 static void exec_q_memory_map(const char *packet, const size_t length)
@@ -570,6 +586,13 @@ static void exec_q_noackmode(const char *packet, const size_t length)
 {
 	(void)packet;
 	(void)length;
+	/*
+	 * This might be the first packet of a LLDB connection, If NoAckMode is enabled it might
+	 * be because the previous session was terminated abruptly, and we need to acknowledge
+	 * the first packet of the new session.
+	 */
+	if (gdb_noackmode())
+		gdb_packet_ack(true);
 	gdb_set_noackmode(true);
 	gdb_put_packet_ok();
 }
