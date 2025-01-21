@@ -121,8 +121,8 @@ static void riscv64_mem_read(target_s *const target, void *const dest, const tar
 	const uint32_t command = RV_DM_ABST_CMD_ACCESS_MEM | RV_ABST_READ | (access_width << RV_ABST_MEM_ACCESS_SHIFT) |
 		(access_length < len ? RV_ABST_MEM_ADDR_POST_INC : 0U);
 	/* Write the address to read to arg1 */
-	if (!riscv_dm_write(hart->dbg_module, RV_DM_DATA2, (uint32_t)src) ||
-		!riscv_dm_write(hart->dbg_module, RV_DM_DATA3, (uint32_t)(src >> 32U)))
+	if (!riscv_dm_write(hart->dbg_module, RV_DM_DATA(2U), (uint32_t)src) ||
+		!riscv_dm_write(hart->dbg_module, RV_DM_DATA(3U), (uint32_t)(src >> 32U)))
 		return;
 	uint8_t *const data = (uint8_t *)dest;
 	for (size_t offset = 0; offset < len; offset += access_length) {
@@ -132,8 +132,8 @@ static void riscv64_mem_read(target_s *const target, void *const dest, const tar
 		/* Extract back the data from arg0 */
 		uint32_t value_low = 0;
 		uint32_t value_high = 0;
-		if (!riscv_dm_read(hart->dbg_module, RV_DM_DATA0, &value_low) ||
-			!riscv_dm_read(hart->dbg_module, RV_DM_DATA1, &value_high))
+		if (!riscv_dm_read(hart->dbg_module, RV_DM_DATA(0U), &value_low) ||
+			!riscv_dm_read(hart->dbg_module, RV_DM_DATA(1U), &value_high))
 			return;
 		riscv64_unpack_data(data + offset, value_low, value_high, access_width);
 	}

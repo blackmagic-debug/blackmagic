@@ -45,6 +45,7 @@ typedef enum riscv_debug_version {
 	RISCV_DEBUG_0_11,
 	RISCV_DEBUG_0_13,
 	RISCV_DEBUG_1_0,
+	RISCV_DEBUG_UNSPECIFIED = 15, /* Version not described in any available version of the spec */
 } riscv_debug_version_e;
 
 /* This enum describes the Hart status (eg after a CSR read/write) */
@@ -158,31 +159,69 @@ typedef struct riscv_hart {
 
 #define RV_STATUS_VERSION_MASK 0x0000000fU
 
-#define RV_DMI_NOOP     0U
-#define RV_DMI_READ     1U
-#define RV_DMI_WRITE    2U
-#define RV_DMI_SUCCESS  0U
-#define RV_DMI_FAILURE  2U
-#define RV_DMI_TOO_SOON 3U
+#define RV_DMI_OP_NOOP     0U /* Ignore data and address */
+#define RV_DMI_OP_READ     1U /* Read data from address */
+#define RV_DMI_OP_WRITE    2U /* Write data to address */
+#define RV_DMI_OP_RESERVED 3U /* Reserved */
 
-#define RV_DM_DATA0             0x04U
-#define RV_DM_DATA1             0x05U
-#define RV_DM_DATA2             0x06U
-#define RV_DM_DATA3             0x07U
-#define RV_DM_ABST_CTRLSTATUS   0x16U
-#define RV_DM_ABST_COMMAND      0x17U
-#define RV_DM_ABST_AUTO         0x18U
-#define RV_DM_PROGBUF0          0x20U
-#define RV_DM_PROGBUF1          0x21U
-#define RV_DM_PROGBUF2          0x22U
-#define RV_DM_SYSBUS_CTRLSTATUS 0x38U
-#define RV_DM_SYSBUS_ADDR0      0x39U
-#define RV_DM_SYSBUS_ADDR1      0x3aU
-#define RV_DM_SYSBUS_DATA0      0x3cU
-#define RV_DM_SYSBUS_DATA1      0x3dU
+#define RV_DMI_SUCCESS  0U /* he previous operation completed successfully */
+#define RV_DMI_RESERVED 1U /* Reserved */
+#define RV_DMI_FAILURE  2U /* A previous operation failed */
+#define RV_DMI_TOO_SOON 3U /* An operation was attempted while a DMI request is still in progress */
+
+/* Debug Module Registers (spec version 0.13.2) */
+#define RV_DM_DATA_BASE         0x04U                      /* Abstract Data 0 */
+#define RV_DM_DATA(n)           (RV_DM_DATA_BASE + (n))    /* Abstract Data n (0 - 11) */
+#define RV_DM_CONTROL           0x10U                      /* Debug Module Control */
+#define RV_DM_STATUS            0x11U                      /* Debug Module Status */
+#define RV_DM_HART_INFO         0x12U                      /* Hart Info */
+#define RV_DM_HALT_SUM1         0x13U                      /* Halt Summary 1 */
+#define RV_DM_HAWINDOW_SEL      0x14U                      /* Hart Array Window Select */
+#define RV_DM_HAWINDOW          0x15U                      /* Hart Array Window */
+#define RV_DM_ABST_CTRLSTATUS   0x16U                      /* Abstract Control and Status */
+#define RV_DM_ABST_COMMAND      0x17U                      /* Abstract Command */
+#define RV_DM_ABST_AUTO         0x18U                      /* Abstract Command Autoexec */
+#define RV_DM_CONFSTRPTR0       0x19U                      /* Configuration String Pointer 0 */
+#define RV_DM_CONFSTRPTR1       0x1aU                      /* Configuration String Pointer 1 */
+#define RV_DM_CONFSTRPTR2       0x1bU                      /* Configuration String Pointer 2 */
+#define RV_DM_CONFSTRPTR3       0x1cU                      /* Configuration String Pointer 3 */
+#define RV_DM_NEXT_DM           0x1dU                      /* Next Debug Module */
+#define RV_DM_PROGBUF_BASE      0x20U                      /* Program Buffer 0 */
+#define RV_DM_PROGBUF(n)        (RV_DM_PROGBUF_BASE + (n)) /* Program Buffer n (0 - 15) */
+#define RV_DM_AUTHDATA          0x30U                      /* Authentication Data */
+#define RV_DM_HALT_SUM2         0x34U                      /* Halt Summary 2 */
+#define RV_DM_HALT_SUM3         0x35U                      /* Halt Summary 3 */
+#define RV_DM_SYSBUS_ADDR3      0x37U                      /* System Bus Address 127:96 */
+#define RV_DM_SYSBUS_CTRLSTATUS 0x38U                      /* System Bus Access Control and Status */
+#define RV_DM_SYSBUS_ADDR0      0x39U                      /* System Bus Address 31:0 */
+#define RV_DM_SYSBUS_ADDR1      0x3aU                      /* System Bus Address 63:32 */
+#define RV_DM_SYSBUS_ADDR2      0x3bU                      /* System Bus Address 95:64 */
+#define RV_DM_SYSBUS_DATA0      0x3cU                      /* System Bus Data 31:0 */
+#define RV_DM_SYSBUS_DATA1      0x3dU                      /* System Bus Data 63:32 */
+#define RV_DM_SYSBUS_DATA2      0x3eU                      /* System Bus Data 95:64 */
+#define RV_DM_SYSBUS_DATA3      0x3fU                      /* System Bus Data 127:96 */
+#define RV_DM_HALT_SUM0         0x40U                      /* Halt Summary 0 */
 
 #define RV_DM_ABST_CMD_ACCESS_REG 0x00000000U
 #define RV_DM_ABST_CMD_ACCESS_MEM 0x02000000U
+
+#define RV_DM_CTRL_ACTIVE          (1U << 0U)
+#define RV_DM_CTRL_SYSTEM_RESET    (1U << 1U)
+#define RV_DM_CTRL_HARTSEL_MASK    0x03ffffc0U
+#define RV_DM_CTRL_HARTSELLO_MASK  0x03ff0000U
+#define RV_DM_CTRL_HARTSELHI_MASK  0x0000ffc0U
+#define RV_DM_CTRL_HART_ACK_RESET  (1U << 28U)
+#define RV_DM_CTRL_HART_RESET      (1U << 29U)
+#define RV_DM_CTRL_RESUME_REQ      (1U << 30U)
+#define RV_DM_CTRL_HALT_REQ        (1U << 31U)
+#define RV_DM_CTRL_HARTSELLO_SHIFT 16U
+#define RV_DM_CTRL_HARTSELHI_SHIFT 4U
+
+#define RV_DM_STAT_ALL_HALTED     (1U << 9U)
+#define RV_DM_STAT_UNAVAILABLE    (1U << 12U)
+#define RV_DM_STAT_NON_EXISTENT   (1U << 14U)
+#define RV_DM_STAT_ALL_RESUME_ACK (1U << 17U)
+#define RV_DM_STAT_ALL_RESET      (1U << 19U)
 
 #define RV_ABST_READ          (0U << 16U)
 #define RV_ABST_WRITE         (1U << 16U)

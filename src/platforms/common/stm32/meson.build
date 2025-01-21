@@ -31,6 +31,7 @@
 platform_stm32_includes = include_directories('.')
 
 platform_stm32_sources = files(
+	'critical.c',
 	'serialno.c',
 	'timing_stm32.c',
 )

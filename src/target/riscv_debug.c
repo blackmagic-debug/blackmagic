@@ -50,29 +50,6 @@
  * https://github.com/riscv/riscv-debug-spec/blob/master/riscv-debug-stable.pdf
  */
 
-#define RV_DM_CONTROL      0x10U
-#define RV_DM_STATUS       0x11U
-#define RV_DM_NEXT_DM      0x1dU
-#define RV_DM_PROGBUF_BASE 0x20U
-
-#define RV_DM_CTRL_ACTIVE          (1U << 0U)
-#define RV_DM_CTRL_SYSTEM_RESET    (1U << 1U)
-#define RV_DM_CTRL_HARTSEL_MASK    0x03ffffc0U
-#define RV_DM_CTRL_HARTSELLO_MASK  0x03ff0000U
-#define RV_DM_CTRL_HARTSELHI_MASK  0x0000ffc0U
-#define RV_DM_CTRL_HART_ACK_RESET  (1U << 28U)
-#define RV_DM_CTRL_HART_RESET      (1U << 29U)
-#define RV_DM_CTRL_RESUME_REQ      (1U << 30U)
-#define RV_DM_CTRL_HALT_REQ        (1U << 31U)
-#define RV_DM_CTRL_HARTSELLO_SHIFT 16U
-#define RV_DM_CTRL_HARTSELHI_SHIFT 4U
-
-#define RV_DM_STAT_ALL_HALTED     (1U << 9U)
-#define RV_DM_STAT_UNAVAILABLE    (1U << 12U)
-#define RV_DM_STAT_NON_EXISTENT   (1U << 14U)
-#define RV_DM_STAT_ALL_RESUME_ACK (1U << 17U)
-#define RV_DM_STAT_ALL_RESET      (1U << 19U)
-
 #define RV_DM_ABST_STATUS_BUSY              (1U << 12U)
 #define RV_DM_ABST_STATUS_DATA_COUNT        0x0000000fU
 #define RV_DM_ABST_STATUS_PROGBUFSIZE_MASK  0x1f000000U
@@ -425,7 +402,7 @@ static void riscv_hart_read_ids(riscv_hart_s *const hart)
 static size_t riscv_snprint_isa_subset(
 	char *const string_buffer, const size_t buffer_size, const uint8_t access_width, const uint32_t extensions)
 {
-	size_t offset = snprintf(string_buffer, buffer_size, "rv%" PRIu8, access_width);
+	size_t offset = snprintf(string_buffer, buffer_size, "rv%u", access_width);
 
 	const bool is_embedded = extensions & RV_ISA_EXT_EMBEDDED;
 
@@ -743,23 +720,23 @@ static bool riscv_csr_read_data(riscv_hart_s *const hart, void *const data, cons
 	uint32_t *const value = (uint32_t *)data;
 	/* If we're doing a 128-bit read, grab the upper-most 2 uint32_t's */
 	if (access_width == 128U &&
-		!(riscv_dm_read(hart->dbg_module, RV_DM_DATA3, value + 3) &&
-			riscv_dm_read(hart->dbg_module, RV_DM_DATA2, value + 2)))
+		!(riscv_dm_read(hart->dbg_module, RV_DM_DATA(3U), value + 3) &&
+			riscv_dm_read(hart->dbg_module, RV_DM_DATA(2U), value + 2)))
 		return false;
 	/* If we're doing at least a 64-bit read, grab the next uint32_t */
-	if (access_width >= 64U && !riscv_dm_read(hart->dbg_module, RV_DM_DATA1, value + 1))
+	if (access_width >= 64U && !riscv_dm_read(hart->dbg_module, RV_DM_DATA(1U), value + 1))
 		return false;
 	/* Finally grab the last and lowest uint32_t */
-	return riscv_dm_read(hart->dbg_module, RV_DM_DATA0, value);
+	return riscv_dm_read(hart->dbg_module, RV_DM_DATA(0U), value);
 }
 
 static bool riscv_csr_progbuf_read(riscv_hart_s *const hart, const uint16_t reg, void *const data)
 {
 	/* Set up the program buffer to read out the target CSR */
-	if (!riscv_dm_write(hart->dbg_module, RV_DM_PROGBUF_BASE + 0U, RV_CSRR_A0 | ((reg & RV_CSR_ADDR_MASK) << 20U)))
+	if (!riscv_dm_write(hart->dbg_module, RV_DM_PROGBUF(0U), RV_CSRR_A0 | ((reg & RV_CSR_ADDR_MASK) << 20U)))
 		return false;
 	/* If there's more than one progbuf register, set the second to an ebreak */
-	if (hart->progbuf_size > 1U && !riscv_dm_write(hart->dbg_module, RV_DM_PROGBUF_BASE + 1U, RV_EBREAK))
+	if (hart->progbuf_size > 1U && !riscv_dm_write(hart->dbg_module, RV_DM_PROGBUF(1U), RV_EBREAK))
 		return false;
 
 	/* Execute the program buffer we've set up, reading a0 out to keep it safe */
@@ -808,15 +785,15 @@ static bool riscv_csr_write_data(riscv_hart_s *const hart, const void *const dat
 {
 	const uint32_t *const value = (const uint32_t *)data;
 	/* Regardless of width, we have to write data0 */
-	if (!riscv_dm_write(hart->dbg_module, RV_DM_DATA0, value[0]))
+	if (!riscv_dm_write(hart->dbg_module, RV_DM_DATA(0U), value[0]))
 		return false;
 	/* If we're doing at least a 64-bit wide access, set up data1 */
-	if (access_width >= 64U && !riscv_dm_write(hart->dbg_module, RV_DM_DATA1, value[1]))
+	if (access_width >= 64U && !riscv_dm_write(hart->dbg_module, RV_DM_DATA(1U), value[1]))
 		return false;
 	/* For a 128-bit access, set up data2 and data3 too */
 	if (access_width == 128 &&
-		!(riscv_dm_write(hart->dbg_module, RV_DM_DATA2, value[2]) &&
-			riscv_dm_write(hart->dbg_module, RV_DM_DATA3, value[3])))
+		!(riscv_dm_write(hart->dbg_module, RV_DM_DATA(2U), value[2]) &&
+			riscv_dm_write(hart->dbg_module, RV_DM_DATA(3U), value[3])))
 		return false;
 	return true;
 }
@@ -829,10 +806,10 @@ static bool riscv_csr_progbuf_write(riscv_hart_s *const hart, const uint16_t reg
 		return false;
 
 	/* Set up the program buffer to write to the target CSR */
-	if (!riscv_dm_write(hart->dbg_module, RV_DM_PROGBUF_BASE + 0U, RV_CSRW_A0 | ((reg & RV_CSR_ADDR_MASK) << 20U)))
+	if (!riscv_dm_write(hart->dbg_module, RV_DM_PROGBUF(0U), RV_CSRW_A0 | ((reg & RV_CSR_ADDR_MASK) << 20U)))
 		return false;
 	/* If there's more than one progbuf register, set the second to an ebreak */
-	if (hart->progbuf_size > 1U && !riscv_dm_write(hart->dbg_module, RV_DM_PROGBUF_BASE + 1U, RV_EBREAK))
+	if (hart->progbuf_size > 1U && !riscv_dm_write(hart->dbg_module, RV_DM_PROGBUF(1U), RV_EBREAK))
 		return false;
 
 	/* Figure out what access width should be used for the data phase of this */

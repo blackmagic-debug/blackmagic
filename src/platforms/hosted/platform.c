@@ -198,6 +198,16 @@ void platform_init(int argc, char **argv)
 	}
 }
 
+void platform_critical_enter(void)
+{
+	/* Nothing to do */
+}
+
+void platform_critical_exit(void)
+{
+	/* Nothing to do */
+}
+
 bool bmda_swd_scan(const uint32_t targetid)
 {
 	bmda_probe_info.is_jtag = false;

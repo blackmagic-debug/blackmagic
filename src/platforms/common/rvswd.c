@@ -46,15 +46,19 @@
 /**
  * RVSWD I/O is shared with SWD
  */
-#define RVSWD_DIO_DIR_PORT SWDIO_DIR_PORT
-#define RVSWD_DIO_PORT     SWDIO_PORT
-#define RVSWD_CLK_PORT     SWCLK_PORT
-#define RVSWD_DIO_DIR_PIN  SWDIO_DIR_PIN
-#define RVSWD_DIO_PIN      SWDIO_PIN
-#define RVSWD_CLK_PIN      SWCLK_PIN
+#define RVSWD_DIO_PORT SWDIO_PORT
+#define RVSWD_DIO_PIN  SWDIO_PIN
+
+#define RVSWD_CLK_PORT SWCLK_PORT
+#define RVSWD_CLK_PIN  SWCLK_PIN
 
 #define RVSWD_DIO_MODE_FLOAT SWDIO_MODE_FLOAT
 #define RVSWD_DIO_MODE_DRIVE SWDIO_MODE_DRIVE
+
+typedef enum rvswd_direction_t {
+	RVSWD_DIRECTION_INPUT,
+	RVSWD_DIRECTION_OUTPUT
+} rvswd_direction_t;
 
 rvswd_proc_s rvswd_proc;
 
@@ -84,19 +88,21 @@ void rvswd_init(void)
 	rvswd_proc.seq_out = rvswd_seq_out;
 }
 
-static void rvswd_set_dio_direction(bool output)
+static void rvswd_set_dio_direction(rvswd_direction_t direction)
 {
 	/* Do nothing if the direction is already set */
-	static bool current_direction = false;
-	if (output == current_direction)
+	/* FIXME: this internal state may become invalid if the IO is modified elsewhere (e.g. SWD) */
+	static rvswd_direction_t current_direction = RVSWD_DIRECTION_INPUT;
+	if (direction == current_direction)
 		return;
 
 	/* Change the direction */
-	if (output)
+	if (direction == RVSWD_DIRECTION_OUTPUT) {
 		RVSWD_DIO_MODE_DRIVE();
-	else
+	} else {
 		RVSWD_DIO_MODE_FLOAT();
-	current_direction = output;
+	}
+	current_direction = direction;
 }
 
 static void rvswd_start(void)
@@ -106,9 +112,9 @@ static void rvswd_start(void)
 	 */
 
 	/* Setup for the start sequence by setting the bus to the idle state */
-	rvswd_set_dio_direction(true);
+	rvswd_set_dio_direction(RVSWD_DIRECTION_OUTPUT);
+	gpio_set(RVSWD_DIO_PORT, RVSWD_DIO_PIN);
 	gpio_set(RVSWD_CLK_PORT, RVSWD_CLK_PIN);
-	gpio_set(RVSWD_DIO_DIR_PORT, RVSWD_DIO_PIN);
 
 	/* Ensure the bus is idle for a period */
 	rvswd_hold_period();
@@ -124,14 +130,9 @@ static void rvswd_stop(void)
 	 * DIO rising edge while CLK is idle high marks a STOP condition
 	 */
 
-	/*
-	 * Setup for the stop condition by driving the CLK and DIO low
-	 *
-	 * It is likely that the previous sequence left the CLK low already
-	 * but a redundant low CLK set ensures we don't issue a start condition by mistake
-	 */
+	/* Setup for the stop condition by driving the CLK and DIO low */
 	gpio_clear(RVSWD_CLK_PORT, RVSWD_CLK_PIN);
-	rvswd_set_dio_direction(true);
+	rvswd_set_dio_direction(RVSWD_DIRECTION_OUTPUT);
 	gpio_clear(RVSWD_DIO_PORT, RVSWD_DIO_PIN);
 
 	/* Ensure setup for a period */
@@ -153,14 +154,16 @@ static uint32_t rvswd_seq_in_clk_delay(const size_t clock_cycles)
 		gpio_clear(RVSWD_CLK_PORT, RVSWD_CLK_PIN);
 		rvswd_hold_period();
 
-		/* Sample the DIO line and raise the CLK, then hold for a period */
+		/* Sample the DIO line and Raise the CLK, then hold for a period */
 		value |= gpio_get(RVSWD_DIO_PORT, RVSWD_DIO_PIN) ? (1U << (cycle - 1U)) : 0U;
 		gpio_set(RVSWD_CLK_PORT, RVSWD_CLK_PIN);
 		rvswd_hold_period();
 	}
 
-	/* Leave the CLK low and return the value */
-	gpio_clear(RVSWD_CLK_PORT, RVSWD_CLK_PIN);
+	// /* Leave the CLK low and return the value */
+	// gpio_clear(RVSWD_CLK_PORT, RVSWD_CLK_PIN);
+
+	/* Leave the CLK high and return the value */
 	return value;
 }
 
@@ -176,19 +179,19 @@ static uint32_t rvswd_seq_in_no_delay(const size_t clock_cycles)
 		/* Sample the DIO line and raise the CLK */
 		value |= gpio_get(RVSWD_DIO_PORT, RVSWD_DIO_PIN) ? (1U << (cycle - 1U)) : 0U;
 		gpio_set(RVSWD_CLK_PORT, RVSWD_CLK_PIN);
-
-		__asm__("nop"); /* Ensure there's time for the CLK to settle */
 	}
 
-	/* Leave the CLK low and return the value */
-	gpio_clear(RVSWD_CLK_PORT, RVSWD_CLK_PIN);
+	// /* Leave the CLK low and return the value */
+	// gpio_clear(RVSWD_CLK_PORT, RVSWD_CLK_PIN);
+
+	/* Leave the CLK high and return the value */
 	return value;
 }
 
 static uint32_t rvswd_seq_in(size_t clock_cycles)
 {
 	/* Set the DIO line to float to give control to the target */
-	rvswd_set_dio_direction(false);
+	rvswd_set_dio_direction(RVSWD_DIRECTION_INPUT);
 
 	/* Delegate to the appropriate sequence in routine depending on the clock divider */
 	if (target_clk_divider != UINT32_MAX)
@@ -211,8 +214,10 @@ static void rvswd_seq_out_clk_delay(const uint32_t dio_states, const size_t cloc
 		rvswd_hold_period();
 	}
 
-	/* Leave the CLK low */
-	gpio_clear(RVSWD_CLK_PORT, RVSWD_CLK_PIN);
+	// /* Leave the CLK low */
+	// gpio_clear(RVSWD_CLK_PORT, RVSWD_CLK_PIN);
+
+	/* Leave the CLK high and return */
 }
 
 static void rvswd_seq_out_no_delay(const uint32_t dio_states, const size_t clock_cycles)
@@ -227,14 +232,16 @@ static void rvswd_seq_out_no_delay(const uint32_t dio_states, const size_t clock
 		gpio_set(RVSWD_CLK_PORT, RVSWD_CLK_PIN);
 	}
 
-	/* Leave the CLK low */
-	gpio_clear(RVSWD_CLK_PORT, RVSWD_CLK_PIN);
+	// /* Leave the CLK low */
+	// gpio_clear(RVSWD_CLK_PORT, RVSWD_CLK_PIN);
+
+	/* Leave the CLK high and return */
 }
 
 static void rvswd_seq_out(const uint32_t dio_states, const size_t clock_cycles)
 {
 	/* Set the DIO line to drive to give us control */
-	rvswd_set_dio_direction(true);
+	rvswd_set_dio_direction(RVSWD_DIRECTION_OUTPUT);
 
 	/* Delegate to the appropriate sequence in routine depending on the clock divider */
 	if (target_clk_divider != UINT32_MAX)
