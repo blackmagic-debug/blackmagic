@@ -76,19 +76,19 @@ static void wchlink_riscv_dtm_init(riscv_dmi_s *const dmi)
 static bool wchlink_riscv_dmi_read(riscv_dmi_s *const dmi, const uint32_t address, uint32_t *const value)
 {
 	uint8_t status = 0;
-	const bool result = wchlink_transfer_dmi(RV_DMI_READ, address, 0, value, &status);
+	const bool result = wchlink_transfer_dmi(RV_DMI_OP_READ, address, 0, value, &status);
 
 	/* Translate error 1 into RV_DMI_FAILURE per the spec, also write RV_DMI_FAILURE if the transfer failed */
-	dmi->fault = !result || status == 1U ? RV_DMI_FAILURE : status;
+	dmi->fault = !result || status == RV_DMI_RESERVED ? RV_DMI_FAILURE : status;
 	return dmi->fault == RV_DMI_SUCCESS;
 }
 
 static bool wchlink_riscv_dmi_write(riscv_dmi_s *const dmi, const uint32_t address, const uint32_t value)
 {
 	uint8_t status = 0;
-	const bool result = wchlink_transfer_dmi(RV_DMI_WRITE, address, value, NULL, &status);
+	const bool result = wchlink_transfer_dmi(RV_DMI_OP_WRITE, address, value, NULL, &status);
 
 	/* Translate error 1 into RV_DMI_FAILURE per the spec, also write RV_DMI_FAILURE if the transfer failed */
-	dmi->fault = !result || status == 1U ? RV_DMI_FAILURE : status;
+	dmi->fault = !result || status == RV_DMI_RESERVED ? RV_DMI_FAILURE : status;
 	return dmi->fault == RV_DMI_SUCCESS;
 }

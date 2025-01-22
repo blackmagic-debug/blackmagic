@@ -139,10 +139,8 @@ static uint8_t riscv_shift_dmi(riscv_dmi_s *const dmi, const uint8_t operation, 
 	jtag_proc.jtagtap_tdi_seq(!device->dr_postscan, (const uint8_t *)&address, dmi->address_width);
 	jtag_proc.jtagtap_tdi_seq(true, ones, device->dr_postscan);
 	jtagtap_return_idle(dmi->idle_cycles);
-	/* Translate error 1 into RV_DMI_FAILURE per the spec */
-	if (status == 1U)
-		return RV_DMI_FAILURE;
-	return status;
+	/* Translate error 1 (Reserved) into RV_DMI_FAILURE per the spec */
+	return status == RV_DMI_RESERVED ? RV_DMI_FAILURE : status;
 }
 
 static bool riscv_dmi_transfer(riscv_dmi_s *const dmi, const uint8_t operation, const uint32_t address,
@@ -177,20 +175,20 @@ static bool riscv_dmi_transfer(riscv_dmi_s *const dmi, const uint8_t operation, 
 bool riscv_jtag_dmi_read(riscv_dmi_s *const dmi, const uint32_t address, uint32_t *const value)
 {
 	/* Setup the location to read from */
-	bool result = riscv_dmi_transfer(dmi, RV_DMI_READ, address, 0U, NULL);
+	bool result = riscv_dmi_transfer(dmi, RV_DMI_OP_READ, address, 0U, NULL);
 	if (result)
 		/* If that worked, read back the value and check the operation status */
-		result = riscv_dmi_transfer(dmi, RV_DMI_NOOP, 0U, 0U, value);
+		result = riscv_dmi_transfer(dmi, RV_DMI_OP_NOOP, 0U, 0U, value);
 	return result;
 }
 
 bool riscv_jtag_dmi_write(riscv_dmi_s *const dmi, const uint32_t address, const uint32_t value)
 {
 	/* Write a value to the requested register */
-	bool result = riscv_dmi_transfer(dmi, RV_DMI_WRITE, address, value, NULL);
+	bool result = riscv_dmi_transfer(dmi, RV_DMI_OP_WRITE, address, value, NULL);
 	if (result)
 		/* If that worked, read back the operation status to ensure the write actually worked */
-		result = riscv_dmi_transfer(dmi, RV_DMI_NOOP, 0U, 0U, NULL);
+		result = riscv_dmi_transfer(dmi, RV_DMI_OP_NOOP, 0U, 0U, NULL);
 	return result;
 }
 

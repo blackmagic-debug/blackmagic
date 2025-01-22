@@ -164,12 +164,15 @@ typedef struct riscv_hart {
 
 #define RV_STATUS_VERSION_MASK 0x0000000fU
 
-#define RV_DMI_NOOP     0U
-#define RV_DMI_READ     1U
-#define RV_DMI_WRITE    2U
-#define RV_DMI_SUCCESS  0U
-#define RV_DMI_FAILURE  2U
-#define RV_DMI_TOO_SOON 3U
+#define RV_DMI_OP_NOOP     0U /* Ignore data and address */
+#define RV_DMI_OP_READ     1U /* Read data from address */
+#define RV_DMI_OP_WRITE    2U /* Write data to address */
+#define RV_DMI_OP_RESERVED 3U /* Reserved */
+
+#define RV_DMI_SUCCESS  0U /* The previous operation completed successfully */
+#define RV_DMI_RESERVED 1U /* Reserved */
+#define RV_DMI_FAILURE  2U /* A previous operation failed */
+#define RV_DMI_TOO_SOON 3U /* An operation was attempted while a DMI request is still in progress */
 
 #define RV_DM_DATA0             0x04U
 #define RV_DM_DATA1             0x05U
