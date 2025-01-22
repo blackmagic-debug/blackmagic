@@ -51,7 +51,7 @@ void riscv_adi_dtm_handler(adiv5_access_port_s *const ap)
 	dmi_ap->dmi.dev_index = 0xffU;
 	dmi_ap->dmi.idle_cycles = 0xffU;
 	dmi_ap->dmi.designer_code = ap->dp->designer_code;
-	dmi_ap->dmi.version = RISCV_DEBUG_0_13; /* The DMI version doesn't actually matter, so just make it spec v0.13 */
+	dmi_ap->dmi.version = RISCV_DEBUG_NONSTANDARD; /* This DTM/DMI is not part of any official spec */
 	dmi_ap->dmi.address_width = ap->flags & ADIV5_AP_FLAGS_64BIT ? 64U : 32U;
 
 	dmi_ap->dmi.read = riscv_adi_dmi_read;
