@@ -41,10 +41,16 @@
 
 typedef enum riscv_debug_version {
 	RISCV_DEBUG_UNKNOWN,
+	/* No Debug Module [Interface] present */
 	RISCV_DEBUG_UNIMPL,
+	/* Debug Module [Interface] conforming to version 0.11 of the spec */
 	RISCV_DEBUG_0_11,
+	/* Debug Module [Interface] conforming to version 0.13 of the spec */
 	RISCV_DEBUG_0_13,
+	/* Debug Module [Interface] conforming to version 1.0 of the spec */
 	RISCV_DEBUG_1_0,
+	/* Debug Module [Interface] not conforming to any available version of the spec */
+	RISCV_DEBUG_NONSTANDARD,
 } riscv_debug_version_e;
 
 /* This enum describes the Hart status (eg after a CSR read/write) */
