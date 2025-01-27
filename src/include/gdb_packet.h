@@ -70,10 +70,14 @@ typedef struct gdb_packet {
 
 /* GDB packet transmission configuration */
 void gdb_set_noackmode(bool enable);
+bool gdb_noackmode(void);
 
 /* Raw GDB packet transmission */
 gdb_packet_s *gdb_packet_receive(void);
 void gdb_packet_send(const gdb_packet_s *packet);
+
+void gdb_packet_ack(bool ack);
+bool gdb_packet_get_ack(uint32_t timeout);
 
 char *gdb_packet_buffer(void);
 

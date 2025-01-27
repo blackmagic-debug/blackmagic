@@ -60,19 +60,8 @@ char *gdb_packet_buffer(void)
 #endif /* EXTERNAL_PACKET_BUFFER */
 
 /* https://sourceware.org/gdb/onlinedocs/gdb/Packet-Acknowledgment.html */
-void gdb_set_noackmode(bool enable)
+void gdb_set_noackmode(const bool enable)
 {
-	/*
-	 * If we were asked to disable NoAckMode, and it was previously enabled,
-	 * it might mean we got a packet we determined to be the first of a new
-	 * GDB session, and as such it was not acknowledged (before GDB enabled NoAckMode),
-	 * better late than never.
-	 *
-	 * If we were asked after the connection was terminated, sending the ack will have no effect.
-	 */
-	if (!enable && noackmode)
-		gdb_if_putchar(GDB_PACKET_ACK, true);
-
 	/* Log only changes */
 	if (noackmode != enable)
 		DEBUG_GDB("%s NoAckMode\n", enable ? "Enabling" : "Disabling");
@@ -80,7 +69,20 @@ void gdb_set_noackmode(bool enable)
 	noackmode = enable;
 }
 
+bool gdb_noackmode(void)
+{
+	return noackmode;
+}
+
 #ifndef DEBUG_GDB_IS_NOOP
+/*
+ * To debug packets from the perspective of GDB we can use the following command:
+ *     set debug remote on
+ * This will print packets sent and received by the GDB client
+ * 
+ * This is not directly related to BMD, but as it's hard to find this information
+ * and it is extremely useful for debugging, we included it here for reference.
+ */
 static void gdb_packet_debug(const char *const func, const gdb_packet_s *const packet)
 {
 	/* Log packet for debugging */
@@ -256,7 +258,7 @@ gdb_packet_s *gdb_packet_receive(void)
 
 				/* (N)Acknowledge packet */
 				const bool checksum_ok = gdb_packet_checksum(packet) == rx_checksum;
-				gdb_if_putchar(checksum_ok ? GDB_PACKET_ACK : GDB_PACKET_NACK, true);
+				gdb_packet_ack(checksum_ok);
 				if (!checksum_ok) {
 					/* Checksum error, restart packet capture */
 					state = PACKET_IDLE;
@@ -287,14 +289,19 @@ gdb_packet_s *gdb_packet_receive(void)
 	}
 }
 
-static inline bool gdb_get_ack(const uint32_t timeout)
+void gdb_packet_ack(const bool ack)
 {
-	/* Return true early if NoAckMode is enabled */
-	if (noackmode)
-		return true;
+	/* Send ACK/NACK */
+	DEBUG_GDB("%s: %s\n", __func__, ack ? "ACK" : "NACK");
+	gdb_if_putchar(ack ? GDB_PACKET_ACK : GDB_PACKET_NACK, true);
+}
 
+bool gdb_packet_get_ack(const uint32_t timeout)
+{
 	/* Wait for ACK/NACK */
-	return gdb_if_getchar_to(timeout) == GDB_PACKET_ACK;
+	const bool ack = gdb_if_getchar_to(timeout) == GDB_PACKET_ACK;
+	DEBUG_GDB("%s: %s\n", __func__, ack ? "ACK" : "NACK");
+	return ack;
 }
 
 static inline void gdb_if_putchar_escaped(const char value)
@@ -335,7 +342,7 @@ void gdb_packet_send(const gdb_packet_s *const packet)
 #endif
 
 		/* Wait for ACK/NACK on standard packets */
-		if (packet->notification || gdb_get_ack(2000U))
+		if (packet->notification || noackmode || gdb_packet_get_ack(2000U))
 			break;
 	}
 }
