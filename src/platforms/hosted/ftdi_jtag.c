@@ -154,6 +154,8 @@ static void ftdi_jtag_cycle(const bool tms, const bool tdi, const size_t clock_c
 	uint64_t tms_states = (UINT64_C(1) << clock_cycles) - 1ULL;
 	if (!tms)
 		tms_states = 0;
+	uint8_t cmds[30U] = {0}; /* Up to ceil[64 // 7] = 10 commands, 3 byte each */
+	size_t cmd_count = 0;
 	for (size_t cycle = 0U; cycle < clock_cycles; cycle += 7U) {
 		const uint8_t cmd[3U] = {
 			MPSSE_WRITE_TMS | MPSSE_LSB | MPSSE_BITMODE | MPSSE_WRITE_NEG,
@@ -161,6 +163,7 @@ static void ftdi_jtag_cycle(const bool tms, const bool tdi, const size_t clock_c
 			(tdi ? 0x80U : 0U) | (tms_states & 0x7fU),
 		};
 		tms_states >>= 7U;
-		ftdi_buffer_write_arr(cmd);
+		memcpy(&cmds[sizeof(cmd) * cmd_count++], cmd, sizeof(cmd));
 	}
+	ftdi_buffer_write(cmds, 3U * cmd_count);
 }
