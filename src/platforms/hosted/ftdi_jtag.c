@@ -33,6 +33,7 @@ static void ftdi_jtag_reset(void);
 static void ftdi_jtag_tms_seq(uint32_t tms_states, size_t clock_cycles);
 static void ftdi_jtag_tdi_seq(bool final_tms, const uint8_t *data_in, size_t clock_cycles);
 static bool ftdi_jtag_next(bool tms, bool tdi);
+static void ftdi_jtag_cycle(bool tms, bool tdi, size_t clock_cycles);
 
 /*
  * Throughout this file you will see command buffers being built which have the following basic form:
@@ -78,6 +79,7 @@ bool ftdi_jtag_init(void)
 	jtag_proc.jtagtap_tms_seq = ftdi_jtag_tms_seq;
 	jtag_proc.jtagtap_tdi_tdo_seq = ftdi_jtag_tdi_tdo_seq;
 	jtag_proc.jtagtap_tdi_seq = ftdi_jtag_tdi_seq;
+	jtag_proc.jtagtap_cycle = ftdi_jtag_cycle;
 	jtag_proc.tap_idle_cycles = 1;
 
 	active_state.data[0] |= active_cable.jtag.set_data_low | MPSSE_CS | MPSSE_DI | MPSSE_DO;
@@ -103,9 +105,8 @@ bool ftdi_jtag_init(void)
 	ftdi_jtag_drain_potential_garbage();
 
 	/* Ensure we're in JTAG mode */
-	for (size_t i = 0; i <= 50U; ++i)
-		ftdi_jtag_next(true, false); /* 50 + 1 idle cycles for SWD reset */
-	ftdi_jtag_tms_seq(0xe73cU, 16U); /* SWD to JTAG sequence */
+	ftdi_jtag_cycle(true, false, 51U); /* 50 + 1 idle cycles for SWD reset */
+	ftdi_jtag_tms_seq(0xe73cU, 16U);   /* SWD to JTAG sequence */
 	return true;
 }
 
@@ -144,4 +145,10 @@ static bool ftdi_jtag_next(const bool tms, const bool tdi)
 	uint8_t ret = 0;
 	ftdi_buffer_read_val(ret);
 	return ret & 0x80U;
+}
+
+static void ftdi_jtag_cycle(const bool tms, const bool tdi, const size_t clock_cycles)
+{
+	for (size_t i = 0; i < clock_cycles; i++)
+		ftdi_jtag_next(tms, tdi);
 }
