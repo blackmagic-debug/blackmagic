@@ -41,6 +41,7 @@ static void dap_jtag_tms_seq(uint32_t tms_states, size_t clock_cycles);
 static void dap_jtag_tdi_tdo_seq(uint8_t *data_out, bool final_tms, const uint8_t *data_in, size_t clock_cycles);
 static void dap_jtag_tdi_seq(bool final_tms, const uint8_t *data_in, size_t clock_cycles);
 static bool dap_jtag_next(bool tms, bool tdi);
+static void dap_jtag_cycle(bool tms, bool tdi, size_t clock_cycles);
 
 bool dap_jtag_init(void)
 {
@@ -58,11 +59,11 @@ bool dap_jtag_init(void)
 	jtag_proc.jtagtap_tms_seq = dap_jtag_tms_seq;
 	jtag_proc.jtagtap_tdi_tdo_seq = dap_jtag_tdi_tdo_seq;
 	jtag_proc.jtagtap_tdi_seq = dap_jtag_tdi_seq;
+	jtag_proc.jtagtap_cycle = dap_jtag_cycle;
 
 	/* Ensure we're in JTAG mode */
-	for (size_t i = 0; i <= 50U; ++i)
-		dap_jtag_next(true, false); /* 50 + 1 idle cycles for SWD reset */
-	dap_jtag_tms_seq(0xe73cU, 16U); /* SWD to JTAG sequence */
+	dap_jtag_cycle(true, false, 51U); /* 50 + 1 idle cycles for SWD reset */
+	dap_jtag_tms_seq(0xe73cU, 16U);   /* SWD to JTAG sequence */
 
 	if (dap_quirks & DAP_QUIRK_NO_JTAG_MUTLI_TAP)
 		DEBUG_WARN("Multi-TAP JTAG is broken on this adaptor firmware revision, please upgrade it\n");
@@ -121,6 +122,12 @@ static bool dap_jtag_next(const bool tms, const bool tdi)
 	perform_dap_jtag_sequence(&tdi_byte, &tdo, tms, 1U);
 	DEBUG_PROBE("jtagtap_next tms=%u tdi=%u tdo=%u\n", tms_byte, tdi_byte, tdo);
 	return tdo;
+}
+
+static void dap_jtag_cycle(const bool tms, const bool tdi, const size_t clock_cycles)
+{
+	for (size_t i = 0; i < clock_cycles; i++)
+		dap_jtag_next(tms, tdi);
 }
 
 bool dap_jtag_configure(void)
