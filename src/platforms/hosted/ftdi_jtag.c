@@ -149,21 +149,40 @@ static bool ftdi_jtag_next(const bool tms, const bool tdi)
 
 static void ftdi_jtag_cycle(const bool tms, const bool tdi, const size_t clock_cycles)
 {
+	if (clock_cycles >= 0x80000U)
+		return;
 	DEBUG_PROBE("%s: %zu clock cycles with TMS %s and TDI %s\n", __func__, clock_cycles, tms ? "high" : "low",
 		tdi ? "high" : "low");
-	uint64_t tms_states = (UINT64_C(1) << clock_cycles) - 1ULL;
-	if (!tms)
-		tms_states = 0;
-	uint8_t cmds[30U] = {0}; /* Up to ceil[64 // 7] = 10 commands, 3 byte each */
-	size_t cmd_count = 0;
-	for (size_t cycle = 0U; cycle < clock_cycles; cycle += 7U) {
-		const uint8_t cmd[3U] = {
-			MPSSE_WRITE_TMS | MPSSE_LSB | MPSSE_BITMODE | MPSSE_WRITE_NEG,
-			MIN(7U, clock_cycles - cycle) - 1U,
-			(tdi ? 0x80U : 0U) | (tms_states & 0x7fU),
+
+	/* Update state of TMS & TDI using 0x4b opcode, then trigger 8a+b cycles using 0x8f, 0x8e. */
+	const uint8_t cmd[3] = {
+		MPSSE_WRITE_TMS | MPSSE_LSB | MPSSE_BITMODE | MPSSE_WRITE_NEG,
+		0,
+		(tdi ? 0x80U : 0U) | (tms ? 0x01U : 0U),
+	};
+	ftdi_buffer_write_arr(cmd);
+
+	/*
+	 * 0x8f CLK_BYTES: Length of 0..n will generate 1..1+n byte cycles,
+	 * i.e. emit 8..8*(n+1) clocks, so adjust clock_bytes down by 1.
+	 */
+	size_t clock_bytes = clock_cycles / 8U;
+	if (clock_bytes > 0) {
+		clock_bytes--;
+		const uint8_t cmd8[3U] = {
+			CLK_BYTES,
+			clock_bytes & 0xffU,
+			clock_bytes >> 8U,
 		};
-		tms_states >>= 7U;
-		memcpy(&cmds[sizeof(cmd) * cmd_count++], cmd, sizeof(cmd));
+		ftdi_buffer_write_arr(cmd8);
 	}
-	ftdi_buffer_write(cmds, 3U * cmd_count);
+	/* 0x8e CLK_BITS: Length of 0..7 will emit 1..8 clocks */
+	const uint8_t clock_bits = clock_cycles % 8U - 1U;
+	if (clock_bits >= 8U)
+		return;
+	const uint8_t cmd1[2U] = {
+		CLK_BITS,
+		clock_bits,
+	};
+	ftdi_buffer_write_arr(cmd1);
 }
