@@ -567,6 +567,8 @@ static void riscv32_sysbus_mem_write(
 		riscv32_sysbus_mem_adjusted_write(hart, address, data, remainder, native_access_width, native_access_length);
 }
 
+#define RV_DM_PROGBUF_BASE 0x20U
+
 static void riscv32_progbuf_mem_read(
 	riscv_hart_s *const hart, void *const dest, const target_addr_t src, const size_t len)
 {
@@ -574,8 +576,71 @@ static void riscv32_progbuf_mem_read(
 	const uint8_t access_width = riscv_mem_access_width(hart, src, len);
 	const uint8_t access_length = 1U << access_width;
 
-	(void)access_length;
-	return;
+	/* RV32I opcodes: extract ptr32 from data1, load word/half/byte, store back to data0 */
+	static const uint32_t progbuf_read32[5] = {
+		0x38000513U, // li a0, 0x380
+		0x00452583U, // lw a1, 4(a0)
+		0x0005a583U, // lw a1, 0(a1)
+		0x00b52023U, // sw a1, 0(a0)
+		0x00100073U
+	};
+	static const uint32_t progbuf_read16[5] = {
+		0x38000513U, // li a0, 0x380
+		0x00452583U, // lw a1, 4(a0)
+		0x00059583U, // lh a1, 0(a1)
+		0x00b51023U, // sh a1, 0(a0)
+		0x00100073U
+	};
+	static const uint32_t progbuf_read8[5] = {
+		0x38000513U, // li a0, 0x380
+		0x00452583U, // lw a1, 4(a0)
+		0x00058583U, // lb a1, 0(a1)
+		0x00b50023U, // sb a1, 0(a0)
+		0x00100073U
+	};
+	const uint32_t *progbuf_read = progbuf_read32;
+	switch (access_width) {
+	case RV_MEM_ACCESS_8_BIT:
+		progbuf_read = progbuf_read8;
+		break;
+	case RV_MEM_ACCESS_16_BIT:
+		progbuf_read = progbuf_read16;
+		break;
+	case RV_MEM_ACCESS_32_BIT:
+		progbuf_read = progbuf_read32;
+		break;
+	default:
+		return;
+	}
+	/* Fill the program buffer */
+	for (int i = 0; i < 5; i++) {
+		if (!riscv_dm_write(hart->dbg_module, RV_DM_PROGBUF_BASE + i, progbuf_read[i]))
+			return;
+	}
+
+	uint32_t a0_save = 0;
+	uint32_t a1_save = 0;
+	riscv_csr_read(hart, RV_GPR_BASE + 10, &a0_save);
+	riscv_csr_read(hart, RV_GPR_BASE + 11, &a1_save);
+
+	uint8_t *const data = (uint8_t *)dest;
+	for (size_t offset = 0; offset < len; offset += access_length) {
+		/* Write the address to read to arg1 */
+		if (!riscv_dm_write(hart->dbg_module, RV_DM_DATA1, src + offset))
+			return;
+		/* Execute progbuf: postexec only, no reg transfer */
+		if (!riscv_dm_write(hart->dbg_module, RV_DM_ABST_COMMAND, RV_ABST_POSTEXEC) ||
+			!riscv_command_wait_complete(hart))
+			return;
+		/* Extract back the data from arg0 */
+		uint32_t value = 0;
+		if (!riscv_dm_read(hart->dbg_module, RV_DM_DATA0, &value))
+			return;
+		riscv32_unpack_data(data + offset, value, access_width);
+	}
+
+	riscv_csr_write(hart, RV_GPR_BASE + 10, &a0_save);
+	riscv_csr_write(hart, RV_GPR_BASE + 11, &a1_save);
 }
 
 static void riscv32_progbuf_mem_write(
@@ -584,8 +649,73 @@ static void riscv32_progbuf_mem_write(
 	/* Figure out the maxmial width of access to perform, up to the bitness of the target */
 	const uint8_t access_width = riscv_mem_access_width(hart, dest, len);
 	const uint8_t access_length = 1U << access_width;
-	(void)access_length;
-	return;
+	/* RV32I opcodes: extract ptr32 from data1 and val from data0, store word/half/byte */
+	static const uint32_t progbuf_write32[5] = {
+		0x38000513U, // li a0, 0x380
+		0x00452583U, // lw a1, 4(a0)
+		0x00052603U, // lw a2, 0(a0)
+		0x00c5a023U, // sw a2, 0(a1)
+		0x00100073U
+	};
+	static const uint32_t progbuf_write16[5] = {
+		0x38000513U, // li a0, 0x380
+		0x00452583U, // lw a1, 4(a0)
+		0x00051603U, // lh a2, 0(a0)
+		0x00c59023U, // sh a2, 0(a1)
+		0x00100073U
+	};
+	static const uint32_t progbuf_write8[5] = {
+		0x38000513U, // li a0, 0x380
+		0x00452583U, // lw a1, 4(a0)
+		0x00050603U, // lb a2, 0(a0)
+		0x00c58023U, // sb a2, 0(a1)
+		0x00100073U
+	};
+	const uint32_t *progbuf_write = progbuf_write32;
+	switch (access_width) {
+	case RV_MEM_ACCESS_8_BIT:
+		progbuf_write = progbuf_write8;
+		break;
+	case RV_MEM_ACCESS_16_BIT:
+		progbuf_write = progbuf_write16;
+		break;
+	case RV_MEM_ACCESS_32_BIT:
+		progbuf_write = progbuf_write32;
+		break;
+	default:
+		return;
+	}
+	/* Fill the program buffer */
+	for (int i = 0; i < 5; i++) {
+		if (!riscv_dm_write(hart->dbg_module, RV_DM_PROGBUF_BASE + i, progbuf_write[i]))
+			return;
+	}
+
+	uint32_t a0_save = 0;
+	uint32_t a1_save = 0;
+	uint32_t a2_save = 0;
+	riscv_csr_read(hart, RV_GPR_BASE + 10, &a0_save);
+	riscv_csr_read(hart, RV_GPR_BASE + 11, &a1_save);
+	riscv_csr_read(hart, RV_GPR_BASE + 12, &a2_save);
+
+	const uint8_t *const data = (const uint8_t *)src;
+	for (size_t offset = 0; offset < len; offset += access_length) {
+		/* Write the address to write to arg1 */
+		if (!riscv_dm_write(hart->dbg_module, RV_DM_DATA1, dest + offset))
+			return;
+		/* Pack the data to write into arg0 */
+		uint32_t value = riscv32_pack_data(data + offset, access_width);
+		if (!riscv_dm_write(hart->dbg_module, RV_DM_DATA0, value))
+			return;
+		/* Execute progbuf: postexec only, no reg transfer */
+		if (!riscv_dm_write(hart->dbg_module, RV_DM_ABST_COMMAND, RV_ABST_POSTEXEC) ||
+			!riscv_command_wait_complete(hart))
+			return;
+	}
+
+	riscv_csr_write(hart, RV_GPR_BASE + 10, &a0_save);
+	riscv_csr_write(hart, RV_GPR_BASE + 11, &a1_save);
+	riscv_csr_write(hart, RV_GPR_BASE + 12, &a2_save);
 }
 
 void riscv32_mem_read(target_s *const target, void *const dest, const target_addr64_t src, const size_t len)
