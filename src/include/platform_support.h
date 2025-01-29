@@ -70,6 +70,7 @@ void platform_max_frequency_set(uint32_t frequency);
 uint32_t platform_max_frequency_get(void);
 
 void platform_target_clk_output_enable(bool enable);
+void platform_ospeed_update(uint32_t frequency);
 
 #if CONFIG_BMDA == 0
 bool platform_spi_init(spi_bus_e bus);
