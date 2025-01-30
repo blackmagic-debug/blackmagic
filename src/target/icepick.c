@@ -64,6 +64,9 @@
 #define ICEPICK_MINOR_SHIFT 24U
 #define ICEPICK_MINOR_MASK  0xfU
 
+#define ICEPICK_TESTAPS_SHIFT 20
+#define ICEPICK_TESTAPS_MASK  7
+
 #define ICEPICK_ROUTING_REG_MASK  0x7fU
 #define ICEPICK_ROUTING_REG_SHIFT 24U
 #define ICEPICK_ROUTING_DATA_MASK 0x00ffffffU
@@ -99,9 +102,9 @@
 #define ICEPICK_CONNECT    0x89U
 #define ICEPICK_DISCONNECT 0x80U
 
-void icepick_write_ir(jtag_dev_s *device, uint8_t ir);
-uint32_t icepick_shift_dr(const jtag_dev_s *device, uint32_t data_in, size_t clock_cycles);
-static void icepick_configure(const jtag_dev_s *device);
+static void icepick_write_ir(jtag_dev_s *device, uint8_t ir);
+static uint32_t icepick_shift_dr(const jtag_dev_s *device, uint32_t data_in, size_t clock_cycles);
+static void icepick_configure(jtag_dev_s *device, char icepick_type, uint32_t tap_count);
 
 void icepick_router_handler(const uint8_t dev_index)
 {
@@ -113,13 +116,25 @@ void icepick_router_handler(const uint8_t dev_index)
 	icepick_write_ir(device, IR_ICEPICKCODE);
 	/* Then read out the 32-bit controller ID code */
 	const uint32_t icepick_idcode = icepick_shift_dr(device, 0U, 32U);
+	char icepick_type;
+	uint32_t testaps_count;
 
 	/* Check it's a suitable ICEPick controller, and abort if not */
-	if ((icepick_idcode & ICEPICK_TYPE_MASK) != ICEPICK_TYPE_D) {
-		DEBUG_ERROR("ICEPick is not a type-D controller (%08" PRIx32 ")\n", icepick_idcode);
+	switch (icepick_idcode & ICEPICK_TYPE_MASK) {
+	case ICEPICK_TYPE_C:
+		icepick_type = 'C';
+		testaps_count = (icepick_idcode >> ICEPICK_TESTAPS_SHIFT) & ICEPICK_TESTAPS_MASK;
+		break;
+	case ICEPICK_TYPE_D:
+		icepick_type = 'D';
+		testaps_count = ICEPICK_ROUTING_DEBUG_TAP_COUNT;
+		break;
+	default:
+		DEBUG_ERROR("ICEPick is not a type-C or type-D controller (%08" PRIx32 ")\n", icepick_idcode);
 		return;
 	}
-	DEBUG_INFO("ICEPick type-D controller v%u.%u (%08" PRIx32 ")\n",
+
+	DEBUG_INFO("ICEPick type-%c controller v%u.%u (%08" PRIx32 ")\n", icepick_type,
 		(icepick_idcode >> ICEPICK_MAJOR_SHIFT) & ICEPICK_MAJOR_MASK,
 		(icepick_idcode >> ICEPICK_MINOR_SHIFT) & ICEPICK_MINOR_MASK, icepick_idcode);
 
@@ -130,7 +145,7 @@ void icepick_router_handler(const uint8_t dev_index)
 	/* Now we're connected, go into the routing inspection/modification mode */
 	icepick_write_ir(device, IR_ROUTER);
 	/* Configure the router to put the Cortex TAP(s) on chain */
-	icepick_configure(device);
+	icepick_configure(device, icepick_type, testaps_count);
 	/* Go to an idle state instruction and then run 10 idle cycles to complete reconfiguration */
 	icepick_write_ir(device, IR_IDCODE);
 	jtag_proc.jtagtap_cycle(false, false, 10U);
@@ -167,7 +182,7 @@ static bool icepick_write_reg(const jtag_dev_s *const device, const uint8_t reg,
 	return !(result & ICEPICK_ROUTING_FAIL);
 }
 
-static void icepick_configure(const jtag_dev_s *const device)
+static void icepick_configure(jtag_dev_s *const device, char icepick_type, const uint32_t testaps_count)
 {
 	/* Try to read out the system control register */
 	uint32_t sysctrl = 0U;
@@ -189,12 +204,12 @@ static void icepick_configure(const jtag_dev_s *const device)
 		return;
 	}
 
-	for (uint8_t tap = 0U; tap < ICEPICK_ROUTING_DEBUG_TAP_COUNT; ++tap) {
+	for (uint8_t tap = 0U; tap < testaps_count; ++tap) {
 		uint32_t tap_config = 0U;
 		if (icepick_read_reg(device, ICEPICK_ROUTING_DEBUG_TAP_BASE + tap, &tap_config)) {
 			DEBUG_INFO("ICEPick TAP %u: %06" PRIx32 "\n", tap, tap_config);
 			if (!icepick_write_reg(device, ICEPICK_ROUTING_DEBUG_TAP_BASE + tap,
-					ICEPICK_ROUTING_DEBUG_TAP_POWER_LOST | ICEPICK_ROUTING_DEBUG_TAP_INHIBIT_SLEEP |
+					tap_config | ICEPICK_ROUTING_DEBUG_TAP_POWER_LOST | ICEPICK_ROUTING_DEBUG_TAP_INHIBIT_SLEEP |
 						ICEPICK_ROUTING_DEBUG_TAP_RELEASE_WIR | ICEPICK_ROUTING_DEBUG_TAP_DEBUG_ENABLE |
 						ICEPICK_ROUTING_DEBUG_TAP_SELECT | ICEPICK_ROUTING_DEBUG_TAP_FORCE_ACTIVE))
 				DEBUG_ERROR("ICEPick TAP %u write failed\n", tap);
@@ -202,18 +217,22 @@ static void icepick_configure(const jtag_dev_s *const device)
 			DEBUG_PROBE("ICEPick TAP %u read failed\n", tap);
 	}
 
-	for (uint8_t core = 0; core < ICEPICK_ROUTING_CORE_COUNT; ++core) {
-		uint32_t core_config = 0U;
-		if (icepick_read_reg(device, ICEPICK_ROUTING_CORE_BASE + core, &core_config)) {
-			DEBUG_INFO("ICEPick core %u: %06" PRIx32 "\n", core, core_config);
-			if (!icepick_write_reg(device, ICEPICK_ROUTING_CORE_BASE + core, 0x00002008U))
-				DEBUG_ERROR("ICEPick core %u write failed\n", core);
-		} else
-			DEBUG_PROBE("ICEPick core %u read failed\n", core);
+	icepick_write_ir(device, IR_IDCODE);
+
+	if (icepick_type == 'D') {
+		for (uint8_t core = 0; core < ICEPICK_ROUTING_CORE_COUNT; ++core) {
+			uint32_t core_config = 0U;
+			if (icepick_read_reg(device, ICEPICK_ROUTING_CORE_BASE + core, &core_config)) {
+				DEBUG_INFO("ICEPick core %u: %06" PRIx32 "\n", core, core_config);
+				if (!icepick_write_reg(device, ICEPICK_ROUTING_CORE_BASE + core, 0x00002008U))
+					DEBUG_ERROR("ICEPick core %u write failed\n", core);
+			} else
+				DEBUG_PROBE("ICEPick core %u read failed\n", core);
+		}
 	}
 }
 
-void icepick_write_ir(jtag_dev_s *const device, const uint8_t ir)
+static void icepick_write_ir(jtag_dev_s *const device, const uint8_t ir)
 {
 	/* Set all the other devices IR's to being in bypass */
 	for (size_t device_index = 0; device_index < jtag_dev_count; device_index++)
@@ -233,7 +252,7 @@ void icepick_write_ir(jtag_dev_s *const device, const uint8_t ir)
 	jtagtap_return_idle(0);
 }
 
-uint32_t icepick_shift_dr(const jtag_dev_s *const device, const uint32_t data_in, const size_t clock_cycles)
+static uint32_t icepick_shift_dr(const jtag_dev_s *const device, const uint32_t data_in, const size_t clock_cycles)
 {
 	/* Prepare the data to send */
 	uint8_t data[4];
