@@ -922,6 +922,11 @@ bool cortexr_probe(adiv5_access_port_s *const ap, const target_addr_t base_addre
 	if (!target)
 		return false;
 
+	// TI omitted the designer code on TMS570.
+	if (target->designer_code == 0) {
+		PROBE(ti_tms570_probe);
+	}
+
 #if CONFIG_BMDA == 0
 	gdb_outf("Please report unknown device with Designer 0x%x Part ID 0x%x\n", target->designer_code, target->part_id);
 #else

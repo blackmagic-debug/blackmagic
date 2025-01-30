@@ -376,11 +376,22 @@ target_ti_cortexa = declare_dependency(
 	dependencies: target_cortexar,
 	compile_args: ['-DENABLE_TI_SITARA=1'],
 )
+
+target_ti_cortexr = declare_dependency(
+	sources: files(
+		'ti_tms570.c',
+		'icepick.c'
+	),
+	dependencies: target_cortexar,
+	compile_args: ['-DENABLE_TI_TMS570=1'],
+)
+
 # If the Cortex-A/R target is not enabled, don't enable TI AM335x part support
-if enabled_targets.contains('cortexar')
+if not is_firmware_build or enabled_targets.contains('cortexar')
 	target_ti = [
 		target_ti_cortexm,
 		target_ti_cortexa,
+		target_ti_cortexr,
 	]
 else
 	target_ti = target_ti_cortexm
@@ -451,8 +462,9 @@ libbmd_target_deps = [
 	target_rp,
 	target_sam,
 	target_stm,
-	target_ti_cortexm,
 	target_ti_cortexa,
+	target_ti_cortexm,
+	target_ti_cortexr,
 	target_xilinx,
 ]
 
