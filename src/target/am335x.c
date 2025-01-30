@@ -54,7 +54,7 @@
 bool am335x_cm3_probe(target_s *const target)
 {
 	/* Try to read out the device identification register and check this is actually an AM335x device */
-	const uint32_t device_id = target_mem_read32(target, AM335x_CTRL_DEVICE_ID) & AM335x_CTRL_DEVICE_ID_MASK;
+	const uint32_t device_id = target_mem32_read32(target, AM335x_CTRL_DEVICE_ID) & AM335x_CTRL_DEVICE_ID_MASK;
 	if (device_id != AM335x_CTRL_DEVICE_ID_AM335x)
 		return false;
 
