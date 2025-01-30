@@ -890,7 +890,7 @@ static bool samx5x_cmd_update_user_word(target_s *t, int argc, const char **argv
 static uint32_t samx5x_ram_size(target_s *t)
 {
 	/* Read the Device ID */
-	const uint32_t did = target_mem_read32(t, SAMX5X_DSU_DID);
+	const uint32_t did = target_mem32_read32(t, SAMX5X_DSU_DID);
 	/* Mask off the device select bits */
 	const samx5x_descr_s samx5x = samx5x_parse_device_id(did);
 	/* Adjust the maximum ram size (256KB) down as appropriate */
@@ -926,7 +926,7 @@ static bool samx5x_cmd_mbist(target_s *t, int argc, const char **argv)
 	/* Poll for DSU Ready */
 	uint32_t status = 0;
 	while ((status & (SAMX5X_STATUSA_DONE | SAMX5X_STATUSA_PERR | SAMX5X_STATUSA_FAIL)) == 0U) {
-		status = target_mem_read32(t, SAMX5X_DSU_CTRLSTAT);
+		status = target_mem32_read32(t, SAMX5X_DSU_CTRLSTAT);
 		if (target_check_error(t))
 			return false;
 	}
@@ -939,8 +939,8 @@ static bool samx5x_cmd_mbist(target_s *t, int argc, const char **argv)
 
 	/* Test the fail bit in Status A */
 	if (status & SAMX5X_STATUSA_FAIL) {
-		const uint32_t data = target_mem_read32(t, SAMX5X_DSU_DATA);
-		tc_printf(t, "MBIST Fail @ 0x%08" PRIx32 " (bit %u in phase %u)\n", target_mem_read32(t, SAMX5X_DSU_ADDRESS),
+		const uint32_t data = target_mem32_read32(t, SAMX5X_DSU_DATA);
+		tc_printf(t, "MBIST Fail @ 0x%08" PRIx32 " (bit %u in phase %u)\n", target_mem32_read32(t, SAMX5X_DSU_ADDRESS),
 			data & 0x1fU, data >> 8U);
 	} else
 		tc_printf(t, "MBIST Passed!\n");
