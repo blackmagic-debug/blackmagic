@@ -50,6 +50,10 @@ meson setup build --cross-file=cross-file/blackpill-xxxxxx.ini -Dbmd_bootloader=
 
   Note: While the above command uses the 'build' directory, the name used is arbitrary, meaning, should a user wish to have multiple platforms built, they may use a more descriptive folder name.
 
+  Also Note: If the bootloader and firmware are going to be built for a Blackpill connected to a "Blackpill Carrier", the above
+  setup MUST have "-Don_carrier_board=true" added to it. This is required to ensure the LEDs are correctly mapped to
+  the Blackpill Carrier Board.
+  
 2. Compile the firmware and bootloader
 
 ```sh
