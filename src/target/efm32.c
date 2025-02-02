@@ -376,6 +376,12 @@ static uint64_t efm32_v1_read_eui64(target_s *t)
 	return ((uint64_t)target_mem_read32(t, EFM32_V1_DI_EUI64_1) << 32U) | target_mem_read32(t, EFM32_V1_DI_EUI64_0);
 }
 
+/* Reads the EFM32 Extended Unique Identifier EUI48 (V2) */
+static uint64_t efm32_v2_read_eui48(target_s *t)
+{
+	return ((uint64_t)target_mem32_read32(t, EFM32_V2_DI_EUI48H) << 32U) | target_mem32_read32(t, EFM32_V2_DI_EUI48L);
+}
+
 /* Reads the Unique Number (DI V2 only) */
 static uint64_t efm32_v2_read_unique(target_s *t, uint8_t di_version)
 {
@@ -537,12 +543,13 @@ bool efm32_probe(target_s *t)
 {
 	/* Check if the OUI in the EUI is silabs or energymicro.
 	 * Use this to identify the Device Identification (DI) version */
-	uint8_t di_version = 1;
-	uint64_t oui24 = ((efm32_v1_read_eui64(t) >> 40U) & 0xffffffU);
-	if (oui24 == EFM32_V1_DI_EUI_SILABS) {
+	uint8_t di_version;
+	const uint32_t oui24_v1 = (efm32_v1_read_eui64(t) >> 40U) & 0xffffffU;
+	const uint32_t oui24_v2 = (efm32_v2_read_eui48(t) >> 24U) & 0xffffffU;
+	if (oui24_v1 == EFM32_V1_DI_EUI_SILABS) {
 		/* Device Identification (DI) version 1 */
 		di_version = 1;
-	} else if (oui24 == EFM32_V2_DI_EUI_ENERGYMICRO) {
+	} else if (oui24_v2 == EFM32_V2_DI_EUI_ENERGYMICRO) {
 		/* Device Identification (DI) version 2 */
 		di_version = 2;
 	} else {
