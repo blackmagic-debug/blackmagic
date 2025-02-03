@@ -671,7 +671,79 @@ void wifi_get_ip_address(char *buffer, uint32_t size)
 			conn_info.au8IPAddr[1], conn_info.au8IPAddr[2], conn_info.au8IPAddr[3]);
 		strncat(buffer, local_buffer, size);
 	} else {
-		memcpy(buffer, "Not connected\n", strlen("Not connected"));
+		memcpy(buffer, "Not connected\n", strlen("Not connected\n"));
+	}
+}
+
+//
+// Using the passed arguments, attempt to connect to a Wi-Fi AP
+//
+void wifi_connect(int argc, const char **argv, char *buffer, uint32_t size)
+{
+	char ssid[64] = {0};
+	char pass_phrase[64] = {0};
+	char *output_buffer = ssid;
+	char *delimeter;
+	bool add_space = false;
+	memset(buffer, 0x00, size);
+	//
+	// Iterate over the arguments received to build the SSID and passphrase
+	//
+	// The BMF command line parser treats spaces as delimiters and both SSID
+	// and the passphrase may have embedded spaces. The SSID and passphrase
+	// should have a comma separator.
+	//
+	// The following loop concatenates each arg and adds back the space delimiter.
+	//
+	// It does this initially into the SSID name, up until an argument is found
+	// that contains a comma. The string before the comma is concatenated with
+	// the SSID and the string after the comma is used as the first element of
+	// the passphrase.
+	//
+	// The remaining arguments are then concatenated into the passphrase with
+	// an space added between them.
+	//
+	for (int loop = 1; loop < argc; loop++) {
+		delimeter = strchr(argv[loop], ',');
+		if (delimeter == NULL) {
+			if (add_space) {
+				strcat(output_buffer, " ");
+				add_space = true;
+			}
+			strcat(output_buffer, argv[loop]); // No comma, just use the argument
+		} else {
+			strcat(output_buffer, " ");
+
+			*delimeter = 0x00; // Null terminate string before comma
+			strcat(output_buffer, argv[loop]);
+			//
+			// Start the passphrase with the remaining string
+			//
+			output_buffer = pass_phrase;
+			add_space = false;
+			strcat(output_buffer, delimeter + 1);
+		}
+	}
+	//
+	// If we have both SSID and Passphrase attempt to connect
+	//
+	if (ssid[0] != 0x00 && pass_phrase[0] != 0x00) {
+		//
+		// Force app_task into wait for wifi connect
+		//
+		// TODO Does this need to check current state is spin?
+		//
+		app_state = app_state_wait_for_wifi_connect;
+		m2m_wifi_connect_sc(ssid, strlen(ssid), M2M_WIFI_SEC_WPA_PSK, &pass_phrase, 6);
+		//
+		// For now lets spin here calling app_tasks
+		//
+		while (1) {
+			platform_tasks();
+			if (app_state == app_state_spin) {
+				break;
+			}
+		}
 	}
 }
 
