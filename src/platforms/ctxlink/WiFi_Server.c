@@ -123,6 +123,8 @@ static bool swo_trace_client_connected = false;
 static bool swo_trace_server_is_running = false;
 static bool new_swo_trace_client_conncted = false;
 
+static tstrM2MIPConfig ip_configuration;
+
 #define SWO_TRACE_INPUT_BUFFER_SIZE 32
 static uint8_t local_swo_trace_buffer[SWO_TRACE_INPUT_BUFFER_SIZE] = {0}; ///< The local buffer[ input buffer size]
 
@@ -558,10 +560,11 @@ static void app_wifi_callback(uint8_t msg_type, void *msg)
 	}
 
 	case M2M_WIFI_IP_ADDRESS_ASSIGNED_EVENT: {
-		t_wifiEventData *wifi_event_data = (t_wifiEventData *)msg;
-		if (wifi_event_data != NULL)
+		tstrM2MIPConfig *ip_config = (tstrM2MIPConfig *)msg;
+		if (ip_config != NULL) {
 			ip_address_assigned = true;
-		else
+			memcpy(&ip_configuration, ip_config, sizeof(tstrM2MIPConfig));
+		} else
 			ip_address_assigned = false;
 		break;
 	}
