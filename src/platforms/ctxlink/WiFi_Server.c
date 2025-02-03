@@ -651,13 +651,26 @@ bool is_ip_address_assigned(void)
 	return res;
 }
 
+//
+// Format the current connection data for display to user
+//
+//	SSID = 'name'
+//	RSSI = xx
+//	ip = xxx.xxx.xxx.xxx
+//
 void wifi_get_ip_address(char *buffer, uint32_t size)
 {
-	if (g_wifi_connected)
-		snprintf(buffer, size, "%d.%d.%d.%d\n", conn_info.acSSID[3], conn_info.acSSID[2], conn_info.acSSID[1],
-			conn_info.acSSID[0]);
-	else {
-		memset(buffer, 0x00, size - 1);
+	char local_buffer[64] = {0};
+	memset(buffer, 0x00, size - 1);
+	if (g_wifi_connected) {
+		snprintf(local_buffer, sizeof(local_buffer), "SSID = %s\n", conn_info.acSSID);
+		strncpy(buffer, local_buffer, size);
+		snprintf(local_buffer, sizeof(local_buffer), "RSSI = %d\n", conn_info.s8RSSI);
+		strncpy(buffer, local_buffer, size);
+		snprintf(local_buffer, sizeof(local_buffer), "IP = %d.%d.%d.%d\n", conn_info.au8IPAddr[0],
+			conn_info.au8IPAddr[1], conn_info.au8IPAddr[2], conn_info.au8IPAddr[3]);
+		strncat(buffer, local_buffer, size);
+	} else {
 		memcpy(buffer, "Not connected\n", strlen("Not connected"));
 	}
 }
