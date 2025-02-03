@@ -737,7 +737,7 @@ void wifi_connect(int argc, const char **argv, char *buffer, uint32_t size)
 		// TODO Does this need to check current state is spin?
 		//
 		app_state = app_state_wait_for_wifi_connect;
-		m2m_wifi_connect_sc(ssid, strlen(ssid), M2M_WIFI_SEC_WPA_PSK, &pass_phrase, 6);
+		m2m_wifi_connect_sc(ssid, strlen(ssid), M2M_WIFI_SEC_WPA_PSK, &pass_phrase, M2M_WIFI_CH_ALL);
 		//
 		// For now lets spin here calling app_tasks
 		//
