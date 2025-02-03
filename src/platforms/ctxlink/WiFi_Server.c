@@ -666,7 +666,7 @@ void wifi_get_ip_address(char *buffer, uint32_t size)
 		snprintf(local_buffer, sizeof(local_buffer), "SSID = %s\n", conn_info.acSSID);
 		strncpy(buffer, local_buffer, size);
 		snprintf(local_buffer, sizeof(local_buffer), "RSSI = %d\n", conn_info.s8RSSI);
-		strncpy(buffer, local_buffer, size);
+		strncat(buffer, local_buffer, size);
 		snprintf(local_buffer, sizeof(local_buffer), "IP = %d.%d.%d.%d\n", conn_info.au8IPAddr[0],
 			conn_info.au8IPAddr[1], conn_info.au8IPAddr[2], conn_info.au8IPAddr[3]);
 		strncat(buffer, local_buffer, size);
