@@ -680,9 +680,25 @@ void wifi_get_ip_address(char *buffer, uint32_t size)
 }
 
 //
+// Wait for app_state to spin with timeout
+//
+void app_task_wait_spin(void)
+{
+	uint32_t wait_timeout = 2000U;
+	while (1) {
+		platform_tasks();
+		if (app_state == app_state_spin)
+			break;
+		platform_delay(1);
+		if (wait_timeout-- == 0)
+			break;
+	}
+}
+
+//
 // Using the passed arguments, attempt to connect to a Wi-Fi AP
 //
-void wifi_connect(int argc, const char **argv, char *buffer, uint32_t size)
+void wifi_connect(int argc, const char **argv, char *buffer, uint32_t size, bool save)
 {
 	char ssid[64] = {0};
 	char pass_phrase[64] = {0};
@@ -734,8 +750,6 @@ void wifi_connect(int argc, const char **argv, char *buffer, uint32_t size)
 	if (ssid[0] != 0x00 && pass_phrase[0] != 0x00) {
 		//
 		// Force app_task into wait for wifi connect
-		//
-		// TODO Does this need to check current state is spin?
 		//
 		app_state = app_state_wait_for_wifi_connect;
 		m2m_wifi_connect_sc(ssid, strlen(ssid), M2M_WIFI_SEC_WPA_PSK, &pass_phrase, M2M_WIFI_CH_ALL);
