@@ -44,6 +44,8 @@ void wifi_gdb_flush(bool force);
 bool wifi_got_client(void);
 uint8_t wifi_get_next(void);
 uint8_t wifi_get_next_to(uint32_t timeout);
+
+void wifi_get_ip_address(char *buffer, uint32_t size) ;
 #ifdef __cplusplus
 }
 #endif /*  __cplusplus */
