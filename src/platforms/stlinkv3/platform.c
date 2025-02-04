@@ -268,6 +268,14 @@ void platform_target_clk_output_enable(bool enable)
 	}
 }
 
+void platform_ospeed_update(const uint32_t frequency)
+{
+	if (frequency > 2000000U)
+		PIN_MODE_FAST();
+	else
+		PIN_MODE_NORMAL();
+}
+
 bool platform_spi_init(const spi_bus_e bus)
 {
 	(void)bus;

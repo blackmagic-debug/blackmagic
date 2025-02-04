@@ -197,6 +197,15 @@ uint32_t platform_target_voltage_sense(void)
 }
 #endif
 
+void platform_ospeed_update(const uint32_t frequency)
+{
+	const uint8_t ospeed = frequency > 2000000U ? GPIO_OSPEED_25MHZ : GPIO_OSPEED_2MHZ;
+
+	gpio_set_output_options(TCK_PORT, GPIO_OTYPE_PP, ospeed, TCK_PIN);
+	gpio_set_output_options(TMS_PORT, GPIO_OTYPE_PP, ospeed, TMS_PIN);
+	gpio_set_output_options(TDI_PORT, GPIO_OTYPE_PP, ospeed, TDI_PIN);
+}
+
 void platform_target_clk_output_enable(bool enable)
 {
 	if (enable) {
