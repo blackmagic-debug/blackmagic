@@ -304,6 +304,30 @@ void riscv_dmi_init(riscv_dmi_s *const dmi)
 	do {
 		/* Read out the DM's status register */
 		uint32_t dm_status = 0;
+
+		/* Turn on DM before trying to read version  */
+		if (!riscv_dmi_write(dmi, base_addr + RV_DM_CONTROL, RV_DM_CTRL_ACTIVE)) {
+			DEBUG_ERROR("error turning on DM!\n");
+			return;
+		}
+
+		/* After changing the value of dm_active, the debugger must poll dmcontrol
+		 * until dm_active has taken the requested value */
+		bool dm_active = false;
+		uint32_t dm_control = 0;
+		while (!dm_active) {
+			if (!riscv_dmi_read(dmi, base_addr + RV_DM_CONTROL, &dm_control)) {
+				DEBUG_ERROR("error turning on DM!\n");
+				return;
+			}
+			dm_active = dm_control & 1;
+			uint8_t counter = 0;
+			if (++counter >= 100) {
+				DEBUG_ERROR("Timeout while trying to turn on DM\n");
+				return;
+			}
+		}
+
 		if (!riscv_dmi_read(dmi, base_addr + RV_DM_STATUS, &dm_status)) {
 			/* If we fail to read the status register, abort */
 			break;
