@@ -45,6 +45,9 @@ typedef struct target_controller target_controller_s;
 #if CONFIG_BMDA == 1
 bool bmda_swd_scan(uint32_t targetid);
 bool bmda_jtag_scan(void);
+#if defined(CONFIG_RVSWD) && defined(PLATFORM_HAS_RVSWD)
+bool bmda_rvswd_scan(void);
+#endif
 #endif
 bool adiv5_swd_scan(uint32_t targetid);
 bool jtag_scan(void);
