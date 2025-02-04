@@ -519,6 +519,19 @@ uint8_t platform_spi_xfer(const spi_bus_e bus, const uint8_t value)
 	return spi_xfer(bus == SPI_BUS_EXTERNAL ? EXT_SPI : AUX_SPI, value);
 }
 
+void platform_spi_xfer_block(
+	const spi_bus_e bus, const uint8_t *const tx_buf, uint8_t *const rx_buf, const size_t count)
+{
+	const uint32_t spi_base = bus == SPI_BUS_EXTERNAL ? EXT_SPI : AUX_SPI;
+
+	/* Put a byte on MOSI, wait entire transfer, grab the byte from MOSI into buffer, repeat. */
+	for (size_t i = 0; i < count; i++) {
+		uint8_t resp = spi_xfer(spi_base, tx_buf[i]);
+		if (rx_buf)
+			rx_buf[i] = resp;
+	}
+}
+
 void exti15_10_isr(void)
 {
 	uint32_t usb_vbus_port;
