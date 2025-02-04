@@ -58,7 +58,7 @@ void gdb_usb_flush(const bool force)
 
 	/* We need to send an empty packet for some hosts to accept this as a complete transfer. */
 	if (force && count_in == CDCACM_PACKET_SIZE) {
-		/* 
+		/*
 		 * libopencm3 needs a change for us to confirm when that transfer is complete,
 		 * so we just send a packet containing a null character for now.
 		 */
@@ -114,6 +114,7 @@ char gdb_usb_getchar(void)
 		 * The WFI here is safe because any interrupt, including the regular SysTick
 		 * will cause the processor to resume from the WFI instruction.
 		 */
+		platform_tasks();
 		if (!gdb_serial_get_dtr()) {
 			__WFI();
 			return '\x04';
