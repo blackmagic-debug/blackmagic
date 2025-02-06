@@ -45,13 +45,15 @@ typedef target_addr32_t target_addr_t;
 typedef struct target_controller target_controller_s;
 
 #if CONFIG_BMDA == 1
-bool bmda_swd_scan(uint32_t targetid);
+bool bmda_swd_scan(void);
+bool bmda_swd_scan_targetid(uint32_t targetid);
 bool bmda_jtag_scan(void);
 #if defined(CONFIG_RVSWD) && defined(PLATFORM_HAS_RVSWD)
 bool bmda_rvswd_scan(void);
 #endif
 #endif
-bool adiv5_swd_scan(uint32_t targetid);
+bool adiv5_swd_scan(void);
+bool adiv5_swd_scan_targetid(uint32_t targetid);
 bool jtag_scan(void);
 
 size_t target_foreach(void (*callback)(size_t index, target_s *target, void *context), void *context);

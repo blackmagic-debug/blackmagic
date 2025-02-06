@@ -299,9 +299,9 @@ bool cmd_swd_scan(target_s *target, int argc, const char **argv)
 	bool scan_result = false;
 	TRY (EXCEPTION_ALL) {
 #if CONFIG_BMDA == 1
-		scan_result = bmda_swd_scan(targetid);
+		scan_result = bmda_swd_scan_targetid(targetid);
 #else
-		scan_result = adiv5_swd_scan(targetid);
+		scan_result = adiv5_swd_scan_targetid(targetid);
 #endif
 	}
 	CATCH () {
@@ -396,9 +396,9 @@ bool cmd_auto_scan(target_s *target, int argc, const char **argv)
 			gdb_out("JTAG scan found no devices, trying SWD!\n");
 
 #if CONFIG_BMDA == 1
-			scan_result = bmda_swd_scan(0);
+			scan_result = bmda_swd_scan();
 #else
-			scan_result = adiv5_swd_scan(0);
+			scan_result = adiv5_swd_scan();
 #endif
 			if (!scan_result) {
 				gdb_out("SWD scan found no devices.\n");
