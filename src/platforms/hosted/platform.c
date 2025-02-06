@@ -196,7 +196,12 @@ void platform_init(int argc, char **argv)
 	}
 }
 
-bool bmda_swd_scan(const uint32_t targetid)
+bool bmda_swd_scan(void)
+{
+	return bmda_swd_scan_targetid(0);
+}
+
+bool bmda_swd_scan_targetid(const uint32_t targetid)
 {
 	bmda_probe_info.is_jtag = false;
 	platform_max_frequency_set(max_frequency);
@@ -209,7 +214,7 @@ bool bmda_swd_scan(const uint32_t targetid)
 #ifdef ENABLE_GPIOD
 	case PROBE_TYPE_GPIOD:
 #endif
-		return adiv5_swd_scan(targetid);
+		return adiv5_swd_scan_targetid(targetid);
 
 #if HOSTED_BMP_ONLY == 0
 	case PROBE_TYPE_STLINK_V2:
