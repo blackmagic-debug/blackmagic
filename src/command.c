@@ -51,6 +51,11 @@
 #include "usb.h"
 #endif
 
+typedef struct scan_command {
+	bool (*scan)(void);
+	const char *name;
+} scan_command_s;
+
 static bool cmd_version(target_s *target, int argc, const char **argv);
 static bool cmd_help(target_s *target, int argc, const char **argv);
 
@@ -385,44 +390,44 @@ bool cmd_auto_scan(target_s *target, int argc, const char **argv)
 	if (connect_assert_nrst)
 		platform_nrst_set_val(true); /* will be deasserted after attach */
 
-	bool scan_result = false;
-	TRY (EXCEPTION_ALL) {
+	static const scan_command_s scan_commands[] =
 #if CONFIG_BMDA == 1
-		scan_result = bmda_jtag_scan();
-#else
-		scan_result = jtag_scan();
-#endif
-		if (!scan_result) {
-			gdb_out("JTAG scan found no devices, trying SWD!\n");
-
-#if CONFIG_BMDA == 1
-			scan_result = bmda_swd_scan();
-#else
-			scan_result = adiv5_swd_scan();
-#endif
-			if (!scan_result) {
-				gdb_out("SWD scan found no devices.\n");
+		/* clang-format off */
+	{
+		{bmda_jtag_scan, "JTAG"},
+		{bmda_swd_scan, "SWD"},
 #if defined(CONFIG_RVSWD) && defined(PLATFORM_HAS_RVSWD)
-#if CONFIG_BMDA == 1
-				scan_result = bmda_rvswd_scan();
+		{bmda_rvswd_scan, "RVSWD"},
+#endif
+	};
 #else
-				scan_result = false;
+	{
+		{jtag_scan, "JTAG"},
+		{adiv5_swd_scan, "SWD"},
+	};
+	/* clang-format on */
 #endif
-				if (!scan_result)
-					gdb_out("RVSWD scan found no devices.\n");
-#endif
-			}
+
+	bool scan_result = false;
+	for (size_t i = 0; i < ARRAY_LENGTH(scan_commands); i++) {
+		TRY (EXCEPTION_ALL) {
+			scan_result = scan_commands[i].scan();
 		}
-	}
-	CATCH () {
-	case EXCEPTION_TIMEOUT:
-		gdb_outf("Timeout during scan. Is target stuck in WFI?\n");
-		break;
-	case EXCEPTION_ERROR:
-		gdb_outf("Exception: %s\n", exception_frame.msg);
-		break;
-	default:
-		break;
+		CATCH () {
+		case EXCEPTION_TIMEOUT:
+			gdb_outf("Timeout during %s scan. Is target stuck in WFI?\n", scan_commands[i].name);
+			break;
+		case EXCEPTION_ERROR:
+			gdb_outf("%s exception: %s\n", scan_commands[i].name, exception_frame.msg);
+			break;
+		default:
+			break;
+		}
+
+		if (scan_result)
+			break;
+
+		gdb_outf("%s scan found no devices.\n", scan_commands[i].name);
 	}
 
 	if (!scan_result) {
