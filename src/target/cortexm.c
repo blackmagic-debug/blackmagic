@@ -780,6 +780,9 @@ static void cortexm_pc_write(target_s *target, const uint32_t val)
  */
 static void cortexm_reset(target_s *const target)
 {
+	adiv5_access_port_s *ap = cortex_ap(target);
+	adiv5_debug_port_s *dp = ap->dp;
+
 	/* Read DHCSR here to clear S_RESET_ST bit before reset */
 	target_mem32_read32(target, CORTEXM_DHCSR);
 	/* If the physical reset pin is not inhibited, use it */
@@ -788,6 +791,8 @@ static void cortexm_reset(target_s *const target)
 		platform_nrst_set_val(false);
 		/* Some NRF52840 users saw invalid SWD transaction with native/firmware without this delay.*/
 		platform_delay(10);
+		if (dp->ensure_idle)
+			dp->ensure_idle(dp);
 	}
 
 	/* Check if the reset succeeded */
@@ -798,6 +803,9 @@ static void cortexm_reset(target_s *const target)
 		 * Trigger reset by AIRCR.
 		 */
 		target_mem32_write32(target, CORTEXM_AIRCR, CORTEXM_AIRCR_VECTKEY | CORTEXM_AIRCR_SYSRESETREQ);
+		platform_delay(10);
+		if (dp->ensure_idle)
+			dp->ensure_idle(dp);
 	}
 
 	/* If target needs to do something extra (see Atmel SAM4L for example) */
