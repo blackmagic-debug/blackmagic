@@ -28,10 +28,65 @@
 #include <libopencm3/cm3/vector.h>
 #include <libopencm3/cm3/scb.h>
 #include <libopencm3/stm32/rcc.h>
+#include <libopencm3/stm32/dbgmcu.h>
 
 volatile uint32_t magic[2] __attribute__((section(".noinit")));
 
 static void platform_detach_usb(void);
+
+#define RCC_CFGR_USBPRE_SHIFT          22
+#define RCC_CFGR_USBPRE_MASK           (0x3 << RCC_CFGR_USBPRE_SHIFT)
+#define RCC_CFGR_USBPRE_PLL_CLK_DIV1_5 0x0
+#define RCC_CFGR_USBPRE_PLL_CLK_NODIV  0x1
+#define RCC_CFGR_USBPRE_PLL_CLK_DIV2_5 0x2
+#define RCC_CFGR_USBPRE_PLL_CLK_DIV2   0x3
+
+static const struct rcc_clock_scale rcc_hse_config_hse8_120mhz = {
+	/* hse8, pll to 120 */
+	.pll_mul = RCC_CFGR_PLLMUL_PLL_CLK_MUL15,
+	.pll_source = RCC_CFGR_PLLSRC_HSE_CLK,
+	.hpre = RCC_CFGR_HPRE_NODIV,
+	.ppre1 = RCC_CFGR_PPRE_DIV2,
+	.ppre2 = RCC_CFGR_PPRE_NODIV,
+	.adcpre = RCC_CFGR_ADCPRE_DIV8,
+	.flash_waitstates = 5, /* except WSEN is 0 and WSCNT don't care */
+	.prediv1 = RCC_CFGR2_PREDIV_NODIV,
+	.usbpre = RCC_CFGR_USBPRE_PLL_CLK_DIV1_5, /* libopencm3_stm32f1 hack */
+	.ahb_frequency = 120000000,
+	.apb1_frequency = 60000000,
+	.apb2_frequency = 120000000,
+};
+
+static const struct rcc_clock_scale rcc_hse_config_hse8_96mhz = {
+	/* hse8, pll to 96 */
+	.pll_mul = RCC_CFGR_PLLMUL_PLL_CLK_MUL12,
+	.pll_source = RCC_CFGR_PLLSRC_HSE_CLK,
+	.hpre = RCC_CFGR_HPRE_NODIV,
+	.ppre1 = RCC_CFGR_PPRE_DIV2,
+	.ppre2 = RCC_CFGR_PPRE_NODIV,
+	.adcpre = RCC_CFGR_ADCPRE_DIV8,
+	.flash_waitstates = 3, /* except WSEN is 0 and WSCNT don't care */
+	.prediv1 = RCC_CFGR2_PREDIV_NODIV,
+	.usbpre = RCC_CFGR_USBPRE_PLL_CLK_NODIV, /* libopencm3_stm32f1 hack */
+	.ahb_frequency = 96000000,
+	.apb1_frequency = 48000000,
+	.apb2_frequency = 96000000,
+};
+
+/* Set USB CK48M prescaler on GD32F30x before enabling RCC_APB1ENR_USBEN */
+static void rcc_set_usbpre_gd32f30x(uint32_t usbpre)
+{
+#if 1
+	/* NuttX style */
+	uint32_t regval = RCC_CFGR;
+	regval &= ~RCC_CFGR_USBPRE_MASK;
+	regval |= (usbpre << RCC_CFGR_USBPRE_SHIFT);
+	RCC_CFGR = regval;
+#else
+	/* libopencm3 style */
+	RCC_CFGR = (RCC_CFGR & ~RCC_CFGR_USBPRE_MASK) | (usbpre << RCC_CFGR_USBPRE_SHIFT);
+#endif
+}
 
 void platform_request_boot(void)
 {
@@ -61,7 +116,38 @@ void platform_init(void)
 	rcc_periph_clock_enable(SWO_DMA_CLK);
 #endif
 
-	rcc_clock_setup_pll(&rcc_hse_configs[RCC_CLOCK_HSE8_72MHZ]);
+	/* Detect platform chip */
+	const uint32_t device_id = DBGMCU_IDCODE & DBGMCU_IDCODE_DEV_ID_MASK;
+	const uint32_t cpu_id = SCB_CPUID & SCB_CPUID_PARTNO;
+	/* STM32F103CB: 0x410 (Medium density) is readable as 0x000 (errata) without debugger. So default to 72 MHz. */
+	const struct rcc_clock_scale *clock = &rcc_hse_configs[RCC_CLOCK_HSE8_72MHZ];
+	/*
+	 * Pick one of 72/96/120 MHz PLL configs.
+	 * Disable USBD clock (after bootloaders)
+	 * then change USBDPSC[1:0] the CK_USBD prescaler
+	 * and finally enable PLL.
+	 */
+	if ((device_id == 0x410 || device_id == 0x000) && cpu_id == 0xc230 && SCB_CPUID == 0x411fc231) {
+		/* STM32F103CB: 0x410 (Medium density), 0x411fc231 (Cortex-M3 r1p1) */
+		clock = &rcc_hse_configs[RCC_CLOCK_HSE8_72MHZ];
+	}
+	if (device_id == 0x410 && cpu_id == 0xc230 && SCB_CPUID == 0x412fc231) {
+		/* GD32F103CB: 0x410 (Medium Density), 0x412fc231 (Cortex-M3 r2p1) */
+		clock = &rcc_hse_config_hse8_96mhz;
+		rcc_periph_clock_disable(RCC_USB);
+		/* Set 96/2=48MHz USB divisor before enabling PLL */
+		rcc_set_usbpre_gd32f30x(RCC_CFGR_USBPRE_PLL_CLK_DIV2);
+	}
+	if (device_id == 0x414 && cpu_id == 0xc240 && SCB_CPUID == 0x410fc241) {
+		/* GD32F303CC: 0x414 (High density) 0x410fc241 (Cortex-M4F r0p1) */
+		clock = &rcc_hse_config_hse8_120mhz;
+		rcc_periph_clock_disable(RCC_USB);
+		/* Set 120/2.5=48MHz USB divisor before enabling PLL */
+		rcc_set_usbpre_gd32f30x(RCC_CFGR_USBPRE_PLL_CLK_DIV2_5);
+	}
+
+	/* Enable PLL */
+	rcc_clock_setup_pll(clock);
 
 	gpio_set_mode(TMS_PORT, GPIO_MODE_OUTPUT_10_MHZ, GPIO_CNF_INPUT_FLOAT, TMS_PIN);
 	gpio_set_mode(TCK_PORT, GPIO_MODE_OUTPUT_10_MHZ, GPIO_CNF_INPUT_FLOAT, TCK_PIN);
