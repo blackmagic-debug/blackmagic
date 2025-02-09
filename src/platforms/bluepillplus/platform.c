@@ -88,6 +88,102 @@ static void rcc_set_usbpre_gd32f30x(uint32_t usbpre)
 #endif
 }
 
+/* ROM table CIDR values */
+#define CIDR0_OFFSET 0xff0U /* DBGCID0 */
+#define CIDR1_OFFSET 0xff4U /* DBGCID1 */
+#define CIDR2_OFFSET 0xff8U /* DBGCID2 */
+#define CIDR3_OFFSET 0xffcU /* DBGCID3 */
+
+#define PIDR0_OFFSET 0xfe0U /* DBGPID0 */
+#define PIDR1_OFFSET 0xfe4U /* DBGPID1 */
+#define PIDR2_OFFSET 0xfe8U /* DBGPID2 */
+#define PIDR3_OFFSET 0xfecU /* DBGPID3 */
+#define PIDR4_OFFSET 0xfd0U /* DBGPID4 */
+#define PIDR5_OFFSET 0xfd4U /* DBGPID5 (Reserved) */
+#define PIDR6_OFFSET 0xfd8U /* DBGPID6 (Reserved) */
+#define PIDR7_OFFSET 0xfdcU /* DBGPID7 (Reserved) */
+
+#define ROMTABLE_BASE 0xe00ff000U
+
+static uint64_t coresight_romtable_pidr(void)
+{
+	uint8_t pidr[8] = {0};
+	uint64_t pid64 = 0;
+
+	/* Pack bytes from sparse Product ID registers */
+	pidr[0] = *(const uint32_t *)(ROMTABLE_BASE + PIDR0_OFFSET);
+	pidr[1] = *(const uint32_t *)(ROMTABLE_BASE + PIDR1_OFFSET);
+	pidr[2] = *(const uint32_t *)(ROMTABLE_BASE + PIDR2_OFFSET);
+	pidr[3] = *(const uint32_t *)(ROMTABLE_BASE + PIDR3_OFFSET);
+	pidr[4] = *(const uint32_t *)(ROMTABLE_BASE + PIDR4_OFFSET);
+
+	memcpy(&pid64, pidr, 8);
+	return pid64;
+}
+
+static uint32_t coresight_romtable_cidr_check(void)
+{
+	uint8_t cidr[4] = {0};
+	uint32_t cid32 = 0;
+	/* Pack bytes from sparse Component ID registers */
+	cidr[0] = *(const uint32_t *)(ROMTABLE_BASE + CIDR0_OFFSET);
+	cidr[1] = *(const uint32_t *)(ROMTABLE_BASE + CIDR1_OFFSET);
+	cidr[2] = *(const uint32_t *)(ROMTABLE_BASE + CIDR2_OFFSET);
+	cidr[3] = *(const uint32_t *)(ROMTABLE_BASE + CIDR3_OFFSET);
+
+	memcpy(&cid32, cidr, 4);
+	return cid32;
+}
+
+static void platform_detect_variant(void)
+{
+	/* Detect platform chip */
+	const uint32_t device_id = DBGMCU_IDCODE & DBGMCU_IDCODE_DEV_ID_MASK;
+	const uint32_t cpu_id = SCB_CPUID & SCB_CPUID_PARTNO;
+	const uint64_t romtable_pidr = coresight_romtable_pidr();
+	const uint32_t romtable_cidr = coresight_romtable_cidr_check();
+	/* STM32F103CB: 0x410 (Medium density) is readable as 0x000 (errata) without debugger. So default to 72 MHz. */
+	const struct rcc_clock_scale *clock = &rcc_hse_configs[RCC_CLOCK_HSE8_72MHZ];
+	/*
+	 * Pick one of 72/96/120 MHz PLL configs.
+	 * Disable USBD clock (after bootloaders)
+	 * then change USBDPSC[1:0] the CK_USBD prescaler
+	 * and finally enable PLL.
+	 */
+	if ((device_id == 0x410 || device_id == 0x000) && cpu_id == 0xc230 && SCB_CPUID == 0x411fc231U) {
+		/* STM32F103CB: 0x410 (Medium density), 0x411fc231 (Cortex-M3 r1p1) */
+		if (romtable_cidr == 0xb105100dU && romtable_pidr == 0xa0410) {
+			/* STM32F103: Manufacturer 020 Partno 410 (PIDR = 0x00000a0410) */
+			clock = &rcc_hse_configs[RCC_CLOCK_HSE8_72MHZ];
+		}
+	}
+
+	if (device_id == 0x410 && cpu_id == 0xc230 && SCB_CPUID == 0x412fc231U) {
+		/* GD32F103CB: 0x410 (Medium Density), 0x412fc231 (Cortex-M3 r2p1) */
+		if (romtable_cidr == 0xb105100dU && romtable_pidr == 0x07000d1f64ULL) {
+			/* GD32F103: Manufacturer 751 Partno f64 (PIDR = 0x07000d1f64) */
+			clock = &rcc_hse_config_hse8_96mhz;
+			rcc_periph_clock_disable(RCC_USB);
+			/* Set 96/2=48MHz USB divisor before enabling PLL */
+			rcc_set_usbpre_gd32f30x(RCC_CFGR_USBPRE_PLL_CLK_DIV2);
+		}
+	}
+
+	if (device_id == 0x414 && cpu_id == 0xc240 && SCB_CPUID == 0x410fc241) {
+		/* GD32F303CC: High density, 0x410fc241 (Cortex-M4F r0p1) */
+		if (romtable_cidr == 0xb105100dU && romtable_pidr == 0x07000d1050ULL) {
+			/* GD32F303: Manufacturer 751 Partno 050 (PIDR = 0x07000d1050) */
+			clock = &rcc_hse_config_hse8_120mhz;
+			rcc_periph_clock_disable(RCC_USB);
+			/* Set 120/2.5=48MHz USB divisor before enabling PLL */
+			rcc_set_usbpre_gd32f30x(RCC_CFGR_USBPRE_PLL_CLK_DIV2_5);
+		}
+	}
+
+	/* Enable PLL */
+	rcc_clock_setup_pll(clock);
+}
+
 void platform_request_boot(void)
 {
 	magic[0] = BOOTMAGIC0;
@@ -116,38 +212,8 @@ void platform_init(void)
 	rcc_periph_clock_enable(SWO_DMA_CLK);
 #endif
 
-	/* Detect platform chip */
-	const uint32_t device_id = DBGMCU_IDCODE & DBGMCU_IDCODE_DEV_ID_MASK;
-	const uint32_t cpu_id = SCB_CPUID & SCB_CPUID_PARTNO;
-	/* STM32F103CB: 0x410 (Medium density) is readable as 0x000 (errata) without debugger. So default to 72 MHz. */
-	const struct rcc_clock_scale *clock = &rcc_hse_configs[RCC_CLOCK_HSE8_72MHZ];
-	/*
-	 * Pick one of 72/96/120 MHz PLL configs.
-	 * Disable USBD clock (after bootloaders)
-	 * then change USBDPSC[1:0] the CK_USBD prescaler
-	 * and finally enable PLL.
-	 */
-	if ((device_id == 0x410 || device_id == 0x000) && cpu_id == 0xc230 && SCB_CPUID == 0x411fc231) {
-		/* STM32F103CB: 0x410 (Medium density), 0x411fc231 (Cortex-M3 r1p1) */
-		clock = &rcc_hse_configs[RCC_CLOCK_HSE8_72MHZ];
-	}
-	if (device_id == 0x410 && cpu_id == 0xc230 && SCB_CPUID == 0x412fc231) {
-		/* GD32F103CB: 0x410 (Medium Density), 0x412fc231 (Cortex-M3 r2p1) */
-		clock = &rcc_hse_config_hse8_96mhz;
-		rcc_periph_clock_disable(RCC_USB);
-		/* Set 96/2=48MHz USB divisor before enabling PLL */
-		rcc_set_usbpre_gd32f30x(RCC_CFGR_USBPRE_PLL_CLK_DIV2);
-	}
-	if (device_id == 0x414 && cpu_id == 0xc240 && SCB_CPUID == 0x410fc241) {
-		/* GD32F303CC: 0x414 (High density) 0x410fc241 (Cortex-M4F r0p1) */
-		clock = &rcc_hse_config_hse8_120mhz;
-		rcc_periph_clock_disable(RCC_USB);
-		/* Set 120/2.5=48MHz USB divisor before enabling PLL */
-		rcc_set_usbpre_gd32f30x(RCC_CFGR_USBPRE_PLL_CLK_DIV2_5);
-	}
-
-	/* Enable PLL */
-	rcc_clock_setup_pll(clock);
+	/* Detect which chip we're running on, and set Hclk as legally fast as possible */
+	platform_detect_variant();
 
 	gpio_set_mode(TMS_PORT, GPIO_MODE_OUTPUT_10_MHZ, GPIO_CNF_INPUT_FLOAT, TMS_PIN);
 	gpio_set_mode(TCK_PORT, GPIO_MODE_OUTPUT_10_MHZ, GPIO_CNF_INPUT_FLOAT, TCK_PIN);
