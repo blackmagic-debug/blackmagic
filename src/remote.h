@@ -303,6 +303,7 @@
  * need new bits as they are already covered). We will co-ordinate with you in making sure the bit
  * is unique when going through the PR'ing process.
  */
+#define REMOTE_JTAG_ENSURE_IDLE 'I'
 
 /* ADIv5 accleration protocol elements */
 #define REMOTE_ADIV5_PACKET     'A'
