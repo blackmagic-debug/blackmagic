@@ -253,6 +253,8 @@
 #define REMOTE_ACCEL_RISCV     (1U << 2U)
 #define REMOTE_ACCEL_ADIV6     (1U << 3U)
 
+#define REMOTE_JTAG_ENSURE_IDLE 'I'
+
 /* ADIv5 accleration protocol elements */
 #define REMOTE_ADIV5_PACKET     'A'
 #define REMOTE_DP_READ          'd'

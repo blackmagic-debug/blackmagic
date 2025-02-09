@@ -192,6 +192,7 @@ static void remote_packet_process_jtag(const char *const packet, const size_t pa
 		remote_dp.error = adiv5_jtag_clear_error;
 		remote_dp.low_access = adiv5_jtag_raw_access;
 		remote_dp.abort = adiv5_jtag_abort;
+		remote_dp.ensure_idle = adiv5_jtag_ensure_idle;
 		jtagtap_init();
 		remote_respond(REMOTE_RESP_OK, 0);
 		break;
@@ -248,6 +249,11 @@ static void remote_packet_process_jtag(const char *const packet, const size_t pa
 		}
 		break;
 	}
+
+	case REMOTE_JTAG_ENSURE_IDLE: /* JI = re-cycle IR after indirect resets */
+		remote_dp.ensure_idle(&remote_dp);
+		remote_respond(REMOTE_RESP_OK, 0);
+		break;
 
 	default:
 		remote_respond(REMOTE_RESP_ERR, REMOTE_ERROR_UNRECOGNISED);
