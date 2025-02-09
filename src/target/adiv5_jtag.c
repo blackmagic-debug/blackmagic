@@ -41,17 +41,6 @@
 #define IR_DPACC 0xaU
 #define IR_APACC 0xbU
 
-static void adiv5_jtag_ensure_idle(adiv5_debug_port_s *dp)
-{
-	/*
-	 * On devices where nRST pulls TRST, the JTAG-DP's IR is reset
-	 * from DPACC/APACC to IDCODE. We want BYPASS in case of daisy-chaining.
-	 */
-	jtag_devs[dp->dev_index].current_ir = 0xffU;
-	/* Go from TLR to RTI. */
-	jtagtap_return_idle(1);
-}
-
 void adiv5_jtag_dp_handler(const uint8_t dev_index)
 {
 	adiv5_debug_port_s *dp = calloc(1, sizeof(*dp));
@@ -186,4 +175,15 @@ void adiv5_jtag_abort(adiv5_debug_port_s *dp, uint32_t abort)
 	uint64_t request = (uint64_t)abort << 3U;
 	jtag_dev_write_ir(dp->dev_index, IR_ABORT);
 	jtag_dev_shift_dr(dp->dev_index, NULL, (const uint8_t *)&request, 35);
+}
+
+void adiv5_jtag_ensure_idle(adiv5_debug_port_s *dp)
+{
+	/*
+	 * On devices where nRST pulls TRST, the JTAG-DP's IR is reset
+	 * from DPACC/APACC to IDCODE. We want BYPASS in case of daisy-chaining.
+	 */
+	jtag_devs[dp->dev_index].current_ir = 0xffU;
+	/* Go from TLR to RTI. */
+	jtagtap_return_idle(1);
 }
