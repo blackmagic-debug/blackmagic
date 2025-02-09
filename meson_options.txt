@@ -9,6 +9,7 @@ option(
 		'blackpill-f401ce',
 		'blackpill-f411ce',
 		'bluepill',
+		'bluepillplus',
 		'bmp-v3',
 		'ctxlink',
 		'f072',
