@@ -666,7 +666,7 @@ static bool cmd_swo_enable(int argc, const char **argv)
 #endif
 #if SWO_ENCODING == 2 || SWO_ENCODING == 3
 	/* Handle the optional baud rate argument if present */
-	if (capture_mode == swo_nrz_uart && argc > decode_arg && argv[decode_arg][0] >= '0' && argv[decode_arg][0] <= '9') {
+	if (argc > decode_arg && argv[decode_arg][0] >= '0' && argv[decode_arg][0] <= '9') {
 		baudrate = strtoul(argv[decode_arg], NULL, 0);
 		if (baudrate == 0U)
 			baudrate = SWO_DEFAULT_BAUD;
