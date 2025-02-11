@@ -143,7 +143,7 @@ void platform_init(void)
 	OTG_FS_GCCFG &= ~(OTG_GCCFG_VBUSBSEN | OTG_GCCFG_VBUSASEN);
 
 	/* By default, do not drive the SWD bus too fast. */
-	platform_max_frequency_set(3000000);
+	platform_max_frequency_set(2000000);
 }
 
 void platform_nrst_set_val(bool assert)
