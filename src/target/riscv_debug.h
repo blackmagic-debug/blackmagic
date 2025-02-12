@@ -41,10 +41,16 @@
 
 typedef enum riscv_debug_version {
 	RISCV_DEBUG_UNKNOWN,
+	/* No Debug Module [Interface] present */
 	RISCV_DEBUG_UNIMPL,
+	/* Debug Module [Interface] conforming to version 0.11 of the spec */
 	RISCV_DEBUG_0_11,
+	/* Debug Module [Interface] conforming to version 0.13 of the spec */
 	RISCV_DEBUG_0_13,
+	/* Debug Module [Interface] conforming to version 1.0 of the spec */
 	RISCV_DEBUG_1_0,
+	/* Debug Module [Interface] not conforming to any available version of the spec */
+	RISCV_DEBUG_NONSTANDARD,
 } riscv_debug_version_e;
 
 /* This enum describes the Hart status (eg after a CSR read/write) */
@@ -157,6 +163,16 @@ typedef struct riscv_hart {
 } riscv_hart_s;
 
 #define RV_STATUS_VERSION_MASK 0x0000000fU
+
+#define RV_DMI_OP_NOOP     0U /* Ignore data and address */
+#define RV_DMI_OP_READ     1U /* Read data from address */
+#define RV_DMI_OP_WRITE    2U /* Write data to address */
+#define RV_DMI_OP_RESERVED 3U /* Reserved */
+
+#define RV_DMI_SUCCESS  0U /* The previous operation completed successfully */
+#define RV_DMI_RESERVED 1U /* Reserved */
+#define RV_DMI_FAILURE  2U /* A previous operation failed */
+#define RV_DMI_TOO_SOON 3U /* An operation was attempted while a DMI request is still in progress */
 
 #define RV_DM_DATA0             0x04U
 #define RV_DM_DATA1             0x05U
