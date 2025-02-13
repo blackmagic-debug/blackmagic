@@ -31,6 +31,7 @@
 
 #define PLATFORM_HAS_TRACESWO
 #define PLATFORM_HAS_POWER_SWITCH
+#define PLATFORM_HAS_WIFI
 
 #define PLATFORM_IDENT "(ctxLink) "
 
@@ -300,5 +301,5 @@ const char *platform_battery_voltage(void);
 bool platform_check_battery_voltage(void);
 bool platform_configure_uart(char *configuration_string);
 void platform_read_adc(void);
-
+bool platform_wifi_state(int argc, const char **argv);
 #endif /* PLATFORMS_CTXLINK_PLATFORM_H */

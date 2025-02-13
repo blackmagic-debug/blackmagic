@@ -156,6 +156,13 @@ int platform_hwversion(void)
 	return 0;
 }
 
+bool platform_wifi_state(int argc, const char **argv)
+{
+	if (argc == 1) {
+	}
+	return true;
+}
+
 void platform_init(void)
 {
 	/* Enable GPIO peripherals */

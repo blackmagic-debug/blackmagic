@@ -70,6 +70,9 @@ static bool cmd_target_power(target_s *target, int argc, const char **argv);
 #ifdef PLATFORM_HAS_BATTERY
 static bool cmd_target_battery(target_s *t, int argc, const char **argv);
 #endif
+#ifdef PLATFORM_HAS_WIFI
+static bool cmd_wifi(target_s *t, int argc, const char **argv);
+#endif
 #ifdef PLATFORM_HAS_TRACESWO
 static bool cmd_swo(target_s *target, int argc, const char **argv);
 #endif
@@ -108,6 +111,9 @@ const command_s cmd_list[] = {
 #endif
 #ifdef PLATFORM_HAS_BATTERY
 	{"battery", cmd_target_battery, "Reads the battery state"},
+#endif
+#ifdef PLATFORM_HAS_WIFI
+	{"wifi", cmd_wifi, "Reads the wi-fi state"},
 #endif
 #ifdef ENABLE_RTT
 	{"rtt", cmd_rtt,
@@ -541,6 +547,14 @@ static bool cmd_target_battery(target_s *t, int argc, const char **argv)
 	return true;
 }
 #endif
+#ifdef PLATFORM_HAS_WIFI
+static bool cmd_wifi(target_s *t, int argc, const char **argv)
+{
+	(void)t;
+	return platform_wifi_state(argc, argv);
+}
+#endif
+
 #ifdef ENABLE_RTT
 static const char *on_or_off(const bool value)
 {
