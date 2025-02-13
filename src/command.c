@@ -551,7 +551,8 @@ static bool cmd_target_battery(target_s *t, int argc, const char **argv)
 static bool cmd_wifi(target_s *t, int argc, const char **argv)
 {
 	(void)t;
-	return platform_wifi_state(argc, argv);
+	gdb_out(platform_wifi_state(argc, argv));
+	return true;
 }
 #endif
 

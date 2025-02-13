@@ -156,11 +156,15 @@ int platform_hwversion(void)
 	return 0;
 }
 
-bool platform_wifi_state(int argc, const char **argv)
+const char *platform_wifi_state(int argc, const char **argv)
 {
+	(void)argv;
 	if (argc == 1) {
+		static char parameters[64] = {0};
+		wifi_get_ip_address(parameters, sizeof(parameters));
+		return parameters;
 	}
-	return true;
+	return "Unknown";
 }
 
 void platform_init(void)

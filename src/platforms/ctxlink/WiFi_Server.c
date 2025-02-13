@@ -651,6 +651,17 @@ bool is_ip_address_assigned(void)
 	return res;
 }
 
+void wifi_get_ip_address(char *buffer, uint32_t size)
+{
+	if (g_wifi_connected)
+		snprintf(buffer, size, "%d.%d.%d.%d\n", conn_info.acSSID[3], conn_info.acSSID[2], conn_info.acSSID[1],
+			conn_info.acSSID[0]);
+	else {
+		memset(buffer, 0x00, size - 1);
+		memcpy(buffer, "Not connected\n", strlen("Not connected"));
+	}
+}
+
 void handle_socket_bind_event(SOCKET *sock, bool *running_state)
 {
 	if (m2m_wifi_get_socket_event_data()->bindStatus == 0)
