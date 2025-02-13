@@ -161,11 +161,10 @@ static char parameters[128] = {0};
 const char *platform_wifi_state(int argc, const char **argv)
 {
 	(void)argv;
-	if (argc == 1) {
-		wifi_get_ip_address(parameters, sizeof(parameters));
-		return parameters;
-	}
-	return "Unknown";
+	if (argc > 1)
+		wifi_connect(argc, argv, parameters, sizeof(parameters));
+	wifi_get_ip_address(parameters, sizeof(parameters));
+	return parameters;
 }
 
 void platform_init(void)
