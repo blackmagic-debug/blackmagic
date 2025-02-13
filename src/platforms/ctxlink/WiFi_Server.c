@@ -154,7 +154,8 @@ typedef enum wi_fi_app_states {
 	app_state_error,                         ///< 12
 	app_state_check_default_connections,     ///< 13
 	app_state_spin,                          ///< 14
-	app_state_wait_connection_info           ///< 15
+	app_state_wait_connection_info,          ///< 15
+	app_state_wait_for_disconnect            ///< 16
 } app_states_e;
 
 app_states_e app_state; ///< State of the application
@@ -1326,6 +1327,14 @@ void app_task(void)
 		}
 		break;
 	}
+	case app_state_wait_for_disconnect: {
+		if (!is_wifi_connected()) {
+			app_state = app_state_spin;
+			mode_task_state = mode_led_idle_state;
+			led_mode = mode_led_idle;
+		}
+		break;
+	}
 	case app_state_wait_wifi_disconnect_for_wps: {
 		if (!is_wifi_connected()) {
 			// enter WPS mode
@@ -1367,7 +1376,6 @@ void app_task(void)
 			app_state = app_state_spin;
 		}
 		break;
-		;
 	}
 
 	case app_state_error: {
