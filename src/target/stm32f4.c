@@ -423,17 +423,21 @@ static bool stm32f4_attach(target_s *const target)
 	/* And rebuild the RAM map */
 	bool use_dual_bank = !is_f7 && dual_bank;
 	if (is_f7) {
-		target_add_ram32(target, 0x00000000, 0x4000); /* 16kiB ITCM RAM */
-		if (target->part_id == ID_STM32F72X) {
-			target_add_ram32(target, 0x20000000, 0x10000); /* 64kiB DTCM RAM */
-			target_add_ram32(target, 0x20010000, 0x30000); /* 192kiB SRAM1/2 (176+16) */
-		} else if (target->part_id == ID_STM32F74X) {
-			target_add_ram32(target, 0x20000000, 0x10000); /* 64kiB DTCM RAM */
-			target_add_ram32(target, 0x20010000, 0x40000); /* 256kiB SRAM1/2 (240+16) */
-		} else if (target->part_id == ID_STM32F76X) {
-			target_add_ram32(target, 0x20000000, 0x20000); /* 128kiB DTCM RAM */
-			target_add_ram32(target, 0x20020000, 0x60000); /* 384kiB SRAM1/2 (368+16) */
+		uint32_t dtcm_size = 64U * 1024U; /* 64kiB DTCM RAM */
+		uint32_t ahbsram_size = 16U * 1024U;
+		if (target->part_id == ID_STM32F72X)
+			ahbsram_size = (176U + 16U) * 1024U; /* 192kiB SRAM1/2 */
+		else if (target->part_id == ID_STM32F74X)
+			ahbsram_size = (240U + 16U) * 1024U; /* 256kiB SRAM1/2 */
+		else if (target->part_id == ID_STM32F76X) {
+			dtcm_size = 128U * 1024U;            /* 128kiB DTCM RAM */
+			ahbsram_size = (368U + 16U) * 1024U; /* 384kiB SRAM1/2 */
 		}
+		target_add_ram32(target, 0x00000000U, 0x4000U); /* 16kiB ITCM RAM */
+		/* On STM32F7, DTCM and AHB SRAM are contiguous */
+		target_add_ram32(target, 0x20000000U, dtcm_size);
+		target_add_ram32(target, 0x20000000U + dtcm_size, ahbsram_size);
+
 		if (dual_bank) {
 			const uint32_t option_ctrl = target_mem32_read32(target, FLASH_OPTCR);
 			use_dual_bank = !(option_ctrl & FLASH_OPTCR_nDBANK);
