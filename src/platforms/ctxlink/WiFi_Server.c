@@ -103,6 +103,7 @@ static bool dns_resolved = false;             ///< True if DNS resolved
 static bool gdb_client_connected = false;     ///< True if client connected
 static bool gdb_server_is_running = false;    ///< True if server is running
 static bool new_gdb_client_connected = false; ///< True if new client connected
+static bool connection_info_received = false; ///< True when all connection information is received
 
 static SOCKET gdb_server_socket = SOCK_ERR_INVALID; ///< The main gdb server socket
 static SOCKET gdb_client_socket = SOCK_ERR_INVALID; ///< The gdb client socket
@@ -152,7 +153,8 @@ typedef enum wi_fi_app_states {
 	app_state_wait_for_server,               ///< 11
 	app_state_error,                         ///< 12
 	app_state_check_default_connections,     ///< 13
-	app_state_spin                           ///< 14
+	app_state_spin,                          ///< 14
+	app_state_wait_connection_info           ///< 15
 } app_states_e;
 
 app_states_e app_state; ///< State of the application
@@ -536,6 +538,7 @@ static void app_wifi_callback(uint8_t msg_type, void *msg)
 	case M2M_WIFI_CONN_INFO_RESPONSE_EVENT: {
 		tstrM2MConnInfo *connection_info = (tstrM2MConnInfo *)msg;
 		memcpy(&conn_info, connection_info, sizeof(tstrM2MConnInfo));
+		connection_info_received = true;
 		break;
 	}
 	case M2M_WIFI_CONN_STATE_CHANGED_EVENT: {
@@ -1350,8 +1353,18 @@ void app_task(void)
 	}
 	case app_state_wait_for_server: {
 		if (is_gdb_server_running())
-			app_state = app_state_spin;
+			if (is_ip_address_assigned())
+				app_state = app_state_wait_connection_info;
 		break;
+	}
+
+	case app_state_wait_connection_info: {
+		if (connection_info_received) {
+			connection_info_received = false;
+			app_state = app_state_spin;
+		}
+		break;
+		;
 	}
 
 	case app_state_error: {
