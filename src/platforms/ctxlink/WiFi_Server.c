@@ -665,7 +665,7 @@ bool is_ip_address_assigned(void)
 void wifi_get_ip_address(char *buffer, uint32_t size)
 {
 	char local_buffer[64] = {0};
-	memset(buffer, 0x00, size - 1);
+	memset(buffer, 0x00, size);
 	if (g_wifi_connected) {
 		snprintf(local_buffer, sizeof(local_buffer), "SSID = %s\n", conn_info.acSSID);
 		strncpy(buffer, local_buffer, size);
@@ -680,9 +680,25 @@ void wifi_get_ip_address(char *buffer, uint32_t size)
 }
 
 //
+// Wait for app_state to spin with timeout
+//
+void app_task_wait_spin(void)
+{
+	uint32_t wait_timeout = 2000U;
+	while (true) {
+		platform_tasks();
+		if (app_state == app_state_spin)
+			break;
+		platform_delay(1U);
+		if (wait_timeout-- == 0U)
+			break;
+	}
+}
+
+//
 // Using the passed arguments, attempt to connect to a Wi-Fi AP
 //
-void wifi_connect(int argc, const char **argv, char *buffer, uint32_t size)
+void wifi_connect(int argc, const char **argv, char *buffer, uint32_t size, bool save)
 {
 	char ssid[64] = {0};
 	char pass_phrase[64] = {0};
@@ -734,8 +750,6 @@ void wifi_connect(int argc, const char **argv, char *buffer, uint32_t size)
 	if (ssid[0] != 0x00 && pass_phrase[0] != 0x00) {
 		//
 		// Force app_task into wait for wifi connect
-		//
-		// TODO Does this need to check current state is spin?
 		//
 		app_state = app_state_wait_for_wifi_connect;
 		m2m_wifi_connect_sc(ssid, strlen(ssid), M2M_WIFI_SEC_WPA_PSK, &pass_phrase, M2M_WIFI_CH_ALL);
@@ -957,7 +971,7 @@ static void app_socket_callback(SOCKET sock, uint8_t msg_type, void *msg)
 				// Copy data to circular input buffer
 				//
 				for (int16_t i = 0; local_count != 0;
-					 i++, local_count--, input_index = (input_index + 1) % INPUT_BUFFER_SIZE) {
+					i++, local_count--, input_index = (input_index + 1) % INPUT_BUFFER_SIZE) {
 					input_buffer[input_index] = local_buffer[i];
 				}
 				buffer_count += recv_data->bufSize;
