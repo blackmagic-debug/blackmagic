@@ -1203,6 +1203,11 @@ void app_task(void)
 			//
 			m2m_wifi_set_sleep_mode(M2M_WIFI_PS_MANUAL, 1);
 			//
+			// Get the WINC1500 firmware version
+			//
+			tstrM2mRev info = {0};
+			nm_get_firmware_info(&info);
+			//
 			// Move to reading the MAC address state
 			//
 			app_state = app_state_read_mac_address; //app_state_connect_to_wifi;
