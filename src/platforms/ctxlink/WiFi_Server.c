@@ -741,11 +741,14 @@ void wifi_connect(int argc, const char **argv, char *buffer, uint32_t size)
 		//
 		// For now lets spin here calling app_tasks
 		//
+		uint32_t wait_timeout = 2000U;
 		while (1) {
 			platform_tasks();
-			if (app_state == app_state_spin) {
+			if (app_state == app_state_spin)
 				break;
-			}
+			platform_delay(1);
+			if (wait_timeout-- == 0)
+				break;
 		}
 	}
 }
