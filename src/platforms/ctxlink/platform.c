@@ -160,30 +160,9 @@ static char parameters[128] = {0};
 
 const char *platform_wifi_state(int argc, const char **argv)
 {
-	(void)argv;
 	memset(parameters, 0x00, sizeof(parameters));
 	if (argc > 1) {
-		bool forget = false;
-		bool save = false;
-		//
-		// Check for an option
-		//
-		if (argv[1][0] == '-') {
-			//
-			// two options are support:
-			//	-forget <- forget the current Wi-Fi connection
-			//  -save <- Save the parameters in NVM (Passed to the wifi_connect call)
-			//
-			if (argv[1][1] == 's')
-				save = true;
-			else if (argv[1][1] == 'f')
-				forget = true;
-		}
-		if (forget)
-			wifi_disconnect() ;
-		else
-			wifi_connect(argc, argv, parameters, sizeof(parameters), save);
-
+		wifi_connect(argc, argv, parameters, sizeof(parameters));
 		app_task_wait_spin();
 	}
 	wifi_get_ip_address(parameters, sizeof(parameters));

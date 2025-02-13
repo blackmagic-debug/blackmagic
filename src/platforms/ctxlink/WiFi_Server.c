@@ -698,7 +698,7 @@ void app_task_wait_spin(void)
 //
 // Using the passed arguments, attempt to connect to a Wi-Fi AP
 //
-void wifi_connect(int argc, const char **argv, char *buffer, uint32_t size, bool save)
+void wifi_connect(size_t argc, const char **argv, char *buffer, uint32_t size)
 {
 	char ssid[64] = {0};
 	char pass_phrase[64] = {0};
@@ -724,7 +724,7 @@ void wifi_connect(int argc, const char **argv, char *buffer, uint32_t size, bool
 	// The remaining arguments are then concatenated into the passphrase with
 	// an space added between them.
 	//
-	for (int loop = 1; loop < argc; loop++) {
+	for (size_t loop = 1; loop < argc; loop++) {
 		delimeter = strchr(argv[loop], ',');
 		if (delimeter == NULL) {
 			if (add_space) {
@@ -767,19 +767,16 @@ void wifi_connect(int argc, const char **argv, char *buffer, uint32_t size, bool
 		//
 		app_state = app_state_wait_for_wifi_connect;
 		m2m_wifi_connect_sc(ssid, strlen(ssid), M2M_WIFI_SEC_WPA_PSK, &pass_phrase, M2M_WIFI_CH_ALL);
-		//
-		// For now lets spin here calling app_tasks
-		//
-		uint32_t wait_timeout = 2000U;
-		while (1) {
-			platform_tasks();
-			if (app_state == app_state_spin)
-				break;
-			platform_delay(1);
-			if (wait_timeout-- == 0)
-				break;
-		}
 	}
+}
+
+//
+// Disconnect from network
+//
+void wifi_disconnect(void)
+{
+	app_state = app_state_wait_for_disconnect;
+	m2m_wifi_disconnect();
 }
 
 void handle_socket_bind_event(SOCKET *sock, bool *running_state)

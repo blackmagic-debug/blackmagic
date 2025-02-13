@@ -46,7 +46,7 @@ uint8_t wifi_get_next(void);
 uint8_t wifi_get_next_to(uint32_t timeout);
 
 void wifi_get_ip_address(char *buffer, uint32_t size);
-void wifi_connect(int argc, const char **argv, char *buffer, uint32_t size, bool save);
+void wifi_connect(size_t argc, const char **argv, char *buffer, uint32_t size);
 void app_task_wait_spin(void);
 void wifi_disconnect(void);
 #ifdef __cplusplus
