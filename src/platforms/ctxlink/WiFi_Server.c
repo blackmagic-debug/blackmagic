@@ -705,6 +705,7 @@ void wifi_connect(int argc, const char **argv, char *buffer, uint32_t size, bool
 	char *output_buffer = ssid;
 	char *delimeter;
 	bool add_space = false;
+	uint32_t transfer_count = 0;
 	memset(buffer, 0x00, size);
 	//
 	// Iterate over the arguments received to build the SSID and passphrase
@@ -731,8 +732,13 @@ void wifi_connect(int argc, const char **argv, char *buffer, uint32_t size, bool
 				add_space = true;
 			}
 			strcat(output_buffer, argv[loop]); // No comma, just use the argument
+			transfer_count++;
 		} else {
-			strcat(output_buffer, " ");
+			if (transfer_count) {
+				transfer_count = 0;
+				strcat(output_buffer, " ");
+			} else
+				transfer_count++;
 
 			*delimeter = 0x00; // Null terminate string before comma
 			strcat(output_buffer, argv[loop]);
@@ -740,14 +746,22 @@ void wifi_connect(int argc, const char **argv, char *buffer, uint32_t size, bool
 			// Start the passphrase with the remaining string
 			//
 			output_buffer = pass_phrase;
-			add_space = false;
+			add_space = true;
 			strcat(output_buffer, delimeter + 1);
 		}
 	}
 	//
 	// If we have both SSID and Passphrase attempt to connect
 	//
-	if (ssid[0] != 0x00 && pass_phrase[0] != 0x00) {
+	if (ssid[0] != '\0' && pass_phrase[0] != '\0') {
+		if (is_wifi_connected()) {
+			//
+			// Issue a disconnect first
+			//
+			app_state = app_state_wait_for_disconnect;
+			wifi_disconnect();
+			app_task_wait_spin();
+		}
 		//
 		// Force app_task into wait for wifi connect
 		//
@@ -1383,9 +1397,8 @@ void app_task(void)
 		break;
 	}
 	case app_state_wait_for_server: {
-		if (is_gdb_server_running())
-			if (is_ip_address_assigned())
-				app_state = app_state_wait_connection_info;
+		if (is_gdb_server_running() && is_ip_address_assigned())
+			app_state = app_state_wait_connection_info;
 		break;
 	}
 
