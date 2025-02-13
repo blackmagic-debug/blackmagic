@@ -123,7 +123,7 @@ static bool swo_trace_client_connected = false;
 static bool swo_trace_server_is_running = false;
 static bool new_swo_trace_client_conncted = false;
 
-static tstrM2MIPConfig ip_configuration;
+tstrM2MConnInfo conn_info;
 
 #define SWO_TRACE_INPUT_BUFFER_SIZE 32
 static uint8_t local_swo_trace_buffer[SWO_TRACE_INPUT_BUFFER_SIZE] = {0}; ///< The local buffer[ input buffer size]
@@ -533,6 +533,11 @@ static void app_wifi_callback(uint8_t msg_type, void *msg)
 		break;
 	}
 
+	case M2M_WIFI_CONN_INFO_RESPONSE_EVENT: {
+		tstrM2MConnInfo *connection_info = (tstrM2MConnInfo *)msg;
+		memcpy(&conn_info, connection_info, sizeof(tstrM2MConnInfo));
+		break;
+	}
 	case M2M_WIFI_CONN_STATE_CHANGED_EVENT: {
 		tstrM2mWifiStateChanged *wifi_state = (tstrM2mWifiStateChanged *)msg;
 		if (wifi_state->u8CurrState == M2M_WIFI_CONNECTED) {
@@ -563,7 +568,10 @@ static void app_wifi_callback(uint8_t msg_type, void *msg)
 		tstrM2MIPConfig *ip_config = (tstrM2MIPConfig *)msg;
 		if (ip_config != NULL) {
 			ip_address_assigned = true;
-			memcpy(&ip_configuration, ip_config, sizeof(tstrM2MIPConfig));
+			//
+			// Request the connection info, user may request it
+			//
+			m2m_wifi_get_connection_info();
 		} else
 			ip_address_assigned = false;
 		break;
@@ -604,7 +612,6 @@ static void app_wifi_callback(uint8_t msg_type, void *msg)
 		break;
 	}
 		/* Unused states. Can be implemented if needed  */
-	case M2M_WIFI_CONN_INFO_RESPONSE_EVENT:
 	case M2M_WIFI_SCAN_DONE_EVENT:
 	case M2M_WIFI_SCAN_RESULT_EVENT:
 	case M2M_WIFI_SYS_TIME_EVENT:
