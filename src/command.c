@@ -113,7 +113,7 @@ const command_s cmd_list[] = {
 	{"battery", cmd_target_battery, "Reads the battery state"},
 #endif
 #ifdef PLATFORM_HAS_WIFI
-	{"wifi", cmd_wifi, "Read/Set Wi-Fi connection [AP name, passphrase]"},
+	{"wifi", cmd_wifi, "Show/Set Wi-Fi connection [-forget] [AP name,passphrase]"},
 #endif
 #ifdef ENABLE_RTT
 	{"rtt", cmd_rtt,
