@@ -521,13 +521,20 @@ static bool stm32f4_attach(target_s *const target)
 		 */
 		const uint32_t remaining_bank_length = stm32f4_remaining_bank_length(bank_length, 0x20000);
 		/* 128kiB in small sectors */
-		if (is_f7)
-			stm32f4_add_flash(target, ITCM_BASE, 0x10000, 0x4000, 0, split);
 		stm32f4_add_flash(target, AXIM_BASE, 0x10000, 0x4000, 0, split);
 		if (bank_length > 0x10000U) {
-			stm32f4_add_flash(target, 0x8010000, 0x10000, 0x10000, 4, split);
+			stm32f4_add_flash(target, AXIM_BASE + 0x10000U, 0x10000, 0x10000, 4, split);
 			if (remaining_bank_length)
-				stm32f4_add_flash(target, 0x8020000, remaining_bank_length, 0x20000, 5, split);
+				stm32f4_add_flash(target, AXIM_BASE + 0x20000U, remaining_bank_length, 0x20000, 5, split);
+		}
+		/* Declare ITCM alias, too */
+		if (is_f7) {
+			stm32f4_add_flash(target, ITCM_BASE, 0x10000, 0x4000, 0, split);
+			if (bank_length > 0x10000U) {
+				stm32f4_add_flash(target, ITCM_BASE + 0x10000U, 0x10000, 0x10000, 4, split);
+				if (remaining_bank_length)
+					stm32f4_add_flash(target, ITCM_BASE + 0x20000U, remaining_bank_length, 0x20000, 5, split);
+			}
 		}
 		/* If the device has an enabled second bank, we better deal with that too. */
 		if (use_dual_bank) {
