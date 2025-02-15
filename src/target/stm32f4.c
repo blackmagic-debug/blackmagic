@@ -531,11 +531,11 @@ static bool stm32f4_attach(target_s *const target)
 		}
 		/* If the device has an enabled second bank, we better deal with that too. */
 		if (use_dual_bank) {
-			if (is_f7) {
+			if (is_f7) { /* F76x in "dual_bank" mode loses "large_sectors" */
 				const uint32_t bank1_base = ITCM_BASE + bank_length;
-				stm32f4_add_flash(target, bank1_base, 0x10000, 0x4000, 0, split);
-				stm32f4_add_flash(target, bank1_base + 0x10000U, 0x10000, 0x10000, 4, split);
-				stm32f4_add_flash(target, bank1_base + 0x20000U, remaining_bank_length, 0x20000, 5, split);
+				stm32f4_add_flash(target, bank1_base, 0x10000, 0x4000, 16, split);
+				stm32f4_add_flash(target, bank1_base + 0x10000U, 0x10000, 0x10000, 20, split);
+				stm32f4_add_flash(target, bank1_base + 0x20000U, remaining_bank_length, 0x20000, 21, split);
 			}
 			const uint32_t bank2_base = AXIM_BASE + bank_length;
 			stm32f4_add_flash(target, bank2_base, 0x10000, 0x4000, 16, split);
