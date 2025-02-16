@@ -227,6 +227,15 @@ You should now see the resulting binaries in `build`, in this case:
 
 These are the binary files you will use to flash to your probe.
 
+#### Building the bootloader
+
+If your probe hardware does not already have a bootloader on it, after building firmware as described above
+you can build the appropriate bootloader with the following command:
+
+```sh
+meson compile -C build boot-bin
+```
+
 ##### region `rom' overflowed
 
 It may happen, while working with non default configurations or the project's latest version from Git,
