@@ -208,6 +208,15 @@ static void usbdfu_getstatus_complete(usbd_device *dev, usb_setup_data_s *req)
 	}
 }
 
+static void usbdfu_detach_complete(usbd_device *const dev, usb_setup_data_s *const req)
+{
+	(void)dev;
+	(void)req;
+
+	/* Delegate to platform-specific impls */
+	dfu_detach();
+}
+
 static usbd_request_return_codes_e usbdfu_control_request(usbd_device *dev, usb_setup_data_s *req, uint8_t **buf,
 	uint16_t *len, void (**complete)(usbd_device *dev, usb_setup_data_s *req))
 {
@@ -279,6 +288,10 @@ static usbd_request_return_codes_e usbdfu_control_request(usbd_device *dev, usb_
 		/* Return state with no state transition */
 		data[0] = usbdfu_state;
 		*len = 1;
+		return USBD_REQ_HANDLED;
+	case DFU_DETACH:
+		/* Accept this request and schedule a reboot */
+		*complete = usbdfu_detach_complete;
 		return USBD_REQ_HANDLED;
 	}
 
