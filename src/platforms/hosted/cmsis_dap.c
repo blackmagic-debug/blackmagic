@@ -222,9 +222,9 @@ static bool dap_init_hid(void)
 
 	/*
 	 * Base the report length information for the device on the max packet length from its descriptors.
-	 * Add 1 to account for HIDAPI's need to prefix with a report type byte. Limit to at most 512 bytes.
+	 * Add 1 to account for HIDAPI's need to prefix with a report type byte. Limit to at most 513 bytes.
 	 */
-	dap_packet_size = MIN(bmda_probe_info.max_packet_length + 1U, 512U);
+	dap_packet_size = MIN(bmda_probe_info.max_packet_length + 1U, 513U);
 
 	/* Handle the NXP LPC11U3x CMSIS-DAP v1.0.7 implementation needing a 64 byte report length */
 	if (bmda_probe_info.vid == 0x1fc9U && bmda_probe_info.pid == 0x0132U)
