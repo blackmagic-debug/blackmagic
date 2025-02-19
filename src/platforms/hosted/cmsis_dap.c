@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2013-2019, Alex Taradov <alex@taradov.com>
- * Copyright (C) 2023-2024 1BitSquared <info@1bitsquared.com>
+ * Copyright (C) 2023-2025 1BitSquared <info@1bitsquared.com>
  * Modified by Rachel Mant <git@dragonmux.network>
  * All rights reserved.
  *
@@ -468,37 +468,73 @@ void dap_exit_function(void)
 	}
 }
 
+ssize_t dbg_dap_cmd_hid_io(const uint8_t *const request_data, const size_t request_length, uint8_t *const response_data,
+	const size_t response_length)
+{
+	/* Make the unused part of the request buffer all 0xff */
+	memset(buffer + request_length + 1U, 0xff, dap_packet_size - (request_length + 1U));
+	/* Then copy in the report ID and request data */
+	buffer[0] = 0x00U;
+	memcpy(buffer + 1U, request_data, request_length);
+
+	/* Send the request to the adaptor, checking for errors */
+	const int result = hid_write(handle, buffer, dap_packet_size);
+	if (result < 0) {
+		DEBUG_ERROR("CMSIS-DAP write error: %ls\n", hid_error(handle));
+		return result;
+	}
+
+	/* Now try and read back the response */
+	const int response = hid_read_timeout(handle, buffer, dap_packet_size - 1U, 1000);
+	/* hid_read_timeout returns -1, 0, or the number of bytes read */
+	if (response < 0) {
+		DEBUG_ERROR("CMSIS-DAP read error: %ls\n", hid_error(handle));
+		/* As the read failed, return -1 here */
+		return result;
+	} else if (response == 0) {
+		DEBUG_ERROR("CMSIS-DAP read timeout\n");
+		/* Signal timeout with 0 */
+		return response;
+	}
+	/* If we got a good response, copy the data for it to the response buffer */
+	memcpy(response_data, buffer, response_length);
+	return response;
+}
+
 ssize_t dbg_dap_cmd_hid(const uint8_t *const request_data, const size_t request_length, uint8_t *const response_data,
 	const size_t response_length)
 {
-	// Need room to prepend HID Report ID byte
+	/* Need room to prepend HID Report ID byte */
 	if (request_length + 1U > dap_packet_size) {
 		DEBUG_ERROR("Attempted to make over-long request of %zu bytes, max length is %zu\n", request_length + 1U,
 			dap_packet_size);
 		exit(-1);
 	}
 
-	memset(buffer + request_length + 1U, 0xff, dap_packet_size - (request_length + 1U));
-	buffer[0] = 0x00; // Report ID
-	memcpy(buffer + 1, request_data, request_length);
-
-	const int result = hid_write(handle, buffer, dap_packet_size);
-	if (result < 0) {
-		DEBUG_ERROR("CMSIS-DAP write error: %ls\n", hid_error(handle));
-		exit(-1);
-	}
-
-	int response = 0;
-	do {
-		response = hid_read_timeout(handle, response_data, response_length, 1000);
-		if (response < 0) {
-			DEBUG_ERROR("CMSIS-DAP read error: %ls\n", hid_error(handle));
-			exit(-1);
-		} else if (response == 0) {
-			DEBUG_ERROR("CMSIS-DAP read timeout\n");
-			exit(-1);
+	size_t tries = 0U;
+	ssize_t response = 0;
+	/* Try up to 3 times to make the request and get the response */
+	while (response == 0 && tries < 3U) {
+		response = dbg_dap_cmd_hid_io(request_data, request_length, response_data, response_length);
+		++tries;
+		/* If this try succeeded, make sure the data read back was sane */
+		while (response_data[0] != request_data[0]) {
+			/* it was not, so try the read back again */
+			response = hid_read_timeout(handle, buffer, dap_packet_size, 1000);
+			/* hid_read_timeout returns -1, 0, or the number of bytes read */
+			if (response < 0) {
+				DEBUG_ERROR("CMSIS-DAP read error: %ls\n", hid_error(handle));
+				/* As the read failed, return -1 here */
+				return response;
+			} else if (response == 0) {
+				DEBUG_ERROR("CMSIS-DAP read timeout\n");
+				/* Signal timeout with -2 */
+				return -2;
+			}
+			/* If we got a good response, copy the data for it to the response buffer */
+			memcpy(response_data, buffer, response_length);
 		}
-	} while (response_data[0] != request_data[0]);
+	}
 	return response;
 }
 
