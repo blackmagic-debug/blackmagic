@@ -172,37 +172,50 @@ static bool dap_swd_seq_in_parity(uint32_t *const result, const size_t clock_cyc
 static bool dap_write_reg_no_check(const uint16_t addr, const uint32_t data)
 {
 	DEBUG_PROBE("dap_write_reg_no_check %04x <- %08" PRIx32 "\n", addr, data);
-	/* Setup the sequences */
-	dap_swd_sequence_s sequences[5] = {
-		/* Write the 8 byte request */
-		{
-			8U,
-			DAP_SWD_OUT_SEQUENCE,
-			{make_packet_request(ADIV5_LOW_WRITE, addr)},
-		},
-		/* Perform one turn-around cycle then read the 3 bit ACK */
-		{4U, DAP_SWD_IN_SEQUENCE},
-		/* Perform another turnaround cycle */
-		{1U, DAP_SWD_OUT_SEQUENCE, {0}},
-		/* Now write out the 32b of data to send and the 1b of parity */
-		{
-			33U,
-			DAP_SWD_OUT_SEQUENCE,
-			/* The 4 data bytes are filled in below with write_le4() */
-			{0U, 0U, 0U, 0U, calculate_odd_parity(data)},
-		},
-		/* Finished up by performing a sequence of 8 idle bits */
-		{8U, DAP_SWD_OUT_SEQUENCE, {0U}},
-	};
-	write_le4(sequences[3].data, 0, data);
-	/* Now perform the sequences */
-	if (!perform_dap_swd_sequences(sequences, 5U)) {
-		DEBUG_ERROR("dap_write_reg_no_check failed\n");
-		return false;
+	/* Check for writes to TARGETSEL */
+	if (addr == ADIV5_DP_TARGETSEL) {
+		/* Check for the SWD sequence quirk, and fail if it's present */
+		if (dap_quirks & DAP_QUIRK_NO_SWD_SEQUENCE)
+			return false;
+		/* Otherwise, setup the sequences */
+		dap_swd_sequence_s sequences[5] = {
+			/* Write the 8 byte request */
+			{
+				8U,
+				DAP_SWD_OUT_SEQUENCE,
+				{make_packet_request(ADIV5_LOW_WRITE, addr)},
+			},
+			/* Perform one turn-around cycle then read the 3 bit ACK */
+			{4U, DAP_SWD_IN_SEQUENCE},
+			/* Perform another turnaround cycle */
+			{1U, DAP_SWD_OUT_SEQUENCE, {0}},
+			/* Now write out the 32b of data to send and the 1b of parity */
+			{
+				33U,
+				DAP_SWD_OUT_SEQUENCE,
+				/* The 4 data bytes are filled in below with write_le4() */
+				{0U, 0U, 0U, 0U, calculate_odd_parity(data)},
+			},
+			/* Finished up by performing a sequence of 8 idle bits */
+			{8U, DAP_SWD_OUT_SEQUENCE, {0U}},
+		};
+		write_le4(sequences[3].data, 0, data);
+		/* Now perform the sequences */
+		if (!perform_dap_swd_sequences(sequences, 5U)) {
+			DEBUG_ERROR("dap_write_reg_no_check failed\n");
+			return false;
+		}
+		/* Check the ack state */
+		const uint8_t ack = sequences[1].data[0] & 7U;
+		return ack != SWD_ACK_OK;
 	}
-	/* Check the ack state */
-	const uint8_t ack = sequences[1].data[0] & 7U;
-	return ack != SWD_ACK_OK;
+	/* For all other writes, set up a write transfer */
+	const dap_transfer_request_s request = {
+		.request = addr & ~DAP_TRANSFER_RnW,
+		.data = data,
+	};
+	/* Try to perform it and return if it was a success or not */
+	return perform_dap_transfer_swd_unchecked(&request, 1U, NULL, 0U);
 }
 
 static uint32_t dap_read_reg_no_check(const uint16_t addr)
