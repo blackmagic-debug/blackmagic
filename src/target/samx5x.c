@@ -80,6 +80,19 @@ const command_s samx5x_cmd_list[] = {
 	{NULL, NULL, NULL},
 };
 
+/* clang-format off */
+static const uint8_t samx5x_user_page_factory_bits[] = {
+	/* 0     8    16    24    32    40    48    56 */
+	0x00, 0x80, 0xff, 0xc3, 0x00, 0xff, 0x00, 0x80,
+
+	/*64    72    80    88    96   104   112   120 */
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+	/*128  136   144   152 */
+	0xff, 0xff, 0xff, 0xff,
+};
+/* clang-format on */
+
 /* RAM Parameters */
 #define SAMX5X_RAM_START 0x20000000U
 
@@ -581,19 +594,6 @@ static int samx5x_write_user_page(target_s *t, uint8_t *buffer)
 
 static int samx5x_update_user_word(target_s *t, uint32_t addr, uint32_t value, uint32_t *value_written, bool force)
 {
-	/* clang-format off */
-	uint8_t factory_bits[] = {
-		/* 0     8    16    24    32    40    48    56 */
-		0x00, 0x80, 0xff, 0xc3, 0x00, 0xff, 0x00, 0x80,
-
-		/*64    72    80    88    96   104   112   120 */
-		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-
-		/*128  136   144   152 */
-		0xff, 0xff, 0xff, 0xff,
-	};
-	/* clang-format on */
-
 	uint8_t buffer[SAMX5X_PAGE_SIZE];
 	uint32_t current_word;
 
@@ -602,7 +602,7 @@ static int samx5x_update_user_word(target_s *t, uint32_t addr, uint32_t value, u
 
 	uint32_t factory_word = 0;
 	for (size_t i = 0; !force && i < 4U && addr + i < 20U; ++i)
-		factory_word |= (uint32_t)factory_bits[addr + i] << (i * 8U);
+		factory_word |= (uint32_t)samx5x_user_page_factory_bits[addr + i] << (i * 8U);
 
 	const uint32_t new_word = (current_word & factory_word) | (value & ~factory_word);
 	if (value_written != NULL)
