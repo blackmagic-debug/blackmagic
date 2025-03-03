@@ -636,9 +636,6 @@ static bool samx5x_user_page_write(target_flash_s *f, target_addr_t dest, const 
 
 	target_s *t = f->t;
 	uint8_t buffer[SAMX5X_PAGE_SIZE];
-	uint32_t current_word;
-	uint32_t value;
-	uint32_t factory_mask;
 	bool changed = false;
 
 	DEBUG_INFO("User page write addr=0x%08" PRIx32 " len=0x%08" PRIx32 "\n", dest, (uint32_t)len);
@@ -647,6 +644,9 @@ static bool samx5x_user_page_write(target_flash_s *f, target_addr_t dest, const 
 
 	for (uint32_t addr = 0; addr < SAMX5X_PAGE_SIZE; addr += 4) {
 		factory_mask = 0;
+		uint32_t current_word;
+		uint32_t value;
+		uint32_t factory_mask = 0U;
 
 		/* sample words from current page and new page content */
 		memcpy(&current_word, buffer + addr, 4);
