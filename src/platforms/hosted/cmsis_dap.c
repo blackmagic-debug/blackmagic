@@ -107,7 +107,6 @@ static uint8_t buffer[1025U];
  * https://arm-software.github.io/CMSIS-DAP/latest/group__DAP__Config__Debug__gr.html#gaa28bb1da2661291634c4a8fb3e227404
  */
 static size_t dap_packet_size = 64U;
-bool dap_has_swd_sequence = false;
 
 dap_version_s dap_adaptor_version(dap_info_e version_kind);
 
@@ -301,8 +300,6 @@ bool dap_init(bool allow_fallback)
 	if ((cmsis_version.major == 1 && cmsis_version.minor >= 3) ||
 		(cmsis_version.major == 2 && cmsis_version.minor >= 1) || cmsis_version.major > 2)
 		adaptor_version = dap_adaptor_version(DAP_INFO_ADAPTOR_VERSION);
-	/* Look for CMSIS-DAP v1.2+ */
-	dap_has_swd_sequence = dap_version_compare_ge(cmsis_version, (dap_version_s){1, 2, 0});
 
 	/* Try to get the actual packet size information from the adaptor */
 	uint16_t dap_packet_size;
@@ -338,8 +335,6 @@ bool dap_init(bool allow_fallback)
 		DEBUG_INFO(", Atomic commands");
 	DEBUG_INFO(")\n");
 
-	DEBUG_INFO("Adaptor %s DAP SWD sequences\n", dap_has_swd_sequence ? "supports" : "does not support");
-
 	dap_quirks = 0;
 	/* Handle multi-TAP JTAG on older (pre-v1.3) ORBTrace gateware being broken */
 	if (strcmp(bmda_probe_info.product, "Orbtrace") == 0 &&
@@ -354,6 +349,12 @@ bool dap_init(bool allow_fallback)
 	/* ORBTrace needs an extra ZLP read done on full packet reception */
 	if (strcmp(bmda_probe_info.product, "Orbtrace") == 0)
 		dap_quirks |= DAP_QUIRK_NEEDS_EXTRA_ZLP_READ;
+
+	/* Pre-CMSIS-DAP v1.2.0 adaptors do not have DAP_SWD_Sequence and must use alternate means to do the same thing */
+	if (!dap_version_compare_ge(cmsis_version, (dap_version_s){1, 2, 0})) {
+		DEBUG_INFO("Adaptor does not support DAP_SWD_Sequence, using fallbacks\n");
+		dap_quirks |= DAP_QUIRK_NO_SWD_SEQUENCE;
+	}
 
 	return true;
 }
