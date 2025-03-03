@@ -77,7 +77,7 @@ bool dap_swd_init(adiv5_debug_port_s *target_dp)
 	swd_proc.seq_out_parity = dap_swd_seq_out_parity;
 
 	/* If we have SWD sequences available, make use of them */
-	if (dap_has_swd_sequence) {
+	if (!(dap_quirks & DAP_QUIRK_NO_SWD_SEQUENCE)) {
 		target_dp->write_no_check = dap_write_reg_no_check;
 		target_dp->read_no_check = dap_read_reg_no_check;
 	} else {

@@ -73,11 +73,11 @@ typedef enum dap_led_type {
 #define DAP_QUIRK_BAD_SWD_NO_RESP_DATA_PHASE (1U << 1U)
 #define DAP_QUIRK_BROKEN_SWD_SEQUENCE        (1U << 2U)
 #define DAP_QUIRK_NEEDS_EXTRA_ZLP_READ       (1U << 3U)
+#define DAP_QUIRK_NO_SWD_SEQUENCE            (1U << 4U)
 
 extern uint8_t dap_caps;
 extern dap_cap_e dap_mode;
 extern uint8_t dap_quirks;
-extern bool dap_has_swd_sequence;
 
 bool dap_connect(void);
 bool dap_disconnect(void);
