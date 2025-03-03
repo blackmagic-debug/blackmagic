@@ -1,7 +1,7 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
- * Copyright (C) 2022-2024 1BitSquared <info@1bitsquared.com>
+ * Copyright (C) 2022-2025 1BitSquared <info@1bitsquared.com>
  * Written by Rachel Mant <git@dragonmux.network>
  * All rights reserved.
  *
@@ -362,6 +362,24 @@ bool perform_dap_jtag_tms_sequence(const uint64_t tms_states, const size_t clock
 	return response == DAP_RESPONSE_OK;
 }
 
+static bool dap_swd_sequence_as_swj_sequences(dap_swd_sequence_s *const sequences, const uint8_t sequence_count)
+{
+	/* Loop through each of the sequences being requested */
+	for (uint8_t index = 0U; index < sequence_count; ++index) {
+		const dap_swd_sequence_s *const sequence = &sequences[index];
+		/* If it's an output sequence, perform it */
+		if (sequence->direction == DAP_SWD_OUT_SEQUENCE) {
+			/* And check if doing so as a SWJ sequence suceeded or not */
+			if (!perform_dap_swj_sequence(sequence->cycles, sequence->data))
+				return false;
+		}
+		/* Otherwise, if it's an input sequence - headache.. */
+		else
+			return false;
+	}
+	return true;
+}
+
 static size_t dap_encode_swd_sequence(
 	const dap_swd_sequence_s *const sequence, uint8_t *const buffer, const size_t offset)
 {
@@ -388,6 +406,12 @@ bool perform_dap_swd_sequences(dap_swd_sequence_s *const sequences, const uint8_
 {
 	if (sequence_count > 5U)
 		return false;
+	/*
+	 * If this adaptor doesn't support the DAP_SWD_Sequence command, rewrite these to a series of
+	 * DAP_SWJ_Sequence commands and perform them to net the same effect as we'd have gotten otherwise.
+	 */
+	if (dap_quirks & DAP_QUIRK_NO_SWD_SEQUENCE)
+		return dap_swd_sequence_as_swj_sequences(sequences, sequence_count);
 
 	DEBUG_PROBE("-> dap_swd_sequence (%u sequences)\n", sequence_count);
 	/* 47 is 2 + (5 * 9) where 9 is the max length of each sequence request */
