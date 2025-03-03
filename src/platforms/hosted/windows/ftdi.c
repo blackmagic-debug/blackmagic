@@ -151,7 +151,10 @@ int ftdi_write_data(struct ftdi_context *ftdi, const unsigned char *buf, int siz
 {
 	(void)ftdi;
 	DWORD bytes_written;
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-qual"
 	if (FT_Write(ftdi_handle, (unsigned char *)buf, size, &bytes_written) != FT_OK)
+#pragma GCC diagnostic pop
 		return 0;
 	return bytes_written;
 }
