@@ -42,6 +42,8 @@
 
 static bool samx5x_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
 static bool samx5x_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
+static bool samx5x_user_page_erase(target_flash_s *f, target_addr_t addr, size_t len);
+static bool samx5x_user_page_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
 static bool samx5x_cmd_lock_flash(target_s *t, int argc, const char **argv);
 static bool samx5x_cmd_unlock_flash(target_s *t, int argc, const char **argv);
 static bool samx5x_cmd_unlock_bootprot(target_s *t, int argc, const char **argv);
@@ -317,6 +319,24 @@ static void samx5x_add_flash(target_s *t, uint32_t addr, size_t length, size_t e
 	target_add_flash(t, f);
 }
 
+static void samx5x_add_user_page(target_s *t)
+{
+	target_flash_s *f = calloc(1, sizeof(*f));
+	if (!f) { /* calloc failed: heap exhaustion */
+		DEBUG_INFO("calloc: failed in %s\n", __func__);
+		return;
+	}
+
+	f->start = SAMX5X_NVM_USER_PAGE;
+	f->length = SAMX5X_PAGE_SIZE;
+	f->blocksize = SAMX5X_PAGE_SIZE;
+	f->erase = samx5x_user_page_erase;
+	f->write = samx5x_user_page_write;
+	f->writesize = SAMX5X_PAGE_SIZE;
+	f->erased = 0xFFu;
+	target_add_flash(t, f);
+}
+
 #define SAMX5X_VARIANT_STR_LENGTH 60U
 
 typedef struct samx5x_priv {
@@ -377,6 +397,8 @@ bool samx5x_probe(target_s *t)
 		samx5x_add_flash(t, 0x00000000, 0x100000, SAMX5X_BLOCK_SIZE, SAMX5X_PAGE_SIZE);
 		break;
 	}
+
+	samx5x_add_user_page(t);
 
 	if (!protected)
 		target_add_commands(t, samx5x_cmd_list, "SAMD5x/E5x");
@@ -592,6 +614,64 @@ static int samx5x_write_user_page(target_s *t, uint8_t *buffer)
 	return 0;
 }
 
+static bool samx5x_user_page_erase(target_flash_s *f, target_addr_t addr, size_t len)
+{
+	(void)f;
+	(void)addr;
+	(void)len;
+
+	/*
+	 * Dummy erase function.
+	 * User page contains calibration data which needs to be preserved.
+	 * See samx5x_user_page_write().
+	 */
+
+	return true;
+}
+
+static bool samx5x_user_page_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len)
+{
+	target_s *t = f->t;
+	uint8_t buffer[SAMX5X_PAGE_SIZE];
+	uint32_t current_word;
+	uint32_t value;
+	uint32_t factory_mask;
+	bool changed = false;
+
+	DEBUG_INFO("User page write addr=0x%08" PRIx32 " len=0x%08" PRIx32 "\n", dest, (uint32_t)len);
+
+	target_mem32_read(t, buffer, SAMX5X_NVM_USER_PAGE, SAMX5X_PAGE_SIZE);
+
+	for (uint32_t addr = 0; addr < SAMX5X_PAGE_SIZE; addr += 4) {
+		factory_mask = 0;
+
+		/* sample words from current page and new page content */
+		memcpy(&current_word, buffer + addr, 4);
+		memcpy(&value, (const uint8_t *)src + addr, 4);
+
+		/* get factory word bitmask */
+		for (size_t i = 0; i < 4U && addr + i < 20U; ++i)
+			factory_mask |= (uint32_t)samx5x_user_page_factory_bits[addr + i] << (i * 8U);
+
+		/* compute new word */
+		const uint32_t new_word = (current_word & factory_mask) | (value & ~factory_mask);
+
+		if (new_word != current_word) {
+			DEBUG_INFO("Altering user page word 0x%08" PRIx32 " at offset 0x%03" PRIx32 "\n", new_word, addr);
+			memcpy(buffer + addr, &new_word, 4);
+			changed = true;
+		}
+	}
+
+	if (changed) {
+		int ret = samx5x_write_user_page(t, buffer);
+		return ret < 0 ? false : true;
+	}
+
+	DEBUG_INFO("Skipping user page write as no change would be made\n");
+	return true;
+}
+
 static int samx5x_update_user_word(target_s *t, uint32_t addr, uint32_t value, uint32_t *value_written, bool force)
 {
 	uint8_t buffer[SAMX5X_PAGE_SIZE];
@@ -613,7 +693,7 @@ static int samx5x_update_user_word(target_s *t, uint32_t addr, uint32_t value, u
 		memcpy(buffer + addr, &new_word, 4);
 		return samx5x_write_user_page(t, buffer);
 	}
-	DEBUG_INFO("Skipping user page write as no change would be made");
+	DEBUG_INFO("Skipping user page write as no change would be made\n");
 	return 0;
 }
 
