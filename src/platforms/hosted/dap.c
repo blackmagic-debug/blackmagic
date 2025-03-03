@@ -258,7 +258,7 @@ void dap_write_reg(adiv5_debug_port_s *target_dp, const uint8_t reg, const uint3
 	};
 
 	do {
-		if (perform_dap_transfer(target_dp, &request, 1U, NULL, 0))
+		if (perform_dap_transfer(target_dp, &request, 1U, NULL, 0U))
 			return;
 	} while (target_dp->fault == DAP_TRANSFER_WAIT);
 }
