@@ -285,7 +285,10 @@ static probe_info_s *process_ftdi_probe(void)
 
 				if (probe_skip) { // Clean up any previous serial number to skip
 					use_serial = true;
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-qual"
 					free((void *)probe_skip);
+#pragma GCC diagnostic pop
 					probe_skip = NULL;
 				}
 
@@ -323,7 +326,10 @@ static probe_info_s *process_ftdi_probe(void)
 		}
 	}
 	if (probe_skip)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-qual"
 		free((void *)probe_skip);
+#pragma GCC diagnostic pop
 	free(dev_info);
 	return probe_list;
 }
