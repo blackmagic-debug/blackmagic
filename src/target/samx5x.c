@@ -631,6 +631,9 @@ static bool samx5x_user_page_erase(target_flash_s *f, target_addr_t addr, size_t
 
 static bool samx5x_user_page_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len)
 {
+	(void)dest;
+	(void)len;
+
 	target_s *t = f->t;
 	uint8_t buffer[SAMX5X_PAGE_SIZE];
 	uint32_t current_word;
