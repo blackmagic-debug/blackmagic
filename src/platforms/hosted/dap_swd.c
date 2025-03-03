@@ -207,29 +207,15 @@ static bool dap_write_reg_no_check(const uint16_t addr, const uint32_t data)
 
 static uint32_t dap_read_reg_no_check(const uint16_t addr)
 {
-	/* Setup the sequences */
-	dap_swd_sequence_s sequences[4] = {
-		/* Write the 8 byte request */
-		{
-			8U,
-			DAP_SWD_OUT_SEQUENCE,
-			{make_packet_request(ADIV5_LOW_READ, addr)},
-		},
-		/* Perform one turn-around cycle then read the 3 bit ACK */
-		{3U, DAP_SWD_IN_SEQUENCE},
-		/* Perform a read for the 32b of data and the 1b of parity */
-		{33U, DAP_SWD_IN_SEQUENCE},
-		/* Finished up by performing a sequence of 8 idle bits */
-		{8U, DAP_SWD_OUT_SEQUENCE, {0U}},
-	};
-	/* Now perform the sequences */
-	if (!perform_dap_swd_sequences(sequences, 4U)) {
-		DEBUG_ERROR("dap_read_reg_no_check failed\n");
-		return false;
+	/* Set up a read transfer */
+	const dap_transfer_request_s request = {.request = addr | DAP_TRANSFER_RnW};
+	uint32_t value = 0;
+	/* Try to perform it, and return the value that results if it suceeds */
+	if (perform_dap_transfer_swd_unchecked(&request, 1U, &value, 1U)) {
+		DEBUG_PROBE("dap_read_reg_no_check %04x -> %08" PRIx32 "\n", addr, value);
+		return value;
 	}
-	const uint32_t data = read_le4(sequences[2].data, 0);
-	DEBUG_PROBE("dap_read_reg_no_check %04x -> %08" PRIx32 "\n", addr, data);
-	/* Check the ack state */
-	const uint8_t ack = sequences[1].data[0] & 7U;
-	return ack == SWD_ACK_OK ? data : 0;
+	/* If it failed, show a fallback value and return it */
+	DEBUG_PROBE("dap_read_reg_no_check %04x -> %08x\n", addr, 0U);
+	return 0U;
 }
