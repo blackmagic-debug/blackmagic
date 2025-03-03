@@ -147,6 +147,8 @@ typedef struct dap_swj_pins_request {
 
 bool perform_dap_transfer(adiv5_debug_port_s *target_dp, const dap_transfer_request_s *transfer_requests,
 	size_t requests, uint32_t *response_data, size_t responses);
+bool perform_dap_transfer_swd_unchecked(
+	const dap_transfer_request_s *transfer_requests, size_t requests, uint32_t *response_data, size_t responses);
 bool perform_dap_transfer_recoverable(adiv5_debug_port_s *target_dp, const dap_transfer_request_s *transfer_requests,
 	size_t requests, uint32_t *response_data, size_t responses);
 bool perform_dap_transfer_block_read(
