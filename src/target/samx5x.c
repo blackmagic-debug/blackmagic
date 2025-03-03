@@ -315,7 +315,7 @@ static void samx5x_add_flash(target_s *t, uint32_t addr, size_t length, size_t e
 	f->erase = samx5x_flash_erase;
 	f->write = samx5x_flash_write;
 	f->writesize = write_page_size;
-	f->erased = 0xFFu;
+	f->erased = 0xffU;
 	target_add_flash(t, f);
 }
 
@@ -333,7 +333,7 @@ static void samx5x_add_user_page(target_s *t)
 	f->erase = samx5x_user_page_erase;
 	f->write = samx5x_user_page_write;
 	f->writesize = SAMX5X_PAGE_SIZE;
-	f->erased = 0xFFu;
+	f->erased = 0xffU;
 	target_add_flash(t, f);
 }
 
