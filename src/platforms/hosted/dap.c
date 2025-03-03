@@ -38,11 +38,6 @@
 #include "jtag_scan.h"
 #include "buffer_utils.h"
 
-#define DAP_TRANSFER_APnDP (1U << 0U)
-#define DAP_TRANSFER_RnW   (1U << 1U)
-
-#define DAP_TRANSFER_WAIT (1U << 1U)
-
 #define SWD_DP_R_IDCODE    0x00U
 #define SWD_DP_W_ABORT     0x00U
 #define SWD_DP_R_CTRL_STAT 0x04U
