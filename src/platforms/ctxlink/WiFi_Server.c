@@ -703,9 +703,7 @@ void wifi_connect(size_t argc, const char **argv, char *buffer, uint32_t size)
 	char ssid[64] = {0};
 	char pass_phrase[64] = {0};
 	char *output_buffer = ssid;
-	char *delimeter;
-	bool add_space = false;
-	uint32_t transfer_count = 0;
+	bool first_element = true;
 	memset(buffer, 0x00, size);
 	//
 	// Iterate over the arguments received to build the SSID and passphrase
@@ -725,28 +723,22 @@ void wifi_connect(size_t argc, const char **argv, char *buffer, uint32_t size)
 	// an space added between them.
 	//
 	for (size_t loop = 1; loop < argc; loop++) {
-		delimeter = strchr(argv[loop], ',');
-		if (delimeter == NULL) {
-			if (add_space) {
+		char *const delimeter = strchr(argv[loop], ',');
+		if (delimeter == NULL || output_buffer == pass_phrase) {
+			if (!first_element)
 				strcat(output_buffer, " ");
-				add_space = true;
-			}
-			strcat(output_buffer, argv[loop]); // No comma, just use the argument
-			transfer_count++;
-		} else {
-			if (transfer_count) {
-				transfer_count = 0;
-				strcat(output_buffer, " ");
-			} else
-				transfer_count++;
-
-			*delimeter = 0x00; // Null terminate string before comma
 			strcat(output_buffer, argv[loop]);
+			first_element = false;
+		} else {
+			if (!first_element)
+				strcat(output_buffer, " ");
+			*delimeter = 0x00;                 // Null terminate string before comma
+			strcat(output_buffer, argv[loop]); // Complete the string in the output buffer
 			//
 			// Start the passphrase with the remaining string
 			//
 			output_buffer = pass_phrase;
-			add_space = true;
+			first_element = false; // The end of the split argument contained the first element
 			strcat(output_buffer, delimeter + 1);
 		}
 	}
@@ -982,7 +974,7 @@ static void app_socket_callback(SOCKET sock, uint8_t msg_type, void *msg)
 				// Copy data to circular input buffer
 				//
 				for (int16_t i = 0; local_count != 0;
-					i++, local_count--, input_index = (input_index + 1) % INPUT_BUFFER_SIZE) {
+					 i++, local_count--, input_index = (input_index + 1) % INPUT_BUFFER_SIZE) {
 					input_buffer[input_index] = local_buffer[i];
 				}
 				buffer_count += recv_data->bufSize;
