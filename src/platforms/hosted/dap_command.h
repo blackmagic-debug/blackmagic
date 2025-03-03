@@ -91,6 +91,11 @@ typedef enum dap_info_status {
 #define DAP_SWJ_nTRST     (1U << 5U)
 #define DAP_SWJ_nRST      (1U << 7U)
 
+#define DAP_TRANSFER_APnDP (1U << 0U)
+#define DAP_TRANSFER_RnW   (1U << 1U)
+
+#define DAP_TRANSFER_WAIT (1U << 1U)
+
 typedef struct dap_transfer_request {
 	uint8_t request;
 	uint32_t data;

@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2013-2015 Alex Taradov <alex@taradov.com>
  * Copyright (C) 2020-2021 Uwe Bonnes <bon@elektron.ikp.physik.tu-darmstadt.de>
- * Copyright (C) 2023-2024 1BitSquared <info@1bitsquared.com>
+ * Copyright (C) 2023-2025 1BitSquared <info@1bitsquared.com>
  * Modified by Rachel Mant <git@dragonmux.network>
  * All rights reserved.
  *
@@ -37,11 +37,6 @@
 #include "dap_command.h"
 #include "jtag_scan.h"
 #include "buffer_utils.h"
-
-#define DAP_TRANSFER_APnDP (1U << 0U)
-#define DAP_TRANSFER_RnW   (1U << 1U)
-
-#define DAP_TRANSFER_WAIT (1U << 1U)
 
 #define SWD_DP_R_IDCODE    0x00U
 #define SWD_DP_W_ABORT     0x00U
