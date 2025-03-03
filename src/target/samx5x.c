@@ -300,6 +300,7 @@ static void samx5x_add_flash(target_s *t, uint32_t addr, size_t length, size_t e
 	f->erase = samx5x_flash_erase;
 	f->write = samx5x_flash_write;
 	f->writesize = write_page_size;
+	f->erased = 0xFFu;
 	target_add_flash(t, f);
 }
 
