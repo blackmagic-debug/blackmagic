@@ -76,15 +76,9 @@ bool dap_swd_init(adiv5_debug_port_s *target_dp)
 	swd_proc.seq_out = dap_swd_seq_out;
 	swd_proc.seq_out_parity = dap_swd_seq_out_parity;
 
-	/* If we have SWD sequences available, make use of them */
-	if (!(dap_quirks & DAP_QUIRK_NO_SWD_SEQUENCE)) {
-		target_dp->write_no_check = dap_write_reg_no_check;
-		target_dp->read_no_check = dap_read_reg_no_check;
-	} else {
-		target_dp->write_no_check = NULL;
-		target_dp->read_no_check = NULL;
-	}
 	/* Set up the accelerated SWD functions for basic target operations */
+	target_dp->write_no_check = dap_write_reg_no_check;
+	target_dp->read_no_check = dap_read_reg_no_check;
 	target_dp->dp_read = dap_dp_read_reg;
 	target_dp->low_access = dap_dp_raw_access;
 	target_dp->abort = dap_dp_abort;
