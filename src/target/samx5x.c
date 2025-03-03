@@ -141,7 +141,7 @@ static const uint8_t samx5x_user_page_factory_bits[] = {
 /* Non-Volatile Memory Calibration and Auxiliary Registers */
 #define SAMX5X_NVM_USER_PAGE   UINT32_C(0x00804000)
 #define SAMX5X_NVM_CALIBRATION UINT32_C(0x00800000)
-#define SAMX5X_NVM_SERIAL(n)   (UINT32_C(0x0080600c) + ((n) == 0 ? 0x1f0U : (n) * 4U))
+#define SAMX5X_NVM_SERIAL(n)   (UINT32_C(0x0080600c) + ((n) == 0 ? 0x1f0U : (n)*4U))
 
 #define SAMX5X_USER_PAGE_OFFSET_LOCK     0x08U
 #define SAMX5X_USER_PAGE_OFFSET_BOOTPROT 0x03U
