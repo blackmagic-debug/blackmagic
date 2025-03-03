@@ -130,6 +130,39 @@ bool perform_dap_transfer(adiv5_debug_port_s *const target_dp, const dap_transfe
 	return false;
 }
 
+bool perform_dap_transfer_swd_unchecked(const dap_transfer_request_s *const transfer_requests, const size_t requests,
+	uint32_t *const response_data, const size_t responses)
+{
+	/* Validate that the number of requests this transfer is valid. We artificially limit it to 12 (from 256) */
+	if (!requests || requests > 12 || (responses && !response_data))
+		return false;
+
+	DEBUG_PROBE("-> dap_transfer (%zu requests)\n", requests);
+	/* 63 is 3 + (12 * 5) where 5 is the max length of each transfer request */
+	uint8_t request[63] = {
+		DAP_TRANSFER,
+		0U,
+		requests,
+	};
+	/* Encode the transfers into the buffer and detect if we're doing any reads */
+	size_t offset = 3U;
+	for (size_t i = 0; i < requests; ++i)
+		offset += dap_encode_transfer(&transfer_requests[i], request, offset);
+
+	dap_transfer_response_s response = {.processed = 0, .status = DAP_TRANSFER_OK};
+	/* Run the request */
+	if (!dap_run_cmd(request, offset, &response, 2U + (responses * 4U)))
+		return false;
+
+	/* Look at the response and decipher what went on */
+	if (response.processed == requests && (response.status & DAP_TRANSFER_STATUS_MASK) == DAP_TRANSFER_OK) {
+		for (size_t i = 0; i < responses; ++i)
+			response_data[i] = read_le4(response.data[i], 0);
+		return true;
+	}
+	return false;
+}
+
 bool perform_dap_transfer_recoverable(adiv5_debug_port_s *const target_dp,
 	const dap_transfer_request_s *const transfer_requests, const size_t requests, uint32_t *const response_data,
 	const size_t responses)
