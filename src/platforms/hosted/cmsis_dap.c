@@ -320,12 +320,12 @@ bool dap_init(bool allow_fallback)
 	}
 
 	/* Having got the capabilities, decode and print an informitive string about them */
-	const bool supportsJTAG = dap_caps & DAP_CAP_JTAG;
-	const bool supportsSWD = dap_caps & DAP_CAP_SWD;
+	const bool supports_jtag = dap_caps & DAP_CAP_JTAG;
+	const bool supports_swd = dap_caps & DAP_CAP_SWD;
 	DEBUG_INFO("Capabilities: %02x (", dap_caps);
-	if (supportsJTAG)
-		DEBUG_INFO("JTAG%s", supportsSWD ? "/" : "");
-	if (supportsSWD)
+	if (supports_jtag)
+		DEBUG_INFO("JTAG%s", supports_swd ? "/" : "");
+	if (supports_swd)
 		DEBUG_INFO("SWD");
 	if (dap_caps & DAP_CAP_SWO_ASYNC)
 		DEBUG_INFO(", Async SWO");
@@ -432,9 +432,8 @@ void dap_dp_abort(adiv5_debug_port_s *const target_dp, const uint32_t abort)
 uint32_t dap_dp_raw_access(
 	adiv5_debug_port_s *const target_dp, const uint8_t rnw, const uint16_t addr, const uint32_t value)
 {
-	const bool APnDP = addr & ADIV5_APnDP;
 	uint32_t res = 0;
-	const uint8_t reg = (addr & 0xcU) | (APnDP ? 1U : 0U);
+	const uint8_t reg = (addr & 0xcU) | (addr & ADIV5_APnDP ? 1U : 0U);
 	if (rnw)
 		res = dap_read_reg(target_dp, reg);
 	else
@@ -492,7 +491,8 @@ ssize_t dbg_dap_cmd_hid_io(const uint8_t *const request_data, const size_t reque
 		DEBUG_ERROR("CMSIS-DAP read error: %ls\n", hid_error(handle));
 		/* As the read failed, return -1 here */
 		return result;
-	} else if (response == 0) {
+	}
+	if (response == 0) {
 		DEBUG_ERROR("CMSIS-DAP read timeout\n");
 		/* Signal timeout with 0 */
 		return response;
@@ -512,6 +512,9 @@ ssize_t dbg_dap_cmd_hid(const uint8_t *const request_data, const size_t request_
 		exit(-1);
 	}
 
+	/* Ensure that the response data type byte is something valid */
+	response_data[0] = ~request_data[0];
+
 	size_t tries = 0U;
 	ssize_t response = 0;
 	/* Try up to 3 times to make the request and get the response */
@@ -527,7 +530,8 @@ ssize_t dbg_dap_cmd_hid(const uint8_t *const request_data, const size_t request_
 				DEBUG_ERROR("CMSIS-DAP read error: %ls\n", hid_error(handle));
 				/* As the read failed, return -1 here */
 				return response;
-			} else if (response == 0) {
+			}
+			if (response == 0) {
 				DEBUG_ERROR("CMSIS-DAP read timeout\n");
 				/* Signal timeout with -2 */
 				return -2;
