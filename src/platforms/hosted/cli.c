@@ -461,11 +461,11 @@ bool scan_for_targets(const bmda_cli_options_s *const opt)
 	if (opt->opt_scanmode == BMP_SCAN_JTAG)
 		return bmda_jtag_scan();
 	if (opt->opt_scanmode == BMP_SCAN_SWD)
-		return bmda_swd_scan(opt->opt_targetid);
+		return bmda_swd_scan_targetid(opt->opt_targetid);
 	if (bmda_jtag_scan())
 		return true;
 	DEBUG_WARN("JTAG scan found no devices, trying SWD.\n");
-	if (bmda_swd_scan(opt->opt_targetid))
+	if (bmda_swd_scan_targetid(opt->opt_targetid))
 		return true;
 	DEBUG_ERROR("SWD scan failed!\n");
 	return false;
