@@ -498,8 +498,9 @@ ssize_t dbg_dap_cmd_hid_io(const uint8_t *const request_data, const size_t reque
 		return response;
 	}
 	/* If we got a good response, copy the data for it to the response buffer */
-	memcpy(response_data, buffer, response_length);
-	return response;
+	const size_t bytes_transferred = MIN((size_t)response, response_length);
+	memcpy(response_data, buffer, bytes_transferred);
+	return (int)bytes_transferred;
 }
 
 ssize_t dbg_dap_cmd_hid(const uint8_t *const request_data, const size_t request_length, uint8_t *const response_data,
@@ -597,7 +598,7 @@ static ssize_t dap_run_cmd_raw(const uint8_t *const request_data, const size_t r
 
 	ssize_t response = -1;
 	if (type == CMSIS_TYPE_HID)
-		response = dbg_dap_cmd_hid(request_data, request_length, data, dap_packet_size);
+		response = dbg_dap_cmd_hid(request_data, request_length, data, MIN(response_length + 1U, dap_packet_size));
 	else if (type == CMSIS_TYPE_BULK)
 		response = dbg_dap_cmd_bulk(request_data, request_length, data, dap_packet_size);
 	if (response < 0)
@@ -610,7 +611,7 @@ static ssize_t dap_run_cmd_raw(const uint8_t *const request_data, const size_t r
 	DEBUG_WIRE("\n");
 
 	if (response_length)
-		memcpy(response_data, data + 1, MIN(response_length, result));
+		memcpy(response_data, data + 1, MIN(response_length, result - 1U));
 	return response;
 }
 
