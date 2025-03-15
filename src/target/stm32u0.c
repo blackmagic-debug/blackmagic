@@ -258,11 +258,6 @@ static bool stm32u0_flash_cfgbusy_wait(target_s *const target, platform_timeout_
 	return stm32u0_flash_sr_flag_wait_reset(target, print_progess, FLASH_SR_CFGBSY);
 }
 
-static bool stm32u0_flash_eop_wait(target_s *const target, platform_timeout_s *const print_progess)
-{
-	return stm32u0_flash_sr_flag_wait_set(target, print_progess, FLASH_SR_EOP);
-}
-
 static bool stm32u0_flash_clear_errors(target_s *const target)
 {
 	uint32_t sr = target_mem32_read32(target, FLASH_SR_REG);
