@@ -40,11 +40,11 @@
  * - https://www.st.com/resource/en/reference_manual/rm0503-stm32u0-series-advanced-armbased-32bit-mcus-stmicroelectronics.pdf
  */
 
-#include "cortexm.h"
 #include "general.h"
 #include "target.h"
 #include "target_internal.h"
 #include "cortex.h"
+#include "cortexm.h"
 
 /* Memory map constants for STM32U0x */
 #define STM32U0_FLASH_BANK_BASE 0x08000000U
