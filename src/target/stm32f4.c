@@ -461,7 +461,23 @@ static bool stm32f4_attach(target_s *const target)
 	} else {
 		if (has_ccm_ram)
 			target_add_ram32(target, STM32F4_CCM_RAM_BASE, 0x10000); /* 64 KiB CCM RAM */
-		target_add_ram32(target, STM32F4_AHB_SRAM_BASE, 0x50000);    /* 320 KiB RAM */
+		/* F405/415, F407/417 have 112+16=128 KiB AHB SRAM */
+		uint32_t ram_size = 128U * 1024U;
+		/* F411, F446 also have a single chunk of 128 KiB AHB SRAM, so treat others specially */
+		if (target->part_id == ID_STM32F46X || target->part_id == ID_STM32F413)
+			ram_size = 320U * 1024U; /* 320 KiB AHB SRAM */
+		else if (target->part_id == ID_STM32F412)
+			ram_size = 256U * 1024U; /* 256 KiB AHB SRAM */
+		else if (target->part_id == ID_STM32F42X)
+			ram_size = 192U * 1024U; /* 192 KiB AHB SRAM */
+		else if (target->part_id == ID_STM32F401E)
+			ram_size = 96U * 1024U; /* 96 KiB AHB SRAM */
+		else if (target->part_id == ID_STM32F401C)
+			ram_size = 64U * 1024U; /* 64 KiB AHB SRAM */
+		else if (target->part_id == ID_STM32F410)
+			ram_size = 32U * 1024U; /* 32 KiB AHB SRAM */
+		/* TODO: F20x can have 128, but also 96 or 64 */
+		target_add_ram32(target, STM32F4_AHB_SRAM_BASE, ram_size);
 
 		if (dual_bank && max_flashsize < 2048U) {
 			/* Check the dual-bank status on 1MiB Flash devices */
