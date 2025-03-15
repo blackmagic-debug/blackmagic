@@ -59,7 +59,6 @@
 
 /* RM0503 §3.7.2 p88 */
 #define FLASH_KEYR_REG (FLASH_REGS_BASE + 0x8U)
-/* FIXME read/write options too? (requires OPTKEY) */
 
 /* RM0503 §3.7.4 p88 */
 #define FLASH_SR_REG (FLASH_REGS_BASE + 0x10U)
@@ -95,11 +94,6 @@
 #define FLASH_CR_LOCK       (1U << 31U)
 
 /* RM0503 §37.9.4 p1301 */
-/* FIXME
- * 0xf0001000U via the APB access port AP0 or
- * 0x40015800U via the software
- * => it works with the software address
- * */
 #define STM32U0_DBGMCU_BASE    0x40015800U
 #define STM32U0_DBGMCU_IDCODE  (STM32U0_DBGMCU_BASE + 0x000U)
 #define STM32U0_DBGMCU_CR      (STM32U0_DBGMCU_BASE + 0x004U)
@@ -141,7 +135,7 @@ static void stm32u0_add_flash(target_s *const target, const size_t length)
 	flash->start = STM32U0_FLASH_BANK_BASE;
 	flash->length = length;
 	flash->blocksize = 2048; /* Erase block size */
-	flash->writesize = 2048; //72;   /* Write operation size FIXME */
+	flash->writesize = 2048; /* Write operation size */
 	flash->erase = stm32u0_flash_erase;
 	flash->write = stm32u0_flash_write;
 	flash->erased = 0xffU;
@@ -309,29 +303,7 @@ static bool stm32u0_flash_write(
 	target_flash_s *const flash, const target_addr_t dest, const void *const src, const size_t len)
 {
 	target_s *const target = flash->t;
-	// FIXME this result in a PGSERR
-	// stm32u0_flash_unlock(target);
-	// /* Procedure described in RM0503 §3.3.8 */
-	// /* 1. Check that no main flash memory operation is ongoing by checking the BSY1 bit of the FLASH status register (FLASH_SR).*/
-	// if (!stm32u0_flash_busy_wait(target, NULL))
-	// 	return false;
-	// /* 2.  Check and clear all error programming flags due to a previous programming. If not, PGSERR is set. */
-	// stm32u0_flash_clear_errors(target);
-	// /* 3.  Check that the CFGBSY bit of FLASH status register (FLASH_SR) is cleared. */
-	// if (!stm32u0_flash_cfgbusy_wait(target, NULL))
-	// 	return false;
-	// /* 4. Set the PG bit of the FLASH control register (FLASH_CR). */
-	// target_mem32_write32(target, FLASH_CR_REG, target_mem32_read32(target, FLASH_CR_REG) | FLASH_CR_PG);
-	// /* 5. Perform the data write operation at the desired memory address, [...] */
-	// target_mem32_write(target, dest, src, len);
-	// /* 6. Wait until the CFGBSY bit of the FLASH status register (FLASH_SR) is cleared again. */
-	// if (!stm32u0_flash_cfgbusy_wait(target, NULL))
-	// 	return false;
-	// /* 7. Check that the EOP flag in the FLASH status register (FLASH_SR) is set (programming operation succeeded), and clear it by software. */
-	// stm32u0_flash_eop_wait(target, NULL);
-	// /* 8. Clear the PG bit of the FLASH control register (FLASH_CR) if there no more programming request anymore. */
-	// target_mem32_write32(target, FLASH_CR_REG, target_mem32_read32(target, FLASH_CR_REG & ~FLASH_CR_PG));
-	// FIXME END, stm32l4 style write works
+
 	target_mem32_write32(target, FLASH_CR_REG, FLASH_CR_PG);
 	target_mem32_write(target, dest, src, len);
 	return stm32u0_flash_busy_wait(target, NULL);
