@@ -32,6 +32,17 @@
  *   https://www.st.com/resource/en/reference_manual/rm0401-stm32f410-advanced-armbased-32bit-mcus-stmicroelectronics.pdf
  * GD32F4xx Arm® Cortex®-M4 32-bit MCU User Manual, Rev. 3.0
  *   https://www.gigadevice.com.cn/Public/Uploads/uploadfile/files/20240407/GD32F4xx_User_Manual_Rev3.0.pdf
+ * References for STM32F7xx:
+ * RM0385 - STM32F75xxx and STM32F74xxx advanced Arm®-based 32-bit MCUs, Rev. 9
+ *   https://www.st.com/resource/en/reference_manual/rm0385-stm32f75xxx-and-stm32f74xxx-advanced-armbased-32bit-mcus-stmicroelectronics.pdf
+ * RM0410 - STM32F76xxx and STM32F77xxx advanced Arm®-based 32-bit MCUs, Rev. 5
+ *   https://www.st.com/resource/en/reference_manual/rm0410-stm32f76xxx-and-stm32f77xxx-advanced-armbased-32bit-mcus-stmicroelectronics.pdf
+ * RM0431 - STM32F72xxx and STM32F73xxx advanced Arm®-based 32-bit MCUs, Rev. 4
+ *   https://www.st.com/resource/en/reference_manual/rm0431-stm32f72xxx-and-stm32f73xxx-advanced-armbased-32bit-mcus-stmicroelectronics.pdf
+ * AN4667 - STM32F7 Series system architecture and performance, Rev. 4
+ *   https://www.st.com/resource/en/application_note/an4667-stm32f7-series-system-architecture-and-performance-stmicroelectronics.pdf
+ * AN4826 - STM32F7 Series Flash memory dual bank mode, Rev. 2
+ *   https://www.st.com/resource/en/application_note/an4826-stm32f7-series-flash-memory-dual-bank-mode-stmicroelectronics.pdf
  */
 
 #include "general.h"
