@@ -170,9 +170,16 @@ static bool jtag_read_idcodes(void)
 		/* Try to read out 32 bits, while shifting in 1's */
 		uint32_t idcode = 0;
 		jtag_proc.jtagtap_tdi_tdo_seq((uint8_t *)&idcode, false, ones, 32);
-		/* If the IDCode read is all 1's, we've reached the end */
+		/*
+		 * If the IDCode read is all 1's, we've reached the end, similarly if it's all 0's
+		 * then something's wrong or we hit a bugged device in the chain and we're done.
+		 */
 		if (idcode == 0xffffffffU)
 			break;
+		if (idcode == 0U) {
+			DEBUG_WARN("Bugged all-0 ID code found, considering scan complete\n");
+			break;
+		}
 		/* Check if the max supported chain length is exceeded */
 		if (device == JTAG_MAX_DEVS) {
 			DEBUG_ERROR("jtag_scan: Maximum chain length exceeded\n");
@@ -280,7 +287,7 @@ static bool jtag_read_irs(void)
 	if (ir_len > JTAG_MAX_IR_LEN) {
 		DEBUG_ERROR("jtag_scan: Maximum IR length exceeded\n");
 		jtag_dev_count = 0;
-		return 0;
+		return false;
 	}
 	return true;
 }
