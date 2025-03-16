@@ -200,7 +200,7 @@ static void dap_hid_print_permissions(const uint16_t vid, const uint16_t pid, co
 static bool dap_init_hid(void)
 {
 	/* Initialise HIDAPI */
-	DEBUG_INFO("Using hid transfer\n");
+	DEBUG_INFO("Using HID transfer\n");
 	if (hid_init())
 		return false;
 
@@ -283,10 +283,8 @@ bool dap_init(bool allow_fallback)
 		}
 	}
 
-	if (type == CMSIS_TYPE_HID) {
-		if (!dap_init_hid())
-			return false;
-	}
+	if (type == CMSIS_TYPE_HID && !dap_init_hid())
+		return false;
 
 	/* Ensure the adaptor is idle and not prepared for any protocol in particular */
 	dap_disconnect();
