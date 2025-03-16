@@ -99,6 +99,11 @@
 #define AXIM_BASE 0x8000000U
 #define ITCM_BASE 0x0200000U
 
+#define STM32F7_ITCM_RAM_BASE 0x00000000U
+#define STM32F4_CCM_RAM_BASE  0x10000000U
+#define STM32F4_AHB_SRAM_BASE 0x20000000U
+#define STM32F7_DTCM_RAM_BASE STM32F4_AHB_SRAM_BASE
+
 #define STM32F4_DBGMCU_CTRL_DBG_SLEEP   (1U << 0U)
 #define STM32F4_DBGMCU_CTRL_DBG_STOP    (1U << 1U)
 #define STM32F4_DBGMCU_CTRL_DBG_STANDBY (1U << 2U)
@@ -433,10 +438,10 @@ static bool stm32f4_attach(target_s *const target)
 			dtcm_size = 128U * 1024U;            /* 128kiB DTCM RAM */
 			ahbsram_size = (368U + 16U) * 1024U; /* 384kiB SRAM1/2 */
 		}
-		target_add_ram32(target, 0x00000000U, 0x4000U); /* 16kiB ITCM RAM */
+		target_add_ram32(target, STM32F7_ITCM_RAM_BASE, 0x4000U); /* 16kiB ITCM RAM */
 		/* On STM32F7, DTCM and AHB SRAM are contiguous */
-		target_add_ram32(target, 0x20000000U, dtcm_size);
-		target_add_ram32(target, 0x20000000U + dtcm_size, ahbsram_size);
+		target_add_ram32(target, STM32F7_DTCM_RAM_BASE, dtcm_size);
+		target_add_ram32(target, STM32F7_DTCM_RAM_BASE + dtcm_size, ahbsram_size);
 
 		if (dual_bank) {
 			const uint32_t option_ctrl = target_mem32_read32(target, FLASH_OPTCR);
