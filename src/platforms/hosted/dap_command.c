@@ -354,7 +354,7 @@ bool perform_dap_jtag_sequence(
 		memcpy(data_out, response + 1U, sequence_length);
 		/* And the final bit from the second response LSb */
 		if (sequences == 2U)
-			data_out[final_byte] = (response[1 + sequence_length] & 1U) << final_bit;
+			data_out[final_byte] |= (response[1 + sequence_length] & 1U) << final_bit;
 	}
 	/* And check that it succeeded */
 	return response[0] == DAP_RESPONSE_OK;
