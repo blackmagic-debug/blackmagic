@@ -107,8 +107,8 @@
 #define STM32F4_DBGMCU_CTRL       (STM32F4_DBGMCU_BASE + 0x04U)
 #define STM32F4_DBGMCU_APB1FREEZE (STM32F4_DBGMCU_BASE + 0x08U)
 
-#define AXIM_BASE 0x8000000U
-#define ITCM_BASE 0x0200000U
+#define STM32F7_AXIM_FLASH_BASE 0x08000000U
+#define STM32F7_ITCM_FLASH_BASE 0x00200000U
 
 #define STM32F7_ITCM_RAM_BASE 0x00000000U
 #define STM32F4_CCM_RAM_BASE  0x10000000U
@@ -506,10 +506,10 @@ static bool stm32f4_attach(target_s *const target)
 		 */
 		const uint32_t remaining_bank_length = stm32f4_remaining_bank_length(bank_length, 0x40000);
 		/* 256kiB in small sectors */
-		stm32f4_add_flash(target, ITCM_BASE, 0x20000, 0x8000, 0, split);
+		stm32f4_add_flash(target, STM32F7_ITCM_FLASH_BASE, 0x20000, 0x8000, 0, split);
 		stm32f4_add_flash(target, 0x0220000, 0x20000, 0x20000, 4, split);
 		stm32f4_add_flash(target, 0x0240000, remaining_bank_length, 0x40000, 5, split);
-		stm32f4_add_flash(target, AXIM_BASE, 0x20000, 0x8000, 0, split);
+		stm32f4_add_flash(target, STM32F7_AXIM_FLASH_BASE, 0x20000, 0x8000, 0, split);
 		stm32f4_add_flash(target, 0x8020000, 0x20000, 0x20000, 4, split);
 		stm32f4_add_flash(target, 0x8040000, remaining_bank_length, 0x40000, 5, split);
 	} else {
@@ -521,30 +521,31 @@ static bool stm32f4_attach(target_s *const target)
 		 */
 		const uint32_t remaining_bank_length = stm32f4_remaining_bank_length(bank_length, 0x20000);
 		/* 128kiB in small sectors */
-		stm32f4_add_flash(target, AXIM_BASE, 0x10000, 0x4000, 0, split);
+		stm32f4_add_flash(target, STM32F7_AXIM_FLASH_BASE, 0x10000, 0x4000, 0, split);
 		if (bank_length > 0x10000U) {
-			stm32f4_add_flash(target, AXIM_BASE + 0x10000U, 0x10000, 0x10000, 4, split);
+			stm32f4_add_flash(target, STM32F7_AXIM_FLASH_BASE + 0x10000U, 0x10000, 0x10000, 4, split);
 			if (remaining_bank_length)
-				stm32f4_add_flash(target, AXIM_BASE + 0x20000U, remaining_bank_length, 0x20000, 5, split);
+				stm32f4_add_flash(target, STM32F7_AXIM_FLASH_BASE + 0x20000U, remaining_bank_length, 0x20000, 5, split);
 		}
 		/* Declare ITCM alias, too */
 		if (is_f7) {
-			stm32f4_add_flash(target, ITCM_BASE, 0x10000, 0x4000, 0, split);
+			stm32f4_add_flash(target, STM32F7_ITCM_FLASH_BASE, 0x10000, 0x4000, 0, split);
 			if (bank_length > 0x10000U) {
-				stm32f4_add_flash(target, ITCM_BASE + 0x10000U, 0x10000, 0x10000, 4, split);
+				stm32f4_add_flash(target, STM32F7_ITCM_FLASH_BASE + 0x10000U, 0x10000, 0x10000, 4, split);
 				if (remaining_bank_length)
-					stm32f4_add_flash(target, ITCM_BASE + 0x20000U, remaining_bank_length, 0x20000, 5, split);
+					stm32f4_add_flash(
+						target, STM32F7_ITCM_FLASH_BASE + 0x20000U, remaining_bank_length, 0x20000, 5, split);
 			}
 		}
 		/* If the device has an enabled second bank, we better deal with that too. */
 		if (use_dual_bank) {
 			if (is_f7) { /* F76x in "dual_bank" mode loses "large_sectors" */
-				const uint32_t bank1_base = ITCM_BASE + bank_length;
+				const uint32_t bank1_base = STM32F7_ITCM_FLASH_BASE + bank_length;
 				stm32f4_add_flash(target, bank1_base, 0x10000, 0x4000, 16, split);
 				stm32f4_add_flash(target, bank1_base + 0x10000U, 0x10000, 0x10000, 20, split);
 				stm32f4_add_flash(target, bank1_base + 0x20000U, remaining_bank_length, 0x20000, 21, split);
 			}
-			const uint32_t bank2_base = AXIM_BASE + bank_length;
+			const uint32_t bank2_base = STM32F7_AXIM_FLASH_BASE + bank_length;
 			stm32f4_add_flash(target, bank2_base, 0x10000, 0x4000, 16, split);
 			stm32f4_add_flash(target, bank2_base + 0x10000U, 0x10000, 0x10000, 20, split);
 			stm32f4_add_flash(target, bank2_base + 0x20000U, remaining_bank_length, 0x20000, 21, split);
@@ -638,8 +639,8 @@ static bool stm32f4_flash_erase(target_flash_s *target_flash, target_addr_t addr
 static bool stm32f4_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t len)
 {
 	/* Translate ITCM addresses to AXIM */
-	if (dest >= ITCM_BASE && dest < AXIM_BASE)
-		dest += AXIM_BASE - ITCM_BASE;
+	if (dest >= STM32F7_ITCM_FLASH_BASE && dest < STM32F7_AXIM_FLASH_BASE)
+		dest += STM32F7_AXIM_FLASH_BASE - STM32F7_ITCM_FLASH_BASE;
 	target_s *target = flash->t;
 
 	align_e psize = ((const stm32f4_priv_s *)target->target_storage)->psize;
