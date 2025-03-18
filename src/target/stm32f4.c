@@ -331,8 +331,8 @@ bool gd32f4_probe(target_s *const target)
 	target->driver = stm32f4_get_chip_name(target->part_id);
 	target_add_commands(target, stm32f4_cmd_list, target->driver);
 
-	target_add_ram32(target, 0x10000000, 0x10000); /* 64 k CCM Ram*/
-	target_add_ram32(target, 0x20000000, 0x50000); /* 320 k RAM */
+	target_add_ram32(target, STM32F4_CCM_RAM_BASE, 0x10000);  /* 64 KiB CCM RAM */
+	target_add_ram32(target, STM32F4_AHB_SRAM_BASE, 0x50000); /* 320 KiB RAM */
 
 	/* TODO implement DBS mode */
 	const uint8_t split = 12;
@@ -460,8 +460,9 @@ static bool stm32f4_attach(target_s *const target)
 		}
 	} else {
 		if (has_ccm_ram)
-			target_add_ram32(target, 0x10000000, 0x10000); /* 64kiB CCM RAM */
-		target_add_ram32(target, 0x20000000, 0x50000);     /* 320kiB RAM */
+			target_add_ram32(target, STM32F4_CCM_RAM_BASE, 0x10000); /* 64 KiB CCM RAM */
+		target_add_ram32(target, STM32F4_AHB_SRAM_BASE, 0x50000);    /* 320 KiB RAM */
+
 		if (dual_bank && max_flashsize < 2048U) {
 			/* Check the dual-bank status on 1MiB Flash devices */
 			const uint32_t option_ctrl = target_mem32_read32(target, FLASH_OPTCR);
