@@ -231,23 +231,6 @@ static bool stm32u0_flash_sr_flag_wait_reset(
 	return true;
 }
 
-static bool stm32u0_flash_sr_flag_wait_set(
-	target_s *const target, platform_timeout_s *const print_progess, uint32_t flag_bit)
-{
-	/* Read FLASH_SR to poll for target bit */
-	uint32_t status = 0;
-	while (!(status & flag_bit)) {
-		status = target_mem32_read32(target, FLASH_SR_REG);
-		if ((status & FLASH_SR_ERROR_MASK) || target_check_error(target)) {
-			DEBUG_ERROR("stm32u0 Flash error: status %" PRIx32 "\n", status);
-			return false;
-		}
-		if (print_progess)
-			target_print_progress(print_progess);
-	}
-	return true;
-}
-
 static bool stm32u0_flash_busy_wait(target_s *const target, platform_timeout_s *const print_progess)
 {
 	return stm32u0_flash_sr_flag_wait_reset(target, print_progess, FLASH_SR_BSY);
