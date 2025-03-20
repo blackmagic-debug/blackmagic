@@ -157,26 +157,20 @@ static bool puya_flash_prepare(target_flash_s *flash)
 		hsi_fs = 0;
 	DEBUG_TARGET("HSI frequency selection is %d\n", hsi_fs);
 
-	const uint32_t eppara0 = target_mem32_read32(flash->t, PUYA_FLASH_TIMING_CAL_BASE + hsi_fs * 20 + 0);
-	const uint32_t eppara1 = target_mem32_read32(flash->t, PUYA_FLASH_TIMING_CAL_BASE + hsi_fs * 20 + 4);
-	const uint32_t eppara2 = target_mem32_read32(flash->t, PUYA_FLASH_TIMING_CAL_BASE + hsi_fs * 20 + 8);
-	const uint32_t eppara3 = target_mem32_read32(flash->t, PUYA_FLASH_TIMING_CAL_BASE + hsi_fs * 20 + 12);
-	const uint32_t eppara4 = target_mem32_read32(flash->t, PUYA_FLASH_TIMING_CAL_BASE + hsi_fs * 20 + 16);
-	DEBUG_TARGET("PY32 flash timing cal %d: %08" PRIx32 "\n", 0, eppara0);
-	DEBUG_TARGET("PY32 flash timing cal %d: %08" PRIx32 "\n", 1, eppara1);
-	DEBUG_TARGET("PY32 flash timing cal %d: %08" PRIx32 "\n", 2, eppara2);
-	DEBUG_TARGET("PY32 flash timing cal %d: %08" PRIx32 "\n", 3, eppara3);
-	DEBUG_TARGET("PY32 flash timing cal %d: %08" PRIx32 "\n", 4, eppara4);
-
-	target_mem32_write32(flash->t, PUYA_FLASH_TS0, eppara0 & 0xffU);
-	target_mem32_write32(flash->t, PUYA_FLASH_TS1, (eppara0 >> 16U) & 0x1ffU);
-	target_mem32_write32(flash->t, PUYA_FLASH_TS3, (eppara0 >> 8U) & 0xffU);
-	target_mem32_write32(flash->t, PUYA_FLASH_TS2P, eppara1 & 0xffU);
-	target_mem32_write32(flash->t, PUYA_FLASH_TPS3, (eppara1 >> 16U) & 0x7ffU);
-	target_mem32_write32(flash->t, PUYA_FLASH_PERTPE, eppara2 & 0x1ffffU);
-	target_mem32_write32(flash->t, PUYA_FLASH_SMERTPE, eppara3 & 0x1ffffU);
-	target_mem32_write32(flash->t, PUYA_FLASH_PRGTPE, eppara4 & 0xffffU);
-	target_mem32_write32(flash->t, PUYA_FLASH_PRETPE, (eppara4 >> 16U) & 0x3fffU);
+	uint32_t eppara[5] = {0};
+	for (uint16_t i = 0; i < 5; i++) {
+		eppara[i] = target_mem32_read32(flash->t, PUYA_FLASH_TIMING_CAL_BASE + hsi_fs * 20 + i * 4U);
+		DEBUG_TARGET("PY32 flash timing cal %u: %08" PRIx32 "\n", i, eppara[i]);
+	}
+	target_mem32_write32(flash->t, PUYA_FLASH_TS0, eppara[0] & 0xffU);
+	target_mem32_write32(flash->t, PUYA_FLASH_TS1, (eppara[0] >> 16U) & 0x1ffU);
+	target_mem32_write32(flash->t, PUYA_FLASH_TS3, (eppara[0] >> 8U) & 0xffU);
+	target_mem32_write32(flash->t, PUYA_FLASH_TS2P, eppara[1] & 0xffU);
+	target_mem32_write32(flash->t, PUYA_FLASH_TPS3, (eppara[1] >> 16U) & 0x7ffU);
+	target_mem32_write32(flash->t, PUYA_FLASH_PERTPE, eppara[2] & 0x1ffffU);
+	target_mem32_write32(flash->t, PUYA_FLASH_SMERTPE, eppara[3] & 0x1ffffU);
+	target_mem32_write32(flash->t, PUYA_FLASH_PRGTPE, eppara[4] & 0xffffU);
+	target_mem32_write32(flash->t, PUYA_FLASH_PRETPE, (eppara[4] >> 16U) & 0x3fffU);
 
 	return true;
 }
