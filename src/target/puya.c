@@ -162,11 +162,11 @@ static bool puya_flash_prepare(target_flash_s *flash)
 	const uint32_t eppara2 = target_mem32_read32(flash->t, PUYA_FLASH_TIMING_CAL_BASE + hsi_fs * 20 + 8);
 	const uint32_t eppara3 = target_mem32_read32(flash->t, PUYA_FLASH_TIMING_CAL_BASE + hsi_fs * 20 + 12);
 	const uint32_t eppara4 = target_mem32_read32(flash->t, PUYA_FLASH_TIMING_CAL_BASE + hsi_fs * 20 + 16);
-	DEBUG_TARGET("PY32 flash timing cal 0: %08" PRIx32 "\n", eppara0);
-	DEBUG_TARGET("PY32 flash timing cal 1: %08" PRIx32 "\n", eppara1);
-	DEBUG_TARGET("PY32 flash timing cal 2: %08" PRIx32 "\n", eppara2);
-	DEBUG_TARGET("PY32 flash timing cal 3: %08" PRIx32 "\n", eppara3);
-	DEBUG_TARGET("PY32 flash timing cal 4: %08" PRIx32 "\n", eppara4);
+	DEBUG_TARGET("PY32 flash timing cal %d: %08" PRIx32 "\n", 0, eppara0);
+	DEBUG_TARGET("PY32 flash timing cal %d: %08" PRIx32 "\n", 1, eppara1);
+	DEBUG_TARGET("PY32 flash timing cal %d: %08" PRIx32 "\n", 2, eppara2);
+	DEBUG_TARGET("PY32 flash timing cal %d: %08" PRIx32 "\n", 3, eppara3);
+	DEBUG_TARGET("PY32 flash timing cal %d: %08" PRIx32 "\n", 4, eppara4);
 
 	target_mem32_write32(flash->t, PUYA_FLASH_TS0, eppara0 & 0xffU);
 	target_mem32_write32(flash->t, PUYA_FLASH_TS1, (eppara0 >> 16U) & 0x1ffU);
