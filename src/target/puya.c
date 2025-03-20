@@ -39,16 +39,13 @@
 #include "buffer_utils.h"
 
 /* Flash */
-#define PUYA_FLASH_START         0x08000000U
-#define PUYA_00A_FLASH_PAGE_SIZE 128U
-#define PUYA_07X_FLASH_PAGE_SIZE 256U
-#define PUYA_07X_RAM_SIZE        0x4000U
+#define PUYA_FLASH_START     0x08000000U
+#define PUYA_FLASH_PAGE_SIZE 128
 
 /* Pile of timing parameters needed to make sure flash works,
  * see section "4.4. Flash configuration bytes" of the RM.
  */
-#define PUYA_00A_FLASH_TIMING_CAL_BASE 0x1fff0f1cU
-
+#define PUYA_FLASH_TIMING_CAL_BASE 0x1fff0f1cU
 /* This config word is undocumented, but the Puya-ISP boot code
  * uses it to determine the valid flash/ram size.
  * (yes, this *does* include undocumented free extra flash/ram in the 002A)
@@ -56,9 +53,7 @@
  * bits[2:0] => flash size in multiples of 0x2000 bytes, minus 1
  * bits[5:4] => RAM size in multiples of 0x800 bytes, minus 1
  */
-#define PUYA_00A_FLASH_RAM_SZ 0x1fff0ffcU
-#define PUYA_07X_FLASH_RAM_SZ 0x1fff31fcU
-
+#define PUYA_FLASH_RAM_SZ     0x1fff0ffcU
 #define PUYA_FLASH_SZ_SHIFT   0U
 #define PUYA_FLASH_SZ_MASK    7U
 #define PUYA_FLASH_UNIT_SHIFT 13U
@@ -110,8 +105,7 @@
  */
 static bool puya_flash_erase(target_flash_s *flash, target_addr_t addr, size_t len);
 static bool puya_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t len);
-static bool puya_00a_flash_prepare(target_flash_s *flash);
-static bool puya_07x_flash_prepare(target_flash_s *flash);
+static bool puya_flash_prepare(target_flash_s *flash);
 static bool puya_flash_done(target_flash_s *flash);
 
 bool puya_probe(target_s *target)
@@ -120,44 +114,31 @@ bool puya_probe(target_s *target)
 	size_t flash_size = 0U;
 
 	const uint32_t dbg_idcode = target_mem32_read32(target, PUYA_DBG_IDCODE);
-	if (dbg_idcode == 0x06188061U) {
-		const uint32_t flash_ram_sz = target_mem32_read32(target, PUYA_07X_FLASH_RAM_SZ);
-		flash_size = (((flash_ram_sz >> PUYA_FLASH_SZ_SHIFT) & PUYA_FLASH_SZ_MASK) + 1) << PUYA_FLASH_UNIT_SHIFT;
-		ram_size = (((flash_ram_sz >> PUYA_RAM_SZ_SHIFT) & PUYA_RAM_SZ_MASK) + 1) << PUYA_RAM_UNIT_SHIFT;
-		target->driver = "PY32F07x";
-		target_add_ram32(target, PUYA_RAM_START, PUYA_07X_RAM_SIZE);
-	} else if ((dbg_idcode & 0xfffU) == 0U) {
-		const uint32_t flash_ram_sz = target_mem32_read32(target, PUYA_00A_FLASH_RAM_SZ);
+	if ((dbg_idcode & 0xfffU) == 0) {
+		const uint32_t flash_ram_sz = target_mem32_read32(target, PUYA_FLASH_RAM_SZ);
 		flash_size = (((flash_ram_sz >> PUYA_FLASH_SZ_SHIFT) & PUYA_FLASH_SZ_MASK) + 1) << PUYA_FLASH_UNIT_SHIFT;
 		ram_size = (((flash_ram_sz >> PUYA_RAM_SZ_SHIFT) & PUYA_RAM_SZ_MASK) + 1) << PUYA_RAM_UNIT_SHIFT;
 		// TODO: which part families does this actually correspond to?
 		// Tested with a PY32F002AW15U which returns 0x60001000 in IDCODE
 		target->driver = "PY32Fxxx";
-		target_add_ram32(target, PUYA_RAM_START, ram_size);
 	} else {
 		DEBUG_TARGET("Unknown PY32 device %08" PRIx32 "\n", dbg_idcode);
 		return false;
 	}
 
+	target_add_ram32(target, PUYA_RAM_START, ram_size);
 	target_flash_s *flash = calloc(1, sizeof(*flash));
 	if (!flash) { /* calloc failed: heap exhaustion */
 		DEBUG_ERROR("calloc: failed in %s\n", __func__);
 		return false;
 	}
-
 	flash->start = PUYA_FLASH_START;
 	flash->length = flash_size;
+	flash->blocksize = PUYA_FLASH_PAGE_SIZE;
+	flash->writesize = PUYA_FLASH_PAGE_SIZE;
 	flash->erase = puya_flash_erase;
 	flash->write = puya_flash_write;
-	if (dbg_idcode == 0x06188061U) {
-		flash->blocksize = PUYA_07X_FLASH_PAGE_SIZE;
-		flash->writesize = PUYA_07X_FLASH_PAGE_SIZE;
-		flash->prepare = puya_07x_flash_prepare;
-	} else {
-		flash->blocksize = PUYA_00A_FLASH_PAGE_SIZE;
-		flash->writesize = PUYA_00A_FLASH_PAGE_SIZE;
-		flash->prepare = puya_00a_flash_prepare;
-	}
+	flash->prepare = puya_flash_prepare;
 	flash->done = puya_flash_done;
 	flash->erased = 0xffU;
 	target_add_flash(target, flash);
@@ -165,42 +146,7 @@ bool puya_probe(target_s *target)
 	return true;
 }
 
-static bool puya_00a_flash_prepare(target_flash_s *flash)
-{
-	target_mem32_write32(flash->t, PUYA_FLASH_KEYR, PUYA_FLASH_KEYR_KEY1);
-	target_mem32_write32(flash->t, PUYA_FLASH_KEYR, PUYA_FLASH_KEYR_KEY2);
-
-	uint8_t hsi_fs =
-		(target_mem32_read32(flash->t, PUYA_RCC_ICSCR) >> PUYA_RCC_ICSCR_HSI_FS_SHIFT) & PUYA_RCC_ICSCR_HSI_FS_MASK;
-	if (hsi_fs > 4U)
-		hsi_fs = 0U;
-	DEBUG_TARGET("HSI frequency selection is %d\n", hsi_fs);
-
-	const uint32_t eppara0 = target_mem32_read32(flash->t, PUYA_00A_FLASH_TIMING_CAL_BASE + hsi_fs * 20 + 0);
-	const uint32_t eppara1 = target_mem32_read32(flash->t, PUYA_00A_FLASH_TIMING_CAL_BASE + hsi_fs * 20 + 4);
-	const uint32_t eppara2 = target_mem32_read32(flash->t, PUYA_00A_FLASH_TIMING_CAL_BASE + hsi_fs * 20 + 8);
-	const uint32_t eppara3 = target_mem32_read32(flash->t, PUYA_00A_FLASH_TIMING_CAL_BASE + hsi_fs * 20 + 12);
-	const uint32_t eppara4 = target_mem32_read32(flash->t, PUYA_00A_FLASH_TIMING_CAL_BASE + hsi_fs * 20 + 16);
-	DEBUG_TARGET("PY32 flash timing cal 0: %08" PRIx32 "\n", eppara0);
-	DEBUG_TARGET("PY32 flash timing cal 1: %08" PRIx32 "\n", eppara1);
-	DEBUG_TARGET("PY32 flash timing cal 2: %08" PRIx32 "\n", eppara2);
-	DEBUG_TARGET("PY32 flash timing cal 3: %08" PRIx32 "\n", eppara3);
-	DEBUG_TARGET("PY32 flash timing cal 4: %08" PRIx32 "\n", eppara4);
-
-	target_mem32_write32(flash->t, PUYA_FLASH_TS0, eppara0 & 0xffU);
-	target_mem32_write32(flash->t, PUYA_FLASH_TS1, (eppara0 >> 16U) & 0x1ffU);
-	target_mem32_write32(flash->t, PUYA_FLASH_TS3, (eppara0 >> 8U) & 0xffU);
-	target_mem32_write32(flash->t, PUYA_FLASH_TS2P, eppara1 & 0xffU);
-	target_mem32_write32(flash->t, PUYA_FLASH_TPS3, (eppara1 >> 16U) & 0x7ffU);
-	target_mem32_write32(flash->t, PUYA_FLASH_PERTPE, eppara2 & 0x1ffffU);
-	target_mem32_write32(flash->t, PUYA_FLASH_SMERTPE, eppara3 & 0x1ffffU);
-	target_mem32_write32(flash->t, PUYA_FLASH_PRGTPE, eppara4 & 0xffffU);
-	target_mem32_write32(flash->t, PUYA_FLASH_PRETPE, (eppara4 >> 16U) & 0x3fffU);
-
-	return true;
-}
-
-static bool puya_07x_flash_prepare(target_flash_s *flash)
+static bool puya_flash_prepare(target_flash_s *flash)
 {
 	target_mem32_write32(flash->t, PUYA_FLASH_KEYR, PUYA_FLASH_KEYR_KEY1);
 	target_mem32_write32(flash->t, PUYA_FLASH_KEYR, PUYA_FLASH_KEYR_KEY2);
@@ -211,17 +157,16 @@ static bool puya_07x_flash_prepare(target_flash_s *flash)
 		hsi_fs = 0;
 	DEBUG_TARGET("HSI frequency selection is %d\n", hsi_fs);
 
-	const uint32_t eppara0 = target_mem32_read32(flash->t, 0x1fff3238 + 4 * 0x28);
-	const uint32_t eppara1 = target_mem32_read32(flash->t, 0x1fff3240 + 4 * 0x28);
-	const uint32_t eppara2 = target_mem32_read32(flash->t, 0x1fff3248 + 4 * 0x28);
-	const uint32_t eppara3 = target_mem32_read32(flash->t, 0x1fff3250 + 4 * 0x28);
-	const uint32_t eppara4 = target_mem32_read32(flash->t, 0x1fff3258 + 4 * 0x28);
-
-	DEBUG_TARGET("PY32 flash timing cal 0: %08" PRIx32 "\n", eppara0);
-	DEBUG_TARGET("PY32 flash timing cal 1: %08" PRIx32 "\n", eppara1);
-	DEBUG_TARGET("PY32 flash timing cal 2: %08" PRIx32 "\n", eppara2);
-	DEBUG_TARGET("PY32 flash timing cal 3: %08" PRIx32 "\n", eppara3);
-	DEBUG_TARGET("PY32 flash timing cal 4: %08" PRIx32 "\n", eppara4);
+	const uint32_t eppara0 = target_mem32_read32(flash->t, PUYA_FLASH_TIMING_CAL_BASE + hsi_fs * 20 + 0);
+	const uint32_t eppara1 = target_mem32_read32(flash->t, PUYA_FLASH_TIMING_CAL_BASE + hsi_fs * 20 + 4);
+	const uint32_t eppara2 = target_mem32_read32(flash->t, PUYA_FLASH_TIMING_CAL_BASE + hsi_fs * 20 + 8);
+	const uint32_t eppara3 = target_mem32_read32(flash->t, PUYA_FLASH_TIMING_CAL_BASE + hsi_fs * 20 + 12);
+	const uint32_t eppara4 = target_mem32_read32(flash->t, PUYA_FLASH_TIMING_CAL_BASE + hsi_fs * 20 + 16);
+	DEBUG_TARGET("PY32 flash timing cal %d: %08" PRIx32 "\n", 0, eppara0);
+	DEBUG_TARGET("PY32 flash timing cal %d: %08" PRIx32 "\n", 1, eppara1);
+	DEBUG_TARGET("PY32 flash timing cal %d: %08" PRIx32 "\n", 2, eppara2);
+	DEBUG_TARGET("PY32 flash timing cal %d: %08" PRIx32 "\n", 3, eppara3);
+	DEBUG_TARGET("PY32 flash timing cal %d: %08" PRIx32 "\n", 4, eppara4);
 
 	target_mem32_write32(flash->t, PUYA_FLASH_TS0, eppara0 & 0xffU);
 	target_mem32_write32(flash->t, PUYA_FLASH_TS1, (eppara0 >> 16U) & 0x1ffU);
@@ -231,7 +176,7 @@ static bool puya_07x_flash_prepare(target_flash_s *flash)
 	target_mem32_write32(flash->t, PUYA_FLASH_PERTPE, eppara2 & 0x1ffffU);
 	target_mem32_write32(flash->t, PUYA_FLASH_SMERTPE, eppara3 & 0x1ffffU);
 	target_mem32_write32(flash->t, PUYA_FLASH_PRGTPE, eppara4 & 0xffffU);
-	target_mem32_write32(flash->t, PUYA_FLASH_PRETPE, (eppara4 >> 16U) & 0xffffU); // diff
+	target_mem32_write32(flash->t, PUYA_FLASH_PRETPE, (eppara4 >> 16U) & 0x3fffU);
 
 	return true;
 }
