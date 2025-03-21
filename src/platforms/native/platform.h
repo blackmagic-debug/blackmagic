@@ -55,14 +55,17 @@ extern int hwversion;
  * TPWR     = PB0  (input)  -- analogue on mini design ADC1, CH8
  * nTRST    = PB1  (output) [blackmagic]
  * PWR_BR   = PB1  (output) [blackmagic_mini] -- supply power to the target, active low
- * TMS_DIR  = PA1  (output) [blackmagic_mini v2.1] -- choose direction of the TCK pin, input low, output high
+ * TMS_DIR  = PA1  (output) [blackmagic_mini v2.1] -- choose direction of the TMS pin, input low, output high
  * nRST     = PA2  (output) -- Hardware 5 and older
  *          = PA9  (output) -- Hardware 6 and newer
  * TDI      = PA3  (output) -- Hardware 5 and older
  *          = PA7  (output) -- Hardware 6 and newer
  * TMS      = PA4  (input/output for SWDIO)
  * TCK      = PA5  (output SWCLK)
- * TCK_DIR  = PC15 (output) -- Hardware 6 and newer
+ * TCK_DIR  = PC15 (output) -- Hardware 6 and newer -- choose direction of the TCK pin.
+ *                                                     external pull-up (default high, output)
+ *                                                     set to LOW to allow multiple BMP to share the TCK/SWDCLK line
+ *                                                     input low, output high
  * TDO      = PA6  (input)
  * TRACESWO = PB7  (input)  -- To allow trace decoding using USART1
  *                             Hardware 4 has a normally open jumper between TDO and TRACESWO
