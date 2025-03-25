@@ -65,6 +65,8 @@ extern int hwversion;
  * TCK_DIR  = PC15 (output) -- Hardware 6 and newer -- choose direction of the TCK pin.
  *                                                     external pull-up (default high, output)
  *                                                     set to LOW to allow multiple BMP to share the TCK/SWDCLK line
+ *                                                     for in-circuit communication (I2C, SPI) set to low to prevent conflict
+ *                                                     with other devices in the circuit
  *                                                     input low, output high
  * TDO      = PA6  (input)
  * TRACESWO = PB7  (input)  -- To allow trace decoding using USART1
