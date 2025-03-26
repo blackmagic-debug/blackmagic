@@ -149,11 +149,22 @@ int ftdi_read_data(struct ftdi_context *ftdi, unsigned char *buf, const int size
 
 int ftdi_write_data(struct ftdi_context *ftdi, const unsigned char *buf, int size)
 {
-	(void)ftdi;
-	DWORD bytes_written;
-	if (FT_Write(ftdi_handle, (unsigned char *)buf, size, &bytes_written) != FT_OK)
-		return 0;
-	return bytes_written;
+    (void)ftdi;
+    DWORD bytes_written;
+
+    unsigned char *temp_buf = (unsigned char *)malloc(size);
+    if (temp_buf == NULL) {
+        return 0; 
+    }
+    memcpy(temp_buf, buf, size);
+
+    if (FT_Write(ftdi_handle, temp_buf, size, &bytes_written) != FT_OK) {
+        free(temp_buf); 
+        return 0;
+    }
+
+    free(temp_buf);
+    return bytes_written;
 }
 
 int ftdi_write_data_set_chunksize(struct ftdi_context *ftdi, unsigned int chunksize)

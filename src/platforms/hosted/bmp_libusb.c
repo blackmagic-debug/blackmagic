@@ -245,6 +245,8 @@ void stlinkv2_read_serial(libusb_device_descriptor_s *device_descriptor, libusb_
 }
 
 #if defined(_WIN32) || defined(__CYGWIN__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-qual"
 static probe_info_s *process_ftdi_probe(void)
 {
 	DWORD ftdi_dev_count = 0;
@@ -285,7 +287,7 @@ static probe_info_s *process_ftdi_probe(void)
 
 				if (probe_skip) { // Clean up any previous serial number to skip
 					use_serial = true;
-					free((void *)probe_skip);
+					free((char*)probe_skip);
 					probe_skip = NULL;
 				}
 
@@ -322,11 +324,14 @@ static probe_info_s *process_ftdi_probe(void)
 			free(product);
 		}
 	}
-	if (probe_skip)
-		free((void *)probe_skip);
+	if (probe_skip) {
+		free((char*)probe_skip);
+		probe_skip = NULL;
+	}
 	free(dev_info);
 	return probe_list;
 }
+#pragma GCC diagnostic pop
 #endif
 
 void orbtrace_read_version(libusb_device *device, libusb_device_handle *handle, char *version, size_t buffer_size)
