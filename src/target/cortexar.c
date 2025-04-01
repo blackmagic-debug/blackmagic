@@ -59,6 +59,19 @@
 
 #include <assert.h>
 
+static uint32_t swap32(const uint32_t value)
+{
+	return ((value >> 24) & 0xff) | ((value >> 8) & 0xff00) | ((value << 8) & 0xff0000) | ((value << 24) & 0xff000000);
+}
+
+static void memcpy_swap(void *dest_v, const void *src_v, size_t count) {
+	uint8_t *dest = dest_v;
+	const uint8_t *src = src_v;
+	for (size_t i = 0; i < count; i += 1) {
+		dest[(i&~3)+(~i&3)] = src[i];
+	}
+}
+
 typedef struct cortexar_priv {
 	/* Base core information */
 	cortex_priv_s base;
@@ -286,10 +299,10 @@ static const uint16_t cortexar_spsr_encodings[5] = {
  * The fourth is `STRH r1, [r0], #+2` to store a uint16_t to [r0] from r1 and increment
  * the address in r0 by 2, writing the new address back to r0.
  */
-#define ARM_LDRB_R0_R1_INSN 0xe4f01001U
-#define ARM_LDRH_R0_R1_INSN 0xe0f010b2U
-#define ARM_STRB_R1_R0_INSN 0xe4e01001U
-#define ARM_STRH_R1_R0_INSN 0xe0e010b2U
+#define ARM_LDRB_R0_R1_INSN 0xe4d01001U
+#define ARM_LDRH_R0_R1_INSN 0xe0d010b2U
+#define ARM_STRB_R1_R0_INSN 0xe4c01001U
+#define ARM_STRH_R1_R0_INSN 0xe0c010b2U
 
 /* Instruction encodings for synchronisation barriers */
 #define ARM_ISB_INSN 0xe57ff06fU
@@ -1021,7 +1034,7 @@ static inline bool cortexar_mem_read_fast(target_s *const target, uint32_t *cons
 		/* Run the transfer, hammering the DTR */
 		for (size_t offset = 0; offset < count; ++offset) {
 			/* Read the next value, which is the value for the last instruction run */
-			const uint32_t value = adiv5_dp_read(priv->base.ap->dp, ADIV5_AP_DB(CORTEXAR_BANKED_DTRRX));
+			const uint32_t value = swap32(adiv5_dp_read(priv->base.ap->dp, ADIV5_AP_DB(CORTEXAR_BANKED_DTRRX)));
 			/* If we've run the instruction at least once, store it */
 			if (offset)
 				dest[offset - 1U] = value;
@@ -1031,7 +1044,7 @@ static inline bool cortexar_mem_read_fast(target_s *const target, uint32_t *cons
 		/* Go back into DCC Normal (Non-blocking) mode */
 		adiv5_dp_write(priv->base.ap->dp, ADIV5_AP_DB(CORTEXAR_BANKED_DCSR), dbg_dcsr | CORTEXAR_DBG_DCSR_DCC_NORMAL);
 		/* Grab the value of the last instruction run now it won't run again */
-		dest[count - 1U] = adiv5_dp_read(priv->base.ap->dp, ADIV5_AP_DB(CORTEXAR_BANKED_DTRRX));
+		dest[count - 1U] = swap32(adiv5_dp_read(priv->base.ap->dp, ADIV5_AP_DB(CORTEXAR_BANKED_DTRRX)));
 		/* Check if the instruction triggered a synchronous data abort */
 		return cortexar_check_data_abort(target, status);
 	}
@@ -1040,6 +1053,7 @@ static inline bool cortexar_mem_read_fast(target_s *const target, uint32_t *cons
 	for (size_t offset = 0; offset < count; ++offset) {
 		if (!cortexar_run_read_insn(target, ARM_LDC_R0_POSTINC4_DTRTX_INSN, dest + offset))
 			return false; /* Propagate failure if it happens */
+		dest[offset] = swap32(dest[offset]);
 	}
 	return true; /* Signal success */
 }
@@ -1165,7 +1179,7 @@ static inline bool cortexar_mem_write_fast(target_s *const target, const uint32_
 		adiv5_dp_write(priv->base.ap->dp, ADIV5_AP_DB(CORTEXAR_BANKED_ITR), ARM_STC_DTRRX_R0_POSTINC4_INSN);
 		/* Run the transfer, hammering the DTR */
 		for (size_t offset = 0; offset < count; ++offset)
-			adiv5_dp_write(priv->base.ap->dp, ADIV5_AP_DB(CORTEXAR_BANKED_DTRTX), src[offset]);
+			adiv5_dp_write(priv->base.ap->dp, ADIV5_AP_DB(CORTEXAR_BANKED_DTRTX), swap32(src[offset]));
 		/* Now read out the status from the DCSR in case anything went wrong */
 		const uint32_t status = adiv5_dp_read(priv->base.ap->dp, ADIV5_AP_DB(CORTEXAR_BANKED_DCSR));
 		/* Go back into DCC Normal (Non-blocking) mode */
@@ -1176,7 +1190,7 @@ static inline bool cortexar_mem_write_fast(target_s *const target, const uint32_
 
 	/* Write each of the uint32_t's checking for failure */
 	for (size_t offset = 0; offset < count; ++offset) {
-		if (!cortexar_run_write_insn(target, ARM_STC_DTRRX_R0_POSTINC4_INSN, src[offset]))
+		if (!cortexar_run_write_insn(target, ARM_STC_DTRRX_R0_POSTINC4_INSN, swap32(src[offset])))
 			return false; /* Propagate failure if it happens */
 	}
 	return true; /* Signal success */
@@ -1277,11 +1291,11 @@ static void cortexar_regs_read(target_s *const target, void *const data)
 	const cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
 	uint32_t *const regs = (uint32_t *)data;
 	/* Copy the register values out from our cache */
-	memcpy(regs, priv->core_regs.r, sizeof(priv->core_regs.r));
-	regs[CORTEX_REG_CPSR] = priv->core_regs.cpsr;
+	memcpy_swap(regs, priv->core_regs.r, sizeof(priv->core_regs.r));
+	regs[CORTEX_REG_CPSR] = swap32(priv->core_regs.cpsr);
 	if (target->target_options & TOPT_FLAVOUR_FLOAT) {
-		memcpy(regs + CORTEXAR_GENERAL_REG_COUNT, priv->core_regs.d, sizeof(priv->core_regs.d));
-		regs[CORTEX_REG_FPCSR] = priv->core_regs.fpcsr;
+		memcpy_swap(regs + CORTEXAR_GENERAL_REG_COUNT, priv->core_regs.d, sizeof(priv->core_regs.d));
+		regs[CORTEX_REG_FPCSR] = swap32(priv->core_regs.fpcsr);
 	}
 }
 
@@ -1290,11 +1304,11 @@ static void cortexar_regs_write(target_s *const target, const void *const data)
 	cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
 	const uint32_t *const regs = (const uint32_t *)data;
 	/* Copy the new register values into our cache */
-	memcpy(priv->core_regs.r, regs, sizeof(priv->core_regs.r));
-	priv->core_regs.cpsr = regs[CORTEX_REG_CPSR];
+	memcpy_swap(priv->core_regs.r, regs, sizeof(priv->core_regs.r));
+	priv->core_regs.cpsr = swap32(regs[CORTEX_REG_CPSR]);
 	if (target->target_options & TOPT_FLAVOUR_FLOAT) {
-		memcpy(priv->core_regs.d, regs + CORTEXAR_GENERAL_REG_COUNT, sizeof(priv->core_regs.d));
-		priv->core_regs.fpcsr = regs[CORTEX_REG_FPCSR];
+		memcpy_swap(priv->core_regs.d, regs + CORTEXAR_GENERAL_REG_COUNT, sizeof(priv->core_regs.d));
+		priv->core_regs.fpcsr = swap32(regs[CORTEX_REG_FPCSR]);
 	}
 }
 
@@ -1339,7 +1353,7 @@ static size_t cortexar_reg_read(target_s *const target, const uint32_t reg, void
 	if (max < reg_width)
 		return 0;
 	/* Finally, copy the register data out and return the width */
-	memcpy(data, reg_ptr, reg_width);
+	memcpy_swap(data, reg_ptr, reg_width);
 	return reg_width;
 }
 
@@ -1354,7 +1368,7 @@ static size_t cortexar_reg_write(target_s *const target, const uint32_t reg, con
 	if (max < reg_width)
 		return 0;
 	/* Finally, copy the new register data in and return the width */
-	memcpy(reg_ptr, data, reg_width);
+	memcpy_swap(reg_ptr, data, reg_width);
 	return reg_width;
 }
 
