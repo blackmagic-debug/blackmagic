@@ -36,6 +36,12 @@
 
 #include "general.h"
 
+#define TOPT_FLAVOUR_FLOAT    (1U << 1U) /* If set, core has a hardware FPU */
+#define TOPT_FLAVOUR_SEC_EXT  (1U << 2U) /* If set, core has security extensions */
+#define TOPT_FLAVOUR_VIRT_EXT (1U << 3U) /* If set, core has virtualisation extensions */
+#define TOPT_FLAVOUR_VIRT_MEM (1U << 4U) /* If set, core uses the virtual memory model, not protected */
+#define TOPT_FLAVOUR_BE       (1U << 5U) /* If set, core is big endian, not little endian */
+
 void cortexar_invalidate_all_caches(target_s *target);
 
 #endif /* TARGET_CORTEXAR_H */
