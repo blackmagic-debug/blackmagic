@@ -23,6 +23,7 @@ bool ti_tms570_probe(target_s *const target)
 	}
 
 	target->driver = "TMS570";
+	target->target_options |= TOPT_FLAVOUR_BE;
 	target_add_ram32(target, TMS570_SRAM_BASE, TMS570_SRAM_SIZE);
 	target_add_ram32(target, TMS570_SRAM_ECC_BASE, TMS570_SRAM_SIZE);
 	return true;

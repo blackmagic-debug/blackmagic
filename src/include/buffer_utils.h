@@ -89,6 +89,15 @@ static inline uint64_t read_be8(const uint8_t *const buffer, const size_t offset
 		((uint64_t)data[6] << 8U) | data[7];
 }
 
+static inline uint64_t read_le8(const uint8_t *const buffer, const size_t offset)
+{
+	return ((uint64_t)buffer[offset + 7] << 56U) | ((uint64_t)buffer[offset + 6] << 48U) |
+		((uint64_t)buffer[offset + 5] << 40U) | ((uint64_t)buffer[offset + 4] << 32U) |
+		((uint64_t)buffer[offset + 3] << 24U) | ((uint64_t)buffer[offset + 2] << 16U) |
+		((uint64_t)buffer[offset + 1] << 8U) | buffer[offset + 0];
+}
+
+
 static inline size_t write_char(char *const buffer, const size_t buffer_size, const size_t offset, const char c)
 {
 	if (buffer && offset < buffer_size)
