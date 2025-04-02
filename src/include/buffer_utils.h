@@ -59,6 +59,30 @@ static inline void write_be4(uint8_t *const buffer, const size_t offset, const u
 	buffer[offset + 3U] = value & 0xffU;
 }
 
+static inline void write_le8(uint8_t *const buffer, const size_t offset, const uint64_t value)
+{
+	buffer[offset + 0U] = value & 0xffU;
+	buffer[offset + 1U] = (value >> 8U) & 0xffU;
+	buffer[offset + 2U] = (value >> 16U) & 0xffU;
+	buffer[offset + 3U] = (value >> 24U) & 0xffU;
+	buffer[offset + 4U] = (value >> 32U) & 0xffU;
+	buffer[offset + 5U] = (value >> 40U) & 0xffU;
+	buffer[offset + 6U] = (value >> 48U) & 0xffU;
+	buffer[offset + 7U] = (value >> 56U) & 0xffU;
+}
+
+static inline void write_be8(uint8_t *const buffer, const size_t offset, const uint64_t value)
+{
+	buffer[offset + 0U] = (value >> 56U) & 0xffU;
+	buffer[offset + 1U] = (value >> 48U) & 0xffU;
+	buffer[offset + 2U] = (value >> 40U) & 0xffU;
+	buffer[offset + 3U] = (value >> 32U) & 0xffU;
+	buffer[offset + 4U] = (value >> 24U) & 0xffU;
+	buffer[offset + 5U] = (value >> 16U) & 0xffU;
+	buffer[offset + 6U] = (value >> 8U) & 0xffU;
+	buffer[offset + 7U] = value & 0xffU;
+}
+
 static inline uint16_t read_le2(const uint8_t *const buffer, const size_t offset)
 {
 	uint8_t data[2U];

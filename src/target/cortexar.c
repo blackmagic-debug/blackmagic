@@ -59,14 +59,6 @@
 
 #include <assert.h>
 
-static void memcpy_swap(void *dest_v, const void *src_v, size_t count) {
-	uint8_t *dest = dest_v;
-	const uint8_t *src = src_v;
-	for (size_t i = 0; i < count; i += 1) {
-		dest[(i&~3)+(~i&3)] = src[i];
-	}
-}
-
 typedef struct cortexar_priv {
 	/* Base core information */
 	cortex_priv_s base;
@@ -202,6 +194,7 @@ typedef struct cortexar_priv {
 #define CORTEXAR_CPSR_MODE_HYP  0x0000001aU
 #define CORTEXAR_CPSR_MODE_SYS  0x0000001fU
 #define CORTEXAR_CPSR_THUMB     (1U << 5U)
+#define CORTEXAR_CPSR_BE        (1U << 9U)
 
 /* CPSR remap position for GDB XML mapping */
 #define CORTEXAR_CPSR_GDB_REMAP_POS 25U
@@ -351,6 +344,12 @@ static const uint16_t cortexar_spsr_encodings[5] = {
 
 #define CORTEXAR_MMFR0_VMSA_MASK 0x0000000fU
 #define CORTEXAR_MMFR0_PMSA_MASK 0x000000f0U
+
+#define TOPT_FLAVOUR_FLOAT    (1U << 1U) /* If set, core has a hardware FPU */
+#define TOPT_FLAVOUR_SEC_EXT  (1U << 2U) /* If set, core has security extensions */
+#define TOPT_FLAVOUR_VIRT_EXT (1U << 3U) /* If set, core has virtualisation extensions */
+#define TOPT_FLAVOUR_VIRT_MEM (1U << 4U) /* If set, core uses the virtual memory model, not protected */
+#define TOPT_FLAVOUR_BE       (1U << 5U) /* If set, core is big endian, not little endian */
 
 #define CORTEXAR_STATUS_DATA_FAULT        (1U << 0U)
 #define CORTEXAR_STATUS_MMU_FAULT         (1U << 1U)
@@ -889,6 +888,17 @@ static target_s *cortexar_probe(
 	} else
 		target_check_error(target);
 
+	/* Read the CPSR to figure out if this target is big endian. This clobbers r0, so save
+	 * r0 beforehand and restore it after the read is complete.
+	 */
+	uint32_t r0 = cortexar_core_reg_read(target, 0U);
+	cortexar_run_insn(target, ARM_MRS_R0_CPSR_INSN);
+	priv->core_regs.cpsr = cortexar_core_reg_read(target, 0U);
+	cortexar_core_reg_write(target, 0U, r0);
+	if (priv->core_regs.cpsr & CORTEXAR_CPSR_BE) {
+		target->target_options |= TOPT_FLAVOUR_BE;
+	}
+
 	return target;
 }
 
@@ -1215,9 +1225,9 @@ static inline bool cortexar_mem_write_fast(target_s *const target, const uint32_
 	for (size_t offset = 0; offset < count; ++offset) {
 		uint32_t value;
 		if (target->target_options & TOPT_FLAVOUR_BE) {
-			value = read_be4((const void *const)src, offset);
+			value = read_be4((const void *const)src, offset * 4);
 		} else {
-			value = read_le4((const void *const)src, offset);
+			value = read_le4((const void *const)src, offset * 4);
 		}
 		if (!cortexar_run_write_insn(target, ARM_STC_DTRRX_R0_POSTINC4_INSN, value))
 			return false; /* Propagate failure if it happens */
@@ -1419,18 +1429,24 @@ static size_t cortexar_reg_read(target_s *const target, const uint32_t reg, void
 		return 0;
 	/* Finally, copy the register data out and return the width */
 	switch (reg_width) {
-		case 4:
+		case 4: {
+			uint32_t value;
 			if (target->target_options & TOPT_FLAVOUR_BE)
-				*(uint32_t *)data = read_be4(reg_ptr, 0);
+				value = read_be4(reg_ptr, 0);
 			else
-				*(uint32_t *)data = read_le4(reg_ptr, 0);
+				value = read_le4(reg_ptr, 0);
+			write_le4(data, 0, value);
 			break;
-		case 8:
+		}
+		case 8: {
+			uint64_t value;
 			if (target->target_options & TOPT_FLAVOUR_BE)
-				*(uint64_t *)data = read_be8(reg_ptr, 0);
+				value = read_be8(reg_ptr, 0);
 			else
-				*(uint64_t *)data = read_le8(reg_ptr, 0);
+				value = read_le8(reg_ptr, 0);
+			write_le4(data, 0, value);
 			break;
+		}
 	}
 	return reg_width;
 }
@@ -1446,7 +1462,24 @@ static size_t cortexar_reg_write(target_s *const target, const uint32_t reg, con
 	if (max < reg_width)
 		return 0;
 	/* Finally, copy the new register data in and return the width */
-	memcpy_swap(reg_ptr, data, reg_width);
+	switch (reg_width) {
+		case 4: {
+			uint32_t value = read_le4(data, 0);
+			if (target->target_options & TOPT_FLAVOUR_BE) {
+				write_be4(reg_ptr, 0, value);
+			} else
+				write_le4(reg_ptr, 0, value);
+			break;
+		}
+		case 8: {
+			uint64_t value = read_le8(data, 0);
+			if (target->target_options & TOPT_FLAVOUR_BE)
+				write_be8(reg_ptr, 0, value);
+			else
+				write_le8(reg_ptr, 0, value);
+			break;
+		}
+	}
 	return reg_width;
 }
 
