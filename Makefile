@@ -1,5 +1,5 @@
 all:
-	@echo "Makefile build system is depricated."
+	@echo "Makefile build system is deprecated."
 	@echo ""
 	@echo "Please use Meson build system instead."
 	@echo ""
