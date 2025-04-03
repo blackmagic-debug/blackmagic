@@ -895,9 +895,8 @@ static target_s *cortexar_probe(
 	cortexar_run_insn(target, ARM_MRS_R0_CPSR_INSN);
 	priv->core_regs.cpsr = cortexar_core_reg_read(target, 0U);
 	cortexar_core_reg_write(target, 0U, r0);
-	if (priv->core_regs.cpsr & CORTEXAR_CPSR_BE) {
+	if (priv->core_regs.cpsr & CORTEXAR_CPSR_BE)
 		target->target_options |= TOPT_FLAVOUR_BE;
-	}
 
 	return target;
 }
@@ -935,9 +934,11 @@ bool cortexr_probe(adiv5_access_port_s *const ap, const target_addr_t base_addre
 	if (!target)
 		return false;
 
-	// TI omitted the designer code on TMS570.
-	if (target->designer_code == 0) {
-		PROBE(ti_tms570_probe);
+	switch (target->designer_code) {
+		/* TI omitted the designer code on TMS570 */
+		case 0:
+			PROBE(ti_tms570_probe);
+			break;
 	}
 
 #if CONFIG_BMDA == 0
@@ -1224,11 +1225,10 @@ static inline bool cortexar_mem_write_fast(target_s *const target, const uint32_
 	/* Write each of the uint32_t's checking for failure */
 	for (size_t offset = 0; offset < count; ++offset) {
 		uint32_t value;
-		if (target->target_options & TOPT_FLAVOUR_BE) {
-			value = read_be4((const void *const)src, offset * 4);
-		} else {
-			value = read_le4((const void *const)src, offset * 4);
-		}
+		if (target->target_options & TOPT_FLAVOUR_BE)
+			value = read_be4((const void *)src, offset * 4U);
+		else
+			value = read_le4((const void *)src, offset * 4U);
 		if (!cortexar_run_write_insn(target, ARM_STC_DTRRX_R0_POSTINC4_INSN, value))
 			return false; /* Propagate failure if it happens */
 	}
@@ -1444,7 +1444,7 @@ static size_t cortexar_reg_read(target_s *const target, const uint32_t reg, void
 				value = read_be8(reg_ptr, 0);
 			else
 				value = read_le8(reg_ptr, 0);
-			write_le4(data, 0, value);
+			write_le8(data, 0, value);
 			break;
 		}
 	}
