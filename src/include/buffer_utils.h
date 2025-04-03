@@ -61,27 +61,32 @@ static inline void write_be4(uint8_t *const buffer, const size_t offset, const u
 
 static inline uint16_t read_le2(const uint8_t *const buffer, const size_t offset)
 {
-	return buffer[offset + 0U] | ((uint16_t)buffer[offset + 1U] << 8U);
+	uint8_t data[2U];
+	memcpy(data, buffer + offset, 2U);
+	return data[0U] | ((uint16_t)data[1U] << 8U);
 }
 
 static inline uint32_t read_le4(const uint8_t *const buffer, const size_t offset)
 {
-	return buffer[offset + 0U] | ((uint32_t)buffer[offset + 1U] << 8U) | ((uint32_t)buffer[offset + 2U] << 16U) |
-		((uint32_t)buffer[offset + 3U] << 24U);
+	uint8_t data[4U];
+	memcpy(data, buffer + offset, 4U);
+	return data[0U] | ((uint32_t)data[1U] << 8U) | ((uint32_t)data[2U] << 16U) | ((uint32_t)data[3U] << 24U);
 }
 
 static inline uint32_t read_be4(const uint8_t *const buffer, const size_t offset)
 {
-	return ((uint32_t)buffer[offset + 0U] << 24U) | ((uint32_t)buffer[offset + 1U] << 16U) |
-		((uint32_t)buffer[offset + 2U] << 8U) | buffer[offset + 3U];
+	uint8_t data[4U];
+	memcpy(data, buffer + offset, 4U);
+	return ((uint32_t)data[0U] << 24U) | ((uint32_t)data[1U] << 16U) | ((uint32_t)data[2U] << 8U) | data[3U];
 }
 
 static inline uint64_t read_be8(const uint8_t *const buffer, const size_t offset)
 {
-	return ((uint64_t)buffer[offset + 0] << 56U) | ((uint64_t)buffer[offset + 1] << 48U) |
-		((uint64_t)buffer[offset + 2] << 40U) | ((uint64_t)buffer[offset + 3] << 32U) |
-		((uint64_t)buffer[offset + 4] << 24U) | ((uint64_t)buffer[offset + 5] << 16U) |
-		((uint64_t)buffer[offset + 6] << 8U) | buffer[offset + 7];
+	uint8_t data[8U];
+	memcpy(data, buffer + offset, 8U);
+	return ((uint64_t)data[0] << 56U) | ((uint64_t)data[1] << 48U) | ((uint64_t)data[2] << 40U) |
+		((uint64_t)data[3] << 32U) | ((uint64_t)data[4] << 24U) | ((uint64_t)data[5] << 16U) |
+		((uint64_t)data[6] << 8U) | data[7];
 }
 
 static inline size_t write_char(char *const buffer, const size_t buffer_size, const size_t offset, const char c)
