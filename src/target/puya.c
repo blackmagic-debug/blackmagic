@@ -40,8 +40,9 @@
 
 /* Flash */
 #define PUYA_FLASH_START         0x08000000U
-#define PUYA_00A_FLASH_PAGE_SIZE 128
-#define PUYA_07X_FLASH_PAGE_SIZE 256
+#define PUYA_00A_FLASH_PAGE_SIZE 128U
+#define PUYA_07X_FLASH_PAGE_SIZE 256U
+#define PUYA_07X_RAM_SIZE        0x4000U
 
 /* Pile of timing parameters needed to make sure flash works,
  * see section "4.4. Flash configuration bytes" of the RM.
@@ -56,7 +57,7 @@
  * bits[5:4] => RAM size in multiples of 0x800 bytes, minus 1
  */
 #define PUYA_00A_FLASH_RAM_SZ 0x1fff0ffcU
-#define PUYA_07X_FLASH_RAM_SZ 0x1FFF31FCU
+#define PUYA_07X_FLASH_RAM_SZ 0x1fff31fcU
 
 #define PUYA_FLASH_SZ_SHIFT   0U
 #define PUYA_FLASH_SZ_MASK    7U
@@ -124,8 +125,8 @@ bool puya_probe(target_s *target)
 		flash_size = (((flash_ram_sz >> PUYA_FLASH_SZ_SHIFT) & PUYA_FLASH_SZ_MASK) + 1) << PUYA_FLASH_UNIT_SHIFT;
 		ram_size = (((flash_ram_sz >> PUYA_RAM_SZ_SHIFT) & PUYA_RAM_SZ_MASK) + 1) << PUYA_RAM_UNIT_SHIFT;
 		target->driver = "PY32F07x";
-		target_add_ram32(target, PUYA_RAM_START, 0x4000);
-	} else if ((dbg_idcode & 0xfffU) == 0) {
+		target_add_ram32(target, PUYA_RAM_START, PUYA_07X_RAM_SIZE);
+	} else if ((dbg_idcode & 0xfffU) == 0U) {
 		const uint32_t flash_ram_sz = target_mem32_read32(target, PUYA_00A_FLASH_RAM_SZ);
 		flash_size = (((flash_ram_sz >> PUYA_FLASH_SZ_SHIFT) & PUYA_FLASH_SZ_MASK) + 1) << PUYA_FLASH_UNIT_SHIFT;
 		ram_size = (((flash_ram_sz >> PUYA_RAM_SZ_SHIFT) & PUYA_RAM_SZ_MASK) + 1) << PUYA_RAM_UNIT_SHIFT;
@@ -171,8 +172,8 @@ static bool puya_00a_flash_prepare(target_flash_s *flash)
 
 	uint8_t hsi_fs =
 		(target_mem32_read32(flash->t, PUYA_RCC_ICSCR) >> PUYA_RCC_ICSCR_HSI_FS_SHIFT) & PUYA_RCC_ICSCR_HSI_FS_MASK;
-	if (hsi_fs > 4)
-		hsi_fs = 0;
+	if (hsi_fs > 4U)
+		hsi_fs = 0U;
 	DEBUG_TARGET("HSI frequency selection is %d\n", hsi_fs);
 
 	const uint32_t eppara0 = target_mem32_read32(flash->t, PUYA_00A_FLASH_TIMING_CAL_BASE + hsi_fs * 20 + 0);
@@ -210,11 +211,11 @@ static bool puya_07x_flash_prepare(target_flash_s *flash)
 		hsi_fs = 0;
 	DEBUG_TARGET("HSI frequency selection is %d\n", hsi_fs);
 
-	const uint32_t eppara0 = target_mem32_read32(flash->t, 0x1FFF3238 + 4 * 0x28);
-	const uint32_t eppara1 = target_mem32_read32(flash->t, 0x1FFF3240 + 4 * 0x28);
-	const uint32_t eppara2 = target_mem32_read32(flash->t, 0x1FFF3248 + 4 * 0x28);
-	const uint32_t eppara3 = target_mem32_read32(flash->t, 0x1FFF3250 + 4 * 0x28);
-	const uint32_t eppara4 = target_mem32_read32(flash->t, 0x1FFF3258 + 4 * 0x28);
+	const uint32_t eppara0 = target_mem32_read32(flash->t, 0x1fff3238 + 4 * 0x28);
+	const uint32_t eppara1 = target_mem32_read32(flash->t, 0x1fff3240 + 4 * 0x28);
+	const uint32_t eppara2 = target_mem32_read32(flash->t, 0x1fff3248 + 4 * 0x28);
+	const uint32_t eppara3 = target_mem32_read32(flash->t, 0x1fff3250 + 4 * 0x28);
+	const uint32_t eppara4 = target_mem32_read32(flash->t, 0x1fff3258 + 4 * 0x28);
 
 	DEBUG_TARGET("PY32 flash timing cal 0: %08" PRIx32 "\n", eppara0);
 	DEBUG_TARGET("PY32 flash timing cal 1: %08" PRIx32 "\n", eppara1);
@@ -230,7 +231,7 @@ static bool puya_07x_flash_prepare(target_flash_s *flash)
 	target_mem32_write32(flash->t, PUYA_FLASH_PERTPE, eppara2 & 0x1ffffU);
 	target_mem32_write32(flash->t, PUYA_FLASH_SMERTPE, eppara3 & 0x1ffffU);
 	target_mem32_write32(flash->t, PUYA_FLASH_PRGTPE, eppara4 & 0xffffU);
-	target_mem32_write32(flash->t, PUYA_FLASH_PRETPE, (eppara4 >> 16U) & 0xFFFFU); // diff
+	target_mem32_write32(flash->t, PUYA_FLASH_PRETPE, (eppara4 >> 16U) & 0xffffU); // diff
 
 	return true;
 }
