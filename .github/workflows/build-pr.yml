@@ -80,7 +80,9 @@ jobs:
 
       # Install BMDA's deps (libftdi1, hidapi-hidraw)
       - name: Install BMDA dependencies
-        run: sudo apt-get -y install libftdi1-dev libhidapi-dev libudev-dev
+        run: |
+          sudo apt update
+          sudo apt-get -y install libftdi1-dev libhidapi-dev libudev-dev
 
       # Record the versions of all the tools used in the build
       - name: Version tools
