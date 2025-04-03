@@ -44,7 +44,7 @@ static bool dap_jtag_next(bool tms, bool tdi);
 
 bool dap_jtag_init(void)
 {
-	/* If we are not able to talk SWD with this adaptor, make this insta-fail */
+	/* If we are not able to talk JTAG with this adaptor, make this insta-fail */
 	if (!(dap_caps & DAP_CAP_JTAG))
 		return false;
 
@@ -113,7 +113,7 @@ static void dap_jtag_tdi_seq(const bool final_tms, const uint8_t *const data_in,
 
 static bool dap_jtag_next(const bool tms, const bool tdi)
 {
-#if ENABLE_DEBUG == 1
+#ifndef DEBUG_PROBE_IS_NOOP
 	const uint8_t tms_byte = tms ? 1 : 0;
 #endif
 	const uint8_t tdi_byte = tdi ? 1 : 0;
