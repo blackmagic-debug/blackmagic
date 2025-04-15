@@ -19,13 +19,13 @@ bool ti_tms570_probe(target_s *const target)
 {
 	const uint32_t part_id = target_mem32_read32(target, TMS570_SYS_DEVID);
 	if (!part_id || ((part_id & TMS570_SCM_DEVID_ID_MASK) != TMS570_SCM_REVID_ID_TMS570)) {
-		fprintf(stderr, "Part ID 0x%08x was unrecognized\n", part_id);
+		DEBUG_ERROR("Part ID 0x%08"PRIx32" was unrecognized\n", part_id);
 		return false;
 	}
-	fprintf(stderr, "Part ID 0x%08x was recognized as a TMS570\n", part_id);
 
 	target->driver = "TMS570";
 	target_add_ram32(target, TMS570_SRAM_BASE, TMS570_SRAM_SIZE);
 	target_add_ram32(target, TMS570_SRAM_ECC_BASE, TMS570_SRAM_SIZE);
+
 	return true;
 }
