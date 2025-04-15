@@ -250,7 +250,7 @@ static const uint16_t cortexar_spsr_encodings[5] = {
 	(((opc1) << 21U) | ((crn) << 16U) | ((rt) << 12U) | ((coproc) << 8U) | ((opc2) << 5U) | (crm))
 /* Packs a CRn and CRm value for the coprocessor IO routines below to unpack */
 #define ENCODE_CP_REG(n, m, opc1, opc2) \
-	((((n) & 0xfU) << 4U) | ((m) & 0xfU) | (((opc1) & 0x7U) << 8U) | (((opc2) & 0x7U) << 12U))
+	((((n)&0xfU) << 4U) | ((m)&0xfU) | (((opc1)&0x7U) << 8U) | (((opc2)&0x7U) << 12U))
 
 /*
  * Instruction encodings for coprocessor load/store
@@ -1014,7 +1014,7 @@ static bool cortexar_check_error(target_s *const target)
 {
 	cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
 	const bool fault = priv->core_status & (CORTEXAR_STATUS_DATA_FAULT | CORTEXAR_STATUS_MMU_FAULT);
-	priv->core_status &= (uint8_t)~(CORTEXAR_STATUS_DATA_FAULT | CORTEXAR_STATUS_MMU_FAULT);
+	priv->core_status &= (uint8_t) ~(CORTEXAR_STATUS_DATA_FAULT | CORTEXAR_STATUS_MMU_FAULT);
 	return fault || cortex_check_error(target);
 }
 
