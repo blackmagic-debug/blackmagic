@@ -19,7 +19,7 @@ bool ti_tms570_probe(target_s *const target)
 {
 	const uint32_t part_id = target_mem32_read32(target, TMS570_SYS_DEVID);
 	if (!part_id || ((part_id & TMS570_SCM_DEVID_ID_MASK) != TMS570_SCM_REVID_ID_TMS570)) {
-		DEBUG_ERROR("Part ID 0x%08"PRIx32" was unrecognized\n", part_id);
+		DEBUG_ERROR("Part ID 0x%08" PRIx32 " was unrecognized\n", part_id);
 		return false;
 	}
 
