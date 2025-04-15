@@ -935,10 +935,10 @@ bool cortexr_probe(adiv5_access_port_s *const ap, const target_addr_t base_addre
 		return false;
 
 	switch (target->designer_code) {
-		/* TI omitted the designer code on TMS570 */
-		case 0:
-			PROBE(ti_tms570_probe);
-			break;
+	/* TI omitted the designer code on TMS570 */
+	case 0:
+		PROBE(ti_tms570_probe);
+		break;
 	}
 
 #if CONFIG_BMDA == 0
@@ -1014,12 +1014,12 @@ static bool cortexar_check_error(target_s *const target)
 {
 	cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
 	const bool fault = priv->core_status & (CORTEXAR_STATUS_DATA_FAULT | CORTEXAR_STATUS_MMU_FAULT);
-	priv->core_status &= (uint8_t) ~(CORTEXAR_STATUS_DATA_FAULT | CORTEXAR_STATUS_MMU_FAULT);
+	priv->core_status &= (uint8_t)~(CORTEXAR_STATUS_DATA_FAULT | CORTEXAR_STATUS_MMU_FAULT);
 	return fault || cortex_check_error(target);
 }
 
-
-static inline uint32_t cortexar_endian_dp_read(target_s *const target, const uint16_t addr) {
+static inline uint32_t cortexar_endian_dp_read(target_s *const target, const uint16_t addr)
+{
 	cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
 	uint32_t value = adiv5_dp_read(priv->base.ap->dp, addr);
 	if (target->target_options & TOPT_FLAVOUR_BE) {
@@ -1032,7 +1032,8 @@ static inline uint32_t cortexar_endian_dp_read(target_s *const target, const uin
 	return value;
 }
 
-static inline void cortexar_endian_dp_write(target_s *const target, const uint16_t addr, uint32_t value) {
+static inline void cortexar_endian_dp_write(target_s *const target, const uint16_t addr, uint32_t value)
+{
 	cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
 
 	if (target->target_options & TOPT_FLAVOUR_BE) {
@@ -1429,24 +1430,24 @@ static size_t cortexar_reg_read(target_s *const target, const uint32_t reg, void
 		return 0;
 	/* Finally, copy the register data out and return the width */
 	switch (reg_width) {
-		case 4: {
-			uint32_t value;
-			if (target->target_options & TOPT_FLAVOUR_BE)
-				value = read_be4(reg_ptr, 0);
-			else
-				value = read_le4(reg_ptr, 0);
-			write_le4(data, 0, value);
-			break;
-		}
-		case 8: {
-			uint64_t value;
-			if (target->target_options & TOPT_FLAVOUR_BE)
-				value = read_be8(reg_ptr, 0);
-			else
-				value = read_le8(reg_ptr, 0);
-			write_le8(data, 0, value);
-			break;
-		}
+	case 4: {
+		uint32_t value;
+		if (target->target_options & TOPT_FLAVOUR_BE)
+			value = read_be4(reg_ptr, 0);
+		else
+			value = read_le4(reg_ptr, 0);
+		write_le4(data, 0, value);
+		break;
+	}
+	case 8: {
+		uint64_t value;
+		if (target->target_options & TOPT_FLAVOUR_BE)
+			value = read_be8(reg_ptr, 0);
+		else
+			value = read_le8(reg_ptr, 0);
+		write_le8(data, 0, value);
+		break;
+	}
 	}
 	return reg_width;
 }
@@ -1463,22 +1464,22 @@ static size_t cortexar_reg_write(target_s *const target, const uint32_t reg, con
 		return 0;
 	/* Finally, copy the new register data in and return the width */
 	switch (reg_width) {
-		case 4: {
-			uint32_t value = read_le4(data, 0);
-			if (target->target_options & TOPT_FLAVOUR_BE) {
-				write_be4(reg_ptr, 0, value);
-			} else
-				write_le4(reg_ptr, 0, value);
-			break;
-		}
-		case 8: {
-			uint64_t value = read_le8(data, 0);
-			if (target->target_options & TOPT_FLAVOUR_BE)
-				write_be8(reg_ptr, 0, value);
-			else
-				write_le8(reg_ptr, 0, value);
-			break;
-		}
+	case 4: {
+		uint32_t value = read_le4(data, 0);
+		if (target->target_options & TOPT_FLAVOUR_BE) {
+			write_be4(reg_ptr, 0, value);
+		} else
+			write_le4(reg_ptr, 0, value);
+		break;
+	}
+	case 8: {
+		uint64_t value = read_le8(data, 0);
+		if (target->target_options & TOPT_FLAVOUR_BE)
+			write_be8(reg_ptr, 0, value);
+		else
+			write_le8(reg_ptr, 0, value);
+		break;
+	}
 	}
 	return reg_width;
 }
