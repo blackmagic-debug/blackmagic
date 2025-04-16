@@ -4,7 +4,7 @@
  * Copyright (C) 2011 Black Sphere Technologies Ltd.
  * Written by Gareth McMullin <gareth@blacksphere.co.nz>
  * Copyright (C) 2021 Uwe Bonnes (bon@elektron.ikp.physik.tu-darmstadt.de)
- * Copyright (C) 2023 1BitSquared <info@1bitsquared.com>
+ * Copyright (C) 2023-2025 1BitSquared <info@1bitsquared.com>
  * Modified by Rachel Mant <git@dragonmux.network>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -208,7 +208,7 @@ bool cmd_version(target_s *target, int argc, const char **argv)
 #endif
 	gdb_outf(", Hardware Version %d\n", platform_hwversion());
 #endif
-	gdb_out("Copyright (C) 2010-2024 Black Magic Debug Project\n");
+	gdb_out("Copyright (C) 2010-2025 Black Magic Debug Project\n");
 	gdb_out("License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>\n\n");
 
 	return true;
