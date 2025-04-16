@@ -1,7 +1,8 @@
 # This file is part of the Black Magic Debug project.
 #
-# Copyright (C) 2023 1BitSquared <info@1bitsquared.com>
+# Copyright (C) 2023-2025 1BitSquared <info@1bitsquared.com>
 # Written by Rafael Silva <perigoso@riseup.net>
+# Modified by Rachel Mant <git@dragonmux.network>
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -31,7 +32,7 @@
 project(
 	'Black Magic Debug',
 	'c',
-	version: '1.10.0',
+	version: '2.0.0-rc2',
 	license: 'GPL-3.0-or-later OR BSD-3-Clause OR MIT',
 	# license_files: ['COPYING', 'COPYING-BSD', 'COPYING-MIT'], # Only available in meson 1.1.0
 	default_options: [
