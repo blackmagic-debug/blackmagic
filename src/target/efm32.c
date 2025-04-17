@@ -42,6 +42,8 @@
 #include "target_internal.h"
 #include "cortexm.h"
 #include "adiv5.h"
+#include "gdb_packet.h"
+#include "exception.h"
 
 #define SRAM_BASE        0x20000000U
 #define STUB_BUFFER_BASE ALIGN(SRAM_BASE + sizeof(efm32_flash_write_stub), 4U)
@@ -69,17 +71,17 @@ const command_s efm32_cmd_list[] = {
 /* Memory System Controller (MSC) Registers                                   */
 /* -------------------------------------------------------------------------- */
 
-#define EFM32_MSC_WRITECTRL(msc) (msc + 0x008U)
-#define EFM32_MSC_WRITECMD(msc)  (msc + 0x00cU)
-#define EFM32_MSC_ADDRB(msc)     (msc + 0x010U)
-#define EFM32_MSC_WDATA(msc)     (msc + 0x018U)
-#define EFM32_MSC_STATUS(msc)    (msc + 0x01cU)
-#define EFM32_MSC_IF(msc)        (msc + 0x030U)
-#define EFM32_MSC_LOCK(msc)      (msc + (msc == 0x400c0000U ? 0x3cU : 0x40U))
-#define EFM32_MSC_MASSLOCK(msc)  (msc + 0x054U)
+#define EFM32_MSC_WRITECTRL(msc) (msc + 0x00CU) //(msc + 0x008U)
+#define EFM32_MSC_WRITECMD(msc)  (msc + 0x010U) 
+#define EFM32_MSC_ADDRB(msc)     (msc + 0x014U) 
+#define EFM32_MSC_WDATA(msc)     (msc + 0x018U) 
+#define EFM32_MSC_STATUS(msc)    (msc + 0x01CU) 
+#define EFM32_MSC_IF(msc)        (msc + 0x020U) 
+#define EFM32_MSC_LOCK(msc)      (msc + 0x03CU) 
+#define EFM32_MSC_MASSLOCK(msc)  (msc + 0x040U) 
 
-#define EFM32_MSC_LOCK_LOCKKEY     0x1b71U
-#define EFM32_MSC_MASSLOCK_LOCKKEY 0x631aU
+#define EFM32_MSC_LOCK_LOCKKEY     0x7025U
+#define EFM32_MSC_MASSLOCK_LOCKKEY 0x0000U
 
 #define EFM32_MSC_WRITECMD_LADDRIM    (1U << 0U)
 #define EFM32_MSC_WRITECMD_ERASEPAGE  (1U << 1U)
@@ -104,6 +106,7 @@ const command_s efm32_cmd_list[] = {
 #define EFM32_LOCK_BITS (EFM32_INFO + 0x4000U)
 #define EFM32_V1_DI     (EFM32_INFO + 0x8000U)
 #define EFM32_V2_DI     (EFM32_INFO + 0x81b0U)
+#define EFR32FG23_DI	(EFM32_INFO + 0x8000U)
 
 /* -------------------------------------------------------------------------- */
 /* Lock Bits (LB)                                                             */
@@ -256,7 +259,52 @@ const command_s efm32_cmd_list[] = {
 #define EFM32_V2_DI_OPA2CAL7         (EFM32_V2_DI + 0x1fcU) /* OPA2 Calibration Register for DRIVESTRENGTH 3, INCBW=0 */
 
 /* top 24 bits of eui */
-#define EFM32_V2_DI_EUI_ENERGYMICRO 0xd0cf5e
+#define EFM32_V2_DI_EUI_ENERGYMICRO 0x666d71 //0xd0cf5e
+
+/* -------------------------------------------------------------------------- */
+/* Device Information (DI) Area for EFR32FG23                           */
+/* -------------------------------------------------------------------------- */
+
+#define EFR32FG23_DI_INFO              		(EFR32FG23_DI  + 0x000U) 
+#define EFR32FG23_DI_PART              		(EFR32FG23_DI  + 0x004U) 
+#define EFR32FG23_DI_MEMINFO           		(EFR32FG23_DI  + 0x008U) 
+#define EFR32FG23_DI_MSIZE             		(EFR32FG23_DI  + 0x00cU) 
+#define EFR32FG23_DI_PKGINFO           		(EFR32FG23_DI  + 0x010U) 
+#define EFR32FG23_DI_CUSTOMINFO        		(EFR32FG23_DI  + 0x014U) 
+#define EFR32FG23_DI_SWFIX             		(EFR32FG23_DI  + 0x018U) 
+#define EFR32FG23_DI_SWCAPA0           		(EFR32FG23_DI  + 0x01cU) 
+#define EFR32FG23_DI_SWCAPA1           		(EFR32FG23_DI  + 0x020U) 
+#define EFR32FG23_DI_EXTINFO           		(EFR32FG23_DI  + 0x028U) 
+#define EFR32FG23_DI_EUI48L            		(EFR32FG23_DI  + 0x040U) 
+#define EFR32FG23_DI_EUI48H            		(EFR32FG23_DI  + 0x044U) 
+#define EFR32FG23_DI_EUI64L           		(EFR32FG23_DI  + 0x048U) 
+#define EFR32FG23_DI_EUI64H            		(EFR32FG23_DI  + 0x04CU) 
+#define EFR32FG23_DI_CALTEMP           		(EFR32FG23_DI  + 0x050U) 
+#define EFR32FG23_DI_EMUTEMP           		(EFR32FG23_DI  + 0x054U) 
+#define EFR32FG23_DI_HFRCODPLLCALn     		(EFR32FG23_DI  + 0x058U) 
+#define EFR32FG23_DI_HFRCOEM23CALn     		(EFR32FG23_DI  + 0x0A0U) 
+#define EFR32FG23_DI_MODULENAME0       		(EFR32FG23_DI  + 0x130U) 
+#define EFR32FG23_DI_MODULENAME1       		(EFR32FG23_DI  + 0x134U) 
+#define EFR32FG23_DI_MODULENAME2       		(EFR32FG23_DI  + 0x138U) 
+#define EFR32FG23_DI_MODULENAME3       		(EFR32FG23_DI  + 0x13CU) 
+#define EFR32FG23_DI_MODULENAME4       		(EFR32FG23_DI  + 0x140U) 
+#define EFR32FG23_DI_MODULENAME5       		(EFR32FG23_DI  + 0x144U) 
+#define EFR32FG23_DI_MODULENAME6       		(EFR32FG23_DI  + 0x148U) 
+#define EFR32FG23_DI_MODULEINFO        		(EFR32FG23_DI  + 0x14CU) 
+#define EFR32FG23_DI_MODXOCAL         		(EFR32FG23_DI  + 0x150U) 
+#define EFR32FG23_DI_HFXOCAL           		(EFR32FG23_DI  + 0x17CU) 
+#define EFR32FG23_DI_IADC0GAIN0    		    (EFR32FG23_DI  + 0x180U) 
+#define EFR32FG23_DI_IADC0GAIN1        	    (EFR32FG23_DI  + 0x184U) 
+#define EFR32FG23_DI_IADC0OFFSETCAL0  	 	(EFR32FG23_DI  + 0x188U) 
+#define EFR32FG23_DI_IADC0NORMALOFFSETCAL0  (EFR32FG23_DI  + 0x18CU) 
+#define EFR32FG23_DI_IADC0NORMALOFFSETCAL1  (EFR32FG23_DI  + 0x190U) 
+#define EFR32FG23_DI_IADC0HISPDOFFSETCAL0   (EFR32FG23_DI  + 0x194U) 
+#define EFR32FG23_DI_IADC0HISPDOFFSETCAL1   (EFR32FG23_DI  + 0x198U) 
+#define EFR32FG23_DI_LEGACY    		       	(EFR32FG23_DI  + 0x1FCU) 
+#define EFR32FG23_DI_RTHERM            		(EFR32FG23_DI  + 0x25CU) 
+
+/* top 24 bits of eui */
+#define EFR32FG23_DI_EUI_ENERGYMICRO 0xf4b3b1
 
 /* -------------------------------------------------------------------------- */
 /* Constants                                                                  */
@@ -332,6 +380,10 @@ static const efm32_device_s efm32_devices[] = {
 	{61, true, 2048, "EFR32FG14P", 0x400e0000, 2048, 16384, "Flex Gecko"},
 	{62, true, 2048, "EFR32FG14B", 0x400e0000, 2048, 16384, "Flex Gecko"},
 	{63, true, 2048, "EFR32FG14V", 0x400e0000, 2048, 16384, "Flex Gecko"},
+	/*  For  EFR32xG23 devices   */
+	{0, true, 8192, "EFR32FG23", 0x40030000, 1024, 0, "Flex Gecko"},
+	{3, true, 8192, "EFR32FG23", 0x40030000, 1024, 0, "Z-wave Gecko"},
+	{5, true, 8192, "EFR32FG23", 0x40030000, 1024, 0, "Pearl Gecko"},
 };
 
 /* miscchip */
@@ -392,6 +444,14 @@ static uint64_t efm32_v2_read_unique(target_s *t, uint8_t di_version)
 	return ((uint64_t)target_mem32_read32(t, EFM32_V2_DI_UNIQUEH) << 32U) | target_mem32_read32(t, EFM32_V2_DI_UNIQUEL);
 }
 
+static uint64_t efr32fg23_read_unique(target_s *t, uint8_t di_version)
+{
+	if (di_version != 3)
+		return 0;
+
+	return (((uint64_t)target_mem32_read32(t, EFR32FG23_DI_EUI64H) & 0x000FU) << 32U ) | target_mem32_read32(t, EFR32FG23_DI_EUI64L);
+}
+
 /* Reads the EFM32 flash size in kiB */
 static uint16_t efm32_read_flash_size(target_s *t, uint8_t di_version)
 {
@@ -399,7 +459,9 @@ static uint16_t efm32_read_flash_size(target_s *t, uint8_t di_version)
 	case 1:
 		return target_mem32_read16(t, EFM32_V1_DI_MEM_INFO_FLASH);
 	case 2:
-		return target_mem32_read32(t, EFM32_V2_DI_MSIZE) & 0xffffU;
+		return target_mem_read32(t, EFM32_V2_DI_MSIZE) & 0xffffU;
+	case 3:
+		return target_mem_read16(t, EFR32FG23_DI_MSIZE);
 	default:
 		return 0;
 	}
@@ -412,7 +474,9 @@ static uint16_t efm32_read_ram_size(target_s *t, uint8_t di_version)
 	case 1:
 		return target_mem32_read16(t, EFM32_V1_DI_MEM_INFO_RAM);
 	case 2:
-		return (target_mem32_read32(t, EFM32_V2_DI_MSIZE) >> 16U) & 0xffffU;
+		return (target_mem_read32(t, EFM32_V2_DI_MSIZE) >> 16U) & 0xffffU;
+	case 3:
+		return (target_mem_read32(t, EFR32FG23_DI_MSIZE) >> 16U) & 0xffffU;
 	default:
 		return 0;
 	}
@@ -435,6 +499,9 @@ static uint32_t efm32_flash_page_size(target_s *t, uint8_t di_version)
 	case 2U:
 		mem_info_page_size = (target_mem32_read32(t, EFM32_V2_DI_MEMINFO) >> 24U) & 0xffU;
 		break;
+	case 3U:
+		mem_info_page_size = target_mem32_read8(t, EFR32FG23_DI_MEMINFO);
+		break;
 	default:
 		return 0;
 	}
@@ -449,7 +516,9 @@ static uint16_t efm32_read_part_number(target_s *t, uint8_t di_version)
 	case 1:
 		return target_mem32_read8(t, EFM32_V1_DI_PART_NUMBER);
 	case 2:
-		return target_mem32_read32(t, EFM32_V2_DI_PART) & 0xffffU;
+		return target_mem32_read32(t, EFM32_V2_DI_PART) & 0xffffU; 
+	case 3:
+		return target_mem32_read32(t, EFR32FG23_DI_PART) & 0xffffU;
 	default:
 		return 0;
 	}
@@ -462,7 +531,9 @@ static uint8_t efm32_read_part_family(target_s *t, uint8_t di_version)
 	case 1:
 		return target_mem32_read8(t, EFM32_V1_DI_PART_FAMILY);
 	case 2:
-		return (target_mem32_read32(t, EFM32_V2_DI_PART) >> 16U) & 0xffU;
+		return (target_mem32_read32(t, EFM32_V2_DI_PART) >> 16U) & 0xffU; 
+	case 3:
+		return (target_mem32_read32(t, EFR32FG23_DI_PART) >> 23U) & 0x3fU;
 	default:
 		return 0;
 	}
@@ -520,6 +591,8 @@ static void efm32_add_flash(target_s *t, target_addr_t addr, size_t length, size
 /* Lookup device */
 static efm32_device_s const *efm32_get_device(target_s *t, uint8_t di_version)
 {
+	if(di_version == 0) return NULL;
+
 	uint8_t part_family = efm32_read_part_family(t, di_version);
 
 	/* Search for family */
@@ -553,9 +626,16 @@ bool efm32_probe(target_s *t)
 	} else if (oui24_v2 == EFM32_V2_DI_EUI_ENERGYMICRO) {
 		/* Device Identification (DI) version 2 */
 		di_version = 2;
+	} else if (oui24_v2 == EFR32FG23_DI_EUI_ENERGYMICRO) { //TODO 
+		/* Device Identification (DI) for EFR32FG23 */
+		di_version = 3;
 	} else {
+		uint32_t oui24 = (uint32_t)(efr32fg23_read_eui64(t) & 0xffffffU);
+		if (oui24 == EFR32FG23_DI_EUI_ENERGYMICRO || oui24 == 0x8000C0U){
+			di_version = 3;
+		} 
 		/* Unknown OUI - assume version 1 */
-		di_version = 1;
+		else di_version = 3;
 	}
 
 	/* Read the part family, and reject if unknown */
@@ -563,6 +643,8 @@ bool efm32_probe(target_s *t)
 	if (!device)
 		return false;
 
+	t->attach = cortexm_attach;
+	t->detach = cortexm_detach;
 	t->mass_erase = efm32_mass_erase;
 	uint16_t part_number = efm32_read_part_number(t, di_version);
 
@@ -572,6 +654,7 @@ bool efm32_probe(target_s *t)
 	uint16_t ram_kib = efm32_read_ram_size(t, di_version);
 	uint32_t ram_size = ram_kib * 0x400U;
 	uint32_t flash_page_size = device->flash_page_size;
+
 
 	efm32_priv_s *priv_storage = calloc(1, sizeof(*priv_storage));
 	if (!priv_storage) { /* calloc failed: heap exhaustion */
@@ -600,6 +683,8 @@ bool efm32_probe(target_s *t)
 		efm32_add_flash(t, 0x0fe10000, device->bootloader_size, flash_page_size);
 	}
 
+	target_mem_write32(t, 0x40008064U, 0xFFFFFFFFU);
+	target_mem_write32(t, 0x40008068U, 0x1FFFFFFFU);
 	target_add_commands(t, efm32_cmd_list, "EFM32");
 
 	return true;
@@ -615,6 +700,9 @@ static bool efm32_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 		return false;
 
 	uint32_t msc = priv_storage->device->msc_addr;
+
+	/* Set WREN bit to enable MSC write and erase functionality */
+	target_mem_write32(t, EFM32_MSC_WRITECTRL(msc), 1);
 
 	/* Unlock */
 	target_mem32_write32(t, EFM32_MSC_LOCK(msc), EFM32_MSC_LOCK_LOCKKEY);
@@ -642,15 +730,12 @@ static bool efm32_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 		else
 			len = 0;
 	}
-
 	return true;
 }
 
 /* Write flash page by page */
 static bool efm32_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len)
 {
-	(void)len;
-
 	target_s *t = f->t;
 
 	efm32_priv_s *priv_storage = (efm32_priv_s *)t->target_storage;
@@ -749,6 +834,11 @@ static bool efm32_cmd_serial(target_s *t, int argc, const char **argv)
 		unique = efm32_v2_read_unique(t, di_version);
 		break;
 
+	case 3:
+		/* Read unique number */
+		unique = efr32fg23_read_unique(t, di_version);
+		break;
+
 	default:
 		tc_printf(t, "Bad DI version %u! This driver doesn't know about this DI version\n", di_version);
 		return false;
@@ -779,6 +869,10 @@ static bool efm32_cmd_efm_info(target_s *t, int argc, const char **argv)
 
 	case 2:
 		tc_printf(t, "DI version 2 (energy micro remix?) base 0x%08" PRIx32 "\n\n", EFM32_V2_DI);
+		break;
+
+	case 3:
+		tc_printf(t, "DI version EFR32xG23 base 0x%08" PRIx32 "\n\n", EFR32FG23_DI);
 		break;
 
 	default:
@@ -970,7 +1064,7 @@ bool efm32_aap_probe(adiv5_access_port_s *ap)
 	snprintf(priv_storage->aap_driver_string, sizeof(priv_storage->aap_driver_string),
 		"EFM32 Authentication Access Port rev.%hu", aap_revision);
 	t->driver = priv_storage->aap_driver_string;
-	t->regs_size = 0;
+	t->regs_size = 4;
 
 	return true;
 }
