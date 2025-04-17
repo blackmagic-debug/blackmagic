@@ -473,11 +473,12 @@ static void check_cmsis_interface_type(libusb_device *const device, bmda_probe_s
 			for (uint8_t index = 0; index < descriptor->bNumEndpoints; ++index)
 				info->max_packet_length = MIN(descriptor->endpoint[index].wMaxPacketSize, info->max_packet_length);
 
-			/* Check if it's a CMSIS-DAP v2 interface */
-			if (descriptor->bInterfaceClass == 0xffU && descriptor->bNumEndpoints == 2U) {
+			/* Check if it's a CMSIS-DAP v2 interface. */
+			if (descriptor->bInterfaceClass == 0xffU &&
+				(descriptor->bNumEndpoints == 2U || descriptor->bNumEndpoints == 3U)) {
 				info->interface_num = descriptor->bInterfaceNumber;
-				/* Extract the endpoints required */
-				for (uint8_t index = 0; index < descriptor->bNumEndpoints; ++index) {
+				/* Extract the endpoints required. Ignore optional SWO trace endpoint */
+				for (uint8_t index = 0; index < 2U; ++index) {
 					const uint8_t ep = descriptor->endpoint[index].bEndpointAddress;
 					if (ep & 0x80U)
 						info->in_ep = ep;
