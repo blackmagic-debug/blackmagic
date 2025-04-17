@@ -459,9 +459,9 @@ static uint16_t efm32_read_flash_size(target_s *t, uint8_t di_version)
 	case 1:
 		return target_mem32_read16(t, EFM32_V1_DI_MEM_INFO_FLASH);
 	case 2:
-		return target_mem_read32(t, EFM32_V2_DI_MSIZE) & 0xffffU;
+		return target_mem32_read32(t, EFM32_V2_DI_MSIZE) & 0xffffU;
 	case 3:
-		return target_mem_read16(t, EFR32FG23_DI_MSIZE);
+		return target_mem32_read16(t, EFR32FG23_DI_MSIZE);
 	default:
 		return 0;
 	}
@@ -474,9 +474,9 @@ static uint16_t efm32_read_ram_size(target_s *t, uint8_t di_version)
 	case 1:
 		return target_mem32_read16(t, EFM32_V1_DI_MEM_INFO_RAM);
 	case 2:
-		return (target_mem_read32(t, EFM32_V2_DI_MSIZE) >> 16U) & 0xffffU;
+		return (target_mem32_read32(t, EFM32_V2_DI_MSIZE) >> 16U) & 0xffffU;
 	case 3:
-		return (target_mem_read32(t, EFR32FG23_DI_MSIZE) >> 16U) & 0xffffU;
+		return (target_mem32_read32(t, EFR32FG23_DI_MSIZE) >> 16U) & 0xffffU;
 	default:
 		return 0;
 	}
@@ -683,8 +683,8 @@ bool efm32_probe(target_s *t)
 		efm32_add_flash(t, 0x0fe10000, device->bootloader_size, flash_page_size);
 	}
 
-	target_mem_write32(t, 0x40008064U, 0xFFFFFFFFU);
-	target_mem_write32(t, 0x40008068U, 0x1FFFFFFFU);
+	target_mem32_write32(t, 0x40008064U, 0xFFFFFFFFU);
+	target_mem32_write32(t, 0x40008068U, 0x1FFFFFFFU);
 	target_add_commands(t, efm32_cmd_list, "EFM32");
 
 	return true;
@@ -702,7 +702,7 @@ static bool efm32_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 	uint32_t msc = priv_storage->device->msc_addr;
 
 	/* Set WREN bit to enable MSC write and erase functionality */
-	target_mem_write32(t, EFM32_MSC_WRITECTRL(msc), 1);
+	target_mem32_write32(t, EFM32_MSC_WRITECTRL(msc), 1);
 
 	/* Unlock */
 	target_mem32_write32(t, EFM32_MSC_LOCK(msc), EFM32_MSC_LOCK_LOCKKEY);
