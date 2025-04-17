@@ -719,6 +719,19 @@ static int samx5x_set_flashlock(target_s *t, uint32_t value)
 	return 0;
 }
 
+static bool parse_unsigned(const char *str, uint32_t *val)
+{
+	char *end = NULL;
+	unsigned long num;
+
+	num = strtoul(str, &end, 0);
+	if (end == NULL || end == str)
+		return false;
+
+	*val = (uint32_t)num;
+	return true;
+}
+
 static bool samx5x_cmd_lock_flash(target_s *t, int argc, const char **argv)
 {
 	(void)argc;
@@ -769,9 +782,25 @@ static int samx5x_set_bootprot(target_s *t, uint8_t value)
 
 static bool samx5x_cmd_lock_bootprot(target_s *t, int argc, const char **argv)
 {
-	(void)argc;
-	(void)argv;
-	if (samx5x_set_bootprot(t, 0U)) {
+	if (argc > 2) {
+		tc_printf(t, "usage: monitor lock_bootprot [number]\n");
+		return false;
+	}
+
+	uint32_t val = 0;
+	if (argc == 2) {
+		if (!parse_unsigned(argv[1], &val)) {
+			tc_printf(t, "number must be either decimal or 0x prefixed hexadecimal\n");
+			return false;
+		}
+
+		if (val > 15U) {
+			tc_printf(t, "number must be between 0 and 15\n");
+			return false;
+		}
+	}
+
+	if (samx5x_set_bootprot(t, (uint8_t)val)) {
 		tc_printf(t, "Error writing NVM page\n");
 		return false;
 	}
