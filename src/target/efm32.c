@@ -631,9 +631,6 @@ bool efm32_probe(target_s *t)
 	} else if (oui24_v2 == EFM32_V2_DI_EUI_ENERGYMICRO) {
 		/* Device Identification (DI) version 2 */
 		di_version = 2;
-	} else if (oui24_v2 == EFR32FG23_DI_EUI_ENERGYMICRO) {
-		/* Device Identification (DI) for EFR32FG23 */
-		di_version = 3;
 	} else {
 		uint32_t oui24 = (uint32_t)(efr32fg23_read_eui64(t) & 0xffffffU);
 		/* Check for known EFR32FG23 OUIs */
