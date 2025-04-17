@@ -429,6 +429,11 @@ static uint64_t efm32_v1_read_eui64(target_s *t)
 	return ((uint64_t)target_mem32_read32(t, EFM32_V1_DI_EUI64_1) << 32U) | target_mem32_read32(t, EFM32_V1_DI_EUI64_0);
 }
 
+static uint64_t efr32fg23_read_eui64(target_s *t)
+{
+	return ((uint64_t)target_mem32_read32(t, EFR32FG23_DI_EUI64H) >> 8U);
+}
+
 /* Reads the EFM32 Extended Unique Identifier EUI48 (V2) */
 static uint64_t efm32_v2_read_eui48(target_s *t)
 {
@@ -626,16 +631,20 @@ bool efm32_probe(target_s *t)
 	} else if (oui24_v2 == EFM32_V2_DI_EUI_ENERGYMICRO) {
 		/* Device Identification (DI) version 2 */
 		di_version = 2;
-	} else if (oui24_v2 == EFR32FG23_DI_EUI_ENERGYMICRO) { //TODO 
+	} else if (oui24_v2 == EFR32FG23_DI_EUI_ENERGYMICRO) {
 		/* Device Identification (DI) for EFR32FG23 */
 		di_version = 3;
 	} else {
 		uint32_t oui24 = (uint32_t)(efr32fg23_read_eui64(t) & 0xffffffU);
-		if (oui24 == EFR32FG23_DI_EUI_ENERGYMICRO || oui24 == 0x8000C0U){
+		/* Check for known EFR32FG23 OUIs */
+		if (oui24 == EFR32FG23_DI_EUI_ENERGYMICRO || oui24 == 0x8000C0U) {
+			/* Use Device Identification version 3 for EFR32FG23 */
 			di_version = 3;
 		} 
-		/* Unknown OUI - assume version 1 */
-		else di_version = 3;
+		else {
+			/* Unknown OUI - assume version 1 */
+			di_version = 1;
+		}
 	}
 
 	/* Read the part family, and reject if unknown */
