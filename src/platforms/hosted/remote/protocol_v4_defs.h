@@ -101,6 +101,13 @@
 		REMOTE_SOM, REMOTE_ADIV5_PACKET, REMOTE_DP_TARGETSEL, REMOTE_ADIV5_DATA, REMOTE_EOM, 0 \
 	}
 
+#define REMOTE_JTAG_ENSURE_IDLE 'I'
+#define REMOTE_JTAG_ENSURE_IDLE_STR                                            \
+	(char[])                                                                   \
+	{                                                                          \
+		REMOTE_SOM, REMOTE_JTAG_PACKET, REMOTE_JTAG_ENSURE_IDLE, REMOTE_EOM, 0 \
+	}
+
 /* ADIv6 acceleration protocol elements */
 #define REMOTE_ADIV6_PACKET '6'
 
