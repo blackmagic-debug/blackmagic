@@ -31,8 +31,8 @@
 |  | EFR32MG22 | Mighty Gecko |
 |  | EFM32PG22 | Pearl Gecko |
 |  | EFR32FG23 | Flex Gecko |
-|  | EFR32SG23 |  |
-|  | EFR32ZG23 |  |
+|  | EFR32SG23 | Sidewalk Gecko |
+|  | EFR32ZG23 | Z-Wave Gecko |
 |  | EFM32PG23 | Pearl Gecko |
 |  | EFR32BG24 | Blue Gecko |
 |  | EFR32MG24 | Mighty Gecko |
@@ -40,8 +40,8 @@
 |  | EFR32BG27 | Blue Gecko |
 |  | EFR32MG27 | Mighty Gecko |
 |  | EFR32FG28 | Flex Gecko |
-|  | EFR32SG28 |  |
-|  | EFR32ZG28 |  |
+|  | EFR32SG28 | Sidewalk Gecko |
+|  | EFR32ZG28 | Z-Wave Gecko |
 |  | EFM32PG28 | Pearl Gecko |
 
 
