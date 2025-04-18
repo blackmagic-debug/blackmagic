@@ -549,7 +549,7 @@ static uint8_t efm32_read_part_family(target_s *t, uint8_t di_version)
 	case 2:
 		return (target_mem32_read32(t, EFM32_V2_DI_PART) >> 16U) & 0xffU; 
 	case 3:
-		return (target_mem32_read32(t, EFR32FG23_DI_PART) >> 23U) & 0x3fU;
+		return (target_mem32_read32(t, EFR32FG23_DI_PART) >> 24U) & 0x3fU;
 	default:
 		return 0;
 	}
@@ -679,7 +679,12 @@ bool efm32_probe(target_s *t)
 	/* Read the part family, and reject if unknown */
 	efm32_device_s const *device = efm32_get_device(t, di_version);
 	if (!device)
+	{
+		DEBUG_ERROR("Could not find the EFM32 device in the lookup table.\n");
 		return false;
+	}
+
+	DEBUG_INFO("Found EFM32/EFR32 device: %s\n", device->name);
 
 	t->attach = cortexm_attach;
 	t->detach = cortexm_detach;
