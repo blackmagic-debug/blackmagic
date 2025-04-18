@@ -179,6 +179,7 @@ const command_s efm32_cmd_list[] = {
 #define EFM32_V1_DI_PROD_REV               (EFM32_V1_DI + 0x1ffU)
 
 /* top 24 bits of eui */
+// Page 65 - https://www.silabs.com/documents/public/reference-manuals/EZR32LG-RM.pdf
 #define EFM32_V1_DI_EUI_SILABS 0x000b57U
 
 /* -------------------------------------------------------------------------- */
@@ -620,6 +621,10 @@ typedef struct efm32_priv {
 
 bool efm32_probe(target_s *t)
 {
+	/* Since different EFM32 devices have different addresses containing the OID,
+	 * there are multiple attempts to read the device information until we find a match. */
+	 
+
 	/* Check if the OUI in the EUI is silabs or energymicro.
 	 * Use this to identify the Device Identification (DI) version */
 	uint8_t di_version;
@@ -640,6 +645,8 @@ bool efm32_probe(target_s *t)
 		} 
 		else {
 			/* Unknown OUI - assume version 1 */
+			DEBUG_INFO("Unknown OUI: 0x%06" PRIx32 "\n", oui24);
+			
 			di_version = 1;
 		}
 	}
