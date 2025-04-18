@@ -69,14 +69,14 @@ const command_s efm32_cmd_list[] = {
 /* Memory System Controller (MSC) Registers                                   */
 /* -------------------------------------------------------------------------- */
 
-#define EFM32_MSC_WRITECTRL(msc) (msc + 0x00CU) //(msc + 0x008U)
-#define EFM32_MSC_WRITECMD(msc)  (msc + 0x010U) 
-#define EFM32_MSC_ADDRB(msc)     (msc + 0x014U) 
-#define EFM32_MSC_WDATA(msc)     (msc + 0x018U) 
-#define EFM32_MSC_STATUS(msc)    (msc + 0x01CU) 
-#define EFM32_MSC_IF(msc)        (msc + 0x020U) 
-#define EFM32_MSC_LOCK(msc)      (msc + 0x03CU) 
-#define EFM32_MSC_MASSLOCK(msc)  (msc + 0x040U) 
+#define EFM32_MSC_WRITECTRL(msc) (msc + 0x00cU) //(msc + 0x008U)
+#define EFM32_MSC_WRITECMD(msc)  (msc + 0x010U)
+#define EFM32_MSC_ADDRB(msc)     (msc + 0x014U)
+#define EFM32_MSC_WDATA(msc)     (msc + 0x018U)
+#define EFM32_MSC_STATUS(msc)    (msc + 0x01cU)
+#define EFM32_MSC_IF(msc)        (msc + 0x020U)
+#define EFM32_MSC_LOCK(msc)      (msc + 0x03cU)
+#define EFM32_MSC_MASSLOCK(msc)  (msc + 0x040U)
 
 #define EFM32_MSC_LOCK_LOCKKEY     0x7025U
 #define EFM32_MSC_MASSLOCK_LOCKKEY 0x0000U
@@ -104,7 +104,7 @@ const command_s efm32_cmd_list[] = {
 #define EFM32_LOCK_BITS (EFM32_INFO + 0x4000U)
 #define EFM32_V1_DI     (EFM32_INFO + 0x8000U)
 #define EFM32_V2_DI     (EFM32_INFO + 0x81b0U)
-#define EFR32FG23_DI	(EFM32_INFO + 0x8000U)
+#define EFR32FG23_DI    (EFM32_INFO + 0x8000U)
 
 /* -------------------------------------------------------------------------- */
 /* Lock Bits (LB)                                                             */
@@ -263,44 +263,43 @@ const command_s efm32_cmd_list[] = {
 /* Device Information (DI) Area for EFR32FG23                           */
 /* -------------------------------------------------------------------------- */
 
-#define EFR32FG23_DI_INFO              		(EFR32FG23_DI  + 0x000U) 
-#define EFR32FG23_DI_PART              		(EFR32FG23_DI  + 0x004U) 
-#define EFR32FG23_DI_MEMINFO           		(EFR32FG23_DI  + 0x008U) 
-#define EFR32FG23_DI_MSIZE             		(EFR32FG23_DI  + 0x00cU) 
-#define EFR32FG23_DI_PKGINFO           		(EFR32FG23_DI  + 0x010U) 
-#define EFR32FG23_DI_CUSTOMINFO        		(EFR32FG23_DI  + 0x014U) 
-#define EFR32FG23_DI_SWFIX             		(EFR32FG23_DI  + 0x018U) 
-#define EFR32FG23_DI_SWCAPA0           		(EFR32FG23_DI  + 0x01cU) 
-#define EFR32FG23_DI_SWCAPA1           		(EFR32FG23_DI  + 0x020U) 
-#define EFR32FG23_DI_EXTINFO           		(EFR32FG23_DI  + 0x028U) 
-#define EFR32FG23_DI_EUI48L            		(EFR32FG23_DI  + 0x040U) 
-#define EFR32FG23_DI_EUI48H            		(EFR32FG23_DI  + 0x044U) 
-#define EFR32FG23_DI_EUI64L           		(EFR32FG23_DI  + 0x048U) 
-#define EFR32FG23_DI_EUI64H            		(EFR32FG23_DI  + 0x04CU) 
-#define EFR32FG23_DI_CALTEMP           		(EFR32FG23_DI  + 0x050U) 
-#define EFR32FG23_DI_EMUTEMP           		(EFR32FG23_DI  + 0x054U) 
-#define EFR32FG23_DI_HFRCODPLLCALn     		(EFR32FG23_DI  + 0x058U) 
-#define EFR32FG23_DI_HFRCOEM23CALn     		(EFR32FG23_DI  + 0x0A0U) 
-#define EFR32FG23_DI_MODULENAME0       		(EFR32FG23_DI  + 0x130U) 
-#define EFR32FG23_DI_MODULENAME1       		(EFR32FG23_DI  + 0x134U) 
-#define EFR32FG23_DI_MODULENAME2       		(EFR32FG23_DI  + 0x138U) 
-#define EFR32FG23_DI_MODULENAME3       		(EFR32FG23_DI  + 0x13CU) 
-#define EFR32FG23_DI_MODULENAME4       		(EFR32FG23_DI  + 0x140U) 
-#define EFR32FG23_DI_MODULENAME5       		(EFR32FG23_DI  + 0x144U) 
-#define EFR32FG23_DI_MODULENAME6       		(EFR32FG23_DI  + 0x148U) 
-#define EFR32FG23_DI_MODULEINFO        		(EFR32FG23_DI  + 0x14CU) 
-#define EFR32FG23_DI_MODXOCAL         		(EFR32FG23_DI  + 0x150U) 
-#define EFR32FG23_DI_HFXOCAL           		(EFR32FG23_DI  + 0x17CU) 
-#define EFR32FG23_DI_IADC0GAIN0    		    (EFR32FG23_DI  + 0x180U) 
-#define EFR32FG23_DI_IADC0GAIN1        	    (EFR32FG23_DI  + 0x184U) 
-#define EFR32FG23_DI_IADC0OFFSETCAL0  	 	(EFR32FG23_DI  + 0x188U) 
-#define EFR32FG23_DI_IADC0NORMALOFFSETCAL0  (EFR32FG23_DI  + 0x18CU) 
-#define EFR32FG23_DI_IADC0NORMALOFFSETCAL1  (EFR32FG23_DI  + 0x190U) 
-#define EFR32FG23_DI_IADC0HISPDOFFSETCAL0   (EFR32FG23_DI  + 0x194U) 
-#define EFR32FG23_DI_IADC0HISPDOFFSETCAL1   (EFR32FG23_DI  + 0x198U) 
-#define EFR32FG23_DI_LEGACY    		       	(EFR32FG23_DI  + 0x1FCU) 
-#define EFR32FG23_DI_RTHERM            		(EFR32FG23_DI  + 0x25CU) 
-
+#define EFR32FG23_DI_INFO                  (EFR32FG23_DI + 0x000U)
+#define EFR32FG23_DI_PART                  (EFR32FG23_DI + 0x004U)
+#define EFR32FG23_DI_MEMINFO               (EFR32FG23_DI + 0x008U)
+#define EFR32FG23_DI_MSIZE                 (EFR32FG23_DI + 0x00cU)
+#define EFR32FG23_DI_PKGINFO               (EFR32FG23_DI + 0x010U)
+#define EFR32FG23_DI_CUSTOMINFO            (EFR32FG23_DI + 0x014U)
+#define EFR32FG23_DI_SWFIX                 (EFR32FG23_DI + 0x018U)
+#define EFR32FG23_DI_SWCAPA0               (EFR32FG23_DI + 0x01cU)
+#define EFR32FG23_DI_SWCAPA1               (EFR32FG23_DI + 0x020U)
+#define EFR32FG23_DI_EXTINFO               (EFR32FG23_DI + 0x028U)
+#define EFR32FG23_DI_EUI48L                (EFR32FG23_DI + 0x040U)
+#define EFR32FG23_DI_EUI48H                (EFR32FG23_DI + 0x044U)
+#define EFR32FG23_DI_EUI64L                (EFR32FG23_DI + 0x048U)
+#define EFR32FG23_DI_EUI64H                (EFR32FG23_DI + 0x04cU)
+#define EFR32FG23_DI_CALTEMP               (EFR32FG23_DI + 0x050U)
+#define EFR32FG23_DI_EMUTEMP               (EFR32FG23_DI + 0x054U)
+#define EFR32FG23_DI_HFRCODPLLCALn         (EFR32FG23_DI + 0x058U)
+#define EFR32FG23_DI_HFRCOEM23CALn         (EFR32FG23_DI + 0x0a0U)
+#define EFR32FG23_DI_MODULENAME0           (EFR32FG23_DI + 0x130U)
+#define EFR32FG23_DI_MODULENAME1           (EFR32FG23_DI + 0x134U)
+#define EFR32FG23_DI_MODULENAME2           (EFR32FG23_DI + 0x138U)
+#define EFR32FG23_DI_MODULENAME3           (EFR32FG23_DI + 0x13cU)
+#define EFR32FG23_DI_MODULENAME4           (EFR32FG23_DI + 0x140U)
+#define EFR32FG23_DI_MODULENAME5           (EFR32FG23_DI + 0x144U)
+#define EFR32FG23_DI_MODULENAME6           (EFR32FG23_DI + 0x148U)
+#define EFR32FG23_DI_MODULEINFO            (EFR32FG23_DI + 0x14cU)
+#define EFR32FG23_DI_MODXOCAL              (EFR32FG23_DI + 0x150U)
+#define EFR32FG23_DI_HFXOCAL               (EFR32FG23_DI + 0x17cU)
+#define EFR32FG23_DI_IADC0GAIN0            (EFR32FG23_DI + 0x180U)
+#define EFR32FG23_DI_IADC0GAIN1            (EFR32FG23_DI + 0x184U)
+#define EFR32FG23_DI_IADC0OFFSETCAL0       (EFR32FG23_DI + 0x188U)
+#define EFR32FG23_DI_IADC0NORMALOFFSETCAL0 (EFR32FG23_DI + 0x18cU)
+#define EFR32FG23_DI_IADC0NORMALOFFSETCAL1 (EFR32FG23_DI + 0x190U)
+#define EFR32FG23_DI_IADC0HISPDOFFSETCAL0  (EFR32FG23_DI + 0x194U)
+#define EFR32FG23_DI_IADC0HISPDOFFSETCAL1  (EFR32FG23_DI + 0x198U)
+#define EFR32FG23_DI_LEGACY                (EFR32FG23_DI + 0x1fcU)
+#define EFR32FG23_DI_RTHERM                (EFR32FG23_DI + 0x25cU)
 
 /* -------------------------------------------------------------------------- */
 /* Constants                                                                  */
@@ -445,7 +444,8 @@ static uint64_t efr32fg23_read_unique(target_s *t, uint8_t di_version)
 	if (di_version != 3)
 		return 0;
 
-	return (((uint64_t)target_mem32_read32(t, EFR32FG23_DI_EUI64H) & 0x000FU) << 32U ) | target_mem32_read32(t, EFR32FG23_DI_EUI64L);
+	return (((uint64_t)target_mem32_read32(t, EFR32FG23_DI_EUI64H) & 0x000fU) << 32U) |
+		target_mem32_read32(t, EFR32FG23_DI_EUI64L);
 }
 
 /* Reads the EFM32 flash size in kiB */
@@ -587,7 +587,8 @@ static void efm32_add_flash(target_s *t, target_addr_t addr, size_t length, size
 /* Lookup device */
 static efm32_device_s const *efm32_get_device(target_s *t, uint8_t di_version)
 {
-	if(di_version == 0) return NULL;
+	if (di_version == 0)
+		return NULL;
 
 	uint8_t part_family = efm32_read_part_family(t, di_version);
 
@@ -631,9 +632,9 @@ bool efm32_probe(target_s *t)
 		 * DI_FAMILYNUM is 23
 		 */
 		uint32_t pn = target_mem32_read32(t, EFR32FG23_DI_PART);
-		uint8_t family = (pn >> 24) & 0x3f; // Extract bits 29-24 (6 bits)
+		uint8_t family = (pn >> 24) & 0x3f;    // Extract bits 29-24 (6 bits)
 		uint8_t familynum = (pn >> 16) & 0x3f; /* Extract family ID from bits 21-16 */
-		uint16_t devicenum = pn & 0xffff; /* Extract DEVICENUM from bits 0-15 */
+		uint16_t devicenum = pn & 0xffff;      /* Extract DEVICENUM from bits 0-15 */
 
 		/* Check for known EFR32FG23 OUIs */
 		if (familynum == 23 && (family == 0 || family == 3 || family == 5)) {
@@ -646,17 +647,15 @@ bool efm32_probe(target_s *t)
 			char letter = 'A' + (devicenum / 1000);
 			uint16_t number = devicenum % 1000;
 			DEBUG_INFO("EFR32xG23 Device             : %c%03u\n", letter, number);
-		} 
-		else {
+		} else {
 			DEBUG_INFO("Could not determine EFM32/EFR32 device type, assuming version 1.");
-		di_version = 1;
+			di_version = 1;
 		}
 	}
 
 	/* Read the part family, and reject if unknown */
 	efm32_device_s const *device = efm32_get_device(t, di_version);
-	if (!device)
-	{
+	if (!device) {
 		DEBUG_ERROR("Could not find the EFM32 device in the lookup table.\n");
 		return false;
 	}
@@ -674,7 +673,6 @@ bool efm32_probe(target_s *t)
 	uint16_t ram_kib = efm32_read_ram_size(t, di_version);
 	uint32_t ram_size = ram_kib * 0x400U;
 	uint32_t flash_page_size = device->flash_page_size;
-
 
 	efm32_priv_s *priv_storage = calloc(1, sizeof(*priv_storage));
 	if (!priv_storage) { /* calloc failed: heap exhaustion */
@@ -703,8 +701,8 @@ bool efm32_probe(target_s *t)
 		efm32_add_flash(t, 0x0fe10000, device->bootloader_size, flash_page_size);
 	}
 
-	target_mem32_write32(t, 0x40008064U, 0xFFFFFFFFU);
-	target_mem32_write32(t, 0x40008068U, 0x1FFFFFFFU);
+	target_mem32_write32(t, 0x40008064U, 0xffffffffU);
+	target_mem32_write32(t, 0x40008068U, 0x1fffffffU);
 	target_add_commands(t, efm32_cmd_list, "EFM32");
 
 	return true;
