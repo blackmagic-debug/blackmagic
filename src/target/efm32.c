@@ -430,21 +430,6 @@ static uint64_t efm32_v1_read_eui64(target_s *t)
 	return ((uint64_t)target_mem32_read32(t, EFM32_V1_DI_EUI64_1) << 32U) | target_mem32_read32(t, EFM32_V1_DI_EUI64_0);
 }
 
-static uint64_t efr32fg23_read_eui64(target_s *t)
-{
-	return ((uint64_t)target_mem32_read32(t, EFR32FG23_DI_EUI64H) >> 8U);
-}
-
-/* Read the OID of an EFR32xG23, which is the top 8 bits of EUI48L*/
-static uint32_t efr32fg23_read_oid(target_s *t)
-{
-	uint32_t loweroct = (target_mem32_read32(t, EFR32FG23_DI_EUI48L) >> 24U) & 0xFF;
-	uint32_t upperoct = (target_mem32_read32(t, EFR32FG23_DI_EUI48H) << 16U) & 0xFFFF00;
-
-	return loweroct + upperoct;
-}
-
-
 /* Reads the EFM32 Extended Unique Identifier EUI48 (V2) */
 static uint64_t efm32_v2_read_eui48(target_s *t)
 {
@@ -631,9 +616,8 @@ typedef struct efm32_priv {
 
 bool efm32_probe(target_s *t)
 {
-	/* Since different EFM32 devices have different addresses containing the OID,
-	 * there are multiple attempts to read the device information until we find a match. */
-	DEBUG_INFO("******** Probing EFM32...\n");
+	/* Different devices have differente addresses for the DI area. Until we know what the device is,
+	 * we use a bit of brute force until we find the right one. */
 
 	/* Check if the OUI in the EUI is silabs or energymicro.
 	 * Use this to identify the Device Identification (DI) version */
@@ -655,8 +639,6 @@ bool efm32_probe(target_s *t)
 		uint8_t family = (pn >> 24) & 0x3f; // Extract bits 29-24 (6 bits)
 		uint8_t familynum = (pn >> 16) & 0x3f; /* Extract family ID from bits 21-16 */
 		uint16_t devicenum = pn & 0xffff; /* Extract DEVICENUM from bits 0-15 */
-		
-
 
 		/* Check for known EFR32FG23 OUIs */
 		if (familynum == 23 && (family == 0 || family == 3 || family == 5)) {
