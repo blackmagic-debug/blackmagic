@@ -69,17 +69,17 @@ const command_s efm32_cmd_list[] = {
 /* Memory System Controller (MSC) Registers                                   */
 /* -------------------------------------------------------------------------- */
 
-#define EFM32_MSC_WRITECTRL(msc) (msc + 0x008U)
-#define EFM32_MSC_WRITECMD(msc)  (msc + 0x00cU)
-#define EFM32_MSC_ADDRB(msc)     (msc + 0x010U)
-#define EFM32_MSC_WDATA(msc)     (msc + 0x018U)
-#define EFM32_MSC_STATUS(msc)    (msc + 0x01cU)
-#define EFM32_MSC_IF(msc)        (msc + 0x030U)
-#define EFM32_MSC_LOCK(msc)      (msc + (msc == 0x400c0000U ? 0x3cU : 0x40U))
-#define EFM32_MSC_MASSLOCK(msc)  (msc + 0x054U)
+#define EFM32_MSC_WRITECTRL(msc) (msc + 0x00CU) //(msc + 0x008U)
+#define EFM32_MSC_WRITECMD(msc)  (msc + 0x010U) 
+#define EFM32_MSC_ADDRB(msc)     (msc + 0x014U) 
+#define EFM32_MSC_WDATA(msc)     (msc + 0x018U) 
+#define EFM32_MSC_STATUS(msc)    (msc + 0x01CU) 
+#define EFM32_MSC_IF(msc)        (msc + 0x020U) 
+#define EFM32_MSC_LOCK(msc)      (msc + 0x03CU) 
+#define EFM32_MSC_MASSLOCK(msc)  (msc + 0x040U) 
 
-#define EFM32_MSC_LOCK_LOCKKEY     0x1b71U
-#define EFM32_MSC_MASSLOCK_LOCKKEY 0x631aU
+#define EFM32_MSC_LOCK_LOCKKEY     0x7025U
+#define EFM32_MSC_MASSLOCK_LOCKKEY 0x0000U
 
 #define EFM32_MSC_WRITECMD_LADDRIM    (1U << 0U)
 #define EFM32_MSC_WRITECMD_ERASEPAGE  (1U << 1U)
