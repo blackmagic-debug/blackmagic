@@ -43,3 +43,7 @@
 |  | EFR32SG28 |  |
 |  | EFR32ZG28 |  |
 |  | EFM32PG28 | Pearl Gecko |
+
+
+
+*Source: https://github.com/SiliconLabs/peripheral_examples/blob/master/README.md*
