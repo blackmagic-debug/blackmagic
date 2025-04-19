@@ -356,6 +356,19 @@ const cable_desc_s cable_desc[] = {
 	},
 	{
 		/*
+		 * 1bitSquared Icebreaker FT2232H
+		 * Direct connection on Interface A, JTAG only
+		 */
+		.vendor = 0x0403U,
+		.product = 0x6010U,
+		.interface = INTERFACE_A,
+		.init.data[0] = MPSSE_CS | MPSSE_DO | MPSSE_DI,
+		.init.dirs[0] = MPSSE_CS | MPSSE_DO | MPSSE_SK,
+		.description = "iCEBreaker V1.0e",
+		.name = "icebreaker",
+	},
+	{
+		/*
 		 * https://www.olimex.com/Products/ARM/JTAG/ARM-USB-TINY-H/
 		 * https://www.olimex.com/Products/ARM/JTAG/_resources/ARM-USB-TINY_and_TINY_H_manual.pdf
 		 *
