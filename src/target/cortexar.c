@@ -968,7 +968,7 @@ bool cortexar_attach(target_s *const target)
 	target_halt_reason_e reason = TARGET_HALT_RUNNING;
 	while (!platform_timeout_is_expired(&timeout) && reason == TARGET_HALT_RUNNING)
 		reason = target_halt_poll(target, NULL);
-	if (reason != TARGET_HALT_REQUEST) {
+	if ((reason != TARGET_HALT_REQUEST) && (reason != TARGET_HALT_BREAKPOINT)) {
 		DEBUG_ERROR("Failed to halt the core\n");
 		return false;
 	}
