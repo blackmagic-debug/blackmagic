@@ -1132,6 +1132,19 @@ static void riscv_halt_resume(target_s *target, const bool step)
 	}
 	if (!riscv_csr_write(hart, RV_DCSR | RV_CSR_FORCE_32_BIT, &stepping_config))
 		return;
+	/* Step over coded breakpoints */
+	uint32_t dcsr_cause = 0U;
+	riscv_csr_read(hart, RV_DCSR, &dcsr_cause);
+	dcsr_cause &= RV_DCSR_CAUSE_MASK;
+	if (dcsr_cause == RV_HALT_CAUSE_EBREAK) {
+		/* Read the instruction to resume on */
+		uint32_t program_counter = riscv_pc_read(hart);
+		/* If it actually is a breakpoint instruction, update the program counter one past it. */
+		if (target_mem32_read32(target, program_counter) == RV_EBREAK) {
+			program_counter += 4U;
+			riscv_csr_write(hart, RV_DPC, &program_counter);
+		}
+	}
 	/* Request the hart to resume */
 	if (!riscv_dm_write(hart->dbg_module, RV_DM_CONTROL, hart->hartsel | RV_DM_CTRL_RESUME_REQ))
 		return;
