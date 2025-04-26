@@ -164,27 +164,33 @@ static void adc_init(void)
 	rcc_periph_clock_enable(RCC_ADC1);
 	gpio_mode_setup(VTREF_PORT, GPIO_MODE_ANALOG, GPIO_PUPD_NONE, VTREF_PIN);
 	adc_power_off(ADC1);
-	adc_disable_scan_mode(ADC1);
-	adc_set_resolution(ADC1, ADC_CR1_RES_12BIT);
+	/* Pclk2=Hclk=96 MHz, use ADCclk=24 MHz to stay below 36 per datasheet. Then 480 cycles take 20us. */
+	adc_set_clk_prescale(ADC_CCR_ADCPRE_BY4);
 	adc_set_sample_time(ADC1, VTREF_CHANNEL, ADC_SMPR_SMP_480CYC);
 	adc_set_sample_time(ADC1, ADC_CHANNEL_VREF, ADC_SMPR_SMP_480CYC);
 	adc_enable_temperature_sensor();
-	adc_power_on(ADC1);
 }
 
 static uint16_t platform_adc_read(void)
 {
-	const uint8_t channels[] = {ADC_CHANNEL_VREF, VTREF_CHANNEL};
-	adc_set_regular_sequence(ADC1, ARRAY_LENGTH(channels), channels);
+	const uint8_t channel17 = ADC_CHANNEL_VREF;
+	const uint8_t channel_vtref = VTREF_CHANNEL;
+	adc_power_on(ADC1);
+	adc_set_regular_sequence(ADC1, 1, &channel17);
 	adc_start_conversion_regular(ADC1);
 	while (!adc_eoc(ADC1))
 		continue;
 	const uint16_t vrefint_sample = adc_read_regular(ADC1);
+	adc_set_regular_sequence(ADC1, 1, &channel_vtref);
+	adc_start_conversion_regular(ADC1);
+	while (!adc_eoc(ADC1))
+		continue;
 	const uint16_t value = adc_read_regular(ADC1);
 	/* Vrefint = 1.21V typ, Vdda = 3.3V, expected code of 1501 */
 	const uint16_t vrefint_expected = 1210U * 4095U / 3300U;
 	const uint16_t value_adj = value * vrefint_expected / vrefint_sample;
-	DEBUG_INFO("%s: Vrefint=%u, VTref=%u, returning %u", __func__, vrefint_sample, value, value_adj);
+	DEBUG_INFO("%s: Vrefint=%u, VTref=%u, returning %u\n", __func__, vrefint_sample, value, value_adj);
+	adc_power_off(ADC1);
 	return value_adj;
 }
 
