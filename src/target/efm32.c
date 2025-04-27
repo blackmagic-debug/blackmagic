@@ -634,19 +634,24 @@ bool efm32_probe(target_s *t)
 		uint32_t pn = target_mem32_read32(t, EFR32FG23_DI_PART);
 		uint8_t family = (pn >> 24) & 0x3f;    // Extract bits 29-24 (6 bits)
 		uint8_t familynum = (pn >> 16) & 0x3f; /* Extract family ID from bits 21-16 */
-		uint16_t devicenum = pn & 0xffff;      /* Extract DEVICENUM from bits 0-15 */
 
 		/* Check for known EFR32FG23 OUIs */
 		if (familynum == 23 && (family == 0 || family == 3 || family == 5)) {
 			/* Use Device Identification version 3 for EFR32FG23 */
 			di_version = 3;
-			DEBUG_INFO("EFR32xG23 Device found\n");
-			DEBUG_INFO("EFR32xG23 Family    (decimal): %u\n", family);
-			DEBUG_INFO("EFR32xG23 FamilyNUM (decimal): %u\n", familynum);
+
+#ifndef DEBUG_INFO_IS_NOOP
+			uint16_t devicenum = pn & 0xffff; /* Extract DEVICENUM from bits 0-15 */
+
 			/* Convert device number to letter-number format (e.g., 1123 -> B123) */
 			char letter = 'A' + (devicenum / 1000);
 			uint16_t number = devicenum % 1000;
+
+			DEBUG_INFO("EFR32xG23 Device found\n");
+			DEBUG_INFO("EFR32xG23 Family    (decimal): %u\n", family);
+			DEBUG_INFO("EFR32xG23 FamilyNUM (decimal): %u\n", familynum);
 			DEBUG_INFO("EFR32xG23 Device             : %c%03u\n", letter, number);
+#endif
 		} else {
 			DEBUG_INFO("Could not determine EFM32/EFR32 device type, assuming version 1.");
 			di_version = 1;
