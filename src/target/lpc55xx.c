@@ -494,9 +494,10 @@ static target_flash_s *lpc55xx_add_flash(target_s *target)
 	flash->writesize = LPC55xx_WRITE_SIZE;
 
 	/* all flash operations must be aligned to the flash page size */
+	/* flash sectors are defined by NXP as the erase block size */
 
-	if (flash->blocksize < config.flash_page_size)
-		flash->blocksize = config.flash_page_size;
+	if (flash->blocksize < config.flash_sector_size)
+		flash->blocksize = config.flash_sector_size;
 
 	if (flash->writesize < config.flash_page_size)
 		flash->writesize = config.flash_page_size;
