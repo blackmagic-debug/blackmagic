@@ -92,6 +92,7 @@
 #define LPC55S28_CHIPID 0xa010119cU // NXP forum
 #define LPC55S66_CHIPID             // (unknown)
 #define LPC55S69_CHIPID 0x501000c5U // (read from MCU-Link)
+#define MCXN947_CHIPID  0x0540008bU // (read from MCU-Link)
 
 /* The available IAP commands that we support, mostly flash access */
 typedef enum lpc55xx_iap_cmd {
@@ -165,6 +166,9 @@ static target_addr_t lpc55xx_get_bootloader_tree_address(target_s *target)
 		//case LPC55S66_CHIPID:
 		return 0x130010f0U;
 
+	case MCXN947_CHIPID:
+		return 0x1303fc00U;
+
 	default:
 		return 0;
 	}
@@ -193,6 +197,8 @@ static const char *lpc55xx_get_device_name(uint32_t chipid)
 		return "LPC55S28";
 	case LPC55S69_CHIPID:
 		return "LPC55S69";
+	case MCXN947_CHIPID:
+		return "MCXN947";
 
 	default:
 		return "unknown";
@@ -600,6 +606,17 @@ bool lpc55xx_probe(target_s *const target)
 		target_add_ram32(target, 0x20008000U, 0x4000U); // SRAM_1
 		target_add_ram32(target, 0x2000c000U, 0x4000U); // SRAM_2
 		target_add_ram32(target, 0x20010000U, 0x4000U); // SRAM_3
+		break;
+	case MCXN947_CHIPID:
+		target_add_ram32(target, 0x04000000U, 0x18000U); // SRAM_X
+		target_add_ram32(target, 0x20000000U, 0x8000);   // SRAM_A
+		target_add_ram32(target, 0x20008000U, 0x8000);   // SRAM_B
+		target_add_ram32(target, 0x20010000U, 0x10000);  // SRAM_C
+		target_add_ram32(target, 0x20020000U, 0x10000);  // SRAM_D
+		target_add_ram32(target, 0x20030000U, 0x10000);  // SRAM_E
+		target_add_ram32(target, 0x20040000U, 0x10000);  // SRAM_F
+		target_add_ram32(target, 0x20050000U, 0x10000);  // SRAM_G
+		target_add_ram32(target, 0x20060000U, 0x8000);   // SRAM_H
 		break;
 	default:
 		// TODO: not enough testing to enable other devices
