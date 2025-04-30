@@ -268,7 +268,7 @@ static target_addr_t lpc55xx_get_ffr_get_uuid_address(target_s *target)
 static lpc55xx_iap_status_e iap_call_raw(target_s *target, lpc55xx_iap_cmd_e cmd, uint32_t r1, uint32_t r2, uint32_t r3)
 {
 	/* Prepare the registers for the IAP call. R0 is always flash_config */
-	uint32_t regs[CORTEXM_GENERAL_REG_COUNT + CORTEX_FLOAT_REG_COUNT];
+	uint32_t regs[CORTEXM_GENERAL_REG_COUNT + CORTEX_FLOAT_REG_COUNT + CORTEXM_TRUSTZONE_REG_COUNT];
 	target_regs_read(target, regs);
 
 	regs[CORTEX_REG_MSP] = LPC55xx_IAP_MSP_ADDRESS;
@@ -347,7 +347,7 @@ static void lpc55xx_prepare_flash_config(target_s *target, target_addr_t address
 static bool lpc55xx_flash_init(target_s *target, lpc55xx_flash_config_s *config)
 {
 	uint8_t backup_memory[LPC55xx_SCRATCH_MEMORY_LEN];
-	uint32_t regs[CORTEXM_GENERAL_REG_COUNT + CORTEX_FLOAT_REG_COUNT];
+	uint32_t regs[CORTEXM_GENERAL_REG_COUNT + CORTEX_FLOAT_REG_COUNT + CORTEXM_TRUSTZONE_REG_COUNT];
 
 	target_regs_read(target, regs);
 	target_mem32_read(target, backup_memory, LPC55xx_FLASH_CONFIG_ADDRESS, sizeof(backup_memory));
@@ -376,7 +376,7 @@ exit:
 static bool lpc55xx_get_uuid(target_s *target, uint8_t *uuid)
 {
 	uint8_t backup_memory[LPC55xx_SCRATCH_MEMORY_LEN + LPC55xx_UUID_LEN];
-	uint32_t regs[CORTEXM_GENERAL_REG_COUNT + CORTEX_FLOAT_REG_COUNT];
+	uint32_t regs[CORTEXM_GENERAL_REG_COUNT + CORTEX_FLOAT_REG_COUNT + CORTEXM_TRUSTZONE_REG_COUNT];
 
 	target_regs_read(target, regs);
 	target_mem32_read(target, backup_memory, LPC55xx_FLASH_CONFIG_ADDRESS, sizeof(backup_memory));
