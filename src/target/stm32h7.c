@@ -500,7 +500,6 @@ static uint32_t stm32h7_flash_cr(uint32_t sector_size, const uint32_t ctrl, cons
 	/* H74x, H72x IP: 128 KiB and has PSIZE */
 	if (sector_size == FLASH_SECTOR_SIZE) {
 		command |= sector_number << STM32H7_FLASH_CTRL_SECTOR_NUM_SHIFT;
-		DEBUG_TARGET("%s: patching FLASH_CR from 0x%08" PRIx32 " to 0x%08" PRIx32 "\n", __func__, ctrl, command);
 		return command;
 	}
 
@@ -513,7 +512,6 @@ static uint32_t stm32h7_flash_cr(uint32_t sector_size, const uint32_t ctrl, cons
 	command |= temp_fw_start >> 2U;
 	/* SNB offset is different, too */
 	command |= sector_number << STM32H7BX_FLASH_CTRL_SECTOR_NUM_SHIFT;
-	DEBUG_TARGET("%s: patching FLASH_CR from 0x%08" PRIx32 " to 0x%08" PRIx32 "\n", __func__, ctrl, command);
 	return command;
 }
 
