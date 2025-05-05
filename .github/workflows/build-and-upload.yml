@@ -98,6 +98,12 @@ jobs:
           meson setup build --cross-file cross-file/${{ matrix.probe }}.ini
           meson compile -C build
           mkdir src/artefacts
+          case "${{ matrix.probe }}" in
+            native-*)
+              mv build/blackmagic_native_firmware.elf build/blackmagic_${{ matrix.probe }}_firmware.elf
+              mv build/blackmagic_native_firmware.bin build/blackmagic_${{ matrix.probe }}_firmware.bin
+              ;;
+          esac
           mv build/blackmagic_*_firmware.{elf,bin} src/artefacts
 
       # Package up the artefacts and upload them
