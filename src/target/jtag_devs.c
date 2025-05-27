@@ -23,6 +23,7 @@
 #include "general.h"
 #include "jtag_scan.h"
 #include "adiv5.h"
+#include "avr_pdi.h"
 #include "riscv_debug.h"
 #include "jtag_devs.h"
 
@@ -421,6 +422,16 @@ const jtag_dev_descr_s dev_descr[] = {
 #if ENABLE_DEBUG == 1
 		.descr = "TI ICEPick.",
 #endif
+	},
+#endif
+#ifdef ENABLE_AVR
+	{
+		.idcode = 0x0000003fU,
+		.idmask = 0x00000fffU,
+#if ENABLE_DEBUG == 1
+		.descr = "AVR JTAG-PDI port.",
+#endif
+		.handler = avr_jtag_pdi_handler,
 	},
 #endif
 #if ENABLE_DEBUG == 1
