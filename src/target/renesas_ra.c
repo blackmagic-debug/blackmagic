@@ -458,24 +458,21 @@ bool renesas_ra_probe(target_s *const target)
 		 */
 
 		if (renesas_pnr_read(target, RENESAS_FIXED2_PNR, pnr)) {
-			DEBUG_WARN("Found renesas chip (%.*s) with pnr location RENESAS_FIXED2_PNR and unsupported Part ID %x "
-					   "please report it\n",
-				(int)sizeof(pnr), pnr, target->part_id);
+			DEBUG_WARN("Found renesas chip (%.*s) with %s and unsupported Part ID 0x%x, please report it\n",
+				(int)sizeof(pnr), pnr, "pnr location RENESAS_FIXED2_PNR", target->part_id);
 			break;
 		}
 
 		if (renesas_pnr_read(target, RENESAS_FIXED1_PNR, pnr)) {
-			DEBUG_WARN("Found renesas chip (%.*s) with pnr location RENESAS_FIXED1_PNR and unsupported Part ID 0x%x "
-					   "please report it\n",
-				(int)sizeof(pnr), pnr, target->part_id);
+			DEBUG_WARN("Found renesas chip (%.*s) with %s and unsupported Part ID 0x%x, please report it\n",
+				(int)sizeof(pnr), pnr, "pnr location RENESAS_FIXED1_PNR", target->part_id);
 			break;
 		}
 
 		flash_root_table = renesas_fmifrt_read(target);
 		if (renesas_pnr_read(target, RENESAS_FMIFRT_PNR(flash_root_table), pnr)) {
-			DEBUG_WARN("Found renesas chip (%.*s) with Flash Root Table and unsupported Part ID 0x%x "
-					   "please report it\n",
-				(int)sizeof(pnr), pnr, target->part_id);
+			DEBUG_WARN("Found renesas chip (%.*s) with %s and unsupported Part ID 0x%x, please report it\n",
+				(int)sizeof(pnr), pnr, "Flash Root Table", target->part_id);
 			break;
 		}
 
