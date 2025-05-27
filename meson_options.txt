@@ -33,6 +33,7 @@ option(
 		'apollo3',
 		'at32f4',
 		'ch32',
+		'ch32v',
 		'ch579',
 		'efm',
 		'gd32',
@@ -147,4 +148,9 @@ option(
 	type: 'boolean',
 	value: false,
 	description: 'Enable firmware-side protocol acceleration of RISC-V Debug'
+)
+option(
+	'rvswd_support',
+	type: 'boolean',
+	value: false
 )
