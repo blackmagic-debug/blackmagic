@@ -847,6 +847,10 @@ static bool stm32l4_attach(target_s *const target)
 	} else
 		stm32l4_add_flash(target, STM32L4_FLASH_BANK_1_BASE, flash_len * 1024U, 0x800, UINT32_MAX);
 
+	/* On STM32G47x SoC, Cortex-M4F allows SRAM access without halting */
+	if (device->device_id == ID_STM32G47)
+		target->target_options |= TOPT_NON_HALTING_MEM_IO;
+
 	/* Clear all errors in the status register. */
 	stm32l4_flash_write32(target, FLASH_SR, stm32l4_flash_read32(target, FLASH_SR));
 	return true;
