@@ -53,6 +53,8 @@ bool dap_jtag_init(void)
 	dap_disconnect();
 	dap_mode = DAP_CAP_JTAG;
 	dap_connect();
+	dap_ntrst_set_val(true);
+	dap_ntrst_set_val(false);
 
 	jtag_proc.jtagtap_reset = dap_jtag_reset;
 	jtag_proc.jtagtap_next = dap_jtag_next;

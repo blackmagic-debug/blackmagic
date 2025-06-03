@@ -84,6 +84,7 @@ static bool dap_transfer_configure(uint8_t idle_cycles, uint16_t wait_retries, u
 
 static uint32_t dap_current_clock_freq;
 static bool dap_nrst_state = false;
+static bool dap_ntrst_state = false;
 
 bool dap_connect(void)
 {
@@ -233,6 +234,33 @@ bool dap_nrst_set_val(const bool nrst_state)
 	}
 	/* Extract the current pin state for the device, de-inverting it */
 	dap_nrst_state = !(response & DAP_SWJ_nRST);
+	return response == request.pin_values;
+}
+
+bool dap_ntrst_get_val(void)
+{
+	return dap_ntrst_state;
+}
+
+bool dap_ntrst_set_val(const bool ntrst_state)
+{
+	/* Setup the request for the pin state change request */
+	dap_swj_pins_request_s request = {
+		.request = DAP_SWJ_PINS,
+		/* nRST is active low, so take that into account */
+		.pin_values = ntrst_state ? 0U : DAP_SWJ_nTRST,
+		.selected_pins = DAP_SWJ_nTRST,
+	};
+	/* Tell the hardware to wait for 10µs for the pin to settle */
+	write_le4(request.wait_time, 0, 10);
+	uint8_t response = 0U;
+	/* Execute it and check if it failed */
+	if (!dap_run_cmd(&request, 7U, &response, 1U)) {
+		DEBUG_PROBE("%s failed\n", __func__);
+		return false;
+	}
+	/* Extract the current pin state for the device, de-inverting it */
+	dap_ntrst_state = !(response & DAP_SWJ_nTRST);
 	return response == request.pin_values;
 }
 
