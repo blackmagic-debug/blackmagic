@@ -81,6 +81,8 @@ extern uint8_t dap_quirks;
 
 bool dap_connect(void);
 bool dap_disconnect(void);
+bool dap_ntrst_get_val(void);
+bool dap_ntrst_set_val(const bool ntrst_state);
 bool dap_led(dap_led_type_e type, bool state);
 size_t dap_info(dap_info_e requested_info, void *buffer, size_t buffer_length);
 bool dap_set_reset_state(bool nrst_state);
