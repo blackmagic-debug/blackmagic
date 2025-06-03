@@ -216,7 +216,14 @@ static void jtag_display_idcodes(void)
 				break;
 			}
 		}
-		DEBUG_INFO("ID code 0x%08" PRIx32 ": %s\n", jtag_devs[device].jd_idcode, description);
+		DEBUG_INFO("ID code 0x%08" PRIx32 ": %-20s | drpre: %d  drpost: %d  irpre: %d  irpost: %d  irlen: %d\n",
+			jtag_devs[device].jd_idcode, description,
+			jtag_devs[device].dr_prescan,
+			jtag_devs[device].dr_postscan,
+			jtag_devs[device].ir_prescan,
+			jtag_devs[device].ir_postscan,
+			jtag_devs[device].ir_len
+		);
 	}
 #endif
 }

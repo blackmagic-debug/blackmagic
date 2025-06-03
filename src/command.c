@@ -117,6 +117,7 @@ const command_s cmd_list[] = {
 	{"halt_timeout", cmd_halt_timeout, "Timeout to wait until Cortex-M is halted: [TIMEOUT, default 2000ms]"},
 	{"connect_rst", cmd_connect_reset, "Configure connect under reset: [enable|disable]"},
 	{"reset", cmd_reset, "Pulse the nRST line - disconnects target: [PULSE_LEN, default 0ms]"},
+	{"reset_halt", cmd_reset, "Reset the target and halt at the first instruction"},
 	{"tdi_low_reset", cmd_tdi_low_reset,
 		"Pulse nRST with TDI set low to attempt to wake certain targets up (eg LPC82x)"},
 #ifdef PLATFORM_HAS_POWER_SWITCH
@@ -570,6 +571,19 @@ static bool cmd_halt_timeout(target_s *target, int argc, const char **argv)
 	if (argc > 1)
 		cortexm_wait_timeout = strtoul(argv[1], NULL, 0);
 	gdb_outf("Cortex-M timeout to wait for device halts: %u\n", cortexm_wait_timeout);
+	return true;
+}
+
+static bool cmd_reset_halt(target_s *target, int argc, const char **argv)
+{
+	(void)target;
+	uint32_t pulse_len_ms = 0;
+	if (argc > 1)
+		pulse_len_ms = strtoul(argv[1], NULL, 0);
+	target_list_free();
+	platform_nrst_set_val(true);
+	platform_delay(pulse_len_ms);
+	platform_nrst_set_val(false);
 	return true;
 }
 

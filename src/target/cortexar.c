@@ -70,6 +70,8 @@ typedef struct cortexar_priv {
 		uint32_t spsr[5U];
 		uint64_t d[16U];
 		uint32_t fpcsr;
+		uint32_t dfsr;
+		uint32_t dfar;
 	} core_regs;
 
 	/* Fault status/address cache */
@@ -701,7 +703,6 @@ static target_addr_t cortexar_virt_to_phys(target_s *const target, const target_
 static bool cortexar_oslock_unlock(target_s *const target)
 {
 	const uint32_t lock_status = cortex_dbg_read32(target, CORTEXAR_DBG_OSLSR);
-	DEBUG_TARGET("%s: OS lock status: %08" PRIx32 "\n", __func__, lock_status);
 	/* Check if the lock is implemented, then if it is, if it's set */
 	if (((lock_status & CORTEXAR_DBG_OSLSR_OS_LOCK_MODEL) == CORTEXAR_DBG_OSLSR_OS_LOCK_MODEL_FULL ||
 			(lock_status & CORTEXAR_DBG_OSLSR_OS_LOCK_MODEL) == CORTEXAR_DBG_OSLSR_OS_LOCK_MODEL_PARTIAL) &&
@@ -1022,7 +1023,8 @@ static inline uint32_t cortexar_endian_dp_read(target_s *const target, const uin
 {
 	cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
 	uint32_t value = adiv5_dp_read(priv->base.ap->dp, addr);
-	if (target->target_options & TOPT_FLAVOUR_BE) {
+	extern bool skip_swap;
+	if ((target->target_options & TOPT_FLAVOUR_BE) && !skip_swap) {
 		uint8_t tmp_value[4];
 		// The instruction run gave us back a value that we interpreted as little endian, however
 		write_le4(tmp_value, 0, value);
@@ -1035,8 +1037,9 @@ static inline uint32_t cortexar_endian_dp_read(target_s *const target, const uin
 static inline void cortexar_endian_dp_write(target_s *const target, const uint16_t addr, uint32_t value)
 {
 	cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
+	extern bool skip_swap;
 
-	if (target->target_options & TOPT_FLAVOUR_BE) {
+	if ((target->target_options & TOPT_FLAVOUR_BE) && !skip_swap) {
 		uint8_t tmp_value[4];
 		// The instruction run gave us back a value that we interpreted as little endian, however
 		write_le4(tmp_value, 0, value);
@@ -1082,7 +1085,8 @@ static inline bool cortexar_mem_read_fast(target_s *const target, uint32_t *cons
 	for (size_t offset = 0; offset < count; ++offset) {
 		if (!cortexar_run_read_insn(target, ARM_LDC_R0_POSTINC4_DTRTX_INSN, dest + offset))
 			return false; /* Propagate failure if it happens */
-		if (target->target_options & TOPT_FLAVOUR_BE) {
+		extern bool skip_swap;
+		if ((target->target_options & TOPT_FLAVOUR_BE) && !skip_swap) {
 			uint8_t value[4];
 			// The instruction run gave us back a value that we interpreted as little endian, however
 			write_le4(value, 0, dest[offset]);
@@ -1226,7 +1230,8 @@ static inline bool cortexar_mem_write_fast(target_s *const target, const uint32_
 	/* Write each of the uint32_t's checking for failure */
 	for (size_t offset = 0; offset < count; ++offset) {
 		uint32_t value;
-		if (target->target_options & TOPT_FLAVOUR_BE)
+		extern bool skip_swap;
+		if ((target->target_options & TOPT_FLAVOUR_BE) && !skip_swap)
 			value = read_be4((const void *)src, offset * 4U);
 		else
 			value = read_le4((const void *)src, offset * 4U);
@@ -1330,13 +1335,14 @@ static void cortexar_regs_read(target_s *const target, void *const data)
 {
 	const cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
 	uint32_t *const regs = (uint32_t *)data;
+	extern bool skip_swap;
 	/* Copy the register values out from our cache */
 	for (size_t reg_index = 0; reg_index < sizeof(priv->core_regs.r) / sizeof(*priv->core_regs.r); reg_index++)
-		if (target->target_options & TOPT_FLAVOUR_BE)
+		if ((target->target_options & TOPT_FLAVOUR_BE) && !skip_swap)
 			write_be4(data, reg_index * 4, priv->core_regs.r[reg_index]);
 		else
 			write_le4(data, reg_index * 4, priv->core_regs.r[reg_index]);
-	if (target->target_options & TOPT_FLAVOUR_BE) {
+	if ((target->target_options & TOPT_FLAVOUR_BE) && !skip_swap) {
 		uint8_t value[4];
 		write_le4(value, 0, priv->core_regs.cpsr);
 		regs[CORTEX_REG_CPSR] = read_be4(value, 0);
@@ -1344,11 +1350,11 @@ static void cortexar_regs_read(target_s *const target, void *const data)
 		regs[CORTEX_REG_CPSR] = priv->core_regs.cpsr;
 	if (target->target_options & TOPT_FLAVOUR_FLOAT) {
 		for (size_t reg_index = 0; reg_index < sizeof(priv->core_regs.d) / sizeof(*priv->core_regs.d); reg_index++)
-			if (target->target_options & TOPT_FLAVOUR_BE)
+			if ((target->target_options & TOPT_FLAVOUR_BE) && !skip_swap)
 				write_be4(data, (CORTEXAR_GENERAL_REG_COUNT + reg_index) * 4, priv->core_regs.d[reg_index]);
 			else
 				write_le4(data, (CORTEXAR_GENERAL_REG_COUNT + reg_index) * 4, priv->core_regs.d[reg_index]);
-		if (target->target_options & TOPT_FLAVOUR_BE) {
+		if ((target->target_options & TOPT_FLAVOUR_BE) && !skip_swap) {
 			uint8_t value[4];
 			write_le4(value, 0, priv->core_regs.fpcsr);
 			regs[CORTEX_REG_FPCSR] = read_be4(value, 0);
@@ -1361,13 +1367,14 @@ static void cortexar_regs_write(target_s *const target, const void *const data)
 {
 	cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
 	const uint32_t *const regs = (const uint32_t *)data;
+	extern bool skip_swap;
 	/* Copy the new register values into our cache */
 	for (size_t reg_index = 0; reg_index < sizeof(priv->core_regs.r) / sizeof(*priv->core_regs.r); reg_index++)
-		if (target->target_options & TOPT_FLAVOUR_BE)
+		if ((target->target_options & TOPT_FLAVOUR_BE) && !skip_swap)
 			priv->core_regs.r[reg_index] = read_be4(data, reg_index * 4);
 		else
 			priv->core_regs.r[reg_index] = read_le4(data, reg_index * 4);
-	if (target->target_options & TOPT_FLAVOUR_BE) {
+	if ((target->target_options & TOPT_FLAVOUR_BE) && !skip_swap) {
 		uint8_t value[4];
 		write_le4(value, 0, regs[CORTEX_REG_CPSR]);
 		priv->core_regs.cpsr = read_be4(value, 0);
@@ -1375,11 +1382,11 @@ static void cortexar_regs_write(target_s *const target, const void *const data)
 		priv->core_regs.cpsr = regs[CORTEX_REG_CPSR];
 	if (target->target_options & TOPT_FLAVOUR_FLOAT) {
 		for (size_t reg_index = 0; reg_index < sizeof(priv->core_regs.r) / sizeof(*priv->core_regs.r); reg_index++)
-			if (target->target_options & TOPT_FLAVOUR_BE)
+			if ((target->target_options & TOPT_FLAVOUR_BE) && !skip_swap)
 				priv->core_regs.d[reg_index] = read_be4(data, (reg_index + CORTEXAR_GENERAL_REG_COUNT) * 4);
 			else
 				priv->core_regs.d[reg_index] = read_le4(data, (reg_index + CORTEXAR_GENERAL_REG_COUNT) * 4);
-		if (target->target_options & TOPT_FLAVOUR_BE) {
+		if ((target->target_options & TOPT_FLAVOUR_BE) && !skip_swap) {
 			uint8_t value[4];
 			write_le4(value, 0, regs[CORTEX_REG_FPCSR]);
 			priv->core_regs.fpcsr = read_be4(value, 0);
@@ -1420,6 +1427,7 @@ static size_t cortexar_reg_width(const size_t reg)
 
 static size_t cortexar_reg_read(target_s *const target, const uint32_t reg, void *const data, const size_t max)
 {
+	extern bool skip_swap;
 	/* Try to get a pointer to the storage for the requested register, and return -1 if that fails */
 	const void *const reg_ptr = cortexar_reg_ptr(target, reg);
 	if (!reg_ptr)
@@ -1432,7 +1440,7 @@ static size_t cortexar_reg_read(target_s *const target, const uint32_t reg, void
 	switch (reg_width) {
 	case 4: {
 		uint32_t value;
-		if (target->target_options & TOPT_FLAVOUR_BE)
+		if ((target->target_options & TOPT_FLAVOUR_BE) && !skip_swap)
 			value = read_be4(reg_ptr, 0);
 		else
 			value = read_le4(reg_ptr, 0);
@@ -1441,7 +1449,7 @@ static size_t cortexar_reg_read(target_s *const target, const uint32_t reg, void
 	}
 	case 8: {
 		uint64_t value;
-		if (target->target_options & TOPT_FLAVOUR_BE)
+		if ((target->target_options & TOPT_FLAVOUR_BE) && !skip_swap)
 			value = read_be8(reg_ptr, 0);
 		else
 			value = read_le8(reg_ptr, 0);
@@ -1454,6 +1462,7 @@ static size_t cortexar_reg_read(target_s *const target, const uint32_t reg, void
 
 static size_t cortexar_reg_write(target_s *const target, const uint32_t reg, const void *const data, const size_t max)
 {
+	extern bool skip_swap;
 	/* Try to get a pointer to the storage for the requested register, and return -1 if that fails */
 	void *const reg_ptr = cortexar_reg_ptr(target, reg);
 	if (!reg_ptr)
@@ -1466,15 +1475,15 @@ static size_t cortexar_reg_write(target_s *const target, const uint32_t reg, con
 	switch (reg_width) {
 	case 4: {
 		uint32_t value = read_le4(data, 0);
-		if (target->target_options & TOPT_FLAVOUR_BE) {
+		if ((target->target_options & TOPT_FLAVOUR_BE) && !skip_swap)
 			write_be4(reg_ptr, 0, value);
-		} else
+		else
 			write_le4(reg_ptr, 0, value);
 		break;
 	}
 	case 8: {
 		uint64_t value = read_le8(data, 0);
-		if (target->target_options & TOPT_FLAVOUR_BE)
+		if ((target->target_options & TOPT_FLAVOUR_BE) && !skip_swap)
 			write_be8(reg_ptr, 0, value);
 		else
 			write_le8(reg_ptr, 0, value);
@@ -1520,7 +1529,7 @@ static void cortexar_reset(target_s *const target)
 #endif
 
 	/* 10ms delay to ensure bootroms have had time to run */
-	platform_delay(10);
+	// platform_delay(10);
 	/* Ignore any initial errors out of reset */
 	target_check_error(target);
 }
@@ -1628,6 +1637,10 @@ static void cortexar_halt_resume(target_s *const target, const bool step)
 	/* Invalidate all the instruction caches if we're on a VMSA model device */
 	if (target->target_options & TOPT_FLAVOUR_VIRT_MEM)
 		cortexar_coproc_write(target, CORTEXAR_ICIALLU, 0U);
+	else {
+		cortexar_coproc_write(target, CORTEXAR_ICIALLU, 0U);
+		// cortexar_run_insn(target, ARM_ISB_INSN);
+	}
 	/* Mark the fault status and address cache invalid */
 	priv->core_status &= ~CORTEXAR_STATUS_FAULT_CACHE_VALID;
 

@@ -62,24 +62,8 @@ bool ti_tms570_probe(target_s *const target)
 	target_add_ram32(target, TMS570_SRAM_BASE, TMS570_SRAM_SIZE);
 	target_add_ram32(target, TMS570_SRAM_ECC_BASE, TMS570_SRAM_SIZE);
 
-	// target_flash_s *flash = calloc(1, sizeof(*flash));
-	// if (!flash) { /* calloc failed: heap exhaustion */
-	// 	DEBUG_ERROR("calloc: failed in %s\n", __func__);
-	// 	return false;
-	// }
-
-	tms570_flash_initialize(target);
-
-	// flash->start = TMS570_FLASH_BASE_ADDR;
-	// flash->length = flash_size;
-	// flash->blocksize = TMS570_FLASH_SECTOR_SIZE;
-	// flash->writesize = CH579_FLASH_WRITE_SIZE;
-	// flash->erase = tms570_flash_erase;
-	// flash->write = tms570_flash_write;
-	// flash->prepare = tms570_flash_prepare;
-	// flash->done = tms570_flash_done;
-	// flash->erased = 0xffU;
-	// target_add_flash(target, flash);
+	// Avoid toggling NRST, which will reset the icepick.
+	target->target_options |= TOPT_INHIBIT_NRST;
 
 	return true;
 }
@@ -118,6 +102,7 @@ static bool tms570_flash_initialize(target_s *const target)
 {
 	if (target->tms570_flash_initialized)
 		return true;
+	DEBUG_TARGET("Initializing flash...\n");
 
 	// Read the OTP data out of flash. This is protected with a Fletcher checksum
 	uint32_t otp_data[12];
@@ -131,7 +116,7 @@ static bool tms570_flash_initialize(target_s *const target)
 	}
 
 	// Enable all three banks
-	uint32_t fmac = target_mem32_read32(target, TMS570_L2FMC_FMAC_ADDR);
+	const uint32_t fmac = target_mem32_read32(target, TMS570_L2FMC_FMAC_ADDR);
 	target_mem32_write32(target, TMS570_L2FMC_FMAC_ADDR, fmac | 7);
 
 	// Disable read margin control.
@@ -142,42 +127,42 @@ static bool tms570_flash_initialize(target_s *const target)
 	target_mem32_write32(target, TMS570_L2FMC_FSM_WR_ENA_ADDR, 0);
 
 	// Copy some timing values from OTP
-	uint32_t unk_210 = target_mem32_read32(target, TMS570_L2FMC_BASE_ADDR + 0x210);
+	const uint32_t unk_210 = target_mem32_read32(target, TMS570_L2FMC_BASE_ADDR + 0x210);
 	target_mem32_write32(target, TMS570_L2FMC_BASE_ADDR + 0x210, (unk_210 & 0xffff0000) | (otp_data[0] >> 16));
-	uint32_t unk_218 = target_mem32_read32(target, TMS570_L2FMC_BASE_ADDR + 0x218);
+	const uint32_t unk_218 = target_mem32_read32(target, TMS570_L2FMC_BASE_ADDR + 0x218);
 	target_mem32_write32(target, TMS570_L2FMC_BASE_ADDR + 0x218, (unk_218 & 0xffff0000) | (otp_data[0] & 0xffff));
 
 	// Set the 2nd nibble after the first write is completed
-	uint32_t unk_21c = target_mem32_read32(target, TMS570_L2FMC_BASE_ADDR + 0x21c);
+	const uint32_t unk_21c = target_mem32_read32(target, TMS570_L2FMC_BASE_ADDR + 0x21c);
 	target_mem32_write32(target, TMS570_L2FMC_BASE_ADDR + 0x21c, (unk_21c & 0xffff00f0) | (otp_data[1] & 0xff0f));
 	target_mem32_write32(target, TMS570_L2FMC_BASE_ADDR + 0x21c, (unk_21c & 0xffff0000) | (otp_data[1] & 0xffff));
 
 	// ???
-	uint8_t unk_214 = target_mem32_read32(target, TMS570_L2FMC_BASE_ADDR + 0x214);
+	const uint32_t unk_214 = target_mem32_read32(target, TMS570_L2FMC_BASE_ADDR + 0x214);
 	target_mem32_write32(target, TMS570_L2FMC_BASE_ADDR + 0x214, (unk_214 & 0xffff0fff) | (otp_data[3] & 0xf000));
 
 	// ???
-	uint8_t unk_220 = target_mem32_read32(target, TMS570_L2FMC_BASE_ADDR + 0x220);
+	const uint32_t unk_220 = target_mem32_read32(target, TMS570_L2FMC_BASE_ADDR + 0x220);
 	target_mem32_write32(target, TMS570_L2FMC_BASE_ADDR + 0x220, (unk_220 & 0xffffff00) | ((otp_data[1] >> 24) & 0xff));
 
 	// ???
-	uint32_t unk_224 = target_mem32_read32(target, TMS570_L2FMC_BASE_ADDR + 0x224);
+	const uint32_t unk_224 = target_mem32_read32(target, TMS570_L2FMC_BASE_ADDR + 0x224);
 	target_mem32_write32(target, TMS570_L2FMC_BASE_ADDR + 0x224, (unk_224 & 0xffffff00) | ((otp_data[2] >> 16) & 0xff));
 
 	// ???
-	uint16_t unk_268 = target_mem32_read32(target, TMS570_L2FMC_BASE_ADDR + 0x268);
+	const uint32_t unk_268 = target_mem32_read32(target, TMS570_L2FMC_BASE_ADDR + 0x268);
 	target_mem32_write32(target, TMS570_L2FMC_BASE_ADDR + 0x268, (unk_268 & 0xfffff000) | (otp_data[5] & 0xfff));
 
 	// ???
-	uint16_t unk_26c = target_mem32_read32(target, TMS570_L2FMC_BASE_ADDR + 0x26c);
+	const uint32_t unk_26c = target_mem32_read32(target, TMS570_L2FMC_BASE_ADDR + 0x26c);
 	target_mem32_write16(
 		target, TMS570_L2FMC_BASE_ADDR + 0x26c, (unk_26c & 0xfe00ffff) | ((otp_data[8] & 0x1ff) << 16));
 
 	// NOTE: This used to be a 16-bit access -- ensure that it's properly swapped
-	uint16_t unk_270 = target_mem32_read32(target, TMS570_L2FMC_BASE_ADDR + 0x270);
+	const uint32_t unk_270 = target_mem32_read32(target, TMS570_L2FMC_BASE_ADDR + 0x270);
 	target_mem32_write32(target, TMS570_L2FMC_BASE_ADDR + 0x270, unk_270 & 0xfe00ffff);
 
-	uint32_t unk_278 = target_mem32_read32(target, TMS570_L2FMC_BASE_ADDR + 0x278);
+	const uint32_t unk_278 = target_mem32_read32(target, TMS570_L2FMC_BASE_ADDR + 0x278);
 	target_mem32_write32(target, TMS570_L2FMC_BASE_ADDR + 0x278, (unk_278 & 0xffffff80) | ((otp_data[4] - 1) & 0x7f));
 
 	target_mem32_write32(target, TMS570_L2FMC_BASE_ADDR + 0x27c, 0x4500);
@@ -185,7 +170,7 @@ static bool tms570_flash_initialize(target_s *const target)
 	// Unlock L2FMC
 	target_mem32_write32(target, TMS570_L2FMC_FLOCK_ADDR, 0x55aa);
 
-	uint32_t fvreadct = target_mem32_read32(target, TMS570_L2FMC_FVREADCT_ADDR);
+	const uint32_t fvreadct = target_mem32_read32(target, TMS570_L2FMC_FVREADCT_ADDR);
 	target_mem32_write32(target, TMS570_L2FMC_FVREADCT_ADDR, (fvreadct & 0xfffffff0) | ((otp_data[10] >> 8) & 0xf));
 
 	target_mem32_write32(target, TMS570_L2FMC_FVNVCT_ADDR, 0);
@@ -194,20 +179,20 @@ static bool tms570_flash_initialize(target_s *const target)
 	target_mem32_write32(target, TMS570_L2FMC_FPSTROBES_ADDR, 0x103);
 	target_mem32_write32(target, TMS570_L2FMC_FBMODE_ADDR, 0);
 
-	uint32_t ftcr = target_mem32_read32(target, TMS570_L2FMC_FTCR_ADDR);
+	const uint32_t ftcr = target_mem32_read32(target, TMS570_L2FMC_FTCR_ADDR);
 	target_mem32_write32(target, TMS570_L2FMC_FTCR_ADDR, ftcr & 0xffffff80);
 
-	uint32_t fvppct = target_mem32_read32(target, TMS570_L2FMC_FVPPCT_ADDR);
+	const uint32_t fvppct = target_mem32_read32(target, TMS570_L2FMC_FVPPCT_ADDR);
 	target_mem32_write32(target, TMS570_L2FMC_FVPPCT_ADDR,
 		(fvppct & 0xffffe0e0) | (((otp_data[9] >> 8) & 0x1f) << 8) | (otp_data[9] & 0x1f));
 
-	uint8_t fvwlct = target_mem32_read32(target, TMS570_L2FMC_FVWLCT_ADDR);
+	const uint32_t fvwlct = target_mem32_read32(target, TMS570_L2FMC_FVWLCT_ADDR);
 	target_mem32_write32(target, TMS570_L2FMC_FVWLCT_ADDR, (fvwlct & ~0xf000) | ((otp_data[10] >> 24) & 0xf) << 12);
 
-	uint32_t fefuse = target_mem32_read32(target, TMS570_L2FMC_FEFUSE_ADDR);
+	const uint32_t fefuse = target_mem32_read32(target, TMS570_L2FMC_FEFUSE_ADDR);
 	target_mem32_write32(target, TMS570_L2FMC_FEFUSE_ADDR, (fefuse & 0xffffffe0) | ((otp_data[10] >> 16) & 0x1f));
 
-	uint32_t unk_a8 = target_mem32_read32(target, TMS570_L2FMC_BASE_ADDR + 0x0a8);
+	const uint32_t unk_a8 = target_mem32_read32(target, TMS570_L2FMC_BASE_ADDR + 0x0a8);
 	target_mem32_write32(target, TMS570_L2FMC_BASE_ADDR + 0x0a8, (unk_a8 & 0xffffff00) | ((otp_data[3] >> 16) & 0xff));
 
 	target_mem32_write32(target, TMS570_L2FMC_FPSTROBES_ADDR, 0x103);
@@ -218,7 +203,7 @@ static bool tms570_flash_initialize(target_s *const target)
 	target_mem32_write32(target, TMS570_L2FMC_FLOCK_ADDR, 0);
 
 	// Re-enable the FSM
-	uint32_t fsm = target_mem32_read32(target, TMS570_L2FMC_FSM_WR_ENA_ADDR);
+	const uint32_t fsm = target_mem32_read32(target, TMS570_L2FMC_FSM_WR_ENA_ADDR);
 	target_mem32_write32(target, TMS570_L2FMC_FSM_WR_ENA_ADDR, (fsm & 0xfffffff8) | 2);
 
 	target->tms570_flash_initialized = true;
@@ -230,7 +215,7 @@ static bool tms570_flash_prepare(target_flash_s *flash)
 	target_s *const target = flash->t;
 
 	if (!tms570_flash_initialize(target)) {
-		DEBUG_ERROR("Checksum for OTP values doesn't match!");
+		DEBUG_ERROR("Unable to initialize flash!");
 		return false;
 	}
 }
