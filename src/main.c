@@ -46,11 +46,11 @@ static void bmp_poll_loop(void)
 		char c = gdb_if_getchar_to(0);
 		if (c == '\x03' || c == '\x04')
 			target_halt_request(cur_target);
-		platform_pace_poll();
 #ifdef ENABLE_RTT
-		if (rtt_enabled)
+		else if (rtt_enabled)
 			poll_rtt(cur_target);
 #endif
+		platform_pace_poll();
 	}
 
 	SET_IDLE_STATE(true);
