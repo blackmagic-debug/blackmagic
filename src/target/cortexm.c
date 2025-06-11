@@ -1237,11 +1237,12 @@ static target_addr_t cortexm_check_watch(target_s *target)
 static bool cortexm_vector_catch(target_s *target, int argc, const char **argv)
 {
 	cortexm_priv_s *priv = target->priv;
-	static const char *const vectors[] = {"reset", NULL, NULL, NULL, "mm", "nocp", "chk", "stat", "bus", "int", "hard"};
+	static const char *const vectors[] = {
+		"reset", NULL, NULL, NULL, "mm", "nocp", "chk", "stat", "bus", "int", "hard", "sf"};
 	uint32_t tmp = 0;
 
 	if (argc < 3)
-		tc_printf(target, "usage: monitor vector_catch (enable|disable) (hard|int|bus|stat|chk|nocp|mm|reset)\n");
+		tc_printf(target, "usage: monitor vector_catch (enable|disable) (sf|hard|int|bus|stat|chk|nocp|mm|reset)\n");
 	else {
 		for (int j = 0; j < argc; j++) {
 			for (size_t i = 0; i < ARRAY_LENGTH(vectors); i++) {
