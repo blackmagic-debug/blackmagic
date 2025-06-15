@@ -29,6 +29,7 @@
  * * SAMD21J18A (rev B)
  * * SAML21J17B (rev B)
  * * SAMC21N18A (rev E)
+ * * PIC32CM1216MC00048 (rev B)
  */
 
 /*
@@ -405,6 +406,10 @@ samd_descr_s samd_parse_device_id(uint32_t did)
 	case 4:
 		samd.series = 9;
 		break;
+	case 7:
+		/* PIC32CM MC00 */
+		samd.series = 7;
+		break;
 	default:
 		samd.series = 0;
 		break;
@@ -476,6 +481,20 @@ samd_descr_s samd_parse_device_id(uint32_t did)
 		}
 		samd.variant = 'A';
 		break;
+	case 7U: /* PIC32CM MC00 */
+		if (devsel & 0x1) {
+			/* PIC32CM6408MC000xx */
+			samd.flash_size = 65536;
+			samd.ram_size = 8192;
+			samd.mem = 8;
+		} else {
+			/* PIC32CM1216MC000xx */
+			samd.flash_size = 131072;
+			samd.ram_size = 16384;
+			samd.mem = 16;
+		}
+		/* PIC32CMxxxxMC000(32|48) */
+		samd.pin = (devsel & 0x6) ? 48 : 32;
 	}
 
 	return samd;
@@ -526,9 +545,15 @@ bool samd_probe(target_s *t)
 	/* Protected? */
 	const bool protected = (ctrlstat & SAMD_STATUSB_PROT);
 
-	snprintf(priv_storage->samd_variant_string, SAMD_VARIANT_STR_LENGTH, "Atmel SAM%c%02d%c%d%c%s (rev %c)%s",
-		samd.family, samd.series, samd.pin, samd.mem, samd.variant, samd.package, samd.revision,
-		protected ? " protected" : "");
+	if (samd.series == 7) {
+		snprintf(priv_storage->samd_variant_string, SAMD_VARIANT_STR_LENGTH,
+			"Microchip PIC32CM%02u%02uMC000%02u (rev %c)%s", samd.mem > 8U ? 12U : 64U, samd.mem, samd.pin,
+			samd.revision, protected ? " protected" : "");
+	} else {
+		snprintf(priv_storage->samd_variant_string, SAMD_VARIANT_STR_LENGTH, "Atmel SAM%c%02d%c%d%c%s (rev %c)%s",
+			samd.family, samd.series, samd.pin, samd.mem, samd.variant, samd.package, samd.revision,
+			protected ? " protected" : "");
+	}
 
 	/* Setup Target */
 	t->driver = priv_storage->samd_variant_string;
