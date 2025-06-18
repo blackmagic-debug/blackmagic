@@ -787,6 +787,11 @@ static void cortexm_reset(target_s *const target)
 		platform_delay(10);
 	}
 
+	adiv5_access_port_s *ap = cortex_ap(target);
+	adiv5_debug_port_s *dp = ap->dp;
+	if (dp->ensure_idle)
+		dp->ensure_idle(dp);
+
 	/* Check if the reset succeeded */
 	const uint32_t status = target_mem32_read32(target, CORTEXM_DHCSR);
 	if (!(status & CORTEXM_DHCSR_S_RESET_ST)) {
@@ -795,6 +800,9 @@ static void cortexm_reset(target_s *const target)
 		 * Trigger reset by AIRCR.
 		 */
 		target_mem32_write32(target, CORTEXM_AIRCR, CORTEXM_AIRCR_VECTKEY | CORTEXM_AIRCR_SYSRESETREQ);
+		platform_delay(10);
+		if (dp->ensure_idle)
+			dp->ensure_idle(dp);
 	}
 
 	/* If target needs to do something extra (see Atmel SAM4L for example) */
