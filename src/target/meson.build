@@ -135,6 +135,7 @@ target_cortexar = declare_dependency(
 target_cortexm = declare_dependency(
 	sources: files('cortexm.c'),
 	dependencies: target_cortex,
+	compile_args: ['-DCONFIG_CORTEXM=1'],
 )
 
 riscv_jtag_dtm = declare_dependency(

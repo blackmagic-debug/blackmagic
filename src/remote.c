@@ -360,6 +360,21 @@ static void remote_packet_process_high_level(const char *packet, const size_t pa
 		);
 		break;
 
+	case REMOTE_HL_ARCHS: /* Ha = request what architecture support is enabled */
+		/* Build a response value that depends on what things are built into the firmware */
+		remote_respond(REMOTE_RESP_OK,
+#if CONFIG_CORTEXM
+			REMOTE_ARCH_CORTEXM |
+#endif
+#if CONFIG_CORTEXAR
+				REMOTE_ARCH_CORTEXAR |
+#endif
+#if CONFIG_RISCV
+				REMOTE_ARCH_RISCV32 | REMOTE_ARCH_RISCV64 |
+#endif
+				0U);
+		break;
+
 	default:
 		remote_respond(REMOTE_RESP_ERR, REMOTE_ERROR_UNRECOGNISED);
 		break;
