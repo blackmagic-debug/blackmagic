@@ -375,6 +375,69 @@ static void remote_packet_process_high_level(const char *packet, const size_t pa
 				0U);
 		break;
 
+	case REMOTE_HL_FAMILIES: /* Ha = request what architecture support is enabled */
+		/* Build a response value that depends on what things are built into the firmware */
+		remote_respond(REMOTE_RESP_OK,
+#if CONFIG_AT32
+			REMOTE_FAMILY_AT32 |
+#endif
+#if CONFIG_APOLLO3
+				REMOTE_FAMILY_APOLLO3 |
+#endif
+#if CONFIG_CH32
+				REMOTE_FAMILY_CH32 |
+#endif
+#if CONFIG_CH579
+				REMOTE_FAMILY_CH579 |
+#endif
+#if CONFIG_EFM
+				REMOTE_FAMILY_EFM |
+#endif
+#if CONFIG_GD32
+				REMOTE_FAMILY_GD32 |
+#endif
+#if CONFIG_HC32
+				REMOTE_FAMILY_HC32 |
+#endif
+#if CONFIG_LPC
+				REMOTE_FAMILY_LPC |
+#endif
+#if CONFIG_MM32
+				REMOTE_FAMILY_MM32 |
+#endif
+#if CONFIG_NRF
+				REMOTE_FAMILY_NRF |
+#endif
+#if CONFIG_NXP
+				REMOTE_FAMILY_NXP_KINETIS | REMOTE_FAMILY_NXP_IMXRT |
+#endif
+#if CONFIG_PUYA
+				REMOTE_FAMILY_PUYA |
+#endif
+#if CONFIG_RENESAS_RA
+				REMOTE_FAMILY_RENESAS_RA |
+#endif
+#if CONFIG_RENESAS_RZ
+				REMOTE_FAMILY_RENESAS_RZ |
+#endif
+#if CONFIG_RP
+				REMOTE_FAMILY_RP |
+#endif
+#if CONFIG_SAM
+				REMOTE_FAMILY_SAM |
+#endif
+#if CONFIG_STM
+				REMOTE_FAMILY_STM32 |
+#endif
+#if CONFIG_TI
+				REMOTE_FAMILY_TI |
+#endif
+#if CONFIG_XILINX
+				REMOTE_FAMILY_XILINX |
+#endif
+				0U);
+		break;
+
 	default:
 		remote_respond(REMOTE_RESP_ERR, REMOTE_ERROR_UNRECOGNISED);
 		break;
