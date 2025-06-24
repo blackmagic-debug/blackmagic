@@ -165,11 +165,13 @@ target_riscv64 = declare_dependency(
 
 target_apollo3 = declare_dependency(
 	sources: files('apollo3.c'),
+	compile_args: ['-DCONFIG_APOLLO3=1'],
 	dependencies: target_cortexm,
 )
 
 target_ch579 = declare_dependency(
 	sources: files('ch579.c'),
+	compile_args: ['-DCONFIG_CH579=1'],
 	dependencies: target_cortexm,
 )
 
@@ -177,11 +179,13 @@ target_efm = declare_dependency(
 	sources: files(
 		'efm32.c'
 	) + efm32_stub,
+	compile_args: ['-DCONFIG_EFM32=1'],
 	dependencies: target_cortexm,
 )
 
 target_hc32 = declare_dependency(
 	sources: files('hc32l110.c'),
+	compile_args: ['-DCONFIG_HC32=1'],
 	dependencies: target_cortexm,
 )
 
@@ -196,6 +200,7 @@ target_lpc = declare_dependency(
 		'lpc55xx.c',
 		'lpc_common.c',
 	),
+	compile_args: ['-DCONFIG_LPC=1'],
 	dependencies: target_cortexm,
 )
 
@@ -205,6 +210,7 @@ target_nrf = declare_dependency(
 		'nrf54l.c',
 		'nrf91.c',
 	),
+	compile_args: ['-DCONFIG_NRF=1'],
 	dependencies: target_cortexm,
 )
 
@@ -215,21 +221,25 @@ target_nxp = declare_dependency(
 		'nxpke04.c',
 		's32k3xx.c',
 	),
+	compile_args: ['-DCONFIG_NXP=1'],
 	dependencies: target_cortexm,
 )
 
 target_puya = declare_dependency(
 	sources: files('puya.c'),
+	compile_args: ['-DCONFIG_PUYA=1'],
 	dependencies: target_cortexm,
 )
 
 target_renesas_ra = declare_dependency(
 	sources: files('renesas_ra.c'),
+	compile_args: ['-DCONFIG_RA=1'],
 	dependencies: target_cortexm,
 )
 
 target_renesas_rz = declare_dependency(
 	sources: files('renesas_rz.c'),
+	compile_args: ['-DCONFIG_RZ=1'],
 	dependencies: target_cortexar,
 )
 
@@ -248,6 +258,7 @@ target_rp = declare_dependency(
 		'rp2040.c',
 		'rp2350.c',
 	) + rp2040_stub,
+	compile_args: ['-DCONFIG_RP=1'],
 	dependencies: target_cortexm,
 )
 
@@ -258,6 +269,7 @@ target_sam = declare_dependency(
 		'samd.c',
 		'samx5x.c',
 	),
+	compile_args: ['-DCONFIG_SAM=1'],
 	dependencies: target_cortexm,
 )
 
@@ -291,6 +303,7 @@ target_ch32 = declare_dependency(
 	sources: files(
 		'ch32f1.c',
 	),
+	compile_args: ['-DCONFIG_CH32=1'],
 	dependencies: target_stm32f1,
 )
 
@@ -304,6 +317,7 @@ target_stm = declare_dependency(
 		'stm32mp15.c',
 		'stm32wb0.c',
 	),
+	compile_args: ['-DCONFIG_STM=1'],
 	dependencies: [target_cortexm, target_stm_common, target_stm32f1, target_stm32f4],
 )
 
@@ -321,6 +335,7 @@ target_at32f4 = declare_dependency(
 	sources: files(
 		'at32f43x.c',
 	),
+	compile_args: ['-DCONFIG_AT32=1'],
 	dependencies: [target_cortexm, target_stm_common]
 )
 
@@ -331,6 +346,7 @@ target_ti = declare_dependency(
 		'msp432p4.c',
 		'mspm0.c'
 	) + lmi_stub,
+	compile_args: ['-DCONFIG_TI=1'],
 	dependencies: target_cortexm,
 )
 
