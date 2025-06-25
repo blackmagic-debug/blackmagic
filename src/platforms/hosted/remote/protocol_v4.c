@@ -133,3 +133,37 @@ bool remote_v4_riscv_jtag_init(riscv_dmi_s *const dmi)
 	dmi->write = remote_v4_riscv_jtag_dmi_write;
 	return true;
 }
+
+uint64_t remote_v4_supported_architectures()
+{
+	/* Ask the probe what target architectures it supports */
+	platform_buffer_write(REMOTE_HL_ARCHS_STR, sizeof(REMOTE_HL_ARCHS_STR));
+
+	/* Read back the answer and check for errors */
+	char buffer[REMOTE_MAX_MSG_SIZE];
+	const ssize_t length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
+	if (length < 1 || (buffer[0] != REMOTE_RESP_OK && buffer[0] != REMOTE_RESP_NOTSUP))
+		DEBUG_ERROR("%s comms error: %zd\n", __func__, length);
+	else if (buffer[0] == REMOTE_RESP_NOTSUP)
+		DEBUG_WARN("Please upgrade your firmware to allow checking supported target architectures to work properly\n");
+	else
+		return remote_decode_response(buffer + 1U, 8U);
+	return 0U;
+}
+
+uint64_t remote_v4_supported_families()
+{
+	/* Ask the probe what target families it supports */
+	platform_buffer_write(REMOTE_HL_FAMILIES_STR, sizeof(REMOTE_HL_FAMILIES_STR));
+
+	/* Read back the answer and check for errors */
+	char buffer[REMOTE_MAX_MSG_SIZE];
+	const ssize_t length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
+	if (length < 1 || (buffer[0] != REMOTE_RESP_OK && buffer[0] != REMOTE_RESP_NOTSUP))
+		DEBUG_ERROR("%s comms error: %zd\n", __func__, length);
+	else if (buffer[0] == REMOTE_RESP_NOTSUP)
+		DEBUG_WARN("Please upgrade your firmware to allow checking supported target families to work properly\n");
+	else
+		return remote_decode_response(buffer + 1U, 8U);
+	return 0U;
+}
