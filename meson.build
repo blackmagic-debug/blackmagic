@@ -259,17 +259,31 @@ If you did not touch the build system this is not your fault, please report it
 	## Utility targets
 	## _______________
 
-	# Black Magic Probe Firmware Manager
-	bmputil = find_program('bmputil', required: false)
+	# Black Magic Probe companion utility
+	bmputil = find_program('bmputil-cli', required: false)
 	if bmputil.found()
 		message('Adding target for firmware update')
 
 		# Firmware update target
 		run_target(
 			'flash',
-			command: [bmputil, 'flash', bmf_elf.full_path()],
+			command: [bmputil, 'probe', 'update', bmf_elf.full_path()],
 			depends: bmf_elf,
 		)
+	# If we couldn't find the utility, look for the older pre-v1.0 version of it
+	else
+		# Black Magic Probe Firmware Manager
+		bmputil = find_program('bmputil', required: false)
+		if bmputil.found()
+			message('Adding target for firmware update')
+
+			# Firmware update target
+			run_target(
+				'flash',
+				command: [bmputil, 'flash', bmf_elf.full_path()],
+				depends: bmf_elf,
+			)
+		endif
 	endif
 endif
 
