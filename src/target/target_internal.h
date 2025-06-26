@@ -168,6 +168,7 @@ struct target {
 	union {
 		bool unsafe_enabled;
 		bool ke04_mode;
+		bool tms570_flash_initialized;
 	};
 
 	bool attached;
