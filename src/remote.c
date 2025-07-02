@@ -390,7 +390,7 @@ static void remote_packet_process_high_level(const char *packet, const size_t pa
 #if CONFIG_CH579
 				REMOTE_FAMILY_CH579 |
 #endif
-#if CONFIG_EFM
+#if CONFIG_EFM32
 				REMOTE_FAMILY_EFM |
 #endif
 #if CONFIG_GD32
@@ -414,10 +414,10 @@ static void remote_packet_process_high_level(const char *packet, const size_t pa
 #if CONFIG_PUYA
 				REMOTE_FAMILY_PUYA |
 #endif
-#if CONFIG_RENESAS_RA
+#if CONFIG_RA
 				REMOTE_FAMILY_RENESAS_RA |
 #endif
-#if CONFIG_RENESAS_RZ
+#if CONFIG_RZ
 				REMOTE_FAMILY_RENESAS_RZ |
 #endif
 #if CONFIG_RP
