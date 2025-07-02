@@ -363,13 +363,13 @@ static void remote_packet_process_high_level(const char *packet, const size_t pa
 	case REMOTE_HL_ARCHS: /* Ha = request what architecture support is enabled */
 		/* Build a response value that depends on what things are built into the firmware */
 		remote_respond(REMOTE_RESP_OK,
-#if CONFIG_CORTEXM
+#if defined(CONFIG_CORTEXM) && CONFIG_CORTEXM == 1
 			REMOTE_ARCH_CORTEXM |
 #endif
-#if CONFIG_CORTEXAR
+#if defined(CONFIG_CORTEXAR) && CONFIG_CORTEXAR == 1
 				REMOTE_ARCH_CORTEXAR |
 #endif
-#if CONFIG_RISCV
+#if defined(CONFIG_RISCV) && CONFIG_RISCV == 1
 				REMOTE_ARCH_RISCV32 | REMOTE_ARCH_RISCV64 |
 #endif
 				0U);
@@ -378,61 +378,61 @@ static void remote_packet_process_high_level(const char *packet, const size_t pa
 	case REMOTE_HL_FAMILIES: /* Ha = request what architecture support is enabled */
 		/* Build a response value that depends on what things are built into the firmware */
 		remote_respond(REMOTE_RESP_OK,
-#if CONFIG_AT32
+#if defined(CONFIG_AT32) && CONFIG_AT32 == 1
 			REMOTE_FAMILY_AT32 |
 #endif
-#if CONFIG_APOLLO3
+#if defined(CONFIG_APOLLO3) && CONFIG_APOLLO3 == 1
 				REMOTE_FAMILY_APOLLO3 |
 #endif
-#if CONFIG_CH32
+#if defined(CONFIG_CH32) && CONFIG_CH32 == 1
 				REMOTE_FAMILY_CH32 |
 #endif
-#if CONFIG_CH579
+#if defined(CONFIG_CH579) && CONFIG_CH579 == 1
 				REMOTE_FAMILY_CH579 |
 #endif
-#if CONFIG_EFM32
+#if defined(CONFIG_EFM32) && CONFIG_EFM32 == 1
 				REMOTE_FAMILY_EFM |
 #endif
-#if CONFIG_GD32
+#if defined(CONFIG_GD32) && CONFIG_GD32 == 1
 				REMOTE_FAMILY_GD32 |
 #endif
-#if CONFIG_HC32
+#if defined(CONFIG_HC32) && CONFIG_HC32 == 1
 				REMOTE_FAMILY_HC32 |
 #endif
-#if CONFIG_LPC
+#if defined(CONFIG_LPC) && CONFIG_LPC == 1
 				REMOTE_FAMILY_LPC |
 #endif
-#if CONFIG_MM32
+#if defined(CONFIG_MM32) && CONFIG_MM32 == 1
 				REMOTE_FAMILY_MM32 |
 #endif
-#if CONFIG_NRF
+#if defined(CONFIG_NRF) && CONFIG_NRF == 1
 				REMOTE_FAMILY_NRF |
 #endif
-#if CONFIG_NXP
+#if defined(CONFIG_NXP) && CONFIG_NXP == 1
 				REMOTE_FAMILY_NXP_KINETIS | REMOTE_FAMILY_NXP_IMXRT |
 #endif
-#if CONFIG_PUYA
+#if defined(CONFIG_PUYA) && CONFIG_PUYA == 1
 				REMOTE_FAMILY_PUYA |
 #endif
-#if CONFIG_RA
+#if defined(CONFIG_RA) && CONFIG_RA == 1
 				REMOTE_FAMILY_RENESAS_RA |
 #endif
-#if CONFIG_RZ
+#if defined(CONFIG_RZ) && CONFIG_RZ == 1
 				REMOTE_FAMILY_RENESAS_RZ |
 #endif
-#if CONFIG_RP
+#if defined(CONFIG_RP) && CONFIG_RP == 1
 				REMOTE_FAMILY_RP |
 #endif
-#if CONFIG_SAM
+#if defined(CONFIG_SAM) && CONFIG_SAM == 1
 				REMOTE_FAMILY_SAM |
 #endif
-#if CONFIG_STM
+#if defined(CONFIG_STM) && CONFIG_STM == 1
 				REMOTE_FAMILY_STM32 |
 #endif
-#if CONFIG_TI
+#if defined(CONFIG_TI) && CONFIG_TI == 1
 				REMOTE_FAMILY_TI |
 #endif
-#if CONFIG_XILINX
+#if defined(CONFIG_XILINX) && CONFIG_XILINX == 1
 				REMOTE_FAMILY_XILINX |
 #endif
 				0U);
