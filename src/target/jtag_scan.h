@@ -46,6 +46,8 @@ extern jtag_dev_s jtag_devs[JTAG_MAX_DEVS];
 extern uint32_t jtag_dev_count;
 extern const uint8_t ones[8];
 
+bool jtag_discover(void);
+
 void jtag_dev_write_ir(uint8_t dev_index, uint32_t ir);
 void jtag_dev_shift_dr(uint8_t dev_index, uint8_t *data_out, const uint8_t *data_in, size_t clock_cycles);
 void jtag_add_device(uint32_t dev_index, const jtag_dev_s *jtag_dev);
