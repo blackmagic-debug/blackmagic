@@ -140,7 +140,8 @@ static void platform_detect_variant(void)
 {
 	/* Detect platform chip */
 	const uint32_t device_id = DBGMCU_IDCODE & DBGMCU_IDCODE_DEV_ID_MASK;
-	const uint32_t cpu_id = SCB_CPUID & SCB_CPUID_PARTNO;
+	const uint32_t scb_cpuid = SCB_CPUID;
+	const uint16_t cpu_id = scb_cpuid & SCB_CPUID_PARTNO;
 	const uint64_t romtable_pidr = coresight_romtable_pidr();
 	const uint32_t romtable_cidr = coresight_romtable_cidr_check();
 	/* STM32F103CB: 0x410 (Medium density) is readable as 0x000 (errata) without debugger. So default to 72 MHz. */
@@ -151,7 +152,7 @@ static void platform_detect_variant(void)
 	 * then change USBDPSC[1:0] the CK_USBD prescaler
 	 * and finally enable PLL.
 	 */
-	if ((device_id == 0x410 || device_id == 0x000) && cpu_id == 0xc230 && SCB_CPUID == 0x411fc231U) {
+	if ((device_id == 0x410 || device_id == 0x000) && cpu_id == 0xc230 && scb_cpuid == 0x411fc231U) {
 		/* STM32F103CB: 0x410 (Medium density), 0x411fc231 (Cortex-M3 r1p1) */
 		if (romtable_cidr == 0xb105100dU && romtable_pidr == 0xa0410) {
 			/* STM32F103: Manufacturer 020 Partno 410 (PIDR = 0x00000a0410) */
@@ -159,7 +160,7 @@ static void platform_detect_variant(void)
 		}
 	}
 
-	if (device_id == 0x410 && cpu_id == 0xc230 && SCB_CPUID == 0x412fc231U) {
+	if (device_id == 0x410 && cpu_id == 0xc230 && scb_cpuid == 0x412fc231U) {
 		/* APM32F103CB: 0x410 (Medium Density), 0x412fc231 (Cortex-M3 r2p1) */
 		if (romtable_cidr == 0xb105100dU && romtable_pidr == 0x04000bb4c3ULL) {
 			/* APM32F103: Manufacturer 43b Partno 4c3 (PIDR = 0x04000bb4c3) */
@@ -170,7 +171,7 @@ static void platform_detect_variant(void)
 		}
 	}
 
-	if (device_id == 0x410 && cpu_id == 0xc230 && SCB_CPUID == 0x412fc231U) {
+	if (device_id == 0x410 && cpu_id == 0xc230 && scb_cpuid == 0x412fc231U) {
 		/* GD32F103CB: 0x410 (Medium Density), 0x412fc231 (Cortex-M3 r2p1) */
 		if (romtable_cidr == 0xb105100dU && romtable_pidr == 0x07000d1f64ULL) {
 			/* GD32F103: Manufacturer 751 Partno f64 (PIDR = 0x07000d1f64) */
@@ -181,7 +182,7 @@ static void platform_detect_variant(void)
 		}
 	}
 
-	if (device_id == 0x414 && cpu_id == 0xc240 && SCB_CPUID == 0x410fc241) {
+	if (device_id == 0x414 && cpu_id == 0xc240 && scb_cpuid == 0x410fc241) {
 		/* GD32F303CC: High density, 0x410fc241 (Cortex-M4F r0p1) */
 		if (romtable_cidr == 0xb105100dU && romtable_pidr == 0x07000d1050ULL) {
 			/* GD32F303: Manufacturer 751 Partno 050 (PIDR = 0x07000d1050) */
