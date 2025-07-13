@@ -160,6 +160,17 @@ static void platform_detect_variant(void)
 	}
 
 	if (device_id == 0x410 && cpu_id == 0xc230 && SCB_CPUID == 0x412fc231U) {
+		/* APM32F103CB: 0x410 (Medium Density), 0x412fc231 (Cortex-M3 r2p1) */
+		if (romtable_cidr == 0xb105100dU && romtable_pidr == 0x04000bb4c3ULL) {
+			/* APM32F103: Manufacturer 43b Partno 4c3 (PIDR = 0x04000bb4c3) */
+			clock = &rcc_hse_config_hse8_96mhz;
+			rcc_periph_clock_disable(RCC_USB);
+			/* Set 96/2=48MHz USB divisor before enabling PLL */
+			rcc_set_usbpre_gd32f30x(RCC_CFGR_USBPRE_PLL_CLK_DIV2);
+		}
+	}
+
+	if (device_id == 0x410 && cpu_id == 0xc230 && SCB_CPUID == 0x412fc231U) {
 		/* GD32F103CB: 0x410 (Medium Density), 0x412fc231 (Cortex-M3 r2p1) */
 		if (romtable_cidr == 0xb105100dU && romtable_pidr == 0x07000d1f64ULL) {
 			/* GD32F103: Manufacturer 751 Partno f64 (PIDR = 0x07000d1f64) */
