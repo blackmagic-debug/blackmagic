@@ -89,6 +89,9 @@ static bool flash_prepare(target_flash_s *flash, flash_operation_e operation)
 	if (flash->operation == operation)
 		return true;
 
+#ifndef DEBUG_TARGET_IS_NOOP
+	const char *const flash_operation_name[4] = {"none", "erase", "mass", "write"};
+#endif
 	bool result = true;
 	/* Terminate any ongoing Flash operation */
 	if (flash->operation != FLASH_OPERATION_NONE)
@@ -98,8 +101,10 @@ static bool flash_prepare(target_flash_s *flash, flash_operation_e operation)
 	if (result) {
 		flash->operation = operation;
 		/* Prepare flash for operation, unless we failed to terminate the previous one */
-		if (flash->prepare)
+		if (flash->prepare) {
+			DEBUG_TARGET("%s (for %s)\n", __func__, flash_operation_name[operation]);
 			result = flash->prepare(flash);
+		}
 
 		/* If the preparation step failed, revert back to the post-done state */
 		if (!result)
