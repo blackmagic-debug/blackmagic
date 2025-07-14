@@ -50,7 +50,6 @@
 
 /* Memory map constants for STM32H5xx */
 #define STM32H5_FLASH_BANK1_BASE 0x08000000U
-#define STM32H5_FLASH_BANK2_BASE 0x08100000U
 #define STM32H5_FLASH_BANK_SIZE  0x00100000U
 #define STM32H5_SRAM1_BASE       0x0a000000U
 #define STM32H5_SRAM1_SIZE       0x00040000U
@@ -72,7 +71,6 @@
 #define STM32H503_SRAM2_ALIAS      0x20004000U
 /* Memory map constants for STM32H523/H533 */
 #define STM32H523_FLASH_BANK1_BASE 0x08000000U
-#define STM32H523_FLASH_BANK2_BASE 0x08040000U
 #define STM32H523_FLASH_BANK_SIZE  0x00040000U
 #define STM32H523_SRAM1_BASE       0x0a000000U
 #define STM32H523_SRAM1_SIZE       0x00020000U
@@ -104,10 +102,8 @@
 #define STM32H5_FLASH_CTRL_BANK1        (0U << 31U)
 #define STM32H5_FLASH_CTRL_BANK2        (1U << 31U)
 
-#define STM32H5_SECTORS_PER_BANK        128U
 #define STM32H5_FLASH_SECTOR_SIZE       0x00002000U
 #define STM32H503_SECTORS_PER_BANK      8U
-#define STM32H523_SECTORS_PER_BANK      32U
 #define STM32H5_FLASH_BANK_MASK         0x80000000U
 #define STM32H5_FLASH_SECTOR_COUNT_MASK 0x000000ffU
 
@@ -124,6 +120,7 @@
 #define STM32H5_DBGMCU_APB3FREEZE  (STM32H5_DBGMCU_BASE + 0x14U)
 #define STM32H5_DBGMCU_AHB1FREEZE  (STM32H5_DBGMCU_BASE + 0x20U)
 #define STM32H5_UID_BASE           0x08fff800U
+#define STM32H5_FLASH_SIZE         0x08fff80cU
 
 #define STM32H5_DBGMCU_IDCODE_DEV_MASK    0x00000fffU
 #define STM32H5_DBGMCU_IDCODE_REV_MASK    0xffff0000U
@@ -215,6 +212,9 @@ bool stm32h5_probe(target_s *const target)
 	target->exit_flash_mode = stm32h5_exit_flash_mode;
 	target_add_commands(target, stm32h5_cmd_list, target->driver);
 
+	uint16_t flash_size_kb = target_mem32_read16(target, STM32H5_FLASH_SIZE);
+	uint32_t flash_bank_size = flash_size_kb * 1024U / 2U;
+	uint16_t sectors_per_bank = flash_size_kb / 8U / 2U;
 	switch (target->part_id) {
 	case ID_STM32H5xx:
 		/*
@@ -226,10 +226,15 @@ bool stm32h5_probe(target_s *const target)
 		target_add_ram32(target, STM32H5_SRAM3_BASE, STM32H5_SRAM3_SIZE);
 
 		/* Build the Flash map */
-		stm32h5_add_flash(target, STM32H5_FLASH_BANK1_BASE, STM32H5_FLASH_BANK_SIZE,
-			STM32H5_SECTORS_PER_BANK | STM32H5_FLASH_CTRL_BANK1);
-		stm32h5_add_flash(target, STM32H5_FLASH_BANK2_BASE, STM32H5_FLASH_BANK_SIZE,
-			STM32H5_SECTORS_PER_BANK | STM32H5_FLASH_CTRL_BANK2);
+		if (flash_size_kb != 1024U && flash_size_kb != 2048U) {
+			flash_size_kb = 2048U;
+			flash_bank_size = flash_size_kb * 1024U / 2U;
+			sectors_per_bank = flash_size_kb / 8U / 2U;
+		}
+		stm32h5_add_flash(
+			target, STM32H5_FLASH_BANK1_BASE, flash_bank_size, sectors_per_bank | STM32H5_FLASH_CTRL_BANK1);
+		stm32h5_add_flash(target, STM32H5_FLASH_BANK1_BASE + flash_bank_size, flash_bank_size,
+			sectors_per_bank | STM32H5_FLASH_CTRL_BANK2);
 		break;
 	case ID_STM32H523:
 		/*
@@ -242,10 +247,15 @@ bool stm32h5_probe(target_s *const target)
 		target_add_ram32(target, STM32H523_SRAM3_BASE, STM32H523_SRAM3_SIZE);
 
 		/* Build the Flash map */
-		stm32h5_add_flash(target, STM32H523_FLASH_BANK1_BASE, STM32H523_FLASH_BANK_SIZE,
-			STM32H523_SECTORS_PER_BANK | STM32H5_FLASH_CTRL_BANK1);
-		stm32h5_add_flash(target, STM32H523_FLASH_BANK2_BASE, STM32H523_FLASH_BANK_SIZE,
-			STM32H523_SECTORS_PER_BANK | STM32H5_FLASH_CTRL_BANK2);
+		if (flash_size_kb != 256U && flash_size_kb != 512U) {
+			flash_size_kb = 512U;
+			flash_bank_size = flash_size_kb * 1024U / 2U;
+			sectors_per_bank = flash_size_kb / 8U / 2U;
+		}
+		stm32h5_add_flash(
+			target, STM32H5_FLASH_BANK1_BASE, flash_bank_size, sectors_per_bank | STM32H5_FLASH_CTRL_BANK1);
+		stm32h5_add_flash(target, STM32H5_FLASH_BANK1_BASE + flash_bank_size, flash_bank_size,
+			sectors_per_bank | STM32H5_FLASH_CTRL_BANK2);
 		break;
 	case ID_STM32H503:
 		/*
