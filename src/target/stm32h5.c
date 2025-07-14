@@ -57,6 +57,8 @@
 #define STM32H5_SRAM2_SIZE       0x00010000U
 #define STM32H5_SRAM3_BASE       0x0a050000U
 #define STM32H5_SRAM3_SIZE       0x00050000U
+#define STM32H5_SRAM_ALIAS_BASE  0x20000000U
+#define STM32H5_SRAM123_SIZE     (STM32H5_SRAM1_SIZE + STM32H5_SRAM2_SIZE + STM32H5_SRAM3_SIZE)
 /* NB: Take all base addresses and add 0x04000000U to find their TrustZone addresses */
 
 /* Memory map constants for the STM32H503 */
@@ -78,6 +80,7 @@
 #define STM32H523_SRAM2_SIZE       0x00014000U
 #define STM32H523_SRAM3_BASE       0x0a034000U
 #define STM32H523_SRAM3_SIZE       0x00010000U
+#define STM32H523_SRAM123_SIZE     (STM32H523_SRAM1_SIZE + STM32H523_SRAM2_SIZE + STM32H523_SRAM3_SIZE)
 
 #define STM32H5_FLASH_BASE        0x40022000
 #define STM32H5_FLASH_ACCESS_CTRL (STM32H5_FLASH_BASE + 0x000U)
@@ -224,6 +227,7 @@ bool stm32h5_probe(target_s *const target)
 		target_add_ram32(target, STM32H5_SRAM1_BASE, STM32H5_SRAM1_SIZE);
 		target_add_ram32(target, STM32H5_SRAM2_BASE, STM32H5_SRAM2_SIZE);
 		target_add_ram32(target, STM32H5_SRAM3_BASE, STM32H5_SRAM3_SIZE);
+		target_add_ram32(target, STM32H5_SRAM_ALIAS_BASE, STM32H5_SRAM123_SIZE);
 
 		/* Build the Flash map */
 		if (flash_size_kb != 1024U && flash_size_kb != 2048U) {
@@ -245,6 +249,7 @@ bool stm32h5_probe(target_s *const target)
 		target_add_ram32(target, STM32H523_SRAM1_BASE, STM32H523_SRAM1_SIZE);
 		target_add_ram32(target, STM32H523_SRAM2_BASE, STM32H523_SRAM2_SIZE);
 		target_add_ram32(target, STM32H523_SRAM3_BASE, STM32H523_SRAM3_SIZE);
+		target_add_ram32(target, STM32H5_SRAM_ALIAS_BASE, STM32H523_SRAM123_SIZE);
 
 		/* Build the Flash map */
 		if (flash_size_kb != 256U && flash_size_kb != 512U) {
