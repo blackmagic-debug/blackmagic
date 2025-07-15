@@ -153,6 +153,7 @@ const command_s stm32l4_cmd_list[] = {
 #define STM32L4_UID_BASE       0x1fff7590U
 #define STM32L4_FLASH_SIZE_REG 0x1fff75e0U
 #define STM32L5_FLASH_SIZE_REG 0x0bfa05e0U
+#define STM32U5_UID_BASE       0x0bfa0700U
 #define STM32U5_FLASH_SIZE_REG 0x0bfa07a0U
 
 #define STM32L5_RCC_APB1ENR1       0x50021058U
@@ -1127,5 +1128,9 @@ static bool stm32l4_cmd_uid(target_s *target, int argc, const char **argv)
 {
 	(void)argc;
 	(void)argv;
-	return stm32_uid(target, STM32L4_UID_BASE);
+	target_addr_t uid_base = STM32L4_UID_BASE;
+	const stm32l4_priv_s *const priv = (stm32l4_priv_s *)target->target_storage;
+	if (priv->device->family == STM32L4_FAMILY_U5xx)
+		uid_base = STM32U5_UID_BASE;
+	return stm32_uid(target, uid_base);
 }
