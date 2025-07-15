@@ -776,6 +776,9 @@ static bool stm32l4_attach(target_s *const target)
 	else
 		target_add_ram32(target, 0x10000000, device->sram2 * 1024U);
 	target_add_ram32(target, 0x20000000, stm32l4_main_sram_length(target));
+	/* Every STM32U5xx has 16 KiB of SRAM4 in SmartRun domain */
+	if (device->family == STM32L4_FAMILY_U5xx)
+		target_add_ram32(target, 0x28000000, 16384U);
 
 	const uint16_t flash_len = stm32l4_read_flash_size(target);
 	const uint32_t options = stm32l4_flash_read32(target, FLASH_OPTR);
