@@ -92,6 +92,7 @@
 #define LPC55S28_CHIPID 0xa010119cU // NXP forum
 #define LPC55S66_CHIPID             // (unknown)
 #define LPC55S69_CHIPID 0x501000c5U // (read from MCU-Link)
+#define MCXN947_CHIPID  0x0540008bU // (read from MCU-Link)
 
 /* The available IAP commands that we support, mostly flash access */
 typedef enum lpc55xx_iap_cmd {
@@ -154,6 +155,9 @@ static target_addr_t lpc55xx_get_bootloader_tree_address(target_s *target)
 		//case LPC55S66_CHIPID:
 		return 0x130010f0U;
 
+	case MCXN947_CHIPID:
+		return 0x1303fc00U;
+
 	default:
 		return 0;
 	}
@@ -182,6 +186,8 @@ static const char *lpc55xx_get_device_name(uint32_t chipid)
 		return "LPC55S28";
 	case LPC55S69_CHIPID:
 		return "LPC55S69";
+	case MCXN947_CHIPID:
+		return "MCXN947";
 
 	default:
 		return "unknown";
@@ -251,7 +257,7 @@ static target_addr_t lpc55xx_get_ffr_get_uuid_address(target_s *target)
 static lpc55xx_iap_status_e iap_call_raw(target_s *target, lpc55xx_iap_cmd_e cmd, uint32_t r1, uint32_t r2, uint32_t r3)
 {
 	/* Prepare the registers for the IAP call. R0 is always flash_config */
-	uint32_t regs[CORTEXM_GENERAL_REG_COUNT + CORTEX_FLOAT_REG_COUNT];
+	uint32_t regs[CORTEXM_GENERAL_REG_COUNT + CORTEX_FLOAT_REG_COUNT + CORTEXM_TRUSTZONE_REG_COUNT];
 	target_regs_read(target, regs);
 
 	regs[CORTEX_REG_MSP] = LPC55xx_IAP_MSP_ADDRESS;
@@ -330,7 +336,7 @@ static void lpc55xx_prepare_flash_config(target_s *target, target_addr_t address
 static bool lpc55xx_flash_init(target_s *target, lpc55xx_flash_config_s *config)
 {
 	uint8_t backup_memory[LPC55xx_SCRATCH_MEMORY_LEN];
-	uint32_t regs[CORTEXM_GENERAL_REG_COUNT + CORTEX_FLOAT_REG_COUNT];
+	uint32_t regs[CORTEXM_GENERAL_REG_COUNT + CORTEX_FLOAT_REG_COUNT + CORTEXM_TRUSTZONE_REG_COUNT];
 
 	target_regs_read(target, regs);
 	target_mem32_read(target, backup_memory, LPC55xx_FLASH_CONFIG_ADDRESS, sizeof(backup_memory));
@@ -359,7 +365,7 @@ exit:
 static bool lpc55xx_get_uuid(target_s *target, uint8_t *uuid)
 {
 	uint8_t backup_memory[LPC55xx_SCRATCH_MEMORY_LEN + LPC55xx_UUID_LEN];
-	uint32_t regs[CORTEXM_GENERAL_REG_COUNT + CORTEX_FLOAT_REG_COUNT];
+	uint32_t regs[CORTEXM_GENERAL_REG_COUNT + CORTEX_FLOAT_REG_COUNT + CORTEXM_TRUSTZONE_REG_COUNT];
 
 	target_regs_read(target, regs);
 	target_mem32_read(target, backup_memory, LPC55xx_FLASH_CONFIG_ADDRESS, sizeof(backup_memory));
@@ -477,9 +483,10 @@ static target_flash_s *lpc55xx_add_flash(target_s *target)
 	flash->writesize = LPC55xx_WRITE_SIZE;
 
 	/* all flash operations must be aligned to the flash page size */
+	/* flash sectors are defined by NXP as the erase block size */
 
-	if (flash->blocksize < config.flash_page_size)
-		flash->blocksize = config.flash_page_size;
+	if (flash->blocksize < config.flash_sector_size)
+		flash->blocksize = config.flash_sector_size;
 
 	if (flash->writesize < config.flash_page_size)
 		flash->writesize = config.flash_page_size;
@@ -589,6 +596,17 @@ bool lpc55xx_probe(target_s *const target)
 		target_add_ram32(target, 0x20008000U, 0x4000U); // SRAM_1
 		target_add_ram32(target, 0x2000c000U, 0x4000U); // SRAM_2
 		target_add_ram32(target, 0x20010000U, 0x4000U); // SRAM_3
+		break;
+	case MCXN947_CHIPID:
+		target_add_ram32(target, 0x04000000U, 0x18000U); // SRAM_X
+		target_add_ram32(target, 0x20000000U, 0x8000);   // SRAM_A
+		target_add_ram32(target, 0x20008000U, 0x8000);   // SRAM_B
+		target_add_ram32(target, 0x20010000U, 0x10000);  // SRAM_C
+		target_add_ram32(target, 0x20020000U, 0x10000);  // SRAM_D
+		target_add_ram32(target, 0x20030000U, 0x10000);  // SRAM_E
+		target_add_ram32(target, 0x20040000U, 0x10000);  // SRAM_F
+		target_add_ram32(target, 0x20050000U, 0x10000);  // SRAM_G
+		target_add_ram32(target, 0x20060000U, 0x8000);   // SRAM_H
 		break;
 	default:
 		// TODO: not enough testing to enable other devices
