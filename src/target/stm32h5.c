@@ -221,7 +221,7 @@ bool stm32h5_probe(target_s *const target)
 	switch (target->part_id) {
 	case ID_STM32H5xx:
 		/*
-		 * Build the RAM map.
+		 * Build the RAM map. 256+64+320=640.
 		 * This uses the addresses and sizes found in §2.3.2, Figure 2, pg113 of RM0481 Rev. 1
 		 */
 		target_add_ram32(target, STM32H5_SRAM1_BASE, STM32H5_SRAM1_SIZE);
@@ -229,7 +229,11 @@ bool stm32h5_probe(target_s *const target)
 		target_add_ram32(target, STM32H5_SRAM3_BASE, STM32H5_SRAM3_SIZE);
 		target_add_ram32(target, STM32H5_SRAM_ALIAS_BASE, STM32H5_SRAM123_SIZE);
 
-		/* Build the Flash map */
+		/*
+		 * Build the Flash map. H562/H563/H573 has one of:
+		 * Flash(I): 2048 KiB as two equal banks (128 sectors of 8 KiB each)
+		 * Flash(G): 1024 KiB as two equal banks (64 sectors of 8 KiB each)
+		 */
 		if (flash_size_kb != 1024U && flash_size_kb != 2048U) {
 			flash_size_kb = 2048U;
 			flash_bank_size = flash_size_kb * 1024U / 2U;
@@ -242,7 +246,7 @@ bool stm32h5_probe(target_s *const target)
 		break;
 	case ID_STM32H523:
 		/*
-		 * Build the RAM map.
+		 * Build the RAM map. 128+80+64=272.
 		 * This uses the addresses and sizes found in §2.3.2, Figure 3, pg117 of RM0481 Rev. 2
 		 * See also §6.3.2, Figure 21, pg235 of RM0481 Rev. 2
 		 */
@@ -251,7 +255,11 @@ bool stm32h5_probe(target_s *const target)
 		target_add_ram32(target, STM32H523_SRAM3_BASE, STM32H523_SRAM3_SIZE);
 		target_add_ram32(target, STM32H5_SRAM_ALIAS_BASE, STM32H523_SRAM123_SIZE);
 
-		/* Build the Flash map */
+		/*
+		 * Build the Flash map. H523/H533 has one of:
+		 * Flash(E): 512 KiB as two equal banks (32 sectors of 8 KiB each)
+		 * Flash(C): 256 KiB as two equal banks (16 sectors of 8 KiB each)
+		 */
 		if (flash_size_kb != 256U && flash_size_kb != 512U) {
 			flash_size_kb = 512U;
 			flash_bank_size = flash_size_kb * 1024U / 2U;
@@ -264,7 +272,7 @@ bool stm32h5_probe(target_s *const target)
 		break;
 	case ID_STM32H503:
 		/*
-		 * Build the RAM map.
+		 * Build the RAM map. 16+16=32.
 		 * This uses the addresses and sizes found in §2.2.2, Figure 2, pg70 of RM0492 Rev. 2
 		 */
 		target_add_ram32(target, STM32H503_SRAM1_BASE, STM32H503_SRAM1_SIZE);
@@ -272,7 +280,10 @@ bool stm32h5_probe(target_s *const target)
 		target_add_ram32(target, STM32H503_SRAM1_ALIAS, STM32H503_SRAM1_SIZE);
 		target_add_ram32(target, STM32H503_SRAM2_ALIAS, STM32H503_SRAM2_SIZE);
 
-		/* Build the Flash map */
+		/*
+		 * Build the Flash map. H503xB has
+		 * Flash(B): 128 KiB as two equal banks (8 sectors of 8 KiB each)
+		 */
 		stm32h5_add_flash(target, STM32H503_FLASH_BANK1_BASE, STM32H503_FLASH_BANK_SIZE,
 			STM32H503_SECTORS_PER_BANK | STM32H5_FLASH_CTRL_BANK1);
 		stm32h5_add_flash(target, STM32H503_FLASH_BANK2_BASE, STM32H503_FLASH_BANK_SIZE,
