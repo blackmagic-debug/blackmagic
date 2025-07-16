@@ -27,7 +27,7 @@
 /* Probe launch macro used by the CPU-generic layers to then call CPU-specific routines safely */
 #define PROBE(x)                                    \
 	do {                                            \
-		DEBUG_TARGET("Calling " STRINGIFY(x) "\n"); \
+		DEBUG_TARGET("Calling %s\n", STRINGIFY(x)); \
 		if ((x)(target))                            \
 			return true;                            \
 		target_check_error(target);                 \
