@@ -75,7 +75,9 @@ if is_firmware_build
 		'cortexm': 'Cortex-M support',
 		'riscv32': 'RISC-V 32-bit support',
 		'riscv64': 'RISC-V 64-bit support',
+		'avr': '8-bit AVR support',
 		'at32f4': 'Arterytek parts',
+		'atxmega': 'ATXMega support',
 		'apollo3': 'Ambiq Apollo3 parts',
 		'ch32': 'WinChipHead CH32 parts',
 		'ch579': 'WinChipHead CH579 parts',
@@ -163,10 +165,20 @@ target_riscv64 = declare_dependency(
 	dependencies: target_riscv,
 )
 
+target_avr = declare_dependency(
+	sources: files('avr_pdi.c'),
+	compile_args: ['-DENABLE_AVR=1'],
+)
+
 target_apollo3 = declare_dependency(
 	sources: files('apollo3.c'),
 	compile_args: ['-DCONFIG_APOLLO3=1'],
 	dependencies: target_cortexm,
+)
+
+target_atxmega = declare_dependency(
+	sources: files('atxmega.c'),
+	dependencies: target_avr,
 )
 
 target_ch579 = declare_dependency(
@@ -395,8 +407,10 @@ libbmd_target_deps = [
 	target_cortexm,
 	target_riscv32,
 	target_riscv64,
+	target_avr,
 	# Enable all targets for libbmd
 	target_apollo3,
+	target_atxmega,
 	target_at32f4,
 	target_ch32,
 	target_ch579,
