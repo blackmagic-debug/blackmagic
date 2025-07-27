@@ -52,6 +52,7 @@ bool nrf51_ctrl_ap_probe(adiv5_access_port_s *ap);
 bool nrf54l_ctrl_ap_probe(adiv5_access_port_s *ap);
 bool rp2040_rescue_probe(adiv5_access_port_s *ap);
 
+bool am335x_cm3_probe(target_s *target);
 bool at32f40x_probe(target_s *target); // STM32 clones from Artery
 bool apollo_3_probe(target_s *target);
 bool at32f43x_probe(target_s *target);
@@ -103,6 +104,7 @@ bool stm32l4_probe(target_s *target);
 bool stm32mp15_ca7_probe(target_s *target);
 bool stm32mp15_cm4_probe(target_s *target);
 bool stm32wb0_probe(target_s *target);
+bool ti_tms570_probe(target_s *target);
 bool zynq7_probe(target_s *target);
 
 void lpc55_dp_prepare(adiv5_debug_port_s *dp);
