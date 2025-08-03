@@ -74,6 +74,12 @@ void remote_adiv6_dp_init(adiv5_debug_port_s *dp);
 void remote_riscv_jtag_dtm_init(riscv_dmi_s *dmi);
 void remote_add_jtag_dev(uint32_t dev_index, const jtag_dev_s *jtag_dev);
 
+bool remote_spi_init(spi_bus_e bus);
+bool remote_spi_deinit(spi_bus_e bus);
+
+bool remote_spi_chip_select(uint8_t device_select);
+uint8_t remote_spi_xfer(spi_bus_e bus, uint8_t value);
+
 uint64_t remote_decode_response(const char *response, size_t digits);
 
 #endif /* PLATFORMS_HOSTED_BMP_REMOTE_H */

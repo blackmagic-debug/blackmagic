@@ -2,9 +2,11 @@
  * This file is part of the Black Magic Debug project.
  *
  * Copyright (C) 2011  Black Sphere Technologies Ltd.
+ * Copyright (C) 2022-2025 1BitSquared <info@1bitsquared.com>
  * Written by Gareth McMullin <gareth@blacksphere.co.nz>
  * Additions by Dave Marples <dave@marples.net>
- * Modifications (C) 2020 Uwe Bonnes (bon@elektron.ikp.physik.tu-darmstadt.de)
+ * Modifications (C) 2020 Uwe Bonnes <bon@elektron.ikp.physik.tu-darmstadt.de>
+ * Rewritten by Rachel Mant <git@dragonmux.network>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -234,4 +236,36 @@ void remote_add_jtag_dev(uint32_t dev_index, const jtag_dev_s *jtag_dev)
 {
 	if (remote_funcs.add_jtag_dev)
 		remote_funcs.add_jtag_dev(dev_index, jtag_dev);
+}
+
+bool remote_spi_init(spi_bus_e bus)
+{
+	if (remote_funcs.spi_init)
+		return remote_funcs.spi_init(bus);
+	DEBUG_ERROR("SPI protocol unsupported by probe, please upgrade your firmware");
+	return false;
+}
+
+bool remote_spi_deinit(spi_bus_e bus)
+{
+	if (remote_funcs.spi_deinit)
+		return remote_funcs.spi_deinit(bus);
+	DEBUG_ERROR("SPI protocol unsupported by probe, please upgrade your firmware");
+	return false;
+}
+
+bool remote_spi_chip_select(uint8_t device_select)
+{
+	if (remote_funcs.spi_chip_select)
+		return remote_funcs.spi_chip_select(device_select);
+	DEBUG_ERROR("SPI protocol unsupported by probe, please upgrade your firmware");
+	return false;
+}
+
+uint8_t remote_spi_xfer(spi_bus_e bus, uint8_t value)
+{
+	if (remote_funcs.spi_xfer)
+		return remote_funcs.spi_xfer(bus, value);
+	DEBUG_ERROR("SPI protocol unsupported by probe, please upgrade your firmware");
+	return UINT8_MAX;
 }
