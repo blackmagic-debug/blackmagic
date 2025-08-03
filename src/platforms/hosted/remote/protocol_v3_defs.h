@@ -1,7 +1,7 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
- * Copyright (C) 2023 1BitSquared <info@1bitsquared.com>
+ * Copyright (C) 2023-2025 1BitSquared <info@1bitsquared.com>
  * Written by Rachel Mant <git@dragonmux.network>
  * All rights reserved.
  *
@@ -57,5 +57,60 @@
 #define REMOTE_ADIV5_RAW_ACCESS 'R'
 #define REMOTE_MEM_READ         'm'
 #define REMOTE_MEM_WRITE        'M'
+
+/* This version of the protocol introduces a SPI access interface */
+#define REMOTE_SPI_PACKET      's'
+#define REMOTE_SPI_BEGIN       'B'
+#define REMOTE_SPI_END         'E'
+#define REMOTE_SPI_CHIP_SELECT 'C'
+#define REMOTE_SPI_TRANSFER    'X'
+#define REMOTE_SPI_READ        'r'
+#define REMOTE_SPI_WRTIE       'w'
+#define REMOTE_SPI_CHIP_ID     'I'
+#define REMOTE_SPI_RUN_COMMAND 'c'
+
+#define REMOTE_SPI_BEGIN_STR                                                                          \
+	(char[])                                                                                          \
+	{                                                                                                 \
+		'+', REMOTE_EOM, REMOTE_SOM, REMOTE_SPI_PACKET, REMOTE_SPI_BEGIN, REMOTE_UINT8, REMOTE_EOM, 0 \
+	}
+#define REMOTE_SPI_END_STR                                                         \
+	(char[])                                                                       \
+	{                                                                              \
+		REMOTE_SOM, REMOTE_SPI_PACKET, REMOTE_SPI_END, REMOTE_UINT8, REMOTE_EOM, 0 \
+	}
+#define REMOTE_SPI_CHIP_SELECT_STR                                                         \
+	(char[])                                                                               \
+	{                                                                                      \
+		REMOTE_SOM, REMOTE_SPI_PACKET, REMOTE_SPI_CHIP_SELECT, REMOTE_UINT8, REMOTE_EOM, 0 \
+	}
+#define REMOTE_SPI_TRANSFER_STR                                                                        \
+	(char[])                                                                                           \
+	{                                                                                                  \
+		REMOTE_SOM, REMOTE_SPI_PACKET, REMOTE_SPI_TRANSFER, REMOTE_UINT8, REMOTE_UINT8, REMOTE_EOM, 0, \
+	}
+#define REMOTE_SPI_READ_STR                                                                                       \
+	(char[])                                                                                                      \
+	{                                                                                                             \
+		REMOTE_SOM, REMOTE_SPI_PACKET, REMOTE_SPI_READ, REMOTE_UINT8, REMOTE_UINT8, REMOTE_UINT16, REMOTE_UINT24, \
+			REMOTE_UINT16, REMOTE_EOM, 0,                                                                         \
+	}
+#define REMOTE_SPI_WRITE_STR                                                                                       \
+	(char[])                                                                                                       \
+	{                                                                                                              \
+		REMOTE_SOM, REMOTE_SPI_PACKET, REMOTE_SPI_WRITE, REMOTE_UINT8, REMOTE_UINT8, REMOTE_UINT16, REMOTE_UINT24, \
+			REMOTE_UINT16, 0,                                                                                      \
+	}
+#define REMOTE_SPI_CHIP_ID_STR                                                                       \
+	(char[])                                                                                         \
+	{                                                                                                \
+		REMOTE_SOM, REMOTE_SPI_PACKET, REMOTE_SPI_CHIP_ID, REMOTE_UINT8, REMOTE_UINT8, REMOTE_EOM, 0 \
+	}
+#define REMOTE_SPI_RUN_COMMAND_STR                                                                        \
+	(char[])                                                                                              \
+	{                                                                                                     \
+		REMOTE_SOM, REMOTE_SPI_PACKET, REMOTE_SPI_RUN_COMMAND, REMOTE_UINT8, REMOTE_UINT8, REMOTE_UINT16, \
+			REMOTE_UINT24, REMOTE_EOM, 0                                                                  \
+	}
 
 #endif /*PLATFORMS_HOSTED_REMOTE_PROTOCOL_V3_DEFS_H*/
