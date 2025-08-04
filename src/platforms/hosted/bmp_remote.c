@@ -46,6 +46,8 @@ uint64_t remote_decode_response(const char *const response, const size_t digits)
 {
 	uint64_t value = 0U;
 	for (size_t idx = 0U; idx < digits; ++idx) {
+		if (response[idx] == '\0')
+			break;
 		value <<= 4U;
 		value |= unhex_digit(response[idx]);
 	}
