@@ -454,6 +454,10 @@ void platform_target_clk_output_enable(bool enable)
 
 bool platform_spi_init(const spi_bus_e bus)
 {
+	/* Check that the hardware's new enough to support this */
+	if (hwversion < 5)
+		return false;
+
 	if (bus == SPI_BUS_EXTERNAL) {
 		rcc_periph_clock_enable(RCC_SPI1);
 		rcc_periph_reset_pulse(RST_SPI1);
