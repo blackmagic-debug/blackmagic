@@ -100,6 +100,7 @@ void onboard_spi_run_command(target_s *const target, const uint16_t command, con
 static bool onboard_flash_add(target_s *const target)
 {
 	/* Read out the chip's ID code */
+	DEBUG_INFO("Attempting on-board Flash ident\n");
 	spi_flash_id_s flash_id;
 	onboard_spi_read(target, SPI_FLASH_CMD_READ_JEDEC_ID, 0, &flash_id, sizeof(flash_id));
 
@@ -110,6 +111,8 @@ static bool onboard_flash_add(target_s *const target)
 		return false;
 	}
 
+	DEBUG_INFO(
+		"Found Flash chip w/ ID: 0x%02x 0x%02x 0x%02x\n", flash_id.manufacturer, flash_id.type, flash_id.capacity);
 	/* Otherwise add it to the providied target */
 	bmp_spi_add_flash(
 		target, 0U, 1U << flash_id.capacity, onboard_spi_read, onboard_spi_write, onboard_spi_run_command);
