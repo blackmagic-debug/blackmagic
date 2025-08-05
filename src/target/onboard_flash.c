@@ -37,6 +37,16 @@
 #include "spi.h"
 #include "sfdp.h"
 
+typedef enum flash_error {
+	flash_ok,
+	flash_bad_address,
+	flash_bad_length
+} flash_error_e;
+
+typedef struct onboard_flash {
+	flash_error_e error_state;
+} onboard_flash_s;
+
 static void onboard_spi_setup_xfer(const uint16_t command, const target_addr32_t address)
 {
 	platform_spi_chip_select(SPI_DEVICE_INT_FLASH | 0x80U);
@@ -113,6 +123,7 @@ static bool onboard_flash_add(target_s *const target)
 
 	DEBUG_INFO(
 		"Found Flash chip w/ ID: 0x%02x 0x%02x 0x%02x\n", flash_id.manufacturer, flash_id.type, flash_id.capacity);
+	target->core = "Windbond";
 	/* Otherwise add it to the providied target */
 	bmp_spi_add_flash(
 		target, 0U, 1U << flash_id.capacity, onboard_spi_read, onboard_spi_write, onboard_spi_run_command);
@@ -121,11 +132,25 @@ static bool onboard_flash_add(target_s *const target)
 
 bool onboard_flash_scan(void)
 {
-	/* Start by trying to create a new target to use for the internal Flash */
+	/* Clear out any stray/previous targets */
 	target_list_free();
+
+	/* Try to allocate storage for our private state */
+	onboard_flash_s *const priv = calloc(1, sizeof(*priv));
+	if (!priv) { /* calloc failed: heap exhaustion */
+		DEBUG_WARN("calloc: failed in %s\n", __func__);
+		return false;
+	}
+
+	/* Try to create a new target to use for the internal Flash */
 	target_s *target = target_new();
 	if (!target)
 		return false;
+
+	/* Start setting up the target structure with core information */
+	target->priv = priv;
+	target->priv_free = free;
+	priv->error_state = flash_ok;
 
 	/* That succeeded, so initialise the SPI bus and check the chip that's supposed to be there.. is */
 	platform_spi_init(SPI_BUS_INTERNAL);
