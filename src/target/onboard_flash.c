@@ -47,6 +47,7 @@ typedef struct onboard_flash {
 	flash_error_e error_state;
 } onboard_flash_s;
 
+static target_halt_reason_e onboard_flash_halt_poll(target_s *target, target_addr64_t *watch);
 static bool onboard_flash_check_error(target_s *target);
 static void onboard_flash_read(target_s *target, void *dest, target_addr64_t src, size_t len);
 
@@ -169,8 +170,17 @@ bool onboard_flash_scan(void)
 	/* Set up memory access state for the Flash */
 	target->check_error = onboard_flash_check_error;
 	target->mem_read = onboard_flash_read;
+	/* Set up GDB support members */
+	target->halt_poll = onboard_flash_halt_poll;
 	target->regs_size = 0U;
 	return true;
+}
+
+static target_halt_reason_e onboard_flash_halt_poll(target_s *const target, target_addr64_t *const watch)
+{
+	(void)target;
+	(void)watch;
+	return TARGET_HALT_REQUEST;
 }
 
 static bool onboard_flash_check_error(target_s *const target)
