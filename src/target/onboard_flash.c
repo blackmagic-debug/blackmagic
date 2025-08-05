@@ -47,6 +47,9 @@ typedef struct onboard_flash {
 	flash_error_e error_state;
 } onboard_flash_s;
 
+static bool onboard_flash_check_error(target_s *target);
+static void onboard_flash_read(target_s *target, void *dest, target_addr64_t src, size_t len);
+
 static void onboard_spi_setup_xfer(const uint16_t command, const target_addr32_t address)
 {
 	platform_spi_chip_select(SPI_DEVICE_INT_FLASH | 0x80U);
@@ -71,7 +74,7 @@ static void onboard_spi_setup_xfer(const uint16_t command, const target_addr32_t
 void onboard_spi_read(target_s *const target, const uint16_t command, const target_addr32_t address, void *const buffer,
 	const size_t length)
 {
-	(void)target;
+	onboard_flash_s *const priv = target->priv;
 	/* Setup the transaction */
 	onboard_spi_setup_xfer(command, address);
 	/* Now read back the data that elicited */
@@ -81,6 +84,7 @@ void onboard_spi_read(target_s *const target, const uint16_t command, const targ
 		data[i] = platform_spi_xfer(SPI_BUS_INTERNAL, 0);
 	/* Deselect the Flash */
 	platform_spi_chip_select(SPI_DEVICE_INT_FLASH);
+	priv->error_state = flash_ok;
 }
 
 void onboard_spi_write(target_s *const target, const uint16_t command, const target_addr32_t address,
@@ -162,5 +166,30 @@ bool onboard_flash_scan(void)
 
 	/* Mark the target as being for the onboard Flash */
 	target->driver = "Onboard SPI Flash";
+	/* Set up memory access state for the Flash */
+	target->check_error = onboard_flash_check_error;
+	target->mem_read = onboard_flash_read;
+	target->regs_size = 0U;
 	return true;
+}
+
+static bool onboard_flash_check_error(target_s *const target)
+{
+	onboard_flash_s *const priv = target->priv;
+	const flash_error_e error_state = priv->error_state;
+	priv->error_state = flash_ok;
+	return error_state != flash_ok;
+}
+
+static void onboard_flash_read(target_s *const target, void *const dest, const target_addr64_t src, const size_t len)
+{
+	onboard_flash_s *const priv = target->priv;
+	target_flash_s *flash = target->flash;
+
+	if (src < flash->start || src >= flash->start + flash->length)
+		priv->error_state = flash_bad_address;
+	else if (len >= flash->length - (src - flash->start))
+		priv->error_state = flash_bad_length;
+	else
+		onboard_spi_read(target, SPI_FLASH_CMD_PAGE_READ, src - flash->start, dest, len);
 }
