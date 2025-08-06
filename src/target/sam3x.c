@@ -413,6 +413,8 @@ bool samx7x_probe(target_s *target)
 	/* Now extract the Flash size and then the Flash page size */
 	const uint32_t flash_size = target_mem32_read32(target, EEFC_FRR(SAMX7X_EEFC_BASE));
 	const uint32_t flash_page_size = target_mem32_read32(target, EEFC_FRR(SAMX7X_EEFC_BASE));
+	DEBUG_TARGET(
+		"Found %" PRIu32 " bytes of Flash with a %" PRIu32 " byte Flash page size\n", flash_size, flash_page_size);
 
 	samx7x_add_ram(target, tcm_config, priv_storage->descr.ram_size);
 	sam_add_flash(target, SAMX7X_EEFC_BASE, 0x00400000, flash_size, flash_page_size);
