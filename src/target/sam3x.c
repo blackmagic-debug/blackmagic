@@ -536,7 +536,7 @@ static bool sam_flash_erase(target_flash_s *flash, target_addr_t addr, size_t le
 	uint32_t chunk = (addr - flash->start) / SAM_LARGE_PAGE_SIZE;
 
 	for (size_t offset = 0; offset < len; offset += flash->blocksize) {
-		int16_t arg = chunk | 0x1U;
+		uint16_t arg = chunk | 0x0001U;
 		if (!sam_flash_cmd(target, base, EEFC_FCR_FCMD_EPA, arg))
 			return false;
 		chunk += 8U;
