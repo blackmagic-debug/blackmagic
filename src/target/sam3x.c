@@ -525,23 +525,18 @@ static sam_driver_e sam_driver(target_s *target)
 
 static bool sam_flash_erase(target_flash_s *flash, target_addr_t addr, size_t len)
 {
+	(void)len;
 	target_s *target = flash->t;
 	const uint32_t base = ((sam_flash_s *)flash)->eefc_base;
 
 	/*
-	 * The SAM4S is the only supported device with a page erase command.
-	 * Erasing is done in 8-page chunks. arg[15:2] contains the page
-	 * number and arg[1:0] contains 0x1, indicating 8-page chunks.
+	 * Devices supported through this routine use an 8 page erase size.
+	 * arg[15:2] contains the page number (aligned to the nearest 8 pages) and
+	 * arg[1:0] contains 0x1, indicating 8-page chunks.
 	 */
-	uint32_t chunk = (addr - flash->start) / SAM_LARGE_PAGE_SIZE;
-
-	for (size_t offset = 0; offset < len; offset += flash->blocksize) {
-		uint16_t arg = chunk | 0x0001U;
-		if (!sam_flash_cmd(target, base, EEFC_FCR_FCMD_EPA, arg))
-			return false;
-		chunk += 8U;
-	}
-	return true;
+	const uint32_t chunk = (addr - flash->start) / flash->writesize;
+	const uint16_t arg = (chunk & 0xfffcU) | 0x0001U;
+	return sam_flash_cmd(target, base, EEFC_FCR_FCMD_EPA, arg);
 }
 
 static bool sam3_flash_erase(target_flash_s *flash, target_addr_t addr, size_t len)
