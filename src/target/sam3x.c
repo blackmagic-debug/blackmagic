@@ -181,7 +181,6 @@ typedef struct samx7x_descr {
 	uint8_t product_id;
 	char pins;
 	uint32_t ram_size;
-	uint32_t flash_size;
 	uint8_t density;
 	char revision;
 } samx7x_descr_s;
@@ -211,7 +210,7 @@ static void sam3_add_flash(target_s *target, uint32_t eefc_base, uint32_t addr, 
 	target_add_flash(target, target_flash);
 }
 
-static void sam_add_flash(target_s *target, uint32_t eefc_base, uint32_t addr, size_t length)
+static void sam_add_flash(target_s *target, uint32_t eefc_base, uint32_t addr, size_t length, uint32_t page_size)
 {
 	sam_flash_s *flash = calloc(1, sizeof(*flash));
 	if (!flash) { /* calloc failed: heap exhaustion */
@@ -222,10 +221,10 @@ static void sam_add_flash(target_s *target, uint32_t eefc_base, uint32_t addr, s
 	target_flash_s *target_flash = &flash->f;
 	target_flash->start = addr;
 	target_flash->length = length;
-	target_flash->blocksize = SAM_LARGE_PAGE_SIZE * 8U;
+	target_flash->blocksize = page_size * 8U;
 	target_flash->erase = sam_flash_erase;
 	target_flash->write = sam_flash_write;
-	target_flash->writesize = SAM_LARGE_PAGE_SIZE;
+	target_flash->writesize = page_size;
 	flash->eefc_base = eefc_base;
 	flash->write_cmd = EEFC_FCR_FCMD_WP;
 	target_add_flash(target, target_flash);
@@ -349,19 +348,15 @@ samx7x_descr_s samx7x_parse_id(uint32_t cidr, uint32_t exid)
 	}
 
 	descr.ram_size = sam_sram_size(cidr);
-	descr.flash_size = sam_flash_size(cidr);
 
-	// 21 = 2048 KB
-	// 20 = 1024 KB
-	// 19 = 512 KB
-	switch (descr.flash_size) {
-	case 0x200000U:
+	switch (cidr & CHIPID_CIDR_NVPSIZ_MASK) {
+	case CHIPID_CIDR_NVPSIZ_2048K:
 		descr.density = 21;
 		break;
-	case 0x100000U:
+	case CHIPID_CIDR_NVPSIZ_1024K:
 		descr.density = 20;
 		break;
-	case 0x80000U:
+	case CHIPID_CIDR_NVPSIZ_512K:
 		descr.density = 19;
 		break;
 	default:
@@ -403,8 +398,24 @@ bool samx7x_probe(target_s *target)
 		return false;
 	tcm_config &= GPNVM_SAMX7X_TCM_BIT_MASK;
 
+	/* Wait for the Flash controller to become idle and then read the Flash descriptor */
+	while (!(target_mem32_read32(target, EEFC_FSR(SAMX7X_EEFC_BASE)) & EEFC_FSR_FRDY))
+		continue;
+	target_mem32_write32(target, EEFC_FCR(SAMX7X_EEFC_BASE), EEFC_FCR_FKEY | EEFC_FCR_FCMD_GETD);
+	while (!(target_mem32_read32(target, EEFC_FSR(SAMX7X_EEFC_BASE)) & EEFC_FSR_FRDY))
+		continue;
+#ifndef DEBUG_TARGET_IS_NOOP
+	/* Now FRR contains FL_ID, so read that to discard it (reporting it as info) */
+	const uint32_t flash_id =
+#endif
+		target_mem32_read32(target, EEFC_FRR(SAMX7X_EEFC_BASE));
+	DEBUG_TARGET("Flash ID: %08" PRIx32 "\n", flash_id);
+	/* Now extract the Flash size and then the Flash page size */
+	const uint32_t flash_size = target_mem32_read32(target, EEFC_FRR(SAMX7X_EEFC_BASE));
+	const uint32_t flash_page_size = target_mem32_read32(target, EEFC_FRR(SAMX7X_EEFC_BASE));
+
 	samx7x_add_ram(target, tcm_config, priv_storage->descr.ram_size);
-	sam_add_flash(target, SAMX7X_EEFC_BASE, 0x00400000, priv_storage->descr.flash_size);
+	sam_add_flash(target, SAMX7X_EEFC_BASE, 0x00400000, flash_size, flash_page_size);
 	target_add_commands(target, sam_cmd_list, "SAMX7X");
 
 	snprintf(priv_storage->sam_variant_string, sizeof(priv_storage->sam_variant_string), "SAM%c%02d%c%d%c",
@@ -469,11 +480,11 @@ bool sam3x_probe(target_s *target)
 		target_add_ram32(target, 0x20000000, 0x400000);
 		/* Smaller devices have a single bank */
 		if (size <= 0x80000U)
-			sam_add_flash(target, SAM4S_EEFC_BASE(0), 0x400000, size);
+			sam_add_flash(target, SAM4S_EEFC_BASE(0), 0x400000, size, SAM_LARGE_PAGE_SIZE);
 		else {
 			/* Larger devices are split evenly between 2 */
-			sam_add_flash(target, SAM4S_EEFC_BASE(0), 0x400000, size / 2U);
-			sam_add_flash(target, SAM4S_EEFC_BASE(1U), 0x400000 + size / 2U, size / 2U);
+			sam_add_flash(target, SAM4S_EEFC_BASE(0), 0x400000, size / 2U, SAM_LARGE_PAGE_SIZE);
+			sam_add_flash(target, SAM4S_EEFC_BASE(1U), 0x400000 + size / 2U, size / 2U, SAM_LARGE_PAGE_SIZE);
 		}
 		target_add_commands(target, sam_cmd_list, "SAM4S");
 		return true;
