@@ -563,11 +563,11 @@ static bool sam_flash_write(target_flash_s *flash, target_addr_t dest, const voi
 {
 	target_s *const target = flash->t;
 	sam_flash_s *const sf = (sam_flash_s *)flash;
-	const uint32_t base = sf->eefc_base;
-	const uint32_t chunk = (dest - flash->start) / flash->writesize;
+
+	const uint32_t page = (dest - flash->start) / flash->writesize;
 
 	target_mem32_write(target, dest, src, len);
-	return sam_flash_cmd(target, base, sf->write_cmd, chunk);
+	return sam_flash_cmd(target, sf->eefc_base, sf->write_cmd, page);
 }
 
 static bool sam_mass_erase(target_flash_s *const flash, platform_timeout_s *const print_progress)
