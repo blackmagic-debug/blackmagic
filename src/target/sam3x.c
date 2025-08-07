@@ -29,20 +29,6 @@
 #include "target_internal.h"
 #include "cortexm.h"
 
-static bool sam_flash_erase(target_flash_s *flash, target_addr_t addr, size_t len);
-static bool sam3_flash_erase(target_flash_s *flash, target_addr_t addr, size_t len);
-static bool sam_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t len);
-static bool sam_mass_erase(target_flash_s *flash, platform_timeout_s *print_progress);
-
-static bool sam_gpnvm_get(target_s *target, uint32_t base, uint32_t *gpnvm);
-
-static bool sam_cmd_gpnvm(target_s *target, int argc, const char **argv);
-
-const command_s sam_cmd_list[] = {
-	{"gpnvm", sam_cmd_gpnvm, "Set/Get GPVNM bits"},
-	{NULL, NULL, NULL},
-};
-
 /* Enhanced Embedded Flash Controller (EEFC) Register Map */
 #define SAMX7X_EEFC_BASE   0x400e0c00U
 #define SAM3N_EEFC_BASE    0x400e0a00U
@@ -162,6 +148,20 @@ const command_s sam_cmd_list[] = {
 #define GPNVM_SAMX7X_TCM_32K        (0x1U << GPNVM_SAMX7X_TCM_BIT_OFFSET)
 #define GPNVM_SAMX7X_TCM_64K        (0x2U << GPNVM_SAMX7X_TCM_BIT_OFFSET)
 #define GPNVM_SAMX7X_TCM_128K       (0x3U << GPNVM_SAMX7X_TCM_BIT_OFFSET)
+
+static bool sam_cmd_gpnvm(target_s *target, int argc, const char **argv);
+
+const command_s sam_cmd_list[] = {
+	{"gpnvm", sam_cmd_gpnvm, "Set/Get GPVNM bits"},
+	{NULL, NULL, NULL},
+};
+
+static bool sam_flash_erase(target_flash_s *flash, target_addr_t addr, size_t len);
+static bool sam3_flash_erase(target_flash_s *flash, target_addr_t addr, size_t len);
+static bool sam_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t len);
+static bool sam_mass_erase(target_flash_s *flash, platform_timeout_s *print_progress);
+
+static bool sam_gpnvm_get(target_s *target, uint32_t base, uint32_t *gpnvm);
 
 typedef enum sam_driver {
 	DRIVER_SAM3X,
