@@ -30,7 +30,7 @@
 #include "cortexm.h"
 
 /* Enhanced Embedded Flash Controller (EEFC) Register Map */
-#define SAMX7X_EEFC_BASE   0x400e0c00U
+#define SAMx7x_EEFC_BASE   0x400e0c00U
 #define SAM3N_EEFC_BASE    0x400e0a00U
 #define SAM3X_EEFC_BASE(x) (0x400e0a00U + ((x) * 0x200U))
 #define SAM3U_EEFC_BASE(x) (0x400e0800U + ((x) * 0x200U))
@@ -66,68 +66,62 @@
 #define SAM_LARGE_PAGE_SIZE 512U
 
 /* CHIPID Register Map */
-#define SAM_CHIPID_CIDR      0x400e0940U
+#define SAM_CHIPID_BASE      0x400e0940U
+#define SAM_CHIPID_CIDR      (SAM_CHIPID_BASE + 0x0U)
+#define SAM_CHIPID_EXID      (SAM_CHIPID_BASE + 0x4U)
 #define SAM34NSU_CHIPID_CIDR 0x400e0740U
-
-#define SAM_CHIPID_EXID (SAM_CHIPID_CIDR + 0x4U)
 
 #define CHIPID_CIDR_VERSION_MASK 0x1fU
 
-#define CHIPID_CIDR_EPROC_OFFSET 5U
-#define CHIPID_CIDR_EPROC_MASK   (0x7U << CHIPID_CIDR_EPROC_OFFSET)
-#define CHIPID_CIDR_EPROC_CM7    (0x0U << CHIPID_CIDR_EPROC_OFFSET)
-#define CHIPID_CIDR_EPROC_CM3    (0x3U << CHIPID_CIDR_EPROC_OFFSET)
-#define CHIPID_CIDR_EPROC_CM4    (0x7U << CHIPID_CIDR_EPROC_OFFSET)
+#define CHIPID_CIDR_EPROC_MASK (0x7U << 5U)
+#define CHIPID_CIDR_EPROC_CM7  (0x0U << 5U)
+#define CHIPID_CIDR_EPROC_CM3  (0x3U << 5U)
+#define CHIPID_CIDR_EPROC_CM4  (0x7U << 5U)
 
-#define CHIPID_CIDR_NVPSIZ_OFFSET 8U
-#define CHIPID_CIDR_NVPSIZ_MASK   (0xfU << CHIPID_CIDR_NVPSIZ_OFFSET)
-#define CHIPID_CIDR_NVPSIZ_8K     (0x1U << CHIPID_CIDR_NVPSIZ_OFFSET)
-#define CHIPID_CIDR_NVPSIZ_16K    (0x2U << CHIPID_CIDR_NVPSIZ_OFFSET)
-#define CHIPID_CIDR_NVPSIZ_32K    (0x3U << CHIPID_CIDR_NVPSIZ_OFFSET)
-#define CHIPID_CIDR_NVPSIZ_64K    (0x5U << CHIPID_CIDR_NVPSIZ_OFFSET)
-#define CHIPID_CIDR_NVPSIZ_128K   (0x7U << CHIPID_CIDR_NVPSIZ_OFFSET)
-#define CHIPID_CIDR_NVPSIZ_256K   (0x9U << CHIPID_CIDR_NVPSIZ_OFFSET)
-#define CHIPID_CIDR_NVPSIZ_512K   (0xaU << CHIPID_CIDR_NVPSIZ_OFFSET)
-#define CHIPID_CIDR_NVPSIZ_1024K  (0xcU << CHIPID_CIDR_NVPSIZ_OFFSET)
-#define CHIPID_CIDR_NVPSIZ_2048K  (0xeU << CHIPID_CIDR_NVPSIZ_OFFSET)
+#define CHIPID_CIDR_NVPSIZ_MASK  (0xfU << 8U)
+#define CHIPID_CIDR_NVPSIZ_8K    (0x1U << 8U)
+#define CHIPID_CIDR_NVPSIZ_16K   (0x2U << 8U)
+#define CHIPID_CIDR_NVPSIZ_32K   (0x3U << 8U)
+#define CHIPID_CIDR_NVPSIZ_64K   (0x5U << 8U)
+#define CHIPID_CIDR_NVPSIZ_128K  (0x7U << 8U)
+#define CHIPID_CIDR_NVPSIZ_256K  (0x9U << 8U)
+#define CHIPID_CIDR_NVPSIZ_512K  (0xaU << 8U)
+#define CHIPID_CIDR_NVPSIZ_1024K (0xcU << 8U)
+#define CHIPID_CIDR_NVPSIZ_2048K (0xeU << 8U)
 
-#define CHIPID_CIDR_NVPSIZ2_OFFSET 12U
-#define CHIPID_CIDR_NVPSIZ2_MASK   (0xfU << CHIPID_CIDR_NVPSIZ2_OFFSET)
+#define CHIPID_CIDR_NVPSIZ2_MASK (0xfU << 12U)
 
-#define CHIPID_CIDR_SRAMSIZ_OFFSET 16U
-#define CHIPID_CIDR_SRAMSIZ_MASK   (0xfU << CHIPID_CIDR_SRAMSIZ_OFFSET)
-#define CHIPID_CIDR_SRAMSIZ_384K   (0x2U << CHIPID_CIDR_SRAMSIZ_OFFSET)
-#define CHIPID_CIDR_SRAMSIZ_256K   (0xdU << CHIPID_CIDR_SRAMSIZ_OFFSET)
+#define CHIPID_CIDR_SRAMSIZ_MASK (0xfU << 16U)
+#define CHIPID_CIDR_SRAMSIZ_384K (0x2U << 16U)
+#define CHIPID_CIDR_SRAMSIZ_256K (0xdU << 16U)
 
-#define CHIPID_CIDR_ARCH_OFFSET  20U
-#define CHIPID_CIDR_ARCH_MASK    (0xffU << CHIPID_CIDR_ARCH_OFFSET)
-#define CHIPID_CIDR_ARCH_SAME70  (0x10U << CHIPID_CIDR_ARCH_OFFSET)
-#define CHIPID_CIDR_ARCH_SAMS70  (0x11U << CHIPID_CIDR_ARCH_OFFSET)
-#define CHIPID_CIDR_ARCH_SAMV71  (0x12U << CHIPID_CIDR_ARCH_OFFSET)
-#define CHIPID_CIDR_ARCH_SAMV70  (0x13U << CHIPID_CIDR_ARCH_OFFSET)
-#define CHIPID_CIDR_ARCH_SAM3UxC (0x80U << CHIPID_CIDR_ARCH_OFFSET)
-#define CHIPID_CIDR_ARCH_SAM3UxE (0x81U << CHIPID_CIDR_ARCH_OFFSET)
-#define CHIPID_CIDR_ARCH_SAM3XxC (0x84U << CHIPID_CIDR_ARCH_OFFSET)
-#define CHIPID_CIDR_ARCH_SAM3XxE (0x85U << CHIPID_CIDR_ARCH_OFFSET)
-#define CHIPID_CIDR_ARCH_SAM3XxG (0x86U << CHIPID_CIDR_ARCH_OFFSET)
-#define CHIPID_CIDR_ARCH_SAM3NxA (0x93U << CHIPID_CIDR_ARCH_OFFSET)
-#define CHIPID_CIDR_ARCH_SAM3NxB (0x94U << CHIPID_CIDR_ARCH_OFFSET)
-#define CHIPID_CIDR_ARCH_SAM3NxC (0x95U << CHIPID_CIDR_ARCH_OFFSET)
-#define CHIPID_CIDR_ARCH_SAM3SxA (0x88U << CHIPID_CIDR_ARCH_OFFSET)
-#define CHIPID_CIDR_ARCH_SAM3SxB (0x89U << CHIPID_CIDR_ARCH_OFFSET)
-#define CHIPID_CIDR_ARCH_SAM3SxC (0x8aU << CHIPID_CIDR_ARCH_OFFSET)
-#define CHIPID_CIDR_ARCH_SAM4SxA (0x88U << CHIPID_CIDR_ARCH_OFFSET)
-#define CHIPID_CIDR_ARCH_SAM4SxB (0x89U << CHIPID_CIDR_ARCH_OFFSET)
-#define CHIPID_CIDR_ARCH_SAM4SxC (0x8aU << CHIPID_CIDR_ARCH_OFFSET)
-#define CHIPID_CIDR_ARCH_SAM4SDB (0x99U << CHIPID_CIDR_ARCH_OFFSET)
-#define CHIPID_CIDR_ARCH_SAM4SDC (0x9aU << CHIPID_CIDR_ARCH_OFFSET)
+#define CHIPID_CIDR_ARCH_MASK    (0xffU << 20U)
+#define CHIPID_CIDR_ARCH_SAME70  (0x10U << 20U)
+#define CHIPID_CIDR_ARCH_SAMS70  (0x11U << 20U)
+#define CHIPID_CIDR_ARCH_SAMV71  (0x12U << 20U)
+#define CHIPID_CIDR_ARCH_SAMV70  (0x13U << 20U)
+#define CHIPID_CIDR_ARCH_SAM3UxC (0x80U << 20U)
+#define CHIPID_CIDR_ARCH_SAM3UxE (0x81U << 20U)
+#define CHIPID_CIDR_ARCH_SAM3XxC (0x84U << 20U)
+#define CHIPID_CIDR_ARCH_SAM3XxE (0x85U << 20U)
+#define CHIPID_CIDR_ARCH_SAM3XxG (0x86U << 20U)
+#define CHIPID_CIDR_ARCH_SAM3NxA (0x93U << 20U)
+#define CHIPID_CIDR_ARCH_SAM3NxB (0x94U << 20U)
+#define CHIPID_CIDR_ARCH_SAM3NxC (0x95U << 20U)
+#define CHIPID_CIDR_ARCH_SAM3SxA (0x88U << 20U)
+#define CHIPID_CIDR_ARCH_SAM3SxB (0x89U << 20U)
+#define CHIPID_CIDR_ARCH_SAM3SxC (0x8aU << 20U)
+#define CHIPID_CIDR_ARCH_SAM4SxA (0x88U << 20U)
+#define CHIPID_CIDR_ARCH_SAM4SxB (0x89U << 20U)
+#define CHIPID_CIDR_ARCH_SAM4SxC (0x8aU << 20U)
+#define CHIPID_CIDR_ARCH_SAM4SDB (0x99U << 20U)
+#define CHIPID_CIDR_ARCH_SAM4SDC (0x9aU << 20U)
 
-#define CHIPID_CIDR_NVPTYP_OFFSET    28U
-#define CHIPID_CIDR_NVPTYP_MASK      (0x7U << CHIPID_CIDR_NVPTYP_OFFSET)
-#define CHIPID_CIDR_NVPTYP_FLASH     (0x2U << CHIPID_CIDR_NVPTYP_OFFSET)
-#define CHIPID_CIDR_NVPTYP_ROM_FLASH (0x3U << CHIPID_CIDR_NVPTYP_OFFSET)
+#define CHIPID_CIDR_NVPTYP_MASK      (0x7U << 28U)
+#define CHIPID_CIDR_NVPTYP_FLASH     (0x2U << 28U)
+#define CHIPID_CIDR_NVPTYP_ROM_FLASH (0x3U << 28U)
 
-#define CHIPID_CIDR_EXT (0x01U << 31U)
+#define CHIPID_CIDR_EXT (1U << 31U)
 
 #define CHIPID_EXID_SAMX7X_PINS_MASK 0x3U
 #define CHIPID_EXID_SAMX7X_PINS_Q    0x2U
@@ -135,19 +129,17 @@
 #define CHIPID_EXID_SAMX7X_PINS_J    0x0U
 
 /* GPNVM */
-#define GPNVM_SAMX7X_SECURITY_BIT_MASK 0x1
+#define GPNVM_SAMX7X_SECURITY_BIT_MASK 0x01U
 
-#define GPNVM_SAMX7X_BOOT_BIT_OFFSET 1U
-#define GPNVM_SAMX7X_BOOT_BIT_MASK   (0x1U << GPNVM_SAMX7X_BOOT_BIT_OFFSET)
-#define GPNVM_SAMX7X_BOOT_ROM        (0x0U << GPNVM_SAMX7X_BOOT_BIT_OFFSET)
-#define GPNVM_SAMX7X_BOOT_FLASH      (0x1U << GPNVM_SAMX7X_BOOT_BIT_OFFSET)
+#define GPNVM_SAMX7X_BOOT_BIT_MASK (0x1U << 1U)
+#define GPNVM_SAMX7X_BOOT_ROM      (0x0U << 1U)
+#define GPNVM_SAMX7X_BOOT_FLASH    (0x1U << 1U)
 
-#define GPNVM_SAMX7X_TCM_BIT_OFFSET 7U
-#define GPNVM_SAMX7X_TCM_BIT_MASK   (0x3U << GPNVM_SAMX7X_TCM_BIT_OFFSET)
-#define GPNVM_SAMX7X_TCM_0K         (0x0U << GPNVM_SAMX7X_TCM_BIT_OFFSET)
-#define GPNVM_SAMX7X_TCM_32K        (0x1U << GPNVM_SAMX7X_TCM_BIT_OFFSET)
-#define GPNVM_SAMX7X_TCM_64K        (0x2U << GPNVM_SAMX7X_TCM_BIT_OFFSET)
-#define GPNVM_SAMX7X_TCM_128K       (0x3U << GPNVM_SAMX7X_TCM_BIT_OFFSET)
+#define GPNVM_SAMX7X_TCM_BIT_MASK (0x3U << 7U)
+#define GPNVM_SAMX7X_TCM_0K       (0x0U << 7U)
+#define GPNVM_SAMX7X_TCM_32K      (0x1U << 7U)
+#define GPNVM_SAMX7X_TCM_64K      (0x2U << 7U)
+#define GPNVM_SAMX7X_TCM_128K     (0x3U << 7U)
 
 static bool sam_cmd_gpnvm(target_s *target, int argc, const char **argv);
 
@@ -401,31 +393,31 @@ bool samx7x_probe(target_s *target)
 
 	/* Check and see what TCM config is set up on the device */
 	uint32_t tcm_config = 0;
-	if (!sam_gpnvm_get(target, SAMX7X_EEFC_BASE, &tcm_config))
+	if (!sam_gpnvm_get(target, SAMx7x_EEFC_BASE, &tcm_config))
 		return false;
 	tcm_config &= GPNVM_SAMX7X_TCM_BIT_MASK;
 
 	/* Wait for the Flash controller to become idle and then read the Flash descriptor */
-	while (!(target_mem32_read32(target, EEFC_FSR(SAMX7X_EEFC_BASE)) & EEFC_FSR_FRDY))
+	while (!(target_mem32_read32(target, EEFC_FSR(SAMx7x_EEFC_BASE)) & EEFC_FSR_FRDY))
 		continue;
-	target_mem32_write32(target, EEFC_FCR(SAMX7X_EEFC_BASE), EEFC_FCR_FKEY | EEFC_FCR_FCMD_GETD);
-	while (!(target_mem32_read32(target, EEFC_FSR(SAMX7X_EEFC_BASE)) & EEFC_FSR_FRDY))
+	target_mem32_write32(target, EEFC_FCR(SAMx7x_EEFC_BASE), EEFC_FCR_FKEY | EEFC_FCR_FCMD_GETD);
+	while (!(target_mem32_read32(target, EEFC_FSR(SAMx7x_EEFC_BASE)) & EEFC_FSR_FRDY))
 		continue;
 #ifndef DEBUG_TARGET_IS_NOOP
 	/* Now FRR contains FL_ID, so read that to discard it (reporting it as info) */
 	const uint32_t flash_id =
 #endif
-		target_mem32_read32(target, EEFC_FRR(SAMX7X_EEFC_BASE));
+		target_mem32_read32(target, EEFC_FRR(SAMx7x_EEFC_BASE));
 	DEBUG_TARGET("Flash ID: %08" PRIx32 "\n", flash_id);
 	/* Now extract the Flash size and then the Flash page size */
-	const uint32_t flash_size = target_mem32_read32(target, EEFC_FRR(SAMX7X_EEFC_BASE));
-	const uint32_t flash_page_size = target_mem32_read32(target, EEFC_FRR(SAMX7X_EEFC_BASE));
+	const uint32_t flash_size = target_mem32_read32(target, EEFC_FRR(SAMx7x_EEFC_BASE));
+	const uint32_t flash_page_size = target_mem32_read32(target, EEFC_FRR(SAMx7x_EEFC_BASE));
 	DEBUG_TARGET(
 		"Found %" PRIu32 " bytes of Flash with a %" PRIu32 " byte Flash page size\n", flash_size, flash_page_size);
 
 	/* Register appropriate RAM and Flash for the part */
 	samx7x_add_ram(target, tcm_config, priv_storage->descr.ram_size);
-	sam_add_flash(target, SAMX7X_EEFC_BASE, 0x00400000, flash_size, flash_page_size);
+	sam_add_flash(target, SAMx7x_EEFC_BASE, 0x00400000, flash_size, flash_page_size);
 	/* Register target-specific commands */
 	target_add_commands(target, sam_cmd_list, "SAMx7x");
 
@@ -637,7 +629,7 @@ static bool sam_cmd_gpnvm(target_s *target, int argc, const char **argv)
 		break;
 	case DRIVER_SAMX7X:
 		gpnvm_mask = 0x1bfU;
-		base = SAMX7X_EEFC_BASE;
+		base = SAMx7x_EEFC_BASE;
 		break;
 	default:
 		/* unknown / invalid driver*/
