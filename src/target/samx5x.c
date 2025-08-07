@@ -2,6 +2,7 @@
  * This file is part of the Black Magic Debug project.
  *
  * Copyright (C) 2019  Ken Healy
+ * Copyright (C) 2025  Utkarsh Verma
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -34,11 +35,10 @@
  */
 
 #include "general.h"
-#include <ctype.h>
+#include <stdlib.h>
 
 #include "target.h"
 #include "target_internal.h"
-#include "cortex.h"
 
 static bool samx5x_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
 static bool samx5x_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
@@ -46,8 +46,7 @@ static bool samx5x_user_page_erase(target_flash_s *f, target_addr_t addr, size_t
 static bool samx5x_user_page_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
 static bool samx5x_cmd_lock_flash(target_s *t, int argc, const char **argv);
 static bool samx5x_cmd_unlock_flash(target_s *t, int argc, const char **argv);
-static bool samx5x_cmd_unlock_bootprot(target_s *t, int argc, const char **argv);
-static bool samx5x_cmd_lock_bootprot(target_s *t, int argc, const char **argv);
+static bool samx5x_cmd_set_bootprot(target_s *t, int argc, const char **argv);
 static bool samx5x_cmd_read_userpage(target_s *t, int argc, const char **argv);
 static bool samx5x_cmd_serial(target_s *t, int argc, const char **argv);
 static bool samx5x_cmd_ssb(target_s *t, int argc, const char **argv);
@@ -67,8 +66,8 @@ static bool samx5x_cmd_write32(target_s *t, int argc, const char **argv);
 const command_s samx5x_cmd_list[] = {
 	{"lock_flash", samx5x_cmd_lock_flash, "Locks flash against spurious commands"},
 	{"unlock_flash", samx5x_cmd_unlock_flash, "Unlocks flash"},
-	{"lock_bootprot", samx5x_cmd_lock_bootprot, "Lock the boot protections to maximum"},
-	{"unlock_bootprot", samx5x_cmd_unlock_bootprot, "Unlock the boot protections to minimum"},
+	{"set_bootprot", samx5x_cmd_set_bootprot,
+		"Reserves the first (15 - <bootprot>) 8 KiB pages for the bootloader: <bootprot>"},
 	{"user_page", samx5x_cmd_read_userpage, "Prints user page from flash"},
 	{"serial", samx5x_cmd_serial, "Prints serial number"},
 	{"set_security_bit", samx5x_cmd_ssb, "Sets the security bit"},
@@ -141,7 +140,7 @@ static const uint8_t samx5x_user_page_factory_bits[] = {
 /* Non-Volatile Memory Calibration and Auxiliary Registers */
 #define SAMX5X_NVM_USER_PAGE   UINT32_C(0x00804000)
 #define SAMX5X_NVM_CALIBRATION UINT32_C(0x00800000)
-#define SAMX5X_NVM_SERIAL(n)   (UINT32_C(0x0080600c) + ((n) == 0 ? 0x1f0U : (n)*4U))
+#define SAMX5X_NVM_SERIAL(n)   (UINT32_C(0x0080600c) + ((n) == 0 ? 0x1f0U : (n) * 4U))
 
 #define SAMX5X_USER_PAGE_OFFSET_LOCK     0x08U
 #define SAMX5X_USER_PAGE_OFFSET_BOOTPROT 0x03U
@@ -719,19 +718,6 @@ static int samx5x_set_flashlock(target_s *t, uint32_t value)
 	return 0;
 }
 
-static bool parse_unsigned(const char *str, uint32_t *val)
-{
-	char *end = NULL;
-	unsigned long num;
-
-	num = strtoul(str, &end, 0);
-	if (end == NULL || end == str)
-		return false;
-
-	*val = (uint32_t)num;
-	return true;
-}
-
 static bool samx5x_cmd_lock_flash(target_s *t, int argc, const char **argv)
 {
 	(void)argc;
@@ -780,43 +766,26 @@ static int samx5x_set_bootprot(target_s *t, uint8_t value)
 	return 0;
 }
 
-static bool samx5x_cmd_lock_bootprot(target_s *t, int argc, const char **argv)
+static bool samx5x_cmd_set_bootprot(target_s *t, int argc, const char **argv)
 {
-	if (argc > 2) {
-		tc_printf(t, "usage: monitor lock_bootprot [number]\n");
+	if (argc != 2) {
+		tc_printf(t, "usage: monitor set_bootprot <bootprot>\n");
 		return false;
 	}
 
-	uint32_t val = 0;
-	if (argc == 2) {
-		if (!parse_unsigned(argv[1], &val)) {
-			tc_printf(t, "number must be either decimal or 0x prefixed hexadecimal\n");
-			return false;
-		}
-
-		if (val > 15U) {
-			tc_printf(t, "number must be between 0 and 15\n");
-			return false;
-		}
+	/* Conversion failures will return 0UL which is a valid value, so error-checking is not possible. */
+	uint32_t val = strtoul(argv[1], NULL, 0);
+	if (val > 15UL) {
+		tc_printf(t, "number must be between 0 and 15\n");
+		return false;
 	}
 
 	if (samx5x_set_bootprot(t, (uint8_t)val)) {
 		tc_printf(t, "Error writing NVM page\n");
 		return false;
 	}
-	tc_printf(t, "%s. The target must be reset for this to take effect.\n", "Bootprot locked");
-	return true;
-}
-
-static bool samx5x_cmd_unlock_bootprot(target_s *t, int argc, const char **argv)
-{
-	(void)argc;
-	(void)argv;
-	if (samx5x_set_bootprot(t, 0xfU)) {
-		tc_printf(t, "Error writing NVM page\n");
-		return false;
-	}
-	tc_printf(t, "%s. The target must be reset for this to take effect.\n", "Bootprot unlocked");
+	tc_printf(t, "BOOTPROT set for the first %u KiB. The target must be reset for this to take effect.\n",
+		(15 - (uint8_t)val) * 8);
 	return true;
 }
 
