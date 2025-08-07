@@ -148,6 +148,8 @@ const command_s sam_cmd_list[] = {
 	{NULL, NULL, NULL},
 };
 
+static bool sam_flash_cmd(target_s *target, uint32_t base, uint8_t cmd, uint16_t arg);
+
 static bool sam_flash_erase(target_flash_s *flash, target_addr_t addr, size_t len);
 static bool sam3_flash_erase(target_flash_s *flash, target_addr_t addr, size_t len);
 static bool sam_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t len);
@@ -397,12 +399,8 @@ bool samx7x_probe(target_s *target)
 		return false;
 	tcm_config &= GPNVM_SAMX7X_TCM_BIT_MASK;
 
-	/* Wait for the Flash controller to become idle and then read the Flash descriptor */
-	while (!(target_mem32_read32(target, EEFC_FSR(SAMx7x_EEFC_BASE)) & EEFC_FSR_FRDY))
-		continue;
-	target_mem32_write32(target, EEFC_FCR(SAMx7x_EEFC_BASE), EEFC_FCR_FKEY | EEFC_FCR_FCMD_GETD);
-	while (!(target_mem32_read32(target, EEFC_FSR(SAMx7x_EEFC_BASE)) & EEFC_FSR_FRDY))
-		continue;
+	/* Read the Flash descriptor */
+	sam_flash_cmd(target, SAMx7x_EEFC_BASE, EEFC_FCR_FCMD_GETD, 0U);
 #ifndef DEBUG_TARGET_IS_NOOP
 	/* Now FRR contains FL_ID, so read that to discard it (reporting it as info) */
 	const uint32_t flash_id =
@@ -495,7 +493,7 @@ bool sam3x_probe(target_s *target)
 	return false;
 }
 
-static bool sam_flash_cmd(target_s *target, uint32_t base, uint8_t cmd, uint16_t arg)
+static bool sam_flash_cmd(target_s *const target, const uint32_t base, const uint8_t cmd, const uint16_t arg)
 {
 	DEBUG_INFO("%s: base = 0x%08" PRIx32 " cmd = 0x%02X, arg = 0x%04X\n", __func__, base, cmd, arg);
 
