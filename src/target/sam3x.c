@@ -32,6 +32,7 @@
 static bool sam_flash_erase(target_flash_s *flash, target_addr_t addr, size_t len);
 static bool sam3_flash_erase(target_flash_s *flash, target_addr_t addr, size_t len);
 static bool sam_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t len);
+static bool sam_mass_erase(target_flash_s *flash, platform_timeout_s *print_progress);
 
 static bool sam_gpnvm_get(target_s *target, uint32_t base, uint32_t *gpnvm);
 
@@ -224,6 +225,7 @@ static void sam_add_flash(target_s *target, uint32_t eefc_base, uint32_t addr, s
 	target_flash->blocksize = page_size * 8U;
 	target_flash->erase = sam_flash_erase;
 	target_flash->write = sam_flash_write;
+	target_flash->mass_erase = sam_mass_erase;
 	target_flash->writesize = page_size;
 	flash->eefc_base = eefc_base;
 	flash->write_cmd = EEFC_FCR_FCMD_WP;
@@ -563,6 +565,25 @@ static bool sam_flash_write(target_flash_s *flash, target_addr_t dest, const voi
 
 	target_mem32_write(target, dest, src, len);
 	return sam_flash_cmd(target, base, sf->write_cmd, chunk);
+}
+
+static bool sam_mass_erase(target_flash_s *const flash, platform_timeout_s *const print_progress)
+{
+	/* Extract the target and base address of the Flash controller to run this on */
+	target_s *const target = flash->t;
+	const uint32_t base = ((sam_flash_s *)flash)->eefc_base;
+
+	/* Initiate the Flash erase all command */
+	while (!(target_mem32_read32(target, EEFC_FSR(base)) & EEFC_FSR_FRDY))
+		continue;
+	target_mem32_write32(target, EEFC_FCR(base), EEFC_FCR_FKEY | EEFC_FCR_FCMD_EA);
+	/* Then wait for that to complete, printing progress as required */
+	while (!(target_mem32_read32(target, EEFC_FSR(base)) & EEFC_FSR_FRDY)) {
+		if (print_progress)
+			target_print_progress(print_progress);
+	}
+
+	return true;
 }
 
 static bool sam_gpnvm_get(target_s *target, uint32_t base, uint32_t *gpnvm)
