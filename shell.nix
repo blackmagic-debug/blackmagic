@@ -1,10 +1,10 @@
 {
   pkgs ? import (fetchGit {
-    name = "nixos-21.11-2022-05-17";
+    name = "nixos-25.05";
     url = "https://github.com/nixos/nixpkgs/";
-    ref = "refs/heads/nixos-21.11";
+    ref = "refs/heads/nixos-25.05";
     # `git ls-remote https://github.com/nixos/nixpkgs nixos-21.11`
-    rev = "8b3398bc7587ebb79f93dfeea1b8c574d3c6dba1";
+    rev = "ce01daebf8489ba97bd1609d185ea276efdeb121";
   }) {}
 }:
 
