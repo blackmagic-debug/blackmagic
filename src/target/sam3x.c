@@ -371,11 +371,13 @@ samx7x_descr_s samx7x_parse_id(uint32_t cidr, uint32_t exid)
 
 bool samx7x_probe(target_s *target)
 {
+	/* Start by reading out the ChipID peripheral's CIDR, and if that indicates there's an EXID, that too */
 	const uint32_t cidr = target_mem32_read32(target, SAM_CHIPID_CIDR);
 	uint32_t exid = 0;
 	if (cidr & CHIPID_CIDR_EXT)
 		exid = target_mem32_read32(target, SAM_CHIPID_EXID);
 
+	/* Check that this is one of the supported SAMx7x family parts */
 	switch (cidr & CHIPID_CIDR_ARCH_MASK) {
 	case CHIPID_CIDR_ARCH_SAME70:
 	case CHIPID_CIDR_ARCH_SAMS70:
@@ -386,6 +388,7 @@ bool samx7x_probe(target_s *target)
 		return false;
 	}
 
+	/* Now we have a positive ID on the part, allocate storage for the private struct data */
 	sam_priv_s *priv_storage = calloc(1, sizeof(*priv_storage));
 	if (!priv_storage) { /* calloc failed: heap exhaustion */
 		DEBUG_ERROR("calloc: failed in %s\n", __func__);
@@ -393,8 +396,10 @@ bool samx7x_probe(target_s *target)
 	}
 	target->target_storage = priv_storage;
 
+	/* Figure out which exact chip it is and what its part code characteristics are */
 	priv_storage->descr = samx7x_parse_id(cidr, exid);
 
+	/* Check and see what TCM config is set up on the device */
 	uint32_t tcm_config = 0;
 	if (!sam_gpnvm_get(target, SAMX7X_EEFC_BASE, &tcm_config))
 		return false;
@@ -418,9 +423,11 @@ bool samx7x_probe(target_s *target)
 	DEBUG_TARGET(
 		"Found %" PRIu32 " bytes of Flash with a %" PRIu32 " byte Flash page size\n", flash_size, flash_page_size);
 
+	/* Register appropriate RAM and Flash for the part */
 	samx7x_add_ram(target, tcm_config, priv_storage->descr.ram_size);
 	sam_add_flash(target, SAMX7X_EEFC_BASE, 0x00400000, flash_size, flash_page_size);
-	target_add_commands(target, sam_cmd_list, "SAMX7X");
+	/* Register target-specific commands */
+	target_add_commands(target, sam_cmd_list, "SAMx7x");
 
 	snprintf(priv_storage->sam_variant_string, sizeof(priv_storage->sam_variant_string), "SAM%c%02d%c%d%c",
 		priv_storage->descr.product_code, priv_storage->descr.product_id, priv_storage->descr.pins,
@@ -500,11 +507,15 @@ static bool sam_flash_cmd(target_s *target, uint32_t base, uint8_t cmd, uint16_t
 {
 	DEBUG_INFO("%s: base = 0x%08" PRIx32 " cmd = 0x%02X, arg = 0x%04X\n", __func__, base, cmd, arg);
 
-	if (base == 0)
+	if (base == 0U)
 		return false;
 
+	/* Wait for the Flash controller to become idle and then initiate the command */
+	while (!(target_mem32_read32(target, EEFC_FSR(base)) & EEFC_FSR_FRDY))
+		continue;
 	target_mem32_write32(target, EEFC_FCR(base), EEFC_FCR_FKEY | cmd | ((uint32_t)arg << 8U));
 
+	/* Then wait for the command to complete */
 	uint32_t status = 0;
 	while (!(status & EEFC_FSR_FRDY)) {
 		status = target_mem32_read32(target, EEFC_FSR(base));
