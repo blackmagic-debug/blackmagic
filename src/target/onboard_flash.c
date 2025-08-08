@@ -34,6 +34,7 @@
 #include "general.h"
 #include "target.h"
 #include "target_internal.h"
+#include "gdb_reg.h"
 #include "spi.h"
 #include "sfdp.h"
 
@@ -50,6 +51,7 @@ typedef struct onboard_flash {
 static target_halt_reason_e onboard_flash_halt_poll(target_s *target, target_addr64_t *watch);
 static bool onboard_flash_check_error(target_s *target);
 static void onboard_flash_read(target_s *target, void *dest, target_addr64_t src, size_t len);
+static const char *onboard_flash_target_description(target_s *target);
 
 static void onboard_spi_setup_xfer(const uint16_t command, const target_addr32_t address)
 {
@@ -173,6 +175,7 @@ bool onboard_flash_scan(void)
 	/* Set up GDB support members */
 	target->halt_poll = onboard_flash_halt_poll;
 	target->regs_size = 0U;
+	target->regs_description = onboard_flash_target_description;
 	return true;
 }
 
@@ -200,6 +203,58 @@ static void onboard_flash_read(target_s *const target, void *const dest, const t
 		priv->error_state = flash_bad_address;
 	else if (len >= flash->length - (src - flash->start))
 		priv->error_state = flash_bad_length;
-	else
+	else {
 		onboard_spi_read(target, SPI_FLASH_CMD_PAGE_READ, src - flash->start, dest, len);
+
+#if ENABLE_DEBUG
+		DEBUG_PROTO("%s: @ %08" PRIx32 " len %zu:", __func__, (uint32_t)src, len);
+#ifndef DEBUG_PROTO_IS_NOOP
+		const uint8_t *const data = (const uint8_t *)dest;
+#endif
+		for (size_t offset = 0; offset < len; ++offset) {
+			if (offset == 16U)
+				break;
+			DEBUG_PROTO(" %02x", data[offset]);
+		}
+		if (len > 16U)
+			DEBUG_PROTO(" ...");
+		DEBUG_PROTO("\n");
+#endif
+	}
+}
+
+/*
+ * This function creates the dummy target description XML string for the on-board Flash.
+ * This is done this way to decrease string duplication and thus code size, making it
+ * unfortunately much less readable than the string literal it is equivalent to.
+ *
+ * This string it creates is the XML-equivalent to the following:
+ *  <?xml version=\"1.0\"?>
+ *  <!DOCTYPE target SYSTEM \"gdb-target.dtd\">
+ *  <target>
+ *    <architecture></architecture>
+ *  </target>
+ */
+static size_t onboard_flash_build_target_description(char *const buffer, const size_t max_length)
+{
+	size_t print_size = max_length;
+	/* Start with the "preamble" chunks, which are mostly common across targets save for 2 words. */
+	int offset = snprintf(
+		buffer, print_size, "%s target %s%s", gdb_xml_preamble_first, gdb_xml_preamble_second, gdb_xml_preamble_third);
+	if (max_length != 0)
+		print_size = max_length - (size_t)offset;
+
+	offset += (size_t)snprintf(buffer + offset, print_size, "</target>");
+	/* offset is now the total length of the string created, discard the sign and return it. */
+	return offset;
+}
+
+static const char *onboard_flash_target_description(target_s *const target)
+{
+	(void)target;
+	const size_t description_length = onboard_flash_build_target_description(NULL, 0) + 1U;
+	char *const description = malloc(description_length);
+	if (description)
+		(void)onboard_flash_build_target_description(description, description_length);
+	return description;
 }
