@@ -57,6 +57,11 @@
 #define EEFC_FCR_FCMD_STUI 0x0eU
 #define EEFC_FCR_FCMD_SPUI 0x0fU
 
+#define EFFC_FCR_FARG_4PAGE_ERASE  0x0000U
+#define EFFC_FCR_FARG_8PAGE_ERASE  0x0001U
+#define EFFC_FCR_FARG_16PAGE_ERASE 0x0002U
+#define EFFC_FCR_FARG_32PAGE_ERASE 0x0003U
+
 #define EEFC_FSR_FRDY   (1U << 0U)
 #define EEFC_FSR_FCMDE  (1U << 1U)
 #define EEFC_FSR_FLOCKE (1U << 2U)
@@ -169,6 +174,7 @@ typedef struct sam_flash {
 	target_flash_s f;
 	uint32_t eefc_base;
 	uint8_t write_cmd;
+	uint8_t erase_size;
 } sam_flash_s;
 
 typedef struct samx7x_descr {
@@ -185,7 +191,7 @@ typedef struct sam_priv {
 	char sam_variant_string[16];
 } sam_priv_s;
 
-static void sam3_add_flash(target_s *target, uint32_t eefc_base, uint32_t addr, size_t length)
+static void sam3_add_flash(target_s *const target, const uint32_t eefc_base, const uint32_t addr, const size_t length)
 {
 	sam_flash_s *flash = calloc(1, sizeof(*flash));
 	if (!flash) { /* calloc failed: heap exhaustion */
@@ -205,7 +211,8 @@ static void sam3_add_flash(target_s *target, uint32_t eefc_base, uint32_t addr, 
 	target_add_flash(target, target_flash);
 }
 
-static void sam_add_flash(target_s *target, uint32_t eefc_base, uint32_t addr, size_t length, uint32_t page_size)
+static void sam_add_flash(target_s *const target, const uint32_t eefc_base, const uint32_t addr, const size_t length,
+	const uint32_t page_size, const uint8_t erase_size)
 {
 	sam_flash_s *flash = calloc(1, sizeof(*flash));
 	if (!flash) { /* calloc failed: heap exhaustion */
@@ -216,13 +223,17 @@ static void sam_add_flash(target_s *target, uint32_t eefc_base, uint32_t addr, s
 	target_flash_s *target_flash = &flash->f;
 	target_flash->start = addr;
 	target_flash->length = length;
-	target_flash->blocksize = page_size * 8U;
+	if (erase_size == EFFC_FCR_FARG_8PAGE_ERASE)
+		target_flash->blocksize = page_size * 8U;
+	else if (erase_size == EFFC_FCR_FARG_16PAGE_ERASE)
+		target_flash->blocksize = page_size * 16U;
 	target_flash->erase = sam_flash_erase;
 	target_flash->write = sam_flash_write;
 	target_flash->mass_erase = sam_mass_erase;
 	target_flash->writesize = page_size;
 	flash->eefc_base = eefc_base;
 	flash->write_cmd = EEFC_FCR_FCMD_WP;
+	flash->erase_size = erase_size;
 	target_add_flash(target, target_flash);
 }
 
@@ -415,7 +426,8 @@ bool samx7x_probe(target_s *target)
 
 	/* Register appropriate RAM and Flash for the part */
 	samx7x_add_ram(target, tcm_config, priv_storage->descr.ram_size);
-	sam_add_flash(target, SAMx7x_EEFC_BASE, 0x00400000, flash_size, flash_page_size);
+	/* Only 16 page erases are valid for all sectors in the device */
+	sam_add_flash(target, SAMx7x_EEFC_BASE, 0x00400000, flash_size, flash_page_size, EFFC_FCR_FARG_16PAGE_ERASE);
 	/* Register target-specific commands */
 	target_add_commands(target, sam_cmd_list, "SAMx7x");
 
@@ -479,13 +491,19 @@ bool sam3x_probe(target_s *target)
 	case CHIPID_CIDR_ARCH_SAM4SDC | CHIPID_CIDR_EPROC_CM4:
 		target->driver = "Atmel SAM4S";
 		target_add_ram32(target, 0x20000000, 0x400000);
-		/* Smaller devices have a single bank */
+		/*
+		 * SAM4x devices support only 4 and 8 page erases on their first couple of sectors,
+		 * and all sizes after - so, use 8 page erases on these parts
+		 */
 		if (size <= 0x80000U)
-			sam_add_flash(target, SAM4S_EEFC_BASE(0), 0x400000, size, SAM_LARGE_PAGE_SIZE);
+			/* Smaller devices have a single bank */
+			sam_add_flash(target, SAM4S_EEFC_BASE(0), 0x400000, size, SAM_LARGE_PAGE_SIZE, EFFC_FCR_FARG_8PAGE_ERASE);
 		else {
 			/* Larger devices are split evenly between 2 */
-			sam_add_flash(target, SAM4S_EEFC_BASE(0), 0x400000, size / 2U, SAM_LARGE_PAGE_SIZE);
-			sam_add_flash(target, SAM4S_EEFC_BASE(1U), 0x400000 + size / 2U, size / 2U, SAM_LARGE_PAGE_SIZE);
+			sam_add_flash(
+				target, SAM4S_EEFC_BASE(0), 0x400000, size / 2U, SAM_LARGE_PAGE_SIZE, EFFC_FCR_FARG_8PAGE_ERASE);
+			sam_add_flash(target, SAM4S_EEFC_BASE(1U), 0x400000 + size / 2U, size / 2U, SAM_LARGE_PAGE_SIZE,
+				EFFC_FCR_FARG_8PAGE_ERASE);
 		}
 		target_add_commands(target, sam_cmd_list, "SAM4S");
 		return true;
@@ -532,16 +550,16 @@ static bool sam_flash_erase(target_flash_s *flash, target_addr_t addr, size_t le
 {
 	(void)len;
 	target_s *target = flash->t;
-	const uint32_t base = ((sam_flash_s *)flash)->eefc_base;
+	sam_flash_s *const sam_flash = (sam_flash_s *)flash;
 
 	/*
-	 * Devices supported through this routine use an 8 page erase size.
-	 * arg[15:2] contains the page number (aligned to the nearest 8 pages) and
-	 * arg[1:0] contains 0x1, indicating 8-page chunks.
+	 * Calculate the page base for the erase to feed into the FARG field,
+	 * and combine it with the pages per erase size determined when the Flash
+	 * was registered to form a valid erase command
 	 */
 	const uint32_t chunk = (addr - flash->start) / flash->writesize;
-	const uint16_t arg = (chunk & 0xfffcU) | 0x0001U;
-	return sam_flash_cmd(target, base, EEFC_FCR_FCMD_EPA, arg);
+	const uint16_t arg = chunk | sam_flash->erase_size;
+	return sam_flash_cmd(target, sam_flash->eefc_base, EEFC_FCR_FCMD_EPA, arg);
 }
 
 static bool sam3_flash_erase(target_flash_s *flash, target_addr_t addr, size_t len)
@@ -560,12 +578,12 @@ static bool sam3_flash_erase(target_flash_s *flash, target_addr_t addr, size_t l
 static bool sam_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t len)
 {
 	target_s *const target = flash->t;
-	sam_flash_s *const sf = (sam_flash_s *)flash;
+	sam_flash_s *const sam_flash = (sam_flash_s *)flash;
 
 	const uint32_t page = (dest - flash->start) / flash->writesize;
 
 	target_mem32_write(target, dest, src, len);
-	return sam_flash_cmd(target, sf->eefc_base, sf->write_cmd, page);
+	return sam_flash_cmd(target, sam_flash->eefc_base, sam_flash->write_cmd, page);
 }
 
 static bool sam_mass_erase(target_flash_s *const flash, platform_timeout_s *const print_progress)
