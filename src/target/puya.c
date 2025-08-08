@@ -38,6 +38,9 @@
 #include "adiv5.h"
 #include "buffer_utils.h"
 
+/* Chip IDs */
+#define ID_PY32F07X 0x06188061U
+
 /* Flash */
 #define PUYA_FLASH_START         0x08000000U
 #define PUYA_00A_FLASH_PAGE_SIZE 128U
@@ -121,7 +124,7 @@ bool puya_probe(target_s *target)
 	size_t flash_size = 0U;
 
 	const uint32_t dbg_idcode = target_mem32_read32(target, PUYA_DBG_IDCODE);
-	if (dbg_idcode == 0x06188061U) {
+	if (dbg_idcode == ID_PY32F07X) {
 		const uint32_t flash_ram_sz = target_mem32_read32(target, PUYA_07X_FLASH_RAM_SZ);
 		flash_size = (((flash_ram_sz >> PUYA_FLASH_SZ_SHIFT) & PUYA_FLASH_SZ_MASK) + 1) << PUYA_FLASH_UNIT_SHIFT;
 		ram_size = (((flash_ram_sz >> PUYA_RAM_SZ_SHIFT) & PUYA_RAM_SZ_MASK) + 1) << PUYA_RAM_UNIT_SHIFT;
@@ -150,7 +153,7 @@ bool puya_probe(target_s *target)
 	flash->length = flash_size;
 	flash->erase = puya_flash_erase;
 	flash->write = puya_flash_write;
-	if (dbg_idcode == 0x06188061U) {
+	if (dbg_idcode == ID_PY32F07X) {
 		flash->blocksize = PUYA_07X_FLASH_PAGE_SIZE;
 		flash->writesize = PUYA_07X_FLASH_PAGE_SIZE;
 		flash->prepare = puya_07x_flash_prepare;
