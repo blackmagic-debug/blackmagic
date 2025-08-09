@@ -38,7 +38,7 @@ void platform_pace_poll(void);
 #else
 void platform_init(void);
 
-inline void platform_pace_poll(void)
+static inline void platform_pace_poll(void)
 {
 }
 
