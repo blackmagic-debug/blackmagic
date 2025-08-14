@@ -315,6 +315,7 @@ target_stm = declare_dependency(
 		'stm32l0.c',
 		'stm32l4.c',
 		'stm32mp15.c',
+		'stm32u0.c',
 		'stm32wb0.c',
 	),
 	compile_args: ['-DCONFIG_STM=1'],
