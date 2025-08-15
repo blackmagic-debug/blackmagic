@@ -44,7 +44,7 @@
 #define CORTEX_CTR_ICACHE_LINE_MASK        0xfU
 #define CORTEX_CTR_DCACHE_LINE_SHIFT       16U
 #define CORTEX_CTR_DCACHE_LINE_MASK        0xfU
-#define CORTEX_CTR_ICACHE_LINE(cache_type) (1U << ((cache_type)&CORTEX_CTR_ICACHE_LINE_MASK))
+#define CORTEX_CTR_ICACHE_LINE(cache_type) (1U << ((cache_type) & CORTEX_CTR_ICACHE_LINE_MASK))
 #define CORTEX_CTR_DCACHE_LINE(cache_type) \
 	(1U << (((cache_type) >> CORTEX_CTR_DCACHE_LINE_SHIFT) & CORTEX_CTR_DCACHE_LINE_MASK))
 
