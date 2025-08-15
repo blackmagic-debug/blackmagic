@@ -100,7 +100,7 @@
 #define STM32H5_FLASH_CTRL_SECTOR_ERASE (1U << 2U)
 #define STM32H5_FLASH_CTRL_BANK_ERASE   (1U << 3U)
 #define STM32H5_FLASH_CTRL_START        (1U << 5U)
-#define STM32H5_FLASH_CTRL_SECTOR(x)    (((x)&0x7fU) << 6U)
+#define STM32H5_FLASH_CTRL_SECTOR(x)    (((x) & 0x7fU) << 6U)
 #define STM32H5_FLASH_CTRL_MASS_ERASE   (1U << 15U)
 #define STM32H5_FLASH_CTRL_BANK1        (0U << 31U)
 #define STM32H5_FLASH_CTRL_BANK2        (1U << 31U)
