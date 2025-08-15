@@ -42,8 +42,8 @@
 #define EFM32_MSC_STATUS_WDATAREADY  (1U << 3U)
 #define EFM32_MSC_STATUS_WORDTIMEOUT (1U << 4U)
 
-void __attribute__((naked))
-efm32_flash_write_stub(const uint32_t *const dest, const uint32_t *const src, uint32_t size, const uint32_t msc_addr)
+void __attribute__((naked)) efm32_flash_write_stub(
+	const uint32_t *const dest, const uint32_t *const src, uint32_t size, const uint32_t msc_addr)
 {
 	const uintptr_t msc = msc_addr;
 	EFM32_MSC_LOCK(msc) = EFM32_MSC_LOCK_LOCKKEY;
