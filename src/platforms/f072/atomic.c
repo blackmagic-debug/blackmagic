@@ -164,3 +164,25 @@ uint16_t __atomic_fetch_sub_2(volatile void *atomic_value, uint16_t add_value, i
 bool __atomic_compare_exchange_2(volatile void *atomic_value, void *expected_value, uint16_t new_value, bool weak,
 	int success_model, int failure_model) __attribute__((alias("atomic_compare_exchange_2")));
 /* NOLINTEND(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp,readability-identifier-naming) */
+
+/* GCC 14 and newer don't provide __atomic_test_and_set, so we have to here */
+#if __GNUC__ >= 14
+bool atomic_test_and_set(uint8_t *atomic_value, int swap_model)
+{
+	/* Create a model-appropriate sequence barrier to start, and begin a protected block */
+	pre_seq_barrier(swap_model);
+	const uint32_t protect_state = protect_begin(atomic_value);
+
+	/* Read out the current value of the atomic, exchange it with a truthy value */
+	const uint8_t old_value = *atomic_value;
+	*atomic_value = __GCC_ATOMIC_TEST_AND_SET_TRUEVAL;
+
+	/* Finish up with a model-appropriate sequence barrier having ended the protected block */
+	protect_end(atomic_value, protect_state);
+	post_seq_barrier(swap_model);
+	/* Return if the value was already truthy */
+	return old_value != 0U;
+}
+
+bool __atomic_test_and_set(volatile void *atomic_value, int swap_model) __attribute__((alias("atomic_test_and_set")));
+#endif
