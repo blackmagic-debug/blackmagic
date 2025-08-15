@@ -110,15 +110,15 @@
 #define RP_SSI_CTRL0_TMOD_EEPROM               (3U << 8U)
 #define RP_SSI_CTRL0_DATA_BIT_MASK             0x001f0000U
 #define RP_SSI_CTRL0_DATA_BIT_SHIFT            16U
-#define RP_SSI_CTRL0_DATA_BITS(x)              (((x)-1U) << RP_SSI_CTRL0_DATA_BIT_SHIFT)
+#define RP_SSI_CTRL0_DATA_BITS(x)              (((x) - 1U) << RP_SSI_CTRL0_DATA_BIT_SHIFT)
 #define RP_SSI_CTRL0_MASK                      (RP_SSI_CTRL0_FRF_MASK | RP_SSI_CTRL0_TMOD_MASK | RP_SSI_CTRL0_DATA_BIT_MASK)
 #define RP_SSI_ENABLE_SSI                      (1U << 0U)
 #define RP_SSI_XIP_SPI_CTRL0_FORMAT_STD_SPI    (0U << 0U)
 #define RP_SSI_XIP_SPI_CTRL0_FORMAT_SPLIT      (1U << 0U)
 #define RP_SSI_XIP_SPI_CTRL0_FORMAT_FRF        (2U << 0U)
-#define RP_SSI_XIP_SPI_CTRL0_ADDRESS_LENGTH(x) (((x)*2U) << 2U)
+#define RP_SSI_XIP_SPI_CTRL0_ADDRESS_LENGTH(x) (((x) * 2U) << 2U)
 #define RP_SSI_XIP_SPI_CTRL0_INSTR_LENGTH_8b   (2U << 8U)
-#define RP_SSI_XIP_SPI_CTRL0_WAIT_CYCLES(x)    (((x)*8U) << 11U)
+#define RP_SSI_XIP_SPI_CTRL0_WAIT_CYCLES(x)    (((x) * 8U) << 11U)
 #define RP_SSI_XIP_SPI_CTRL0_XIP_CMD_SHIFT     24U
 #define RP_SSI_XIP_SPI_CTRL0_XIP_CMD(x)        ((x) << RP_SSI_XIP_SPI_CTRL0_XIP_CMD_SHIFT)
 #define RP_SSI_XIP_SPI_CTRL0_TRANS_1C1A        (0U << 0U)

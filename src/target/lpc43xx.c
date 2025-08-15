@@ -189,7 +189,7 @@
 #define LPC43x0_SPIFI_MCMD (LPC43x0_SPIFI_BASE + 0x018U)
 #define LPC43x0_SPIFI_STAT (LPC43x0_SPIFI_BASE + 0x01cU)
 
-#define LPC43x0_SPIFI_DATA_LENGTH(x)       ((x)&0x00003fffU)
+#define LPC43x0_SPIFI_DATA_LENGTH(x)       ((x) & 0x00003fffU)
 #define LPC43x0_SPIFI_DATA_SHIFT           15U
 #define LPC43x0_SPIFI_DATA_IN              (0U << 15U)
 #define LPC43x0_SPIFI_DATA_OUT             (1U << 15U)

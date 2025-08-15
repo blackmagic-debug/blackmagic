@@ -149,8 +149,8 @@ static void rp_spi_write(const uint32_t address, const uint8_t *const src, const
 	rp_spi_flash_deselect();
 }
 
-static void __attribute__((used, section(".entry")))
-rp_flash_write(const uint32_t dest, const uint8_t *const src, const size_t length, const uint32_t page_size)
+static void __attribute__((used, section(".entry"))) rp_flash_write(
+	const uint32_t dest, const uint8_t *const src, const size_t length, const uint32_t page_size)
 {
 	for (size_t offset = 0; offset < length; offset += page_size) {
 		/* Try to write-enable the Flash */

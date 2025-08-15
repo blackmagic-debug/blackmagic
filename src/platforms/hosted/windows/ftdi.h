@@ -66,7 +66,8 @@ enum ftdi_module_detach_mode {
 #define DRIVE_OPEN_COLLECTOR 0x9eU
 /* Value Low */
 /* Value HIGH */ /*rate is 12000000/((1+value)*2) */
-#define DIV_VALUE(rate) ((rate) > 6000000U) ? 0U : ((6000000U / (rate)-1U) > 0xffffU) ? 0xffffU : (6000000U / (rate)-1U)
+#define DIV_VALUE(rate) \
+	((rate) > 6000000U) ? 0U : ((6000000U / (rate) - 1U) > 0xffffU) ? 0xffffU : (6000000U / (rate) - 1U)
 
 /* Commands in MPSSE and Host Emulation Mode */
 #define SEND_IMMEDIATE 0x87U

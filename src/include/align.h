@@ -42,10 +42,10 @@ typedef enum align {
 	ALIGN_64BIT = 3U,
 } align_e;
 
-#define ALIGN_OF(x)     (((x)&3U) == 0 ? ALIGN_32BIT : (((x)&1U) == 0 ? ALIGN_16BIT : ALIGN_8BIT))
+#define ALIGN_OF(x)     (((x) & 3U) == 0 ? ALIGN_32BIT : (((x) & 1U) == 0 ? ALIGN_16BIT : ALIGN_8BIT))
 #define MIN_ALIGN(x, y) MIN(ALIGN_OF(x), ALIGN_OF(y))
 
-#define ALIGN(x, n) (((x) + (n)-1) & ~((n)-1))
+#define ALIGN(x, n) (((x) + (n) - 1) & ~((n) - 1))
 
 #define BMD_ALIGN_DEF(x) _Alignas(x)
 

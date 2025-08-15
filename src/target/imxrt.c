@@ -155,15 +155,15 @@
 #define IMXRT_FLEXSPI1_LUT_CTRL_UNLOCK            0x00000002U
 #define IMXRT_FLEXSPI1_CTRL1_CAS_MASK             0x00007800U
 #define IMXRT_FLEXSPI1_CTRL1_CAS_SHIFT            11U
-#define IMXRT_FLEXSPI1_PRG_LENGTH(x)              ((x)&0x0000ffffU)
-#define IMXRT_FLEXSPI1_PRG_SEQ_INDEX(x)           (((x)&0xfU) << 16U)
+#define IMXRT_FLEXSPI1_PRG_LENGTH(x)              ((x) & 0x0000ffffU)
+#define IMXRT_FLEXSPI1_PRG_SEQ_INDEX(x)           (((x) & 0xfU) << 16U)
 #define IMXRT_FLEXSPI1_PRG_RUN                    0x00000001U
 #define IMXRT_FLEXSPI1_PRG_FIFO_CTRL_CLR          0x00000001U
 #define IMXRT_FLEXSPI1_PRG_FIFO_CTRL_WATERMARK(x) ((((((x) + 7U) >> 3U) - 1U) & 0xfU) << 2U)
 #define IMXRT_FLEXSPI1_PRG_WRITE_FIFO_STATUS_FILL 0x000000ffU
-#define IMXRT_FLEXSI_SLOT_OFFSET(x)               ((x)*16U)
+#define IMXRT_FLEXSI_SLOT_OFFSET(x)               ((x) * 16U)
 
-#define IMXRT_FLEXSPI_LUT_OPCODE(x)   (((x)&0x3fU) << 2U)
+#define IMXRT_FLEXSPI_LUT_OPCODE(x)   (((x) & 0x3fU) << 2U)
 #define IMXRT_FLEXSPI_LUT_MODE_SERIAL 0x0U
 #define IMXRT_FLEXSPI_LUT_MODE_DUAL   0x1U
 #define IMXRT_FLEXSPI_LUT_MODE_QUAD   0x2U

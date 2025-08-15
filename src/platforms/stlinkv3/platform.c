@@ -52,8 +52,8 @@ static uint32_t hw_version;
 #define SCB_CCSIDR_NUMSETS_SHIFT       13U                                    /*!< SCB CCSIDR: NumSets Position */
 #define SCB_CCSIDR_ASSOCIATIVITY_SHIFT 3U                                     /*!< SCB CCSIDR: Associativity Position */
 #define SCB_CCSIDR_ASSOCIATIVITY_MASK  (0x3ffUL << SCB_CCSIDR_ASSOCIATIVITY_SHIFT) /*!< SCB CCSIDR: Associativity Mask */
-#define CCSIDR_WAYS(x)                 (((x)&SCB_CCSIDR_ASSOCIATIVITY_MASK) >> SCB_CCSIDR_ASSOCIATIVITY_SHIFT)
-#define CCSIDR_SETS(x)                 (((x)&SCB_CCSIDR_NUMSETS_MASK) >> SCB_CCSIDR_NUMSETS_SHIFT)
+#define CCSIDR_WAYS(x)                 (((x) & SCB_CCSIDR_ASSOCIATIVITY_MASK) >> SCB_CCSIDR_ASSOCIATIVITY_SHIFT)
+#define CCSIDR_SETS(x)                 (((x) & SCB_CCSIDR_NUMSETS_MASK) >> SCB_CCSIDR_NUMSETS_SHIFT)
 #define SCB_DCISW_SET_SHIFT            5U                               /*!< SCB DCISW: Set Position */
 #define SCB_DCISW_SET_MASK             (0x1ffUL << SCB_DCISW_SET_SHIFT) /*!< SCB DCISW: Set Mask */
 #define SCB_DCISW_WAY_SHIFT            30U                              /*!< SCB DCISW: Way Position */
