@@ -104,7 +104,7 @@ const command_s samd_cmd_list[] = {
 #define SAMD_NVM_USER_ROW_LOW  0x00804000U
 #define SAMD_NVM_USER_ROW_HIGH 0x00804004U
 #define SAMD_NVM_CALIBRATION   0x00806020U
-#define SAMD_NVM_SERIAL(n)     (0x0080a00cU + (0x30U * (((n) + 3U) / 4U)) + ((n)*4U))
+#define SAMD_NVM_SERIAL(n)     (0x0080a00cU + (0x30U * (((n) + 3U) / 4U)) + ((n) * 4U))
 
 /* -------------------------------------------------------------------------- */
 /* Device Service Unit (DSU) Registers */
