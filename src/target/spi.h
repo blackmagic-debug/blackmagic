@@ -41,7 +41,7 @@
 #include "spi_types.h"
 
 #define SPI_FLASH_OPCODE_MASK      0x00ffU
-#define SPI_FLASH_OPCODE(x)        ((x)&SPI_FLASH_OPCODE_MASK)
+#define SPI_FLASH_OPCODE(x)        ((x) & SPI_FLASH_OPCODE_MASK)
 #define SPI_FLASH_DUMMY_MASK       0x0700U
 #define SPI_FLASH_DUMMY_SHIFT      8U
 #define SPI_FLASH_DUMMY_LEN(x)     (((x) << SPI_FLASH_DUMMY_SHIFT) & SPI_FLASH_DUMMY_MASK)
