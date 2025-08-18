@@ -29,9 +29,9 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-target_common_includes = include_directories('.')
-
 subdir('flashstub')
+
+target_common_includes = include_directories('.')
 
 target_common_sources = files(
 	'adi.c',
