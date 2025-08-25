@@ -957,7 +957,7 @@ static void cortexa_armv8_core_regs_save(target_s *const target)
 		bool success = cortexa_armv8_core_reg_read64(target, i, &priv->core_regs.x[i]);
 
 		if (!success)
-			DEBUG_ERROR("%s: Failed to read register x%lu\n", __func__, i);
+			DEBUG_ERROR("%s: Failed to read register x%" PRIu32 "\n", __func__, (uint32_t)i);
 	}
 
 	/* Save SP/PC/SPSR registers */
@@ -1614,7 +1614,7 @@ static void cortexa_armv8_config_breakpoint(
 	else if (breakwatch->size == 2)
 		control |= CORTEXA_DBG_BCR_EL1_BYTE_SELECT_LOW_HALF;
 	else {
-		DEBUG_ERROR("Invalid breakpoint size %ld\n", breakwatch->size);
+		DEBUG_ERROR("Invalid breakpoint size %" PRIu32 "\n", (uint32_t)breakwatch->size);
 		return;
 	}
 
