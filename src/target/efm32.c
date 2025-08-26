@@ -586,7 +586,7 @@ bool efm32_probe(target_s *target)
 }
 
 /* Erase flash row by row */
-static bool efm32_flash_erase(target_flash_s *flash, target_addr_t addr, size_t len)
+static bool efm32_flash_erase(target_flash_s *const flash, const target_addr_t addr, const size_t len)
 {
 	target_s *target = flash->t;
 
@@ -602,9 +602,9 @@ static bool efm32_flash_erase(target_flash_s *flash, target_addr_t addr, size_t 
 	/* Set WREN bit to enable MSC write and erase functionality */
 	target_mem32_write32(target, EFM32_MSC_WRITECTRL(msc), 1);
 
-	while (len) {
+	for (size_t offset = 0U; offset < len; offset += flash->blocksize) {
 		/* Write address of first word in row to erase it */
-		target_mem32_write32(target, EFM32_MSC_ADDRB(msc), addr);
+		target_mem32_write32(target, EFM32_MSC_ADDRB(msc), addr + offset);
 		target_mem32_write32(target, EFM32_MSC_WRITECMD(msc), EFM32_MSC_WRITECMD_LADDRIM);
 
 		/* Issue the erase command */
@@ -615,12 +615,6 @@ static bool efm32_flash_erase(target_flash_s *flash, target_addr_t addr, size_t 
 			if (target_check_error(target))
 				return false;
 		}
-
-		addr += flash->blocksize;
-		if (len > flash->blocksize)
-			len -= flash->blocksize;
-		else
-			len = 0;
 	}
 
 	return true;
