@@ -354,7 +354,7 @@ static const efm32_v2_di_pkgtype_s efm32_v2_di_pkgtypes[] = {
 	{74, "WLCSP"}, /* WLCSP package */
 	{76, "BGA"},   /* BGA package */
 	{77, "QFN"},   /* QFN package */
-	{81, "QFxP"},  /* QFP package */
+	{81, "QFP"},   /* QFP package */
 };
 
 /* tempgrade */
@@ -814,12 +814,12 @@ static bool efm32_cmd_efm_info(target_s *target, int argc, const char **argv)
 		efm32_v2_di_pkgtype_s const *pkgtype = NULL;
 		efm32_v2_di_tempgrade_s const *tempgrade;
 
-		for (size_t i = 0; i < (sizeof(efm32_v2_di_pkgtypes) / sizeof(efm32_v2_di_pkgtype_s)); i++) {
+		for (size_t i = 0; i < ARRAY_LENGTH(efm32_v2_di_pkgtypes); i++) {
 			if (efm32_v2_di_pkgtypes[i].pkgtype == miscchip.pkgtype) {
 				pkgtype = &efm32_v2_di_pkgtypes[i];
 			}
 		}
-		for (size_t i = 0; i < (sizeof(efm32_v2_di_tempgrades) / sizeof(efm32_v2_di_tempgrade_s)); i++) {
+		for (size_t i = 0; i < ARRAY_LENGTH(efm32_v2_di_tempgrades); i++) {
 			if (efm32_v2_di_tempgrades[i].tempgrade == miscchip.tempgrade) {
 				tempgrade = &efm32_v2_di_tempgrades[i];
 			}
