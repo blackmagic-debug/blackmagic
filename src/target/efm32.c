@@ -68,10 +68,7 @@ const command_s efm32_cmd_list[] = {
 	{NULL, NULL, NULL},
 };
 
-/* -------------------------------------------------------------------------- */
-/* Memory System Controller (MSC) Registers                                   */
-/* -------------------------------------------------------------------------- */
-
+/* Memory System Controller (MSC) Registers */
 #define EFM32_MSC_WRITECTRL(msc) ((msc) + 0x008U)
 #define EFM32_MSC_WRITECMD(msc)  ((msc) + 0x00cU)
 #define EFM32_MSC_ADDRB(msc)     ((msc) + 0x010U)
@@ -98,20 +95,14 @@ const command_s efm32_cmd_list[] = {
 #define EFM32_MSC_STATUS_INVADDR    (1U << 2U)
 #define EFM32_MSC_STATUS_WDATAREADY (1U << 3U)
 
-/* -------------------------------------------------------------------------- */
-/* Flash Information Area                                                      */
-/* -------------------------------------------------------------------------- */
-
+/* Flash Information Area */
 #define EFM32_INFO      UINT32_C(0x0fe00000)
 #define EFM32_USER_DATA (EFM32_INFO + 0x0000U)
 #define EFM32_LOCK_BITS (EFM32_INFO + 0x4000U)
 #define EFM32_V1_DI     (EFM32_INFO + 0x8000U)
 #define EFM32_V2_DI     (EFM32_INFO + 0x81b0U)
 
-/* -------------------------------------------------------------------------- */
-/* Lock Bits (LB)                                                             */
-/* -------------------------------------------------------------------------- */
-
+/* Lock Bits (LB) */
 #define EFM32_LOCK_BITS_DLW  (EFM32_LOCK_BITS + (4U * 127U))
 #define EFM32_LOCK_BITS_ULW  (EFM32_LOCK_BITS + (4U * 126U))
 #define EFM32_LOCK_BITS_MLW  (EFM32_LOCK_BITS + (4U * 125U))
@@ -120,10 +111,7 @@ const command_s efm32_cmd_list[] = {
 #define EFM32_CLW0_BOOTLOADER_ENABLE (1U << 1U)
 #define EFM32_CLW0_PINRESETSOFT      (1U << 2U)
 
-/* -------------------------------------------------------------------------- */
-/* Device Information (DI) Area - Version 1                                   */
-/* -------------------------------------------------------------------------- */
-
+/* Device Information (DI) Area - Version 1 */
 #define EFM32_V1_DI_CMU_LFRCOCTRL          (EFM32_V1_DI + 0x020U)
 #define EFM32_V1_DI_CMU_HFRCOCTRL          (EFM32_V1_DI + 0x028U)
 #define EFM32_V1_DI_CMU_AUXHFRCOCTRL       (EFM32_V1_DI + 0x030U)
@@ -178,13 +166,10 @@ const command_s efm32_cmd_list[] = {
 #define EFM32_V1_DI_PART_FAMILY            (EFM32_V1_DI + 0x1feU)
 #define EFM32_V1_DI_PROD_REV               (EFM32_V1_DI + 0x1ffU)
 
-/* top 24 bits of eui */
+/* Top 24 bits of EUI */
 #define EFM32_V1_DI_EUI_SILABS 0x000b57U
 
-/* -------------------------------------------------------------------------- */
-/* Device Information (DI) Area - Version 2                                   */
-/* -------------------------------------------------------------------------- */
-
+/* Device Information (DI) Area - Version 2 */
 #define EFM32_V2_DI_CAL              (EFM32_V2_DI + 0x000U) /* CRC of DI-page and calibration temperature */
 #define EFM32_V2_DI_EXTINFO          (EFM32_V2_DI + 0x020U) /* External Component description */
 #define EFM32_V2_DI_EUI48L           (EFM32_V2_DI + 0x028U) /* EUI48 OUI and Unique identifier */
@@ -258,12 +243,8 @@ const command_s efm32_cmd_list[] = {
 #define EFM32_V2_DI_OPA2CAL6         (EFM32_V2_DI + 0x1f8U) /* OPA2 Calibration Register for DRIVESTRENGTH 2, INCBW=0 */
 #define EFM32_V2_DI_OPA2CAL7         (EFM32_V2_DI + 0x1fcU) /* OPA2 Calibration Register for DRIVESTRENGTH 3, INCBW=0 */
 
-/* top 24 bits of eui */
-#define EFM32_V2_DI_EUI_ENERGYMICRO 0xd0cf5e
-
-/* -------------------------------------------------------------------------- */
-/* Constants                                                                  */
-/* -------------------------------------------------------------------------- */
+/* Top 24 bits of EUI */
+#define EFM32_V2_DI_EUI_ENERGYMICRO 0xd0cf5eU
 
 typedef struct efm32_device {
 	char *name;               /* Friendly device family name */
@@ -337,14 +318,12 @@ static const efm32_device_s efm32_devices[] = {
 	{"EFR32FG14V", 0x400e0000, 63, true, 2048, 2048, 16384, "Flex Gecko"},
 };
 
-/* miscchip */
 typedef struct efm32_v2_di_miscchip {
 	uint8_t pincount;
 	uint8_t pkgtype;
 	uint8_t tempgrade;
 } efm32_v2_di_miscchip_s;
 
-/* pkgtype */
 typedef struct efm32_v2_di_pkgtype {
 	uint8_t pkgtype;
 	char *name;
@@ -357,7 +336,6 @@ static const efm32_v2_di_pkgtype_s efm32_v2_di_pkgtypes[] = {
 	{81, "QFP"},   /* QFP package */
 };
 
-/* tempgrade */
 typedef struct efm32_v2_di_tempgrade {
 	uint8_t tempgrade;
 	char *name;
@@ -426,7 +404,7 @@ static uint16_t efm32_read_ram_size(target_s *target, uint8_t di_version)
 	}
 }
 
-/**
+/*
  * Reads the EFM32 reported flash page size in bytes.  Note: This
  * driver ignores this value and uses a conservative hard-coded
  * value. There are errata on the value reported by the EFM32
@@ -507,10 +485,6 @@ static efm32_v2_di_miscchip_s efm32_v2_read_miscchip(target_s *target, uint8_t d
 	return miscchip;
 }
 
-/* -------------------------------------------------------------------------- */
-/* Shared Functions                                                           */
-/* -------------------------------------------------------------------------- */
-
 static void efm32_add_flash(target_s *target, target_addr_t addr, size_t length, size_t page_size)
 {
 	target_flash_s *flash = calloc(1, sizeof(*flash));
@@ -546,8 +520,10 @@ static efm32_device_s const *efm32_get_device(target_s *target, uint8_t di_versi
 
 bool efm32_probe(target_s *target)
 {
-	/* Check if the OUI in the EUI is silabs or energymicro.
-	 * Use this to identify the Device Identification (DI) version */
+	/*
+	 * Check if the OUI in the EUI is SiLabs or EnergyMicro.
+	 * Use this to identify the Device Identification (DI) version
+	 */
 	uint8_t di_version;
 	const uint32_t oui24_v1 = (efm32_v1_read_eui64(target) >> 40U) & 0xffffffU;
 	const uint32_t oui24_v2 = (efm32_v2_read_eui48(target) >> 24U) & 0xffffffU;
@@ -839,7 +815,7 @@ static bool efm32_cmd_efm_info(target_s *target, int argc, const char **argv)
 	return true;
 }
 
-/**
+/*
  * Bootloader status in CLW0, if applicable.
  *
  * This is a bit in flash, so it is possible to clear it only once.
