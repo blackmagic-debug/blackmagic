@@ -1,8 +1,9 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
- * Copyright (C) 2022-2023 1BitSquared <info@1bitsquared.com>
+ * Copyright (C) 2022-2025 1BitSquared <info@1bitsquared.com>
  * Written by Sid Price <sid@sidprice.com>
+ * Modified by Rachel Mant <git@dragonmux.network>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,9 +22,6 @@
 #include "general.h"
 #include "target.h"
 #include "target_internal.h"
-
-static bool apollo_3_flash_erase(target_flash_s *flash, target_addr_t addr, size_t len);
-static bool apollo_3_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t len);
 
 #define APOLLO_3_FLASH_BASE_ADDRESS 0x00000000U
 #define APOLLO_3_FLASH_SIZE         0x00100000U
@@ -81,6 +79,9 @@ static bool apollo_3_flash_write(target_flash_s *flash, target_addr_t dest, cons
 #define APOLLO_3_VENDOR_ID_ADDRESS 0x40020010U /* Vendor ID Register */
 #define APOLLO_3_VENDOR_ID         0x414d4251U
 
+static bool apollo_3_flash_erase(target_flash_s *flash, target_addr_t addr, size_t len);
+static bool apollo_3_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t len);
+
 static void apollo_3_add_flash(target_s *target)
 {
 	target_flash_s *flash = calloc(1, sizeof(*flash));
@@ -109,7 +110,7 @@ bool apollo_3_probe(target_s *target)
 	/* Read the CHIPPN register to gather MCU details */
 	uint32_t mcu_chip_partnum = target_mem32_read32(target, APOLLO_3_CHIPPN_REGISTER);
 	/* Check the chip is an Apollo 3 */
-	if ((mcu_chip_partnum & APOLLO_3_CHIPPN_PART_NUMBER_MASK) != 0x06000000) {
+	if ((mcu_chip_partnum & APOLLO_3_CHIPPN_PART_NUMBER_MASK) != 0x06000000U) {
 		DEBUG_INFO("Invalid chip type read\n");
 		return false;
 	}
