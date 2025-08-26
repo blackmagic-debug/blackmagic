@@ -588,13 +588,13 @@ bool efm32_probe(target_s *target)
 /* Erase flash row by row */
 static bool efm32_flash_erase(target_flash_s *const flash, const target_addr_t addr, const size_t len)
 {
-	target_s *target = flash->t;
-
-	efm32_priv_s *priv_storage = (efm32_priv_s *)target->target_storage;
-	if (!priv_storage || !priv_storage->device)
+	(void)len;
+	target_s *const target = flash->t;
+	const efm32_priv_s *const priv = (const efm32_priv_s *)target->target_storage;
+	if (!priv || !priv->device)
 		return false;
 
-	uint32_t msc = priv_storage->device->msc_addr;
+	const uint32_t msc = priv->device->msc_addr;
 
 	/* Unlock */
 	target_mem32_write32(target, EFM32_MSC_LOCK(msc), EFM32_MSC_LOCK_LOCKKEY);
@@ -602,19 +602,17 @@ static bool efm32_flash_erase(target_flash_s *const flash, const target_addr_t a
 	/* Set WREN bit to enable MSC write and erase functionality */
 	target_mem32_write32(target, EFM32_MSC_WRITECTRL(msc), 1);
 
-	for (size_t offset = 0U; offset < len; offset += flash->blocksize) {
-		/* Write address of first word in row to erase it */
-		target_mem32_write32(target, EFM32_MSC_ADDRB(msc), addr + offset);
-		target_mem32_write32(target, EFM32_MSC_WRITECMD(msc), EFM32_MSC_WRITECMD_LADDRIM);
+	/* Write address of first word in row to erase it */
+	target_mem32_write32(target, EFM32_MSC_ADDRB(msc), addr);
+	target_mem32_write32(target, EFM32_MSC_WRITECMD(msc), EFM32_MSC_WRITECMD_LADDRIM);
 
-		/* Issue the erase command */
-		target_mem32_write32(target, EFM32_MSC_WRITECMD(msc), EFM32_MSC_WRITECMD_ERASEPAGE);
+	/* Issue the erase command */
+	target_mem32_write32(target, EFM32_MSC_WRITECMD(msc), EFM32_MSC_WRITECMD_ERASEPAGE);
 
-		/* Poll MSC Busy */
-		while ((target_mem32_read32(target, EFM32_MSC_STATUS(msc)) & EFM32_MSC_STATUS_BUSY)) {
-			if (target_check_error(target))
-				return false;
-		}
+	/* Poll MSC Busy */
+	while ((target_mem32_read32(target, EFM32_MSC_STATUS(msc)) & EFM32_MSC_STATUS_BUSY)) {
+		if (target_check_error(target))
+			return false;
 	}
 
 	return true;
