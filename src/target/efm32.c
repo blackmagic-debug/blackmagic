@@ -364,10 +364,10 @@ typedef struct efm32_v2_di_tempgrade {
 } efm32_v2_di_tempgrade_s;
 
 static const efm32_v2_di_tempgrade_s efm32_v2_di_tempgrades[] = {
-	{0, "-40 to 85°C"},
-	{1, "-40 to 125°C"},
-	{2, "-40 to 105°C"},
-	{3, "0 to 70°C"},
+	{0, "-40-85"},
+	{1, "-40-125"},
+	{2, "-40-105"},
+	{3, "0-70"},
 };
 
 typedef struct efm32_priv {
@@ -826,7 +826,7 @@ static bool efm32_cmd_efm_info(target_s *target, int argc, const char **argv)
 		}
 
 		tc_printf(target, "Package %s %u pins\n", pkgtype->name, miscchip.pincount);
-		tc_printf(target, "Temperature grade %s\n", tempgrade->name);
+		tc_printf(target, "Temperature grade %s°C\n", tempgrade->name);
 		tc_printf(target, "\n");
 	}
 
