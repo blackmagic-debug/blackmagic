@@ -1,8 +1,9 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
- * Copyright (C) 2023-2024 1BitSquared <info@1bitsquared.com>
+ * Copyright (C) 2023-2025 1BitSquared <info@1bitsquared.com>
  * Written by ALTracer <11005378+ALTracer@users.noreply.github.com>
+ * Modified by Rachel Mant <git@dragonmux.network>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -36,21 +37,6 @@
 #include "target_internal.h"
 #include "cortexm.h"
 #include "stm32_common.h"
-
-static bool at32f43_cmd_option(target_s *target, int argc, const char **argv);
-static bool at32f43_cmd_uid(target_s *target, int argc, const char **argv);
-
-const command_s at32f43_cmd_list[] = {
-	{"option", at32f43_cmd_option, "Manipulate option bytes"},
-	{"uid", at32f43_cmd_uid, "Print unique device ID"},
-	{NULL, NULL, NULL},
-};
-
-static bool at32f43_flash_prepare(target_flash_s *flash);
-static bool at32f43_flash_erase(target_flash_s *flash, target_addr_t addr, size_t len);
-static bool at32f43_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t len);
-static bool at32f43_flash_done(target_flash_s *flash);
-static bool at32f43_mass_erase(target_s *target, platform_timeout_s *print_progess);
 
 /* Flash memory controller register map */
 #define AT32F43x_FLASH_REG_BASE   0x40023c00U
@@ -133,6 +119,21 @@ static bool at32f43_mass_erase(target_s *target, platform_timeout_s *print_proge
 #define AT32F4x_UID_BASE   0x1ffff7e8U
 #define AT32F4x_PROJECT_ID 0x1ffff7f3U
 #define AT32F4x_FLASHSIZE  0x1ffff7e0U
+
+static bool at32f43_cmd_option(target_s *target, int argc, const char **argv);
+static bool at32f43_cmd_uid(target_s *target, int argc, const char **argv);
+
+const command_s at32f43_cmd_list[] = {
+	{"option", at32f43_cmd_option, "Manipulate option bytes"},
+	{"uid", at32f43_cmd_uid, "Print unique device ID"},
+	{NULL, NULL, NULL},
+};
+
+static bool at32f43_flash_prepare(target_flash_s *flash);
+static bool at32f43_flash_erase(target_flash_s *flash, target_addr_t addr, size_t len);
+static bool at32f43_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t len);
+static bool at32f43_flash_done(target_flash_s *flash);
+static bool at32f43_mass_erase(target_s *target, platform_timeout_s *print_progess);
 
 typedef struct at32f43_flash {
 	target_flash_s target_flash;
