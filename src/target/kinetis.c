@@ -455,15 +455,17 @@ static bool kinetis_flash_cmd_erase(target_flash_s *const flash, const target_ad
 	return kinetis_fccob_cmd(flash->t, FTFx_CMD_ERASE_SECTOR, addr, NULL, 0);
 }
 
-static bool kinetis_flash_cmd_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t len)
+static bool kinetis_flash_cmd_write(
+	target_flash_s *flash, const target_addr_t dest, const void *const src, const size_t len)
 {
 	kinetis_flash_s *const kf = (kinetis_flash_s *)flash;
+	const uint8_t *const data = (const uint8_t *)src;
 
 	/* Ensure we don't write something horrible over the security byte */
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wcast-qual"
 	if (!flash->t->unsafe_enabled && dest <= FLASH_SECURITY_BYTE_ADDRESS && dest + len > FLASH_SECURITY_BYTE_ADDRESS)
-		((uint8_t *)src)[FLASH_SECURITY_BYTE_ADDRESS - dest] = FLASH_SECURITY_BYTE_UNSECURED;
+		((uint8_t *)data)[FLASH_SECURITY_BYTE_ADDRESS - dest] = FLASH_SECURITY_BYTE_UNSECURED;
 #pragma GCC diagnostic pop
 
 	/* Determine write command based on the alignment. */
@@ -473,16 +475,10 @@ static bool kinetis_flash_cmd_write(target_flash_s *flash, target_addr_t dest, c
 	else
 		write_cmd = FTFx_CMD_PROGRAM_LONGWORD;
 
-	while (len) {
-		if (!kinetis_fccob_cmd(flash->t, write_cmd, dest, src, kf->write_len >> 2U))
+	for (size_t offset = 0U; offset < len; offset += kf->write_len) {
+		if (!kinetis_fccob_cmd(
+				flash->t, write_cmd, dest + offset, (const uint32_t *)(data + offset), kf->write_len >> 2U))
 			return false;
-
-		if (len > kf->write_len)
-			len -= kf->write_len;
-		else
-			len = 0;
-		dest += kf->write_len;
-		src = (const uint8_t *)src + kf->write_len;
 	}
 
 	return true;
