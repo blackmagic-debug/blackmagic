@@ -451,11 +451,8 @@ static bool kinetis_fccob_cmd(target_s *target, uint8_t cmd, uint32_t addr, cons
 
 static bool kinetis_flash_cmd_erase(target_flash_s *const flash, const target_addr_t addr, const size_t len)
 {
-	for (size_t offset = 0; offset < len; offset += flash->blocksize) {
-		if (!kinetis_fccob_cmd(flash->t, FTFx_CMD_ERASE_SECTOR, addr + offset, NULL, 0))
-			return false;
-	}
-	return true;
+	(void)len;
+	return kinetis_fccob_cmd(flash->t, FTFx_CMD_ERASE_SECTOR, addr, NULL, 0);
 }
 
 static bool kinetis_flash_cmd_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t len)
