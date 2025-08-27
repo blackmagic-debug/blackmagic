@@ -114,16 +114,6 @@ const command_s kinetis_cmd_list[] = {
 	{NULL, NULL, NULL},
 };
 
-static bool kinetis_cmd_unsafe(target_s *target, int argc, const char **argv)
-{
-	if (argc == 1) {
-		tc_printf(target, "Allow programming security byte: %s\n", target->unsafe_enabled ? "enabled" : "disabled");
-	} else {
-		parse_enable_or_disable(argv[1], &target->unsafe_enabled);
-	}
-	return true;
-}
-
 static bool kinetis_flash_cmd_erase(target_flash_s *flash, target_addr_t addr, size_t len);
 static bool kinetis_flash_cmd_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t len);
 static bool kinetis_flash_done(target_flash_s *flash);
@@ -533,6 +523,16 @@ static bool kinetis_flash_done(target_flash_s *const flash)
 		kinetis_fccob_cmd(flash->t, FTFx_CMD_PROGRAM_LONGWORD, FLASH_SECURITY_BYTE_ADDRESS, &val, 1);
 	}
 
+	return true;
+}
+
+static bool kinetis_cmd_unsafe(target_s *target, int argc, const char **argv)
+{
+	if (argc == 1) {
+		tc_printf(target, "Allow programming security byte: %s\n", target->unsafe_enabled ? "enabled" : "disabled");
+	} else {
+		parse_enable_or_disable(argv[1], &target->unsafe_enabled);
+	}
 	return true;
 }
 
