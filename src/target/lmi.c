@@ -35,10 +35,10 @@
 #include "target_internal.h"
 #include "cortexm.h"
 
-#define SRAM_BASE        0x20000000U
-#define STUB_BUFFER_BASE ALIGN(SRAM_BASE + sizeof(lmi_flash_write_stub), 4U)
+#define LMI_SRAM_BASE        0x20000000U
+#define LMI_STUB_BUFFER_BASE ALIGN(LMI_SRAM_BASE + sizeof(lmi_flash_write_stub), 4U)
 
-#define BLOCK_SIZE 0x400U
+#define LMI_BLOCK_SIZE 0x400U
 
 #define LMI_SCB_BASE 0x400fe000U
 #define LMI_SCB_DID0 (LMI_SCB_BASE + 0x000U)
@@ -60,12 +60,12 @@
  *  * TM4C123/LM4Fxxx: Blizzard
  *  * TM4C129:         Snowflake
  */
-#define DID0_CLASS_MASK                0x00ff0000U
-#define DID0_CLASS_STELLARIS_SANDSTORM 0x00000000U
-#define DID0_CLASS_STELLARIS_FURY      0x00010000U
-#define DID0_CLASS_STELLARIS_DUSTDEVIL 0x00030000U
-#define DID0_CLASS_TIVA_BLIZZARD       0x00050000U
-#define DID0_CLASS_TIVA_SNOWFLAKE      0x000a0000U
+#define LMI_DID0_CLASS_MASK                0x00ff0000U
+#define LMI_DID0_CLASS_STELLARIS_SANDSTORM 0x00000000U
+#define LMI_DID0_CLASS_STELLARIS_FURY      0x00010000U
+#define LMI_DID0_CLASS_STELLARIS_DUSTDEVIL 0x00030000U
+#define LMI_DID0_CLASS_TIVA_BLIZZARD       0x00050000U
+#define LMI_DID0_CLASS_TIVA_SNOWFLAKE      0x000a0000U
 
 /*
  * Format for DID1:
@@ -82,13 +82,13 @@
  *       (1:0)     Qualification status
  * These part numbers here are the upper 16-bits of DID1
  */
-#define DID1_LM3S3748      0x1049U
-#define DID1_LM3S5732      0x1096U
-#define DID1_LM3S8962      0x10a6U
-#define DID1_TM4C123GH6PM  0x10a1U
-#define DID1_TM4C1230C3PM  0x1022U
-#define DID1_TM4C1294NCPDT 0x101fU
-#define DID1_TM4C1294KCPDT 0x1034U
+#define LMI_DID1_LM3S3748      0x1049U
+#define LMI_DID1_LM3S5732      0x1096U
+#define LMI_DID1_LM3S8962      0x10a6U
+#define LMI_DID1_TM4C123GH6PM  0x10a1U
+#define LMI_DID1_TM4C1230C3PM  0x1022U
+#define LMI_DID1_TM4C1294NCPDT 0x101fU
+#define LMI_DID1_TM4C1294KCPDT 0x1034U
 
 #define LMI_FLASH_BASE 0x400fd000U
 #define LMI_FLASH_FMA  (LMI_FLASH_BASE + 0x000U)
@@ -127,12 +127,12 @@ static void lmi_add_flash(target_s *target, size_t length)
 bool lm3s_probe(target_s *const target, const uint16_t did1)
 {
 	switch (did1) {
-	case DID1_LM3S3748:
-	case DID1_LM3S5732:
+	case LMI_DID1_LM3S3748:
+	case LMI_DID1_LM3S5732:
 		target_add_ram32(target, 0x20000000U, 0x10000U);
 		lmi_add_flash(target, 0x20000U);
 		break;
-	case DID1_LM3S8962:
+	case LMI_DID1_LM3S8962:
 		target_add_ram32(target, 0x2000000U, 0x10000U);
 		lmi_add_flash(target, 0x40000U);
 		break;
@@ -146,7 +146,7 @@ bool lm3s_probe(target_s *const target, const uint16_t did1)
 bool tm4c_probe(target_s *const target, const uint16_t did1)
 {
 	switch (did1) {
-	case DID1_TM4C123GH6PM:
+	case LMI_DID1_TM4C123GH6PM:
 		target_add_ram32(target, 0x20000000, 0x10000);
 		lmi_add_flash(target, 0x80000);
 		/*
@@ -156,17 +156,17 @@ bool tm4c_probe(target_s *const target, const uint16_t did1)
 		 */
 		target->target_options |= TOPT_INHIBIT_NRST;
 		break;
-	case DID1_TM4C1230C3PM:
+	case LMI_DID1_TM4C1230C3PM:
 		target_add_ram32(target, 0x20000000, 0x6000);
 		lmi_add_flash(target, 0x10000);
 		target->target_options |= TOPT_INHIBIT_NRST;
 		break;
-	case DID1_TM4C1294KCPDT:
+	case LMI_DID1_TM4C1294KCPDT:
 		target_add_ram32(target, 0x20000000, 0x40000);
 		lmi_add_flash(target, 0x80000);
 		target->target_options |= TOPT_INHIBIT_NRST;
 		break;
-	case DID1_TM4C1294NCPDT:
+	case LMI_DID1_TM4C1294NCPDT:
 		target_add_ram32(target, 0x20000000, 0x40000);
 		lmi_add_flash(target, 0x100000);
 		target->target_options |= TOPT_INHIBIT_NRST;
@@ -184,12 +184,12 @@ bool lmi_probe(target_s *const target)
 	const uint32_t did0 = target_mem32_read32(target, LMI_SCB_DID0);
 	const uint16_t did1 = target_mem32_read32(target, LMI_SCB_DID1) >> 16U;
 
-	switch (did0 & DID0_CLASS_MASK) {
-	case DID0_CLASS_STELLARIS_FURY:
-	case DID0_CLASS_STELLARIS_DUSTDEVIL:
+	switch (did0 & LMI_DID0_CLASS_MASK) {
+	case LMI_DID0_CLASS_STELLARIS_FURY:
+	case LMI_DID0_CLASS_STELLARIS_DUSTDEVIL:
 		return lm3s_probe(target, did1);
-	case DID0_CLASS_TIVA_BLIZZARD:
-	case DID0_CLASS_TIVA_SNOWFLAKE:
+	case LMI_DID0_CLASS_TIVA_BLIZZARD:
+	case LMI_DID0_CLASS_TIVA_SNOWFLAKE:
 		return tm4c_probe(target, did1);
 	default:
 		return false;
@@ -205,7 +205,7 @@ static bool lmi_flash_erase(target_flash_s *flash, target_addr_t addr, const siz
 	platform_timeout_s timeout;
 	platform_timeout_set(&timeout, 500);
 
-	for (size_t erased = 0; erased < len; erased += BLOCK_SIZE) {
+	for (size_t erased = 0; erased < len; erased += LMI_BLOCK_SIZE) {
 		target_mem32_write32(target, LMI_FLASH_FMA, addr);
 		target_mem32_write32(target, LMI_FLASH_FMC, LMI_FLASH_FMC_WRKEY | LMI_FLASH_FMC_ERASE);
 
@@ -217,7 +217,7 @@ static bool lmi_flash_erase(target_flash_s *flash, target_addr_t addr, const siz
 		if (target_check_error(target))
 			return false;
 
-		addr += BLOCK_SIZE;
+		addr += LMI_BLOCK_SIZE;
 	}
 	return true;
 }
@@ -226,10 +226,10 @@ static bool lmi_flash_write(target_flash_s *flash, target_addr_t dest, const voi
 {
 	target_s *target = flash->t;
 	target_check_error(target);
-	target_mem32_write(target, SRAM_BASE, lmi_flash_write_stub, sizeof(lmi_flash_write_stub));
-	target_mem32_write(target, STUB_BUFFER_BASE, src, len);
+	target_mem32_write(target, LMI_SRAM_BASE, lmi_flash_write_stub, sizeof(lmi_flash_write_stub));
+	target_mem32_write(target, LMI_STUB_BUFFER_BASE, src, len);
 	if (target_check_error(target))
 		return false;
 
-	return cortexm_run_stub(target, SRAM_BASE, dest, STUB_BUFFER_BASE, len, 0) == 0;
+	return cortexm_run_stub(target, LMI_SRAM_BASE, dest, LMI_STUB_BUFFER_BASE, len, 0) == 0;
 }
