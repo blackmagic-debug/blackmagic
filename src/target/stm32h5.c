@@ -289,6 +289,8 @@ bool stm32h5_probe(target_s *const target)
 		stm32h5_add_flash(target, STM32H503_FLASH_BANK2_BASE, STM32H503_FLASH_BANK_SIZE,
 			STM32H503_SECTORS_PER_BANK | STM32H5_FLASH_CTRL_BANK2);
 		break;
+	default:
+		return false;
 	}
 
 	return true;
