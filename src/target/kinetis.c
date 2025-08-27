@@ -411,7 +411,7 @@ bool kinetis_probe(target_s *const target)
 	return true;
 }
 
-static bool kinetis_fccob_cmd(target_s *target, uint8_t cmd, uint32_t addr, const uint32_t *data, int n_items)
+static bool kinetis_fccob_cmd(target_s *target, uint8_t cmd, uint32_t addr, const uint32_t *data, uint8_t n_items)
 {
 	uint8_t fstat;
 
@@ -452,7 +452,7 @@ static bool kinetis_fccob_cmd(target_s *target, uint8_t cmd, uint32_t addr, cons
 static bool kinetis_flash_cmd_erase(target_flash_s *const flash, const target_addr_t addr, const size_t len)
 {
 	(void)len;
-	return kinetis_fccob_cmd(flash->t, FTFx_CMD_ERASE_SECTOR, addr, NULL, 0);
+	return kinetis_fccob_cmd(flash->t, FTFx_CMD_ERASE_SECTOR, addr, NULL, 0U);
 }
 
 static bool kinetis_flash_cmd_write(
@@ -502,11 +502,11 @@ static bool kinetis_flash_done(target_flash_s *const flash)
 		uint32_t vals[2] = {target_mem32_read32(flash->t, FLASH_SECURITY_BYTE_ADDRESS - 4U),
 			target_mem32_read32(flash->t, FLASH_SECURITY_BYTE_ADDRESS)};
 		vals[1] = (vals[1] & 0xffffff00U) | FLASH_SECURITY_BYTE_UNSECURED;
-		kinetis_fccob_cmd(flash->t, FTFx_CMD_PROGRAM_PHRASE, FLASH_SECURITY_BYTE_ADDRESS - 4U, vals, 2);
+		kinetis_fccob_cmd(flash->t, FTFx_CMD_PROGRAM_PHRASE, FLASH_SECURITY_BYTE_ADDRESS - 4U, vals, 2U);
 	} else {
 		uint32_t val = target_mem32_read32(flash->t, FLASH_SECURITY_BYTE_ADDRESS);
 		val = (val & 0xffffff00U) | FLASH_SECURITY_BYTE_UNSECURED;
-		kinetis_fccob_cmd(flash->t, FTFx_CMD_PROGRAM_LONGWORD, FLASH_SECURITY_BYTE_ADDRESS, &val, 1);
+		kinetis_fccob_cmd(flash->t, FTFx_CMD_PROGRAM_LONGWORD, FLASH_SECURITY_BYTE_ADDRESS, &val, 1U);
 	}
 
 	return true;
@@ -514,11 +514,10 @@ static bool kinetis_flash_done(target_flash_s *const flash)
 
 static bool kinetis_cmd_unsafe(target_s *target, int argc, const char **argv)
 {
-	if (argc == 1) {
+	if (argc == 1)
 		tc_printf(target, "Allow programming security byte: %s\n", target->unsafe_enabled ? "enabled" : "disabled");
-	} else {
+	else
 		parse_enable_or_disable(argv[1], &target->unsafe_enabled);
-	}
 	return true;
 }
 
@@ -556,20 +555,20 @@ bool kinetis_mdm_probe(adiv5_access_port_s *ap)
 		return false;
 	}
 
-	target_s *t = target_new();
-	if (!t) {
+	target_s *target = target_new();
+	if (!target) {
 		return false;
 	}
 
-	t->enter_flash_mode = target_enter_flash_mode_stub;
-	t->mass_erase = kinetis_mdm_mass_erase;
+	target->enter_flash_mode = target_enter_flash_mode_stub;
+	target->mass_erase = kinetis_mdm_mass_erase;
 	adiv5_ap_ref(ap);
-	t->priv = ap;
-	t->priv_free = (priv_free_func)adiv5_ap_unref;
+	target->priv = ap;
+	target->priv_free = (priv_free_func)adiv5_ap_unref;
 
-	t->driver = "Kinetis Recovery (MDM-AP)";
-	t->regs_size = 0;
-	target_add_commands(t, kinetis_mdm_cmd_list, t->driver);
+	target->driver = "Kinetis Recovery (MDM-AP)";
+	target->regs_size = 0;
+	target_add_commands(target, kinetis_mdm_cmd_list, target->driver);
 
 	return true;
 }
