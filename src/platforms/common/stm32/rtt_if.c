@@ -44,7 +44,7 @@ static uint32_t recv_head = 0;
 static uint32_t recv_tail = 0;
 
 /* data from host to target: number of free bytes in usb receive buffer */
-inline static uint32_t recv_bytes_free()
+inline static uint32_t recv_bytes_free(void)
 {
 	if (recv_tail <= recv_head)
 		return RTT_DOWN_BUF_SIZE - recv_head + recv_tail - 1U;
@@ -52,7 +52,7 @@ inline static uint32_t recv_bytes_free()
 }
 
 /* data from host to target: true if not enough free buffer space and we need to close flow control */
-inline static bool recv_set_nak()
+inline static bool recv_set_nak(void)
 {
 	assert(sizeof(recv_buf) > 2U * CDCACM_PACKET_SIZE);
 	return recv_bytes_free() < 2U * CDCACM_PACKET_SIZE;

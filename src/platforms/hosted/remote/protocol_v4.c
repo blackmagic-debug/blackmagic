@@ -134,7 +134,7 @@ bool remote_v4_riscv_jtag_init(riscv_dmi_s *const dmi)
 	return true;
 }
 
-uint64_t remote_v4_supported_architectures()
+uint64_t remote_v4_supported_architectures(void)
 {
 	/* Ask the probe what target architectures it supports */
 	platform_buffer_write(REMOTE_HL_ARCHS_STR, sizeof(REMOTE_HL_ARCHS_STR));
@@ -151,7 +151,7 @@ uint64_t remote_v4_supported_architectures()
 	return 0U;
 }
 
-uint64_t remote_v4_supported_families()
+uint64_t remote_v4_supported_families(void)
 {
 	/* Ask the probe what target families it supports */
 	platform_buffer_write(REMOTE_HL_FAMILIES_STR, sizeof(REMOTE_HL_FAMILIES_STR));

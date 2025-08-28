@@ -47,7 +47,7 @@
 	__attribute__((weak)) void name(adiv5_debug_port_s *const debug_port) \
 	{                                                                     \
 		lpc55_dp_prepare_nop(debug_port);                                 \
-	};
+	}
 #else
 #define CORTEXAR_PROBE_WEAK_NOP(name) \
 	extern bool name(adiv5_access_port_s *, target_addr_t) __attribute__((weak, alias("cortexar_probe_nop")));

@@ -44,7 +44,7 @@ bool remote_v4_adiv5_init(adiv5_debug_port_s *dp);
 bool remote_v4_adiv6_init(adiv5_debug_port_s *dp);
 bool remote_v4_riscv_jtag_init(riscv_dmi_s *dmi);
 
-uint64_t remote_v4_supported_architectures();
-uint64_t remote_v4_supported_families();
+uint64_t remote_v4_supported_architectures(void);
+uint64_t remote_v4_supported_families(void);
 
 #endif /*PLATFORMS_HOSTED_REMOTE_PROTOCOL_V4_H*/

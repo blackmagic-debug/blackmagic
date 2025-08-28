@@ -68,7 +68,7 @@ void mode_set_parameters(mode_led_modes_e led_mode)
 	}
 }
 
-bool mode_check_timeout()
+bool mode_check_timeout(void)
 {
 	if (--led_mode_timeout == 0) {
 		led_mode_timeout = led_mode_reset_timeout;

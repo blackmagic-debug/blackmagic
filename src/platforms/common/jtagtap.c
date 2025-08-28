@@ -96,7 +96,7 @@ static void jtagtap_reset(void)
 	jtagtap_soft_reset();
 }
 
-static bool jtagtap_next_clk_delay()
+static bool jtagtap_next_clk_delay(void)
 {
 	gpio_set(TCK_PORT, TCK_PIN);
 	for (volatile uint32_t counter = target_clk_divider; counter > 0; --counter)
@@ -108,7 +108,7 @@ static bool jtagtap_next_clk_delay()
 	return result != 0;
 }
 
-static bool jtagtap_next_no_delay()
+static bool jtagtap_next_no_delay(void)
 {
 	gpio_set(TCK_PORT, TCK_PIN);
 	const uint16_t result = gpio_get(TDO_PORT, TDO_PIN);

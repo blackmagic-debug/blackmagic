@@ -76,7 +76,7 @@ target_s *target_new(void)
 	return target;
 }
 
-target_s *target_list_get_last()
+target_s *target_list_get_last(void)
 {
 	if (!target_list)
 		return NULL;

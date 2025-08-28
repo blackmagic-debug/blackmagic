@@ -155,7 +155,7 @@ uint32_t adiv5_swd_read_no_check(const uint16_t addr)
 	return res == SWD_ACK_OK ? data : 0;
 }
 
-bool adiv5_swd_scan()
+bool adiv5_swd_scan(void)
 {
 	return adiv5_swd_scan_targetid(0);
 }

@@ -315,7 +315,7 @@ bool platform_target_get_power(void)
 	return false;
 }
 
-static inline void platform_wait_pwm_cycle()
+static inline void platform_wait_pwm_cycle(void)
 {
 	while (!timer_get_flag(TIM1, TIM_SR_UIF))
 		continue;

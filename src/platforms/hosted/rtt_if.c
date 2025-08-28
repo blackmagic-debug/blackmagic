@@ -47,7 +47,7 @@ static bool tty_saved = false;
 
 /* set up and tear down */
 
-int rtt_if_init()
+int rtt_if_init(void)
 {
 	terminal_io_state_s ttystate;
 	tcgetattr(STDIN_FILENO, &saved_ttystate);
@@ -62,7 +62,7 @@ int rtt_if_init()
 	return 0;
 }
 
-int rtt_if_exit()
+int rtt_if_exit(void)
 {
 	if (tty_saved)
 		tcsetattr(STDIN_FILENO, TCSANOW, &saved_ttystate);
@@ -106,12 +106,12 @@ bool rtt_nodata(const uint32_t channel)
 
 /* windows, output only */
 
-int rtt_if_init()
+int rtt_if_init(void)
 {
 	return 0;
 }
 
-int rtt_if_exit()
+int rtt_if_exit(void)
 {
 	return 0;
 }

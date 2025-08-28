@@ -320,7 +320,7 @@ bool bmda_jtag_init(void)
 	}
 }
 
-bool bmda_rvswd_scan()
+bool bmda_rvswd_scan(void)
 {
 	bmda_probe_info.is_jtag = false;
 

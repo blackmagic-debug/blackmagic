@@ -317,7 +317,7 @@ static bool wchlink_get_version(void)
  * Removing this function still allows the WCH-Link to work and the scan is successful
  * but it is unknown if it might required for some chips or states
  */
-static bool wchlink_after_attach_unknown()
+static bool wchlink_after_attach_unknown(void)
 {
 	DEBUG_INFO("Sending unknown WCH-Link command after attach\n");
 
@@ -327,7 +327,7 @@ static bool wchlink_after_attach_unknown()
 }
 
 /* WCH-Link attach routine, attempts to detect and attach to a connected RISC-V chip */
-bool wchlink_attach()
+bool wchlink_attach(void)
 {
 	uint8_t response[5U];
 	if (!wchlink_command_send_recv(WCH_CMD_CONTROL, WCH_CONTROL_SUBCMD_ATTACH, NULL, 0, response, sizeof(response)))

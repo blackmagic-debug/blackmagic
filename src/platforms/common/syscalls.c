@@ -126,14 +126,14 @@ __attribute__((used)) void *_sbrk(const ptrdiff_t alloc_size)
 }
 
 /* ARM EABI Personality functions for newlib-4.3.0 */
-__attribute__((weak)) void __aeabi_unwind_cpp_pr0()
+__attribute__((weak)) void __aeabi_unwind_cpp_pr0(void)
 {
 }
 
-__attribute__((weak)) void __aeabi_unwind_cpp_pr1()
+__attribute__((weak)) void __aeabi_unwind_cpp_pr1(void)
 {
 }
 
-__attribute__((weak)) void __aeabi_unwind_cpp_pr2()
+__attribute__((weak)) void __aeabi_unwind_cpp_pr2(void)
 {
 }
