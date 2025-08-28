@@ -113,6 +113,7 @@ extended_warnings = [
 	'-w24703', # Potentially uninitialized local pointer variable 'name' used
 	'-Wmissing-attributes',
 	'-Wmissing-braces',
+	'-Wnewline-eof',
 	'-Wno-char-subscripts',
 	'-Wnull-dereference',
 	# '-Wpacked',
@@ -127,6 +128,7 @@ extended_warnings = [
 	# '-Wstack-protector',
 	'-Wstrict-aliasing',
 	'-Wstrict-overflow=3',
+	'-Wstrict-prototypes',
 	'-Wstring-compare',
 	'-Wstringop-overflow',
 	'-Wunknown-pragmas', # MSVC's C4081 and it's a level 1 warning
