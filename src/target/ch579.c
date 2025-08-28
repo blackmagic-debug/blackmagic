@@ -3,6 +3,9 @@
  * This file is part of the Black Magic Debug project.
  *
  * Copyright (C) 2024 ArcaneNibble, jediminer543
+ * Copyright (C) 2025 1BitSquared <info@1bitsquared.com>
+ * Written by ArcaneNibble <rqou@berkeley.edu>
+ * Modified by Rachel Mant <git@dragonmux.network>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -33,16 +36,15 @@
 
 /*
  * This file implements support for CH579 devices, providing
- * ram and flash memory maps and Flash programming routines.
+ * memory maps and Flash programming routines.
  *
- * This may support other chips from WCH but this has not been
- * tested.
+ * This may support other chips from WCH but this has not been tested.
  *
  * References:
- * - CH579 Datasheet: https://www.wch-ic.com/downloads/CH579DS1_PDF.html
- * - Special Function Register list is found in eval board zip
- *   - Can be downloaded at: https://www.wch.cn/downloads/CH579EVT_ZIP.html
- *   - Path: EVT/EXAM/SRC/StdPeriphDriver/inc/CH579SFR.h
+ * CH579 Datasheet: https://www.wch-ic.com/downloads/CH579DS1_PDF.html
+ * Special Function Register list is found in eval board zip
+ *   Can be downloaded at: https://www.wch.cn/downloads/CH579EVT_ZIP.html
+ *   Path: EVT/EXAM/SRC/StdPeriphDriver/inc/CH579SFR.h
  */
 
 #include "general.h"
@@ -52,21 +54,15 @@
 #include "adiv5.h"
 #include "buffer_utils.h"
 
-/*
- * Memory map
- */
+/* Memory map constants */
 /* 250KB + 2KB，CodeFlash + DataFlash of FlashROM */
-#define CH579_FLASH_BASE_ADDR  0x00000000U
-#define CH579_FLASH_SIZE       0x3f000U
+#define CH579_FLASH_BASE       0x00000000U
+#define CH579_FLASH_SIZE       0x0003f000U
 #define CH579_FLASH_BLOCK_SIZE 512U
 #define CH579_FLASH_WRITE_SIZE 4U
 /* 32KB，SRAM */
 #define CH579_SRAM_BASE_ADDR 0x20000000U
 #define CH579_SRAM_SIZE      0x8000U
-
-/*
- * Registers
- */
 
 /* System Control registers */
 #define CH579_R8_CHIP_ID 0x40001041U
@@ -78,9 +74,6 @@
 #define CH579_R8_FLASH_PROTECT 0x40001809U
 #define CH579_R16_FLASH_STATUS 0x4000180aU
 
-/*
- * Constants
- */
 /* ADDR_OK */
 #define CH579_CONST_ADDR_OK 0x40U
 
@@ -91,13 +84,13 @@
 #define CH579_CONST_ROM_CMD_ERASE_INFO   0xa5U
 #define CH579_CONST_ROM_CMD_PROGRAM_INFO 0x99U
 
-/* Flash Protect base value; upper bits must be set*/
+/* Flash Protect base value; upper bits must be set */
 #define CH579_RB_ROM_WE_MUST_10 (1U << 7U)
 /* Flash Protect Bitmasks */
 #define CH579_RB_ROM_CODE_WE (1U << 3U)
 #define CH579_RB_ROM_DATA_WE (1U << 2U)
 /* Flash Protect Standard value */
-#define CH579_RB_ROM_WRITE_ENABLE  CH579_RB_ROM_WE_MUST_10 | CH579_RB_ROM_CODE_WE | CH579_RB_ROM_DATA_WE
+#define CH579_RB_ROM_WRITE_ENABLE  (CH579_RB_ROM_WE_MUST_10 | CH579_RB_ROM_CODE_WE | CH579_RB_ROM_DATA_WE)
 #define CH579_RB_ROM_WRITE_DISABLE CH579_RB_ROM_WE_MUST_10
 
 /* Flash addresses */
@@ -106,21 +99,11 @@
 #define CH579_FLASH_INFO_ADDR 0x00040000U
 
 /* Flash config address info */
-#define CH579_FLASH_CONFIG_FLAG_CFG_RESET_EN 1U << 3U
-#define CH579_FLASH_CONFIG_FLAG_CFG_DEBUG_EN 1U << 4U
-#define CH579_FLASH_CONFIG_FLAG_CFG_BOOT_EN  1U << 6U
-#define CH579_FLASH_CONFIG_FLAG_CFG_ROM_READ 1U << 7U
+#define CH579_FLASH_CONFIG_FLAG_CFG_RESET_EN (1U << 3U)
+#define CH579_FLASH_CONFIG_FLAG_CFG_DEBUG_EN (1U << 4U)
+#define CH579_FLASH_CONFIG_FLAG_CFG_BOOT_EN  (1U << 6U)
+#define CH579_FLASH_CONFIG_FLAG_CFG_ROM_READ (1U << 7U)
 
-/*
- * Flash functions
- */
-static bool ch579_flash_erase(target_flash_s *flash, target_addr_t addr, size_t len);
-static bool ch579_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t len);
-static bool ch579_flash_prepare(target_flash_s *flash);
-static bool ch579_flash_done(target_flash_s *flash);
-/*
- * Monitor functions
- */
 static bool ch579_cmd_erase_info_dangerous(target_s *target, int argc, const char **argv);
 static bool ch579_cmd_write_info_dangerous(target_s *target, int argc, const char **argv);
 static bool ch579_cmd_disable_bootloader(target_s *target, int argc, const char **argv);
@@ -132,10 +115,15 @@ const command_s ch579_cmd_list[] = {
 	{NULL, NULL, NULL},
 };
 
+static bool ch579_flash_erase(target_flash_s *flash, target_addr_t addr, size_t len);
+static bool ch579_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t len);
+static bool ch579_flash_prepare(target_flash_s *flash);
+static bool ch579_flash_done(target_flash_s *flash);
+
 bool ch579_probe(target_s *target)
 {
-	uint8_t chip_id = target_mem32_read8(target, CH579_R8_CHIP_ID);
-	if (chip_id != 0x79) {
+	const uint8_t chip_id = target_mem32_read8(target, CH579_R8_CHIP_ID);
+	if (chip_id != 0x79U) {
 		DEBUG_ERROR("Not CH579! 0x%02x\n", chip_id);
 		return false;
 	}
@@ -147,7 +135,7 @@ bool ch579_probe(target_s *target)
 		DEBUG_ERROR("calloc: failed in %s\n", __func__);
 		return false;
 	}
-	flash->start = CH579_FLASH_BASE_ADDR;
+	flash->start = CH579_FLASH_BASE;
 	flash->length = CH579_FLASH_SIZE;
 	flash->blocksize = CH579_FLASH_BLOCK_SIZE;
 	flash->writesize = CH579_FLASH_WRITE_SIZE;
@@ -218,10 +206,6 @@ static bool ch579_flash_done(target_flash_s *flash)
 	target_mem32_write8(flash->t, CH579_R8_FLASH_PROTECT, CH579_RB_ROM_WRITE_DISABLE);
 	return true;
 }
-
-/*
- *Monitor commands
- */
 
 /* Dangerous as this disables debugging; may disable bootloader; will likely lock you out of the chip */
 static bool ch579_cmd_erase_info_dangerous(target_s *target, int argc, const char **argv)
