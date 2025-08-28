@@ -24,6 +24,7 @@
 #include "jtag_scan.h"
 #include "adiv5.h"
 #include "riscv_debug.h"
+#include "icepick.h"
 #include "jtag_devs.h"
 
 const jtag_dev_descr_s dev_descr[] = {
@@ -414,13 +415,14 @@ const jtag_dev_descr_s dev_descr[] = {
 		.handler = riscv_jtag_dtm_handler,
 	},
 #endif
-#if defined(CONFIG_CORTEXAR) // && defined(ENABLE_SITARA)
+#if defined(CONFIG_CORTEXAR) && defined(ENABLE_TI_SITARA)
 	{
 		.idcode = 0x0b90002fU,
 		.idmask = 0x0ff00fffU,
 #if ENABLE_DEBUG == 1
 		.descr = "TI ICEPick.",
 #endif
+		.handler = icepick_router_handler,
 	},
 #endif
 #if ENABLE_DEBUG == 1
