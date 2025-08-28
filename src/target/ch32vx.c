@@ -3,6 +3,7 @@
  *
  * Copyright (C) 2022-2025 1BitSquared <info@1bitsquared.com>
  * Written by Rafael Silva <perigoso@riseup.net>
+ * Modified by Rachel Mant <git@dragonmux.network>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,8 +26,8 @@
 #include "target_internal.h"
 #include "buffer_utils.h"
 
-/* 
- * IDCODE register 
+/*
+ * IDCODE register
  * [31:16] - REVID
  * [15:0]  - DEVID
  */
@@ -50,22 +51,22 @@
 #define CH32VX_ESIG_UID2      0x1ffff7ecU /* Unique ID register, bits 32:63 */
 #define CH32VX_ESIG_UID3      0x1ffff7f0U /* Unique ID register, bits 64:95 */
 
-static bool ch32vx_uid_cmd(target_s *t, int argc, const char **argv);
+static bool ch32vx_uid_cmd(target_s *target, int argc, const char **argv);
 
 const command_s ch32vx_cmd_list[] = {
 	{"uid", ch32vx_uid_cmd, "Prints 96 bit unique id"},
 	{NULL, NULL, NULL},
 };
 
-static size_t ch32vx_read_flash_size(target_s *const t)
+static size_t ch32vx_read_flash_size(target_s *const target)
 {
-	return target_mem32_read16(t, CH32VX_ESIG_FLASH_CAP) * 1024U;
+	return target_mem32_read16(target, CH32VX_ESIG_FLASH_CAP) * 1024U;
 }
 
-static void ch32vx_read_uid(target_s *const t, uint8_t *const uid)
+static void ch32vx_read_uid(target_s *const target, uint8_t *const uid)
 {
 	for (size_t uid_reg_offset = 0; uid_reg_offset < 12U; uid_reg_offset += 4U)
-		write_be4(uid, uid_reg_offset, target_mem32_read32(t, CH32VX_ESIG_UID1 + uid_reg_offset));
+		write_be4(uid, uid_reg_offset, target_mem32_read32(target, CH32VX_ESIG_UID1 + uid_reg_offset));
 }
 
 bool ch32v003x_probe(target_s *const target)
@@ -86,9 +87,10 @@ bool ch32v003x_probe(target_s *const target)
 
 	target->driver = "CH32V003";
 
+#ifndef DEBUG_INFO_IS_NOOP
 	const size_t flash_size = ch32vx_read_flash_size(target);
-	DEBUG_INFO("CH32V003x flash size: %zu\n", flash_size);
-	(void)flash_size;
+	DEBUG_INFO("CH32V003x flash size: %" PRIu32 "\n", (uint32_t)flash_size);
+#endif
 
 	target->part_id = idcode;
 
@@ -135,9 +137,10 @@ bool ch32vx_probe(target_s *const target)
 		break;
 	}
 
+#ifndef DEBUG_INFO_IS_NOOP
 	const size_t flash_size = ch32vx_read_flash_size(target);
-	DEBUG_INFO("CH32Vx flash size: %zu\n", flash_size);
-	(void)flash_size;
+	DEBUG_INFO("CH32V003x flash size: %" PRIu32 "\n", (uint32_t)flash_size);
+#endif
 
 	target->part_id = idcode;
 
