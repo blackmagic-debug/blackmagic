@@ -1,7 +1,7 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
- * Copyright (C) 2023-2025 1BitSquared <info@1bitsquared.com>
+ * Copyright (C) 2025 1BitSquared <info@1bitsquared.com>
  * Written by Rachel Mant <git@dragonmux.network>
  * All rights reserved.
  *
@@ -31,40 +31,16 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "bmp_remote.h"
-#include "hex_utils.h"
+#ifndef PLATFORMS_HOSTED_REMOTE_PROTOCOL_V3_SPI_H
+#define PLATFORMS_HOSTED_REMOTE_PROTOCOL_V3_SPI_H
 
-#include "protocol_v0.h"
-#include "protocol_v1.h"
-#include "protocol_v2.h"
-#include "protocol_v3.h"
-#include "protocol_v3_adiv5.h"
-#include "protocol_v3_spi.h"
+#include <stdint.h>
+#include "spi.h"
 
-void remote_v3_init(void)
-{
-	remote_funcs = (bmp_remote_protocol_s){
-		.swd_init = remote_v0_swd_init,
-		.jtag_init = remote_v2_jtag_init,
-		.adiv5_init = remote_v3_adiv5_init,
-		.add_jtag_dev = remote_v1_add_jtag_dev,
-		.get_comms_frequency = remote_v2_get_comms_frequency,
-		.set_comms_frequency = remote_v2_set_comms_frequency,
-		.target_clk_output_enable = remote_v2_target_clk_output_enable,
-		.spi_init = remote_v3_spi_init,
-		.spi_deinit = remote_v3_spi_deinit,
-		.spi_chip_select = remote_v3_spi_chip_select,
-		.spi_xfer = remote_v3_spi_xfer,
-	};
-}
+bool remote_v3_spi_init(spi_bus_e bus);
+bool remote_v3_spi_deinit(spi_bus_e bus);
 
-bool remote_v3_adiv5_init(adiv5_debug_port_s *const dp)
-{
-	dp->low_access = remote_v3_adiv5_raw_access;
-	dp->dp_read = remote_v3_adiv5_dp_read;
-	dp->ap_read = remote_v3_adiv5_ap_read;
-	dp->ap_write = remote_v3_adiv5_ap_write;
-	dp->mem_read = remote_v3_adiv5_mem_read_bytes;
-	dp->mem_write = remote_v3_adiv5_mem_write_bytes;
-	return true;
-}
+bool remote_v3_spi_chip_select(uint8_t device_select);
+uint8_t remote_v3_spi_xfer(spi_bus_e bus, uint8_t value);
+
+#endif /*PLATFORMS_HOSTED_REMOTE_PROTOCOL_V3_SPI_H*/

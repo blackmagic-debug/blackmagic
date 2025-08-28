@@ -127,7 +127,7 @@ void target_list_free(void)
 	while (target) {
 		target_s *next_target = target->next;
 		TRY (EXCEPTION_ALL) {
-			if (target->attached)
+			if (target->attached && target->detach)
 				target->detach(target);
 		}
 		CATCH () {

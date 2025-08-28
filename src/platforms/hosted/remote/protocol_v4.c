@@ -1,7 +1,7 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
- * Copyright (C) 2024 1BitSquared <info@1bitsquared.com>
+ * Copyright (C) 2024-2025 1BitSquared <info@1bitsquared.com>
  * Written by Rachel Mant <git@dragonmux.network>
  * All rights reserved.
  *
@@ -39,6 +39,7 @@
 #include "protocol_v2.h"
 #include "protocol_v3.h"
 #include "protocol_v3_adiv5.h"
+#include "protocol_v3_spi.h"
 #include "protocol_v4.h"
 #include "protocol_v4_defs.h"
 #include "protocol_v4_adiv5.h"
@@ -68,6 +69,10 @@ bool remote_v4_init(void)
 		.get_comms_frequency = remote_v2_get_comms_frequency,
 		.set_comms_frequency = remote_v2_set_comms_frequency,
 		.target_clk_output_enable = remote_v2_target_clk_output_enable,
+		.spi_init = remote_v3_spi_init,
+		.spi_deinit = remote_v3_spi_deinit,
+		.spi_chip_select = remote_v3_spi_chip_select,
+		.spi_xfer = remote_v3_spi_xfer,
 	};
 
 	/* Now fill in acceleration-specific functions */

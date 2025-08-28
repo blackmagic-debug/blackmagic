@@ -2,7 +2,7 @@
  * This file is part of the Black Magic Debug project.
  *
  * Copyright (C) 2020-2021 Uwe Bonnes (bon@elektron.ikp.physik.tu-darmstadt.de)
- * Copyright (C) 2022-2023 1BitSquared <info@1bitsquared.com>
+ * Copyright (C) 2022-2025 1BitSquared <info@1bitsquared.com>
  * Modified by Rachel Mant <git@dragonmux.network>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -689,5 +689,53 @@ void platform_target_clk_output_enable(const bool enable)
 
 	default:
 		break;
+	}
+}
+
+bool platform_spi_init(const spi_bus_e bus)
+{
+	switch (bmda_probe_info.type) {
+	case PROBE_TYPE_BMP:
+		return remote_spi_init(bus);
+
+	default:
+		DEBUG_ERROR("SPI protocol unsupported by probe");
+		return false;
+	}
+}
+
+bool platform_spi_deinit(spi_bus_e bus)
+{
+	switch (bmda_probe_info.type) {
+	case PROBE_TYPE_BMP:
+		return remote_spi_deinit(bus);
+
+	default:
+		DEBUG_ERROR("SPI protocol unsupported by probe");
+		return false;
+	}
+}
+
+bool platform_spi_chip_select(const uint8_t device_select)
+{
+	switch (bmda_probe_info.type) {
+	case PROBE_TYPE_BMP:
+		return remote_spi_chip_select(device_select);
+
+	default:
+		DEBUG_ERROR("SPI protocol unsupported by probe");
+		return false;
+	}
+}
+
+uint8_t platform_spi_xfer(const spi_bus_e bus, const uint8_t value)
+{
+	switch (bmda_probe_info.type) {
+	case PROBE_TYPE_BMP:
+		return remote_spi_xfer(bus, value);
+
+	default:
+		DEBUG_ERROR("SPI protocol unsupported by probe");
+		return UINT8_MAX;
 	}
 }
