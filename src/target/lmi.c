@@ -100,12 +100,12 @@
 #define LMI_FLASH_FMC_COMT   (1U << 3U)
 #define LMI_FLASH_FMC_WRKEY  0xa4420000U
 
-static bool lmi_flash_erase(target_flash_s *flash, target_addr_t addr, size_t len);
-static bool lmi_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t len);
-
 static const uint16_t lmi_flash_write_stub[] = {
 #include "flashstub/lmi.stub"
 };
+
+static bool lmi_flash_erase(target_flash_s *flash, target_addr_t addr, size_t len);
+static bool lmi_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t len);
 
 static void lmi_add_flash(target_s *target, size_t length)
 {
