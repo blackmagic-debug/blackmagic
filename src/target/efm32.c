@@ -49,25 +49,6 @@
 #define SRAM_BASE        0x20000000U
 #define STUB_BUFFER_BASE ALIGN(SRAM_BASE + sizeof(efm32_flash_write_stub), 4U)
 
-static bool efm32_flash_erase(target_flash_s *flash, target_addr_t addr, size_t len);
-static bool efm32_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t len);
-static bool efm32_mass_erase(target_s *target, platform_timeout_s *print_progess);
-
-static const uint16_t efm32_flash_write_stub[] = {
-#include "flashstub/efm32.stub"
-};
-
-static bool efm32_cmd_serial(target_s *target, int argc, const char **argv);
-static bool efm32_cmd_efm_info(target_s *target, int argc, const char **argv);
-static bool efm32_cmd_bootloader(target_s *target, int argc, const char **argv);
-
-const command_s efm32_cmd_list[] = {
-	{"serial", efm32_cmd_serial, "Print unique device ID"},
-	{"efm_info", efm32_cmd_efm_info, "Prints information about the device"},
-	{"bootloader", efm32_cmd_bootloader, "Bootloader status in CLW0"},
-	{NULL, NULL, NULL},
-};
-
 /* Memory System Controller (MSC) Registers */
 #define EFM32_MSC_WRITECTRL(msc) ((msc) + 0x008U)
 #define EFM32_MSC_WRITECMD(msc)  ((msc) + 0x00cU)
@@ -353,6 +334,25 @@ typedef struct efm32_priv {
 	uint8_t di_version;
 	const efm32_device_s *device;
 } efm32_priv_s;
+
+static bool efm32_cmd_serial(target_s *target, int argc, const char **argv);
+static bool efm32_cmd_efm_info(target_s *target, int argc, const char **argv);
+static bool efm32_cmd_bootloader(target_s *target, int argc, const char **argv);
+
+const command_s efm32_cmd_list[] = {
+	{"serial", efm32_cmd_serial, "Print unique device ID"},
+	{"efm_info", efm32_cmd_efm_info, "Prints information about the device"},
+	{"bootloader", efm32_cmd_bootloader, "Bootloader status in CLW0"},
+	{NULL, NULL, NULL},
+};
+
+static const uint16_t efm32_flash_write_stub[] = {
+#include "flashstub/efm32.stub"
+};
+
+static bool efm32_flash_erase(target_flash_s *flash, target_addr_t addr, size_t len);
+static bool efm32_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t len);
+static bool efm32_mass_erase(target_s *target, platform_timeout_s *print_progess);
 
 /* Reads the EFM32 Extended Unique Identifier EUI64 (V1) */
 static uint64_t efm32_v1_read_eui64(target_s *target)
