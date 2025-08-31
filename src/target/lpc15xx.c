@@ -36,22 +36,7 @@
 
 #define LPC15XX_DEVICE_ID 0x400743f8U
 
-static bool lpc15xx_read_uid(target_s *target, int argc, const char *argv[])
-{
-	(void)argc;
-	(void)argv;
-	struct lpc_flash *flash = (struct lpc_flash *)target->flash;
-	iap_result_s result = {0};
-	if (lpc_iap_call(flash, &result, IAP_CMD_READUID))
-		return false;
-	uint8_t uid[16U] = {0};
-	memcpy(&uid, result.values, sizeof(uid));
-	tc_printf(target, "UID: 0x");
-	for (uint32_t i = 0; i < sizeof(uid); ++i)
-		tc_printf(target, "%02x", uid[i]);
-	tc_printf(target, "\n");
-	return true;
-}
+static bool lpc15xx_read_uid(target_s *target, int argc, const char **argv);
 
 const command_s lpc15xx_cmd_list[] = {
 	{"readuid", lpc15xx_read_uid, "Read out the 16-byte UID."},
@@ -95,5 +80,22 @@ bool lpc15xx_probe(target_s *t)
 	target_add_ram32(t, 0x02000000, ram_size);
 	lpc15xx_add_flash(t, 0x00000000, 0x40000, 0x1000);
 	target_add_commands(t, lpc15xx_cmd_list, "LPC15xx");
+	return true;
+}
+
+static bool lpc15xx_read_uid(target_s *target, int argc, const char **argv)
+{
+	(void)argc;
+	(void)argv;
+	struct lpc_flash *flash = (struct lpc_flash *)target->flash;
+	iap_result_s result = {0};
+	if (lpc_iap_call(flash, &result, IAP_CMD_READUID))
+		return false;
+	uint8_t uid[16U] = {0};
+	memcpy(&uid, result.values, sizeof(uid));
+	tc_printf(target, "UID: 0x");
+	for (uint32_t i = 0; i < sizeof(uid); ++i)
+		tc_printf(target, "%02x", uid[i]);
+	tc_printf(target, "\n");
 	return true;
 }
