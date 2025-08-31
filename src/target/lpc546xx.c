@@ -58,12 +58,6 @@ static bool lpc546xx_cmd_reset_attach(target_s *target, int argc, const char **a
 static bool lpc546xx_cmd_reset(target_s *target, int argc, const char **argv);
 static bool lpc546xx_cmd_write_sector(target_s *target, int argc, const char **argv);
 
-static void lpc546xx_reset_attach(target_s *target);
-static bool lpc546xx_flash_init(target_s *target);
-static bool lpc546xx_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
-static void lpc546xx_wdt_set_period(target_s *target);
-static void lpc546xx_wdt_kick(target_s *target);
-
 const command_s lpc546xx_cmd_list[] = {
 	{"erase_sector", lpc546xx_cmd_erase_sector, "Erase a sector by number"},
 	{"read_partid", lpc546xx_cmd_read_partid, "Read out the 32-bit part ID using IAP."},
@@ -76,6 +70,12 @@ const command_s lpc546xx_cmd_list[] = {
 		"Write incrementing data 8-bit values across a previously erased sector"},
 	{NULL, NULL, NULL},
 };
+
+static void lpc546xx_reset_attach(target_s *target);
+static bool lpc546xx_flash_init(target_s *target);
+static bool lpc546xx_flash_erase(target_flash_s *flash, target_addr_t addr, size_t len);
+static void lpc546xx_wdt_set_period(target_s *target);
+static void lpc546xx_wdt_kick(target_s *target);
 
 typedef struct lpc546xx_device {
 	uint32_t chipid;
