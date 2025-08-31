@@ -232,19 +232,15 @@ static bool lpc546xx_cmd_reset_attach(target_s *target, int argc, const char **a
 	return true;
 }
 
+/* XXX: Why does this command exist at all? Thsi should already be being provided by other layers before this one */
 /* Reset all major systems _except_ debug. Note that this will leave the system with the ROM bootloader mapped to 0x0 */
 static bool lpc546xx_cmd_reset(target_s *target, int argc, const char **argv)
 {
 	(void)argc;
 	(void)argv;
 
-	/* Cortex-M4 Application Interrupt and Reset Control Register */
-	static const uint32_t AIRCR = 0xe000ed0cU;
-	/* Magic value key */
-	static const uint32_t reset_val = 0x05fa0004U;
-
 	/* System reset on target */
-	target_mem32_write(target, AIRCR, &reset_val, sizeof(reset_val));
+	target_mem32_write32(target, CORTEXM_AIRCR, CORTEXM_AIRCR_VECTKEY | CORTEXM_AIRCR_SYSRESETREQ);
 	return true;
 }
 
