@@ -265,6 +265,12 @@ typedef struct lpc43x0_priv {
 static bool lpc43xx_cmd_reset(target_s *target, int argc, const char **argv);
 static bool lpc43xx_cmd_mkboot(target_s *target, int argc, const char **argv);
 
+const command_s lpc43xx_cmd_list[] = {
+	{"reset", lpc43xx_cmd_reset, "Reset target"},
+	{"mkboot", lpc43xx_cmd_mkboot, "Make flash bank bootable"},
+	{NULL, NULL, NULL},
+};
+
 static lpc43xx_partid_s lpc43x0_spi_read_partid(target_s *target);
 static bool lpc43x0_attach(target_s *target);
 static void lpc43x0_detach(target_s *target);
@@ -283,12 +289,6 @@ static bool lpc43xx_iap_flash_erase(target_flash_s *flash, target_addr_t addr, s
 static bool lpc43xx_iap_mass_erase(target_s *target, platform_timeout_s *print_progess);
 static void lpc43xx_wdt_set_period(target_s *target);
 static void lpc43xx_wdt_kick(target_s *target);
-
-const command_s lpc43xx_cmd_list[] = {
-	{"reset", lpc43xx_cmd_reset, "Reset target"},
-	{"mkboot", lpc43xx_cmd_mkboot, "Make flash bank bootable"},
-	{NULL, NULL, NULL},
-};
 
 static void lpc43xx_add_iap_flash(target_s *target, uint32_t iap_entry, uint8_t bank, uint8_t base_sector,
 	uint32_t addr, size_t len, size_t erasesize)
