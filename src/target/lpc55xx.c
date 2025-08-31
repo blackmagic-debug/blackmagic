@@ -231,7 +231,7 @@ static target_addr_t lpc55xx_get_flash_erase_address(target_s *target)
 		return 0x1300413bU; // UNTESTED: found in SDK, not referenced in UM
 
 	target_addr_t flash_table_address = lpc55xx_get_flash_table_address(target, bootloader_tree_address);
-	return target_mem32_read32(target, flash_table_address + 2 * sizeof(uint32_t));
+	return target_mem32_read32(target, flash_table_address + (2U * sizeof(uint32_t)));
 }
 
 static target_addr_t lpc55xx_get_flash_program_address(target_s *target)
@@ -242,7 +242,7 @@ static target_addr_t lpc55xx_get_flash_program_address(target_s *target)
 		return 0x1300419dU; // UNTESTED: found in SDK, not referenced in UM
 
 	target_addr_t flash_table_address = lpc55xx_get_flash_table_address(target, bootloader_tree_address);
-	return target_mem32_read32(target, flash_table_address + 3 * sizeof(uint32_t));
+	return target_mem32_read32(target, flash_table_address + (3U * sizeof(uint32_t)));
 }
 
 static target_addr_t lpc55xx_get_ffr_init_address(target_s *target)
@@ -251,8 +251,8 @@ static target_addr_t lpc55xx_get_ffr_init_address(target_s *target)
 	target_addr_t flash_table_address = lpc55xx_get_flash_table_address(target, bootloader_tree_address);
 
 	if (lpc55xx_get_rom_api_version(target, bootloader_tree_address) == 0)
-		return target_mem32_read32(target, flash_table_address + 7 * sizeof(uint32_t));
-	return target_mem32_read32(target, flash_table_address + 10 * sizeof(uint32_t));
+		return target_mem32_read32(target, flash_table_address + (7U * sizeof(uint32_t)));
+	return target_mem32_read32(target, flash_table_address + (10U * sizeof(uint32_t)));
 }
 
 static target_addr_t lpc55xx_get_ffr_get_uuid_address(target_s *target)
@@ -261,8 +261,8 @@ static target_addr_t lpc55xx_get_ffr_get_uuid_address(target_s *target)
 	target_addr_t flash_table_address = lpc55xx_get_flash_table_address(target, bootloader_tree_address);
 
 	if (lpc55xx_get_rom_api_version(target, bootloader_tree_address) == 0)
-		return target_mem32_read32(target, flash_table_address + 10 * sizeof(uint32_t));
-	return target_mem32_read32(target, flash_table_address + 13 * sizeof(uint32_t));
+		return target_mem32_read32(target, flash_table_address + (10U * sizeof(uint32_t)));
+	return target_mem32_read32(target, flash_table_address + (13U * sizeof(uint32_t)));
 }
 
 static lpc55xx_iap_status_e iap_call_raw(target_s *target, lpc55xx_iap_cmd_e cmd, uint32_t r1, uint32_t r2, uint32_t r3)
@@ -420,14 +420,12 @@ static bool lpc55xx_enter_flash_mode(target_s *target)
 	// put it back into a known state. Unfortunately target_reset hangs for this
 	// target and I'm not sure why, so the below is a viable workaround for now.
 
-	const uint32_t reg_pc_value = LPC55xx_CODE_PATCH_ADDRESS | 1;
+	const uint32_t reg_pc_value = LPC55xx_CODE_PATCH_ADDRESS | 1U;
 
 	// Execute a small binary patch which just disables interrupts and then hits
 	// a breakpoint, to allow the flash IAP calls to run undisturbed. This patch
 	// consists of the instructions CPSID I; BKPT; in ARM Thumb encoding.
-	const uint32_t CODE_PATCH = 0xbe00b672U;
-
-	target_mem32_write32(target, LPC55xx_CODE_PATCH_ADDRESS, CODE_PATCH);
+	target_mem32_write32(target, LPC55xx_CODE_PATCH_ADDRESS, 0xbe00b672U);
 	target_reg_write(target, CORTEX_REG_PC, &reg_pc_value, sizeof(uint32_t));
 
 	target_halt_resume(target, false);
