@@ -51,18 +51,18 @@
 
 #define IAP_PGM_CHUNKSIZE 4096U
 
-static bool lpc546xx_cmd_erase_sector(target_s *t, int argc, const char **argv);
-static bool lpc546xx_cmd_read_partid(target_s *t, int argc, const char **argv);
-static bool lpc546xx_cmd_read_uid(target_s *t, int argc, const char **argv);
-static bool lpc546xx_cmd_reset_attach(target_s *t, int argc, const char **argv);
-static bool lpc546xx_cmd_reset(target_s *t, int argc, const char **argv);
-static bool lpc546xx_cmd_write_sector(target_s *t, int argc, const char **argv);
+static bool lpc546xx_cmd_erase_sector(target_s *target, int argc, const char **argv);
+static bool lpc546xx_cmd_read_partid(target_s *target, int argc, const char **argv);
+static bool lpc546xx_cmd_read_uid(target_s *target, int argc, const char **argv);
+static bool lpc546xx_cmd_reset_attach(target_s *target, int argc, const char **argv);
+static bool lpc546xx_cmd_reset(target_s *target, int argc, const char **argv);
+static bool lpc546xx_cmd_write_sector(target_s *target, int argc, const char **argv);
 
-static void lpc546xx_reset_attach(target_s *t);
-static bool lpc546xx_flash_init(target_s *t);
+static void lpc546xx_reset_attach(target_s *target);
+static bool lpc546xx_flash_init(target_s *target);
 static bool lpc546xx_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
-static void lpc546xx_wdt_set_period(target_s *t);
-static void lpc546xx_wdt_kick(target_s *t);
+static void lpc546xx_wdt_set_period(target_s *target);
+static void lpc546xx_wdt_kick(target_s *target);
 
 const command_s lpc546xx_cmd_list[] = {
 	{"erase_sector", lpc546xx_cmd_erase_sector, "Erase a sector by number"},
@@ -131,9 +131,9 @@ static void lpc546xx_add_flash(
 	flash->wdt_kick = lpc546xx_wdt_kick;
 }
 
-bool lpc546xx_probe(target_s *t)
+bool lpc546xx_probe(target_s *target)
 {
-	const uint32_t chipid = target_mem32_read32(t, LPC546XX_CHIPID);
+	const uint32_t chipid = target_mem32_read32(target, LPC546XX_CHIPID);
 	uint32_t flash_size = 0;
 	uint32_t sram123_size = 0;
 
@@ -143,7 +143,7 @@ bool lpc546xx_probe(target_s *t)
 		return false;
 
 	flash_size = device->flash_kbytes * 1024U;
-	t->driver = device->designator;
+	target->driver = device->designator;
 	/*
 	 * All parts have 64kB SRAM0 (and 32kB SRAMX)
 	 * J256 parts only have 32kB SRAM1
@@ -151,22 +151,22 @@ bool lpc546xx_probe(target_s *t)
 	 */
 	sram123_size = device->sram123_kbytes * 1024U;
 
-	lpc546xx_add_flash(t, IAP_ENTRYPOINT_LOCATION, 0, 0x0, flash_size, 0x8000);
+	lpc546xx_add_flash(target, IAP_ENTRYPOINT_LOCATION, 0, 0x0, flash_size, 0x8000);
 
 	/*
 	 * Note: upper 96kiB is only usable after enabling the appropriate control
 	 * register bits, see LPC546xx User Manual: §7.5.19 AHB Clock Control register 0
 	 */
 	const uint32_t sram0_size = 64U * 1024U;
-	target_add_ram32(t, 0x20000000, sram0_size);
-	target_add_ram32(t, 0x20010000, sram123_size);
-	target_add_ram32(t, 0x04000000, 0x8000U); /* SRAMX */
-	target_add_commands(t, lpc546xx_cmd_list, "LPC546xx");
-	t->target_options |= TOPT_INHIBIT_NRST;
+	target_add_ram32(target, 0x20000000, sram0_size);
+	target_add_ram32(target, 0x20010000, sram123_size);
+	target_add_ram32(target, 0x04000000, 0x8000U); /* SRAMX */
+	target_add_commands(target, lpc546xx_cmd_list, "LPC546xx");
+	target->target_options |= TOPT_INHIBIT_NRST;
 	return true;
 }
 
-static void lpc546xx_reset_attach(target_s *t)
+static void lpc546xx_reset_attach(target_s *target)
 {
 	/*
 	 * To reset the LPC546xx into a usable state, we need to reset and let it
@@ -175,19 +175,19 @@ static void lpc546xx_reset_attach(target_s *t)
 	 * and reading memory from sector 0 will return the contents of the ROM
 	 * bootloader, not the flash
 	 */
-	target_reset(t);
-	target_halt_resume(t, false);
-	cortexm_attach(t);
+	target_reset(target);
+	target_halt_resume(target, false);
+	cortexm_attach(target);
 }
 
-static bool lpc546xx_cmd_erase_sector(target_s *t, int argc, const char **argv)
+static bool lpc546xx_cmd_erase_sector(target_s *target, int argc, const char **argv)
 {
-	tc_printf(t, "This command is deprecated in favor of erase_range and may be removed in the future\n");
+	tc_printf(target, "This command is deprecated in favor of erase_range and may be removed in the future\n");
 
 	if (argc > 1) {
 		uint32_t sector_addr = strtoul(argv[1], NULL, 0);
-		sector_addr *= t->flash->blocksize;
-		return target_flash_erase(t, sector_addr, 1U);
+		sector_addr *= target->flash->blocksize;
+		return target_flash_erase(target, sector_addr, 1U);
 	}
 	return true;
 }
@@ -222,18 +222,18 @@ static bool lpc546xx_cmd_read_uid(target_s *target, int argc, const char **argv)
 }
 
 /* Reset everything, including debug; single step past the ROM bootloader so the system is in a sane state */
-static bool lpc546xx_cmd_reset_attach(target_s *t, int argc, const char **argv)
+static bool lpc546xx_cmd_reset_attach(target_s *target, int argc, const char **argv)
 {
 	(void)argc;
 	(void)argv;
 
-	lpc546xx_reset_attach(t);
+	lpc546xx_reset_attach(target);
 
 	return true;
 }
 
 /* Reset all major systems _except_ debug. Note that this will leave the system with the ROM bootloader mapped to 0x0 */
-static bool lpc546xx_cmd_reset(target_s *t, int argc, const char **argv)
+static bool lpc546xx_cmd_reset(target_s *target, int argc, const char **argv)
 {
 	(void)argc;
 	(void)argv;
@@ -244,18 +244,18 @@ static bool lpc546xx_cmd_reset(target_s *t, int argc, const char **argv)
 	static const uint32_t reset_val = 0x05fa0004U;
 
 	/* System reset on target */
-	target_mem32_write(t, AIRCR, &reset_val, sizeof(reset_val));
+	target_mem32_write(target, AIRCR, &reset_val, sizeof(reset_val));
 	return true;
 }
 
-static bool lpc546xx_cmd_write_sector(target_s *t, int argc, const char **argv)
+static bool lpc546xx_cmd_write_sector(target_s *target, int argc, const char **argv)
 {
 	if (argc > 1) {
-		const uint32_t sector_size = t->flash->blocksize;
+		const uint32_t sector_size = target->flash->blocksize;
 		uint32_t sector_addr = strtoul(argv[1], NULL, 0);
 		sector_addr *= sector_size;
 
-		if (!lpc546xx_flash_erase(t->flash, sector_addr, 1U))
+		if (!lpc546xx_flash_erase(target->flash, sector_addr, 1U))
 			return false;
 
 		uint8_t *buf = calloc(1, sector_size);
@@ -266,14 +266,14 @@ static bool lpc546xx_cmd_write_sector(target_s *t, int argc, const char **argv)
 		for (uint32_t i = 0; i < sector_size; i++)
 			buf[i] = i & 0xffU;
 
-		const bool result = lpc_flash_write_magic_vect(t->flash, sector_addr, buf, sector_size);
+		const bool result = lpc_flash_write_magic_vect(target->flash, sector_addr, buf, sector_size);
 		free(buf);
 		return result;
 	}
 	return true;
 }
 
-static bool lpc546xx_flash_init(target_s *t)
+static bool lpc546xx_flash_init(target_s *target)
 {
 	/*
 	 * Reset the chip. It's unfortunate but we need to make sure the ROM
@@ -282,43 +282,43 @@ static bool lpc546xx_flash_init(target_s *t)
 	 * main clock frequency during its own operation, so we need to force
 	 * it back to the 12MHz FRO to guarantee correct flash timing for the IAP API
 	 */
-	lpc546xx_reset_attach(t);
+	lpc546xx_reset_attach(target);
 
 	/* Deal with WDT */
-	lpc546xx_wdt_set_period(t);
+	lpc546xx_wdt_set_period(target);
 
-	target_mem32_write32(t, LPC546XX_MAINCLKSELA, 0);  // 12MHz FRO
-	target_mem32_write32(t, LPC546XX_MAINCLKSELB, 0);  // Use MAINCLKSELA
-	target_mem32_write32(t, LPC546XX_AHBCLKDIV, 0);    // Divide by 1
-	target_mem32_write32(t, LPC546XX_FLASHCFG, 0x1aU); // Recommended default
+	target_mem32_write32(target, LPC546XX_MAINCLKSELA, 0);  // 12MHz FRO
+	target_mem32_write32(target, LPC546XX_MAINCLKSELB, 0);  // Use MAINCLKSELA
+	target_mem32_write32(target, LPC546XX_AHBCLKDIV, 0);    // Divide by 1
+	target_mem32_write32(target, LPC546XX_FLASHCFG, 0x1aU); // Recommended default
 	return true;
 }
 
-static bool lpc546xx_flash_erase(target_flash_s *tf, target_addr_t addr, size_t len)
+static bool lpc546xx_flash_erase(target_flash_s *flash, target_addr_t addr, size_t len)
 {
-	if (!lpc546xx_flash_init(tf->t))
+	if (!lpc546xx_flash_init(flash->t))
 		return false;
-	return lpc_flash_erase(tf, addr, len);
+	return lpc_flash_erase(flash, addr, len);
 }
 
-static void lpc546xx_wdt_set_period(target_s *t)
+static void lpc546xx_wdt_set_period(target_s *target)
 {
 	/* Check if WDT is on */
-	uint32_t wdt_mode = target_mem32_read32(t, LPC546XX_WDT_MODE);
+	uint32_t wdt_mode = target_mem32_read32(target, LPC546XX_WDT_MODE);
 
 	/* If WDT on, we can't disable it, but we may be able to set a long period */
 	if (wdt_mode && !(wdt_mode & LPC546XX_WDT_PROTECT))
-		target_mem32_write32(t, LPC546XX_WDT_CNT, LPC546XX_WDT_PERIOD_MAX);
+		target_mem32_write32(target, LPC546XX_WDT_CNT, LPC546XX_WDT_PERIOD_MAX);
 }
 
-static void lpc546xx_wdt_kick(target_s *t)
+static void lpc546xx_wdt_kick(target_s *target)
 {
 	/* Check if WDT is on */
-	uint32_t wdt_mode = target_mem32_read32(t, LPC546XX_WDT_MODE);
+	uint32_t wdt_mode = target_mem32_read32(target, LPC546XX_WDT_MODE);
 
 	/* If WDT on, poke it to reset it */
 	if (wdt_mode) {
-		target_mem32_write32(t, LPC546XX_WDT_FEED, 0xaa);
-		target_mem32_write32(t, LPC546XX_WDT_FEED, 0xff);
+		target_mem32_write32(target, LPC546XX_WDT_FEED, 0xaa);
+		target_mem32_write32(target, LPC546XX_WDT_FEED, 0xff);
 	}
 }
