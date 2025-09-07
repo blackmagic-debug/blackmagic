@@ -254,11 +254,8 @@ static bool msp432_sector_erase(target_flash_s *flash, target_addr_t addr)
 /* Erase from addr for len bytes */
 static bool msp432_flash_erase(target_flash_s *const flash, const target_addr_t addr, const size_t len)
 {
-	bool ret = true;
-	for (size_t offset = 0; offset < len; offset += flash->blocksize) {
-		ret &= msp432_sector_erase(flash, addr + offset);
-	}
-	return ret;
+	(void)len;
+	return msp432_sector_erase(flash, addr);
 }
 
 /* Program flash */
