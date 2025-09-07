@@ -142,6 +142,31 @@ typedef enum lpc55xx_iap_status {
 	IAP_STATUS_FLASH_FFR_BANK_IS_LOCKED = 141,
 } lpc55xx_iap_status_e;
 
+typedef struct lpc55xx_flash_config {
+	uint32_t flash_block_base;
+	uint32_t flash_total_size;
+	uint32_t flash_block_count;
+	uint32_t flash_page_size;
+	uint32_t flash_sector_size;
+
+	uint32_t reserved0[5];
+	uint32_t sys_freq_mhz;
+	uint32_t reserved1[4];
+} lpc55xx_flash_config_s;
+
+static bool lpc55xx_read_uid(target_s *target, int argc, const char **argv);
+
+static const command_s lpc55xx_cmd_list[] = {
+	{"readuid", lpc55xx_read_uid, "Read out the 16-byte UID."},
+	{NULL, NULL, NULL},
+};
+
+static bool lpc55xx_flash_init(target_s *target, lpc55xx_flash_config_s *config);
+static bool lpc55xx_enter_flash_mode(target_s *target);
+static bool lpc55xx_flash_prepare(target_flash_s *flash);
+static bool lpc55xx_flash_erase(target_flash_s *flash, target_addr_t addr, size_t len);
+static bool lpc55xx_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t len);
+
 static target_addr_t lpc55xx_get_bootloader_tree_address(target_s *target)
 {
 	switch (target_mem32_read32(target, LPC55xx_CHIPID_ADDRESS)) {
@@ -318,17 +343,112 @@ static lpc55xx_iap_status_e iap_call_raw(target_s *target, lpc55xx_iap_cmd_e cmd
 	return (lpc55xx_iap_status_e)regs[0];
 }
 
-typedef struct lpc55xx_flash_config {
-	uint32_t flash_block_base;
-	uint32_t flash_total_size;
-	uint32_t flash_block_count;
-	uint32_t flash_page_size;
-	uint32_t flash_sector_size;
+static target_flash_s *lpc55xx_add_flash(target_s *target)
+{
+	target_flash_s *flash = calloc(1, sizeof(*flash));
+	if (!flash) { /* calloc failed: heap exhaustion */
+		DEBUG_ERROR("calloc: failed in %s\n", __func__);
+		return NULL;
+	}
 
-	uint32_t reserved0[5];
-	uint32_t sys_freq_mhz;
-	uint32_t reserved1[4];
-} lpc55xx_flash_config_s;
+	lpc55xx_flash_config_s config;
+	if (!lpc55xx_flash_init(target, &config)) {
+		free(flash);
+		return NULL;
+	}
+
+	DEBUG_INFO("LPC55xx: Detected flash with %" PRIu32 " bytes, %" PRIu32 "-byte pages\n", config.flash_total_size,
+		config.flash_page_size);
+
+	target->enter_flash_mode = lpc55xx_enter_flash_mode;
+
+	flash->blocksize = LPC55xx_ERASE_SIZE;
+	flash->writesize = LPC55xx_WRITE_SIZE;
+
+	/* all flash operations must be aligned to the flash page size */
+	/* flash sectors are defined by NXP as the erase block size */
+
+	if (flash->blocksize < config.flash_sector_size)
+		flash->blocksize = config.flash_sector_size;
+
+	if (flash->writesize < config.flash_page_size)
+		flash->writesize = config.flash_page_size;
+
+	flash->start = LPC55xx_FLASH_BASE;
+	flash->length = config.flash_total_size;
+	flash->prepare = lpc55xx_flash_prepare;
+	flash->erase = lpc55xx_flash_erase;
+	flash->write = lpc55xx_flash_write;
+	flash->erased = 0xff;
+
+	target_add_flash(target, flash);
+
+	return flash;
+}
+
+bool lpc55xx_probe(target_s *const target)
+{
+	const adiv5_access_port_s *const ap = cortex_ap(target);
+	if (ap->apsel == 1)
+		return false;
+
+	const uint32_t chipid = target_mem32_read32(target, LPC55xx_CHIPID_ADDRESS);
+	DEBUG_WARN("Chip ID: %08" PRIx32 "\n", chipid);
+
+	target->target_options |= TOPT_INHIBIT_NRST;
+	target->driver = lpc55xx_get_device_name(chipid);
+
+	switch (chipid) {
+	case LPC5502_CHIPID:
+	case LPC5512_CHIPID:
+		target_add_ram32(target, 0x04000000U, 0x4000U); // SRAM_X
+		target_add_ram32(target, 0x20000000U, 0x8000U); // SRAM_0
+		break;
+	case LPC5504_CHIPID:
+	case LPC55S04_CHIPID:
+	case LPC5514_CHIPID:
+	case LPC55S14_CHIPID:
+		target_add_ram32(target, 0x04000000U, 0x4000U); // SRAM_X
+		target_add_ram32(target, 0x20000000U, 0x8000U); // SRAM_0
+		target_add_ram32(target, 0x20008000U, 0x4000U); // SRAM_1
+		target_add_ram32(target, 0x2000c000U, 0x4000U); // SRAM_2
+		break;
+	case LPC5506_CHIPID:
+	case LPC55S06_CHIPID:
+	case LPC5516_CHIPID:
+	case LPC55S16_CHIPID:
+	case LPC55S69_CHIPID:
+		target_add_ram32(target, 0x04000000U, 0x4000U); // SRAM_X
+		target_add_ram32(target, 0x20000000U, 0x8000U); // SRAM_0
+		target_add_ram32(target, 0x20008000U, 0x4000U); // SRAM_1
+		target_add_ram32(target, 0x2000c000U, 0x4000U); // SRAM_2
+		target_add_ram32(target, 0x20010000U, 0x4000U); // SRAM_3
+		break;
+	case MCXN947_CHIPID:
+		target_add_ram32(target, 0x04000000U, 0x18000U); // SRAM_X
+		target_add_ram32(target, 0x20000000U, 0x8000);   // SRAM_A
+		target_add_ram32(target, 0x20008000U, 0x8000);   // SRAM_B
+		target_add_ram32(target, 0x20010000U, 0x10000);  // SRAM_C
+		target_add_ram32(target, 0x20020000U, 0x10000);  // SRAM_D
+		target_add_ram32(target, 0x20030000U, 0x10000);  // SRAM_E
+		target_add_ram32(target, 0x20040000U, 0x10000);  // SRAM_F
+		target_add_ram32(target, 0x20050000U, 0x10000);  // SRAM_G
+		target_add_ram32(target, 0x20060000U, 0x8000);   // SRAM_H
+		break;
+	default:
+		// TODO: not enough testing to enable other devices
+		DEBUG_WARN("LPC55xx: add support for this device!");
+		return false;
+	}
+
+	// If we got here, we're happy enough about the device
+	// to go ahead and start Flash detection and IAP calls
+
+	lpc55xx_add_flash(target);
+	target_add_commands(target, lpc55xx_cmd_list, "LPC55xx");
+
+	return true;
+}
 
 static void lpc55xx_prepare_flash_config(target_s *target, target_addr_t address)
 {
@@ -469,50 +589,7 @@ static bool lpc55xx_flash_write(target_flash_s *flash, target_addr_t dest, const
 	return status == IAP_STATUS_FLASH_SUCCESS;
 }
 
-static target_flash_s *lpc55xx_add_flash(target_s *target)
-{
-	target_flash_s *flash = calloc(1, sizeof(*flash));
-	if (!flash) { /* calloc failed: heap exhaustion */
-		DEBUG_ERROR("calloc: failed in %s\n", __func__);
-		return NULL;
-	}
-
-	lpc55xx_flash_config_s config;
-	if (!lpc55xx_flash_init(target, &config)) {
-		free(flash);
-		return NULL;
-	}
-
-	DEBUG_INFO("LPC55xx: Detected flash with %" PRIu32 " bytes, %" PRIu32 "-byte pages\n", config.flash_total_size,
-		config.flash_page_size);
-
-	target->enter_flash_mode = lpc55xx_enter_flash_mode;
-
-	flash->blocksize = LPC55xx_ERASE_SIZE;
-	flash->writesize = LPC55xx_WRITE_SIZE;
-
-	/* all flash operations must be aligned to the flash page size */
-	/* flash sectors are defined by NXP as the erase block size */
-
-	if (flash->blocksize < config.flash_sector_size)
-		flash->blocksize = config.flash_sector_size;
-
-	if (flash->writesize < config.flash_page_size)
-		flash->writesize = config.flash_page_size;
-
-	flash->start = LPC55xx_FLASH_BASE;
-	flash->length = config.flash_total_size;
-	flash->prepare = lpc55xx_flash_prepare;
-	flash->erase = lpc55xx_flash_erase;
-	flash->write = lpc55xx_flash_write;
-	flash->erased = 0xff;
-
-	target_add_flash(target, flash);
-
-	return flash;
-}
-
-static bool lpc55xx_read_uid(target_s *target, int argc, const char *argv[])
+static bool lpc55xx_read_uid(target_s *target, int argc, const char **argv)
 {
 	(void)argc;
 	(void)argv;
@@ -528,11 +605,6 @@ static bool lpc55xx_read_uid(target_s *target, int argc, const char *argv[])
 
 	return true;
 }
-
-static const command_s lpc55xx_cmd_list[] = {
-	{"readuid", lpc55xx_read_uid, "Read out the 16-byte UID."},
-	{NULL, NULL, NULL},
-};
 
 static bool lpc55_dmap_cmd(adiv5_access_port_s *ap, uint32_t cmd);
 static bool lpc55_dmap_mass_erase(target_s *target, platform_timeout_s *print_progess);
@@ -566,70 +638,6 @@ void lpc55_dp_prepare(adiv5_debug_port_s *const dp)
 		lpc55_dmap_cmd(&ap, LPC55_DMAP_START_DEBUG_SESSION);
 	}
 	/* At this point we assume that we've got access to the debug mailbox and can continue normally. */
-}
-
-bool lpc55xx_probe(target_s *const target)
-{
-	const adiv5_access_port_s *const ap = cortex_ap(target);
-	if (ap->apsel == 1)
-		return false;
-
-	const uint32_t chipid = target_mem32_read32(target, LPC55xx_CHIPID_ADDRESS);
-	DEBUG_WARN("Chip ID: %08" PRIx32 "\n", chipid);
-
-	target->target_options |= TOPT_INHIBIT_NRST;
-	target->driver = lpc55xx_get_device_name(chipid);
-
-	switch (chipid) {
-	case LPC5502_CHIPID:
-	case LPC5512_CHIPID:
-		target_add_ram32(target, 0x04000000U, 0x4000U); // SRAM_X
-		target_add_ram32(target, 0x20000000U, 0x8000U); // SRAM_0
-		break;
-	case LPC5504_CHIPID:
-	case LPC55S04_CHIPID:
-	case LPC5514_CHIPID:
-	case LPC55S14_CHIPID:
-		target_add_ram32(target, 0x04000000U, 0x4000U); // SRAM_X
-		target_add_ram32(target, 0x20000000U, 0x8000U); // SRAM_0
-		target_add_ram32(target, 0x20008000U, 0x4000U); // SRAM_1
-		target_add_ram32(target, 0x2000c000U, 0x4000U); // SRAM_2
-		break;
-	case LPC5506_CHIPID:
-	case LPC55S06_CHIPID:
-	case LPC5516_CHIPID:
-	case LPC55S16_CHIPID:
-	case LPC55S69_CHIPID:
-		target_add_ram32(target, 0x04000000U, 0x4000U); // SRAM_X
-		target_add_ram32(target, 0x20000000U, 0x8000U); // SRAM_0
-		target_add_ram32(target, 0x20008000U, 0x4000U); // SRAM_1
-		target_add_ram32(target, 0x2000c000U, 0x4000U); // SRAM_2
-		target_add_ram32(target, 0x20010000U, 0x4000U); // SRAM_3
-		break;
-	case MCXN947_CHIPID:
-		target_add_ram32(target, 0x04000000U, 0x18000U); // SRAM_X
-		target_add_ram32(target, 0x20000000U, 0x8000);   // SRAM_A
-		target_add_ram32(target, 0x20008000U, 0x8000);   // SRAM_B
-		target_add_ram32(target, 0x20010000U, 0x10000);  // SRAM_C
-		target_add_ram32(target, 0x20020000U, 0x10000);  // SRAM_D
-		target_add_ram32(target, 0x20030000U, 0x10000);  // SRAM_E
-		target_add_ram32(target, 0x20040000U, 0x10000);  // SRAM_F
-		target_add_ram32(target, 0x20050000U, 0x10000);  // SRAM_G
-		target_add_ram32(target, 0x20060000U, 0x8000);   // SRAM_H
-		break;
-	default:
-		// TODO: not enough testing to enable other devices
-		DEBUG_WARN("LPC55xx: add support for this device!");
-		return false;
-	}
-
-	// If we got here, we're happy enough about the device
-	// to go ahead and start Flash detection and IAP calls
-
-	lpc55xx_add_flash(target);
-	target_add_commands(target, lpc55xx_cmd_list, "LPC55xx");
-
-	return true;
 }
 
 bool lpc55_dmap_probe(adiv5_access_port_s *ap)
