@@ -238,13 +238,13 @@ static bool msp432_sector_erase(target_flash_s *flash, target_addr_t addr)
 	target_regs_read(target, regs);
 	regs[0] = addr; // Address of sector to erase in R0
 
-	DEBUG_INFO("Erasing sector at 0x%08" PRIX32 "\n", addr);
+	DEBUG_TARGET("Erasing sector at 0x%08" PRIX32 "\n", addr);
 
 	/* Call ROM */
 	msp432_call_rom(target, mf->flash_erase_sector_fn, regs);
 
 	// Result value in R0 is true for success
-	DEBUG_INFO("ROM return value: %" PRIu32 "\n", regs[0]);
+	DEBUG_TARGET("ROM return value: %" PRIu32 "\n", regs[0]);
 
 	/* Restore original protection */
 	target_mem32_write32(target, mf->flash_protect_register, old_prot);
@@ -290,14 +290,14 @@ static bool msp432_flash_write(target_flash_s *flash, target_addr_t dest, const 
 	regs[1] = dest;              // Flash address to be write to in R1
 	regs[2] = len;               // Size of buffer to be flashed in R2
 
-	DEBUG_INFO("Writing 0x%04" PRIX32 " bytes at 0x%08zu\n", dest, len);
+	DEBUG_TARGET("Writing 0x%04" PRIX32 " bytes at 0x%08" PRIx32 "\n", dest, (uint32_t)len);
 	/* Call ROM */
 	msp432_call_rom(target, mf->flash_program_fn, regs);
 
 	/* Restore original protection */
 	target_mem32_write32(target, mf->flash_protect_register, old_prot);
 
-	DEBUG_INFO("ROM return value: %" PRIu32 "\n", regs[0]);
+	DEBUG_TARGET("ROM return value: %" PRIu32 "\n", regs[0]);
 
 	// Result value in R0 is true for success
 	return regs[0] != 0;
@@ -312,7 +312,7 @@ static bool msp432_cmd_erase_main(target_s *target, int argc, const char **argv)
 	/* Usually, this is not wanted, so go sector by sector...        */
 
 	uint32_t banksize = target_mem32_read32(target, SYS_FLASH_SIZE) / 2U;
-	DEBUG_INFO("Bank Size: 0x%08" PRIX32 "\n", banksize);
+	DEBUG_TARGET("Bank Size: 0x%08" PRIX32 "\n", banksize);
 
 	bool result = true;
 
