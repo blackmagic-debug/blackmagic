@@ -88,7 +88,7 @@ bool lpc40xx_probe(target_s *target)
 		return false;
 
 	/*
-	 * Now that we're sure it's a Cortex-M3, we need to halt the
+	 * Now that we're sure it's a Cortex-M4F, we need to halt the
 	 * target and make an IAP call to get the part number.
 	 * There appears to have no other method of reading the part number.
 	 */
@@ -126,20 +126,22 @@ bool lpc40xx_probe(target_s *target)
 	case 0x47193f47U: /* LPC4078 */
 	case 0x47191f43U: /* LPC4076 */
 	case 0x47011132U: /* LPC4074 */
-		target->driver = "LPC40xx";
-		target->extended_reset = lpc40xx_extended_reset;
-		target->mass_erase = lpc40xx_mass_erase;
-		target->enter_flash_mode = lpc40xx_enter_flash_mode;
-		target->exit_flash_mode = lpc40xx_exit_flash_mode;
-		target_add_ram32(target, 0x10000000U, 0x10000U);
-		target_add_ram32(target, 0x2007c000U, 0x4000U);
-		target_add_ram32(target, 0x20080000U, 0x4000U);
-		lpc40xx_add_flash(target, 0x00000000U, 0x10000U, 0x1000U, 0);
-		lpc40xx_add_flash(target, 0x00010000U, 0x70000U, 0x8000U, 16);
-		return true;
+		break;
+	default:
+		return false;
 	}
 
-	return false;
+	target->driver = "LPC40xx";
+	target->extended_reset = lpc40xx_extended_reset;
+	target->mass_erase = lpc40xx_mass_erase;
+	target->enter_flash_mode = lpc40xx_enter_flash_mode;
+	target->exit_flash_mode = lpc40xx_exit_flash_mode;
+	target_add_ram32(target, 0x10000000U, 0x10000U);
+	target_add_ram32(target, 0x2007c000U, 0x4000U);
+	target_add_ram32(target, 0x20080000U, 0x4000U);
+	lpc40xx_add_flash(target, 0x00000000U, 0x10000U, 0x1000U, 0);
+	lpc40xx_add_flash(target, 0x00010000U, 0x70000U, 0x8000U, 16);
+	return true;
 }
 
 static bool lpc40xx_enter_flash_mode(target_s *const target)
