@@ -1,10 +1,12 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
- * Copyright (C) 2015  Black Sphere Technologies Ltd.
+ * Copyright (C) 2015 Black Sphere Technologies Ltd.
+ * Copyright (C) 2018 newbrain
+ * Copyright (C) 2023-2025 1BitSquared <info@1bitsquared.com>
  * Written by Gareth McMullin <gareth@blacksphere.co.nz>
- *
- * Copyright (C) 2018  newbrain
+ * Modified by newbrain
+ * Modified by Rachel Mant <git@dragonmux.network>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -113,14 +115,6 @@
 /* Length in 16bit words of flash commands */
 static const uint8_t cmd_lens[] = {4, 1, 2, 3, 6, 0, 6, 6, 1, 2, 2, 1, 5, 3, 3};
 
-/* Flash routines */
-static bool ke04_command(target_s *target, uint8_t cmd, uint32_t addr, const void *data);
-static bool ke04_flash_erase(target_flash_s *flash, target_addr_t addr, size_t len);
-static bool ke04_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t len);
-static bool ke04_flash_done(target_flash_s *flash);
-static bool ke04_mass_erase(target_s *target, platform_timeout_s *print_progess);
-
-/* Target specific commands */
 static bool kinetis_cmd_unsafe(target_s *target, int argc, const char **argv);
 static bool ke04_cmd_sector_erase(target_s *target, int argc, const char **argv);
 
@@ -130,37 +124,10 @@ const command_s ke_cmd_list[] = {
 	{NULL, NULL, NULL},
 };
 
-static bool ke04_cmd_sector_erase(target_s *target, int argc, const char **argv)
-{
-	if (argc < 2)
-		tc_printf(target, "usage: monitor sector_erase <addr>\n");
-
-	target_flash_s *flash = target->flash;
-	char *eos = NULL;
-	uint32_t addr = strtoul(argv[1], &eos, 0);
-
-	/* Check that addr is a valid number and inside the flash range */
-	if ((eos && eos[0] != '\0') || addr < flash->start || addr >= flash->start + flash->length) {
-		/* Address not in range */
-		tc_printf(target, "Invalid sector address\n");
-		return false;
-	}
-
-	/* Erase and verify the given sector */
-	ke04_command(target, CMD_ERASE_FLASH_SECTOR, addr, NULL);
-	/* Adjust security byte if needed */
-	ke04_flash_done(flash);
-	return true;
-}
-
-static bool kinetis_cmd_unsafe(target_s *target, int argc, const char **argv)
-{
-	if (argc == 1)
-		tc_printf(target, "Allow programming security byte: %s\n", target->unsafe_enabled ? "enabled" : "disabled");
-	else
-		parse_enable_or_disable(argv[1], &target->unsafe_enabled);
-	return true;
-}
+static bool ke04_flash_erase(target_flash_s *flash, target_addr_t addr, size_t len);
+static bool ke04_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t len);
+static bool ke04_flash_done(target_flash_s *flash);
+static bool ke04_mass_erase(target_s *target, platform_timeout_s *print_progess);
 
 bool ke04_probe(target_s *target)
 {
@@ -239,18 +206,6 @@ bool ke04_probe(target_s *target)
 	return true;
 }
 
-static bool ke04_mass_erase(target_s *const target, platform_timeout_s *const print_progess)
-{
-	(void)print_progess;
-	/* FIXME: looks like this might make sense as a flash->mass erase routine */
-
-	/* Erase and verify the whole flash */
-	ke04_command(target, CMD_ERASE_ALL_BLOCKS, 0, NULL);
-	/* Adjust security byte if needed */
-	ke04_flash_done(target->flash);
-	return true;
-}
-
 static bool ke04_wait_complete(target_s *target)
 {
 	uint8_t fstat = 0;
@@ -324,6 +279,20 @@ static bool ke04_command(target_s *target, uint8_t cmd, uint32_t addr, const voi
 	return true;
 }
 
+static bool ke04_flash_done(target_flash_s *flash)
+{
+	target_s *target = flash->t;
+	if (target->unsafe_enabled ||
+		target_mem32_read8(target, FLASH_SECURITY_BYTE_ADDRESS) == FLASH_SECURITY_BYTE_UNSECURED)
+		return true;
+
+	/* Load the security byte from its field */
+	/* Note: Cumulative programming is not allowed according to the RM */
+	uint32_t vals[2] = {target_mem32_read32(target, FLASH_SECURITY_WORD_ADDRESS), 0};
+	vals[0] = (vals[0] & 0xff00ffffU) | (FLASH_SECURITY_BYTE_UNSECURED << 16U);
+	return ke04_command(target, CMD_PROGRAM_FLASH_32, FLASH_SECURITY_WORD_ADDRESS, &vals);
+}
+
 static bool ke04_flash_erase(target_flash_s *const flash, const target_addr_t addr, const size_t len)
 {
 	for (size_t offset = 0; offset < len; offset += flash->blocksize) {
@@ -351,16 +320,46 @@ static bool ke04_flash_write(target_flash_s *flash, target_addr_t dest, const vo
 	return true;
 }
 
-static bool ke04_flash_done(target_flash_s *flash)
+static bool ke04_mass_erase(target_s *const target, platform_timeout_s *const print_progess)
 {
-	target_s *target = flash->t;
-	if (target->unsafe_enabled ||
-		target_mem32_read8(target, FLASH_SECURITY_BYTE_ADDRESS) == FLASH_SECURITY_BYTE_UNSECURED)
-		return true;
+	(void)print_progess;
+	/* FIXME: looks like this might make sense as a flash->mass erase routine */
 
-	/* Load the security byte from its field */
-	/* Note: Cumulative programming is not allowed according to the RM */
-	uint32_t vals[2] = {target_mem32_read32(target, FLASH_SECURITY_WORD_ADDRESS), 0};
-	vals[0] = (vals[0] & 0xff00ffffU) | (FLASH_SECURITY_BYTE_UNSECURED << 16U);
-	return ke04_command(target, CMD_PROGRAM_FLASH_32, FLASH_SECURITY_WORD_ADDRESS, &vals);
+	/* Erase and verify the whole flash */
+	ke04_command(target, CMD_ERASE_ALL_BLOCKS, 0, NULL);
+	/* Adjust security byte if needed */
+	ke04_flash_done(target->flash);
+	return true;
+}
+
+static bool ke04_cmd_sector_erase(target_s *target, int argc, const char **argv)
+{
+	if (argc < 2)
+		tc_printf(target, "usage: monitor sector_erase <addr>\n");
+
+	target_flash_s *flash = target->flash;
+	char *eos = NULL;
+	uint32_t addr = strtoul(argv[1], &eos, 0);
+
+	/* Check that addr is a valid number and inside the flash range */
+	if ((eos && eos[0] != '\0') || addr < flash->start || addr >= flash->start + flash->length) {
+		/* Address not in range */
+		tc_printf(target, "Invalid sector address\n");
+		return false;
+	}
+
+	/* Erase and verify the given sector */
+	ke04_command(target, CMD_ERASE_FLASH_SECTOR, addr, NULL);
+	/* Adjust security byte if needed */
+	ke04_flash_done(flash);
+	return true;
+}
+
+static bool kinetis_cmd_unsafe(target_s *target, int argc, const char **argv)
+{
+	if (argc == 1)
+		tc_printf(target, "Allow programming security byte: %s\n", target->unsafe_enabled ? "enabled" : "disabled");
+	else
+		parse_enable_or_disable(argv[1], &target->unsafe_enabled);
+	return true;
 }
