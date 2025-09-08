@@ -286,8 +286,10 @@ bool gd32f1_probe(target_s *target)
 	switch (device_id) {
 	case 0x414U: /* GD32F30x_HD, High density */
 	case 0x430U: /* GD32F30x_XD, XL-density */
-		target->driver = "GD32F3";
+		target->driver = "GD32F3 HD/XD";
 		block_size = 0x800;
+		/* On this SoC, Cortex-M4F allows SRAM access without halting */
+		target->target_options |= TOPT_NON_HALTING_MEM_IO;
 		break;
 	case 0x418U: /* Connectivity Line */
 		target->driver = "GD32F2";
@@ -297,14 +299,19 @@ bool gd32f1_probe(target_s *target)
 		if ((target->cpuid & CORTEX_CPUID_PARTNO_MASK) == CORTEX_M23)
 			target->driver = "GD32E230"; /* GD32E230, 64 KiB max in 1 KiB pages */
 		else if ((target->cpuid & CORTEX_CPUID_PARTNO_MASK) == CORTEX_M4) {
-			target->driver = "GD32F3";
+			target->driver = "GD32F3 MD";
 			block_size = 0x800;
-		} else
+		} else {
 			target->driver = "GD32F1"; /* GD32F103, 1 KiB pages */
+			/* On this SoC, Cortex-M3 allows SRAM access without halting */
+			target->target_options |= TOPT_NON_HALTING_MEM_IO;
+		}
 		break;
 	case 0x444U: /* GD32E50x_CL, 512 KiB max in 8 KiB pages */
 		target->driver = "GD32E5";
 		block_size = 0x2000;
+		/* On this SoC, Cortex-M33 allows SRAM access without halting */
+		target->target_options |= TOPT_NON_HALTING_MEM_IO;
 		break;
 	default:
 		return false;
@@ -494,6 +501,8 @@ static bool at32f403a_407_detect(target_s *target, const uint16_t part_id)
 	}
 	// All parts have 96 KiB SRAM
 	target_add_ram32(target, STM32F1_SRAM_BASE, 96U * 1024U);
+	/* On AT32F403A/F407 SoC, Cortex-M4F allows SRAM access without halting */
+	target->target_options |= TOPT_NON_HALTING_MEM_IO;
 	target->driver = "AT32F403A/407";
 	target->part_id = part_id;
 	target->target_options |= STM32F1_TOPT_32BIT_WRITES;
@@ -1007,6 +1016,9 @@ bool stm32f1_probe(target_s *target)
 	target_add_ram32(target, STM32F1_SRAM_BASE, ram_size);
 	stm32f1_add_flash(target, STM32F1_FLASH_BANK1_BASE, flash_size, block_size);
 	target_add_commands(target, stm32f1_cmd_list, target->driver);
+
+	/* On STM32F1 (F3, F0) SoC, Cortex-M3 (M4F, M0) allows SRAM access without halting */
+	target->target_options |= TOPT_NON_HALTING_MEM_IO;
 
 	/* Now we have a stable debug environment, make sure the WDTs + WFI and WFE instructions can't cause problems */
 	return stm32f1_configure_dbgmcu(target, dbgmcu_config_taddr);

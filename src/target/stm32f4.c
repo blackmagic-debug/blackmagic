@@ -486,6 +486,10 @@ static bool stm32f4_attach(target_s *const target)
 		}
 	}
 
+	/* On STM32F4 SoC, Cortex-M4F allows SRAM access without halting */
+	if (!is_f7 && target->part_id != ID_STM32F20X)
+		target->target_options |= TOPT_NON_HALTING_MEM_IO;
+
 	/* Now we have a base RAM map, rebuild the Flash map */
 	uint8_t split = 0;
 	uint32_t bank_length;
