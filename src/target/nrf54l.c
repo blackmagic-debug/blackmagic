@@ -33,6 +33,11 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+/*
+ * This file implements support for nRF54L series devices, providing
+ * memory maps and Flash programming routines.
+ */
+
 #include "general.h"
 #include "target.h"
 #include "target_internal.h"
