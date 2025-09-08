@@ -114,15 +114,15 @@
 static const uint8_t cmd_lens[] = {4, 1, 2, 3, 6, 0, 6, 6, 1, 2, 2, 1, 5, 3, 3};
 
 /* Flash routines */
-static bool ke04_command(target_s *t, uint8_t cmd, uint32_t addr, const void *data);
-static bool ke04_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
-static bool ke04_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
-static bool ke04_flash_done(target_flash_s *f);
-static bool ke04_mass_erase(target_s *t, platform_timeout_s *print_progess);
+static bool ke04_command(target_s *target, uint8_t cmd, uint32_t addr, const void *data);
+static bool ke04_flash_erase(target_flash_s *flash, target_addr_t addr, size_t len);
+static bool ke04_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t len);
+static bool ke04_flash_done(target_flash_s *flash);
+static bool ke04_mass_erase(target_s *target, platform_timeout_s *print_progess);
 
 /* Target specific commands */
-static bool kinetis_cmd_unsafe(target_s *t, int argc, const char **argv);
-static bool ke04_cmd_sector_erase(target_s *t, int argc, const char **argv);
+static bool kinetis_cmd_unsafe(target_s *target, int argc, const char **argv);
+static bool ke04_cmd_sector_erase(target_s *target, int argc, const char **argv);
 
 const command_s ke_cmd_list[] = {
 	{"unsafe", kinetis_cmd_unsafe, "Allow programming security byte (enable|disable)"},
@@ -130,42 +130,42 @@ const command_s ke_cmd_list[] = {
 	{NULL, NULL, NULL},
 };
 
-static bool ke04_cmd_sector_erase(target_s *t, int argc, const char **argv)
+static bool ke04_cmd_sector_erase(target_s *target, int argc, const char **argv)
 {
 	if (argc < 2)
-		tc_printf(t, "usage: monitor sector_erase <addr>\n");
+		tc_printf(target, "usage: monitor sector_erase <addr>\n");
 
-	target_flash_s *f = t->flash;
+	target_flash_s *flash = target->flash;
 	char *eos = NULL;
 	uint32_t addr = strtoul(argv[1], &eos, 0);
 
 	/* Check that addr is a valid number and inside the flash range */
-	if ((eos && eos[0] != '\0') || addr < f->start || addr >= f->start + f->length) {
+	if ((eos && eos[0] != '\0') || addr < flash->start || addr >= flash->start + flash->length) {
 		/* Address not in range */
-		tc_printf(t, "Invalid sector address\n");
+		tc_printf(target, "Invalid sector address\n");
 		return false;
 	}
 
 	/* Erase and verify the given sector */
-	ke04_command(t, CMD_ERASE_FLASH_SECTOR, addr, NULL);
+	ke04_command(target, CMD_ERASE_FLASH_SECTOR, addr, NULL);
 	/* Adjust security byte if needed */
-	ke04_flash_done(f);
+	ke04_flash_done(flash);
 	return true;
 }
 
-static bool kinetis_cmd_unsafe(target_s *t, int argc, const char **argv)
+static bool kinetis_cmd_unsafe(target_s *target, int argc, const char **argv)
 {
 	if (argc == 1)
-		tc_printf(t, "Allow programming security byte: %s\n", t->unsafe_enabled ? "enabled" : "disabled");
+		tc_printf(target, "Allow programming security byte: %s\n", target->unsafe_enabled ? "enabled" : "disabled");
 	else
-		parse_enable_or_disable(argv[1], &t->unsafe_enabled);
+		parse_enable_or_disable(argv[1], &target->unsafe_enabled);
 	return true;
 }
 
-bool ke04_probe(target_s *t)
+bool ke04_probe(target_s *target)
 {
 	/* Read the higher 16bits of System Reset Status and ID Register */
-	const uint16_t srsid = target_mem32_read32(t, SIM_SRSID) >> 16U;
+	const uint16_t srsid = target_mem32_read32(target, SIM_SRSID) >> 16U;
 
 	/* Is this a Kinetis KE04 family MCU? */
 	if ((srsid & SRSID_KE04_MASK) != SRSID_KE04_FAMILY)
@@ -180,7 +180,7 @@ bool ke04_probe(target_s *t)
 	case SRSID_PIN_20:
 	case SRSID_PIN_24:
 		/* We have a KE04Z8 */
-		t->driver = "Kinetis KE04Z8Vxxxx";
+		target->driver = "Kinetis KE04Z8Vxxxx";
 		flashsize = 0x2000U; /* 8 kilobytes */
 		ramsize = 0x400U;    /* 1 kilobyte  */
 		break;
@@ -191,15 +191,15 @@ bool ke04_probe(target_s *t)
 	case SRSID_PIN_80: {
 		/* We have either a KE04Z64 or 128 */
 		/* Try to read a flash address not available in a Z64 */
-		volatile uint32_t BMD_UNUSED dummy = target_mem32_read32(t, 0x00010000U);
-		if (target_check_error(t)) {
+		volatile uint32_t BMD_UNUSED dummy = target_mem32_read32(target, 0x00010000U);
+		if (target_check_error(target)) {
 			/* Read failed: we have a 64 */
-			t->driver = "Kinetis KE04Z64Vxxxx";
+			target->driver = "Kinetis KE04Z64Vxxxx";
 			flashsize = 0x10000U; /* 64 kilobytes */
 			ramsize = 0x2000U;    /*  8 kilobytes */
 		} else {
 			/* Read succeeded: we have a 128 */
-			t->driver = "Kinetis KE04Z128Vxxxx";
+			target->driver = "Kinetis KE04Z128Vxxxx";
 			flashsize = 0x20000U; /* 128 kilobytes */
 			ramsize = 0x4000U;    /*  16 kilobytes */
 		}
@@ -211,72 +211,72 @@ bool ke04_probe(target_s *t)
 		return false;
 	}
 
-	t->mass_erase = ke04_mass_erase;
+	target->mass_erase = ke04_mass_erase;
 	/* Add low (1/4) and high (3/4) RAM */
-	ramsize /= 4U;                                         /* Amount before RAM_BASE_ADDR */
-	target_add_ram32(t, RAM_BASE_ADDR - ramsize, ramsize); /* Lower RAM  */
-	ramsize *= 3U;                                         /* Amount after RAM_BASE_ADDR  */
-	target_add_ram32(t, RAM_BASE_ADDR, ramsize);           /* Higher RAM */
+	ramsize /= 4U;                                              /* Amount before RAM_BASE_ADDR */
+	target_add_ram32(target, RAM_BASE_ADDR - ramsize, ramsize); /* Lower RAM  */
+	ramsize *= 3U;                                              /* Amount after RAM_BASE_ADDR  */
+	target_add_ram32(target, RAM_BASE_ADDR, ramsize);           /* Higher RAM */
 
 	/* Add flash, all KE04 have same write and erase size */
-	target_flash_s *f = calloc(1, sizeof(*f));
-	if (!f) { /* calloc failed: heap exhaustion */
+	target_flash_s *flash = calloc(1, sizeof(*flash));
+	if (!flash) { /* calloc failed: heap exhaustion */
 		DEBUG_ERROR("calloc: failed in %s\n", __func__);
 		return false;
 	}
 
-	f->start = FLASH_BASE_ADDR;
-	f->length = flashsize;
-	f->blocksize = KE04_SECTOR_SIZE;
-	f->erase = ke04_flash_erase;
-	f->write = ke04_flash_write;
-	f->done = ke04_flash_done;
-	f->erased = 0xffU;
-	target_add_flash(t, f);
+	flash->start = FLASH_BASE_ADDR;
+	flash->length = flashsize;
+	flash->blocksize = KE04_SECTOR_SIZE;
+	flash->erase = ke04_flash_erase;
+	flash->write = ke04_flash_write;
+	flash->done = ke04_flash_done;
+	flash->erased = 0xffU;
+	target_add_flash(target, flash);
 
 	/* Add target specific commands */
-	target_add_commands(t, ke_cmd_list, t->driver);
+	target_add_commands(target, ke_cmd_list, target->driver);
 	return true;
 }
 
-static bool ke04_mass_erase(target_s *const t, platform_timeout_s *const print_progess)
+static bool ke04_mass_erase(target_s *const target, platform_timeout_s *const print_progess)
 {
 	(void)print_progess;
 	/* FIXME: looks like this might make sense as a flash->mass erase routine */
 
 	/* Erase and verify the whole flash */
-	ke04_command(t, CMD_ERASE_ALL_BLOCKS, 0, NULL);
+	ke04_command(target, CMD_ERASE_ALL_BLOCKS, 0, NULL);
 	/* Adjust security byte if needed */
-	ke04_flash_done(t->flash);
+	ke04_flash_done(target->flash);
 	return true;
 }
 
-static bool ke04_wait_complete(target_s *t)
+static bool ke04_wait_complete(target_s *target)
 {
 	uint8_t fstat = 0;
 	/* Wait for CCIF to be high */
 	while (!(fstat & FTMRE_FSTAT_CCIF)) {
-		fstat = target_mem32_read8(t, FTMRE_FSTAT);
-		if (target_check_error(t))
+		fstat = target_mem32_read8(target, FTMRE_FSTAT);
+		if (target_check_error(target))
 			return false;
 	}
 	return true;
 }
 
-static bool ke04_command(target_s *t, uint8_t cmd, uint32_t addr, const void *const data)
+static bool ke04_command(target_s *target, uint8_t cmd, uint32_t addr, const void *const data)
 {
 	/* Set FCLKDIV to 0x17 for 24MHz (default at reset) */
-	uint8_t fclkdiv = target_mem32_read8(t, FTMRE_FCLKDIV);
+	uint8_t fclkdiv = target_mem32_read8(target, FTMRE_FCLKDIV);
 	if ((fclkdiv & 0x1fU) != 0x17U) {
-		if (!ke04_wait_complete(t))
+		if (!ke04_wait_complete(target))
 			return false;
 		/* Write correct value */
-		target_mem32_write8(t, FTMRE_FCLKDIV, 0x17U);
+		target_mem32_write8(target, FTMRE_FCLKDIV, 0x17U);
 	}
 
 	/* clear errors unconditionally, so we can start a new operation */
-	target_mem32_write8(t, FTMRE_FSTAT, FTMRE_FSTAT_ACCERR | FTMRE_FSTAT_FPVIOL);
-	if (!ke04_wait_complete(t))
+	target_mem32_write8(target, FTMRE_FSTAT, FTMRE_FSTAT_ACCERR | FTMRE_FSTAT_FPVIOL);
+	if (!ke04_wait_complete(target))
 		return false;
 
 	/* Write the flash command and the needed parameters */
@@ -289,31 +289,31 @@ static bool ke04_command(target_s *t, uint8_t cmd, uint32_t addr, const void *co
 		cmd = CMD_PROGRAM_FLASH;
 	const uint16_t fccob_cmd = (cmd << 8U) | (addr >> 16U);
 	/* Write command to FCCOB array */
-	target_mem32_write8(t, FTMRE_FCCOBIX, fccob_idx++);
-	target_mem32_write16(t, FTMRE_FCCOB, fccob_cmd);
+	target_mem32_write8(target, FTMRE_FCCOBIX, fccob_idx++);
+	target_mem32_write16(target, FTMRE_FCCOB, fccob_cmd);
 
 	/* Write first argument (low partof address) */
 	if (cmd_len >= 1) {
-		target_mem32_write8(t, FTMRE_FCCOBIX, fccob_idx++);
-		target_mem32_write16(t, FTMRE_FCCOB, addr & 0xffffU);
+		target_mem32_write8(target, FTMRE_FCCOBIX, fccob_idx++);
+		target_mem32_write16(target, FTMRE_FCCOB, addr & 0xffffU);
 	}
 
 	/* Write one or two 32 bit words of data */
 	const uint16_t *const cmd_data = (const uint16_t *)data;
 	for (uint8_t offset = 0; fccob_idx < cmd_len; ++fccob_idx, ++offset) {
-		target_mem32_write8(t, FTMRE_FCCOBIX, fccob_idx);
-		target_mem32_write16(t, FTMRE_FCCOB, cmd_data[offset]);
+		target_mem32_write8(target, FTMRE_FCCOBIX, fccob_idx);
+		target_mem32_write16(target, FTMRE_FCCOB, cmd_data[offset]);
 	}
 
 	/* Enable execution by clearing CCIF */
-	target_mem32_write8(t, FTMRE_FSTAT, FTMRE_FSTAT_CCIF);
+	target_mem32_write8(target, FTMRE_FSTAT, FTMRE_FSTAT_CCIF);
 
 	platform_timeout_s timeout;
 	platform_timeout_set(&timeout, 500);
 	/* Wait for execution to complete */
 	uint8_t fstat = 0;
 	while (!(fstat & FTMRE_FSTAT_CCIF)) {
-		fstat = target_mem32_read8(t, FTMRE_FSTAT);
+		fstat = target_mem32_read8(target, FTMRE_FSTAT);
 		/* Check ACCERR and FPVIOL are zero in FSTAT */
 		if (fstat & (FTMRE_FSTAT_ACCERR | FTMRE_FSTAT_FPVIOL))
 			return false;
@@ -324,42 +324,43 @@ static bool ke04_command(target_s *t, uint8_t cmd, uint32_t addr, const void *co
 	return true;
 }
 
-static bool ke04_flash_erase(target_flash_s *const f, const target_addr_t addr, const size_t len)
+static bool ke04_flash_erase(target_flash_s *const flash, const target_addr_t addr, const size_t len)
 {
-	for (size_t offset = 0; offset < len; offset += f->blocksize) {
-		if (!ke04_command(f->t, CMD_ERASE_FLASH_SECTOR, addr + offset, NULL))
+	for (size_t offset = 0; offset < len; offset += flash->blocksize) {
+		if (!ke04_command(flash->t, CMD_ERASE_FLASH_SECTOR, addr + offset, NULL))
 			return false;
 	}
 	return true;
 }
 
-static bool ke04_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len)
+static bool ke04_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t len)
 {
 	/* Ensure we don't write something horrible over the security byte */
-	target_s *t = f->t;
+	target_s *target = flash->t;
 	const uint8_t *data = src;
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wcast-qual"
-	if (!t->unsafe_enabled && dest <= FLASH_SECURITY_BYTE_ADDRESS && dest + len > FLASH_SECURITY_BYTE_ADDRESS)
+	if (!target->unsafe_enabled && dest <= FLASH_SECURITY_BYTE_ADDRESS && dest + len > FLASH_SECURITY_BYTE_ADDRESS)
 		((uint8_t *)data)[FLASH_SECURITY_BYTE_ADDRESS - dest] = FLASH_SECURITY_BYTE_UNSECURED;
 #pragma GCC diagnostic pop
 
 	for (size_t offset = 0; offset < len; offset += KE04_WRITE_LEN) {
-		if (!ke04_command(f->t, CMD_PROGRAM_FLASH, dest + offset, data + offset))
+		if (!ke04_command(target, CMD_PROGRAM_FLASH, dest + offset, data + offset))
 			return false;
 	}
 	return true;
 }
 
-static bool ke04_flash_done(target_flash_s *f)
+static bool ke04_flash_done(target_flash_s *flash)
 {
-	target_s *t = f->t;
-	if (t->unsafe_enabled || target_mem32_read8(f->t, FLASH_SECURITY_BYTE_ADDRESS) == FLASH_SECURITY_BYTE_UNSECURED)
+	target_s *target = flash->t;
+	if (target->unsafe_enabled ||
+		target_mem32_read8(target, FLASH_SECURITY_BYTE_ADDRESS) == FLASH_SECURITY_BYTE_UNSECURED)
 		return true;
 
 	/* Load the security byte from its field */
 	/* Note: Cumulative programming is not allowed according to the RM */
-	uint32_t vals[2] = {target_mem32_read32(f->t, FLASH_SECURITY_WORD_ADDRESS), 0};
+	uint32_t vals[2] = {target_mem32_read32(target, FLASH_SECURITY_WORD_ADDRESS), 0};
 	vals[0] = (vals[0] & 0xff00ffffU) | (FLASH_SECURITY_BYTE_UNSECURED << 16U);
-	return ke04_command(f->t, CMD_PROGRAM_FLASH_32, FLASH_SECURITY_WORD_ADDRESS, &vals);
+	return ke04_command(target, CMD_PROGRAM_FLASH_32, FLASH_SECURITY_WORD_ADDRESS, &vals);
 }
