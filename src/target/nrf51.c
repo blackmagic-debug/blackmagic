@@ -1,7 +1,10 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
- * Copyright (C) 2014  Mike Walters <mike@flomp.net>
+ * Copyright (C) 2014 Mike Walters <mike@flomp.net>
+ * Copyright (C) 2022-2025 1BitSquared <info@1bitsquared.com>
+ * Written by Mike Walters <mike@flomp.net>
+ * Modified by Rachel Mant <git@dragonmux.network>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,8 +20,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* This file implements nRF51 target specific functions for detecting
- * the device, providing the XML memory map and Flash memory programming.
+/*
+ * This file implements support for nRF51 and nRF52 series devices, providing
+ * memory maps and Flash programming routines.
  */
 
 #include "general.h"
