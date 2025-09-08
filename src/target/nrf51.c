@@ -27,39 +27,6 @@
 #include "cortexm.h"
 #include "adiv5.h"
 
-static bool nrf51_flash_erase(target_flash_s *flash, target_addr_t addr, size_t len);
-static bool nrf51_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t len);
-static bool nrf51_flash_prepare(target_flash_s *flash);
-static bool nrf51_flash_done(target_flash_s *flash);
-static bool nrf51_mass_erase(target_s *target, platform_timeout_s *print_progess);
-
-static bool nrf51_cmd_erase_uicr(target_s *target, int argc, const char **argv);
-static bool nrf51_cmd_protect_flash(target_s *target, int argc, const char **argv);
-static bool nrf51_cmd_read_hwid(target_s *target, int argc, const char **argv);
-static bool nrf51_cmd_read_fwid(target_s *target, int argc, const char **argv);
-static bool nrf51_cmd_read_deviceid(target_s *target, int argc, const char **argv);
-static bool nrf51_cmd_read_deviceaddr(target_s *target, int argc, const char **argv);
-static bool nrf51_cmd_read_deviceinfo(target_s *target, int argc, const char **argv);
-static bool nrf51_cmd_read_help(target_s *target, int argc, const char **argv);
-static bool nrf51_cmd_read(target_s *target, int argc, const char **argv);
-
-const command_s nrf51_cmd_list[] = {
-	{"erase_uicr", nrf51_cmd_erase_uicr, "Erase UICR registers"},
-	{"protect_flash", nrf51_cmd_protect_flash, "Enable flash read/write protection"},
-	{"read", nrf51_cmd_read, "Read device parameters"},
-	{NULL, NULL, NULL},
-};
-
-const command_s nrf51_read_cmd_list[] = {
-	{"help", nrf51_cmd_read_help, "Display help for read commands"},
-	{"hwid", nrf51_cmd_read_hwid, "Read hardware identification number"},
-	{"fwid", nrf51_cmd_read_fwid, "Read pre-loaded firmware ID"},
-	{"deviceid", nrf51_cmd_read_deviceid, "Print unique device ID"},
-	{"deviceaddr", nrf51_cmd_read_deviceaddr, "Read device address"},
-	{"deviceinfo", nrf51_cmd_read_deviceinfo, "Read device information"},
-	{NULL, NULL, NULL},
-};
-
 /* Non-Volatile Memory Controller (NVMC) Registers */
 #define NRF51_NVMC           0x4001e000U
 #define NRF51_NVMC_READY     (NRF51_NVMC + 0x400U)
@@ -102,6 +69,39 @@ const command_s nrf51_read_cmd_list[] = {
 
 #define NRF51_PAGE_SIZE 1024U
 #define NRF52_PAGE_SIZE 4096U
+
+static bool nrf51_cmd_erase_uicr(target_s *target, int argc, const char **argv);
+static bool nrf51_cmd_protect_flash(target_s *target, int argc, const char **argv);
+static bool nrf51_cmd_read_hwid(target_s *target, int argc, const char **argv);
+static bool nrf51_cmd_read_fwid(target_s *target, int argc, const char **argv);
+static bool nrf51_cmd_read_deviceid(target_s *target, int argc, const char **argv);
+static bool nrf51_cmd_read_deviceaddr(target_s *target, int argc, const char **argv);
+static bool nrf51_cmd_read_deviceinfo(target_s *target, int argc, const char **argv);
+static bool nrf51_cmd_read_help(target_s *target, int argc, const char **argv);
+static bool nrf51_cmd_read(target_s *target, int argc, const char **argv);
+
+const command_s nrf51_cmd_list[] = {
+	{"erase_uicr", nrf51_cmd_erase_uicr, "Erase UICR registers"},
+	{"protect_flash", nrf51_cmd_protect_flash, "Enable flash read/write protection"},
+	{"read", nrf51_cmd_read, "Read device parameters"},
+	{NULL, NULL, NULL},
+};
+
+const command_s nrf51_read_cmd_list[] = {
+	{"help", nrf51_cmd_read_help, "Display help for read commands"},
+	{"hwid", nrf51_cmd_read_hwid, "Read hardware identification number"},
+	{"fwid", nrf51_cmd_read_fwid, "Read pre-loaded firmware ID"},
+	{"deviceid", nrf51_cmd_read_deviceid, "Print unique device ID"},
+	{"deviceaddr", nrf51_cmd_read_deviceaddr, "Read device address"},
+	{"deviceinfo", nrf51_cmd_read_deviceinfo, "Read device information"},
+	{NULL, NULL, NULL},
+};
+
+static bool nrf51_flash_erase(target_flash_s *flash, target_addr_t addr, size_t len);
+static bool nrf51_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t len);
+static bool nrf51_flash_prepare(target_flash_s *flash);
+static bool nrf51_flash_done(target_flash_s *flash);
+static bool nrf51_mass_erase(target_s *target, platform_timeout_s *print_progess);
 
 static void nrf51_add_flash(target_s *target, uint32_t addr, size_t length, size_t erasesize)
 {
