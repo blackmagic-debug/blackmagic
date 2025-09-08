@@ -38,9 +38,6 @@
 #include "adiv5.h"
 #include "buffer_utils.h"
 
-/* Chip IDs */
-#define ID_PY32F07X 0x06188061U
-
 /* Flash */
 #define PUYA_FLASH_START         0x08000000U
 #define PUYA_00A_FLASH_PAGE_SIZE 128U
@@ -109,9 +106,9 @@
 #define PUYA_DBG_BASE   0x40015800U
 #define PUYA_DBG_IDCODE (PUYA_DBG_BASE + 0x00U)
 
-/*
- * Flash functions
- */
+/* Chip IDs */
+#define ID_PY32F07X 0x06188061U
+
 static bool puya_flash_erase(target_flash_s *flash, target_addr_t addr, size_t len);
 static bool puya_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t len);
 static bool puya_00a_flash_prepare(target_flash_s *flash);
@@ -183,7 +180,7 @@ static bool puya_00a_flash_prepare(target_flash_s *flash)
 	uint32_t eppara[5] = {0};
 
 	for (uint16_t i = 0; i < 5; i++) {
-		eppara[i] = target_mem32_read32(flash->t, PUYA_00A_FLASH_TIMING_CAL_BASE + hsi_fs * 20 + i * 4U);
+		eppara[i] = target_mem32_read32(flash->t, PUYA_00A_FLASH_TIMING_CAL_BASE + (hsi_fs * 20) + (i * 4U));
 		DEBUG_TARGET("PY32 flash timing cal %u: %08" PRIx32 "\n", i, eppara[i]);
 	}
 
@@ -205,16 +202,18 @@ static bool puya_07x_flash_prepare(target_flash_s *flash)
 	target_mem32_write32(flash->t, PUYA_FLASH_KEYR, PUYA_FLASH_KEYR_KEY1);
 	target_mem32_write32(flash->t, PUYA_FLASH_KEYR, PUYA_FLASH_KEYR_KEY2);
 
+#ifndef DEBUG_TARGET_IS_NOOP
 	uint8_t hsi_fs =
 		(target_mem32_read32(flash->t, PUYA_RCC_ICSCR) >> PUYA_RCC_ICSCR_HSI_FS_SHIFT) & PUYA_RCC_ICSCR_HSI_FS_MASK;
 	if (hsi_fs > 4)
 		hsi_fs = 0;
+#endif
 	DEBUG_TARGET("HSI frequency selection is %d\n", hsi_fs);
 
 	uint32_t eppara[5] = {0};
 
 	for (uint16_t i = 0; i < 5; i++) {
-		eppara[i] = target_mem32_read32(flash->t, PUYA_07X_FLASH_TIMING_CAL_BASE + 4 * 0x28 + i * 8U);
+		eppara[i] = target_mem32_read32(flash->t, PUYA_07X_FLASH_TIMING_CAL_BASE + (4 * 0x28) + (i * 8U));
 		DEBUG_TARGET("PY32 flash timing cal %u: %08" PRIx32 "\n", i, eppara[i]);
 	}
 
