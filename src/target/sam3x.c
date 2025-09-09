@@ -20,8 +20,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* This file implements Atmel SAM3/4 target specific functions for detecting
- * the device, providing the XML memory map and Flash memory programming.
+/*
+ * This file implements support for Atmel SAM3, SAM4 and SAMx7x series devices, providing
+ * memory maps and Flash programming routines.
  *
  * Supported devices: SAM3N, SAM3S, SAM3U, SAM3X, SAM4S, SAME70, SAMS70, SAMV71, SAMV70
  */
@@ -254,6 +255,8 @@ static void samx7x_add_ram(target_s *target, uint32_t tcm_config, uint32_t ram_s
 	case GPNVM_SAMX7X_TCM_128K:
 		itcm_size = dtcm_size = 0x20000;
 		break;
+	default:
+		break;
 	}
 
 	if (dtcm_size > 0)
@@ -325,6 +328,8 @@ samx7x_descr_s samx7x_parse_id(uint32_t cidr, uint32_t exid)
 		descr.product_code = 'V';
 		descr.product_id = 70;
 		break;
+	default:
+		break;
 	}
 
 	// A = Revision A, legacy version
@@ -353,6 +358,8 @@ samx7x_descr_s samx7x_parse_id(uint32_t cidr, uint32_t exid)
 		break;
 	case CHIPID_EXID_SAMX7X_PINS_J:
 		descr.pins = 'J';
+		break;
+	default:
 		break;
 	}
 
@@ -454,9 +461,11 @@ bool sam3x_probe(target_s *target)
 		target_add_ram32(target, 0x20000000, 0x200000);
 		/* 2 Flash memories back-to-back starting at 0x80000 */
 		sam3_add_flash(target, SAM3X_EEFC_BASE(0), 0x80000, size / 2U);
-		sam3_add_flash(target, SAM3X_EEFC_BASE(1U), 0x80000 + size / 2U, size / 2U);
+		sam3_add_flash(target, SAM3X_EEFC_BASE(1U), 0x80000 + (size / 2U), size / 2U);
 		target_add_commands(target, sam_cmd_list, "SAM3X");
 		return true;
+	default:
+		break;
 	}
 
 	cidr = target_mem32_read32(target, SAM34NSU_CHIPID_CIDR);
@@ -504,11 +513,13 @@ bool sam3x_probe(target_s *target)
 			/* Larger devices are split evenly between 2 */
 			sam_add_flash(
 				target, SAM4S_EEFC_BASE(0), 0x400000, size / 2U, SAM_LARGE_PAGE_SIZE, EFFC_FCR_FARG_8PAGE_ERASE);
-			sam_add_flash(target, SAM4S_EEFC_BASE(1U), 0x400000 + size / 2U, size / 2U, SAM_LARGE_PAGE_SIZE,
+			sam_add_flash(target, SAM4S_EEFC_BASE(1U), 0x400000 + (size / 2U), size / 2U, SAM_LARGE_PAGE_SIZE,
 				EFFC_FCR_FARG_8PAGE_ERASE);
 		}
 		target_add_commands(target, sam_cmd_list, "SAM4S");
 		return true;
+	default:
+		break;
 	}
 	return false;
 }
