@@ -1,8 +1,10 @@
 /*
- *
  * This file is part of the Black Magic Debug project.
  *
- * Copyright (C) 2016  Chuck McManis <cmcmanis@mcmanis.com>
+ * Copyright (C) 2016 Chuck McManis <cmcmanis@mcmanis.com>
+ * Copyright (C) 2022-2025 1BitSquared <info@1bitsquared.com>
+ * Written by Chuck McManis <cmcmanis@mcmanis.com>
+ * Modified by Rachel Mant <git@dragonmux.network>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,8 +21,8 @@
  */
 
 /*
- * This file implements Atmel SAM4L target specific functions for detecting
- * the device, providing the XML memory map and Flash memory programming.
+ * This file implements support for Atmel SAM4L series devices, providing
+ * memory maps and Flash programming routines.
  *
  * Supported devices: SAM4L2, SAM4L4, SAM4L8
  */
