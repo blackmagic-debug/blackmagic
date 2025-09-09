@@ -140,9 +140,9 @@
 #define SMAP_EXTID  (SMAP_BASE + 0xf4U)
 #define SMAP_IDR    (SMAP_BASE + 0xfcU)
 
-static void sam4l_extended_reset(target_s *t);
-static bool sam4l_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
-static bool sam4l_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
+static void sam4l_extended_reset(target_s *target);
+static bool sam4l_flash_erase(target_flash_s *flash, target_addr_t addr, size_t len);
+static bool sam4l_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t len);
 
 /* Why couldn't Atmel make it sequential ... */
 static const uint32_t sam4l_ram_size[16] = {
@@ -187,23 +187,23 @@ static const uint32_t sam4l_nvp_size[16] = {
  * Populate a target_flash struct with the necessary function pointers
  * and constants to describe our flash.
  */
-static void sam4l_add_flash(target_s *t, uint32_t addr, size_t length)
+static void sam4l_add_flash(target_s *target, uint32_t addr, size_t length)
 {
-	target_flash_s *f = calloc(1, sizeof(*f));
-	if (!f) { /* calloc failed: heap exhaustion */
+	target_flash_s *flash = calloc(1, sizeof(*flash));
+	if (!flash) { /* calloc failed: heap exhaustion */
 		DEBUG_ERROR("calloc: failed in %s\n", __func__);
 		return;
 	}
 
-	f->start = addr;
-	f->length = length;
-	f->blocksize = SAM4L_PAGE_SIZE;
-	f->erase = sam4l_flash_erase;
-	f->write = sam4l_flash_write;
-	f->writesize = SAM4L_PAGE_SIZE;
-	f->erased = 0xff;
+	flash->start = addr;
+	flash->length = length;
+	flash->blocksize = SAM4L_PAGE_SIZE;
+	flash->erase = sam4l_flash_erase;
+	flash->write = sam4l_flash_write;
+	flash->writesize = SAM4L_PAGE_SIZE;
+	flash->erased = 0xff;
 	/* Add it into the target structures flash chain */
-	target_add_flash(t, f);
+	target_add_flash(target, flash);
 }
 
 /*
@@ -212,9 +212,9 @@ static void sam4l_add_flash(target_s *t, uint32_t addr, size_t length)
  *
  * Figure out from the register how much RAM and FLASH this variant has.
  */
-bool sam4l_probe(target_s *t)
+bool sam4l_probe(target_s *target)
 {
-	const uint32_t cidr = target_mem32_read32(t, SAM4L_CHIPID_CIDR);
+	const uint32_t cidr = target_mem32_read32(target, SAM4L_CHIPID_CIDR);
 	if (((cidr >> CHIPID_CIDR_ARCH_SHIFT) & CHIPID_CIDR_ARCH_MASK) != SAM4L_ARCH)
 		return false;
 
@@ -222,19 +222,19 @@ bool sam4l_probe(target_s *t)
 	const uint32_t ram_size = sam4l_ram_size[(cidr >> CHIPID_CIDR_SRAMSIZ_SHIFT) & CHIPID_CIDR_SRAMSIZ_MASK];
 	const uint32_t flash_size = sam4l_nvp_size[(cidr >> CHIPID_CIDR_NVPSIZ_SHIFT) & CHIPID_CIDR_NVPSIZ_MASK];
 
-	t->driver = "Atmel SAM4L";
+	target->driver = "Atmel SAM4L";
 	/* This function says we need to do "extra" stuff after reset */
-	t->extended_reset = sam4l_extended_reset;
+	target->extended_reset = sam4l_extended_reset;
 
-	target_add_ram32(t, 0x20000000, ram_size);
-	sam4l_add_flash(t, 0x0, flash_size);
+	target_add_ram32(target, 0x20000000, ram_size);
+	sam4l_add_flash(target, 0x0, flash_size);
 
 	DEBUG_INFO("SAM4L - RAM: 0x%" PRIx32 " (%" PRIu32 "kiB), FLASH: 0x%" PRIx32 " (%" PRIu32 "kiB)\n", ram_size,
 		ram_size / 1024U, flash_size, flash_size / 1024U);
 
 	/* Enable SMAP if not, check for HCR and reset if set */
-	sam4l_extended_reset(t);
-	if (target_check_error(t))
+	sam4l_extended_reset(target);
+	if (target_check_error(target))
 		DEBUG_ERROR("SAM4L: target_check_error returned true\n");
 	return true;
 }
@@ -242,20 +242,20 @@ bool sam4l_probe(target_s *t)
 /*
  * We've been reset, make sure we take the core out of reset
  */
-static void sam4l_extended_reset(target_s *t)
+static void sam4l_extended_reset(target_s *target)
 {
 	DEBUG_INFO("SAM4L: Extended Reset\n");
 
 	/* Enable SMAP in case we're dealing with a non-JTAG reset */
-	target_mem32_write32(t, SMAP_CR, 0x1); /* enable SMAP */
-	uint32_t reg = target_mem32_read32(t, SMAP_SR);
+	target_mem32_write32(target, SMAP_CR, 0x1); /* enable SMAP */
+	uint32_t reg = target_mem32_read32(target, SMAP_SR);
 	DEBUG_INFO("SMAP_SR has 0x%08" PRIx32 "\n", reg);
 	if ((reg & SMAP_SR_HCR) != 0) {
 		/* Write '1' bit to the status clear register */
-		target_mem32_write32(t, SMAP_SCR, SMAP_SR_HCR);
+		target_mem32_write32(target, SMAP_SCR, SMAP_SR_HCR);
 		/* Waiting 250 loops for it to reset is arbitrary, it should happen right away */
 		for (size_t i = 0; i < 250U; i++) {
-			reg = target_mem32_read32(t, SMAP_SR);
+			reg = target_mem32_read32(target, SMAP_SR);
 			if (!(reg & SMAP_SR_HCR))
 				break;
 			/* Not sure what to do if we can't reset that bit */
@@ -264,7 +264,7 @@ static void sam4l_extended_reset(target_s *t)
 		}
 	}
 	/* reset bus error if for some reason SMAP was disabled */
-	target_check_error(t);
+	target_check_error(target);
 }
 
 /*
@@ -275,7 +275,7 @@ static void sam4l_extended_reset(target_s *t)
  * Need the target struct to call the mem_read32 and mem_write32 function
  * pointers.
  */
-static bool sam4l_flash_command(target_s *t, uint32_t page, uint32_t cmd)
+static bool sam4l_flash_command(target_s *target, uint32_t page, uint32_t cmd)
 {
 	DEBUG_INFO(
 		"%s: FSR: 0x%08" PRIx32 ", page = %" PRIu32 ", command = %" PRIu32 "\n", __func__, FLASHCALW_FSR, page, cmd);
@@ -283,7 +283,7 @@ static bool sam4l_flash_command(target_s *t, uint32_t page, uint32_t cmd)
 	/* Wait for Flash controller ready */
 	platform_timeout_s timeout;
 	platform_timeout_set(&timeout, FLASH_TIMEOUT);
-	while (!(target_mem32_read32(t, FLASHCALW_FSR) & FLASHCALW_FSR_FRDY)) {
+	while (!(target_mem32_read32(target, FLASHCALW_FSR) & FLASHCALW_FSR_FRDY)) {
 		if (platform_timeout_is_expired(&timeout)) {
 			DEBUG_WARN("%s: Not ready!\n", __func__);
 			return false;
@@ -296,26 +296,26 @@ static bool sam4l_flash_command(target_s *t, uint32_t page, uint32_t cmd)
 	DEBUG_INFO("%s: Writing command word 0x%08" PRIx32 "\n", __func__, cmd_reg);
 
 	/* And kick it off */
-	target_mem32_write32(t, FLASHCALW_FCMD, cmd_reg);
+	target_mem32_write32(target, FLASHCALW_FCMD, cmd_reg);
 	/* Don't actually wait for it to finish, the next command will stall if it is not done */
 	return true;
 }
 
 /* Write data from 'src' into flash using the algorithm provided by Atmel in their data sheet. */
 static bool sam4l_flash_write(
-	target_flash_s *const f, const target_addr_t dest, const void *const src, const size_t len)
+	target_flash_s *const flash, const target_addr_t dest, const void *const src, const size_t len)
 {
 	DEBUG_INFO("%s: dest = 0x%08" PRIx32 ", len %" PRIx32 "\n", __func__, dest, (uint32_t)len);
 	/* Writing any more or less than 1 page size is not supported by this for now */
 	if (len != SAM4L_PAGE_SIZE)
 		return false;
 
-	target_s *t = f->t;
+	target_s *target = flash->t;
 	/* This will fail with unaligned writes, however the target Flash API guarantees we're called aligned */
 	const uint16_t page = dest / SAM4L_PAGE_SIZE;
 
 	/* Clear the page buffer */
-	if (!sam4l_flash_command(t, 0, FLASH_CMD_CPB))
+	if (!sam4l_flash_command(target, 0, FLASH_CMD_CPB))
 		return false;
 
 	/* Now fill page buffer with our 512 bytes of data */
@@ -333,15 +333,15 @@ static bool sam4l_flash_write(
 		 * instead we just write 0 -> pagelen (512) and that fills our
 		 * buffer correctly.
 		 */
-		target_mem32_write32(t, dest + offset, data[offset / 4U]);
+		target_mem32_write32(target, dest + offset, data[offset / 4U]);
 	}
 
 	/* write the page */
-	return sam4l_flash_command(t, page, FLASH_CMD_WP);
+	return sam4l_flash_command(target, page, FLASH_CMD_WP);
 }
 
 /* Erase flash across the addresses specified by addr and len */
-static bool sam4l_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
+static bool sam4l_flash_erase(target_flash_s *flash, target_addr_t addr, size_t len)
 {
 	DEBUG_INFO("SAM4L: flash erase address 0x%08" PRIx32 " for %" PRIu32 " bytes\n", addr, (uint32_t)len);
 	/*
@@ -351,11 +351,11 @@ static bool sam4l_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 	 * This issue is however mitigated by the target Flash API layer somewhat.
 	 */
 
-	target_s *t = f->t;
+	target_s *target = flash->t;
 
 	for (size_t offset = 0; offset < len; offset += SAM4L_PAGE_SIZE) {
 		const size_t page = (addr + offset) / SAM4L_PAGE_SIZE;
-		if (!sam4l_flash_command(t, page, FLASH_CMD_EP))
+		if (!sam4l_flash_command(target, page, FLASH_CMD_EP))
 			return false;
 	}
 	return true;
