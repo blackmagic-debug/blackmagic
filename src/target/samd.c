@@ -126,7 +126,7 @@ typedef struct samd_part {
 	uint8_t devsel;
 	char pin;
 	uint8_t mem;
-	uint8_t variant;
+	char variant;
 } samd_part_s;
 
 typedef struct samd_descr {
@@ -170,7 +170,7 @@ static const samd_part_s samd_d21_parts[] = {
 	{0x56, 'E', 15, 'B'}, /* SAMD21E15B (WLCSP) */
 	{0x62, 'E', 16, 'C'}, /* SAMD21E16C (WLCSP) */
 	{0x63, 'E', 15, 'C'}, /* SAMD21E15C (WLCSP) */
-	{0xff, 0, 0, 0},      /* Sentinel entry */
+	{0xff, 0, 0, '\0'},   /* Sentinel entry */
 };
 
 static const samd_part_s samd_c21_parts[] = {
@@ -306,7 +306,7 @@ void samd_reset(target_s *target)
  *
  * Only required for SAM D20 _Revision B_ Silicon
  */
-static void samd20_revB_detach(target_s *target)
+static void samd20_revb_detach(target_s *target)
 {
 	cortexm_detach(target);
 
@@ -322,7 +322,7 @@ static void samd20_revB_detach(target_s *target)
  *
  * Only required for SAM D20 _Revision B_ Silicon
  */
-static void samd20_revB_halt_resume(target_s *target, bool step)
+static void samd20_revb_halt_resume(target_s *target, bool step)
 {
 	cortexm_halt_resume(target, step);
 
@@ -389,6 +389,8 @@ samd_descr_s samd_parse_device_id(uint32_t did)
 		break;
 	case 2:
 		samd.family = 'C';
+		break;
+	default:
 		break;
 	}
 	/* Series */
@@ -468,6 +470,8 @@ samd_descr_s samd_parse_device_id(uint32_t did)
 			samd.package[0] = 'S';
 			samd.package[1] = 'S';
 			break;
+		default:
+			break;
 		}
 		samd.pin = 'D';
 		samd.mem = 14U - (devsel % 3U);
@@ -487,6 +491,8 @@ samd_descr_s samd_parse_device_id(uint32_t did)
 			samd.mem = 13;
 			samd.flash_size = 8192;
 			break;
+		default:
+			break;
 		}
 		samd.variant = 'A';
 		break;
@@ -504,6 +510,8 @@ samd_descr_s samd_parse_device_id(uint32_t did)
 		}
 		/* PIC32CMxxxxMC000(32|48) */
 		samd.pin = (devsel & 0x6) ? 48 : 32;
+	default:
+		break;
 	}
 
 	return samd;
@@ -568,8 +576,8 @@ bool samd_probe(target_s *target)
 		 * These functions check for an extended reset.
 		 * Appears to be related to Errata 35.4.1 ref 12015
 		 */
-		target->detach = samd20_revB_detach;
-		target->halt_resume = samd20_revB_halt_resume;
+		target->detach = samd20_revb_detach;
+		target->halt_resume = samd20_revb_halt_resume;
 	} else if (samd.series == 11) {
 		/*
 		 * Attach routine that checks for an extended reset and releases it.
