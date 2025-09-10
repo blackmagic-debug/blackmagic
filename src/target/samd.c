@@ -46,32 +46,6 @@
 #include "target_internal.h"
 #include "cortexm.h"
 
-static bool samd_flash_erase(target_flash_s *flash, target_addr_t addr, size_t len);
-static bool samd_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t len);
-/* NB: This is not marked static on purpose as it's used by samx5x.c. */
-bool samd_mass_erase(target_s *target, platform_timeout_s *print_progess);
-
-static bool samd_cmd_lock_flash(target_s *target, int argc, const char **argv);
-static bool samd_cmd_unlock_flash(target_s *target, int argc, const char **argv);
-static bool samd_cmd_unlock_bootprot(target_s *target, int argc, const char **argv);
-static bool samd_cmd_lock_bootprot(target_s *target, int argc, const char **argv);
-static bool samd_cmd_read_userrow(target_s *target, int argc, const char **argv);
-static bool samd_cmd_serial(target_s *target, int argc, const char **argv);
-static bool samd_cmd_mbist(target_s *target, int argc, const char **argv);
-static bool samd_cmd_ssb(target_s *target, int argc, const char **argv);
-
-const command_s samd_cmd_list[] = {
-	{"lock_flash", samd_cmd_lock_flash, "Locks flash against spurious commands"},
-	{"unlock_flash", samd_cmd_unlock_flash, "Unlocks flash"},
-	{"lock_bootprot", samd_cmd_lock_bootprot, "Lock the boot protections to maximum"},
-	{"unlock_bootprot", samd_cmd_unlock_bootprot, "Unlock the boot protections to minimum"},
-	{"user_row", samd_cmd_read_userrow, "Prints user row from flash"},
-	{"serial", samd_cmd_serial, "Prints serial number"},
-	{"mbist", samd_cmd_mbist, "Runs the built-in memory test"},
-	{"set_security_bit", samd_cmd_ssb, "Sets the Security Bit"},
-	{NULL, NULL, NULL},
-};
-
 /* Non-Volatile Memory Controller (NVMC) Parameters */
 #define SAMD_ROW_SIZE  256U
 #define SAMD_PAGE_SIZE 64U
@@ -145,6 +119,8 @@ const command_s samd_cmd_list[] = {
 
 #define ID_SAMD 0xcd0U
 
+#define SAMD_VARIANT_STR_LENGTH 60U
+
 /* Family parts */
 typedef struct samd_part {
 	uint8_t devsel;
@@ -152,6 +128,22 @@ typedef struct samd_part {
 	uint8_t mem;
 	uint8_t variant;
 } samd_part_s;
+
+typedef struct samd_descr {
+	char family;
+	uint8_t series;
+	char revision;
+	char pin;
+	uint32_t ram_size;
+	uint32_t flash_size;
+	uint8_t mem;
+	char variant;
+	char package[3];
+} samd_descr_s;
+
+typedef struct samd_priv {
+	char samd_variant_string[SAMD_VARIANT_STR_LENGTH];
+} samd_priv_s;
 
 static const samd_part_s samd_d21_parts[] = {
 	{0x00, 'J', 18, 'A'}, /* SAMD21J18A */
@@ -235,6 +227,32 @@ static const samd_part_s samd_l22_parts[] = {
 	{0x0c, 'G', 16, 'A'}, /* SAML22G16 */
 	{0xff, 0, 0, 0},      /* Sentinel entry */
 };
+
+static bool samd_cmd_lock_flash(target_s *target, int argc, const char **argv);
+static bool samd_cmd_unlock_flash(target_s *target, int argc, const char **argv);
+static bool samd_cmd_unlock_bootprot(target_s *target, int argc, const char **argv);
+static bool samd_cmd_lock_bootprot(target_s *target, int argc, const char **argv);
+static bool samd_cmd_read_userrow(target_s *target, int argc, const char **argv);
+static bool samd_cmd_serial(target_s *target, int argc, const char **argv);
+static bool samd_cmd_mbist(target_s *target, int argc, const char **argv);
+static bool samd_cmd_ssb(target_s *target, int argc, const char **argv);
+
+const command_s samd_cmd_list[] = {
+	{"lock_flash", samd_cmd_lock_flash, "Locks flash against spurious commands"},
+	{"unlock_flash", samd_cmd_unlock_flash, "Unlocks flash"},
+	{"lock_bootprot", samd_cmd_lock_bootprot, "Lock the boot protections to maximum"},
+	{"unlock_bootprot", samd_cmd_unlock_bootprot, "Unlock the boot protections to minimum"},
+	{"user_row", samd_cmd_read_userrow, "Prints user row from flash"},
+	{"serial", samd_cmd_serial, "Prints serial number"},
+	{"mbist", samd_cmd_mbist, "Runs the built-in memory test"},
+	{"set_security_bit", samd_cmd_ssb, "Sets the Security Bit"},
+	{NULL, NULL, NULL},
+};
+
+static bool samd_flash_erase(target_flash_s *flash, target_addr_t addr, size_t len);
+static bool samd_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t len);
+/* NB: This is not marked static on purpose as it's used by samx5x.c. */
+bool samd_mass_erase(target_s *target, platform_timeout_s *print_progess);
 
 /*
  * Overloads the default cortexm reset function with a version that
@@ -352,18 +370,6 @@ bool samd_protected_attach(target_s *target)
  * Use the DSU Device Identification Register to populate a struct
  * describing the SAM D device.
  */
-typedef struct samd_descr {
-	char family;
-	uint8_t series;
-	char revision;
-	char pin;
-	uint32_t ram_size;
-	uint32_t flash_size;
-	uint8_t mem;
-	char variant;
-	char package[3];
-} samd_descr_s;
-
 samd_descr_s samd_parse_device_id(uint32_t did)
 {
 	samd_descr_s samd = {0};
@@ -519,12 +525,6 @@ static void samd_add_flash(target_s *target, uint32_t addr, size_t length)
 	flash->writesize = SAMD_PAGE_SIZE;
 	target_add_flash(target, flash);
 }
-
-#define SAMD_VARIANT_STR_LENGTH 60U
-
-typedef struct samd_priv {
-	char samd_variant_string[SAMD_VARIANT_STR_LENGTH];
-} samd_priv_s;
 
 bool samd_probe(target_s *target)
 {
