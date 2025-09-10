@@ -455,8 +455,9 @@ static bool at32f40_is_dual_bank(const uint16_t part_id)
 	case 0x0353U: // AT32F407AVGT7 / LQFP100
 		// Flash (G): 1024 KiB / 2 KiB per block, dual-bank
 		return true;
+	default:
+		return false;
 	}
-	return false;
 }
 
 static bool at32f403a_407_detect(target_s *target, const uint16_t part_id)
@@ -1208,8 +1209,9 @@ static uint16_t stm32f1_flash_readable_key(const target_s *const target)
 	case 0x448U: /* STM32F07 RM0091 Rev.7, STM32F070xb RM0360 Rev. 4*/
 	case 0x442U: /* STM32F09 RM0091 Rev.7, STM32F030xc RM0360 Rev. 4*/
 		return FLASH_OBP_RDP_KEY_F3;
+	default:
+		return FLASH_OBP_RDP_KEY;
 	}
-	return FLASH_OBP_RDP_KEY;
 }
 
 static bool stm32f1_option_erase(target_s *target)
