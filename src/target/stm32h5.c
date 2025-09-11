@@ -82,28 +82,29 @@
 #define STM32H523_SRAM3_SIZE       0x00010000U
 #define STM32H523_SRAM123_SIZE     (STM32H523_SRAM1_SIZE + STM32H523_SRAM2_SIZE + STM32H523_SRAM3_SIZE)
 
-#define STM32H5_FLASH_BASE        0x40022000
-#define STM32H5_FLASH_ACCESS_CTRL (STM32H5_FLASH_BASE + 0x000U)
-#define STM32H5_FLASH_KEY         (STM32H5_FLASH_BASE + 0x004U)
-#define STM32H5_FLASH_OPTION_KEY  (STM32H5_FLASH_BASE + 0x00cU)
-#define STM32H5_FLASH_STATUS      (STM32H5_FLASH_BASE + 0x020U)
-#define STM32H5_FLASH_CTRL        (STM32H5_FLASH_BASE + 0x028U)
-#define STM32H5_FLASH_CLEAR_CTRL  (STM32H5_FLASH_BASE + 0x030U)
+/* Flash Program and Erase Controller (FPEC) Register Map */
+#define STM32H5_FPEC_BASE        0x40022000
+#define STM32H5_FPEC_ACCESS_CTRL (STM32H5_FPEC_BASE + 0x000U)
+#define STM32H5_FPEC_KEY         (STM32H5_FPEC_BASE + 0x004U)
+#define STM32H5_FPEC_OPTION_KEY  (STM32H5_FPEC_BASE + 0x00cU)
+#define STM32H5_FPEC_STATUS      (STM32H5_FPEC_BASE + 0x020U)
+#define STM32H5_FPEC_CTRL        (STM32H5_FPEC_BASE + 0x028U)
+#define STM32H5_FPEC_CLEAR_CTRL  (STM32H5_FPEC_BASE + 0x030U)
 
-#define STM32H5_FLASH_KEY1              0x45670123U
-#define STM32H5_FLASH_KEY2              0xcdef89abU
-#define STM32H5_FLASH_STATUS_BUSY       (1U << 0U)
-#define STM32H5_FLASH_STATUS_EOP        (1U << 16U)
-#define STM32H5_FLASH_STATUS_ERROR_MASK 0x00fc0000U
-#define STM32H5_FLASH_CTRL_LOCK         (1U << 0U)
-#define STM32H5_FLASH_CTRL_PROGRAM      (1U << 1U)
-#define STM32H5_FLASH_CTRL_SECTOR_ERASE (1U << 2U)
-#define STM32H5_FLASH_CTRL_BANK_ERASE   (1U << 3U)
-#define STM32H5_FLASH_CTRL_START        (1U << 5U)
-#define STM32H5_FLASH_CTRL_SECTOR(x)    (((x) & 0x7fU) << 6U)
-#define STM32H5_FLASH_CTRL_MASS_ERASE   (1U << 15U)
-#define STM32H5_FLASH_CTRL_BANK1        (0U << 31U)
-#define STM32H5_FLASH_CTRL_BANK2        (1U << 31U)
+#define STM32H5_FPEC_KEY1              0x45670123U
+#define STM32H5_FPEC_KEY2              0xcdef89abU
+#define STM32H5_FPEC_STATUS_BUSY       (1U << 0U)
+#define STM32H5_FPEC_STATUS_EOP        (1U << 16U)
+#define STM32H5_FPEC_STATUS_ERROR_MASK 0x00fc0000U
+#define STM32H5_FPEC_CTRL_LOCK         (1U << 0U)
+#define STM32H5_FPEC_CTRL_PROGRAM      (1U << 1U)
+#define STM32H5_FPEC_CTRL_SECTOR_ERASE (1U << 2U)
+#define STM32H5_FPEC_CTRL_BANK_ERASE   (1U << 3U)
+#define STM32H5_FPEC_CTRL_START        (1U << 5U)
+#define STM32H5_FPEC_CTRL_SECTOR(x)    (((x) & 0x7fU) << 6U)
+#define STM32H5_FPEC_CTRL_MASS_ERASE   (1U << 15U)
+#define STM32H5_FPEC_CTRL_BANK1        (0U << 31U)
+#define STM32H5_FPEC_CTRL_BANK2        (1U << 31U)
 
 #define STM32H5_FLASH_SECTOR_SIZE       0x00002000U
 #define STM32H503_SECTORS_PER_BANK      8U
@@ -240,9 +241,9 @@ bool stm32h5_probe(target_s *const target)
 			sectors_per_bank = flash_size_kb / 8U / 2U;
 		}
 		stm32h5_add_flash(
-			target, STM32H5_FLASH_BANK1_BASE, flash_bank_size, sectors_per_bank | STM32H5_FLASH_CTRL_BANK1);
+			target, STM32H5_FLASH_BANK1_BASE, flash_bank_size, sectors_per_bank | STM32H5_FPEC_CTRL_BANK1);
 		stm32h5_add_flash(target, STM32H5_FLASH_BANK1_BASE + flash_bank_size, flash_bank_size,
-			sectors_per_bank | STM32H5_FLASH_CTRL_BANK2);
+			sectors_per_bank | STM32H5_FPEC_CTRL_BANK2);
 		break;
 	case ID_STM32H523:
 		/*
@@ -266,9 +267,9 @@ bool stm32h5_probe(target_s *const target)
 			sectors_per_bank = flash_size_kb / 8U / 2U;
 		}
 		stm32h5_add_flash(
-			target, STM32H5_FLASH_BANK1_BASE, flash_bank_size, sectors_per_bank | STM32H5_FLASH_CTRL_BANK1);
+			target, STM32H5_FLASH_BANK1_BASE, flash_bank_size, sectors_per_bank | STM32H5_FPEC_CTRL_BANK1);
 		stm32h5_add_flash(target, STM32H5_FLASH_BANK1_BASE + flash_bank_size, flash_bank_size,
-			sectors_per_bank | STM32H5_FLASH_CTRL_BANK2);
+			sectors_per_bank | STM32H5_FPEC_CTRL_BANK2);
 		break;
 	case ID_STM32H503:
 		/*
@@ -285,9 +286,9 @@ bool stm32h5_probe(target_s *const target)
 		 * Flash(B): 128 KiB as two equal banks (8 sectors of 8 KiB each)
 		 */
 		stm32h5_add_flash(target, STM32H503_FLASH_BANK1_BASE, STM32H503_FLASH_BANK_SIZE,
-			STM32H503_SECTORS_PER_BANK | STM32H5_FLASH_CTRL_BANK1);
+			STM32H503_SECTORS_PER_BANK | STM32H5_FPEC_CTRL_BANK1);
 		stm32h5_add_flash(target, STM32H503_FLASH_BANK2_BASE, STM32H503_FLASH_BANK_SIZE,
-			STM32H503_SECTORS_PER_BANK | STM32H5_FLASH_CTRL_BANK2);
+			STM32H503_SECTORS_PER_BANK | STM32H5_FPEC_CTRL_BANK2);
 		break;
 	default:
 		return false;
@@ -320,10 +321,10 @@ static void stm32h5_detach(target_s *target)
 
 static bool stm32h5_flash_wait_complete(target_s *const target, platform_timeout_s *const timeout)
 {
-	uint32_t status = STM32H5_FLASH_STATUS_BUSY;
+	uint32_t status = STM32H5_FPEC_STATUS_BUSY;
 	/* Read the status register and poll for busy and !EOP */
-	while (!(status & STM32H5_FLASH_STATUS_EOP) && (status & STM32H5_FLASH_STATUS_BUSY)) {
-		status = target_mem32_read32(target, STM32H5_FLASH_STATUS);
+	while (!(status & STM32H5_FPEC_STATUS_EOP) && (status & STM32H5_FPEC_STATUS_BUSY)) {
+		status = target_mem32_read32(target, STM32H5_FPEC_STATUS);
 		if (target_check_error(target)) {
 			DEBUG_ERROR("%s: error reading status\n", __func__);
 			return false;
@@ -331,12 +332,12 @@ static bool stm32h5_flash_wait_complete(target_s *const target, platform_timeout
 		if (timeout)
 			target_print_progress(timeout);
 	}
-	if (status & STM32H5_FLASH_STATUS_ERROR_MASK)
+	if (status & STM32H5_FPEC_STATUS_ERROR_MASK)
 		DEBUG_ERROR("%s: Flash error: %08" PRIx32 "\n", __func__, status);
 	/* Clear all error and status bits */
 	target_mem32_write32(
-		target, STM32H5_FLASH_CLEAR_CTRL, status & (STM32H5_FLASH_STATUS_ERROR_MASK | STM32H5_FLASH_STATUS_EOP));
-	return !(status & STM32H5_FLASH_STATUS_ERROR_MASK);
+		target, STM32H5_FPEC_CLEAR_CTRL, status & (STM32H5_FPEC_STATUS_ERROR_MASK | STM32H5_FPEC_STATUS_EOP));
+	return !(status & STM32H5_FPEC_STATUS_ERROR_MASK);
 }
 
 static bool stm32h5_enter_flash_mode(target_s *const target)
@@ -346,18 +347,18 @@ static bool stm32h5_enter_flash_mode(target_s *const target)
 	if (!stm32h5_flash_wait_complete(target, NULL))
 		return false;
 	/* Now, if the Flash controller's not already unlocked, unlock it */
-	if (target_mem32_read32(target, STM32H5_FLASH_CTRL) & STM32H5_FLASH_CTRL_LOCK) {
-		target_mem32_write32(target, STM32H5_FLASH_KEY, STM32H5_FLASH_KEY1);
-		target_mem32_write32(target, STM32H5_FLASH_KEY, STM32H5_FLASH_KEY2);
+	if (target_mem32_read32(target, STM32H5_FPEC_CTRL) & STM32H5_FPEC_CTRL_LOCK) {
+		target_mem32_write32(target, STM32H5_FPEC_KEY, STM32H5_FPEC_KEY1);
+		target_mem32_write32(target, STM32H5_FPEC_KEY, STM32H5_FPEC_KEY2);
 	}
 	/* Success of entering Flash mode is predicated on successfully unlocking the controller */
-	return !(target_mem32_read32(target, STM32H5_FLASH_CTRL) & STM32H5_FLASH_CTRL_LOCK);
+	return !(target_mem32_read32(target, STM32H5_FPEC_CTRL) & STM32H5_FPEC_CTRL_LOCK);
 }
 
 static bool stm32h5_exit_flash_mode(target_s *const target)
 {
 	/* On leaving Flash mode, lock the controller again */
-	target_mem32_write32(target, STM32H5_FLASH_CTRL, STM32H5_FLASH_CTRL_LOCK);
+	target_mem32_write32(target, STM32H5_FPEC_CTRL, STM32H5_FPEC_CTRL_LOCK);
 	target_reset(target);
 	return true;
 }
@@ -373,9 +374,9 @@ static bool stm32h5_flash_erase(target_flash_s *const target_flash, const target
 	const size_t sector = begin / STM32H5_FLASH_SECTOR_SIZE;
 
 	/* Erase the current Flash sector */
-	const uint32_t ctrl = bank | STM32H5_FLASH_CTRL_SECTOR_ERASE | STM32H5_FLASH_CTRL_SECTOR(sector);
-	target_mem32_write32(target, STM32H5_FLASH_CTRL, ctrl);
-	target_mem32_write32(target, STM32H5_FLASH_CTRL, ctrl | STM32H5_FLASH_CTRL_START);
+	const uint32_t ctrl = bank | STM32H5_FPEC_CTRL_SECTOR_ERASE | STM32H5_FPEC_CTRL_SECTOR(sector);
+	target_mem32_write32(target, STM32H5_FPEC_CTRL, ctrl);
+	target_mem32_write32(target, STM32H5_FPEC_CTRL, ctrl | STM32H5_FPEC_CTRL_START);
 
 	/* Wait for the operation to complete, reporting errors */
 	return stm32h5_flash_wait_complete(target, NULL);
@@ -386,22 +387,22 @@ static bool stm32h5_flash_write(
 {
 	target_s *const target = flash->t;
 	/* Enable programming operations */
-	target_mem32_write32(target, STM32H5_FLASH_CTRL, STM32H5_FLASH_CTRL_PROGRAM);
+	target_mem32_write32(target, STM32H5_FPEC_CTRL, STM32H5_FPEC_CTRL_PROGRAM);
 	/* Write the data to the Flash */
 	target_mem32_write(target, dest, src, len);
 	/* Wait for the operation to complete and report errors */
 	if (!stm32h5_flash_wait_complete(target, NULL))
 		return false;
 	/* Disable programming operations */
-	target_mem32_write32(target, STM32H5_FLASH_CTRL, 0U);
+	target_mem32_write32(target, STM32H5_FPEC_CTRL, 0U);
 	return true;
 }
 
 static bool stm32h5_mass_erase(target_s *const target, platform_timeout_s *const print_progess)
 {
 	/* Trigger the mass erase */
-	target_mem32_write32(target, STM32H5_FLASH_CTRL, STM32H5_FLASH_CTRL_MASS_ERASE);
-	target_mem32_write32(target, STM32H5_FLASH_CTRL, STM32H5_FLASH_CTRL_MASS_ERASE | STM32H5_FLASH_CTRL_START);
+	target_mem32_write32(target, STM32H5_FPEC_CTRL, STM32H5_FPEC_CTRL_MASS_ERASE);
+	target_mem32_write32(target, STM32H5_FPEC_CTRL, STM32H5_FPEC_CTRL_MASS_ERASE | STM32H5_FPEC_CTRL_START);
 	/* And wait for it to complete, reporting errors along the way */
 	return stm32h5_flash_wait_complete(target, print_progess);
 }
