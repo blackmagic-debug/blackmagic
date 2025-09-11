@@ -3,7 +3,7 @@
  *
  * Copyright (C) 2011  Black Sphere Technologies Ltd.
  * Written by Gareth McMullin <gareth@blacksphere.co.nz>
- * Copyright (C) 2022-2024 1BitSquared <info@1bitsquared.com>
+ * Copyright (C) 2022-2025 1BitSquared <info@1bitsquared.com>
  * Modified by Rachel Mant <git@dragonmux.network>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -21,8 +21,8 @@
  */
 
 /*
- * This file implements STM32F0/F1 + clones, and GF32E5 target specific functions for detecting
- * the device, providing the XML memory map and Flash memory programming.
+ * This file implements support for STM32F0/F1 + clones, and GF32E5 series devices, providing
+ * memory maps and Flash programming routines.
  *
  * References:
  * RM0008 - STM32F101xx, STM32F102xx, STM32F103xx, STM32F105xx and STM32F107xx advanced Arm®-based 32-bit MCUs, Rev. 21
