@@ -58,45 +58,50 @@
 #include "jep106.h"
 #include "stm32_common.h"
 
-/* Flash Program ad Erase Controller Register Map */
-#define FPEC_BASE     0x40022000U
-#define FLASH_ACR     (FPEC_BASE + 0x00U)
-#define FLASH_KEYR    (FPEC_BASE + 0x04U)
-#define FLASH_OPTKEYR (FPEC_BASE + 0x08U)
-#define FLASH_SR      (FPEC_BASE + 0x0cU)
-#define FLASH_CR      (FPEC_BASE + 0x10U)
-#define FLASH_AR      (FPEC_BASE + 0x14U)
-#define FLASH_OBR     (FPEC_BASE + 0x1cU)
-#define FLASH_WRPR    (FPEC_BASE + 0x20U)
+/* Memory map constants for STM32H5xx */
+#define STM32F1_FLASH_BANK1_BASE 0x08000000U
+#define STM32F1_FLASH_BANK2_BASE 0x08080000U
+#define STM32F1_SRAM_BASE        0x20000000U
+#define STM32F1_FLASH_BANK_SPLIT 0x08080000U
 
-#define FLASH_BANK1_OFFSET 0x00U
-#define FLASH_BANK2_OFFSET 0x40U
-#define FLASH_BANK_SPLIT   0x08080000U
+/* Flash Program and Erase Controller (FPEC) Register Map */
+#define STM32F1_FPEC_BASE        0x40022000U
+#define STM32F1_FPEC_ACCESS_CTRL (STM32F1_FPEC_BASE + 0x00U)
+#define STM32F1_FPEC_KEY         (STM32F1_FPEC_BASE + 0x04U)
+#define STM32F1_FPEC_OPTION_KEY  (STM32F1_FPEC_BASE + 0x08U)
+#define STM32F1_FPEC_STATUS      (STM32F1_FPEC_BASE + 0x0cU)
+#define STM32F1_FPEC_CTRL        (STM32F1_FPEC_BASE + 0x10U)
+#define STM32F1_FPEC_ADDR        (STM32F1_FPEC_BASE + 0x14U)
+#define STM32F1_FPEC_OPTION_BYTE (STM32F1_FPEC_BASE + 0x1cU)
+#define STM32F1_FPEC_WRITE_PROT  (STM32F1_FPEC_BASE + 0x20U)
 
-#define FLASH_CR_OBL_LAUNCH (1U << 13U)
-#define FLASH_CR_OPTWRE     (1U << 9U)
-#define FLASH_CR_LOCK       (1U << 7U)
-#define FLASH_CR_STRT       (1U << 6U)
-#define FLASH_CR_OPTER      (1U << 5U)
-#define FLASH_CR_OPTPG      (1U << 4U)
-#define FLASH_CR_MER        (1U << 2U)
-#define FLASH_CR_PER        (1U << 1U)
-#define FLASH_CR_PG         (1U << 0U)
+#define STM32F1_FPEC_OBL_LAUNCH (1U << 13U)
+#define STM32F1_FPEC_OPTWRE     (1U << 9U)
+#define STM32F1_FPEC_LOCK       (1U << 7U)
+#define STM32F1_FPEC_STRT       (1U << 6U)
+#define STM32F1_FPEC_OPTER      (1U << 5U)
+#define STM32F1_FPEC_OPTPG      (1U << 4U)
+#define STM32F1_FPEC_MER        (1U << 2U)
+#define STM32F1_FPEC_PER        (1U << 1U)
+#define STM32F1_FPEC_PG         (1U << 0U)
 
-#define FLASH_OBR_RDPRT (1U << 1U)
+#define STM32F1_FPEC_OPTION_BYTE_RDPRT (1U << 1U)
 
-#define FLASH_SR_BSY (1U << 0U)
+#define STM32F1_FPEC_BANK1_OFFSET 0x00U
+#define STM32F1_FPEC_BANK2_OFFSET 0x40U
 
-#define FLASH_OBP_RDP        0x1ffff800U
-#define FLASH_OBP_RDP_KEY    0x5aa5U
-#define FLASH_OBP_RDP_KEY_F3 0x55aaU
+#define STM32F1_FPEC_STATUS_BSY (1U << 0U)
 
-#define KEY1 0x45670123U
-#define KEY2 0xcdef89abU
+#define STM32F1_FPEC_OBP_RDP        0x1ffff800U
+#define STM32F1_FPEC_OBP_RDP_KEY    0x5aa5U
+#define STM32F1_FPEC_OBP_RDP_KEY_F3 0x55aaU
 
-#define SR_ERROR_MASK 0x14U
-#define SR_PROG_ERROR 0x04U
-#define SR_EOP        0x20U
+#define STM32F1_FPEC_KEY1 0x45670123U
+#define STM32F1_FPEC_KEY2 0xcdef89abU
+
+#define STM32F1_FPEC_STATUS_ERROR_MASK 0x14U
+#define STM32F1_FPEC_STATUS_PROG_ERROR 0x04U
+#define STM32F1_FPEC_STATUS_EOP        0x20U
 
 #define STM32F1_DBGMCU_BASE   0xe0042000U
 #define STM32F1_DBGMCU_IDCODE (STM32F1_DBGMCU_BASE + 0x000U)
@@ -149,10 +154,6 @@
 
 #define STM32F1_OB_COUNT 8U
 #define AT32F4_OB_COUNT  24U
-
-#define STM32F1_FLASH_BANK1_BASE 0x08000000U
-#define STM32F1_FLASH_BANK2_BASE 0x08080000U
-#define STM32F1_SRAM_BASE        0x20000000U
 
 #define STM32F1_TOPT_32BIT_WRITES (1U << 8U)
 
@@ -319,7 +320,7 @@ bool gd32f1_probe(target_s *target)
 	 * HD and <=512 KiB CL devices have only bank0 with 2 KiB sized pages
 	 * XD and  >512 KiB CL devices also have bank1 with 4 KiB sized pages
 	 * Same boundaries found in other families.
-	 * XXX: This driver currently only supports parts with a FLASH_BANK_SPLIT
+	 * XXX: This driver currently only supports parts with a STM32F1_FLASH_BANK_SPLIT
 	 * at the 512 KiB boundary (i.e. 0x08080000) like STM32F1 XL-density.
 	 */
 	if (flash_size > 512U) {
@@ -700,7 +701,7 @@ bool at32f40x_probe(target_s *target)
 	// ... and highest byte of UID
 	const uint32_t project_id = target_mem32_read8(target, AT32F4x_PROJECT_ID);
 
-	const bool read_protected = target_mem32_read32(target, FLASH_OBR) & FLASH_OBR_RDPRT;
+	const bool read_protected = target_mem32_read32(target, STM32F1_FPEC_OPTION_BYTE) & STM32F1_FPEC_OPTION_BYTE_RDPRT;
 	if (read_protected)
 		DEBUG_TARGET("%s: Read protection enabled, UID reads as 0x%02" PRIx32 "\n", __func__, project_id);
 
@@ -1032,25 +1033,25 @@ static void stm32f1_detach(target_s *const target)
 
 static bool stm32f1_flash_unlock(target_s *target, uint32_t bank_offset)
 {
-	target_mem32_write32(target, FLASH_KEYR + bank_offset, KEY1);
-	target_mem32_write32(target, FLASH_KEYR + bank_offset, KEY2);
-	uint32_t ctrl = target_mem32_read32(target, FLASH_CR + bank_offset);
-	if (ctrl & FLASH_CR_LOCK)
+	target_mem32_write32(target, STM32F1_FPEC_KEY + bank_offset, STM32F1_FPEC_KEY1);
+	target_mem32_write32(target, STM32F1_FPEC_KEY + bank_offset, STM32F1_FPEC_KEY2);
+	uint32_t ctrl = target_mem32_read32(target, STM32F1_FPEC_CTRL + bank_offset);
+	if (ctrl & STM32F1_FPEC_LOCK)
 		DEBUG_ERROR("unlock failed, cr: 0x%08" PRIx32 "\n", ctrl);
-	return !(ctrl & FLASH_CR_LOCK);
+	return !(ctrl & STM32F1_FPEC_LOCK);
 }
 
 static inline void stm32f1_flash_clear_eop(target_s *const target, const uint32_t bank_offset)
 {
-	const uint32_t status = target_mem32_read32(target, FLASH_SR + bank_offset);
-	target_mem32_write32(target, FLASH_SR + bank_offset, status | SR_EOP); /* EOP is W1C */
+	const uint32_t status = target_mem32_read32(target, STM32F1_FPEC_STATUS + bank_offset);
+	target_mem32_write32(target, STM32F1_FPEC_STATUS + bank_offset, status | STM32F1_FPEC_STATUS_EOP); /* EOP is W1C */
 }
 
 static bool stm32f1_flash_busy_wait(
 	target_s *const target, const uint32_t bank_offset, platform_timeout_s *const timeout)
 {
 	/* Read FLASH_SR to poll for BSY bit */
-	uint32_t status = FLASH_SR_BSY;
+	uint32_t status = STM32F1_FPEC_STATUS_BSY;
 	/*
 	 * Please note that checking EOP here is only legal because every operation is preceded by
 	 * a call to stm32f1_flash_clear_eop. Without this the flag could be stale from a previous
@@ -1058,8 +1059,8 @@ static bool stm32f1_flash_busy_wait(
 	 * For more information, see FLASH_SR register description §3.4 pg 25.
 	 * https://www.st.com/resource/en/programming_manual/pm0075-stm32f10xxx-flash-memory-microcontrollers-stmicroelectronics.pdf
 	 */
-	while (!(status & SR_EOP) && (status & FLASH_SR_BSY)) {
-		status = target_mem32_read32(target, FLASH_SR + bank_offset);
+	while (!(status & STM32F1_FPEC_STATUS_EOP) && (status & STM32F1_FPEC_STATUS_BSY)) {
+		status = target_mem32_read32(target, STM32F1_FPEC_STATUS + bank_offset);
 		if (target_check_error(target)) {
 			DEBUG_ERROR("Lost communications with target");
 			return false;
@@ -1067,9 +1068,9 @@ static bool stm32f1_flash_busy_wait(
 		if (timeout)
 			target_print_progress(timeout);
 	};
-	if (status & SR_ERROR_MASK)
+	if (status & STM32F1_FPEC_STATUS_ERROR_MASK)
 		DEBUG_ERROR("stm32f1 flash error 0x%" PRIx32 "\n", status);
-	return !(status & SR_ERROR_MASK);
+	return !(status & STM32F1_FPEC_STATUS_ERROR_MASK);
 }
 
 static bool stm32f1_is_dual_bank(const uint16_t part_id)
@@ -1083,9 +1084,9 @@ static bool stm32f1_is_dual_bank(const uint16_t part_id)
 
 static uint32_t stm32f1_bank_offset_for(target_addr_t addr)
 {
-	if (addr >= FLASH_BANK_SPLIT)
-		return FLASH_BANK2_OFFSET;
-	return FLASH_BANK1_OFFSET;
+	if (addr >= STM32F1_FLASH_BANK_SPLIT)
+		return STM32F1_FPEC_BANK2_OFFSET;
+	return STM32F1_FPEC_BANK1_OFFSET;
 }
 
 static bool stm32f1_flash_erase(target_flash_s *flash, target_addr_t addr, size_t length)
@@ -1094,20 +1095,20 @@ static bool stm32f1_flash_erase(target_flash_s *flash, target_addr_t addr, size_
 	target_addr_t end = addr + length - 1U;
 
 	/* Unlocked an appropriate flash bank */
-	if ((stm32f1_is_dual_bank(target->part_id) && end >= FLASH_BANK_SPLIT &&
-			!stm32f1_flash_unlock(target, FLASH_BANK2_OFFSET)) ||
-		(addr < FLASH_BANK_SPLIT && !stm32f1_flash_unlock(target, 0)))
+	if ((stm32f1_is_dual_bank(target->part_id) && end >= STM32F1_FLASH_BANK_SPLIT &&
+			!stm32f1_flash_unlock(target, STM32F1_FPEC_BANK2_OFFSET)) ||
+		(addr < STM32F1_FLASH_BANK_SPLIT && !stm32f1_flash_unlock(target, 0)))
 		return false;
 
 	const uint32_t bank_offset = stm32f1_bank_offset_for(addr);
 	stm32f1_flash_clear_eop(target, bank_offset);
 
 	/* Flash page erase instruction */
-	target_mem32_write32(target, FLASH_CR + bank_offset, FLASH_CR_PER);
+	target_mem32_write32(target, STM32F1_FPEC_CTRL + bank_offset, STM32F1_FPEC_PER);
 	/* write address to FMA */
-	target_mem32_write32(target, FLASH_AR + bank_offset, addr);
+	target_mem32_write32(target, STM32F1_FPEC_ADDR + bank_offset, addr);
 	/* Flash page erase start instruction */
-	target_mem32_write32(target, FLASH_CR + bank_offset, FLASH_CR_STRT | FLASH_CR_PER);
+	target_mem32_write32(target, STM32F1_FPEC_CTRL + bank_offset, STM32F1_FPEC_STRT | STM32F1_FPEC_PER);
 
 	/* Wait for completion or an error */
 	return stm32f1_flash_busy_wait(target, bank_offset, NULL);
@@ -1115,10 +1116,10 @@ static bool stm32f1_flash_erase(target_flash_s *flash, target_addr_t addr, size_
 
 static size_t stm32f1_bank1_length(target_addr_t addr, size_t len)
 {
-	if (addr >= FLASH_BANK_SPLIT)
+	if (addr >= STM32F1_FLASH_BANK_SPLIT)
 		return 0;
-	if (addr + len > FLASH_BANK_SPLIT)
-		return FLASH_BANK_SPLIT - addr;
+	if (addr + len > STM32F1_FLASH_BANK_SPLIT)
+		return STM32F1_FLASH_BANK_SPLIT - addr;
 	return len;
 }
 
@@ -1132,9 +1133,9 @@ static bool stm32f1_flash_write(target_flash_s *flash, target_addr_t dest, const
 
 	/* Start by writing any bank 1 data */
 	if (offset) {
-		stm32f1_flash_clear_eop(target, FLASH_BANK1_OFFSET);
+		stm32f1_flash_clear_eop(target, STM32F1_FPEC_BANK1_OFFSET);
 
-		target_mem32_write32(target, FLASH_CR, FLASH_CR_PG);
+		target_mem32_write32(target, STM32F1_FPEC_CTRL, STM32F1_FPEC_PG);
 		/* Use the target API instead of a direct Cortex-M call for GD32VF103 parts */
 		if (target->designer_code == JEP106_MANUFACTURER_RV_GIGADEVICE && target->cpuid == 0x80000022U)
 			target_mem32_write(target, dest, src, offset);
@@ -1142,7 +1143,7 @@ static bool stm32f1_flash_write(target_flash_s *flash, target_addr_t dest, const
 			cortexm_mem_write_aligned(target, dest, src, offset, psize);
 
 		/* Wait for completion or an error */
-		if (!stm32f1_flash_busy_wait(target, FLASH_BANK1_OFFSET, NULL))
+		if (!stm32f1_flash_busy_wait(target, STM32F1_FPEC_BANK1_OFFSET, NULL))
 			return false;
 	}
 
@@ -1150,9 +1151,9 @@ static bool stm32f1_flash_write(target_flash_s *flash, target_addr_t dest, const
 	const size_t remainder = len - offset;
 	if (stm32f1_is_dual_bank(target->part_id) && remainder) {
 		const uint8_t *data = src;
-		stm32f1_flash_clear_eop(target, FLASH_BANK2_OFFSET);
+		stm32f1_flash_clear_eop(target, STM32F1_FPEC_BANK2_OFFSET);
 
-		target_mem32_write32(target, FLASH_CR + FLASH_BANK2_OFFSET, FLASH_CR_PG);
+		target_mem32_write32(target, STM32F1_FPEC_CTRL + STM32F1_FPEC_BANK2_OFFSET, STM32F1_FPEC_PG);
 		/* Use the target API instead of a direct Cortex-M call for GD32VF103 parts */
 		if (target->designer_code == JEP106_MANUFACTURER_RV_GIGADEVICE && target->cpuid == 0x80000022U)
 			target_mem32_write(target, dest + offset, data + offset, remainder);
@@ -1160,7 +1161,7 @@ static bool stm32f1_flash_write(target_flash_s *flash, target_addr_t dest, const
 			cortexm_mem_write_aligned(target, dest + offset, data + offset, remainder, psize);
 
 		/* Wait for completion or an error */
-		if (!stm32f1_flash_busy_wait(target, FLASH_BANK2_OFFSET, NULL))
+		if (!stm32f1_flash_busy_wait(target, STM32F1_FPEC_BANK2_OFFSET, NULL))
 			return false;
 	}
 
@@ -1176,8 +1177,8 @@ static bool stm32f1_mass_erase_bank(
 	stm32f1_flash_clear_eop(target, bank_offset);
 
 	/* Flash mass erase start instruction */
-	target_mem32_write32(target, FLASH_CR + bank_offset, FLASH_CR_MER);
-	target_mem32_write32(target, FLASH_CR + bank_offset, FLASH_CR_STRT | FLASH_CR_MER);
+	target_mem32_write32(target, STM32F1_FPEC_CTRL + bank_offset, STM32F1_FPEC_MER);
+	target_mem32_write32(target, STM32F1_FPEC_CTRL + bank_offset, STM32F1_FPEC_STRT | STM32F1_FPEC_MER);
 
 	/* Wait for completion or an error */
 	return stm32f1_flash_busy_wait(target, bank_offset, timeout);
@@ -1188,12 +1189,12 @@ static bool stm32f1_mass_erase(target_s *target, platform_timeout_s *const print
 	if (!stm32f1_flash_unlock(target, 0))
 		return false;
 
-	if (!stm32f1_mass_erase_bank(target, FLASH_BANK1_OFFSET, print_progess))
+	if (!stm32f1_mass_erase_bank(target, STM32F1_FPEC_BANK1_OFFSET, print_progess))
 		return false;
 
 	/* If we're on a part that has a second bank, mass erase that bank too */
 	if (stm32f1_is_dual_bank(target->part_id))
-		return stm32f1_mass_erase_bank(target, FLASH_BANK2_OFFSET, print_progess);
+		return stm32f1_mass_erase_bank(target, STM32F1_FPEC_BANK2_OFFSET, print_progess);
 	return true;
 }
 
@@ -1208,22 +1209,22 @@ static uint16_t stm32f1_flash_readable_key(const target_s *const target)
 	case 0x445U: /* STM32F04 RM0091 Rev.7, STM32F070x6 RM0360 Rev. 4*/
 	case 0x448U: /* STM32F07 RM0091 Rev.7, STM32F070xb RM0360 Rev. 4*/
 	case 0x442U: /* STM32F09 RM0091 Rev.7, STM32F030xc RM0360 Rev. 4*/
-		return FLASH_OBP_RDP_KEY_F3;
+		return STM32F1_FPEC_OBP_RDP_KEY_F3;
 	default:
-		return FLASH_OBP_RDP_KEY;
+		return STM32F1_FPEC_OBP_RDP_KEY;
 	}
 }
 
 static bool stm32f1_option_erase(target_s *target)
 {
-	stm32f1_flash_clear_eop(target, FLASH_BANK1_OFFSET);
+	stm32f1_flash_clear_eop(target, STM32F1_FPEC_BANK1_OFFSET);
 
 	/* Erase option bytes instruction */
-	target_mem32_write32(target, FLASH_CR, FLASH_CR_OPTER | FLASH_CR_OPTWRE);
-	target_mem32_write32(target, FLASH_CR, FLASH_CR_STRT | FLASH_CR_OPTER | FLASH_CR_OPTWRE);
+	target_mem32_write32(target, STM32F1_FPEC_CTRL, STM32F1_FPEC_OPTER | STM32F1_FPEC_OPTWRE);
+	target_mem32_write32(target, STM32F1_FPEC_CTRL, STM32F1_FPEC_STRT | STM32F1_FPEC_OPTER | STM32F1_FPEC_OPTWRE);
 
 	/* Wait for completion or an error */
-	return stm32f1_flash_busy_wait(target, FLASH_BANK1_OFFSET, NULL);
+	return stm32f1_flash_busy_wait(target, STM32F1_FPEC_BANK1_OFFSET, NULL);
 }
 
 static bool stm32f1_option_write_erased(
@@ -1232,19 +1233,19 @@ static bool stm32f1_option_write_erased(
 	if (value == 0xffffU)
 		return true;
 
-	stm32f1_flash_clear_eop(target, FLASH_BANK1_OFFSET);
+	stm32f1_flash_clear_eop(target, STM32F1_FPEC_BANK1_OFFSET);
 
 	/* Program option bytes instruction */
-	target_mem32_write32(target, FLASH_CR, FLASH_CR_OPTPG | FLASH_CR_OPTWRE);
+	target_mem32_write32(target, STM32F1_FPEC_CTRL, STM32F1_FPEC_OPTPG | STM32F1_FPEC_OPTWRE);
 
-	const uint32_t addr = FLASH_OBP_RDP + (offset * 2U);
+	const uint32_t addr = STM32F1_FPEC_OBP_RDP + (offset * 2U);
 	if (write16_broken)
 		target_mem32_write32(target, addr, 0xffff0000U | value);
 	else
 		target_mem32_write16(target, addr, value);
 
 	/* Wait for completion or an error */
-	const bool result = stm32f1_flash_busy_wait(target, FLASH_BANK1_OFFSET, NULL);
+	const bool result = stm32f1_flash_busy_wait(target, STM32F1_FPEC_BANK1_OFFSET, NULL);
 	if (result || offset != 0U)
 		return result;
 	/*
@@ -1252,8 +1253,8 @@ static bool stm32f1_option_write_erased(
 	 * check if we got a status of "Program Error" in FLASH_SR, indicating the target
 	 * refused to erase the read protection option bytes (and turn it into a truthy return).
 	 */
-	const uint8_t status = target_mem32_read32(target, FLASH_SR) & SR_ERROR_MASK;
-	return status == SR_PROG_ERROR;
+	const uint8_t status = target_mem32_read32(target, STM32F1_FPEC_STATUS) & STM32F1_FPEC_STATUS_ERROR_MASK;
+	return status == STM32F1_FPEC_STATUS_PROG_ERROR;
 }
 
 static bool stm32f1_option_write(target_s *const target, const uint32_t addr, const uint16_t value)
@@ -1261,7 +1262,7 @@ static bool stm32f1_option_write(target_s *const target, const uint32_t addr, co
 	/* Arterytek has 24 option byte halfwords (48 bytes) */
 	const uint16_t ob_count = !strncmp(target->driver, "AT32F403A/407", 13) ? AT32F4_OB_COUNT : STM32F1_OB_COUNT;
 
-	const uint32_t index = (addr - FLASH_OBP_RDP) >> 1U;
+	const uint32_t index = (addr - STM32F1_FPEC_OBP_RDP) >> 1U;
 	/* If index would be negative, the high most bit is set, so we get a giant positive number. */
 	if (index > ob_count - 1U)
 		return false;
@@ -1270,7 +1271,7 @@ static bool stm32f1_option_write(target_s *const target, const uint32_t addr, co
 	/* Retrieve old values */
 	for (size_t i = 0U; i < ob_count * 2U; i += 4U) {
 		const size_t offset = i >> 1U;
-		uint32_t val = target_mem32_read32(target, FLASH_OBP_RDP + i);
+		uint32_t val = target_mem32_read32(target, STM32F1_FPEC_OBP_RDP + i);
 		opt_val[offset] = val & 0xffffU;
 		opt_val[offset + 1U] = val >> 16U;
 	}
@@ -1298,7 +1299,8 @@ static bool stm32f1_option_write(target_s *const target, const uint32_t addr, co
 
 static bool stm32f1_cmd_option(target_s *target, int argc, const char **argv)
 {
-	const uint32_t read_protected = target_mem32_read32(target, FLASH_OBR) & FLASH_OBR_RDPRT;
+	const uint32_t read_protected =
+		target_mem32_read32(target, STM32F1_FPEC_OPTION_BYTE) & STM32F1_FPEC_OPTION_BYTE_RDPRT;
 	const bool erase_requested = argc == 2 && strcmp(argv[1], "erase") == 0;
 	/* Fast-exit if the Flash is not readable and the user didn't ask us to erase the option bytes */
 	if (read_protected && !erase_requested) {
@@ -1307,10 +1309,10 @@ static bool stm32f1_cmd_option(target_s *target, int argc, const char **argv)
 	}
 
 	/* Unprotect the option bytes so we can modify them */
-	if (!stm32f1_flash_unlock(target, FLASH_BANK1_OFFSET))
+	if (!stm32f1_flash_unlock(target, STM32F1_FPEC_BANK1_OFFSET))
 		return false;
-	target_mem32_write32(target, FLASH_OPTKEYR, KEY1);
-	target_mem32_write32(target, FLASH_OPTKEYR, KEY2);
+	target_mem32_write32(target, STM32F1_FPEC_OPTION_KEY, STM32F1_FPEC_KEY1);
+	target_mem32_write32(target, STM32F1_FPEC_OPTION_KEY, STM32F1_FPEC_KEY2);
 
 	if (erase_requested) {
 		/* When the user asks us to erase the option bytes, kick of an erase */
@@ -1340,7 +1342,7 @@ static bool stm32f1_cmd_option(target_s *target, int argc, const char **argv)
 
 	/* When all gets said and done, display the current option bytes values */
 	for (size_t i = 0U; i < ob_count * 2U; i += 4U) {
-		const uint32_t addr = FLASH_OBP_RDP + i;
+		const uint32_t addr = STM32F1_FPEC_OBP_RDP + i;
 		const uint32_t val = target_mem32_read32(target, addr);
 		tc_printf(target, "0x%08" PRIX32 ": 0x%04" PRIX32 "\n", addr, val & 0xffffU);
 		tc_printf(target, "0x%08" PRIX32 ": 0x%04" PRIX32 "\n", addr + 2U, val >> 16U);
@@ -1355,7 +1357,7 @@ static bool stm32f1_cmd_uid(target_s *target, int argc, const char **argv)
 	(void)argv;
 	target_addr_t uid_base = STM32F1_UID_BASE;
 	/* These parts have their UID elsewhere */
-	if (stm32f1_flash_readable_key(target) == FLASH_OBP_RDP_KEY_F3)
+	if (stm32f1_flash_readable_key(target) == STM32F1_FPEC_OBP_RDP_KEY_F3)
 		uid_base = STM32F3_UID_BASE;
 	return stm32_uid(target, uid_base);
 }
