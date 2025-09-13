@@ -51,56 +51,56 @@
 #include "cortexm.h"
 #include "stm32_common.h"
 
-/* Flash Program and Erase Controller Register Map */
-#define FPEC_BASE     0x40023c00U
-#define FLASH_ACR     (FPEC_BASE + 0x00U)
-#define FLASH_KEYR    (FPEC_BASE + 0x04U)
-#define FLASH_OPTKEYR (FPEC_BASE + 0x08U)
-#define FLASH_SR      (FPEC_BASE + 0x0cU)
-#define FLASH_CR      (FPEC_BASE + 0x10U)
-#define FLASH_OPTCR   (FPEC_BASE + 0x14U)
+/* Flash Program and Erase Controller (FPEC) Register Map */
+#define STM32F4_FPEC_BASE        0x40023c00U
+#define STM32F4_FPEC_ACCESS_CTRL (STM32F4_FPEC_BASE + 0x00U)
+#define STM32F4_FPEC_KEY         (STM32F4_FPEC_BASE + 0x04U)
+#define STM32F4_FPEC_OPTION_KEY  (STM32F4_FPEC_BASE + 0x08U)
+#define STM32F4_FPEC_STATUS      (STM32F4_FPEC_BASE + 0x0cU)
+#define STM32F4_FPEC_CTRL        (STM32F4_FPEC_BASE + 0x10U)
+#define STM32F4_FPEC_OPTION_CTRL (STM32F4_FPEC_BASE + 0x14U)
 
-#define FLASH_CR_PG      (1U << 0U)
-#define FLASH_CR_SER     (1U << 1U)
-#define FLASH_CR_MER     (1U << 2U)
-#define FLASH_CR_PSIZE8  (0U << 8U)
-#define FLASH_CR_PSIZE16 (1U << 8U)
-#define FLASH_CR_PSIZE32 (2U << 8U)
-#define FLASH_CR_PSIZE64 (3U << 8U)
-#define FLASH_CR_MER1    (1U << 15U)
-#define FLASH_CR_STRT    (1U << 16U)
-#define FLASH_CR_EOPIE   (1U << 24U)
-#define FLASH_CR_ERRIE   (1U << 25U)
-#define FLASH_CR_STRT    (1U << 16U)
-#define FLASH_CR_LOCK    (1U << 31U)
+#define STM32F4_FPEC_CTRL_PG      (1U << 0U)
+#define STM32F4_FPEC_CTRL_SER     (1U << 1U)
+#define STM32F4_FPEC_CTRL_MER     (1U << 2U)
+#define STM32F4_FPEC_CTRL_PSIZE8  (0U << 8U)
+#define STM32F4_FPEC_CTRL_PSIZE16 (1U << 8U)
+#define STM32F4_FPEC_CTRL_PSIZE32 (2U << 8U)
+#define STM32F4_FPEC_CTRL_PSIZE64 (3U << 8U)
+#define STM32F4_FPEC_CTRL_MER1    (1U << 15U)
+#define STM32F4_FPEC_CTRL_STRT    (1U << 16U)
+#define STM32F4_FPEC_CTRL_EOPIE   (1U << 24U)
+#define STM32F4_FPEC_CTRL_ERRIE   (1U << 25U)
+#define STM32F4_FPEC_CTRL_STRT    (1U << 16U)
+#define STM32F4_FPEC_CTRL_LOCK    (1U << 31U)
 
-#define FLASH_SR_BSY (1U << 16U)
+#define STM32F4_FPEC_STATUS_BSY (1U << 16U)
 
-#define FLASH_OPTCR_OPTLOCK (1U << 0U)
-#define FLASH_OPTCR_OPTSTRT (1U << 1U)
-#define FLASH_OPTCR_WDG_SW  (1U << 5U)
-#define FLASH_OPTCR_nDBANK  (1U << 29U)
-#define FLASH_OPTCR_DB1M    (1U << 30U)
+#define STM32F4_FPEC_OPTION_CTRL_OPTLOCK (1U << 0U)
+#define STM32F4_FPEC_OPTION_CTRL_OPTSTRT (1U << 1U)
+#define STM32F4_FPEC_OPTION_CTRL_WDG_SW  (1U << 5U)
+#define STM32F4_FPEC_OPTION_CTRL_nDBANK  (1U << 29U)
+#define STM32F4_FPEC_OPTION_CTRL_DB1M    (1U << 30U)
 
-#define FLASH_OPTCR_PROT_MASK 0xff00U
-#define FLASH_OPTCR_PROT_L0   0xaa00U
-#define FLASH_OPTCR_PROT_L1   0xbb00U
+#define STM32F4_FPEC_OPTION_CTRL_PROT_MASK 0xff00U
+#define STM32F4_FPEC_OPTION_CTRL_PROT_L0   0xaa00U
+#define STM32F4_FPEC_OPTION_CTRL_PROT_L1   0xbb00U
 
-#define KEY1 0x45670123U
-#define KEY2 0xcdef89abU
+#define STM32F4_FPEC_KEY1 0x45670123U
+#define STM32F4_FPEC_KEY2 0xcdef89abU
 
-#define OPTKEY1 0x08192a3bU
-#define OPTKEY2 0x4c5d6e7fU
+#define STM32F4_FPEC_OPTION_KEY1 0x08192a3bU
+#define STM32F4_FPEC_OPTION_KEY2 0x4c5d6e7fU
 
-#define SR_ERROR_MASK 0xf2U
-#define SR_EOP        0x01U
+#define STM32F4_FPEC_STATUS_ERROR_MASK 0x000000f2U
+#define STM32F4_FPEC_STATUS_EOP        (1U << 0U)
 
-#define F4_UID_BASE    0x1fff7a10U
-#define F4_FLASHSIZE   0x1fff7a22U
-#define F7_UID_BASE    0x1ff0f420U
-#define F7_FLASHSIZE   0x1ff0f442U
-#define F72X_UID_BASE  0x1ff07a10U
-#define F72X_FLASHSIZE 0x1ff07a22U
+#define STM32F4_UID_BASE     0x1fff7a10U
+#define STM32F4_FLASH_SIZE   0x1fff7a22U
+#define STM32F7_UID_BASE     0x1ff0f420U
+#define STM32F7_FLASH_SIZE   0x1ff0f442U
+#define STM32F72x_UID_BASE   0x1ff07a10U
+#define STM32F72x_FLASH_SIZE 0x1ff07a22U
 
 #define STM32F4_DBGMCU_BASE       0xe0042000U
 #define STM32F4_DBGMCU_IDCODE     (STM32F4_DBGMCU_BASE + 0x00U)
@@ -455,8 +455,8 @@ static bool stm32f4_attach(target_s *const target)
 		target_add_ram32(target, STM32F7_DTCM_RAM_BASE + dtcm_size, ahbsram_size);
 
 		if (dual_bank) {
-			const uint32_t option_ctrl = target_mem32_read32(target, FLASH_OPTCR);
-			use_dual_bank = !(option_ctrl & FLASH_OPTCR_nDBANK);
+			const uint32_t option_ctrl = target_mem32_read32(target, STM32F4_FPEC_OPTION_CTRL);
+			use_dual_bank = !(option_ctrl & STM32F4_FPEC_OPTION_CTRL_nDBANK);
 		}
 	} else {
 		if (has_ccm_ram)
@@ -481,8 +481,8 @@ static bool stm32f4_attach(target_s *const target)
 
 		if (dual_bank && max_flashsize < 2048U) {
 			/* Check the dual-bank status on 1MiB Flash devices */
-			const uint32_t option_ctrl = target_mem32_read32(target, FLASH_OPTCR);
-			use_dual_bank = !(option_ctrl & FLASH_OPTCR_DB1M);
+			const uint32_t option_ctrl = target_mem32_read32(target, STM32F4_FPEC_OPTION_CTRL);
+			use_dual_bank = !(option_ctrl & STM32F4_FPEC_OPTION_CTRL_DB1M);
 		}
 	}
 
@@ -583,20 +583,20 @@ static void stm32f4_detach(target_s *const target)
 
 static void stm32f4_flash_unlock(target_s *target)
 {
-	if (target_mem32_read32(target, FLASH_CR) & FLASH_CR_LOCK) {
+	if (target_mem32_read32(target, STM32F4_FPEC_CTRL) & STM32F4_FPEC_CTRL_LOCK) {
 		/* Enable FPEC controller access */
-		target_mem32_write32(target, FLASH_KEYR, KEY1);
-		target_mem32_write32(target, FLASH_KEYR, KEY2);
+		target_mem32_write32(target, STM32F4_FPEC_KEY, STM32F4_FPEC_KEY1);
+		target_mem32_write32(target, STM32F4_FPEC_KEY, STM32F4_FPEC_KEY2);
 	}
 }
 
 static bool stm32f4_flash_busy_wait(target_s *const target, platform_timeout_s *const timeout)
 {
 	/* Read FLASH_SR to poll for BSY bit */
-	uint32_t status = FLASH_SR_BSY;
-	while (status & FLASH_SR_BSY) {
-		status = target_mem32_read32(target, FLASH_SR);
-		if ((status & SR_ERROR_MASK) || target_check_error(target)) {
+	uint32_t status = STM32F4_FPEC_STATUS_BSY;
+	while (status & STM32F4_FPEC_STATUS_BSY) {
+		status = target_mem32_read32(target, STM32F4_FPEC_STATUS);
+		if ((status & STM32F4_FPEC_STATUS_ERROR_MASK) || target_check_error(target)) {
 			DEBUG_ERROR("stm32f4 flash error 0x%" PRIx32 "\n", status);
 			return false;
 		}
@@ -619,11 +619,12 @@ static bool stm32f4_flash_erase(target_flash_s *target_flash, target_addr_t addr
 
 	/* Erase the requested chunk of flash, one sector at a time. */
 	for (size_t offset = 0; offset < len; offset += target_flash->blocksize) {
-		uint32_t cr = FLASH_CR_EOPIE | FLASH_CR_ERRIE | FLASH_CR_SER | (psize * FLASH_CR_PSIZE16) | (sector << 3U);
+		uint32_t cr = STM32F4_FPEC_CTRL_EOPIE | STM32F4_FPEC_CTRL_ERRIE | STM32F4_FPEC_CTRL_SER |
+			(psize * STM32F4_FPEC_CTRL_PSIZE16) | (sector << 3U);
 		/* Flash page erase instruction */
-		target_mem32_write32(target, FLASH_CR, cr);
+		target_mem32_write32(target, STM32F4_FPEC_CTRL, cr);
 		/* write address to FMA */
-		target_mem32_write32(target, FLASH_CR, cr | FLASH_CR_STRT);
+		target_mem32_write32(target, STM32F4_FPEC_CTRL, cr | STM32F4_FPEC_CTRL_STRT);
 
 		/* Wait for completion or an error */
 		if (!stm32f4_flash_busy_wait(target, NULL))
@@ -644,7 +645,7 @@ static bool stm32f4_flash_write(target_flash_s *flash, target_addr_t dest, const
 	target_s *target = flash->t;
 
 	align_e psize = ((const stm32f4_priv_s *)target->target_storage)->psize;
-	target_mem32_write32(target, FLASH_CR, (psize * FLASH_CR_PSIZE16) | FLASH_CR_PG);
+	target_mem32_write32(target, STM32F4_FPEC_CTRL, (psize * STM32F4_FPEC_CTRL_PSIZE16) | STM32F4_FPEC_CTRL_PG);
 	cortexm_mem_write_aligned(target, dest, src, len, psize);
 
 	/* Wait for completion or an error */
@@ -658,9 +659,9 @@ static bool stm32f4_mass_erase(target_s *const target, platform_timeout_s *const
 	stm32f4_flash_unlock(target);
 
 	/* Flash mass erase start instruction */
-	const uint32_t ctrl = FLASH_CR_MER | (stm32f4_flash->bank_split ? FLASH_CR_MER1 : 0);
-	target_mem32_write32(target, FLASH_CR, ctrl);
-	target_mem32_write32(target, FLASH_CR, ctrl | FLASH_CR_STRT);
+	const uint32_t ctrl = STM32F4_FPEC_CTRL_MER | (stm32f4_flash->bank_split ? STM32F4_FPEC_CTRL_MER1 : 0);
+	target_mem32_write32(target, STM32F4_FPEC_CTRL, ctrl);
+	target_mem32_write32(target, STM32F4_FPEC_CTRL, ctrl | STM32F4_FPEC_CTRL_STRT);
 
 	/* Wait for completion or an error */
 	return stm32f4_flash_busy_wait(target, print_progess);
@@ -747,20 +748,21 @@ static size_t stm32f4_opt_bytes_for(const uint16_t part_id)
 
 static bool stm32f4_option_write(target_s *target, uint32_t *const val, size_t count)
 {
-	val[0] &= ~(FLASH_OPTCR_OPTSTRT | FLASH_OPTCR_OPTLOCK);
-	uint32_t optcr = target_mem32_read32(target, FLASH_OPTCR);
+	val[0] &= ~(STM32F4_FPEC_OPTION_CTRL_OPTSTRT | STM32F4_FPEC_OPTION_CTRL_OPTLOCK);
+	uint32_t optcr = target_mem32_read32(target, STM32F4_FPEC_OPTION_CTRL);
 	/* Check if watchdog and read protection is active.
 	 * When both are active, watchdog will trigger when erasing
 	 * to get back to level 0 protection and operation aborts!
 	 */
-	if (!(optcr & FLASH_OPTCR_WDG_SW) && (optcr & FLASH_OPTCR_PROT_MASK) != FLASH_OPTCR_PROT_L0 &&
-		(val[0] & FLASH_OPTCR_PROT_MASK) != FLASH_OPTCR_PROT_L1) {
-		val[0] &= ~FLASH_OPTCR_PROT_MASK;
-		val[0] |= FLASH_OPTCR_PROT_L1;
+	if (!(optcr & STM32F4_FPEC_OPTION_CTRL_WDG_SW) &&
+		(optcr & STM32F4_FPEC_OPTION_CTRL_PROT_MASK) != STM32F4_FPEC_OPTION_CTRL_PROT_L0 &&
+		(val[0] & STM32F4_FPEC_OPTION_CTRL_PROT_MASK) != STM32F4_FPEC_OPTION_CTRL_PROT_L1) {
+		val[0] &= ~STM32F4_FPEC_OPTION_CTRL_PROT_MASK;
+		val[0] |= STM32F4_FPEC_OPTION_CTRL_PROT_L1;
 		tc_printf(target, "Keeping L1 protection while HW Watchdog fuse is set!\n");
 	}
-	target_mem32_write32(target, FLASH_OPTKEYR, OPTKEY1);
-	target_mem32_write32(target, FLASH_OPTKEYR, OPTKEY2);
+	target_mem32_write32(target, STM32F4_FPEC_OPTION_KEY, STM32F4_FPEC_OPTION_KEY1);
+	target_mem32_write32(target, STM32F4_FPEC_OPTION_KEY, STM32F4_FPEC_OPTION_KEY2);
 	if (!stm32f4_flash_busy_wait(target, NULL))
 		return false;
 
@@ -768,13 +770,13 @@ static bool stm32f4_option_write(target_s *target, uint32_t *const val, size_t c
 	/* Write option bytes instruction */
 	if (stm32f4_opt_bytes_for(part_id) > 1U && count > 1U) {
 		/* XXX: Do we need to read old value and then set it? */
-		target_mem32_write32(target, FLASH_OPTCR + 4U, val[1]);
+		target_mem32_write32(target, STM32F4_FPEC_OPTION_CTRL + 4U, val[1]);
 		if (part_id == ID_STM32F72X && count > 2U)
-			target_mem32_write32(target, FLASH_OPTCR + 8U, val[2]);
+			target_mem32_write32(target, STM32F4_FPEC_OPTION_CTRL + 8U, val[2]);
 	}
 
-	target_mem32_write32(target, FLASH_OPTCR, val[0]);
-	target_mem32_write32(target, FLASH_OPTCR, val[0] | FLASH_OPTCR_OPTSTRT);
+	target_mem32_write32(target, STM32F4_FPEC_OPTION_CTRL, val[0]);
+	target_mem32_write32(target, STM32F4_FPEC_OPTION_CTRL, val[0] | STM32F4_FPEC_OPTION_CTRL_OPTSTRT);
 
 	tc_printf(target, "Erasing flash\nThis may take a few seconds...\n");
 
@@ -785,7 +787,7 @@ static bool stm32f4_option_write(target_s *target, uint32_t *const val, size_t c
 		return false;
 	tc_printf(target, "\n");
 
-	target_mem32_write32(target, FLASH_OPTCR, FLASH_OPTCR_OPTLOCK);
+	target_mem32_write32(target, STM32F4_FPEC_OPTION_CTRL, STM32F4_FPEC_OPTION_CTRL_OPTLOCK);
 	/* Reset target to reload option bits.*/
 	target_reset(target);
 	return true;
@@ -860,11 +862,11 @@ static bool stm32f4_cmd_option(target_s *target, int argc, const char **argv)
 			opt_bytes > 1U ? " <OPTCR1>" : "", opt_bytes == 3U ? " <OPTCR2>" : "");
 
 	uint32_t val[3] = {0};
-	val[0] = target_mem32_read32(target, FLASH_OPTCR);
+	val[0] = target_mem32_read32(target, STM32F4_FPEC_OPTION_CTRL);
 	if (opt_bytes > 1U) {
-		val[1] = target_mem32_read32(target, FLASH_OPTCR + 4U);
+		val[1] = target_mem32_read32(target, STM32F4_FPEC_OPTION_CTRL + 4U);
 		if (opt_bytes == 3U)
-			val[2] = target_mem32_read32(target, FLASH_OPTCR + 8U);
+			val[2] = target_mem32_read32(target, STM32F4_FPEC_OPTION_CTRL + 8U);
 	}
 	optcr_mask(target, val);
 	tc_printf(target, "OPTCR: 0x%08" PRIx32, val[0]);
@@ -899,14 +901,14 @@ static bool stm32f4_cmd_uid(target_s *target, int argc, const char **argv)
 
 	switch (target->part_id) {
 	case ID_STM32F72X:
-		uid_base = F72X_UID_BASE;
+		uid_base = STM32F72x_UID_BASE;
 		break;
 	case ID_STM32F74X:
 	case ID_STM32F76X:
-		uid_base = F7_UID_BASE;
+		uid_base = STM32F7_UID_BASE;
 		break;
 	default: /* including STM32F2, STM32F4; and GD32F4 */
-		uid_base = F4_UID_BASE;
+		uid_base = STM32F4_UID_BASE;
 		break;
 	}
 	return stm32_uid(target, uid_base);
