@@ -4,7 +4,7 @@
  * Copyright (C) 2011 Black Sphere Technologies Ltd.
  * Written by Gareth McMullin <gareth@blacksphere.co.nz>
  * Copyright (C) 2017, 2018 Uwe Bonnes <bon@elektron.ikp.physik.tu-darmstadt.de>
- * Copyright (C) 2023-2024 1BitSquared <info@1bitsquared.com>
+ * Copyright (C) 2023-2025 1BitSquared <info@1bitsquared.com>
  * Modified by Rachel Mant <git@dragonmux.network>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -51,6 +51,15 @@
 #include "cortexm.h"
 #include "stm32_common.h"
 
+/* Memory map constants for STM32F4 & STM32F7 */
+#define STM32F7_AXIM_FLASH_BASE 0x08000000U
+#define STM32F7_ITCM_FLASH_BASE 0x00200000U
+
+#define STM32F7_ITCM_RAM_BASE 0x00000000U
+#define STM32F4_CCM_RAM_BASE  0x10000000U
+#define STM32F4_AHB_SRAM_BASE 0x20000000U
+#define STM32F7_DTCM_RAM_BASE STM32F4_AHB_SRAM_BASE
+
 /* Flash Program and Erase Controller (FPEC) Register Map */
 #define STM32F4_FPEC_BASE        0x40023c00U
 #define STM32F4_FPEC_ACCESS_CTRL (STM32F4_FPEC_BASE + 0x00U)
@@ -59,6 +68,16 @@
 #define STM32F4_FPEC_STATUS      (STM32F4_FPEC_BASE + 0x0cU)
 #define STM32F4_FPEC_CTRL        (STM32F4_FPEC_BASE + 0x10U)
 #define STM32F4_FPEC_OPTION_CTRL (STM32F4_FPEC_BASE + 0x14U)
+
+#define STM32F4_FPEC_KEY1 0x45670123U
+#define STM32F4_FPEC_KEY2 0xcdef89abU
+
+#define STM32F4_FPEC_OPTION_KEY1 0x08192a3bU
+#define STM32F4_FPEC_OPTION_KEY2 0x4c5d6e7fU
+
+#define STM32F4_FPEC_STATUS_BUSY       (1U << 16U)
+#define STM32F4_FPEC_STATUS_EOP        (1U << 0U)
+#define STM32F4_FPEC_STATUS_ERROR_MASK 0x000000f2U
 
 #define STM32F4_FPEC_CTRL_PG      (1U << 0U)
 #define STM32F4_FPEC_CTRL_SER     (1U << 1U)
@@ -74,26 +93,14 @@
 #define STM32F4_FPEC_CTRL_STRT    (1U << 16U)
 #define STM32F4_FPEC_CTRL_LOCK    (1U << 31U)
 
-#define STM32F4_FPEC_STATUS_BSY (1U << 16U)
-
-#define STM32F4_FPEC_OPTION_CTRL_OPTLOCK (1U << 0U)
-#define STM32F4_FPEC_OPTION_CTRL_OPTSTRT (1U << 1U)
-#define STM32F4_FPEC_OPTION_CTRL_WDG_SW  (1U << 5U)
-#define STM32F4_FPEC_OPTION_CTRL_nDBANK  (1U << 29U)
-#define STM32F4_FPEC_OPTION_CTRL_DB1M    (1U << 30U)
-
-#define STM32F4_FPEC_OPTION_CTRL_PROT_MASK 0xff00U
-#define STM32F4_FPEC_OPTION_CTRL_PROT_L0   0xaa00U
-#define STM32F4_FPEC_OPTION_CTRL_PROT_L1   0xbb00U
-
-#define STM32F4_FPEC_KEY1 0x45670123U
-#define STM32F4_FPEC_KEY2 0xcdef89abU
-
-#define STM32F4_FPEC_OPTION_KEY1 0x08192a3bU
-#define STM32F4_FPEC_OPTION_KEY2 0x4c5d6e7fU
-
-#define STM32F4_FPEC_STATUS_ERROR_MASK 0x000000f2U
-#define STM32F4_FPEC_STATUS_EOP        (1U << 0U)
+#define STM32F4_FPEC_OPTION_CTRL_OPTLOCK   (1U << 0U)
+#define STM32F4_FPEC_OPTION_CTRL_OPTSTRT   (1U << 1U)
+#define STM32F4_FPEC_OPTION_CTRL_WDG_SW    (1U << 5U)
+#define STM32F4_FPEC_OPTION_CTRL_nDBANK    (1U << 29U)
+#define STM32F4_FPEC_OPTION_CTRL_DB1M      (1U << 30U)
+#define STM32F4_FPEC_OPTION_CTRL_PROT_MASK (0xffU << 8U)
+#define STM32F4_FPEC_OPTION_CTRL_PROT_L0   (0xaaU << 8U)
+#define STM32F4_FPEC_OPTION_CTRL_PROT_L1   (0xbbU << 8U)
 
 #define STM32F4_UID_BASE     0x1fff7a10U
 #define STM32F4_FLASH_SIZE   0x1fff7a22U
@@ -102,18 +109,11 @@
 #define STM32F72x_UID_BASE   0x1ff07a10U
 #define STM32F72x_FLASH_SIZE 0x1ff07a22U
 
+/* DBGMCU Register Map */
 #define STM32F4_DBGMCU_BASE       0xe0042000U
 #define STM32F4_DBGMCU_IDCODE     (STM32F4_DBGMCU_BASE + 0x00U)
 #define STM32F4_DBGMCU_CTRL       (STM32F4_DBGMCU_BASE + 0x04U)
 #define STM32F4_DBGMCU_APB1FREEZE (STM32F4_DBGMCU_BASE + 0x08U)
-
-#define STM32F7_AXIM_FLASH_BASE 0x08000000U
-#define STM32F7_ITCM_FLASH_BASE 0x00200000U
-
-#define STM32F7_ITCM_RAM_BASE 0x00000000U
-#define STM32F4_CCM_RAM_BASE  0x10000000U
-#define STM32F4_AHB_SRAM_BASE 0x20000000U
-#define STM32F7_DTCM_RAM_BASE STM32F4_AHB_SRAM_BASE
 
 #define STM32F4_DBGMCU_CTRL_DBG_SLEEP   (1U << 0U)
 #define STM32F4_DBGMCU_CTRL_DBG_STOP    (1U << 1U)
@@ -593,8 +593,8 @@ static void stm32f4_flash_unlock(target_s *target)
 static bool stm32f4_flash_busy_wait(target_s *const target, platform_timeout_s *const timeout)
 {
 	/* Read FLASH_SR to poll for BSY bit */
-	uint32_t status = STM32F4_FPEC_STATUS_BSY;
-	while (status & STM32F4_FPEC_STATUS_BSY) {
+	uint32_t status = STM32F4_FPEC_STATUS_BUSY;
+	while (status & STM32F4_FPEC_STATUS_BUSY) {
 		status = target_mem32_read32(target, STM32F4_FPEC_STATUS);
 		if ((status & STM32F4_FPEC_STATUS_ERROR_MASK) || target_check_error(target)) {
 			DEBUG_ERROR("stm32f4 flash error 0x%" PRIx32 "\n", status);
