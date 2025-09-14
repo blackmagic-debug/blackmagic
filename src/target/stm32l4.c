@@ -2,7 +2,7 @@
  * This file is part of the Black Magic Debug project.
  *
  * Copyright (C) 2015, 2017-2022 Uwe Bonnes <bon@elektron.ikp.physik.tu-darmstadt.de>
- * Copyright (C) 2022-2024 1BitSquared <info@1bitsquared.com>
+ * Copyright (C) 2022-2025 1BitSquared <info@1bitsquared.com>
  * Written by Uwe Bonnes <bon@elektron.ikp.physik.tu-darmstadt.de>
  * Modified by Rachel Mant <git@dragonmux.network>
  *
@@ -55,25 +55,6 @@
 #include "stm32_common.h"
 #include <limits.h>
 #include <assert.h>
-
-static bool stm32l4_cmd_erase_bank1(target_s *target, int argc, const char **argv);
-static bool stm32l4_cmd_erase_bank2(target_s *target, int argc, const char **argv);
-static bool stm32l4_cmd_option(target_s *target, int argc, const char **argv);
-static bool stm32l4_cmd_uid(target_s *target, int argc, const char **argv);
-
-static bool stm32l4_attach(target_s *target);
-static void stm32l4_detach(target_s *target);
-static bool stm32l4_flash_erase(target_flash_s *flash, target_addr_t addr, size_t len);
-static bool stm32l4_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t len);
-static bool stm32l4_mass_erase(target_s *target, platform_timeout_s *print_progess);
-
-const command_s stm32l4_cmd_list[] = {
-	{"erase_bank1", stm32l4_cmd_erase_bank1, "Erase entire bank1 flash memory"},
-	{"erase_bank2", stm32l4_cmd_erase_bank2, "Erase entire bank2 flash memory"},
-	{"option", stm32l4_cmd_option, "Manipulate option bytes"},
-	{"uid", stm32l4_cmd_uid, "Print unique device ID"},
-	{NULL, NULL, NULL},
-};
 
 /* Flash Program ad Erase Controller Register Map */
 #define STM32L4_FPEC_BASE 0x40022000U
@@ -236,6 +217,25 @@ const command_s stm32l4_cmd_list[] = {
 #define ID_STM32WLxx 0x497U
 #define ID_STM32WB35 0x495U /* STM32WB35/55 */
 #define ID_STM32WB1x 0x494U
+
+static bool stm32l4_cmd_erase_bank1(target_s *target, int argc, const char **argv);
+static bool stm32l4_cmd_erase_bank2(target_s *target, int argc, const char **argv);
+static bool stm32l4_cmd_option(target_s *target, int argc, const char **argv);
+static bool stm32l4_cmd_uid(target_s *target, int argc, const char **argv);
+
+const command_s stm32l4_cmd_list[] = {
+	{"erase_bank1", stm32l4_cmd_erase_bank1, "Erase entire bank1 flash memory"},
+	{"erase_bank2", stm32l4_cmd_erase_bank2, "Erase entire bank2 flash memory"},
+	{"option", stm32l4_cmd_option, "Manipulate option bytes"},
+	{"uid", stm32l4_cmd_uid, "Print unique device ID"},
+	{NULL, NULL, NULL},
+};
+
+static bool stm32l4_attach(target_s *target);
+static void stm32l4_detach(target_s *target);
+static bool stm32l4_flash_erase(target_flash_s *flash, target_addr_t addr, size_t len);
+static bool stm32l4_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t len);
+static bool stm32l4_mass_erase(target_s *target, platform_timeout_s *print_progess);
 
 typedef enum stm32l4_family {
 	STM32L4_FAMILY_L4xx,
