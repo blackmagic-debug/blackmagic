@@ -21,8 +21,8 @@
  */
 
 /*
- * This file implements STM32L4 target specific functions for detecting
- * the device, providing the XML memory map and Flash memory programming.
+ * This file implements support for STM32L4, STM32L5, STM32G4, STM32U5, STM32WB, and STM32WL series
+ * devices, providing memory maps and Flash programming routines.
  *
  * On L4, flash and options are written in DWORDs (8-Byte) only.
  *
