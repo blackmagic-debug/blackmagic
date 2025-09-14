@@ -2,7 +2,7 @@
  * This file is part of the Black Magic Debug project.
  *
  * Copyright (C) 2017-2020 Uwe Bonnes bon@elektron.ikp.physik.tu-darmstadt.de
- * Copyright (C) 2022-2024 1BitSquared <info@1bitsquared.com>
+ * Copyright (C) 2022-2025 1BitSquared <info@1bitsquared.com>
  * Modified by Rachel Mant <git@dragonmux.network>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -171,8 +171,7 @@
 #define STM32H7_FLASH_BANK_SIZE     0x00100000U
 #define STM32H74xxG_FLASH_BANK_SIZE 0x00080000U
 #define STM32H74xxG_FLASH_SIZE      0x00100000U
-#define NUM_SECTOR_PER_BANK         8U
-#define FLASH_SECTOR_SIZE           0x20000U
+#define STM32H7_FLASH_SECTOR_SIZE   0x20000U
 
 #define ID_STM32H74x 0x450U /* RM0433, RM0399 */
 #define ID_STM32H7Bx 0x480U /* RM0455 */
@@ -356,17 +355,17 @@ bool stm32h7_probe(target_s *target)
 		/* Read the Flash size from the device (expressed in kiB) and multiply it by 1024 */
 		const uint32_t flash_size = target_mem32_read32(target, STM32H7_FLASH_SIZE) << 10U;
 		/* STM32H750nB: 128 KiB, single sector of first bank */
-		if (flash_size == FLASH_SECTOR_SIZE)
-			stm32h7_add_flash(target, STM32H7_FLASH_BANK1_BASE, flash_size, FLASH_SECTOR_SIZE);
+		if (flash_size == STM32H7_FLASH_SECTOR_SIZE)
+			stm32h7_add_flash(target, STM32H7_FLASH_BANK1_BASE, flash_size, STM32H7_FLASH_SECTOR_SIZE);
 		/* STM32H742xG/H743xG: two banks, each 512 KiB in only 4 sectors of 128 KiB, (and a hole in 0x08080000-0x080fffff), no crypto */
 		else if (flash_size == STM32H74xxG_FLASH_SIZE) {
-			stm32h7_add_flash(target, STM32H7_FLASH_BANK1_BASE, STM32H74xxG_FLASH_BANK_SIZE, FLASH_SECTOR_SIZE);
-			stm32h7_add_flash(target, STM32H7_FLASH_BANK2_BASE, STM32H74xxG_FLASH_BANK_SIZE, FLASH_SECTOR_SIZE);
+			stm32h7_add_flash(target, STM32H7_FLASH_BANK1_BASE, STM32H74xxG_FLASH_BANK_SIZE, STM32H7_FLASH_SECTOR_SIZE);
+			stm32h7_add_flash(target, STM32H7_FLASH_BANK2_BASE, STM32H74xxG_FLASH_BANK_SIZE, STM32H7_FLASH_SECTOR_SIZE);
 		}
 		/* STM32H742xI/H743xI/H753xI: two banks, each 1024 KiB in 8 sectors of 128 KiB */
 		else {
-			stm32h7_add_flash(target, STM32H7_FLASH_BANK1_BASE, STM32H7_FLASH_BANK_SIZE, FLASH_SECTOR_SIZE);
-			stm32h7_add_flash(target, STM32H7_FLASH_BANK2_BASE, STM32H7_FLASH_BANK_SIZE, FLASH_SECTOR_SIZE);
+			stm32h7_add_flash(target, STM32H7_FLASH_BANK1_BASE, STM32H7_FLASH_BANK_SIZE, STM32H7_FLASH_SECTOR_SIZE);
+			stm32h7_add_flash(target, STM32H7_FLASH_BANK2_BASE, STM32H7_FLASH_BANK_SIZE, STM32H7_FLASH_SECTOR_SIZE);
 		}
 		break;
 	}
@@ -395,7 +394,7 @@ bool stm32h7_probe(target_s *target)
 		 * STM32H723xE/H725xE: 512 KiB in 4 sectors of 128 KiB, single bank, no crypto
 		 * STM32H72xxG (H723xG/H733xG, H725xG/H735xG): 1024 KiB in 8 sectors of 128 KiB, single bank
 		 */
-		stm32h7_add_flash(target, STM32H7_FLASH_BANK1_BASE, flash_size, FLASH_SECTOR_SIZE);
+		stm32h7_add_flash(target, STM32H7_FLASH_BANK1_BASE, flash_size, STM32H7_FLASH_SECTOR_SIZE);
 		break;
 	}
 	default:
@@ -498,7 +497,7 @@ static uint32_t stm32h7_flash_cr(uint32_t sector_size, const uint32_t ctrl, cons
 {
 	uint32_t command = ctrl;
 	/* H74x, H72x IP: 128 KiB and has PSIZE */
-	if (sector_size == FLASH_SECTOR_SIZE) {
+	if (sector_size == STM32H7_FLASH_SECTOR_SIZE) {
 		command |= sector_number << STM32H7_FLASH_CTRL_SECTOR_NUM_SHIFT;
 		return command;
 	}
