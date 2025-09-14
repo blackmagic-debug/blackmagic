@@ -2,7 +2,7 @@
  * This file is part of the Black Magic Debug project.
  *
  * Copyright (C) 2014,2015 Marc Singer <elf@woollysoft.com>
- * Copyright (C) 2022-2024 1BitSquared <info@1bitsquared.com>
+ * Copyright (C) 2022-2025 1BitSquared <info@1bitsquared.com>
  * Written by Marc Singer <elf@woollysoft.com>
  * Modified by Rachel Mant <git@dragonmux.network>
  *
@@ -297,6 +297,8 @@ bool stm32l0_probe(target_s *const target)
 		stm32l_add_flash(target, STM32Lx_FLASH_BANK_BASE, bank_size, STM32L0_FLASH_PAGE_SIZE);
 		stm32l_add_flash(target, bank2_base, bank_size, STM32L0_FLASH_PAGE_SIZE);
 		break;
+	default:
+		break;
 	}
 	}
 	/* There's also no good way to know how much EEPROM the part has, so define a one-size map for that too */
@@ -365,6 +367,8 @@ bool stm32l1_probe(target_s *const target)
 		flash_size_taddr = STM32L1xxxx_UID_FLASH_SIZE;
 		priv->uid_taddr = STM32L1xxxx_UID_BASE;
 		break;
+	default:
+		break;
 	}
 	/* Read out the appropriate Flash size register value */
 	uint32_t flash_size = target_mem32_read16(target, flash_size_taddr);
@@ -429,6 +433,8 @@ bool stm32l1_probe(target_s *const target)
 		stm32l_add_flash(target, STM32Lx_FLASH_BANK_BASE + 0x00040000U, bank_size, STM32L1_FLASH_PAGE_SIZE);
 		break;
 	}
+	default:
+		break;
 	}
 
 	return true;
