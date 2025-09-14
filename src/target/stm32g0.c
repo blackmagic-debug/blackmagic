@@ -545,6 +545,8 @@ static bool stm32g0_cmd_erase_bank(target_s *target, int argc, const char **argv
 		case '2':
 			ctrl = STM32G0_FPEC_CTRL_MER2 | STM32G0_FPEC_CTRL_START;
 			break;
+		default:
+			break;
 		}
 	}
 
