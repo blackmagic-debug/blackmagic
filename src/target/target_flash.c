@@ -278,8 +278,11 @@ static bool flash_buffered_flush(target_flash_s *flash)
 		const uint8_t *src = flash->buf + (aligned_addr - flash->buf_addr_base);
 		const uint32_t length = flash->buf_addr_high - aligned_addr;
 
-		for (size_t offset = 0; offset < length; offset += flash->writesize)
+		for (size_t offset = 0; offset < length; offset += flash->writesize) {
+			DEBUG_TARGET("%s: %08" PRIx32 "+%" PRIu32 "\n", "target_flash_write", (uint32_t)(aligned_addr + offset),
+				(uint32_t)flash->writesize);
 			result &= flash->write(flash, aligned_addr + offset, src + offset, flash->writesize);
+		}
 
 		flash->buf_addr_base = UINT32_MAX;
 		flash->buf_addr_low = UINT32_MAX;
