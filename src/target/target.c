@@ -512,7 +512,8 @@ int target_breakwatch_set(target_s *target, target_breakwatch_e type, target_add
 
 int target_breakwatch_clear(target_s *target, target_breakwatch_e type, target_addr_t addr, size_t len)
 {
-	breakwatch_s *bwp = NULL, *bw;
+	breakwatch_s *bwp = NULL;
+	breakwatch_s *bw;
 	for (bw = target->bw_list; bw; bwp = bw, bw = bw->next) {
 		if (bw->type == type && bw->addr == addr && bw->size == len)
 			break;
@@ -657,6 +658,6 @@ void tc_printf(target_s *target, const char *fmt, ...)
 	va_list ap;
 	va_start(ap, fmt);
 	target->tc->printf(target->tc, fmt, ap);
-	fflush(stdout);
+	(void)fflush(stdout);
 	va_end(ap);
 }
