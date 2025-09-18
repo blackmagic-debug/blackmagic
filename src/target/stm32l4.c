@@ -276,15 +276,15 @@ typedef struct stm32l4_option_bytes_info {
 } stm32l4_option_bytes_info_s;
 
 typedef enum stm32l4_flash_reg {
-	FLASH_KEYR,
-	FLASH_OPTKEYR,
+	STM32L4_FPEC_KEY,
+	STM32L4_FPEC_OPTION_KEY,
 	STM32L4_FPEC_STATUS,
 	STM32L4_FPEC_CTRL,
-	FLASH_OPTR,
-	FLASH_REGS_COUNT
+	STM32L4_FPEC_OPTION,
+	STM32L4_FPEC_REGS_COUNT
 } stm32l4_flash_reg_e;
 
-static const uint32_t stm32l4_flash_regs_map[FLASH_REGS_COUNT] = {
+static const uint32_t stm32l4_flash_regs_map[STM32L4_FPEC_REGS_COUNT] = {
 	STM32L4_FPEC_BASE + 0x08U, /* KEYR */
 	STM32L4_FPEC_BASE + 0x0cU, /* OPTKEYR */
 	STM32L4_FPEC_BASE + 0x10U, /* SR */
@@ -292,7 +292,7 @@ static const uint32_t stm32l4_flash_regs_map[FLASH_REGS_COUNT] = {
 	STM32L4_FPEC_BASE + 0x20U, /* OPTR */
 };
 
-static const uint32_t stm32l5_flash_regs_map[FLASH_REGS_COUNT] = {
+static const uint32_t stm32l5_flash_regs_map[STM32L4_FPEC_REGS_COUNT] = {
 	STM32L5_FPEC_BASE + 0x08U, /* KEYR */
 	STM32L5_FPEC_BASE + 0x10U, /* OPTKEYR */
 	STM32L5_FPEC_BASE + 0x20U, /* SR */
@@ -300,7 +300,7 @@ static const uint32_t stm32l5_flash_regs_map[FLASH_REGS_COUNT] = {
 	STM32L5_FPEC_BASE + 0x40U, /* OPTR */
 };
 
-static const uint32_t stm32wl_flash_regs_map[FLASH_REGS_COUNT] = {
+static const uint32_t stm32wl_flash_regs_map[STM32L4_FPEC_REGS_COUNT] = {
 	STM32WL_FPEC_BASE + 0x08U, /* KEYR */
 	STM32WL_FPEC_BASE + 0x0cU, /* OPTKEYR */
 	STM32WL_FPEC_BASE + 0x10U, /* SR */
@@ -308,7 +308,7 @@ static const uint32_t stm32wl_flash_regs_map[FLASH_REGS_COUNT] = {
 	STM32WL_FPEC_BASE + 0x20U, /* OPTR */
 };
 
-static const uint32_t stm32wb_flash_regs_map[FLASH_REGS_COUNT] = {
+static const uint32_t stm32wb_flash_regs_map[STM32L4_FPEC_REGS_COUNT] = {
 	STM32WB_FPEC_BASE + 0x08U, /* KEYR */
 	STM32WB_FPEC_BASE + 0x0cU, /* OPTKEYR */
 	STM32WB_FPEC_BASE + 0x10U, /* SR */
@@ -722,7 +722,7 @@ bool stm32l4_probe(target_s *const target)
 	case ID_STM32WLxx:
 	case ID_STM32WB35:
 	case ID_STM32WB1x:
-		if ((stm32l4_flash_read32(target, FLASH_OPTR)) & STM32W_FPEC_OPTION_SECURITY_EN) {
+		if ((stm32l4_flash_read32(target, STM32L4_FPEC_OPTION)) & STM32W_FPEC_OPTION_SECURITY_EN) {
 			DEBUG_WARN("STM32W security enabled\n");
 			target->driver = device_id == ID_STM32WLxx ? "STM32WLxx (secure)" : "STM32WBxx (secure)";
 		}
@@ -737,7 +737,7 @@ bool stm32l4_probe(target_s *const target)
 		}
 		break;
 	case ID_STM32L55:
-		if ((stm32l4_flash_read32(target, FLASH_OPTR)) & STM32L5_FPEC_OPTION_TRUSTZONE_EN) {
+		if ((stm32l4_flash_read32(target, STM32L4_FPEC_OPTION)) & STM32L5_FPEC_OPTION_TRUSTZONE_EN) {
 			DEBUG_WARN("STM32L5 Trust Zone enabled\n");
 			target->core = "M33+TZ";
 		}
@@ -778,7 +778,7 @@ static bool stm32l4_attach(target_s *const target)
 		target_add_ram32(target, 0x28000000, 16384U);
 
 	const uint16_t flash_len = stm32l4_read_flash_size(target);
-	const uint32_t options = stm32l4_flash_read32(target, FLASH_OPTR);
+	const uint32_t options = stm32l4_flash_read32(target, STM32L4_FPEC_OPTION);
 
 	/* Now we have a base RAM map, rebuild the Flash map */
 	if (device->family == STM32L4_FAMILY_WBxx) {
@@ -863,8 +863,8 @@ static void stm32l4_flash_unlock(target_s *const target)
 {
 	if ((stm32l4_flash_read32(target, STM32L4_FPEC_CTRL)) & STM32L4_FPEC_CTRL_LOCK) {
 		/* Enable FPEC controller access */
-		stm32l4_flash_write32(target, FLASH_KEYR, STM32L4_FPEC_KEY1);
-		stm32l4_flash_write32(target, FLASH_KEYR, STM32L4_FPEC_KEY2);
+		stm32l4_flash_write32(target, STM32L4_FPEC_KEY, STM32L4_FPEC_KEY1);
+		stm32l4_flash_write32(target, STM32L4_FPEC_KEY, STM32L4_FPEC_KEY2);
 	}
 }
 
@@ -966,8 +966,8 @@ static bool stm32l4_option_write(target_s *const target, const uint32_t *const v
 {
 	/* Unlock the option registers Flash */
 	stm32l4_flash_unlock(target);
-	stm32l4_flash_write32(target, FLASH_OPTKEYR, STM32L4_FPEC_OPTION_KEY1);
-	stm32l4_flash_write32(target, FLASH_OPTKEYR, STM32L4_FPEC_OPTION_KEY2);
+	stm32l4_flash_write32(target, STM32L4_FPEC_OPTION_KEY, STM32L4_FPEC_OPTION_KEY1);
+	stm32l4_flash_write32(target, STM32L4_FPEC_OPTION_KEY, STM32L4_FPEC_OPTION_KEY2);
 	/* Wait for the operation to complete and report any errors */
 	if (!stm32l4_flash_busy_wait(target, NULL))
 		return true;
