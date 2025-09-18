@@ -139,8 +139,7 @@
 #define STM32L5_PWR_CR1            0x50007000U
 #define STM32L5_PWR_CR1_VOS        (3U << 9U)
 
-#define DUAL_BANK     0x80U
-#define RAM_COUNT_MSK 0x07U
+#define STM32L4_FLAG_DUAL_BANK 0x80U
 
 /* TODO: add block size constants for other MCUs */
 #define STM32U5_FLASH_BLOCK_SIZE 0x2000U
@@ -254,7 +253,7 @@ typedef struct stm32l4_device_info {
 	uint16_t sram1; /* Normal SRAM mapped at 0x20000000 */
 	uint16_t sram2; /* SRAM at 0x10000000, mapped after sram1 (not L47) */
 	uint16_t sram3; /* SRAM mapped after SRAM1 and SRAM2 */
-	uint8_t flags;  /* Only DUAL_BANK is evaluated for now. */
+	uint8_t flags;  /* Only STM32L4_FLAG_DUAL_BANK is evaluated for now. */
 	uint16_t device_id;
 	stm32l4_family_e family;
 	const uint32_t *flash_regs_map;
@@ -354,7 +353,7 @@ static stm32l4_device_info_s const stm32l4_device_info[] = {
 		.designator = "STM32L47x",
 		.sram1 = 96U,
 		.sram2 = 32U,
-		.flags = 2U | DUAL_BANK,
+		.flags = 2U | STM32L4_FLAG_DUAL_BANK,
 		.flash_regs_map = stm32l4_flash_regs_map,
 		.flash_size_reg = STM32L4_FLASH_SIZE_REG,
 	},
@@ -364,7 +363,7 @@ static stm32l4_device_info_s const stm32l4_device_info[] = {
 		.designator = "STM32L49x",
 		.sram1 = 256U,
 		.sram2 = 64U,
-		.flags = 2U | DUAL_BANK,
+		.flags = 2U | STM32L4_FLAG_DUAL_BANK,
 		.flash_regs_map = stm32l4_flash_regs_map,
 		.flash_size_reg = STM32L4_FLASH_SIZE_REG,
 	},
@@ -375,7 +374,7 @@ static stm32l4_device_info_s const stm32l4_device_info[] = {
 		.sram1 = 192U,
 		.sram2 = 64U,
 		.sram3 = 384U,
-		.flags = 3U | DUAL_BANK,
+		.flags = 3U | STM32L4_FLAG_DUAL_BANK,
 		.flash_regs_map = stm32l4_flash_regs_map,
 		.flash_size_reg = STM32L4_FLASH_SIZE_REG,
 	},
@@ -423,7 +422,7 @@ static stm32l4_device_info_s const stm32l4_device_info[] = {
 		.family = STM32L4_FAMILY_U5xx,
 		.designator = "STM32U535/545",
 		.sram1 = 192U + 64U, /* SRAM1+2 continuous */
-		.flags = 2U | DUAL_BANK,
+		.flags = 2U | STM32L4_FLAG_DUAL_BANK,
 		.flash_regs_map = stm32l5_flash_regs_map,
 		.flash_size_reg = STM32U5_FLASH_SIZE_REG,
 	},
@@ -432,7 +431,7 @@ static stm32l4_device_info_s const stm32l4_device_info[] = {
 		.family = STM32L4_FAMILY_U5xx,
 		.designator = "STM32U575/585",
 		.sram1 = 192U + 64U + 512U, /* SRAM1+2+3 continuous */
-		.flags = 2U | DUAL_BANK,
+		.flags = 2U | STM32L4_FLAG_DUAL_BANK,
 		.flash_regs_map = stm32l5_flash_regs_map,
 		.flash_size_reg = STM32U5_FLASH_SIZE_REG,
 	},
@@ -441,7 +440,7 @@ static stm32l4_device_info_s const stm32l4_device_info[] = {
 		.family = STM32L4_FAMILY_U5xx,
 		.designator = "STM32U59x/5Ax",
 		.sram1 = 786U + 64U + 832U + 832U, /* SRAM1+2+3+5 continuous */
-		.flags = 2U | DUAL_BANK,
+		.flags = 2U | STM32L4_FLAG_DUAL_BANK,
 		.flash_regs_map = stm32l5_flash_regs_map,
 		.flash_size_reg = STM32U5_FLASH_SIZE_REG,
 	},
@@ -450,7 +449,7 @@ static stm32l4_device_info_s const stm32l4_device_info[] = {
 		.family = STM32L4_FAMILY_U5xx,
 		.designator = "STM32U5Fx/5Gx",
 		.sram1 = 786U + 64U + 832U + 832U + 512U, /* SRAM1+2+3+5+6 continuous */
-		.flags = 2U | DUAL_BANK,
+		.flags = 2U | STM32L4_FLAG_DUAL_BANK,
 		.flash_regs_map = stm32l5_flash_regs_map,
 		.flash_size_reg = STM32U5_FLASH_SIZE_REG,
 	},
@@ -827,7 +826,7 @@ static bool stm32l4_attach(target_s *const target)
 				stm32l4_add_flash(target, STM32L4_FLASH_BANK1_BASE, bank_len, 0x1000, UINT32_MAX);
 			}
 		}
-	} else if (device->flags & DUAL_BANK) {
+	} else if (device->flags & STM32L4_FLAG_DUAL_BANK) {
 		if (options & STM32L4_OPTION_DUALBANK) {
 			const uint32_t bank_len = flash_len * 512U;
 			if (device->family == STM32L4_FAMILY_U5xx) {
