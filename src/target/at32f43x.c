@@ -478,15 +478,10 @@ static bool at32f43_flash_done(target_flash_s *target_flash)
 
 static bool at32f43_flash_erase(target_flash_s *target_flash, target_addr_t addr, size_t len)
 {
+	(void)len;
 	target_s *target = target_flash->t;
 	const at32f43_flash_s *const flash = (at32f43_flash_s *)target_flash;
 	const uint32_t bank_reg_offset = flash->bank_reg_offset;
-
-	if (len != target_flash->blocksize) {
-		DEBUG_ERROR(
-			"%s: Requested erase length %zu does not match blocksize %zu!\n", __func__, len, target_flash->blocksize);
-		return false;
-	}
 
 	at32f43_flash_clear_eop(target, bank_reg_offset);
 	DEBUG_TARGET("%s: 0x%08" PRIX32 "+%" PRIu32 " reg_base 0x%08" PRIX32 "\n", __func__, addr, (uint32_t)len,
