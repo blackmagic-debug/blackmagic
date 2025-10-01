@@ -463,19 +463,10 @@ static void stm32g0_flash_op_finish(target_s *const target)
 	stm32g0_flash_lock(target);
 }
 
-static size_t stm32g0_bank1_end_page(target_flash_s *const flash)
-{
-	target_s *const target = flash->t;
-	/* If the part is dual banked, compute the end of the first bank */
-	if (target->part_id == ID_STM32G0B_C)
-		return ((flash->length / 2U) - 1U) / flash->blocksize;
-	/* Single banked devices have a fixed bank end */
-	return STM32G0_FLASH_BANK2_START_PAGE - 1U;
-}
-
 /* Erase pages of Flash. In the OTP case, this function clears any previous error and returns. */
 static bool stm32g0_flash_erase(target_flash_s *const flash, const target_addr_t addr, const size_t len)
 {
+	(void)len;
 	target_s *const target = flash->t;
 
 	/* Wait for Flash ready */
@@ -492,28 +483,20 @@ static bool stm32g0_flash_erase(target_flash_s *const flash, const target_addr_t
 		return true;
 	}
 
-	const size_t pages_to_erase = ((len - 1U) / flash->blocksize) + 1U;
-	const size_t bank1_end_page = stm32g0_bank1_end_page(flash);
-	uint32_t page = (addr - flash->start) / flash->blocksize;
-
+	/* Get the Flash ready for the erase */
 	stm32g0_flash_unlock(target);
 
-	for (size_t pages_erased = 0U; pages_erased < pages_to_erase; ++pages_erased, ++page) {
-		/* If the page to erase is after the end of bank 1 but not yet in bank 2, skip */
-		if (page < STM32G0_FLASH_BANK2_START_PAGE && page > bank1_end_page)
-			page = STM32G0_FLASH_BANK2_START_PAGE;
+	/* Calculate the address of the page to erase in this bank, and erase it */
+	const uint32_t page = (addr - flash->start) / flash->blocksize;
+	const uint32_t ctrl = (page << STM32G0_FPEC_CTRL_PNB_SHIFT) | STM32G0_FPEC_CTRL_PER |
+		(page >= STM32G0_FLASH_BANK2_START_PAGE ? STM32G0_FPEC_CTRL_BKER : 0);
+	target_mem32_write32(target, STM32G0_FPEC_CTRL, ctrl);
+	target_mem32_write32(target, STM32G0_FPEC_CTRL, ctrl | STM32G0_FPEC_CTRL_START);
 
-		/* Erase the current page */
-		const uint32_t ctrl = (page << STM32G0_FPEC_CTRL_PNB_SHIFT) | STM32G0_FPEC_CTRL_PER |
-			(page >= STM32G0_FLASH_BANK2_START_PAGE ? STM32G0_FPEC_CTRL_BKER : 0);
-		target_mem32_write32(target, STM32G0_FPEC_CTRL, ctrl);
-		target_mem32_write32(target, STM32G0_FPEC_CTRL, ctrl | STM32G0_FPEC_CTRL_START);
-
-		/* Wait for the operation to finish and report errors */
-		if (!stm32g0_wait_busy(target, NULL)) {
-			stm32g0_flash_op_finish(target);
-			return false;
-		}
+	/* Wait for the operation to finish and report errors */
+	if (!stm32g0_wait_busy(target, NULL)) {
+		stm32g0_flash_op_finish(target);
+		return false;
 	}
 
 	/* Check for error */
