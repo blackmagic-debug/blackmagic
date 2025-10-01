@@ -166,7 +166,7 @@ static void at32f43_add_flash(target_s *const target, const target_addr_t addr, 
 	target_add_flash(target, target_flash);
 }
 
-static void at32f43_configure_dbgmcu(target_s *target)
+static void at32f43_configure_dbgmcu(target_s *const target)
 {
 	/*
 	 * Enable sleep state emulation (clocks fed by HICK)
@@ -185,7 +185,7 @@ static void at32f43_configure_dbgmcu(target_s *target)
 		target_mem32_write32(target, AT32F43x_DBGMCU_APB1_PAUSE, dbgmcu_apb1_pause | dbgmcu_apb1_pause_mask);
 }
 
-static bool at32f43_attach(target_s *target)
+static bool at32f43_attach(target_s *const target)
 {
 	if (!cortexm_attach(target))
 		return false;
@@ -194,7 +194,7 @@ static bool at32f43_attach(target_s *target)
 	return true;
 }
 
-static void at32f43_detach(target_s *target)
+static void at32f43_detach(target_s *const target)
 {
 	const uint32_t dbgmcu_ctrl = target_mem32_read32(target, AT32F43x_DBGMCU_CTRL);
 	const uint32_t dbgmcu_apb1_pause = target_mem32_read32(target, AT32F43x_DBGMCU_APB1_PAUSE);
@@ -206,7 +206,7 @@ static void at32f43_detach(target_s *target)
 }
 
 /* Identify AT32F43x "High Performance" line devices */
-static bool at32f43_detect(target_s *target, const uint16_t part_id)
+static bool at32f43_detect(target_s *const target, const uint16_t part_id)
 {
 	/*
 	 * AT32F435 EOPB0 ZW/NZW split reconfiguration unsupported,
@@ -305,7 +305,7 @@ static bool at32f43_detect(target_s *target, const uint16_t part_id)
 }
 
 /* Identify AT32F405 Mainstream devices */
-static bool at32f405_detect(target_s *target, const uint32_t series)
+static bool at32f405_detect(target_s *const target, const uint32_t series)
 {
 	/*
 	 * AT32F405/F402 always contain 1 bank with 128 sectors
@@ -336,7 +336,7 @@ static bool at32f405_detect(target_s *target, const uint32_t series)
 }
 
 /* Identify AT32F423 Value line devices */
-static bool at32f423_detect(target_s *target, const uint32_t series)
+static bool at32f423_detect(target_s *const target, const uint32_t series)
 {
 	/*
 	 * AT32F423 always has 48 KiB of SRAM and one of
@@ -364,7 +364,7 @@ static bool at32f423_detect(target_s *target, const uint32_t series)
 }
 
 /* Identify any Arterytek devices with Cortex-M4 and FPEC at 0x4002_3c00 */
-bool at32f43x_probe(target_s *target)
+bool at32f43x_probe(target_s *const target)
 {
 	// Artery clones use Cortex M4 cores
 	if ((target->cpuid & CORTEX_CPUID_PARTNO_MASK) != CORTEX_M4)
@@ -460,7 +460,7 @@ static bool at32f43_flash_busy_wait(
 	return !(status & AT32F43x_FLASH_STS_PRGMERR);
 }
 
-static bool at32f43_flash_prepare(target_flash_s *target_flash)
+static bool at32f43_flash_prepare(target_flash_s *const target_flash)
 {
 	target_s *target = target_flash->t;
 	const at32f43_flash_s *const flash = (at32f43_flash_s *)target_flash;
@@ -468,7 +468,7 @@ static bool at32f43_flash_prepare(target_flash_s *target_flash)
 	return at32f43_flash_unlock(target, bank_reg_offset);
 }
 
-static bool at32f43_flash_done(target_flash_s *target_flash)
+static bool at32f43_flash_done(target_flash_s *const target_flash)
 {
 	target_s *target = target_flash->t;
 	const at32f43_flash_s *const flash = (at32f43_flash_s *)target_flash;
@@ -476,7 +476,7 @@ static bool at32f43_flash_done(target_flash_s *target_flash)
 	return at32f43_flash_lock(target, bank_reg_offset);
 }
 
-static bool at32f43_flash_erase(target_flash_s *target_flash, target_addr_t addr, size_t len)
+static bool at32f43_flash_erase(target_flash_s *const target_flash, const target_addr_t addr, const size_t len)
 {
 	(void)len;
 	target_s *target = target_flash->t;
@@ -497,7 +497,8 @@ static bool at32f43_flash_erase(target_flash_s *target_flash, target_addr_t addr
 	return at32f43_flash_busy_wait(target, bank_reg_offset, NULL);
 }
 
-static bool at32f43_flash_write(target_flash_s *target_flash, target_addr_t dest, const void *src, size_t len)
+static bool at32f43_flash_write(
+	target_flash_s *const target_flash, const target_addr_t dest, const void *src, const size_t len)
 {
 	target_s *target = target_flash->t;
 	const at32f43_flash_s *const flash = (at32f43_flash_s *)target_flash;
@@ -542,7 +543,7 @@ static bool at32f43_mass_erase(target_s *const target, platform_timeout_s *const
 	return true;
 }
 
-static bool at32f43_option_erase(target_s *target)
+static bool at32f43_option_erase(target_s *const target)
 {
 	/* bank_reg_offset is 0, option bytes belong to first bank */
 	at32f43_flash_clear_eop(target, 0);
@@ -646,7 +647,7 @@ static bool at32f43_option_write(target_s *const target, const uint32_t addr, co
 	return result;
 }
 
-static bool at32f43_cmd_option(target_s *target, int argc, const char **argv)
+static bool at32f43_cmd_option(target_s *const target, const int argc, const char **const argv)
 {
 	const uint32_t read_protected = target_mem32_read32(target, AT32F43x_FLASH_USD) & AT32F43x_FLASH_USD_RDP;
 	const bool erase_requested = argc == 2 && strcmp(argv[1], "erase") == 0;
@@ -704,7 +705,7 @@ static bool at32f43_cmd_option(target_s *target, int argc, const char **argv)
 	return true;
 }
 
-static bool at32f43_cmd_uid(target_s *target, int argc, const char **argv)
+static bool at32f43_cmd_uid(target_s *const target, const int argc, const char **const argv)
 {
 	(void)argc;
 	(void)argv;
