@@ -189,6 +189,18 @@ typedef struct stm32h7_priv {
 	char name[STM32H7_NAME_MAX_LENGTH];
 } stm32h7_priv_s;
 
+static const struct {
+	uint16_t rev_id;
+	char revision;
+} stm32h7xx_revisions[] = {
+	{0x1000U, 'A'},
+	{0x1001U, 'Z'},
+	{0x1003U, 'Y'},
+	{0x1007U, 'X'}, /* RM0455 */
+	{0x2001U, 'X'},
+	{0x2003U, 'V'},
+};
+
 /* static bool stm32h7_cmd_option(target_s *t, int argc, const char **argv); */
 static bool stm32h7_uid(target_s *target, int argc, const char **argv);
 static bool stm32h7_crc(target_s *target, int argc, const char **argv);
@@ -219,7 +231,7 @@ static uint32_t stm32h7_flash_bank_base(const uint32_t addr)
 	return STM32H7_FPEC1_BASE;
 }
 
-static void stm32h7_add_flash(target_s *target, uint32_t addr, size_t length, size_t blocksize)
+static void stm32h7_add_flash(target_s *const target, const uint32_t addr, const size_t length, const size_t blocksize)
 {
 	stm32h7_flash_s *flash = calloc(1, sizeof(*flash));
 	if (!flash) { /* calloc failed: heap exhaustion */
@@ -252,7 +264,7 @@ static void stm32h7_configure_wdts(target_s *const target)
 	target_mem32_write32(target, STM32H7_IWDG_KEY, STM32H7_IWDG_KEY_RESET);
 }
 
-bool stm32h7_probe(target_s *target)
+bool stm32h7_probe(target_s *const target)
 {
 	const adiv5_access_port_s *const ap = cortex_ap(target);
 	/* Use the partno from the AP always to handle the difference between JTAG and SWD */
@@ -403,7 +415,7 @@ bool stm32h7_probe(target_s *target)
 	return true;
 }
 
-static bool stm32h7_attach(target_s *target)
+static bool stm32h7_attach(target_s *const target)
 {
 	if (!cortexm_attach(target))
 		return false;
@@ -418,7 +430,7 @@ static bool stm32h7_attach(target_s *target)
 	return true;
 }
 
-static void stm32h7_detach(target_s *target)
+static void stm32h7_detach(target_s *const target)
 {
 	target_mem32_write32(target, STM32H7_DBGMCU_CONFIG,
 		target_mem32_read32(target, STM32H7_DBGMCU_CONFIG) &
@@ -473,7 +485,7 @@ static bool stm32h7_flash_unlock(target_s *const target, const uint32_t regbase)
 	return !(target_mem32_read32(target, regbase + STM32H7_FLASH_CTRL) & STM32H7_FLASH_CTRL_LOCK);
 }
 
-static bool stm32h7_flash_prepare(target_flash_s *target_flash)
+static bool stm32h7_flash_prepare(target_flash_s *const target_flash)
 {
 	target_s *target = target_flash->t;
 	const stm32h7_flash_s *const flash = (stm32h7_flash_s *)target_flash;
@@ -482,7 +494,7 @@ static bool stm32h7_flash_prepare(target_flash_s *target_flash)
 	return stm32h7_flash_unlock(target, flash->regbase);
 }
 
-static bool stm32h7_flash_done(target_flash_s *target_flash)
+static bool stm32h7_flash_done(target_flash_s *const target_flash)
 {
 	target_s *target = target_flash->t;
 	const stm32h7_flash_s *const flash = (stm32h7_flash_s *)target_flash;
@@ -493,7 +505,7 @@ static bool stm32h7_flash_done(target_flash_s *target_flash)
 }
 
 /* Helper for offsetting FLASH_CR bits correctly */
-static uint32_t stm32h7_flash_cr(uint32_t sector_size, const uint32_t ctrl, const uint8_t sector_number)
+static uint32_t stm32h7_flash_cr(const uint32_t sector_size, const uint32_t ctrl, const uint8_t sector_number)
 {
 	uint32_t command = ctrl;
 	/* H74x, H72x IP: 128 KiB and has PSIZE */
@@ -631,7 +643,7 @@ static uint32_t stm32h7_part_uid_addr(target_s *const target)
 	return 0x1ff1e800U;
 }
 
-static bool stm32h7_uid(target_s *target, int argc, const char **argv)
+static bool stm32h7_uid(target_s *const target, const int argc, const char **const argv)
 {
 	(void)argc;
 	(void)argv;
@@ -639,7 +651,7 @@ static bool stm32h7_uid(target_s *target, int argc, const char **argv)
 	return stm32_uid(target, uid_addr);
 }
 
-static bool stm32h7_crc_bank(target_s *target, uint32_t addr)
+static bool stm32h7_crc_bank(target_s *const target, const uint32_t addr)
 {
 	const uint32_t reg_base = stm32h7_flash_bank_base(addr);
 	if (!stm32h7_flash_unlock(target, reg_base))
@@ -668,7 +680,7 @@ static bool stm32h7_crc_bank(target_s *target, uint32_t addr)
 	return true;
 }
 
-static bool stm32h7_crc(target_s *target, int argc, const char **argv)
+static bool stm32h7_crc(target_s *const target, const int argc, const char **const argv)
 {
 	(void)argc;
 	(void)argv;
@@ -682,7 +694,7 @@ static bool stm32h7_crc(target_s *target, int argc, const char **argv)
 	return true;
 }
 
-static bool stm32h7_cmd_psize(target_s *target, int argc, const char **argv)
+static bool stm32h7_cmd_psize(target_s *const target, const int argc, const char **const argv)
 {
 	if (argc == 1) {
 		align_e psize = ALIGN_64BIT;
@@ -714,19 +726,7 @@ static bool stm32h7_cmd_psize(target_s *target, int argc, const char **argv)
 	return true;
 }
 
-static const struct {
-	uint16_t rev_id;
-	char revision;
-} stm32h7xx_revisions[] = {
-	{0x1000U, 'A'},
-	{0x1001U, 'Z'},
-	{0x1003U, 'Y'},
-	{0x1007U, 'X'}, /* RM0455 */
-	{0x2001U, 'X'},
-	{0x2003U, 'V'},
-};
-
-static bool stm32h7_cmd_rev(target_s *target, int argc, const char **argv)
+static bool stm32h7_cmd_rev(target_s *const target, const int argc, const char **const argv)
 {
 	(void)argc;
 	(void)argv;
