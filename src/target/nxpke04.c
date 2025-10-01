@@ -129,7 +129,7 @@ static bool ke04_flash_write(target_flash_s *flash, target_addr_t dest, const vo
 static bool ke04_flash_done(target_flash_s *flash);
 static bool ke04_mass_erase(target_s *target, platform_timeout_s *print_progess);
 
-bool ke04_probe(target_s *target)
+bool ke04_probe(target_s *const target)
 {
 	/* Read the higher 16bits of System Reset Status and ID Register */
 	const uint16_t srsid = target_mem32_read32(target, SIM_SRSID) >> 16U;
@@ -186,7 +186,7 @@ bool ke04_probe(target_s *target)
 	target_add_ram32(target, RAM_BASE_ADDR, ramsize);           /* Higher RAM */
 
 	/* Add flash, all KE04 have same write and erase size */
-	target_flash_s *flash = calloc(1, sizeof(*flash));
+	target_flash_s *const flash = calloc(1, sizeof(*flash));
 	if (!flash) { /* calloc failed: heap exhaustion */
 		DEBUG_ERROR("calloc: failed in %s\n", __func__);
 		return false;
@@ -206,7 +206,7 @@ bool ke04_probe(target_s *target)
 	return true;
 }
 
-static bool ke04_wait_complete(target_s *target)
+static bool ke04_wait_complete(target_s *const target)
 {
 	uint8_t fstat = 0;
 	/* Wait for CCIF to be high */
@@ -218,10 +218,10 @@ static bool ke04_wait_complete(target_s *target)
 	return true;
 }
 
-static bool ke04_command(target_s *target, uint8_t cmd, uint32_t addr, const void *const data)
+static bool ke04_command(target_s *const target, uint8_t cmd, uint32_t addr, const void *const data)
 {
 	/* Set FCLKDIV to 0x17 for 24MHz (default at reset) */
-	uint8_t fclkdiv = target_mem32_read8(target, FTMRE_FCLKDIV);
+	const uint8_t fclkdiv = target_mem32_read8(target, FTMRE_FCLKDIV);
 	if ((fclkdiv & 0x1fU) != 0x17U) {
 		if (!ke04_wait_complete(target))
 			return false;
@@ -279,7 +279,7 @@ static bool ke04_command(target_s *target, uint8_t cmd, uint32_t addr, const voi
 	return true;
 }
 
-static bool ke04_flash_done(target_flash_s *flash)
+static bool ke04_flash_done(target_flash_s *const flash)
 {
 	target_s *target = flash->t;
 	if (target->unsafe_enabled ||
@@ -302,11 +302,12 @@ static bool ke04_flash_erase(target_flash_s *const flash, const target_addr_t ad
 	return true;
 }
 
-static bool ke04_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t len)
+static bool ke04_flash_write(
+	target_flash_s *const flash, const target_addr_t dest, const void *const src, const size_t len)
 {
 	/* Ensure we don't write something horrible over the security byte */
 	target_s *target = flash->t;
-	const uint8_t *data = src;
+	const uint8_t *const data = src;
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wcast-qual"
 	if (!target->unsafe_enabled && dest <= FLASH_SECURITY_BYTE_ADDRESS && dest + len > FLASH_SECURITY_BYTE_ADDRESS)
@@ -332,14 +333,14 @@ static bool ke04_mass_erase(target_s *const target, platform_timeout_s *const pr
 	return true;
 }
 
-static bool ke04_cmd_sector_erase(target_s *target, int argc, const char **argv)
+static bool ke04_cmd_sector_erase(target_s *const target, const int argc, const char **const argv)
 {
 	if (argc < 2)
 		tc_printf(target, "usage: monitor sector_erase <addr>\n");
 
-	target_flash_s *flash = target->flash;
+	target_flash_s *const flash = target->flash;
 	char *eos = NULL;
-	uint32_t addr = strtoul(argv[1], &eos, 0);
+	const uint32_t addr = strtoul(argv[1], &eos, 0);
 
 	/* Check that addr is a valid number and inside the flash range */
 	if ((eos && eos[0] != '\0') || addr < flash->start || addr >= flash->start + flash->length) {
@@ -355,7 +356,7 @@ static bool ke04_cmd_sector_erase(target_s *target, int argc, const char **argv)
 	return true;
 }
 
-static bool kinetis_cmd_unsafe(target_s *target, int argc, const char **argv)
+static bool kinetis_cmd_unsafe(target_s *const target, const int argc, const char **const argv)
 {
 	if (argc == 1)
 		tc_printf(target, "Allow programming security byte: %s\n", target->unsafe_enabled ? "enabled" : "disabled");
