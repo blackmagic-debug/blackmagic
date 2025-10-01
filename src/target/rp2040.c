@@ -209,7 +209,7 @@ static void rp_add_flash(target_s *const target)
 	rp_flash_exit_xip(target);
 	rp_spi_config(target);
 
-	spi_flash_s *flash = bmp_spi_add_flash(
+	spi_flash_s *const flash = bmp_spi_add_flash(
 		target, RP_XIP_FLASH_BASE, rp_get_flash_length(target), rp_spi_read, NULL, rp_spi_run_command);
 	flash->flash.write = rp_flash_write;
 
@@ -226,7 +226,7 @@ bool rp2040_probe(target_s *const target)
 		return false;
 
 	/* Check bootrom magic*/
-	uint32_t boot_magic = target_mem32_read32(target, RP_BOOTROM_MAGIC_ADDR);
+	const uint32_t boot_magic = target_mem32_read32(target, RP_BOOTROM_MAGIC_ADDR);
 	if ((boot_magic & RP_BOOTROM_MAGIC_MASK) != RP_BOOTROM_MAGIC) {
 		DEBUG_ERROR("Wrong Bootmagic %08" PRIx32 " found!\n", boot_magic);
 		return false;
@@ -237,12 +237,12 @@ bool rp2040_probe(target_s *const target)
 		DEBUG_WARN("Old Bootrom Version 1!\n");
 #endif
 
-	rp_priv_s *priv_storage = calloc(1, sizeof(rp_priv_s));
+	rp_priv_s *const priv_storage = calloc(1, sizeof(rp_priv_s));
 	if (!priv_storage) { /* calloc failed: heap exhaustion */
 		DEBUG_ERROR("calloc: failed in %s\n", __func__);
 		return false;
 	}
-	target->target_storage = (void *)priv_storage;
+	target->target_storage = priv_storage;
 
 	target->driver = "RP2040";
 	target->target_options |= TOPT_INHIBIT_NRST;
@@ -666,14 +666,14 @@ static bool rp_cmd_erase_sector(target_s *const target, const int argc, const ch
 static bool rp_cmd_reset_usb_boot(target_s *const target, const int argc, const char **const argv)
 {
 	uint32_t regs[20U] = {0};
-	rp_priv_s *ps = (rp_priv_s *)target->target_storage;
+	const rp_priv_s *const priv = (rp_priv_s *)target->target_storage;
 	/* Set up the arguments for the function call */
 	if (argc > 1)
 		regs[0] = strtoul(argv[1], NULL, 0);
 	if (argc > 2)
 		regs[1] = strtoul(argv[2], NULL, 0);
 	/* The USB boot function does not return and takes its arguments in r0 and r1 */
-	regs[CORTEX_REG_PC] = ps->rom_reset_usb_boot;
+	regs[CORTEX_REG_PC] = priv->rom_reset_usb_boot;
 	/* So load the link register with a dummy return address like we just booted the chip */
 	regs[CORTEX_REG_LR] = UINT32_MAX;
 	/* Configure the stack to the end of SRAM and configure the status register for Thumb execution */
@@ -688,7 +688,7 @@ static bool rp_cmd_reset_usb_boot(target_s *const target, const int argc, const 
 
 static bool rp2040_rescue_do_reset(target_s *const target)
 {
-	adiv5_access_port_s *ap = (adiv5_access_port_s *)target->priv;
+	const adiv5_access_port_s *const ap = (adiv5_access_port_s *)target->priv;
 	const uint32_t ctrl = adiv5_dp_read(ap->dp, ADIV5_DP_CTRLSTAT);
 	adiv5_dp_write(ap->dp, ADIV5_DP_CTRLSTAT, ctrl | ADIV5_DP_CTRLSTAT_CDBGPWRUPREQ);
 	platform_timeout_s timeout;
