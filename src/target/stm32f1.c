@@ -782,7 +782,7 @@ const void *mm32l0_pack_data(const void *const src, uint32_t *const data, const 
  * Broadcasting the value to write to all lanes is harmless though and works for both
  * MM32 devices and STM32 devices which comply properly with ADIv5.
  */
-void mm32l0_mem_write_sized(
+void mm32l0_mem_write_bytes(
 	adiv5_access_port_s *const ap, const target_addr64_t dest, const void *src, const size_t len, const align_e align)
 {
 	/* Do nothing and return if there's nothing to write */
@@ -801,7 +801,7 @@ void mm32l0_mem_write_sized(
 		 * Check if the address doesn't overflow the 10-bit auto increment bound for TAR,
 		 * if it's not the first transfer (offset == 0)
 		 */
-		if (begin != dest && (begin & 0x00000effU) == 0U)
+		if (begin != dest && (begin & 0x000003ffU) == 0U)
 			/* Update TAR to adjust the upper bits */
 			adiv5_dp_write(ap->dp, ADIV5_AP_TAR_LOW, begin);
 		/* Pack the data for transfer */
@@ -854,7 +854,7 @@ bool mm32l0xx_probe(target_s *const target)
 	target_add_ram32(target, STM32F1_SRAM_BASE, ram_kbyte * 1024U);
 	stm32f1_add_flash(target, STM32F1_FLASH_BANK1_BASE, flash_kbyte * 1024U, block_size);
 	target_add_commands(target, stm32f1_cmd_list, target->driver);
-	cortex_ap(target)->dp->mem_write = mm32l0_mem_write_sized;
+	cortex_ap(target)->dp->mem_write = mm32l0_mem_write_bytes;
 
 	/* Now we have a stable debug environment, make sure the WDTs + WFI and WFE instructions can't cause problems */
 	return stm32f1_configure_dbgmcu(target, MM32L0_DBGMCU_CONFIG);
