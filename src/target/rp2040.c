@@ -669,10 +669,10 @@ static bool rp_cmd_erase_sector(target_s *target, int argc, const char **argv)
 	return result;
 }
 
-static bool rp_cmd_reset_usb_boot(target_s *t, int argc, const char **argv)
+static bool rp_cmd_reset_usb_boot(target_s *const target, const int argc, const char **const argv)
 {
 	uint32_t regs[20U] = {0};
-	rp_priv_s *ps = (rp_priv_s *)t->target_storage;
+	rp_priv_s *ps = (rp_priv_s *)target->target_storage;
 	/* Set up the arguments for the function call */
 	if (argc > 1)
 		regs[0] = strtoul(argv[1], NULL, 0);
@@ -686,9 +686,9 @@ static bool rp_cmd_reset_usb_boot(target_s *t, int argc, const char **argv)
 	regs[CORTEX_REG_MSP] = RP_SRAM_BASE + RP_SRAM_SIZE;
 	regs[CORTEX_REG_XPSR] = CORTEXM_XPSR_THUMB;
 	/* Now reconfigure the core with the new execution environment */
-	target_regs_write(t, regs);
+	target_regs_write(target, regs);
 	/* And resume the core */
-	target_halt_resume(t, false);
+	target_halt_resume(target, false);
 	return true;
 }
 
