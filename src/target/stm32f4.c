@@ -608,33 +608,24 @@ static bool stm32f4_flash_busy_wait(target_s *const target, platform_timeout_s *
 
 static bool stm32f4_flash_erase(target_flash_s *const target_flash, const target_addr_t addr, const size_t len)
 {
-	target_s *target = target_flash->t;
-	stm32f4_flash_s *flash = (stm32f4_flash_s *)target_flash;
+	(void)len;
+	target_s *const target = target_flash->t;
+	const stm32f4_flash_s *const flash = (stm32f4_flash_s *)target_flash;
 	stm32f4_flash_unlock(target);
 
-	align_e psize = ((const stm32f4_priv_s *)target->target_storage)->psize;
+	const align_e psize = ((const stm32f4_priv_s *)target->target_storage)->psize;
 
 	/* No address translation is needed here, as we erase by sector number */
-	uint8_t sector = flash->base_sector + ((addr - target_flash->start) / target_flash->blocksize);
+	const uint8_t sector = flash->base_sector + ((addr - target_flash->start) / target_flash->blocksize);
 
-	/* Erase the requested chunk of flash, one sector at a time. */
-	for (size_t offset = 0; offset < len; offset += target_flash->blocksize) {
-		uint32_t cr = STM32F4_FPEC_CTRL_EOPIE | STM32F4_FPEC_CTRL_ERRIE | STM32F4_FPEC_CTRL_SER |
-			(psize * STM32F4_FPEC_CTRL_PSIZE16) | (sector << 3U);
-		/* Flash page erase instruction */
-		target_mem32_write32(target, STM32F4_FPEC_CTRL, cr);
-		/* write address to FMA */
-		target_mem32_write32(target, STM32F4_FPEC_CTRL, cr | STM32F4_FPEC_CTRL_STRT);
+	/* Erase the requested Flash sector */
+	const uint32_t ctrl = STM32F4_FPEC_CTRL_EOPIE | STM32F4_FPEC_CTRL_ERRIE | STM32F4_FPEC_CTRL_SER |
+		(psize * STM32F4_FPEC_CTRL_PSIZE16) | (sector << 3U);
+	target_mem32_write32(target, STM32F4_FPEC_CTRL, ctrl);
+	target_mem32_write32(target, STM32F4_FPEC_CTRL, ctrl | STM32F4_FPEC_CTRL_STRT);
 
-		/* Wait for completion or an error */
-		if (!stm32f4_flash_busy_wait(target, NULL))
-			return false;
-
-		++sector;
-		if (flash->bank_split && sector == flash->bank_split)
-			sector = 16;
-	}
-	return true;
+	/* Wait for completion or an error */
+	return stm32f4_flash_busy_wait(target, NULL);
 }
 
 static bool stm32f4_flash_write(
@@ -643,9 +634,9 @@ static bool stm32f4_flash_write(
 	/* Translate ITCM addresses to AXIM */
 	if (dest >= STM32F7_ITCM_FLASH_BASE && dest < STM32F7_AXIM_FLASH_BASE)
 		dest += STM32F7_AXIM_FLASH_BASE - STM32F7_ITCM_FLASH_BASE;
-	target_s *target = flash->t;
+	target_s *const target = flash->t;
 
-	align_e psize = ((const stm32f4_priv_s *)target->target_storage)->psize;
+	const align_e psize = ((const stm32f4_priv_s *)target->target_storage)->psize;
 	target_mem32_write32(target, STM32F4_FPEC_CTRL, (psize * STM32F4_FPEC_CTRL_PSIZE16) | STM32F4_FPEC_CTRL_PG);
 	cortexm_mem_write_aligned(target, dest, src, len, psize);
 
