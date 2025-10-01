@@ -39,9 +39,12 @@
  */
 
 /*
- * This file implements Raspberry Pico (RP2040) target specific functions
- * for detecting the device, providing the XML memory map and
- * Flash memory programming.
+ * This file implements support for the Raspberry Pico 1 (RP2040),
+ * providing memory maps and Flash programming routines.
+ *
+ * References:
+ * RP2040 Datasheet
+ *   https://datasheets.raspberrypi.com/rp2040/rp2040-datasheet.pdf
  */
 
 #include "general.h"
