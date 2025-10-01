@@ -914,7 +914,8 @@ static bool stm32l4_flash_erase(target_flash_s *const flash, const target_addr_t
 	return true;
 }
 
-static bool stm32l4_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t len)
+static bool stm32l4_flash_write(
+	target_flash_s *const flash, const target_addr_t dest, const void *const src, const size_t len)
 {
 	target_s *target = flash->t;
 	stm32l4_flash_write32(target, STM32L4_FPEC_CTRL, STM32L4_FPEC_CTRL_PROGRAM);
@@ -1061,7 +1062,7 @@ static stm32l4_option_bytes_info_s stm32l4_get_opt_bytes_info(const uint16_t par
  * 0x1ffff828 0          0          0          0          0x000000ff 0xff00ff00
  */
 
-static bool stm32l4_cmd_option(target_s *target, int argc, const char **argv)
+static bool stm32l4_cmd_option(target_s *const target, const int argc, const char **const argv)
 {
 	if (target->part_id == ID_STM32L55) {
 		tc_printf(target, "%s options not implemented!\n", "STM32L5");
@@ -1120,7 +1121,7 @@ static bool stm32l4_cmd_option(target_s *target, int argc, const char **argv)
 }
 
 /* Read and decode Unique Device ID register of L4 and G4 */
-static bool stm32l4_cmd_uid(target_s *target, int argc, const char **argv)
+static bool stm32l4_cmd_uid(target_s *const target, const int argc, const char **const argv)
 {
 	(void)argc;
 	(void)argv;
