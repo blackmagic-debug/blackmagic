@@ -321,11 +321,11 @@ static bool sam4l_flash_write(
 		return false;
 
 	/* Now fill page buffer with our 512 bytes of data */
-
 	const uint32_t *const data = src;
-	/* I did try to use target_mem32_write however that resulted in the
-	 * last 64 bits (8 bytes) to be incorrect on even pages (0, 2, 4, ...)
-	 * since it works this way I've not investigated further.
+	/*
+	 * `target_mem32_write` use has been attempted, however that resulted in the
+	 * last 64 bits (8 bytes) to be incorrect on even pages (0, 2, 4, ...).
+	 * Since it works this way, it has not been investigated further.
 	 */
 	for (size_t offset = 0; offset < SAM4L_PAGE_SIZE; offset += 4U) {
 		/*
