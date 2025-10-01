@@ -206,7 +206,7 @@ static void rp_flash_enter_xip(target_s *target);
 static void rp_flash_connect_internal(target_s *target);
 static void rp_flash_flush_cache(target_s *target);
 
-static void rp_add_flash(target_s *target)
+static void rp_add_flash(target_s *const target)
 {
 	const bool por_state = rp_flash_in_por_state(target);
 	DEBUG_INFO("RP2040 Flash controller %sin POR state, reconfiguring\n", por_state ? "" : "not ");
@@ -259,7 +259,7 @@ bool rp2040_probe(target_s *const target)
 	return true;
 }
 
-static bool rp_attach(target_s *target)
+static bool rp_attach(target_s *const target)
 {
 	if (!cortexm_attach(target) || !rp_read_rom_func_table(target))
 		return false;
@@ -647,7 +647,7 @@ static uint32_t rp_get_flash_length(target_s *const target)
 	return MAX_FLASH;
 }
 
-static bool rp_cmd_erase_sector(target_s *target, int argc, const char **argv)
+static bool rp_cmd_erase_sector(target_s *const target, const int argc, const char **const argv)
 {
 	uint32_t start = target->flash->start;
 	uint32_t length;
@@ -692,7 +692,7 @@ static bool rp_cmd_reset_usb_boot(target_s *const target, const int argc, const 
 	return true;
 }
 
-static bool rp2040_rescue_do_reset(target_s *target)
+static bool rp2040_rescue_do_reset(target_s *const target)
 {
 	adiv5_access_port_s *ap = (adiv5_access_port_s *)target->priv;
 	const uint32_t ctrl = adiv5_dp_read(ap->dp, ADIV5_DP_CTRLSTAT);
@@ -718,7 +718,7 @@ static bool rp2040_rescue_do_reset(target_s *target)
  *
  * Attach to this DP will do the reset, but will fail to attach!
  */
-bool rp2040_rescue_probe(adiv5_access_port_s *ap)
+bool rp2040_rescue_probe(adiv5_access_port_s *const ap)
 {
 	target_s *target = target_new();
 	if (!target)
