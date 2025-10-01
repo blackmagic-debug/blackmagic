@@ -176,7 +176,7 @@ static bool stm32f1_flash_erase(target_flash_s *flash, target_addr_t addr, size_
 static bool stm32f1_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t len);
 static bool stm32f1_mass_erase(target_s *target, platform_timeout_s *print_progess);
 
-static void stm32f1_add_flash(target_s *target, uint32_t addr, size_t length, size_t erasesize)
+static void stm32f1_add_flash(target_s *const target, const uint32_t addr, const size_t length, const size_t erasesize)
 {
 	target_flash_s *flash = calloc(1, sizeof(*flash));
 	if (!flash) { /* calloc failed: heap exhaustion */
@@ -278,7 +278,7 @@ static void stm32f1_deconfigure_dbgmcu(target_s *const target)
 
 #ifdef CONFIG_GD32
 /* Identify GD32F1, GD32F2, GD32F3, GD32E230 and GD32E5 chips */
-bool gd32f1_probe(target_s *target)
+bool gd32f1_probe(target_s *const target)
 {
 	target_addr32_t dbgmcu_config_taddr;
 	const uint16_t device_id = stm32f1_read_idcode(target, &dbgmcu_config_taddr);
@@ -396,7 +396,7 @@ static void gd32vf1_detach(target_s *const target)
 #endif
 #endif
 
-static bool at32f403_detect(target_s *target, const uint16_t part_id)
+static bool at32f403_detect(target_s *const target, const uint16_t part_id)
 {
 	switch (part_id) {
 	case 0x0240U: // AT32F403ZCT6 / LQFP144
@@ -461,7 +461,7 @@ static bool at32f40_is_dual_bank(const uint16_t part_id)
 	}
 }
 
-static bool at32f403a_407_detect(target_s *target, const uint16_t part_id)
+static bool at32f403a_407_detect(target_s *const target, const uint16_t part_id)
 {
 	// Current driver supports only *default* memory layout (256 KB ZW Flash / 96 KB SRAM)
 	// XXX: Support for external Flash on SPIM requires specific flash code (not implemented)
@@ -509,7 +509,7 @@ static bool at32f403a_407_detect(target_s *target, const uint16_t part_id)
 	return stm32f1_configure_dbgmcu(target, STM32F1_DBGMCU_CONFIG);
 }
 
-static bool at32f415_detect(target_s *target, const uint16_t part_id)
+static bool at32f415_detect(target_s *const target, const uint16_t part_id)
 {
 	switch (part_id) {
 	case 0x0240U: // LQFP64_10x10
@@ -550,7 +550,7 @@ static bool at32f415_detect(target_s *target, const uint16_t part_id)
 	return stm32f1_configure_dbgmcu(target, STM32F1_DBGMCU_CONFIG);
 }
 
-static bool at32f413_detect(target_s *target, const uint16_t part_id)
+static bool at32f413_detect(target_s *const target, const uint16_t part_id)
 {
 	switch (part_id) {
 	case 0x0240U: // LQFP64
@@ -586,7 +586,7 @@ static bool at32f413_detect(target_s *target, const uint16_t part_id)
 	return stm32f1_configure_dbgmcu(target, STM32F1_DBGMCU_CONFIG);
 }
 
-static bool at32f421_detect(target_s *target, const uint16_t part_id)
+static bool at32f421_detect(target_s *const target, const uint16_t part_id)
 {
 	// Extra part: AT32F4212C8T7 with dual Op-Amp? (16/64, LQFP48)
 	switch (part_id) {
@@ -638,7 +638,7 @@ static bool at32f421_detect(target_s *target, const uint16_t part_id)
 	return stm32f1_configure_dbgmcu(target, STM32F1_DBGMCU_CONFIG);
 }
 
-static bool at32f425_detect(target_s *target, const uint16_t part_id)
+static bool at32f425_detect(target_s *const target, const uint16_t part_id)
 {
 #if 0
 	/*
@@ -688,7 +688,7 @@ static bool at32f425_detect(target_s *target, const uint16_t part_id)
 }
 
 /* Identify AT32F40x "Mainstream" line devices (Cortex-M4) */
-bool at32f40x_probe(target_s *target)
+bool at32f40x_probe(target_s *const target)
 {
 	// Artery clones use Cortex M4 cores
 	if ((target->cpuid & CORTEX_CPUID_PARTNO_MASK) != CORTEX_M4)
@@ -782,7 +782,8 @@ const void *mm32l0_pack_data(const void *const src, uint32_t *const data, const 
  * Broadcasting the value to write to all lanes is harmless though and works for both
  * MM32 devices and STM32 devices which comply properly with ADIv5.
  */
-void mm32l0_mem_write_sized(adiv5_access_port_s *ap, target_addr64_t dest, const void *src, size_t len, align_e align)
+void mm32l0_mem_write_sized(
+	adiv5_access_port_s *const ap, const target_addr64_t dest, const void *src, const size_t len, const align_e align)
 {
 	/* Do nothing and return if there's nothing to write */
 	if (len == 0U)
@@ -814,7 +815,7 @@ void mm32l0_mem_write_sized(adiv5_access_port_s *ap, target_addr64_t dest, const
 }
 
 /* Identify MM32 devices (Cortex-M0) */
-bool mm32l0xx_probe(target_s *target)
+bool mm32l0xx_probe(target_s *const target)
 {
 	size_t flash_kbyte = 0;
 	size_t ram_kbyte = 0;
@@ -860,7 +861,7 @@ bool mm32l0xx_probe(target_s *target)
 }
 
 /* Identify MM32 devices (Cortex-M3, Star-MC1) */
-bool mm32f3xx_probe(target_s *target)
+bool mm32f3xx_probe(target_s *const target)
 {
 	size_t flash_kbyte = 0;
 	size_t ram1_kbyte = 0; /* ram at 0x20000000 */
@@ -907,7 +908,7 @@ bool mm32f3xx_probe(target_s *target)
 #endif
 
 /* Identify real STM32F0/F1/F3 devices */
-bool stm32f1_probe(target_s *target)
+bool stm32f1_probe(target_s *const target)
 {
 	target_addr32_t dbgmcu_config_taddr;
 	const uint16_t device_id = stm32f1_read_idcode(target, &dbgmcu_config_taddr);
@@ -1031,7 +1032,7 @@ static void stm32f1_detach(target_s *const target)
 	cortexm_detach(target);
 }
 
-static bool stm32f1_flash_unlock(target_s *target, uint32_t bank_offset)
+static bool stm32f1_flash_unlock(target_s *const target, const uint32_t bank_offset)
 {
 	target_mem32_write32(target, STM32F1_FPEC_KEY + bank_offset, STM32F1_FPEC_KEY1);
 	target_mem32_write32(target, STM32F1_FPEC_KEY + bank_offset, STM32F1_FPEC_KEY2);
@@ -1082,14 +1083,14 @@ static bool stm32f1_is_dual_bank(const uint16_t part_id)
 	return false;
 }
 
-static uint32_t stm32f1_bank_offset_for(target_addr_t addr)
+static uint32_t stm32f1_bank_offset_for(const target_addr_t addr)
 {
 	if (addr >= STM32F1_FLASH_BANK_SPLIT)
 		return STM32F1_FPEC_BANK2_OFFSET;
 	return STM32F1_FPEC_BANK1_OFFSET;
 }
 
-static bool stm32f1_flash_erase(target_flash_s *flash, target_addr_t addr, size_t length)
+static bool stm32f1_flash_erase(target_flash_s *const flash, const target_addr_t addr, const size_t length)
 {
 	target_s *target = flash->t;
 	target_addr_t end = addr + length - 1U;
@@ -1114,7 +1115,7 @@ static bool stm32f1_flash_erase(target_flash_s *flash, target_addr_t addr, size_
 	return stm32f1_flash_busy_wait(target, bank_offset, NULL);
 }
 
-static size_t stm32f1_bank1_length(target_addr_t addr, size_t len)
+static size_t stm32f1_bank1_length(const target_addr_t addr, const size_t len)
 {
 	if (addr >= STM32F1_FLASH_BANK_SPLIT)
 		return 0;
@@ -1123,7 +1124,8 @@ static size_t stm32f1_bank1_length(target_addr_t addr, size_t len)
 	return len;
 }
 
-static bool stm32f1_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t len)
+static bool stm32f1_flash_write(
+	target_flash_s *const flash, const target_addr_t dest, const void *const src, const size_t len)
 {
 	target_s *target = flash->t;
 	const size_t offset = stm32f1_bank1_length(dest, len);
@@ -1184,7 +1186,7 @@ static bool stm32f1_mass_erase_bank(
 	return stm32f1_flash_busy_wait(target, bank_offset, timeout);
 }
 
-static bool stm32f1_mass_erase(target_s *target, platform_timeout_s *const print_progess)
+static bool stm32f1_mass_erase(target_s *const target, platform_timeout_s *const print_progess)
 {
 	if (!stm32f1_flash_unlock(target, 0))
 		return false;
@@ -1215,7 +1217,7 @@ static uint16_t stm32f1_flash_readable_key(const target_s *const target)
 	}
 }
 
-static bool stm32f1_option_erase(target_s *target)
+static bool stm32f1_option_erase(target_s *const target)
 {
 	stm32f1_flash_clear_eop(target, STM32F1_FPEC_BANK1_OFFSET);
 
@@ -1297,7 +1299,7 @@ static bool stm32f1_option_write(target_s *const target, const uint32_t addr, co
 	return true;
 }
 
-static bool stm32f1_cmd_option(target_s *target, int argc, const char **argv)
+static bool stm32f1_cmd_option(target_s *const target, const int argc, const char **const argv)
 {
 	const uint32_t read_protected =
 		target_mem32_read32(target, STM32F1_FPEC_OPTION_BYTE) & STM32F1_FPEC_OPTION_BYTE_RDPRT;
@@ -1351,7 +1353,7 @@ static bool stm32f1_cmd_option(target_s *target, int argc, const char **argv)
 	return true;
 }
 
-static bool stm32f1_cmd_uid(target_s *target, int argc, const char **argv)
+static bool stm32f1_cmd_uid(target_s *const target, const int argc, const char **const argv)
 {
 	(void)argc;
 	(void)argv;
