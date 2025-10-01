@@ -452,7 +452,7 @@ static bool stm32l0_attach(target_s *const target)
 	return true;
 }
 
-static void stm32l0_detach(target_s *target)
+static void stm32l0_detach(target_s *const target)
 {
 	/* Reverse all changes to STM32L0_DBGMCU_CONFIG */
 	target_mem32_write32(target, STM32L0_DBGMCU_CONFIG, 0U);
@@ -469,7 +469,7 @@ static bool stm32l1_attach(target_s *const target)
 	return cortexm_attach(target) && stm32l1_configure_dbgmcu(target);
 }
 
-static void stm32l1_detach(target_s *target)
+static void stm32l1_detach(target_s *const target)
 {
 	/* Reverse all changes to the DBGMCU control and freeze registers */
 	target_mem32_write32(target, STM32L1_DBGMCU_APB1FREEZE,
