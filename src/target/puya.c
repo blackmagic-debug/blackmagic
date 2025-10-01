@@ -115,7 +115,7 @@ static bool puya_00a_flash_prepare(target_flash_s *flash);
 static bool puya_07x_flash_prepare(target_flash_s *flash);
 static bool puya_flash_done(target_flash_s *flash);
 
-bool puya_probe(target_s *target)
+bool puya_probe(target_s *const target)
 {
 	uint32_t ram_size = 0U;
 	size_t flash_size = 0U;
@@ -140,7 +140,7 @@ bool puya_probe(target_s *target)
 		return false;
 	}
 
-	target_flash_s *flash = calloc(1, sizeof(*flash));
+	target_flash_s *const flash = calloc(1, sizeof(*flash));
 	if (!flash) { /* calloc failed: heap exhaustion */
 		DEBUG_ERROR("calloc: failed in %s\n", __func__);
 		return false;
@@ -166,7 +166,7 @@ bool puya_probe(target_s *target)
 	return true;
 }
 
-static bool puya_00a_flash_prepare(target_flash_s *flash)
+static bool puya_00a_flash_prepare(target_flash_s *const flash)
 {
 	target_mem32_write32(flash->t, PUYA_FLASH_KEYR, PUYA_FLASH_KEYR_KEY1);
 	target_mem32_write32(flash->t, PUYA_FLASH_KEYR, PUYA_FLASH_KEYR_KEY2);
@@ -197,7 +197,7 @@ static bool puya_00a_flash_prepare(target_flash_s *flash)
 	return true;
 }
 
-static bool puya_07x_flash_prepare(target_flash_s *flash)
+static bool puya_07x_flash_prepare(target_flash_s *const flash)
 {
 	target_mem32_write32(flash->t, PUYA_FLASH_KEYR, PUYA_FLASH_KEYR_KEY1);
 	target_mem32_write32(flash->t, PUYA_FLASH_KEYR, PUYA_FLASH_KEYR_KEY2);
@@ -230,7 +230,7 @@ static bool puya_07x_flash_prepare(target_flash_s *flash)
 	return true;
 }
 
-static bool puya_flash_done(target_flash_s *flash)
+static bool puya_flash_done(target_flash_s *const flash)
 {
 	target_mem32_write32(flash->t, PUYA_FLASH_CR, PUYA_FLASH_CR_LOCK);
 	return true;
@@ -255,7 +255,7 @@ static bool puya_check_flash_no_error(target_s *const target)
 	return !((status & PUYA_FLASH_SR_WRPERR));
 }
 
-static bool puya_flash_erase(target_flash_s *flash, target_addr_t addr, size_t len)
+static bool puya_flash_erase(target_flash_s *const flash, const target_addr_t addr, const size_t len)
 {
 	(void)len;
 	target_mem32_write32(flash->t, PUYA_FLASH_CR, PUYA_FLASH_CR_PER);
@@ -265,7 +265,8 @@ static bool puya_flash_erase(target_flash_s *flash, target_addr_t addr, size_t l
 	return puya_check_flash_no_error(flash->t);
 }
 
-static bool puya_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t len)
+static bool puya_flash_write(
+	target_flash_s *const flash, const target_addr_t dest, const void *const src, const size_t len)
 {
 	target_mem32_write32(flash->t, PUYA_FLASH_CR, PUYA_FLASH_CR_PG);
 	for (size_t i = 0; i < len; i += 4) {
