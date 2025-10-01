@@ -176,6 +176,60 @@
 #define ID_STM32U031 0x4590U /* STM32U031 */
 #define ID_STM32U0x3 0x4890U /* STM32U073/083 */
 
+typedef enum stm32g0_option_bytes_registers {
+	OPT_REG_OPTR,
+	OPT_REG_PCROP1ASR,
+	OPT_REG_PCROP1AER,
+	OPT_REG_WRP1AR,
+	OPT_REG_WRP1BR,
+	OPT_REG_PCROP1BSR,
+	OPT_REG_PCROP1BER,
+	OPT_REG_PCROP2ASR,
+	OPT_REG_PCROP2AER,
+	OPT_REG_WRP2AR,
+	OPT_REG_WRP2BR,
+	OPT_REG_PCROP2BSR,
+	OPT_REG_PCROP2BER,
+	OPT_REG_SECR,
+
+	OPT_REG_COUNT
+} stm32g0_option_bytes_registers_e;
+
+typedef struct stm32g0_option_register {
+	uint32_t addr;
+	uint32_t val;
+} stm32g0_option_register_s;
+
+/*
+ * G0x1: OPTR = FFFFFEAA
+ * 1111 1111 1111 1111 1111 1110 1010 1010
+ * G0x0: OPTR = DFFFE1AA
+ * 1101 1111 1111 1111 1110 0001 1010 1010
+ *   *IRHEN               * ****BOREN
+ * C0x1: OPTR = FFFFFFAA
+ * 1111 1111 1111 1111 1111 1111 1010 1010
+ *                             *BOREN
+ * IRH and BOR are reserved on G0x0, it is safe to apply G0x1 options on G0x0.
+ * The same for PCROP and SECR.
+ * This is not true for C0x1 which has BOREN set.
+ */
+static stm32g0_option_register_s stm32g0_options_def[OPT_REG_COUNT] = {
+	[OPT_REG_OPTR] = {STM32G0_FPEC_OPTION, STM32G0x1_FPEC_OPTION_DEFAULT},
+	[OPT_REG_PCROP1ASR] = {STM32G0_FPEC_PCROP1A_START, 0xffffffff},
+	[OPT_REG_PCROP1AER] = {STM32G0_FPEC_PCROP1A_END, 0x00000000},
+	[OPT_REG_WRP1AR] = {STM32G0_FPEC_WRP1A, 0x000000ff},
+	[OPT_REG_WRP1BR] = {STM32G0_FPEC_WRP1B, 0x000000ff},
+	[OPT_REG_PCROP1BSR] = {STM32G0_FPEC_PCROP1B_START, 0xffffffff},
+	[OPT_REG_PCROP1BER] = {STM32G0_FPEC_PCROP1B_END, 0x00000000},
+	[OPT_REG_PCROP2ASR] = {STM32G0_FPEC_PCROP2A_START, 0xffffffff},
+	[OPT_REG_PCROP2AER] = {STM32G0_FPEC_PCROP2A_END, 0x00000000},
+	[OPT_REG_WRP2AR] = {STM32G0_FPEC_WRP2A, 0x000000ff},
+	[OPT_REG_WRP2BR] = {STM32G0_FPEC_WRP2B, 0x000000ff},
+	[OPT_REG_PCROP2BSR] = {STM32G0_FPEC_PCROP2B_START, 0xffffffff},
+	[OPT_REG_PCROP2BER] = {STM32G0_FPEC_PCROP2B_END, 0x00000000},
+	[OPT_REG_SECR] = {STM32G0_FPEC_SECURITY_OPT, 0x00000000},
+};
+
 typedef struct stm32g0_priv {
 	bool irreversible_enabled;
 } stm32g0_priv_s;
@@ -578,61 +632,7 @@ static void stm32g0_flash_option_unlock(target_s *const target)
 	target_mem32_write32(target, STM32G0_FPEC_OPTION_KEY, STM32G0_FPEC_OPTION_KEY2);
 }
 
-typedef enum option_bytes_registers {
-	OPT_REG_OPTR,
-	OPT_REG_PCROP1ASR,
-	OPT_REG_PCROP1AER,
-	OPT_REG_WRP1AR,
-	OPT_REG_WRP1BR,
-	OPT_REG_PCROP1BSR,
-	OPT_REG_PCROP1BER,
-	OPT_REG_PCROP2ASR,
-	OPT_REG_PCROP2AER,
-	OPT_REG_WRP2AR,
-	OPT_REG_WRP2BR,
-	OPT_REG_PCROP2BSR,
-	OPT_REG_PCROP2BER,
-	OPT_REG_SECR,
-
-	OPT_REG_COUNT
-} option_bytes_registers_e;
-
-typedef struct option_register {
-	uint32_t addr;
-	uint32_t val;
-} option_register_s;
-
-/*
- * G0x1: OPTR = FFFFFEAA
- * 1111 1111 1111 1111 1111 1110 1010 1010
- * G0x0: OPTR = DFFFE1AA
- * 1101 1111 1111 1111 1110 0001 1010 1010
- *   *IRHEN               * ****BOREN
- * C0x1: OPTR = FFFFFFAA
- * 1111 1111 1111 1111 1111 1111 1010 1010
- *                             *BOREN
- * IRH and BOR are reserved on G0x0, it is safe to apply G0x1 options on G0x0.
- * The same for PCROP and SECR.
- * This is not true for C0x1 which has BOREN set.
- */
-static option_register_s options_def[OPT_REG_COUNT] = {
-	[OPT_REG_OPTR] = {STM32G0_FPEC_OPTION, STM32G0x1_FPEC_OPTION_DEFAULT},
-	[OPT_REG_PCROP1ASR] = {STM32G0_FPEC_PCROP1A_START, 0xffffffff},
-	[OPT_REG_PCROP1AER] = {STM32G0_FPEC_PCROP1A_END, 0x00000000},
-	[OPT_REG_WRP1AR] = {STM32G0_FPEC_WRP1A, 0x000000ff},
-	[OPT_REG_WRP1BR] = {STM32G0_FPEC_WRP1B, 0x000000ff},
-	[OPT_REG_PCROP1BSR] = {STM32G0_FPEC_PCROP1B_START, 0xffffffff},
-	[OPT_REG_PCROP1BER] = {STM32G0_FPEC_PCROP1B_END, 0x00000000},
-	[OPT_REG_PCROP2ASR] = {STM32G0_FPEC_PCROP2A_START, 0xffffffff},
-	[OPT_REG_PCROP2AER] = {STM32G0_FPEC_PCROP2A_END, 0x00000000},
-	[OPT_REG_WRP2AR] = {STM32G0_FPEC_WRP2A, 0x000000ff},
-	[OPT_REG_WRP2BR] = {STM32G0_FPEC_WRP2B, 0x000000ff},
-	[OPT_REG_PCROP2BSR] = {STM32G0_FPEC_PCROP2B_START, 0xffffffff},
-	[OPT_REG_PCROP2BER] = {STM32G0_FPEC_PCROP2B_END, 0x00000000},
-	[OPT_REG_SECR] = {STM32G0_FPEC_SECURITY_OPT, 0x00000000},
-};
-
-static void write_registers(target_s *const target, const option_register_s *const regs, const size_t nb_regs)
+static void write_registers(target_s *const target, const stm32g0_option_register_s *const regs, const size_t nb_regs)
 {
 	for (size_t reg = 0U; reg < nb_regs; ++reg) {
 		if (regs[reg].addr > 0U)
@@ -641,7 +641,7 @@ static void write_registers(target_s *const target, const option_register_s *con
 }
 
 /* Program the option bytes. */
-static bool stm32g0_option_write(target_s *const target, const option_register_s *const options_req)
+static bool stm32g0_option_write(target_s *const target, const stm32g0_option_register_s *const options_req)
 {
 	/* Unlock the option bytes Flash */
 	stm32g0_flash_unlock(target);
@@ -676,10 +676,11 @@ exit_error:
  * This table is further written to the target.
  * The register is added only if its address is valid.
  */
-static bool stm32g0_add_reg_value(option_register_s *const options_regs, const uint32_t addr, const uint32_t val)
+static bool stm32g0_add_reg_value(
+	stm32g0_option_register_s *const options_regs, const uint32_t addr, const uint32_t val)
 {
 	for (size_t reg = 0U; reg < OPT_REG_COUNT; ++reg) {
-		if (options_def[reg].addr == addr) {
+		if (stm32g0_options_def[reg].addr == addr) {
 			options_regs[reg].addr = addr;
 			options_regs[reg].val = val;
 			return true;
@@ -690,7 +691,7 @@ static bool stm32g0_add_reg_value(option_register_s *const options_regs, const u
 
 /* Parse (address, value) register pairs given on the command line. */
 static bool stm32g0_parse_cmdline_registers(
-	const uint32_t argc, const char *const *const argv, option_register_s *const options_regs)
+	const uint32_t argc, const char *const *const argv, stm32g0_option_register_s *const options_regs)
 {
 	uint32_t valid_regs = 0U;
 
@@ -705,7 +706,7 @@ static bool stm32g0_parse_cmdline_registers(
 }
 
 /* Validates option bytes settings. Only allow level 2 device protection if explicitly allowed. */
-static bool stm32g0_validate_options(target_s *const target, const option_register_s *options_req)
+static bool stm32g0_validate_options(target_s *const target, const stm32g0_option_register_s *options_req)
 {
 	stm32g0_priv_s *priv = (stm32g0_priv_s *)target->target_storage;
 	const bool valid =
@@ -718,8 +719,8 @@ static bool stm32g0_validate_options(target_s *const target, const option_regist
 static void stm32g0_display_registers(target_s *const target)
 {
 	for (size_t i = 0; i < OPT_REG_COUNT; ++i) {
-		const uint32_t val = target_mem32_read32(target, options_def[i].addr);
-		tc_printf(target, "0x%08" PRIX32 ": 0x%08" PRIX32 "\n", options_def[i].addr, val);
+		const uint32_t val = target_mem32_read32(target, stm32g0_options_def[i].addr);
+		tc_printf(target, "0x%08" PRIX32 ": 0x%08" PRIX32 "\n", stm32g0_options_def[i].addr, val);
 	}
 }
 
@@ -730,12 +731,12 @@ static void stm32g0_display_registers(target_s *const target)
  */
 static bool stm32g0_cmd_option(target_s *const target, const int argc, const char **const argv)
 {
-	option_register_s options_req[OPT_REG_COUNT] = {{0}};
+	stm32g0_option_register_s options_req[OPT_REG_COUNT] = {{0}};
 
 	if (argc == 2 && strcasecmp(argv[1], "erase") == 0) {
 		if (target->part_id == ID_STM32C011 || target->part_id == ID_STM32C031)
-			options_def[OPT_REG_OPTR].val = STM32C0x1_FPEC_OPTION_DEFAULT;
-		if (!stm32g0_option_write(target, options_def))
+			stm32g0_options_def[OPT_REG_OPTR].val = STM32C0x1_FPEC_OPTION_DEFAULT;
+		if (!stm32g0_option_write(target, stm32g0_options_def))
 			goto exit_error;
 	} else if (argc > 2 && (argc & 1U) == 0U && strcasecmp(argv[1], "write") == 0) {
 		if (!stm32g0_parse_cmdline_registers((uint32_t)argc - 2U, argv + 2U, options_req) ||
