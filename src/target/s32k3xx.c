@@ -21,8 +21,8 @@
  */
 
 /*
- * This file implements S32K3xx target specific functions providing
- * the XML memory map and Flash memory programming.
+ * This file implements support for S32K3xx series devices, providing
+ * memory maps and Flash programming routines.
  */
 
 #include "command.h"
