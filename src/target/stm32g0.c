@@ -230,10 +230,6 @@ static stm32g0_option_register_s stm32g0_options_def[OPT_REG_COUNT] = {
 	[OPT_REG_SECR] = {STM32G0_FPEC_SECURITY_OPT, 0x00000000},
 };
 
-typedef struct stm32g0_priv {
-	bool irreversible_enabled;
-} stm32g0_priv_s;
-
 static bool stm32g0_attach(target_s *target);
 static void stm32g0_detach(target_s *target);
 static bool stm32g0_flash_erase(target_flash_s *flash, target_addr_t addr, size_t len);
@@ -279,22 +275,6 @@ static void stm32g0_add_flash(target_s *const target, const uint32_t addr, const
 
 static bool stm32g0_configure_dbgmcu(target_s *const target)
 {
-	/* If we're in the probe phase */
-	if (target->target_storage == NULL) {
-		/* Allocate target-specific storage */
-		stm32g0_priv_s *const priv_storage = calloc(1, sizeof(*priv_storage));
-		if (!priv_storage) { /* calloc failed: heap exhaustion */
-			DEBUG_ERROR("calloc: failed in %s\n", __func__);
-			return false;
-		}
-		target->target_storage = priv_storage;
-		/* Mark irriversible operations disabled */
-		priv_storage->irreversible_enabled = false;
-
-		target->attach = stm32g0_attach;
-		target->detach = stm32g0_detach;
-	}
-
 	/* Enable the clock for the DBGMCU if it's not already */
 	target_mem32_write32(
 		target, STM32G0_RCC_APBENR1, target_mem32_read32(target, STM32G0_RCC_APBENR1) | STM32G0_RCC_APBENR1_DBGEN);
@@ -387,6 +367,12 @@ bool stm32g0_probe(target_s *const target)
 	/* Now we have a stable debug environment, make sure the WDTs + WFI and WFE instructions can't cause problems */
 	if (!stm32g0_configure_dbgmcu(target))
 		return false;
+
+	/* Mark irriversible (unsafe) operations disabled */
+	target->unsafe_enabled = false;
+
+	target->attach = stm32g0_attach;
+	target->detach = stm32g0_detach;
 
 	target_add_ram32(target, STM32G0_SRAM_BASE, ram_size);
 	/* Even dual Flash bank devices have a contiguous Flash memory space */
@@ -518,9 +504,8 @@ static bool stm32g0_flash_write(
 	target_flash_s *const flash, const target_addr_t dest, const void *const src, const size_t len)
 {
 	target_s *const target = flash->t;
-	stm32g0_priv_s *priv = (stm32g0_priv_s *)target->target_storage;
 
-	if (flash->start == STM32G0_OTP_BASE && !priv->irreversible_enabled) {
+	if (flash->start == STM32G0_OTP_BASE && !target->unsafe_enabled) {
 		tc_printf(target, "Irreversible operations disabled\n");
 		stm32g0_flash_op_finish(target);
 		return false;
@@ -691,9 +676,8 @@ static bool stm32g0_parse_cmdline_registers(
 /* Validates option bytes settings. Only allow level 2 device protection if explicitly allowed. */
 static bool stm32g0_validate_options(target_s *const target, const stm32g0_option_register_s *options_req)
 {
-	stm32g0_priv_s *priv = (stm32g0_priv_s *)target->target_storage;
 	const bool valid =
-		(options_req[OPT_REG_OPTR].val & STM32G0_FPEC_OPTION_RDP_MASK) != 0xccU || priv->irreversible_enabled;
+		(options_req[OPT_REG_OPTR].val & STM32G0_FPEC_OPTION_RDP_MASK) != 0xccU || target->unsafe_enabled;
 	if (!valid)
 		tc_printf(target, "Irreversible operations disabled\n");
 	return valid;
@@ -740,9 +724,8 @@ exit_error:
 /* Enables the irreversible operation that is level 2 device protection. */
 static bool stm32g0_cmd_irreversible(target_s *const target, const int argc, const char **const argv)
 {
-	stm32g0_priv_s *priv = (stm32g0_priv_s *)target->target_storage;
-	const bool ret = argc != 2 || parse_enable_or_disable(argv[1], &priv->irreversible_enabled);
-	tc_printf(target, "Irreversible operations: %s\n", priv->irreversible_enabled ? "enabled" : "disabled");
+	const bool ret = argc != 2 || parse_enable_or_disable(argv[1], &target->unsafe_enabled);
+	tc_printf(target, "Irreversible operations: %s\n", target->unsafe_enabled ? "enabled" : "disabled");
 	return ret;
 }
 
