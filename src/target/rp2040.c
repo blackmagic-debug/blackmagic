@@ -54,15 +54,15 @@
 #include "spi.h"
 #include "sfdp.h"
 
-#define RP_MAX_TABLE_SIZE     0x80U
-#define BOOTROM_MAGIC_ADDR    0x00000010U
-#define BOOTROM_MAGIC         ((uint32_t)'M' | ((uint32_t)'u' << 8U) | (1U << 16U))
-#define BOOTROM_MAGIC_MASK    0x00ffffffU
-#define BOOTROM_VERSION_SHIFT 24U
-#define RP_XIP_FLASH_BASE     0x10000000U
-#define RP_SRAM_BASE          0x20000000U
-#define RP_SRAM_SIZE          0x42000U
-#define RP_STUB_BUFFER_BASE   (RP_SRAM_BASE + 0x1000)
+#define RP_MAX_TABLE_SIZE        0x80U
+#define RP_BOOTROM_MAGIC_ADDR    0x00000010U
+#define RP_BOOTROM_MAGIC         ((uint32_t)'M' | ((uint32_t)'u' << 8U) | (1U << 16U))
+#define RP_BOOTROM_MAGIC_MASK    0x00ffffffU
+#define RP_BOOTROM_VERSION_SHIFT 24U
+#define RP_XIP_FLASH_BASE        0x10000000U
+#define RP_SRAM_BASE             0x20000000U
+#define RP_SRAM_SIZE             0x42000U
+#define RP_STUB_BUFFER_BASE      (RP_SRAM_BASE + 0x1000)
 
 #define RP_REG_ACCESS_NORMAL              0x0000U
 #define RP_REG_ACCESS_WRITE_XOR           0x1000U
@@ -154,16 +154,10 @@
 #define RP_RESETS_RESET_IO_QSPI_BITS   0x00000040U
 #define RP_RESETS_RESET_PADS_QSPI_BITS 0x00000200U
 
-#define BOOTROM_FUNC_TABLE_ADDR      0x00000014U
-#define BOOTROM_FUNC_TABLE_TAG(x, y) ((uint8_t)(x) | ((uint8_t)(y) << 8U))
+#define RP_BOOTROM_FUNC_TABLE_ADDR      0x00000014U
+#define RP_BOOTROM_FUNC_TABLE_TAG(x, y) ((uint8_t)(x) | ((uint8_t)(y) << 8U))
 
-#define FLASHSIZE_4K_SECTOR      (4U * 1024U)
-#define FLASHSIZE_32K_BLOCK      (32U * 1024U)
-#define FLASHSIZE_64K_BLOCK      (64U * 1024U)
-#define FLASHSIZE_32K_BLOCK_MASK ~(FLASHSIZE_32K_BLOCK - 1U)
-#define FLASHSIZE_64K_BLOCK_MASK ~(FLASHSIZE_64K_BLOCK - 1U)
-#define MAX_FLASH                (16U * 1024U * 1024U)
-#define MAX_WRITE_CHUNK          0x1000U
+#define RP2040_MAX_FLASH (16U * 1024U * 1024U)
 
 #define ID_RP2040 0x1002U
 
@@ -232,14 +226,14 @@ bool rp2040_probe(target_s *const target)
 		return false;
 
 	/* Check bootrom magic*/
-	uint32_t boot_magic = target_mem32_read32(target, BOOTROM_MAGIC_ADDR);
-	if ((boot_magic & BOOTROM_MAGIC_MASK) != BOOTROM_MAGIC) {
+	uint32_t boot_magic = target_mem32_read32(target, RP_BOOTROM_MAGIC_ADDR);
+	if ((boot_magic & RP_BOOTROM_MAGIC_MASK) != RP_BOOTROM_MAGIC) {
 		DEBUG_ERROR("Wrong Bootmagic %08" PRIx32 " found!\n", boot_magic);
 		return false;
 	}
 
 #if ENABLE_DEBUG == 1
-	if ((boot_magic >> BOOTROM_VERSION_SHIFT) == 1)
+	if ((boot_magic >> RP_BOOTROM_VERSION_SHIFT) == 1)
 		DEBUG_WARN("Old Bootrom Version 1!\n");
 #endif
 
@@ -282,7 +276,7 @@ static bool rp_read_rom_func_table(target_s *const target)
 {
 	rp_priv_s *const priv = (rp_priv_s *)target->target_storage;
 	/* We have to do a 32-bit read here but the pointer contained is only 16-bit. */
-	const uint16_t table_offset = target_mem32_read32(target, BOOTROM_FUNC_TABLE_ADDR) & 0x0000ffffU;
+	const uint16_t table_offset = target_mem32_read32(target, RP_BOOTROM_FUNC_TABLE_ADDR) & 0x0000ffffU;
 	uint16_t table[RP_MAX_TABLE_SIZE];
 	if (target_mem32_read(target, table, table_offset, RP_MAX_TABLE_SIZE))
 		return false;
@@ -290,7 +284,7 @@ static bool rp_read_rom_func_table(target_s *const target)
 	for (size_t i = 0; i < RP_MAX_TABLE_SIZE; i += 2U) {
 		const uint16_t tag = table[i];
 		const uint16_t addr = table[i + 1U];
-		if (tag == BOOTROM_FUNC_TABLE_TAG('U', 'B')) {
+		if (tag == RP_BOOTROM_FUNC_TABLE_TAG('U', 'B')) {
 			priv->rom_reset_usb_boot = addr;
 			return true;
 		}
@@ -644,7 +638,7 @@ static uint32_t rp_get_flash_length(target_s *const target)
 		return 1U << flash_id.capacity;
 
 	// Guess maximum flash size
-	return MAX_FLASH;
+	return RP2040_MAX_FLASH;
 }
 
 static bool rp_cmd_erase_sector(target_s *const target, const int argc, const char **const argv)
