@@ -188,7 +188,7 @@ static const uint32_t sam4l_nvp_size[16] = {
  * Populate a target_flash struct with the necessary function pointers
  * and constants to describe our flash.
  */
-static void sam4l_add_flash(target_s *target, uint32_t addr, size_t length)
+static void sam4l_add_flash(target_s *const target, const uint32_t addr, const size_t length)
 {
 	target_flash_s *flash = calloc(1, sizeof(*flash));
 	if (!flash) { /* calloc failed: heap exhaustion */
@@ -213,7 +213,7 @@ static void sam4l_add_flash(target_s *target, uint32_t addr, size_t length)
  *
  * Figure out from the register how much RAM and FLASH this variant has.
  */
-bool sam4l_probe(target_s *target)
+bool sam4l_probe(target_s *const target)
 {
 	const uint32_t cidr = target_mem32_read32(target, SAM4L_CHIPID_CIDR);
 	if (((cidr & SAM4L_CHIPID_CIDR_ARCH_MASK) >> SAM4L_CHIPID_CIDR_ARCH_SHIFT) != SAM4L_CHIPID_CIDR_ARCH_SAM4L)
@@ -243,7 +243,7 @@ bool sam4l_probe(target_s *target)
 }
 
 /* We've been reset, make sure we take the core out of reset */
-static void sam4l_extended_reset(target_s *target)
+static void sam4l_extended_reset(target_s *const target)
 {
 	DEBUG_INFO("SAM4L: Extended Reset\n");
 
@@ -276,7 +276,7 @@ static void sam4l_extended_reset(target_s *target)
  * Need the target struct to call the mem_read32 and mem_write32 function
  * pointers.
  */
-static bool sam4l_flash_command(target_s *target, uint32_t page, uint32_t cmd)
+static bool sam4l_flash_command(target_s *const target, const uint32_t page, const uint32_t cmd)
 {
 	DEBUG_INFO("%s: FSR: 0x%08" PRIx32 ", page = %" PRIu32 ", command = %" PRIu32 "\n", __func__, SAM4L_FLASHCTRL_FSR,
 		page, cmd);
@@ -343,7 +343,7 @@ static bool sam4l_flash_write(
 }
 
 /* Erase flash across the addresses specified by addr and len */
-static bool sam4l_flash_erase(target_flash_s *flash, target_addr_t addr, size_t len)
+static bool sam4l_flash_erase(target_flash_s *const flash, const target_addr_t addr, const size_t len)
 {
 	DEBUG_INFO("SAM4L: flash erase address 0x%08" PRIx32 " for %" PRIu32 " bytes\n", addr, (uint32_t)len);
 	/*
