@@ -307,7 +307,6 @@ static bool sam4l_flash_command(target_s *const target, const uint32_t page, con
 static bool sam4l_flash_write(
 	target_flash_s *const flash, const target_addr_t dest, const void *const src, const size_t len)
 {
-	DEBUG_INFO("%s: dest = 0x%08" PRIx32 ", len %" PRIx32 "\n", __func__, dest, (uint32_t)len);
 	/* Writing any more or less than 1 page size is not supported by this for now */
 	if (len != SAM4L_PAGE_SIZE)
 		return false;
@@ -345,7 +344,6 @@ static bool sam4l_flash_write(
 /* Erase flash across the addresses specified by addr and len */
 static bool sam4l_flash_erase(target_flash_s *const flash, const target_addr_t addr, const size_t len)
 {
-	DEBUG_INFO("SAM4L: flash erase address 0x%08" PRIx32 " for %" PRIu32 " bytes\n", addr, (uint32_t)len);
 	/*
 	 * NB: if addr isn't aligned to a page boundary, or length
 	 * is not an even multiple of page sizes, we may end up
