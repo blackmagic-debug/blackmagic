@@ -307,10 +307,7 @@ static bool sam4l_flash_command(target_s *const target, const uint32_t page, con
 static bool sam4l_flash_write(
 	target_flash_s *const flash, const target_addr_t dest, const void *const src, const size_t len)
 {
-	/* Writing any more or less than 1 page size is not supported by this for now */
-	if (len != SAM4L_PAGE_SIZE)
-		return false;
-
+	(void)len;
 	target_s *target = flash->t;
 	/* This will fail with unaligned writes, however the target Flash API guarantees we're called aligned */
 	const uint16_t page = dest / SAM4L_PAGE_SIZE;
