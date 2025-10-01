@@ -581,7 +581,7 @@ static void stm32f4_detach(target_s *const target)
 	cortexm_detach(target);
 }
 
-static void stm32f4_flash_unlock(target_s *target)
+static void stm32f4_flash_unlock(target_s *const target)
 {
 	if (target_mem32_read32(target, STM32F4_FPEC_CTRL) & STM32F4_FPEC_CTRL_LOCK) {
 		/* Enable FPEC controller access */
@@ -606,7 +606,7 @@ static bool stm32f4_flash_busy_wait(target_s *const target, platform_timeout_s *
 	return true;
 }
 
-static bool stm32f4_flash_erase(target_flash_s *target_flash, target_addr_t addr, size_t len)
+static bool stm32f4_flash_erase(target_flash_s *const target_flash, const target_addr_t addr, const size_t len)
 {
 	target_s *target = target_flash->t;
 	stm32f4_flash_s *flash = (stm32f4_flash_s *)target_flash;
@@ -637,7 +637,8 @@ static bool stm32f4_flash_erase(target_flash_s *target_flash, target_addr_t addr
 	return true;
 }
 
-static bool stm32f4_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t len)
+static bool stm32f4_flash_write(
+	target_flash_s *const flash, target_addr_t dest, const void *const src, const size_t len)
 {
 	/* Translate ITCM addresses to AXIM */
 	if (dest >= STM32F7_ITCM_FLASH_BASE && dest < STM32F7_AXIM_FLASH_BASE)
@@ -746,7 +747,7 @@ static size_t stm32f4_opt_bytes_for(const uint16_t part_id)
 	return 1;
 }
 
-static bool stm32f4_option_write(target_s *target, uint32_t *const val, size_t count)
+static bool stm32f4_option_write(target_s *const target, uint32_t *const val, const size_t count)
 {
 	val[0] &= ~(STM32F4_FPEC_OPTION_CTRL_OPTSTRT | STM32F4_FPEC_OPTION_CTRL_OPTLOCK);
 	uint32_t optcr = target_mem32_read32(target, STM32F4_FPEC_OPTION_CTRL);
@@ -793,7 +794,7 @@ static bool stm32f4_option_write(target_s *target, uint32_t *const val, size_t c
 	return true;
 }
 
-static bool stm32f4_option_write_default(target_s *target)
+static bool stm32f4_option_write_default(target_s *const target)
 {
 	uint32_t val[3] = {0};
 	switch (target->part_id) {
@@ -838,7 +839,7 @@ static bool partial_match(const char *const str, const char *const what, const s
 	return strncasecmp(str, what, str_len) == 0;
 }
 
-static bool stm32f4_cmd_option(target_s *target, int argc, const char **argv)
+static bool stm32f4_cmd_option(target_s *const target, const int argc, const char **const argv)
 {
 	const size_t opt_bytes = stm32f4_opt_bytes_for(target->part_id);
 	if (argc == 2 && partial_match(argv[1], option_cmd_erase, OPTION_CMD_LEN(option_cmd_erase)))
@@ -879,7 +880,7 @@ static bool stm32f4_cmd_option(target_s *target, int argc, const char **argv)
 	return true;
 }
 
-static bool stm32f4_cmd_psize(target_s *target, int argc, const char **argv)
+static bool stm32f4_cmd_psize(target_s *const target, const int argc, const char **const argv)
 {
 	if (argc == 1) {
 		align_e psize = ((const stm32f4_priv_s *)target->target_storage)->psize;
@@ -893,7 +894,7 @@ static bool stm32f4_cmd_psize(target_s *target, int argc, const char **argv)
 	return true;
 }
 
-static bool stm32f4_cmd_uid(target_s *target, int argc, const char **argv)
+static bool stm32f4_cmd_uid(target_s *const target, const int argc, const char **const argv)
 {
 	(void)argc;
 	(void)argv;
