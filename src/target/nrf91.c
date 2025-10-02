@@ -112,6 +112,7 @@ static bool nrf91_wait_ready(target_s *const target, platform_timeout_s *const t
 
 static bool nrf91_flash_erase(target_flash_s *flash, target_addr_t addr, size_t len)
 {
+	(void)len;
 	target_s *target = flash->t;
 
 	/* Enable erase */
@@ -119,13 +120,11 @@ static bool nrf91_flash_erase(target_flash_s *flash, target_addr_t addr, size_t 
 	if (!nrf91_wait_ready(target, NULL))
 		return false;
 
-	for (size_t offset = 0; offset < len; offset += flash->blocksize) {
-		/* Write all ones to first word in page to erase it */
-		target_mem32_write32(target, addr + offset, 0xffffffffU);
+	/* Write all ones to first word in page to erase it */
+	target_mem32_write32(target, addr, 0xffffffffU);
 
-		if (!nrf91_wait_ready(target, NULL))
-			return false;
-	}
+	if (!nrf91_wait_ready(target, NULL))
+		return false;
 
 	/* Return to read-only */
 	target_mem32_write32(target, NRF91_NVMC_CONFIG, NRF91_NVMC_CONFIG_REN);
