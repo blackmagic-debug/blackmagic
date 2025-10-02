@@ -87,7 +87,7 @@ static bool rram_erase(target_flash_s *flash, target_addr_t addr, size_t len);
 static bool rram_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t len);
 static bool rram_mass_erase(target_s *target, platform_timeout_s *print_progess);
 
-static void add_rram(target_s *target, uint32_t addr, size_t length, uint32_t writesize)
+static void add_rram(target_s *const target, const uint32_t addr, const size_t length, const uint32_t writesize)
 {
 	target_flash_s *flash = calloc(1, sizeof(*flash));
 	if (!flash) { /* calloc failed: heap exhaustion */
@@ -107,7 +107,7 @@ static void add_rram(target_s *target, uint32_t addr, size_t length, uint32_t wr
 	target_add_flash(target, flash);
 }
 
-bool nrf54l_probe(target_s *target)
+bool nrf54l_probe(target_s *const target)
 {
 	const adiv5_access_port_s *const ap = cortex_ap(target);
 
@@ -135,7 +135,7 @@ bool nrf54l_probe(target_s *target)
 	return true;
 }
 
-static bool rram_prepare(target_flash_s *flash)
+static bool rram_prepare(target_flash_s *const flash)
 {
 	uint32_t writebufsize = flash->writesize / 16U;
 	target_mem32_write32(flash->t, NRF54L_RRAMC_CONFIG,
@@ -143,7 +143,7 @@ static bool rram_prepare(target_flash_s *flash)
 	return true;
 }
 
-static bool rram_done(target_flash_s *flash)
+static bool rram_done(target_flash_s *const flash)
 {
 	// Wait for writebuf to flush.
 	while (target_mem32_read32(flash->t, NRF54L_RRAMC_BUFSTATUS_WRITEBUFEMPTY) !=
@@ -153,7 +153,7 @@ static bool rram_done(target_flash_s *flash)
 	return true;
 }
 
-static bool rram_erase(target_flash_s *flash, target_addr_t addr, size_t len)
+static bool rram_erase(target_flash_s *const flash, const target_addr_t addr, const size_t len)
 {
 	(void)flash;
 	(void)addr;
@@ -162,7 +162,7 @@ static bool rram_erase(target_flash_s *flash, target_addr_t addr, size_t len)
 	return true;
 }
 
-static bool rram_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t len)
+static bool rram_write(target_flash_s *const flash, const target_addr_t dest, const void *const src, const size_t len)
 {
 	// Wait for rram to be ready for next write.
 	while (target_mem32_read32(flash->t, NRF54L_RRAMC_READYNEXT) != NRF54L_RRAMC_READYNEXT_READY)
@@ -183,7 +183,7 @@ static bool rram_mass_erase(target_s *const target, platform_timeout_s *const pr
 
 static bool nrf54l_ctrl_ap_mass_erase(target_s *target, platform_timeout_s *print_progess);
 
-bool nrf54l_ctrl_ap_probe(adiv5_access_port_s *ap)
+bool nrf54l_ctrl_ap_probe(adiv5_access_port_s *const ap)
 {
 	switch (ap->idr) {
 	case NRF54L_CTRL_AP_IDR_VALUE:
