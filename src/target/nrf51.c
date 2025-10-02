@@ -74,6 +74,15 @@
 #define NRF51_PAGE_SIZE 1024U
 #define NRF52_PAGE_SIZE 4096U
 
+/* nRF52 recovery AP defines */
+#define NRF52_CTRL_AP_IDR 0x02880000U
+
+#define CTRL_AP_POWER_EN  ADIV5_DP_REG(0x01U)
+#define CTRL_AP_SELECT_AP ADIV5_DP_REG(0x02U)
+#define CTRL_AP_STATUS    ADIV5_AP_REG(0x08U)
+#define CTRL_AP_CONTROL   ADIV5_AP_REG(0x04U)
+#define CTRL_AP_PROT_EN   ADIV5_AP_REG(0x0cU)
+
 static bool nrf51_cmd_erase_uicr(target_s *target, int argc, const char **argv);
 static bool nrf51_cmd_protect_flash(target_s *target, int argc, const char **argv);
 static bool nrf51_cmd_read_hwid(target_s *target, int argc, const char **argv);
@@ -401,15 +410,7 @@ static bool nrf51_cmd_read(target_s *const target, const int argc, const char **
 	return nrf51_cmd_read_help(target, 0, NULL);
 }
 
-#define NRF52_CTRL_AP_IDR 0x02880000U
-
 static bool nrf51_ctrl_ap_mass_erase(target_s *target, platform_timeout_s *print_progess);
-
-#define CTRL_AP_POWER_EN  ADIV5_DP_REG(0x01U)
-#define CTRL_AP_SELECT_AP ADIV5_DP_REG(0x02U)
-#define CTRL_AP_STATUS    ADIV5_AP_REG(0x08U)
-#define CTRL_AP_CONTROL   ADIV5_AP_REG(0x04U)
-#define CTRL_AP_PROT_EN   ADIV5_AP_REG(0x0cU)
 
 bool nrf51_ctrl_ap_probe(adiv5_access_port_s *const ap)
 {
