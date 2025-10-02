@@ -210,22 +210,18 @@ static bool nrf51_flash_done(target_flash_s *const flash)
 
 static bool nrf51_flash_erase(target_flash_s *const flash, const target_addr_t addr, const size_t len)
 {
+	(void)len;
 	target_s *target = flash->t;
 
-	for (size_t offset = 0; offset < len; offset += flash->blocksize) {
-		/* If the address to erase is the UICR, we have to handle that separately */
-		if (addr + offset == NRF51_UICR)
-			/* Write to the ERASE_UICR register to erase */
-			target_mem32_write32(target, NRF51_NVMC_ERASEUICR, 0x1U);
-		else
-			/* Write address of first word in page to erase it */
-			target_mem32_write32(target, NRF51_NVMC_ERASEPAGE, addr + offset);
+	/* If the address to erase is the UICR, we have to handle that separately */
+	if (addr == NRF51_UICR)
+		/* Write to the ERASE_UICR register to erase */
+		target_mem32_write32(target, NRF51_NVMC_ERASEUICR, 0x1U);
+	else
+		/* Write address of first word in page to erase it */
+		target_mem32_write32(target, NRF51_NVMC_ERASEPAGE, addr);
 
-		if (!nrf51_wait_ready(target, NULL))
-			return false;
-	}
-
-	return true;
+	return nrf51_wait_ready(target, NULL);
 }
 
 static bool nrf51_flash_write(
