@@ -335,25 +335,10 @@ static bool ke04_mass_erase(target_s *const target, platform_timeout_s *const pr
 
 static bool ke04_cmd_sector_erase(target_s *const target, const int argc, const char **const argv)
 {
-	if (argc < 2)
-		tc_printf(target, "usage: monitor sector_erase <addr>\n");
-
-	target_flash_s *const flash = target->flash;
-	char *eos = NULL;
-	const uint32_t addr = strtoul(argv[1], &eos, 0);
-
-	/* Check that addr is a valid number and inside the flash range */
-	if ((eos && eos[0] != '\0') || addr < flash->start || addr >= flash->start + flash->length) {
-		/* Address not in range */
-		tc_printf(target, "Invalid sector address\n");
-		return false;
-	}
-
-	/* Erase and verify the given sector */
-	ke04_command(target, CMD_ERASE_FLASH_SECTOR, addr, NULL);
-	/* Adjust security byte if needed */
-	ke04_flash_done(flash);
-	return true;
+	(void)argc;
+	(void)argv;
+	tc_printf(target, "sector_erase deprecated, please use erase_range instead\n");
+	return false;
 }
 
 static bool kinetis_cmd_unsafe(target_s *const target, const int argc, const char **const argv)
