@@ -239,8 +239,6 @@ static bool msp432_sector_erase(const target_flash_s *const target_flash, const 
 	target_regs_read(target, regs);
 	regs[0] = addr; // Address of sector to erase in R0
 
-	DEBUG_TARGET("Erasing sector at 0x%08" PRIX32 "\n", addr);
-
 	/* Call ROM */
 	msp432_call_rom(target, flash->flash_erase_sector_fn, regs);
 
@@ -281,7 +279,6 @@ static bool msp432_flash_write(
 	regs[1] = dest;              // Flash address to be write to in R1
 	regs[2] = len;               // Size of buffer to be flashed in R2
 
-	DEBUG_TARGET("Writing 0x%04" PRIX32 " bytes at 0x%08" PRIx32 "\n", dest, (uint32_t)len);
 	/* Call ROM */
 	msp432_call_rom(target, mf->flash_program_fn, regs);
 
