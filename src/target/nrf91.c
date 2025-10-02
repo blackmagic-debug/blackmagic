@@ -60,7 +60,7 @@
 static bool nrf91_flash_erase(target_flash_s *flash, target_addr_t addr, size_t len);
 static bool nrf91_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t len);
 
-static void nrf91_add_flash(target_s *target, uint32_t addr, size_t length, size_t erasesize)
+static void nrf91_add_flash(target_s *const target, const uint32_t addr, const size_t length, const size_t erasesize)
 {
 	target_flash_s *flash = calloc(1, sizeof(*flash));
 	if (!flash) { /* calloc failed: heap exhaustion */
@@ -77,7 +77,7 @@ static void nrf91_add_flash(target_s *target, uint32_t addr, size_t length, size
 	target_add_flash(target, flash);
 }
 
-bool nrf91_probe(target_s *target)
+bool nrf91_probe(target_s *const target)
 {
 	adiv5_access_port_s *ap = cortex_ap(target);
 
@@ -110,7 +110,7 @@ static bool nrf91_wait_ready(target_s *const target, platform_timeout_s *const t
 	return true;
 }
 
-static bool nrf91_flash_erase(target_flash_s *flash, target_addr_t addr, size_t len)
+static bool nrf91_flash_erase(target_flash_s *const flash, const target_addr_t addr, const size_t len)
 {
 	(void)len;
 	target_s *target = flash->t;
@@ -131,7 +131,7 @@ static bool nrf91_flash_erase(target_flash_s *flash, target_addr_t addr, size_t 
 	return nrf91_wait_ready(target, NULL);
 }
 
-static bool nrf91_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t len)
+static bool nrf91_flash_write(target_flash_s *const flash, const target_addr_t dest, const void *src, const size_t len)
 {
 	target_s *target = flash->t;
 
