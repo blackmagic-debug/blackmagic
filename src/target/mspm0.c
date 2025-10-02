@@ -297,8 +297,6 @@ static bool mspm0_flash_erase(target_flash_s *const target_flash, const target_a
 
 	target_s *const target = target_flash->t;
 
-	DEBUG_INFO("%s: Erasing flash addr %08" PRIx32 " length %08" PRIx32 "\n", __func__, addr, (uint32_t)length);
-
 	mspm0_flash_unprotect_sector(target_flash, addr);
 	target_mem32_write32(
 		target, MSPM0_FLASHCTL_CMDTYPE, MSPM0_FLASHCTL_CMDTYPE_SZ_SECTOR | MSPM0_FLASHCTL_CMDTYPE_ERASE);
