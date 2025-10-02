@@ -128,7 +128,8 @@ static bool msp432_flash_write(target_flash_s *flash, target_addr_t dest, const 
 /* Call a function in the MSP432 ROM (or anywhere else...)*/
 static void msp432_call_rom(target_s *target, uint32_t address, uint32_t *regs);
 
-static void msp432_add_flash(target_s *target, uint32_t addr, size_t length, target_addr_t prot_reg)
+static void msp432_add_flash(
+	target_s *const target, const uint32_t addr, const size_t length, const target_addr_t prot_reg)
 {
 	msp432_flash_s *flash = calloc(1, sizeof(*flash));
 	if (!flash) { /* calloc failed: heap exhaustion */
@@ -152,7 +153,7 @@ static void msp432_add_flash(target_s *target, uint32_t addr, size_t length, tar
 	flash->flash_protect_register = prot_reg;
 }
 
-bool msp432p4_probe(target_s *target)
+bool msp432p4_probe(target_s *const target)
 {
 	/* Check for the right device info tag in the TLV ROM structure */
 	if (target_mem32_read32(target, DEVINFO_TAG_ADDR) != DEVINFO_TAG_VALUE)
@@ -259,7 +260,8 @@ static bool msp432_flash_erase(target_flash_s *const flash, const target_addr_t 
 }
 
 /* Program flash */
-static bool msp432_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t len)
+static bool msp432_flash_write(
+	target_flash_s *const flash, const target_addr_t dest, const void *const src, const size_t len)
 {
 	msp432_flash_s *mf = (msp432_flash_s *)flash;
 	target_s *target = flash->t;
@@ -293,7 +295,7 @@ static bool msp432_flash_write(target_flash_s *flash, target_addr_t dest, const 
 }
 
 /* Optional commands handlers */
-static bool msp432_cmd_erase_main(target_s *target, int argc, const char **argv)
+static bool msp432_cmd_erase_main(target_s *const target, const int argc, const char **const argv)
 {
 	(void)argc;
 	(void)argv;
@@ -316,7 +318,7 @@ static bool msp432_cmd_erase_main(target_s *target, int argc, const char **argv)
 	return result;
 }
 
-static bool msp432_cmd_sector_erase(target_s *target, int argc, const char **argv)
+static bool msp432_cmd_sector_erase(target_s *const target, const int argc, const char **const argv)
 {
 	if (argc < 2)
 		tc_printf(target, "usage: monitor sector_erase <addr>\n");
@@ -333,7 +335,7 @@ static bool msp432_cmd_sector_erase(target_s *target, int argc, const char **arg
 }
 
 /* MSP432 ROM routine invocation */
-static void msp432_call_rom(target_s *target, uint32_t address, uint32_t *regs)
+static void msp432_call_rom(target_s *const target, const uint32_t address, uint32_t *const regs)
 {
 	/* Kill watchdog */
 	target_mem32_write16(target, WDT_A_WTDCTL, WDT_A_HOLD);
