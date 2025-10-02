@@ -157,7 +157,7 @@ static conf_register_s mspm0_bcr_regs[] = {
 	{0U, 0U, NULL},
 };
 
-static void mspm0_dump_regs(target_s *const target, const conf_register_s *regs, uint32_t base)
+static void mspm0_dump_regs(target_s *const target, const conf_register_s *const regs, const uint32_t base)
 {
 	for (const conf_register_s *reg = regs; reg->id; ++reg) {
 		tc_printf(target, "%15s: ", reg->id);
@@ -341,7 +341,7 @@ static bool mspm0_flash_write(
 	return status & MSPM0_FLASHCTL_STAT_CMDPASS;
 }
 
-static bool mspm0_mass_erase(target_s *target, platform_timeout_s *print_progess)
+static bool mspm0_mass_erase(target_s *const target, platform_timeout_s *const print_progess)
 {
 	bool success = true;
 	for (mspm0_flash_s *flash = (mspm0_flash_s *)target->flash; flash && success;
