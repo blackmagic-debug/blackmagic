@@ -20,18 +20,13 @@
  */
 
 /*
- * This file implements MSP432 target specific functions for detecting
- * the device, providing the XML memory map and Flash memory programming.
+ * This file implements support for MSP432P4 series devices, providing
+ * memory maps and Flash programming routines.
  *
  * References:
- * TI doc - SLAU356G
- *   MSP432P4xx Technical Reference Manual
- * TI doc - SLAS826G
- *   MSP432P401R, MSP432P401M SimpleLink Mixed-Signal Microcontrollers
- * TI doc - SLAA704
- *   Flash Operations on MSP432 MCUs
- * TI doc -
- *   MSP432® Peripheral Driver Library User's Guide
+ * SLAU356G - MSP432P4xx Technical Reference Manual
+ * SLAS826G - MSP432P401R, MSP432P401M SimpleLink Mixed-Signal Microcontrollers
+ * SLAA704 - Flash Operations on MSP432 MCUs
  */
 
 #include "general.h"
