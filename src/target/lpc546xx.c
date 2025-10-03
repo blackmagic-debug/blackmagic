@@ -51,7 +51,6 @@
 
 #define IAP_PGM_CHUNKSIZE 4096U
 
-static bool lpc546xx_cmd_erase_sector(target_s *target, int argc, const char **argv);
 static bool lpc546xx_cmd_read_partid(target_s *target, int argc, const char **argv);
 static bool lpc546xx_cmd_read_uid(target_s *target, int argc, const char **argv);
 static bool lpc546xx_cmd_reset_attach(target_s *target, int argc, const char **argv);
@@ -59,7 +58,6 @@ static bool lpc546xx_cmd_reset(target_s *target, int argc, const char **argv);
 static bool lpc546xx_cmd_write_sector(target_s *target, int argc, const char **argv);
 
 const command_s lpc546xx_cmd_list[] = {
-	{"erase_sector", lpc546xx_cmd_erase_sector, "Erase a sector by number"},
 	{"read_partid", lpc546xx_cmd_read_partid, "Read out the 32-bit part ID using IAP."},
 	{"read_uid", lpc546xx_cmd_read_uid, "Read out the 16-byte UID."},
 	{"reset_attach", lpc546xx_cmd_reset_attach,
@@ -176,18 +174,6 @@ static void lpc546xx_reset_attach(target_s *const target)
 	target_reset(target);
 	target_halt_resume(target, false);
 	cortexm_attach(target);
-}
-
-static bool lpc546xx_cmd_erase_sector(target_s *const target, const int argc, const char **const argv)
-{
-	tc_printf(target, "This command is deprecated in favor of erase_range and may be removed in the future\n");
-
-	if (argc > 1) {
-		uint32_t sector_addr = strtoul(argv[1], NULL, 0);
-		sector_addr *= target->flash->blocksize;
-		return target_flash_erase(target, sector_addr, 1U);
-	}
-	return true;
 }
 
 static bool lpc546xx_cmd_read_partid(target_s *const target, const int argc, const char **const argv)
