@@ -1,7 +1,7 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
- * Copyright (C) 2022-2023 1BitSquared <info@1bitsquared.com>
+ * Copyright (C) 2022-2025 1BitSquared <info@1bitsquared.com>
  * Written by Rachel Mant <git@dragonmux.network>
  * Based on prior work by Uwe Bones <bon@elektron.ikp.physik.tu-darmstadt.de>
  * All rights reserved.
@@ -32,19 +32,26 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+/*
+ * This file implements support for LPC55xx series devices, providing
+ * memory maps and Flash programming routines.
+ *
+ * References and details about the IAP variant used here:
+ * LPC55S0x/LPC550x 32-bit Arm Cortex®-M33, Product data sheet, Rev. 1.4
+ *   https://www.nxp.com/docs/en/data-sheet/LPC55S0x_LPC550x.pdf
+ * LPC55S1x/LPC551x 32-bit Arm Cortex®-M33, Product data sheet, Rev. 1.8
+ *   https://www.nxp.com/docs/en/nxp/data-sheets/LPC55S1x_LPC551x_DS.pdf
+ * and (behind their login wall):
+ * UM11424 - LPC55S0x/LPC550x User manual
+ *   https://cache.nxp.com/secured/assets/documents/en/nxp/user-guides/UM11424.pdf?fileExt=.pdf
+ * UM11295 - LPC55S1x/LPC551x User manual
+ *   https://cache.nxp.com/secured/assets/documents/en/nxp/user-guides/UM11295.pdf?fileExt=.pdf
+ */
+
 #include "general.h"
 #include "target.h"
 #include "target_internal.h"
 #include "cortexm.h"
-
-/*
- * For detailed documentation on how this code works and the IAP variant used here, see:
- * https://www.nxp.com/docs/en/data-sheet/LPC55S0x_LPC550x_DS.pdf
- * https://www.nxp.com/docs/en/nxp/data-sheets/LPC55S1x_LPC551x_DS.pdf
- * and (behind their login wall):
- * https://cache.nxp.com/secured/assets/documents/en/nxp/user-guides/UM11424.pdf?fileExt=.pdf
- * https://cache.nxp.com/secured/assets/documents/en/nxp/user-guides/UM11295.pdf?fileExt=.pdf
- */
 
 #define LPC55_DMAP_IDR                 0x002a0000U
 #define LPC55_DMAP_BULK_ERASE          0x02U
