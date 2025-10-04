@@ -27,7 +27,7 @@
 /* Probe launch macro used by the CPU-generic layers to then call CPU-specific routines safely */
 #define PROBE(x)                                    \
 	do {                                            \
-		DEBUG_TARGET("Calling " STRINGIFY(x) "\n"); \
+		DEBUG_TARGET("Calling %s\n", STRINGIFY(x)); \
 		if ((x)(target))                            \
 			return true;                            \
 		target_check_error(target);                 \
@@ -41,6 +41,8 @@
 bool cortexa_probe(adiv5_access_port_s *ap, target_addr_t base_address);
 bool cortexr_probe(adiv5_access_port_s *ap, target_addr_t base_address);
 bool cortexm_probe(adiv5_access_port_s *ap);
+bool cortexa_armv8_dc_probe(adiv5_access_port_s *ap, target_addr_t base_address);
+bool cortexa_armv8_cti_probe(adiv5_access_port_s *ap, target_addr_t base_address);
 
 bool riscv32_probe(target_s *target);
 bool riscv64_probe(target_s *target);
@@ -58,6 +60,8 @@ bool at32f43x_probe(target_s *target);
 bool ch32f1_probe(target_s *target); // will catch all the clones
 bool ch579_probe(target_s *target);
 bool efm32_probe(target_s *target);
+bool ch32v003x_probe(target_s *target);
+bool ch32vx_probe(target_s *target);
 bool gd32f1_probe(target_s *target);
 bool gd32f4_probe(target_s *target);
 bool gd32vf1_probe(target_s *target);

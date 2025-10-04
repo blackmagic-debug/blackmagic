@@ -32,6 +32,17 @@
  *   https://www.st.com/resource/en/reference_manual/rm0401-stm32f410-advanced-armbased-32bit-mcus-stmicroelectronics.pdf
  * GD32F4xx Arm® Cortex®-M4 32-bit MCU User Manual, Rev. 3.0
  *   https://www.gigadevice.com.cn/Public/Uploads/uploadfile/files/20240407/GD32F4xx_User_Manual_Rev3.0.pdf
+ * References for STM32F7xx:
+ * RM0385 - STM32F75xxx and STM32F74xxx advanced Arm®-based 32-bit MCUs, Rev. 9
+ *   https://www.st.com/resource/en/reference_manual/rm0385-stm32f75xxx-and-stm32f74xxx-advanced-armbased-32bit-mcus-stmicroelectronics.pdf
+ * RM0410 - STM32F76xxx and STM32F77xxx advanced Arm®-based 32-bit MCUs, Rev. 5
+ *   https://www.st.com/resource/en/reference_manual/rm0410-stm32f76xxx-and-stm32f77xxx-advanced-armbased-32bit-mcus-stmicroelectronics.pdf
+ * RM0431 - STM32F72xxx and STM32F73xxx advanced Arm®-based 32-bit MCUs, Rev. 4
+ *   https://www.st.com/resource/en/reference_manual/rm0431-stm32f72xxx-and-stm32f73xxx-advanced-armbased-32bit-mcus-stmicroelectronics.pdf
+ * AN4667 - STM32F7 Series system architecture and performance, Rev. 4
+ *   https://www.st.com/resource/en/application_note/an4667-stm32f7-series-system-architecture-and-performance-stmicroelectronics.pdf
+ * AN4826 - STM32F7 Series Flash memory dual bank mode, Rev. 2
+ *   https://www.st.com/resource/en/application_note/an4826-stm32f7-series-flash-memory-dual-bank-mode-stmicroelectronics.pdf
  */
 
 #include "general.h"
@@ -96,8 +107,13 @@
 #define STM32F4_DBGMCU_CTRL       (STM32F4_DBGMCU_BASE + 0x04U)
 #define STM32F4_DBGMCU_APB1FREEZE (STM32F4_DBGMCU_BASE + 0x08U)
 
-#define AXIM_BASE 0x8000000U
-#define ITCM_BASE 0x0200000U
+#define STM32F7_AXIM_FLASH_BASE 0x08000000U
+#define STM32F7_ITCM_FLASH_BASE 0x00200000U
+
+#define STM32F7_ITCM_RAM_BASE 0x00000000U
+#define STM32F4_CCM_RAM_BASE  0x10000000U
+#define STM32F4_AHB_SRAM_BASE 0x20000000U
+#define STM32F7_DTCM_RAM_BASE STM32F4_AHB_SRAM_BASE
 
 #define STM32F4_DBGMCU_CTRL_DBG_SLEEP   (1U << 0U)
 #define STM32F4_DBGMCU_CTRL_DBG_STOP    (1U << 1U)
@@ -315,8 +331,8 @@ bool gd32f4_probe(target_s *const target)
 	target->driver = stm32f4_get_chip_name(target->part_id);
 	target_add_commands(target, stm32f4_cmd_list, target->driver);
 
-	target_add_ram32(target, 0x10000000, 0x10000); /* 64 k CCM Ram*/
-	target_add_ram32(target, 0x20000000, 0x50000); /* 320 k RAM */
+	target_add_ram32(target, STM32F4_CCM_RAM_BASE, 0x10000);  /* 64 KiB CCM RAM */
+	target_add_ram32(target, STM32F4_AHB_SRAM_BASE, 0x50000); /* 320 KiB RAM */
 
 	/* TODO implement DBS mode */
 	const uint8_t split = 12;
@@ -423,17 +439,46 @@ static bool stm32f4_attach(target_s *const target)
 	/* And rebuild the RAM map */
 	bool use_dual_bank = !is_f7 && dual_bank;
 	if (is_f7) {
-		target_add_ram32(target, 0x00000000, 0x4000);  /* 16kiB ITCM RAM */
-		target_add_ram32(target, 0x20000000, 0x20000); /* 128kiB DTCM RAM */
-		target_add_ram32(target, 0x20020000, 0x60000); /* 384kiB RAM */
+		uint32_t dtcm_size = 64U * 1024U; /* 64kiB DTCM RAM */
+		uint32_t ahbsram_size = 16U * 1024U;
+		if (target->part_id == ID_STM32F72X)
+			ahbsram_size = (176U + 16U) * 1024U; /* 192kiB SRAM1/2 */
+		else if (target->part_id == ID_STM32F74X)
+			ahbsram_size = (240U + 16U) * 1024U; /* 256kiB SRAM1/2 */
+		else if (target->part_id == ID_STM32F76X) {
+			dtcm_size = 128U * 1024U;            /* 128kiB DTCM RAM */
+			ahbsram_size = (368U + 16U) * 1024U; /* 384kiB SRAM1/2 */
+		}
+		target_add_ram32(target, STM32F7_ITCM_RAM_BASE, 0x4000U); /* 16kiB ITCM RAM */
+		/* On STM32F7, DTCM and AHB SRAM are contiguous */
+		target_add_ram32(target, STM32F7_DTCM_RAM_BASE, dtcm_size);
+		target_add_ram32(target, STM32F7_DTCM_RAM_BASE + dtcm_size, ahbsram_size);
+
 		if (dual_bank) {
 			const uint32_t option_ctrl = target_mem32_read32(target, FLASH_OPTCR);
 			use_dual_bank = !(option_ctrl & FLASH_OPTCR_nDBANK);
 		}
 	} else {
 		if (has_ccm_ram)
-			target_add_ram32(target, 0x10000000, 0x10000); /* 64kiB CCM RAM */
-		target_add_ram32(target, 0x20000000, 0x50000);     /* 320kiB RAM */
+			target_add_ram32(target, STM32F4_CCM_RAM_BASE, 0x10000); /* 64 KiB CCM RAM */
+		/* F405/415, F407/417 have 112+16=128 KiB AHB SRAM */
+		uint32_t ram_size = 128U * 1024U;
+		/* F411, F446 also have a single chunk of 128 KiB AHB SRAM, so treat others specially */
+		if (target->part_id == ID_STM32F46X || target->part_id == ID_STM32F413)
+			ram_size = 320U * 1024U; /* 320 KiB AHB SRAM */
+		else if (target->part_id == ID_STM32F412)
+			ram_size = 256U * 1024U; /* 256 KiB AHB SRAM */
+		else if (target->part_id == ID_STM32F42X)
+			ram_size = 192U * 1024U; /* 192 KiB AHB SRAM */
+		else if (target->part_id == ID_STM32F401E)
+			ram_size = 96U * 1024U; /* 96 KiB AHB SRAM */
+		else if (target->part_id == ID_STM32F401C)
+			ram_size = 64U * 1024U; /* 64 KiB AHB SRAM */
+		else if (target->part_id == ID_STM32F410)
+			ram_size = 32U * 1024U; /* 32 KiB AHB SRAM */
+		/* TODO: F20x can have 128, but also 96 or 64 */
+		target_add_ram32(target, STM32F4_AHB_SRAM_BASE, ram_size);
+
 		if (dual_bank && max_flashsize < 2048U) {
 			/* Check the dual-bank status on 1MiB Flash devices */
 			const uint32_t option_ctrl = target_mem32_read32(target, FLASH_OPTCR);
@@ -461,10 +506,10 @@ static bool stm32f4_attach(target_s *const target)
 		 */
 		const uint32_t remaining_bank_length = stm32f4_remaining_bank_length(bank_length, 0x40000);
 		/* 256kiB in small sectors */
-		stm32f4_add_flash(target, ITCM_BASE, 0x20000, 0x8000, 0, split);
+		stm32f4_add_flash(target, STM32F7_ITCM_FLASH_BASE, 0x20000, 0x8000, 0, split);
 		stm32f4_add_flash(target, 0x0220000, 0x20000, 0x20000, 4, split);
 		stm32f4_add_flash(target, 0x0240000, remaining_bank_length, 0x40000, 5, split);
-		stm32f4_add_flash(target, AXIM_BASE, 0x20000, 0x8000, 0, split);
+		stm32f4_add_flash(target, STM32F7_AXIM_FLASH_BASE, 0x20000, 0x8000, 0, split);
 		stm32f4_add_flash(target, 0x8020000, 0x20000, 0x20000, 4, split);
 		stm32f4_add_flash(target, 0x8040000, remaining_bank_length, 0x40000, 5, split);
 	} else {
@@ -476,23 +521,31 @@ static bool stm32f4_attach(target_s *const target)
 		 */
 		const uint32_t remaining_bank_length = stm32f4_remaining_bank_length(bank_length, 0x20000);
 		/* 128kiB in small sectors */
-		if (is_f7)
-			stm32f4_add_flash(target, ITCM_BASE, 0x10000, 0x4000, 0, split);
-		stm32f4_add_flash(target, AXIM_BASE, 0x10000, 0x4000, 0, split);
+		stm32f4_add_flash(target, STM32F7_AXIM_FLASH_BASE, 0x10000, 0x4000, 0, split);
 		if (bank_length > 0x10000U) {
-			stm32f4_add_flash(target, 0x8010000, 0x10000, 0x10000, 4, split);
+			stm32f4_add_flash(target, STM32F7_AXIM_FLASH_BASE + 0x10000U, 0x10000, 0x10000, 4, split);
 			if (remaining_bank_length)
-				stm32f4_add_flash(target, 0x8020000, remaining_bank_length, 0x20000, 5, split);
+				stm32f4_add_flash(target, STM32F7_AXIM_FLASH_BASE + 0x20000U, remaining_bank_length, 0x20000, 5, split);
+		}
+		/* Declare ITCM alias, too */
+		if (is_f7) {
+			stm32f4_add_flash(target, STM32F7_ITCM_FLASH_BASE, 0x10000, 0x4000, 0, split);
+			if (bank_length > 0x10000U) {
+				stm32f4_add_flash(target, STM32F7_ITCM_FLASH_BASE + 0x10000U, 0x10000, 0x10000, 4, split);
+				if (remaining_bank_length)
+					stm32f4_add_flash(
+						target, STM32F7_ITCM_FLASH_BASE + 0x20000U, remaining_bank_length, 0x20000, 5, split);
+			}
 		}
 		/* If the device has an enabled second bank, we better deal with that too. */
 		if (use_dual_bank) {
-			if (is_f7) {
-				const uint32_t bank1_base = ITCM_BASE + bank_length;
-				stm32f4_add_flash(target, bank1_base, 0x10000, 0x4000, 0, split);
-				stm32f4_add_flash(target, bank1_base + 0x10000U, 0x10000, 0x10000, 4, split);
-				stm32f4_add_flash(target, bank1_base + 0x20000U, remaining_bank_length, 0x20000, 5, split);
+			if (is_f7) { /* F76x in "dual_bank" mode loses "large_sectors" */
+				const uint32_t bank1_base = STM32F7_ITCM_FLASH_BASE + bank_length;
+				stm32f4_add_flash(target, bank1_base, 0x10000, 0x4000, 16, split);
+				stm32f4_add_flash(target, bank1_base + 0x10000U, 0x10000, 0x10000, 20, split);
+				stm32f4_add_flash(target, bank1_base + 0x20000U, remaining_bank_length, 0x20000, 21, split);
 			}
-			const uint32_t bank2_base = AXIM_BASE + bank_length;
+			const uint32_t bank2_base = STM32F7_AXIM_FLASH_BASE + bank_length;
 			stm32f4_add_flash(target, bank2_base, 0x10000, 0x4000, 16, split);
 			stm32f4_add_flash(target, bank2_base + 0x10000U, 0x10000, 0x10000, 20, split);
 			stm32f4_add_flash(target, bank2_base + 0x20000U, remaining_bank_length, 0x20000, 21, split);
@@ -586,8 +639,8 @@ static bool stm32f4_flash_erase(target_flash_s *target_flash, target_addr_t addr
 static bool stm32f4_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t len)
 {
 	/* Translate ITCM addresses to AXIM */
-	if (dest >= ITCM_BASE && dest < AXIM_BASE)
-		dest += AXIM_BASE - ITCM_BASE;
+	if (dest >= STM32F7_ITCM_FLASH_BASE && dest < STM32F7_AXIM_FLASH_BASE)
+		dest += STM32F7_AXIM_FLASH_BASE - STM32F7_ITCM_FLASH_BASE;
 	target_s *target = flash->t;
 
 	align_e psize = ((const stm32f4_priv_s *)target->target_storage)->psize;

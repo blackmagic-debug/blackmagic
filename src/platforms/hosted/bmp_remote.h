@@ -1,7 +1,9 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
- * Copyright (C) 2020 Uwe Bonnes
+ * Copyright (C) 2020 Uwe Bonnes <bon@elektron.ikp.physik.tu-darmstadt.de>
+ * Copyright (C) 2022-2025 1BitSquared <info@1bitsquared.com>
+ * Rewritten by Rachel Mant <git@dragonmux.network>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,6 +30,7 @@
 #include "jtag_devs.h"
 #include "adiv5.h"
 #include "riscv_debug.h"
+#include "spi.h"
 #include "target.h"
 #include "target_internal.h"
 
@@ -43,6 +46,10 @@ typedef struct bmp_remote_protocol {
 	uint32_t (*get_comms_frequency)(void);
 	bool (*set_comms_frequency)(uint32_t freq);
 	void (*target_clk_output_enable)(bool enable);
+	bool (*spi_init)(spi_bus_e bus);
+	bool (*spi_deinit)(spi_bus_e bus);
+	bool (*spi_chip_select)(uint8_t device_select);
+	uint8_t (*spi_xfer)(spi_bus_e bus, uint8_t value);
 } bmp_remote_protocol_s;
 
 extern bmp_remote_protocol_s remote_funcs;
@@ -66,6 +73,12 @@ void remote_adiv5_dp_init(adiv5_debug_port_s *dp);
 void remote_adiv6_dp_init(adiv5_debug_port_s *dp);
 void remote_riscv_jtag_dtm_init(riscv_dmi_s *dmi);
 void remote_add_jtag_dev(uint32_t dev_index, const jtag_dev_s *jtag_dev);
+
+bool remote_spi_init(spi_bus_e bus);
+bool remote_spi_deinit(spi_bus_e bus);
+
+bool remote_spi_chip_select(uint8_t device_select);
+uint8_t remote_spi_xfer(spi_bus_e bus, uint8_t value);
 
 uint64_t remote_decode_response(const char *response, size_t digits);
 

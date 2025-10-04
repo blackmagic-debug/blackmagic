@@ -2,6 +2,8 @@
  * This file is part of the Black Magic Debug project.
  *
  * Copyright (C) 2015 Gareth McMullin <gareth@blacksphere.co.nz>
+ * Copyright (C) 2022-2025 1BitSquared <info@1bitsquared.com>
+ * Modified by Rachel Mant <git@dragonmux.network>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -38,7 +40,7 @@ void platform_pace_poll(void);
 #else
 void platform_init(void);
 
-inline void platform_pace_poll(void)
+static inline void platform_pace_poll(void)
 {
 }
 
@@ -70,14 +72,13 @@ void platform_max_frequency_set(uint32_t frequency);
 uint32_t platform_max_frequency_get(void);
 
 void platform_target_clk_output_enable(bool enable);
+void platform_ospeed_update(uint32_t frequency);
 
-#if CONFIG_BMDA == 0
 bool platform_spi_init(spi_bus_e bus);
 bool platform_spi_deinit(spi_bus_e bus);
 
 bool platform_spi_chip_select(uint8_t device_select);
 uint8_t platform_spi_xfer(spi_bus_e bus, uint8_t value);
-#endif
 
 #ifdef PLATFORM_IDENT_DYNAMIC
 const char *platform_ident(void);

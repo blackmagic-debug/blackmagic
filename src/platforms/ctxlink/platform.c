@@ -156,6 +156,19 @@ int platform_hwversion(void)
 	return 0;
 }
 
+static char parameters[128] = {0};
+
+const char *platform_wifi_state(int argc, const char **argv)
+{
+	memset(parameters, 0x00, sizeof(parameters));
+	if (argc > 1) {
+		wifi_connect(argc, argv, parameters, sizeof(parameters));
+		app_task_wait_spin();
+	}
+	wifi_get_ip_address(parameters, sizeof(parameters));
+	return parameters;
+}
+
 void platform_init(void)
 {
 	/* Enable GPIO peripherals */

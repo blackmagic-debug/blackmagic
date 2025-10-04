@@ -1,7 +1,8 @@
 # This file is part of the Black Magic Debug project.
 #
-# Copyright (C) 2023 1BitSquared <info@1bitsquared.com>
+# Copyright (C) 2023-2025 1BitSquared <info@1bitsquared.com>
 # Written by Rafael Silva <perigoso@riseup.net>
+# Modified by Rachel Mant <git@dragonmux.network>
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -31,7 +32,7 @@
 project(
 	'Black Magic Debug',
 	'c',
-	version: '1.10.0',
+	version: '2.0.0',
 	license: 'GPL-3.0-or-later OR BSD-3-Clause OR MIT',
 	# license_files: ['COPYING', 'COPYING-BSD', 'COPYING-MIT'], # Only available in meson 1.1.0
 	default_options: [
@@ -112,6 +113,7 @@ extended_warnings = [
 	'-w24703', # Potentially uninitialized local pointer variable 'name' used
 	'-Wmissing-attributes',
 	'-Wmissing-braces',
+	'-Wnewline-eof',
 	'-Wno-char-subscripts',
 	'-Wnull-dereference',
 	# '-Wpacked',
@@ -126,6 +128,7 @@ extended_warnings = [
 	# '-Wstack-protector',
 	'-Wstrict-aliasing',
 	'-Wstrict-overflow=3',
+	'-Wstrict-prototypes',
 	'-Wstring-compare',
 	'-Wstringop-overflow',
 	'-Wunknown-pragmas', # MSVC's C4081 and it's a level 1 warning
@@ -258,17 +261,31 @@ If you did not touch the build system this is not your fault, please report it
 	## Utility targets
 	## _______________
 
-	# Black Magic Probe Firmware Manager
-	bmputil = find_program('bmputil', required: false)
+	# Black Magic Probe companion utility
+	bmputil = find_program('bmputil-cli', required: false)
 	if bmputil.found()
 		message('Adding target for firmware update')
 
 		# Firmware update target
 		run_target(
 			'flash',
-			command: [bmputil, 'flash', bmf_elf.full_path()],
+			command: [bmputil, 'probe', 'update', bmf_elf.full_path()],
 			depends: bmf_elf,
 		)
+	# If we couldn't find the utility, look for the older pre-v1.0 version of it
+	else
+		# Black Magic Probe Firmware Manager
+		bmputil = find_program('bmputil', required: false)
+		if bmputil.found()
+			message('Adding target for firmware update')
+
+			# Firmware update target
+			run_target(
+				'flash',
+				command: [bmputil, 'flash', bmf_elf.full_path()],
+				depends: bmf_elf,
+			)
+		endif
 	endif
 endif
 

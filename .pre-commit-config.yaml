@@ -1,8 +1,8 @@
 exclude: '^upgrade/|^scripts/'  # don't run hooks on scripts/ and upgrade/
 
 repos:
-- repo: https://github.com/ssciwr/clang-format-hook
-  rev: v16.0.2
+- repo: https://github.com/pre-commit/mirrors-clang-format
+  rev: v18.1.8
   hooks:
   - id: clang-format
     # entries here override, not extend, upstream's configuration

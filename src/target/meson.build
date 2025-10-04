@@ -42,6 +42,7 @@ target_common_sources = files(
 	'gdb_reg.c',
 	'jtag_devs.c',
 	'jtag_scan.c',
+	'onboard_flash.c',
 	'semihosting.c',
 	'sfdp.c',
 	'spi.c',
@@ -77,7 +78,8 @@ if is_firmware_build
 		'riscv64': 'RISC-V 64-bit support',
 		'at32f4': 'Arterytek parts',
 		'apollo3': 'Ambiq Apollo3 parts',
-		'ch32': 'WinChipHead CH32 parts',
+		'ch32': 'WinChipHead CH32 ARM Cortex parts',
+		'ch32v': 'WinChipHead CH32 RISC-V parts',
 		'ch579': 'WinChipHead CH579 parts',
 		'efm': 'Energy Micro parts',
 		'gd32': 'GigaDevice parts',
@@ -122,6 +124,10 @@ endif
 # We declare a dependency for each target group with the source files required
 # these dependencies are then added to the BMD core, conditinal on the targets option
 # NOTE: sourceset module might be an alternative to this method (unexplored)
+target_arm_coresight = declare_dependency(
+	sources: files('arm_coresight_cti.c'),
+)
+
 target_cortex = declare_dependency(
 	sources: files('cortex.c'),
 )
@@ -135,6 +141,12 @@ target_cortexar = declare_dependency(
 target_cortexm = declare_dependency(
 	sources: files('cortexm.c'),
 	dependencies: target_cortex,
+	compile_args: ['-DCONFIG_CORTEXM=1'],
+)
+
+target_cortexa_armv8 = declare_dependency(
+	sources: files('cortexa_armv8.c'),
+	dependencies: [target_cortex, target_arm_coresight],
 )
 
 riscv_jtag_dtm = declare_dependency(
@@ -164,11 +176,13 @@ target_riscv64 = declare_dependency(
 
 target_apollo3 = declare_dependency(
 	sources: files('apollo3.c'),
+	compile_args: ['-DCONFIG_APOLLO3=1'],
 	dependencies: target_cortexm,
 )
 
 target_ch579 = declare_dependency(
 	sources: files('ch579.c'),
+	compile_args: ['-DCONFIG_CH579=1'],
 	dependencies: target_cortexm,
 )
 
@@ -176,11 +190,13 @@ target_efm = declare_dependency(
 	sources: files(
 		'efm32.c'
 	) + efm32_stub,
+	compile_args: ['-DCONFIG_EFM32=1'],
 	dependencies: target_cortexm,
 )
 
 target_hc32 = declare_dependency(
 	sources: files('hc32l110.c'),
+	compile_args: ['-DCONFIG_HC32=1'],
 	dependencies: target_cortexm,
 )
 
@@ -195,6 +211,7 @@ target_lpc = declare_dependency(
 		'lpc55xx.c',
 		'lpc_common.c',
 	),
+	compile_args: ['-DCONFIG_LPC=1'],
 	dependencies: target_cortexm,
 )
 
@@ -204,6 +221,7 @@ target_nrf = declare_dependency(
 		'nrf54l.c',
 		'nrf91.c',
 	),
+	compile_args: ['-DCONFIG_NRF=1'],
 	dependencies: target_cortexm,
 )
 
@@ -214,21 +232,25 @@ target_nxp = declare_dependency(
 		'nxpke04.c',
 		's32k3xx.c',
 	),
+	compile_args: ['-DCONFIG_NXP=1'],
 	dependencies: target_cortexm,
 )
 
 target_puya = declare_dependency(
 	sources: files('puya.c'),
+	compile_args: ['-DCONFIG_PUYA=1'],
 	dependencies: target_cortexm,
 )
 
 target_renesas_ra = declare_dependency(
 	sources: files('renesas_ra.c'),
+	compile_args: ['-DCONFIG_RA=1'],
 	dependencies: target_cortexm,
 )
 
 target_renesas_rz = declare_dependency(
 	sources: files('renesas_rz.c'),
+	compile_args: ['-DCONFIG_RZ=1'],
 	dependencies: target_cortexar,
 )
 
@@ -247,6 +269,7 @@ target_rp = declare_dependency(
 		'rp2040.c',
 		'rp2350.c',
 	) + rp2040_stub,
+	compile_args: ['-DCONFIG_RP=1'],
 	dependencies: target_cortexm,
 )
 
@@ -257,6 +280,7 @@ target_sam = declare_dependency(
 		'samd.c',
 		'samx5x.c',
 	),
+	compile_args: ['-DCONFIG_SAM=1'],
 	dependencies: target_cortexm,
 )
 
@@ -290,7 +314,15 @@ target_ch32 = declare_dependency(
 	sources: files(
 		'ch32f1.c',
 	),
+	compile_args: ['-DCONFIG_CH32=1'],
 	dependencies: target_stm32f1,
+)
+
+target_ch32v = declare_dependency(
+	sources: files(
+		'ch32vx.c',
+	),
+	dependencies: target_riscv32,
 )
 
 target_stm = declare_dependency(
@@ -303,6 +335,7 @@ target_stm = declare_dependency(
 		'stm32mp15.c',
 		'stm32wb0.c',
 	),
+	compile_args: ['-DCONFIG_STM=1'],
 	dependencies: [target_cortexm, target_stm_common, target_stm32f1, target_stm32f4],
 )
 
@@ -320,6 +353,7 @@ target_at32f4 = declare_dependency(
 	sources: files(
 		'at32f43x.c',
 	),
+	compile_args: ['-DCONFIG_AT32=1'],
 	dependencies: [target_cortexm, target_stm_common]
 )
 
@@ -330,6 +364,7 @@ target_ti = declare_dependency(
 		'msp432p4.c',
 		'mspm0.c'
 	) + lmi_stub,
+	compile_args: ['-DCONFIG_TI=1'],
 	dependencies: target_cortexm,
 )
 
@@ -376,12 +411,14 @@ libbmd_target_deps = [
 	# Enable all architectures for libbmd
 	target_cortexar,
 	target_cortexm,
+	target_cortexa_armv8,
 	target_riscv32,
 	target_riscv64,
 	# Enable all targets for libbmd
 	target_apollo3,
 	target_at32f4,
 	target_ch32,
+	target_ch32v,
 	target_ch579,
 	target_efm,
 	target_gd32,

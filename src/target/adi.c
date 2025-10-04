@@ -185,11 +185,19 @@ static const arm_coresight_component_s arm_component_lut[] = {
 	{0x9e4, 0x00, 0x0a17, aa_nosupport, cidc_dc, ARM_COMPONENT_STR("CoreSight MTE", "(Memory Tagging Extensioon)")},
 	{0x9e7, 0x11, 0x0000, aa_nosupport, cidc_dc, ARM_COMPONENT_STR("CoreSight TPIU", "(Trace Port Interface Unit)")},
 	{0x9e8, 0x21, 0x0000, aa_nosupport, cidc_dc, ARM_COMPONENT_STR("CoreSight TCM", "(Trace Memory Controller)")},
+	{0x909, 0x22, 0x0000, aa_nosupport, cidc_dc, ARM_COMPONENT_STR("CoreSight ATBR", "(ATB Replicator)")},
 	{0x9eb, 0x12, 0x0000, aa_nosupport, cidc_dc, ARM_COMPONENT_STR("CoreSight ATBF", "(ATB Funnel)")},
 	{0x9ec, 0x22, 0x0000, aa_nosupport, cidc_dc, ARM_COMPONENT_STR("CoreSight ATBR", "(ATB Replicator)")},
 	{0x9ed, 0x14, 0x1a14, aa_nosupport, cidc_dc, ARM_COMPONENT_STR("CoreSight CTI", "(Cross Trigger Interface)")},
 	{0x9ee, 0x00, 0x0000, aa_nosupport, cidc_dc,
 		ARM_COMPONENT_STR("CoreSight CATU", "(CoreSight Address Translation Unit)")},
+
+	{0xd05, 0x13, 0x4a13, aa_nosupport, cidc_dc, ARM_COMPONENT_STR("Cortex-A55 ETM", "(Embedded Trace)")},
+	{0xd05, 0x14, 0x1a14, aa_cti_armv8, cidc_dc, ARM_COMPONENT_STR("Cortex-A55 CTI", "(Cross Trigger)")},
+	{0xd05, 0x16, 0x2a16, aa_nosupport, cidc_unknown,
+		ARM_COMPONENT_STR("Cortex-A55 PMU", "(Performance Monitor Unit)")},
+	{0xd05, 0x15, 0x8a15, aa_cortexa_armv8, cidc_dc, ARM_COMPONENT_STR("Cortex-A55", "(Debug Unit)")},
+
 	{0xfff, 0x00, 0, aa_end, cidc_unknown, ARM_COMPONENT_STR("end", "end")},
 };
 
@@ -873,6 +881,14 @@ void adi_ap_component_probe(
 		case aa_cortexr:
 			DEBUG_INFO("%s-> cortexr_probe\n", indent + 1);
 			cortexr_probe(ap, base_address);
+			break;
+		case aa_cortexa_armv8:
+			DEBUG_INFO("%s-> cortexa_armv8_dc_probe\n", indent + 1);
+			cortexa_armv8_dc_probe(ap, base_address);
+			break;
+		case aa_cti_armv8:
+			DEBUG_INFO("%s-> cortexa_armv8_cti_probe\n", indent + 1);
+			cortexa_armv8_cti_probe(ap, base_address);
 			break;
 		/* Handle when the component is a CoreSight component ROM table */
 		case aa_rom_table:

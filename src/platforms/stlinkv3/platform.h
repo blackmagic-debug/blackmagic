@@ -112,14 +112,14 @@ extern bool debug_bmp;
 	do {                                                                              \
 		gpio_set_output_options(TMS_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_25MHZ, TMS_PIN); \
 		gpio_set_output_options(TCK_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_25MHZ, TCK_PIN); \
-		gpio_set_output_options(TDO_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_25MHZ, TDO_PIN); \
+		gpio_set_output_options(TDI_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_25MHZ, TDI_PIN); \
 	} while (0)
 
 #define PIN_MODE_NORMAL()                                                            \
 	do {                                                                             \
 		gpio_set_output_options(TMS_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_2MHZ, TMS_PIN); \
 		gpio_set_output_options(TCK_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_2MHZ, TCK_PIN); \
-		gpio_set_output_options(TDO_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_2MHZ, TDO_PIN); \
+		gpio_set_output_options(TDI_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_2MHZ, TDI_PIN); \
 	} while (0)
 
 extern const struct _usbd_driver stm32f723_usb_driver;

@@ -47,6 +47,9 @@
 
 #include <assert.h>
 
+/* This is the size (in 32 bits integers) you must allocate when reading cortem registers */
+#define CORTEXM_MAX_REG_COUNT (CORTEXM_GENERAL_REG_COUNT + CORTEX_FLOAT_REG_COUNT + CORTEXM_TRUSTZONE_REG_COUNT)
+
 static bool cortexm_vector_catch(target_s *target, int argc, const char **argv);
 
 const command_s cortexm_cmd_list[] = {
@@ -942,7 +945,7 @@ static int cortexm_fault_unwind(target_s *target)
 	 */
 	if ((hfsr & CORTEXM_HFSR_FORCED) || cfsr) {
 		/* Unwind exception */
-		uint32_t regs[CORTEXM_GENERAL_REG_COUNT + CORTEX_FLOAT_REG_COUNT];
+		uint32_t regs[CORTEXM_MAX_REG_COUNT];
 		uint32_t stack[8];
 		/* Read registers for post-exception stack pointer */
 		target_regs_read(target, regs);
@@ -992,7 +995,7 @@ static int cortexm_fault_unwind(target_s *target)
 
 bool cortexm_run_stub(target_s *target, uint32_t loadaddr, uint32_t r0, uint32_t r1, uint32_t r2, uint32_t r3)
 {
-	uint32_t regs[CORTEXM_GENERAL_REG_COUNT + CORTEX_FLOAT_REG_COUNT] = {0};
+	uint32_t regs[CORTEXM_MAX_REG_COUNT] = {0};
 
 	regs[0] = r0;
 	regs[1] = r1;
@@ -1010,7 +1013,7 @@ bool cortexm_run_stub(target_s *target, uint32_t loadaddr, uint32_t r0, uint32_t
 	/* Execute the stub */
 	target_halt_reason_e reason = TARGET_HALT_RUNNING;
 #if defined(PLATFORM_HAS_DEBUG)
-	uint32_t arm_regs_start[CORTEXM_GENERAL_REG_COUNT + CORTEX_FLOAT_REG_COUNT];
+	uint32_t arm_regs_start[CORTEXM_MAX_REG_COUNT];
 	target_regs_read(target, arm_regs_start);
 #endif
 	cortexm_halt_resume(target, 0);
@@ -1021,7 +1024,7 @@ bool cortexm_run_stub(target_s *target, uint32_t loadaddr, uint32_t r0, uint32_t
 			cortexm_halt_request(target);
 #if defined(PLATFORM_HAS_DEBUG)
 			DEBUG_WARN("Stub hung\n");
-			uint32_t arm_regs[CORTEXM_GENERAL_REG_COUNT + CORTEX_FLOAT_REG_COUNT];
+			uint32_t arm_regs[CORTEXM_MAX_REG_COUNT];
 			target_regs_read(target, arm_regs);
 			for (uint32_t i = 0; i < 20U; ++i)
 				DEBUG_WARN("%2" PRIu32 ": %08" PRIx32 ", %08" PRIx32 "\n", i, arm_regs_start[i], arm_regs[i]);
@@ -1234,11 +1237,12 @@ static target_addr_t cortexm_check_watch(target_s *target)
 static bool cortexm_vector_catch(target_s *target, int argc, const char **argv)
 {
 	cortexm_priv_s *priv = target->priv;
-	static const char *const vectors[] = {"reset", NULL, NULL, NULL, "mm", "nocp", "chk", "stat", "bus", "int", "hard"};
+	static const char *const vectors[] = {
+		"reset", NULL, NULL, NULL, "mm", "nocp", "chk", "stat", "bus", "int", "hard", "sf"};
 	uint32_t tmp = 0;
 
 	if (argc < 3)
-		tc_printf(target, "usage: monitor vector_catch (enable|disable) (hard|int|bus|stat|chk|nocp|mm|reset)\n");
+		tc_printf(target, "usage: monitor vector_catch (enable|disable) (sf|hard|int|bus|stat|chk|nocp|mm|reset)\n");
 	else {
 		for (int j = 0; j < argc; j++) {
 			for (size_t i = 0; i < ARRAY_LENGTH(vectors); i++) {

@@ -50,7 +50,6 @@
 
 /* Memory map constants for STM32H5xx */
 #define STM32H5_FLASH_BANK1_BASE 0x08000000U
-#define STM32H5_FLASH_BANK2_BASE 0x08100000U
 #define STM32H5_FLASH_BANK_SIZE  0x00100000U
 #define STM32H5_SRAM1_BASE       0x0a000000U
 #define STM32H5_SRAM1_SIZE       0x00040000U
@@ -58,6 +57,8 @@
 #define STM32H5_SRAM2_SIZE       0x00010000U
 #define STM32H5_SRAM3_BASE       0x0a050000U
 #define STM32H5_SRAM3_SIZE       0x00050000U
+#define STM32H5_SRAM_ALIAS_BASE  0x20000000U
+#define STM32H5_SRAM123_SIZE     (STM32H5_SRAM1_SIZE + STM32H5_SRAM2_SIZE + STM32H5_SRAM3_SIZE)
 /* NB: Take all base addresses and add 0x04000000U to find their TrustZone addresses */
 
 /* Memory map constants for the STM32H503 */
@@ -70,6 +71,16 @@
 #define STM32H503_SRAM2_SIZE       0x00004000U
 #define STM32H503_SRAM1_ALIAS      0x20000000U
 #define STM32H503_SRAM2_ALIAS      0x20004000U
+/* Memory map constants for STM32H523/H533 */
+#define STM32H523_FLASH_BANK1_BASE 0x08000000U
+#define STM32H523_FLASH_BANK_SIZE  0x00040000U
+#define STM32H523_SRAM1_BASE       0x0a000000U
+#define STM32H523_SRAM1_SIZE       0x00020000U
+#define STM32H523_SRAM2_BASE       0x0a020000U
+#define STM32H523_SRAM2_SIZE       0x00014000U
+#define STM32H523_SRAM3_BASE       0x0a034000U
+#define STM32H523_SRAM3_SIZE       0x00010000U
+#define STM32H523_SRAM123_SIZE     (STM32H523_SRAM1_SIZE + STM32H523_SRAM2_SIZE + STM32H523_SRAM3_SIZE)
 
 #define STM32H5_FLASH_BASE        0x40022000
 #define STM32H5_FLASH_ACCESS_CTRL (STM32H5_FLASH_BASE + 0x000U)
@@ -89,12 +100,11 @@
 #define STM32H5_FLASH_CTRL_SECTOR_ERASE (1U << 2U)
 #define STM32H5_FLASH_CTRL_BANK_ERASE   (1U << 3U)
 #define STM32H5_FLASH_CTRL_START        (1U << 5U)
-#define STM32H5_FLASH_CTRL_SECTOR(x)    (((x)&0x7fU) << 6U)
+#define STM32H5_FLASH_CTRL_SECTOR(x)    (((x) & 0x7fU) << 6U)
 #define STM32H5_FLASH_CTRL_MASS_ERASE   (1U << 15U)
 #define STM32H5_FLASH_CTRL_BANK1        (0U << 31U)
 #define STM32H5_FLASH_CTRL_BANK2        (1U << 31U)
 
-#define STM32H5_SECTORS_PER_BANK        128U
 #define STM32H5_FLASH_SECTOR_SIZE       0x00002000U
 #define STM32H503_SECTORS_PER_BANK      8U
 #define STM32H5_FLASH_BANK_MASK         0x80000000U
@@ -113,6 +123,7 @@
 #define STM32H5_DBGMCU_APB3FREEZE  (STM32H5_DBGMCU_BASE + 0x14U)
 #define STM32H5_DBGMCU_AHB1FREEZE  (STM32H5_DBGMCU_BASE + 0x20U)
 #define STM32H5_UID_BASE           0x08fff800U
+#define STM32H5_FLASH_SIZE         0x08fff80cU
 
 #define STM32H5_DBGMCU_IDCODE_DEV_MASK    0x00000fffU
 #define STM32H5_DBGMCU_IDCODE_REV_MASK    0xffff0000U
@@ -126,6 +137,8 @@
 #define ID_STM32H5xx 0x484U
 /* Taken from DBGMCU_IDCODE in §41.124 of RM0492 rev 2, pg1807 */
 #define ID_STM32H503 0x474U
+/* Taken from DBGMCU_IDCODE in §59.12.4 of RM0481 rev 2, pg3116 */
+#define ID_STM32H523 0x478U
 
 typedef struct stm32h5_flash {
 	target_flash_s target_flash;
@@ -186,7 +199,7 @@ bool stm32h5_probe(target_s *const target)
 {
 	const adiv5_access_port_s *const ap = cortex_ap(target);
 	/* Use the partno from the AP always to handle the difference between JTAG and SWD */
-	if (ap->partno != ID_STM32H5xx && ap->partno != ID_STM32H503)
+	if (ap->partno != ID_STM32H5xx && ap->partno != ID_STM32H503 && ap->partno != ID_STM32H523)
 		return false;
 	target->part_id = ap->partno;
 
@@ -202,25 +215,64 @@ bool stm32h5_probe(target_s *const target)
 	target->exit_flash_mode = stm32h5_exit_flash_mode;
 	target_add_commands(target, stm32h5_cmd_list, target->driver);
 
+	uint16_t flash_size_kb = target_mem32_read16(target, STM32H5_FLASH_SIZE);
+	uint32_t flash_bank_size = flash_size_kb * 1024U / 2U;
+	uint16_t sectors_per_bank = flash_size_kb / 8U / 2U;
 	switch (target->part_id) {
 	case ID_STM32H5xx:
 		/*
-		 * Build the RAM map.
+		 * Build the RAM map. 256+64+320=640.
 		 * This uses the addresses and sizes found in §2.3.2, Figure 2, pg113 of RM0481 Rev. 1
 		 */
 		target_add_ram32(target, STM32H5_SRAM1_BASE, STM32H5_SRAM1_SIZE);
 		target_add_ram32(target, STM32H5_SRAM2_BASE, STM32H5_SRAM2_SIZE);
 		target_add_ram32(target, STM32H5_SRAM3_BASE, STM32H5_SRAM3_SIZE);
+		target_add_ram32(target, STM32H5_SRAM_ALIAS_BASE, STM32H5_SRAM123_SIZE);
 
-		/* Build the Flash map */
-		stm32h5_add_flash(target, STM32H5_FLASH_BANK1_BASE, STM32H5_FLASH_BANK_SIZE,
-			STM32H5_SECTORS_PER_BANK | STM32H5_FLASH_CTRL_BANK1);
-		stm32h5_add_flash(target, STM32H5_FLASH_BANK2_BASE, STM32H5_FLASH_BANK_SIZE,
-			STM32H5_SECTORS_PER_BANK | STM32H5_FLASH_CTRL_BANK2);
+		/*
+		 * Build the Flash map. H562/H563/H573 has one of:
+		 * Flash(I): 2048 KiB as two equal banks (128 sectors of 8 KiB each)
+		 * Flash(G): 1024 KiB as two equal banks (64 sectors of 8 KiB each)
+		 */
+		if (flash_size_kb != 1024U && flash_size_kb != 2048U) {
+			flash_size_kb = 2048U;
+			flash_bank_size = flash_size_kb * 1024U / 2U;
+			sectors_per_bank = flash_size_kb / 8U / 2U;
+		}
+		stm32h5_add_flash(
+			target, STM32H5_FLASH_BANK1_BASE, flash_bank_size, sectors_per_bank | STM32H5_FLASH_CTRL_BANK1);
+		stm32h5_add_flash(target, STM32H5_FLASH_BANK1_BASE + flash_bank_size, flash_bank_size,
+			sectors_per_bank | STM32H5_FLASH_CTRL_BANK2);
+		break;
+	case ID_STM32H523:
+		/*
+		 * Build the RAM map. 128+80+64=272.
+		 * This uses the addresses and sizes found in §2.3.2, Figure 3, pg117 of RM0481 Rev. 2
+		 * See also §6.3.2, Figure 21, pg235 of RM0481 Rev. 2
+		 */
+		target_add_ram32(target, STM32H523_SRAM1_BASE, STM32H523_SRAM1_SIZE);
+		target_add_ram32(target, STM32H523_SRAM2_BASE, STM32H523_SRAM2_SIZE);
+		target_add_ram32(target, STM32H523_SRAM3_BASE, STM32H523_SRAM3_SIZE);
+		target_add_ram32(target, STM32H5_SRAM_ALIAS_BASE, STM32H523_SRAM123_SIZE);
+
+		/*
+		 * Build the Flash map. H523/H533 has one of:
+		 * Flash(E): 512 KiB as two equal banks (32 sectors of 8 KiB each)
+		 * Flash(C): 256 KiB as two equal banks (16 sectors of 8 KiB each)
+		 */
+		if (flash_size_kb != 256U && flash_size_kb != 512U) {
+			flash_size_kb = 512U;
+			flash_bank_size = flash_size_kb * 1024U / 2U;
+			sectors_per_bank = flash_size_kb / 8U / 2U;
+		}
+		stm32h5_add_flash(
+			target, STM32H5_FLASH_BANK1_BASE, flash_bank_size, sectors_per_bank | STM32H5_FLASH_CTRL_BANK1);
+		stm32h5_add_flash(target, STM32H5_FLASH_BANK1_BASE + flash_bank_size, flash_bank_size,
+			sectors_per_bank | STM32H5_FLASH_CTRL_BANK2);
 		break;
 	case ID_STM32H503:
 		/*
-		 * Build the RAM map.
+		 * Build the RAM map. 16+16=32.
 		 * This uses the addresses and sizes found in §2.2.2, Figure 2, pg70 of RM0492 Rev. 2
 		 */
 		target_add_ram32(target, STM32H503_SRAM1_BASE, STM32H503_SRAM1_SIZE);
@@ -228,7 +280,10 @@ bool stm32h5_probe(target_s *const target)
 		target_add_ram32(target, STM32H503_SRAM1_ALIAS, STM32H503_SRAM1_SIZE);
 		target_add_ram32(target, STM32H503_SRAM2_ALIAS, STM32H503_SRAM2_SIZE);
 
-		/* Build the Flash map */
+		/*
+		 * Build the Flash map. H503xB has
+		 * Flash(B): 128 KiB as two equal banks (8 sectors of 8 KiB each)
+		 */
 		stm32h5_add_flash(target, STM32H503_FLASH_BANK1_BASE, STM32H503_FLASH_BANK_SIZE,
 			STM32H503_SECTORS_PER_BANK | STM32H5_FLASH_CTRL_BANK1);
 		stm32h5_add_flash(target, STM32H503_FLASH_BANK2_BASE, STM32H503_FLASH_BANK_SIZE,
@@ -382,6 +437,9 @@ static bool stm32h5_cmd_rev(target_s *target, int argc, const char **argv)
 		break;
 	case ID_STM32H503:
 		tc_printf(target, "STM32H503\n");
+		break;
+	case ID_STM32H523:
+		tc_printf(target, "STM32H523/533\n");
 		break;
 	default:
 		tc_printf(target, "Unknown %s. BMP may not correctly support it!\n", target->driver);

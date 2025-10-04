@@ -168,7 +168,7 @@ static sockaddr_storage_s sockaddr_prepare(const uint16_t port)
 	return service;
 }
 
-static int socket_error()
+static int socket_error(void)
 {
 #if defined(_WIN32) || defined(__CYGWIN__)
 	return WSAGetLastError();

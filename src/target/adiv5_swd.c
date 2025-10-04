@@ -155,7 +155,12 @@ uint32_t adiv5_swd_read_no_check(const uint16_t addr)
 	return res == SWD_ACK_OK ? data : 0;
 }
 
-bool adiv5_swd_scan(const uint32_t targetid)
+bool adiv5_swd_scan(void)
+{
+	return adiv5_swd_scan_targetid(0);
+}
+
+bool adiv5_swd_scan_targetid(const uint32_t targetid)
 {
 	/* Free the device list if any */
 	target_list_free();

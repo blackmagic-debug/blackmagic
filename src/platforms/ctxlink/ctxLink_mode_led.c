@@ -68,7 +68,7 @@ void mode_set_parameters(mode_led_modes_e led_mode)
 	}
 }
 
-bool mode_check_timeout()
+bool mode_check_timeout(void)
 {
 	if (--led_mode_timeout == 0) {
 		led_mode_timeout = led_mode_reset_timeout;
@@ -108,8 +108,8 @@ void mode_led_task(void)
 			 */
 		if (led_mode != mode_led_idle) {
 			/*
-				 * Set up the led control registers according to the requested mode
-				 */
+			 * Set up the led control registers according to the requested mode
+			 */
 			mode_task_state = mode_led_state_on;
 #ifndef INSTRUMENT
 			gpio_set(LED_PORT, LED_MODE);

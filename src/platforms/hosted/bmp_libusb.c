@@ -2,7 +2,7 @@
  * This file is part of the Black Magic Debug project.
  *
  * Copyright (C) 2020 - 2022 Uwe Bonnes (bon@elektron.ikp.physik.tu-darmstadt.de)
- * Copyright (C) 2022-2023 1BitSquared <info@1bitsquared.com>
+ * Copyright (C) 2022-2025 1BitSquared <info@1bitsquared.com>
  * Written by Sid Price <sid@sidprice.com>
  * Written by Rachel Mant <git@dragonmux.network>
  *
@@ -76,6 +76,7 @@ static const debugger_device_s debugger_devices[] = {
 	{VENDOR_ID_STLINK, PRODUCT_ID_STLINKV3, PROBE_TYPE_STLINK_V2, NULL, "ST-Link v3"},
 	{VENDOR_ID_STLINK, PRODUCT_ID_STLINKV3E, PROBE_TYPE_STLINK_V2, NULL, "ST-Link v3E"},
 	{VENDOR_ID_SEGGER, PRODUCT_ID_ANY, PROBE_TYPE_JLINK, NULL, "Segger J-Link"},
+	{VENDOR_ID_WCH, PRODUCT_ID_WCHLINK_RV, PROBE_TYPE_WCHLINK, NULL, "WCH-Link"},
 	{VENDOR_ID_FTDI, PRODUCT_ID_FTDI_FT2232, PROBE_TYPE_FTDI, NULL, "FTDI FT2232"},
 	{VENDOR_ID_FTDI, PRODUCT_ID_FTDI_FT4232, PROBE_TYPE_FTDI, NULL, "FTDI FT4232"},
 	{VENDOR_ID_FTDI, PRODUCT_ID_FTDI_FT232, PROBE_TYPE_FTDI, NULL, "FTDI FT232"},
@@ -118,7 +119,7 @@ const debugger_device_s *get_debugger_device_from_vid_pid(const uint16_t probe_v
 void bmp_ident(bmda_probe_s *info)
 {
 	DEBUG_INFO("Black Magic Debug App " FIRMWARE_VERSION "\n for Black Magic Probe, ST-Link v2 and v3, CMSIS-DAP, "
-			   "J-Link and FTDI (MPSSE)\n");
+			   "J-Link, FTDI (MPSSE) and WCH-Link\n");
 	if (info && info->vid && info->pid) {
 		DEBUG_INFO("Using %04x:%04x %s %s\n %s %s\n", info->vid, info->pid,
 			(info->serial[0]) ? info->serial : NO_SERIAL_NUMBER, info->manufacturer, info->product, info->version);
@@ -285,7 +286,10 @@ static probe_info_s *process_ftdi_probe(void)
 
 				if (probe_skip) { // Clean up any previous serial number to skip
 					use_serial = true;
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-qual"
 					free((void *)probe_skip);
+#pragma GCC diagnostic pop
 					probe_skip = NULL;
 				}
 
@@ -323,7 +327,10 @@ static probe_info_s *process_ftdi_probe(void)
 		}
 	}
 	if (probe_skip)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-qual"
 		free((void *)probe_skip);
+#pragma GCC diagnostic pop
 	free(dev_info);
 	return probe_list;
 }
@@ -467,11 +474,12 @@ static void check_cmsis_interface_type(libusb_device *const device, bmda_probe_s
 			for (uint8_t index = 0; index < descriptor->bNumEndpoints; ++index)
 				info->max_packet_length = MIN(descriptor->endpoint[index].wMaxPacketSize, info->max_packet_length);
 
-			/* Check if it's a CMSIS-DAP v2 interface */
-			if (descriptor->bInterfaceClass == 0xffU && descriptor->bNumEndpoints == 2U) {
+			/* Check if it's a CMSIS-DAP v2 interface. */
+			if (descriptor->bInterfaceClass == 0xffU &&
+				(descriptor->bNumEndpoints == 2U || descriptor->bNumEndpoints == 3U)) {
 				info->interface_num = descriptor->bInterfaceNumber;
-				/* Extract the endpoints required */
-				for (uint8_t index = 0; index < descriptor->bNumEndpoints; ++index) {
+				/* Extract the endpoints required. Ignore optional SWO trace endpoint */
+				for (uint8_t index = 0; index < 2U; ++index) {
 					const uint8_t ep = descriptor->endpoint[index].bEndpointAddress;
 					if (ep & 0x80U)
 						info->in_ep = ep;

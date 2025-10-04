@@ -40,9 +40,7 @@ probe_stlinkv3_dfu_sources = files(
 	'usbdfu.c',
 )
 
-bmd_bootloader = get_option('bmd_bootloader')
-
-probe_stlinkv3_load_address = bmd_bootloader ? '0x08020000' : '0x08000000'
+probe_stlinkv3_load_address = '0x08020000'
 
 probe_stlinkv3_args = [
 	'-DDFU_SERIAL_LENGTH=25',
@@ -88,7 +86,7 @@ summary(
 	{
 		'Name': 'STLINK-V3',
 		'Platform': 'STM32F7',
-		'Bootloader': bmd_bootloader ? 'Black Magic Debug Bootloader' : 'OEM ST Bootloader',
+		'Bootloader': get_option('bmd_bootloader') ? 'Black Magic Debug Bootloader' : 'OEM ST Bootloader',
 		'Load Address': probe_stlinkv3_load_address,
 	},
 	section: 'Probe',

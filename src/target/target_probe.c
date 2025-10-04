@@ -47,7 +47,7 @@
 	__attribute__((weak)) void name(adiv5_debug_port_s *const debug_port) \
 	{                                                                     \
 		lpc55_dp_prepare_nop(debug_port);                                 \
-	};
+	}
 #else
 #define CORTEXAR_PROBE_WEAK_NOP(name) \
 	extern bool name(adiv5_access_port_s *, target_addr_t) __attribute__((weak, alias("cortexar_probe_nop")));
@@ -90,6 +90,8 @@ static inline void lpc55_dp_prepare_nop(adiv5_debug_port_s *const debug_port)
 CORTEXAR_PROBE_WEAK_NOP(cortexa_probe)
 CORTEXAR_PROBE_WEAK_NOP(cortexr_probe)
 CORTEXM_PROBE_WEAK_NOP(cortexm_probe)
+CORTEXAR_PROBE_WEAK_NOP(cortexa_armv8_dc_probe)
+CORTEXAR_PROBE_WEAK_NOP(cortexa_armv8_cti_probe)
 
 TARGET_PROBE_WEAK_NOP(riscv32_probe)
 TARGET_PROBE_WEAK_NOP(riscv64_probe)
@@ -104,6 +106,8 @@ CORTEXM_PROBE_WEAK_NOP(rp2040_rescue_probe)
 TARGET_PROBE_WEAK_NOP(apollo_3_probe)
 TARGET_PROBE_WEAK_NOP(at32f40x_probe)
 TARGET_PROBE_WEAK_NOP(at32f43x_probe)
+TARGET_PROBE_WEAK_NOP(ch32v003x_probe)
+TARGET_PROBE_WEAK_NOP(ch32vx_probe)
 TARGET_PROBE_WEAK_NOP(ch32f1_probe)
 TARGET_PROBE_WEAK_NOP(ch579_probe)
 TARGET_PROBE_WEAK_NOP(efm32_probe)

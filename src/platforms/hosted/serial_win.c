@@ -318,7 +318,7 @@ bool serial_open(const bmda_cli_options_s *const cl_opts, const char *const seri
 
 	COMMTIMEOUTS timeouts = {0};
 	/*
-	 * Turn off read timeouts so that ReadFill() instantly returns even if there's no data waiting
+	 * Turn off read timeouts so that ReadFile() instantly returns even if there's no data waiting
 	 * (we implement our own mechanism below for that case as we only want to wait if we get no data)
 	 */
 	timeouts.ReadIntervalTimeout = MAXDWORD;

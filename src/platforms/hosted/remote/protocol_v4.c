@@ -1,7 +1,7 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
- * Copyright (C) 2024 1BitSquared <info@1bitsquared.com>
+ * Copyright (C) 2024-2025 1BitSquared <info@1bitsquared.com>
  * Written by Rachel Mant <git@dragonmux.network>
  * All rights reserved.
  *
@@ -39,6 +39,7 @@
 #include "protocol_v2.h"
 #include "protocol_v3.h"
 #include "protocol_v3_adiv5.h"
+#include "protocol_v3_spi.h"
 #include "protocol_v4.h"
 #include "protocol_v4_defs.h"
 #include "protocol_v4_adiv5.h"
@@ -68,6 +69,10 @@ bool remote_v4_init(void)
 		.get_comms_frequency = remote_v2_get_comms_frequency,
 		.set_comms_frequency = remote_v2_set_comms_frequency,
 		.target_clk_output_enable = remote_v2_target_clk_output_enable,
+		.spi_init = remote_v3_spi_init,
+		.spi_deinit = remote_v3_spi_deinit,
+		.spi_chip_select = remote_v3_spi_chip_select,
+		.spi_xfer = remote_v3_spi_xfer,
 	};
 
 	/* Now fill in acceleration-specific functions */
@@ -132,4 +137,38 @@ bool remote_v4_riscv_jtag_init(riscv_dmi_s *const dmi)
 	dmi->read = remote_v4_riscv_jtag_dmi_read;
 	dmi->write = remote_v4_riscv_jtag_dmi_write;
 	return true;
+}
+
+uint64_t remote_v4_supported_architectures(void)
+{
+	/* Ask the probe what target architectures it supports */
+	platform_buffer_write(REMOTE_HL_ARCHS_STR, sizeof(REMOTE_HL_ARCHS_STR));
+
+	/* Read back the answer and check for errors */
+	char buffer[REMOTE_MAX_MSG_SIZE];
+	const ssize_t length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
+	if (length < 1 || (buffer[0] != REMOTE_RESP_OK && buffer[0] != REMOTE_RESP_NOTSUP))
+		DEBUG_ERROR("%s comms error: %zd\n", __func__, length);
+	else if (buffer[0] == REMOTE_RESP_NOTSUP)
+		DEBUG_WARN("Please upgrade your firmware to allow checking supported target architectures to work properly\n");
+	else
+		return remote_decode_response(buffer + 1U, 8U);
+	return 0U;
+}
+
+uint64_t remote_v4_supported_families(void)
+{
+	/* Ask the probe what target families it supports */
+	platform_buffer_write(REMOTE_HL_FAMILIES_STR, sizeof(REMOTE_HL_FAMILIES_STR));
+
+	/* Read back the answer and check for errors */
+	char buffer[REMOTE_MAX_MSG_SIZE];
+	const ssize_t length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
+	if (length < 1 || (buffer[0] != REMOTE_RESP_OK && buffer[0] != REMOTE_RESP_NOTSUP))
+		DEBUG_ERROR("%s comms error: %zd\n", __func__, length);
+	else if (buffer[0] == REMOTE_RESP_NOTSUP)
+		DEBUG_WARN("Please upgrade your firmware to allow checking supported target families to work properly\n");
+	else
+		return remote_decode_response(buffer + 1U, 8U);
+	return 0U;
 }

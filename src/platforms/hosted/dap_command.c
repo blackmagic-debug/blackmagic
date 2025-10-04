@@ -1,7 +1,7 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
- * Copyright (C) 2022-2024 1BitSquared <info@1bitsquared.com>
+ * Copyright (C) 2022-2025 1BitSquared <info@1bitsquared.com>
  * Written by Rachel Mant <git@dragonmux.network>
  * All rights reserved.
  *
@@ -127,6 +127,39 @@ bool perform_dap_transfer(adiv5_debug_port_s *const target_dp, const dap_transfe
 
 	DEBUG_PROBE("-> transfer failed with %u after processing %u requests\n", response.status, response.processed);
 	dap_dispatch_status(target_dp, response.status);
+	return false;
+}
+
+bool perform_dap_transfer_swd_unchecked(const dap_transfer_request_s *const transfer_requests, const size_t requests,
+	uint32_t *const response_data, const size_t responses)
+{
+	/* Validate that the number of requests this transfer is valid. We artificially limit it to 12 (from 256) */
+	if (!requests || requests > 12 || (responses && !response_data))
+		return false;
+
+	DEBUG_PROBE("-> dap_transfer (%zu requests)\n", requests);
+	/* 63 is 3 + (12 * 5) where 5 is the max length of each transfer request */
+	uint8_t request[63] = {
+		DAP_TRANSFER,
+		0U,
+		requests,
+	};
+	/* Encode the transfers into the buffer and detect if we're doing any reads */
+	size_t offset = 3U;
+	for (size_t i = 0; i < requests; ++i)
+		offset += dap_encode_transfer(&transfer_requests[i], request, offset);
+
+	dap_transfer_response_s response = {.processed = 0, .status = DAP_TRANSFER_OK};
+	/* Run the request */
+	if (!dap_run_cmd(request, offset, &response, 2U + (responses * 4U)))
+		return false;
+
+	/* Look at the response and decipher what went on */
+	if (response.processed == requests && (response.status & DAP_TRANSFER_STATUS_MASK) == DAP_TRANSFER_OK) {
+		for (size_t i = 0; i < responses; ++i)
+			response_data[i] = read_le4(response.data[i], 0);
+		return true;
+	}
 	return false;
 }
 
@@ -321,7 +354,7 @@ bool perform_dap_jtag_sequence(
 		memcpy(data_out, response + 1U, sequence_length);
 		/* And the final bit from the second response LSb */
 		if (sequences == 2U)
-			data_out[final_byte] = (response[1 + sequence_length] & 1U) << final_bit;
+			data_out[final_byte] |= (response[1 + sequence_length] & 1U) << final_bit;
 	}
 	/* And check that it succeeded */
 	return response[0] == DAP_RESPONSE_OK;
@@ -362,6 +395,24 @@ bool perform_dap_jtag_tms_sequence(const uint64_t tms_states, const size_t clock
 	return response == DAP_RESPONSE_OK;
 }
 
+static bool dap_swd_sequence_as_swj_sequences(dap_swd_sequence_s *const sequences, const uint8_t sequence_count)
+{
+	/* Loop through each of the sequences being requested */
+	for (uint8_t index = 0U; index < sequence_count; ++index) {
+		const dap_swd_sequence_s *const sequence = &sequences[index];
+		/* If it's an output sequence, perform it */
+		if (sequence->direction == DAP_SWD_OUT_SEQUENCE) {
+			/* And check if doing so as a SWJ sequence suceeded or not */
+			if (!perform_dap_swj_sequence(sequence->cycles, sequence->data))
+				return false;
+		}
+		/* Otherwise, if it's an input sequence - headache.. */
+		else
+			return false;
+	}
+	return true;
+}
+
 static size_t dap_encode_swd_sequence(
 	const dap_swd_sequence_s *const sequence, uint8_t *const buffer, const size_t offset)
 {
@@ -388,6 +439,12 @@ bool perform_dap_swd_sequences(dap_swd_sequence_s *const sequences, const uint8_
 {
 	if (sequence_count > 5U)
 		return false;
+	/*
+	 * If this adaptor doesn't support the DAP_SWD_Sequence command, rewrite these to a series of
+	 * DAP_SWJ_Sequence commands and perform them to net the same effect as we'd have gotten otherwise.
+	 */
+	if (dap_quirks & DAP_QUIRK_NO_SWD_SEQUENCE)
+		return dap_swd_sequence_as_swj_sequences(sequences, sequence_count);
 
 	DEBUG_PROBE("-> dap_swd_sequence (%u sequences)\n", sequence_count);
 	/* 47 is 2 + (5 * 9) where 9 is the max length of each sequence request */

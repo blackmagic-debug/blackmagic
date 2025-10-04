@@ -1,8 +1,9 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
- * Copyright (C) 2023 1BitSquared <info@1bitsquared.com>
+ * Copyright (C) 2023,2025 1BitSquared <info@1bitsquared.com>
  * Written by Sid Price <sid@sidprice.com>
+ * Modified by Rachel Mant <git@dragonmux.network>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -151,7 +152,10 @@ int ftdi_write_data(struct ftdi_context *ftdi, const unsigned char *buf, int siz
 {
 	(void)ftdi;
 	DWORD bytes_written;
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-qual"
 	if (FT_Write(ftdi_handle, (unsigned char *)buf, size, &bytes_written) != FT_OK)
+#pragma GCC diagnostic pop
 		return 0;
 	return bytes_written;
 }

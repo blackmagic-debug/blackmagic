@@ -137,7 +137,7 @@ bool lpc546xx_probe(target_s *t)
 	uint32_t flash_size = 0;
 	uint32_t sram123_size = 0;
 
-	DEBUG_INFO("LPC546xx: Part ID 0x%08" PRIu32 "\n", chipid);
+	DEBUG_INFO("LPC546xx: Part ID 0x%08" PRIx32 "\n", chipid);
 	const lpc546xx_device_s *device = lpc546xx_get_device(chipid);
 	if (!device)
 		return false;

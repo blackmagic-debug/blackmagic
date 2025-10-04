@@ -350,7 +350,7 @@ static void remote_packet_process_high_level(const char *packet, const size_t pa
 		break;
 	}
 
-	case REMOTE_HL_ACCEL: { /* HA = request what accelerations are available */
+	case REMOTE_HL_ACCEL: /* HA = request what accelerations are available */
 		/* Build a response value that depends on what things are built into the firmare */
 		remote_respond(REMOTE_RESP_OK,
 			REMOTE_ACCEL_ADIV5 | REMOTE_ACCEL_ADIV6
@@ -359,7 +359,84 @@ static void remote_packet_process_high_level(const char *packet, const size_t pa
 #endif
 		);
 		break;
-	}
+
+	case REMOTE_HL_ARCHS: /* Ha = request what architecture support is enabled */
+		/* Build a response value that depends on what things are built into the firmware */
+		remote_respond(REMOTE_RESP_OK,
+#if defined(CONFIG_CORTEXM) && CONFIG_CORTEXM == 1
+			REMOTE_ARCH_CORTEXM |
+#endif
+#if defined(CONFIG_CORTEXAR) && CONFIG_CORTEXAR == 1
+				REMOTE_ARCH_CORTEXAR |
+#endif
+#if defined(CONFIG_RISCV) && CONFIG_RISCV == 1
+				REMOTE_ARCH_RISCV32 | REMOTE_ARCH_RISCV64 |
+#endif
+				0U);
+		break;
+
+	case REMOTE_HL_FAMILIES: /* Ha = request what architecture support is enabled */
+		/* Build a response value that depends on what things are built into the firmware */
+		remote_respond(REMOTE_RESP_OK,
+#if defined(CONFIG_AT32) && CONFIG_AT32 == 1
+			REMOTE_FAMILY_AT32 |
+#endif
+#if defined(CONFIG_APOLLO3) && CONFIG_APOLLO3 == 1
+				REMOTE_FAMILY_APOLLO3 |
+#endif
+#if defined(CONFIG_CH32) && CONFIG_CH32 == 1
+				REMOTE_FAMILY_CH32 |
+#endif
+#if defined(CONFIG_CH579) && CONFIG_CH579 == 1
+				REMOTE_FAMILY_CH579 |
+#endif
+#if defined(CONFIG_EFM32) && CONFIG_EFM32 == 1
+				REMOTE_FAMILY_EFM |
+#endif
+#if defined(CONFIG_GD32) && CONFIG_GD32 == 1
+				REMOTE_FAMILY_GD32 |
+#endif
+#if defined(CONFIG_HC32) && CONFIG_HC32 == 1
+				REMOTE_FAMILY_HC32 |
+#endif
+#if defined(CONFIG_LPC) && CONFIG_LPC == 1
+				REMOTE_FAMILY_LPC |
+#endif
+#if defined(CONFIG_MM32) && CONFIG_MM32 == 1
+				REMOTE_FAMILY_MM32 |
+#endif
+#if defined(CONFIG_NRF) && CONFIG_NRF == 1
+				REMOTE_FAMILY_NRF |
+#endif
+#if defined(CONFIG_NXP) && CONFIG_NXP == 1
+				REMOTE_FAMILY_NXP_KINETIS | REMOTE_FAMILY_NXP_IMXRT |
+#endif
+#if defined(CONFIG_PUYA) && CONFIG_PUYA == 1
+				REMOTE_FAMILY_PUYA |
+#endif
+#if defined(CONFIG_RA) && CONFIG_RA == 1
+				REMOTE_FAMILY_RENESAS_RA |
+#endif
+#if defined(CONFIG_RZ) && CONFIG_RZ == 1
+				REMOTE_FAMILY_RENESAS_RZ |
+#endif
+#if defined(CONFIG_RP) && CONFIG_RP == 1
+				REMOTE_FAMILY_RP |
+#endif
+#if defined(CONFIG_SAM) && CONFIG_SAM == 1
+				REMOTE_FAMILY_SAM |
+#endif
+#if defined(CONFIG_STM) && CONFIG_STM == 1
+				REMOTE_FAMILY_STM32 |
+#endif
+#if defined(CONFIG_TI) && CONFIG_TI == 1
+				REMOTE_FAMILY_TI |
+#endif
+#if defined(CONFIG_XILINX) && CONFIG_XILINX == 1
+				REMOTE_FAMILY_XILINX |
+#endif
+				0U);
+		break;
 
 	default:
 		remote_respond(REMOTE_RESP_ERR, REMOTE_ERROR_UNRECOGNISED);

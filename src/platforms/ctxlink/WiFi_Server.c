@@ -103,6 +103,7 @@ static bool dns_resolved = false;             ///< True if DNS resolved
 static bool gdb_client_connected = false;     ///< True if client connected
 static bool gdb_server_is_running = false;    ///< True if server is running
 static bool new_gdb_client_connected = false; ///< True if new client connected
+static bool connection_info_received = false; ///< True when all connection information is received
 
 static SOCKET gdb_server_socket = SOCK_ERR_INVALID; ///< The main gdb server socket
 static SOCKET gdb_client_socket = SOCK_ERR_INVALID; ///< The gdb client socket
@@ -122,6 +123,8 @@ static SOCKET swo_trace_client_socket = SOCK_ERR_INVALID;
 static bool swo_trace_client_connected = false;
 static bool swo_trace_server_is_running = false;
 static bool new_swo_trace_client_conncted = false;
+
+tstrM2MConnInfo conn_info;
 
 #define SWO_TRACE_INPUT_BUFFER_SIZE 32
 static uint8_t local_swo_trace_buffer[SWO_TRACE_INPUT_BUFFER_SIZE] = {0}; ///< The local buffer[ input buffer size]
@@ -150,7 +153,9 @@ typedef enum wi_fi_app_states {
 	app_state_wait_for_server,               ///< 11
 	app_state_error,                         ///< 12
 	app_state_check_default_connections,     ///< 13
-	app_state_spin                           ///< 14
+	app_state_spin,                          ///< 14
+	app_state_wait_connection_info,          ///< 15
+	app_state_wait_for_disconnect            ///< 16
 } app_states_e;
 
 app_states_e app_state; ///< State of the application
@@ -531,6 +536,12 @@ static void app_wifi_callback(uint8_t msg_type, void *msg)
 		break;
 	}
 
+	case M2M_WIFI_CONN_INFO_RESPONSE_EVENT: {
+		tstrM2MConnInfo *connection_info = (tstrM2MConnInfo *)msg;
+		memcpy(&conn_info, connection_info, sizeof(tstrM2MConnInfo));
+		connection_info_received = true;
+		break;
+	}
 	case M2M_WIFI_CONN_STATE_CHANGED_EVENT: {
 		tstrM2mWifiStateChanged *wifi_state = (tstrM2mWifiStateChanged *)msg;
 		if (wifi_state->u8CurrState == M2M_WIFI_CONNECTED) {
@@ -558,10 +569,14 @@ static void app_wifi_callback(uint8_t msg_type, void *msg)
 	}
 
 	case M2M_WIFI_IP_ADDRESS_ASSIGNED_EVENT: {
-		t_wifiEventData *wifi_event_data = (t_wifiEventData *)msg;
-		if (wifi_event_data != NULL)
+		tstrM2MIPConfig *ip_config = (tstrM2MIPConfig *)msg;
+		if (ip_config != NULL) {
 			ip_address_assigned = true;
-		else
+			//
+			// Request the connection info, user may request it
+			//
+			m2m_wifi_get_connection_info();
+		} else
 			ip_address_assigned = false;
 		break;
 	}
@@ -601,7 +616,6 @@ static void app_wifi_callback(uint8_t msg_type, void *msg)
 		break;
 	}
 		/* Unused states. Can be implemented if needed  */
-	case M2M_WIFI_CONN_INFO_RESPONSE_EVENT:
 	case M2M_WIFI_SCAN_DONE_EVENT:
 	case M2M_WIFI_SCAN_RESULT_EVENT:
 	case M2M_WIFI_SYS_TIME_EVENT:
@@ -639,6 +653,122 @@ bool is_ip_address_assigned(void)
 	bool res = ip_address_assigned;
 	ip_address_assigned = false;
 	return res;
+}
+
+//
+// Format the current connection data for display to user
+//
+//	SSID = 'name'
+//	RSSI = xx
+//	ip = xxx.xxx.xxx.xxx
+//
+void wifi_get_ip_address(char *buffer, uint32_t size)
+{
+	char local_buffer[64] = {0};
+	memset(buffer, 0x00, size);
+	if (g_wifi_connected) {
+		snprintf(local_buffer, sizeof(local_buffer), "SSID = %s\n", conn_info.acSSID);
+		strncpy(buffer, local_buffer, size);
+		snprintf(local_buffer, sizeof(local_buffer), "RSSI = %d\n", conn_info.s8RSSI);
+		strncat(buffer, local_buffer, size);
+		snprintf(local_buffer, sizeof(local_buffer), "IP = %d.%d.%d.%d\n", conn_info.au8IPAddr[0],
+			conn_info.au8IPAddr[1], conn_info.au8IPAddr[2], conn_info.au8IPAddr[3]);
+		strncat(buffer, local_buffer, size);
+	} else {
+		memcpy(buffer, "Not connected\n", strlen("Not connected\n"));
+	}
+}
+
+//
+// Wait for app_state to spin with timeout
+//
+void app_task_wait_spin(void)
+{
+	uint32_t wait_timeout = 2000U;
+	while (true) {
+		platform_tasks();
+		if (app_state == app_state_spin)
+			break;
+		platform_delay(1U);
+		if (wait_timeout-- == 0U)
+			break;
+	}
+}
+
+//
+// Using the passed arguments, attempt to connect to a Wi-Fi AP
+//
+void wifi_connect(size_t argc, const char **argv, char *buffer, uint32_t size)
+{
+	char ssid[64] = {0};
+	char pass_phrase[64] = {0};
+	char *output_buffer = ssid;
+	bool first_element = true;
+	memset(buffer, 0x00, size);
+	//
+	// Iterate over the arguments received to build the SSID and passphrase
+	//
+	// The BMF command line parser treats spaces as delimiters and both SSID
+	// and the passphrase may have embedded spaces. The SSID and passphrase
+	// should have a comma separator.
+	//
+	// The following loop concatenates each arg and adds back the space delimiter.
+	//
+	// It does this initially into the SSID name, up until an argument is found
+	// that contains a comma. The string before the comma is concatenated with
+	// the SSID and the string after the comma is used as the first element of
+	// the passphrase.
+	//
+	// The remaining arguments are then concatenated into the passphrase with
+	// an space added between them.
+	//
+	for (size_t loop = 1; loop < argc; loop++) {
+		char *const delimeter = strchr(argv[loop], ',');
+		if (delimeter == NULL || output_buffer == pass_phrase) {
+			if (!first_element)
+				strcat(output_buffer, " ");
+			strcat(output_buffer, argv[loop]);
+			first_element = false;
+		} else {
+			if (!first_element)
+				strcat(output_buffer, " ");
+			*delimeter = 0x00;                 // Null terminate string before comma
+			strcat(output_buffer, argv[loop]); // Complete the string in the output buffer
+			//
+			// Start the passphrase with the remaining string
+			//
+			output_buffer = pass_phrase;
+			first_element = false; // The end of the split argument contained the first element
+			strcat(output_buffer, delimeter + 1);
+		}
+	}
+	//
+	// If we have both SSID and Passphrase attempt to connect
+	//
+	if (ssid[0] != '\0' && pass_phrase[0] != '\0') {
+		if (is_wifi_connected()) {
+			//
+			// Issue a disconnect first
+			//
+			app_state = app_state_wait_for_disconnect;
+			wifi_disconnect();
+			app_task_wait_spin();
+		}
+		//
+		// Force app_task into wait for wifi connect
+		//
+		app_state = app_state_wait_for_wifi_connect;
+		m2m_wifi_connect_sc(ssid, strlen(ssid), M2M_WIFI_SEC_WPA_PSK, &pass_phrase, M2M_WIFI_CH_ALL);
+	}
+}
+
+//
+// Disconnect from network
+//
+void wifi_disconnect(void)
+{
+	app_state = app_state_wait_for_disconnect;
+	m2m_wifi_disconnect();
 }
 
 void handle_socket_bind_event(SOCKET *sock, bool *running_state)
@@ -1076,6 +1206,11 @@ void app_task(void)
 			//
 			m2m_wifi_set_sleep_mode(M2M_WIFI_PS_MANUAL, 1);
 			//
+			// Get the WINC1500 firmware version
+			//
+			tstrM2mRev info = {0};
+			nm_get_firmware_info(&info);
+			//
 			// Move to reading the MAC address state
 			//
 			app_state = app_state_read_mac_address; //app_state_connect_to_wifi;
@@ -1214,6 +1349,14 @@ void app_task(void)
 		}
 		break;
 	}
+	case app_state_wait_for_disconnect: {
+		if (!is_wifi_connected()) {
+			app_state = app_state_spin;
+			mode_task_state = mode_led_idle_state;
+			led_mode = mode_led_idle;
+		}
+		break;
+	}
 	case app_state_wait_wifi_disconnect_for_wps: {
 		if (!is_wifi_connected()) {
 			// enter WPS mode
@@ -1243,8 +1386,16 @@ void app_task(void)
 		break;
 	}
 	case app_state_wait_for_server: {
-		if (is_gdb_server_running())
+		if (is_gdb_server_running() && is_ip_address_assigned())
+			app_state = app_state_wait_connection_info;
+		break;
+	}
+
+	case app_state_wait_connection_info: {
+		if (connection_info_received) {
+			connection_info_received = false;
 			app_state = app_state_spin;
+		}
 		break;
 	}
 

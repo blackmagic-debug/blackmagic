@@ -29,3 +29,5 @@ scripts/swolisten
 
 /deps/*
 !/deps/*.wrap
+
+/.cache/

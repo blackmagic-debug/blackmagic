@@ -54,6 +54,9 @@ bmda_sources = files(
 	'jlink.c',
 	'jlink_jtag.c',
 	'jlink_swd.c',
+	'wchlink.c',
+	'wchlink_rvswd.c',
+	'wchlink_riscv_dtm.c',
 )
 subdir('remote')
 

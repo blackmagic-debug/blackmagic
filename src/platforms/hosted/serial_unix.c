@@ -48,7 +48,7 @@ static size_t read_buffer_fullness = 0U;
 static size_t read_buffer_offset = 0U;
 
 #ifndef _WIN32
-inline int closesocket(const int socket)
+static inline int closesocket(const int socket)
 {
 	return close(socket);
 }

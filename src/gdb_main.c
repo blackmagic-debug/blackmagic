@@ -133,7 +133,7 @@ int32_t gdb_main_loop(target_controller_s *const tc, const gdb_packet_s *const p
 			/**
 			 * Register data is unavailable
 			 * See: https://sourceware.org/gdb/current/onlinedocs/gdb.html/Packets.html#read-registers-packet
-			 * 
+			 *
 			 * ... the stub may also return a string of literal ‘x’ in place of the register data digits,
 			 * to indicate that the corresponding register’s value is unavailable.
 			 */
@@ -258,7 +258,7 @@ int32_t gdb_main_loop(target_controller_s *const tc, const gdb_packet_s *const p
 			/**
 			 * Register data is unavailable
 			 * See: https://sourceware.org/gdb/current/onlinedocs/gdb.html/Packets.html#read-registers-packet
-			 * 
+			 *
 			 * ... the stub may also return a string of literal ‘x’ in place of the register data digits,
 			 * to indicate that the corresponding register’s value is unavailable.
 			 */
@@ -466,7 +466,7 @@ static void exec_q_supported(const char *packet, const size_t length)
 	 * This might be the first packet of a GDB connection, If NoAckMode is enabled it might
 	 * be because the previous session was terminated abruptly, and we need to acknowledge
 	 * the first packet of the new session.
-	 * 
+	 *
 	 * If NoAckMode was intentionally enabled before (e.g. LLDB enables NoAckMode first),
 	 * the acknowledgment should be safely ignored.
 	 */
@@ -773,7 +773,7 @@ static void exec_v_cont(const char *packet, const size_t length)
 		 *
 		 * TODO: Support the 't' (stop) action needed for non-stop debug so GDB can request a halt.
 		 */
-		gdb_put_packet_str("vCont;c;C;s;t");
+		gdb_put_packet_str("vCont;c;C;s;S;t");
 		return;
 	}
 

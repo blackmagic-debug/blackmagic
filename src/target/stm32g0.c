@@ -39,6 +39,8 @@
  *   https://www.st.com/resource/en/reference_manual/rm0490-stm32c0x1-advanced-armbased-32bit-mcus-stmicroelectronics.pdf
  * PM0223 - STM32 Cortex®-M0+ MCUs programming manual, Rev 6
  *   https://www.st.com/resource/en/programming_manual/pm0223-stm32-cortexm0-mcus-programming-manual-stmicroelectronics.pdf
+ * RM0503 - STM32U0 series advanced Arm®-based 32-bit MCUs Rev 2
+ * - https://www.st.com/resource/en/reference_manual/rm0503-stm32u0-series-advanced-armbased-32bit-mcus-stmicroelectronics.pdf
  *
  * Note: The STM32C0 series shares the same technological platform as the STM32G0 series.
  */
@@ -52,6 +54,8 @@
 
 #define FLASH_START            0x08000000U
 #define FLASH_MEMORY_SIZE      0x1fff75e0U
+#define FLASH_MEMORY_SIZE_U031 0x1fff3ea0U /* RM0503 $38.2 p1314 */
+#define FLASH_MEMORY_SIZE_U0x3 0x1fff6ea0U
 #define FLASH_PAGE_SIZE        0x800U
 #define FLASH_BANK2_START_PAGE 256U
 #define FLASH_OTP_START        0x1fff7000U
@@ -133,6 +137,9 @@
 #define RAM_SIZE_C01 (6U * 1024U)  // 6kiB
 #define RAM_SIZE_C03 (12U * 1024U) // 12kiB
 
+#define RAM_SIZE_U031 (12U * 1024U) // 12kiB
+#define RAM_SIZE_U0x3 (40U * 1024U) // 40kiB
+
 #define G0_RCC_BASE       0x40021000U
 #define RCC_APBENR1       (G0_RCC_BASE + 0x3cU)
 #define RCC_APBENR1_DBGEN (1U << 27U)
@@ -149,6 +156,9 @@
 
 #define STM32C0_UID_BASE 0x1fff7550U
 #define STM32G0_UID_BASE 0x1fff7590U
+/* RM0503 §33.1 p1313 */
+#define STM32U031_UID_BASE 0x1fff6e50U
+#define STM32U0x3_UID_BASE 0x1fff3e50U
 
 /*
  * The underscores in these definitions represent /'s, this means
@@ -160,6 +170,9 @@
 #define ID_STM32G05_6 0x456U
 #define ID_STM32G07_8 0x460U
 #define ID_STM32G0B_C 0x467U
+/* RM0503 §37.3.3 p1251 */
+#define ID_STM32U031 0x4590U /* STM32U031 */
+#define ID_STM32U0x3 0x4890U /* STM32U073/083 */
 
 typedef struct stm32g0_priv {
 	bool irreversible_enabled;
@@ -181,6 +194,11 @@ const command_s stm32g0_cmd_list[] = {
 	{"erase_bank", stm32g0_cmd_erase_bank, "Erase specified Flash bank"},
 	{"option", stm32g0_cmd_option, "Manipulate option bytes"},
 	{"irreversible", stm32g0_cmd_irreversible, "Allow irreversible operations: (enable|disable)"},
+	{"uid", stm32g0_cmd_uid, "Print unique device ID"},
+	{NULL, NULL, NULL},
+};
+
+const command_s stm32u0_cmd_list[] = {
 	{"uid", stm32g0_cmd_uid, "Print unique device ID"},
 	{NULL, NULL, NULL},
 };
@@ -244,6 +262,7 @@ bool stm32g0_probe(target_s *target)
 {
 	uint32_t ram_size = 0U;
 	size_t flash_size = 0U;
+	bool commands_reduced_subset = false;
 
 	switch (target->part_id) {
 	case ID_STM32G03_4:;
@@ -290,6 +309,20 @@ bool stm32g0_probe(target_s *target)
 		flash_size = target_mem32_read16(target, FLASH_MEMORY_SIZE) * 1024U;
 		target->driver = "STM32G0B/C";
 		break;
+	case ID_STM32U031:
+		/* SRAM 12kiB, Flash up to 32kiB */
+		ram_size = RAM_SIZE_U031;
+		flash_size = target_mem32_read16(target, FLASH_MEMORY_SIZE_U031) * 1024U;
+		target->driver = "STM32U031";
+		commands_reduced_subset = true;
+		break;
+	case ID_STM32U0x3:
+		/* SRAM 40kiB, Flash up to 256kiB */
+		ram_size = RAM_SIZE_U0x3;
+		flash_size = target_mem32_read16(target, FLASH_MEMORY_SIZE_U0x3) * 1024U;
+		target->driver = "STM32U0x3";
+		commands_reduced_subset = true;
+		break;
 	default:
 		return false;
 	}
@@ -303,7 +336,11 @@ bool stm32g0_probe(target_s *target)
 	stm32g0_add_flash(target, FLASH_START, flash_size, FLASH_PAGE_SIZE);
 
 	target->mass_erase = stm32g0_mass_erase;
-	target_add_commands(target, stm32g0_cmd_list, target->driver);
+
+	if (commands_reduced_subset)
+		target_add_commands(target, stm32u0_cmd_list, target->driver);
+	else
+		target_add_commands(target, stm32g0_cmd_list, target->driver);
 
 	/* OTP Flash area */
 	stm32g0_add_flash(target, FLASH_OTP_START, FLASH_OTP_SIZE, FLASH_OTP_BLOCKSIZE);
@@ -723,7 +760,20 @@ static bool stm32g0_cmd_uid(target_s *target, int argc, const char **argv)
 	(void)argc;
 	(void)argv;
 	target_addr_t uid_base = STM32G0_UID_BASE;
-	if (target->part_id == ID_STM32C011 || target->part_id == ID_STM32C031)
+	switch (target->part_id) {
+	case ID_STM32C011:
+	case ID_STM32C031:
 		uid_base = STM32C0_UID_BASE;
+		break;
+	case ID_STM32U031:
+		uid_base = STM32U031_UID_BASE;
+		break;
+	case ID_STM32U0x3:
+		uid_base = STM32U0x3_UID_BASE;
+		break;
+	default:
+		break;
+	}
+
 	return stm32_uid(target, uid_base);
 }

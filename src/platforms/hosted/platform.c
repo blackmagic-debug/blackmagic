@@ -2,7 +2,7 @@
  * This file is part of the Black Magic Debug project.
  *
  * Copyright (C) 2020-2021 Uwe Bonnes (bon@elektron.ikp.physik.tu-darmstadt.de)
- * Copyright (C) 2022-2023 1BitSquared <info@1bitsquared.com>
+ * Copyright (C) 2022-2025 1BitSquared <info@1bitsquared.com>
  * Modified by Rachel Mant <git@dragonmux.network>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -51,6 +51,7 @@
 #include "stlinkv2.h"
 #include "ftdi_bmp.h"
 #include "jlink.h"
+#include "wchlink.h"
 #include "cmsis_dap.h"
 #endif
 
@@ -163,6 +164,11 @@ void platform_init(int argc, char **argv)
 		if (!jlink_init())
 			exit(1);
 		break;
+
+	case PROBE_TYPE_WCHLINK:
+		if (!wchlink_init())
+			exit(-1);
+		break;
 #endif
 
 #ifdef ENABLE_GPIOD
@@ -190,7 +196,12 @@ void platform_init(int argc, char **argv)
 	}
 }
 
-bool bmda_swd_scan(const uint32_t targetid)
+bool bmda_swd_scan(void)
+{
+	return bmda_swd_scan_targetid(0);
+}
+
+bool bmda_swd_scan_targetid(const uint32_t targetid)
 {
 	bmda_probe_info.is_jtag = false;
 	platform_max_frequency_set(max_frequency);
@@ -203,7 +214,7 @@ bool bmda_swd_scan(const uint32_t targetid)
 #ifdef ENABLE_GPIOD
 	case PROBE_TYPE_GPIOD:
 #endif
-		return adiv5_swd_scan(targetid);
+		return adiv5_swd_scan_targetid(targetid);
 
 #if HOSTED_BMP_ONLY == 0
 	case PROBE_TYPE_STLINK_V2:
@@ -302,6 +313,21 @@ bool bmda_jtag_init(void)
 #ifdef ENABLE_GPIOD
 	case PROBE_TYPE_GPIOD:
 		return bmda_gpiod_jtag_init();
+#endif
+
+	default:
+		return false;
+	}
+}
+
+bool bmda_rvswd_scan(void)
+{
+	bmda_probe_info.is_jtag = false;
+
+	switch (bmda_probe_info.type) {
+#if HOSTED_BMP_ONLY == 0
+	case PROBE_TYPE_WCHLINK:
+		return wchlink_rvswd_scan();
 #endif
 
 	default:
@@ -410,6 +436,9 @@ char *bmda_adaptor_ident(void)
 
 	case PROBE_TYPE_JLINK:
 		return "J-Link";
+
+	case PROBE_TYPE_WCHLINK:
+		return "WCH-Link";
 
 	case PROBE_TYPE_GPIOD:
 		return "GPIOD";
@@ -660,5 +689,53 @@ void platform_target_clk_output_enable(const bool enable)
 
 	default:
 		break;
+	}
+}
+
+bool platform_spi_init(const spi_bus_e bus)
+{
+	switch (bmda_probe_info.type) {
+	case PROBE_TYPE_BMP:
+		return remote_spi_init(bus);
+
+	default:
+		DEBUG_ERROR("SPI protocol unsupported by probe");
+		return false;
+	}
+}
+
+bool platform_spi_deinit(spi_bus_e bus)
+{
+	switch (bmda_probe_info.type) {
+	case PROBE_TYPE_BMP:
+		return remote_spi_deinit(bus);
+
+	default:
+		DEBUG_ERROR("SPI protocol unsupported by probe");
+		return false;
+	}
+}
+
+bool platform_spi_chip_select(const uint8_t device_select)
+{
+	switch (bmda_probe_info.type) {
+	case PROBE_TYPE_BMP:
+		return remote_spi_chip_select(device_select);
+
+	default:
+		DEBUG_ERROR("SPI protocol unsupported by probe");
+		return false;
+	}
+}
+
+uint8_t platform_spi_xfer(const spi_bus_e bus, const uint8_t value)
+{
+	switch (bmda_probe_info.type) {
+	case PROBE_TYPE_BMP:
+		return remote_spi_xfer(bus, value);
+
+	default:
+		DEBUG_ERROR("SPI protocol unsupported by probe");
+		return UINT8_MAX;
 	}
 }

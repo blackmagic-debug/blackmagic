@@ -4,7 +4,7 @@
  * Copyright (C) 2011 Black Sphere Technologies Ltd.
  * Written by Gareth McMullin <gareth@blacksphere.co.nz>
  * Copyright (C) 2021 Uwe Bonnes (bon@elektron.ikp.physik.tu-darmstadt.de)
- * Copyright (C) 2023 1BitSquared <info@1bitsquared.com>
+ * Copyright (C) 2023-2025 1BitSquared <info@1bitsquared.com>
  * Modified by Rachel Mant <git@dragonmux.network>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -51,11 +51,20 @@
 #include "usb.h"
 #endif
 
+typedef struct scan_command {
+	bool (*scan)(void);
+	const char *name;
+} scan_command_s;
+
 static bool cmd_version(target_s *target, int argc, const char **argv);
 static bool cmd_help(target_s *target, int argc, const char **argv);
 
 static bool cmd_jtag_scan(target_s *target, int argc, const char **argv);
 static bool cmd_swd_scan(target_s *target, int argc, const char **argv);
+#if defined(CONFIG_RVSWD) && defined(PLATFORM_HAS_RVSWD)
+static bool cmd_rvswd_scan(target_s *target, int argc, const char **argv);
+#endif
+static bool cmd_onboard_flash_scan(target_s *target, int argc, const char **argv);
 static bool cmd_auto_scan(target_s *target, int argc, const char **argv);
 static bool cmd_frequency(target_s *target, int argc, const char **argv);
 static bool cmd_targets(target_s *target, int argc, const char **argv);
@@ -69,6 +78,9 @@ static bool cmd_target_power(target_s *target, int argc, const char **argv);
 #endif
 #ifdef PLATFORM_HAS_BATTERY
 static bool cmd_target_battery(target_s *t, int argc, const char **argv);
+#endif
+#ifdef PLATFORM_HAS_WIFI
+static bool cmd_wifi(target_s *t, int argc, const char **argv);
 #endif
 #ifdef PLATFORM_HAS_TRACESWO
 static bool cmd_swo(target_s *target, int argc, const char **argv);
@@ -94,6 +106,10 @@ const command_s cmd_list[] = {
 	{"jtag_scan", cmd_jtag_scan, "Scan JTAG chain for devices"},
 	{"swd_scan", cmd_swd_scan, "Scan SWD interface for devices: [TARGET_ID]"},
 	{"swdp_scan", cmd_swd_scan, "Deprecated: use swd_scan instead"},
+#if defined(CONFIG_RVSWD) && defined(PLATFORM_HAS_RVSWD)
+	{"rvswd_scan", cmd_rvswd_scan, "Scan RVSWD for devices"},
+#endif
+	{"spi_scan", cmd_onboard_flash_scan, "Scan for on-board SPI Flash devices"},
 	{"auto_scan", cmd_auto_scan, "Automatically scan all chain types for devices"},
 	{"frequency", cmd_frequency, "set minimum high and low times: [FREQ]"},
 	{"targets", cmd_targets, "Display list of available targets"},
@@ -108,6 +124,9 @@ const command_s cmd_list[] = {
 #endif
 #ifdef PLATFORM_HAS_BATTERY
 	{"battery", cmd_target_battery, "Reads the battery state"},
+#endif
+#ifdef PLATFORM_HAS_WIFI
+	{"wifi", cmd_wifi, "Show/Set Wi-Fi connection [AP name,passphrase]"},
 #endif
 #ifdef ENABLE_RTT
 	{"rtt", cmd_rtt,
@@ -202,7 +221,7 @@ bool cmd_version(target_s *target, int argc, const char **argv)
 #endif
 	gdb_outf(", Hardware Version %d\n", platform_hwversion());
 #endif
-	gdb_out("Copyright (C) 2010-2024 Black Magic Debug Project\n");
+	gdb_out("Copyright (C) 2010-2025 Black Magic Debug Project\n");
 	gdb_out("License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>\n\n");
 
 	return true;
@@ -287,9 +306,9 @@ bool cmd_swd_scan(target_s *target, int argc, const char **argv)
 	bool scan_result = false;
 	TRY (EXCEPTION_ALL) {
 #if CONFIG_BMDA == 1
-		scan_result = bmda_swd_scan(targetid);
+		scan_result = bmda_swd_scan_targetid(targetid);
 #else
-		scan_result = adiv5_swd_scan(targetid);
+		scan_result = adiv5_swd_scan_targetid(targetid);
 #endif
 	}
 	CATCH () {
@@ -316,6 +335,69 @@ bool cmd_swd_scan(target_s *target, int argc, const char **argv)
 	return true;
 }
 
+bool cmd_onboard_flash_scan(target_s *target, int argc, const char **argv)
+{
+	(void)target;
+	(void)argc;
+	(void)argv;
+
+	/* Attempt a SPI bus scan for Flash */
+	if (!onboard_flash_scan()) {
+		gdb_out("On-board Flash scan failed!\n");
+		return false;
+	}
+	/* If that succeeded, register global target commands and clear morse code state */
+	cmd_targets(NULL, 0, NULL);
+	morse(NULL, false);
+	return true;
+}
+
+#if defined(CONFIG_RVSWD) && defined(PLATFORM_HAS_RVSWD)
+bool cmd_rvswd_scan(target_s *target, int argc, const char **argv)
+{
+	(void)target;
+	(void)argc;
+	(void)argv;
+
+	if (platform_target_voltage())
+		gdb_outf("Target voltage: %s\n", platform_target_voltage());
+
+	if (connect_assert_nrst)
+		platform_nrst_set_val(true); /* will be deasserted after attach */
+
+	bool scan_result = false;
+	TRY (EXCEPTION_ALL) {
+#if CONFIG_BMDA == 1
+		scan_result = bmda_rvswd_scan();
+#else
+		scan_result = false;
+#endif
+	}
+	CATCH () {
+	case EXCEPTION_TIMEOUT:
+		gdb_outf("Timeout during scan. Is target stuck in WFI?\n");
+		break;
+	case EXCEPTION_ERROR:
+		gdb_outf("Exception: %s\n", exception_frame.msg);
+		break;
+	default:
+		break;
+	}
+
+	if (!scan_result) {
+		platform_target_clk_output_enable(false);
+		platform_nrst_set_val(false);
+		gdb_out("RVSWD scan failed!\n");
+		return false;
+	}
+
+	cmd_targets(NULL, 0, NULL);
+	platform_target_clk_output_enable(false);
+	morse(NULL, false);
+	return true;
+}
+#endif
+
 bool cmd_auto_scan(target_s *target, int argc, const char **argv)
 {
 	(void)target;
@@ -327,34 +409,44 @@ bool cmd_auto_scan(target_s *target, int argc, const char **argv)
 	if (connect_assert_nrst)
 		platform_nrst_set_val(true); /* will be deasserted after attach */
 
-	bool scan_result = false;
-	TRY (EXCEPTION_ALL) {
+	static const scan_command_s scan_commands[] =
 #if CONFIG_BMDA == 1
-		scan_result = bmda_jtag_scan();
-#else
-		scan_result = jtag_scan();
+		/* clang-format off */
+	{
+		{bmda_jtag_scan, "JTAG"},
+		{bmda_swd_scan, "SWD"},
+#if defined(CONFIG_RVSWD) && defined(PLATFORM_HAS_RVSWD)
+		{bmda_rvswd_scan, "RVSWD"},
 #endif
-		if (!scan_result) {
-			gdb_out("JTAG scan found no devices, trying SWD!\n");
+	};
+#else
+	{
+		{jtag_scan, "JTAG"},
+		{adiv5_swd_scan, "SWD"},
+	};
+	/* clang-format on */
+#endif
 
-#if CONFIG_BMDA == 1
-			scan_result = bmda_swd_scan(0);
-#else
-			scan_result = adiv5_swd_scan(0);
-#endif
-			if (!scan_result)
-				gdb_out("SWD scan found no devices.\n");
+	bool scan_result = false;
+	for (size_t i = 0; i < ARRAY_LENGTH(scan_commands); i++) {
+		TRY (EXCEPTION_ALL) {
+			scan_result = scan_commands[i].scan();
 		}
-	}
-	CATCH () {
-	case EXCEPTION_TIMEOUT:
-		gdb_outf("Timeout during scan. Is target stuck in WFI?\n");
-		break;
-	case EXCEPTION_ERROR:
-		gdb_outf("Exception: %s\n", exception_frame.msg);
-		break;
-	default:
-		break;
+		CATCH () {
+		case EXCEPTION_TIMEOUT:
+			gdb_outf("Timeout during %s scan. Is target stuck in WFI?\n", scan_commands[i].name);
+			break;
+		case EXCEPTION_ERROR:
+			gdb_outf("%s exception: %s\n", scan_commands[i].name, exception_frame.msg);
+			break;
+		default:
+			break;
+		}
+
+		if (scan_result)
+			break;
+
+		gdb_outf("%s scan found no devices.\n", scan_commands[i].name);
 	}
 
 	if (!scan_result) {
@@ -541,6 +633,15 @@ static bool cmd_target_battery(target_s *t, int argc, const char **argv)
 	return true;
 }
 #endif
+#ifdef PLATFORM_HAS_WIFI
+static bool cmd_wifi(target_s *t, int argc, const char **argv)
+{
+	(void)t;
+	gdb_out(platform_wifi_state(argc, argv));
+	return true;
+}
+#endif
+
 #ifdef ENABLE_RTT
 static const char *on_or_off(const bool value)
 {

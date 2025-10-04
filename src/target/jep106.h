@@ -67,13 +67,18 @@
 #define JEP106_MANUFACTURER_GIGADEVICE   0x751U /* GigaDevice */
 #define JEP106_MANUFACTURER_RASPBERRY    0x913U /* Raspberry Pi */
 #define JEP106_MANUFACTURER_RENESAS      0x423U /* Renesas */
-#define JEP106_MANUFACTURER_WCH          0x72aU /* "Nanjing Yihuo Technology", used by CH579 */
 #define JEP106_MANUFACTURER_XILINX       0x309U /* Xilinx - Technically 0x049, but they use Ikanos Communications' code */
 /*
  * This JEP code should belong to "Andes Technology Corporation", but is used on RISC-V by GigaDevice,
  * so in the unlikely event we need to support chips by them, here be dragons.
  */
 #define JEP106_MANUFACTURER_RV_GIGADEVICE 0x61eU
+
+/*
+ * Used by WCH (WinChipHead) aka Nanjing Qinheng Microelectronics
+ * Not the same company but related
+ */
+#define JEP106_MANUFACTURER_WCH 0x72aU /* Nanjing Yihuo Technology */
 
 /*
  * This code is not listed in the JEP106 standard, but is used by some stm32f1 clones

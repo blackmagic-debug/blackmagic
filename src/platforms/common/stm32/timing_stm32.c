@@ -141,6 +141,11 @@ uint32_t platform_time_ms(void)
 	return time_ms;
 }
 
+__attribute__((weak)) void platform_ospeed_update(const uint32_t frequency)
+{
+	(void)frequency;
+}
+
 /*
  * Assume some USED_SWD_CYCLES per clock and CYCLES_PER_CNT cycles
  * per delay loop count with 2 delay loops per clock
@@ -152,6 +157,7 @@ uint32_t platform_time_ms(void)
 
 void platform_max_frequency_set(const uint32_t frequency)
 {
+	platform_ospeed_update(frequency);
 #ifdef BITBANG_CALIBRATED_FREQS
 	/*
 	 * If the frequency requested is above the value given when no delays are used of any kind,

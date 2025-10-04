@@ -14,6 +14,10 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.job }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+  pull-requests: read
+
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
   # This workflow contains a job for each supported OS in the form `build-<os>`
@@ -29,9 +33,9 @@ jobs:
     strategy:
       matrix:
         os:
-          - {id: ubuntu-22.04, name: jammy}
+          - {id: ubuntu-24.04, name: noble}
         arm-compiler:
-          - '12.2.Rel1'
+          - '14.2.Rel1'
         probe:
           - '96b_carbon'
           - 'blackpill-f401cc'
@@ -74,13 +78,15 @@ jobs:
       # Install and setup a suitable Meson + Ninja
       - name: Setup Meson + Ninja
         run: |
-          sudo python3 -m pip install --upgrade pip setuptools wheel
+          sudo apt install -y python3-pip python3-setuptools python3-wheel
           sudo python3 -m pip install meson ninja
         working-directory: ${{ runner.temp }}
 
       # Install BMDA's deps (libftdi1, hidapi-hidraw)
       - name: Install BMDA dependencies
-        run: sudo apt-get -y install libftdi1-dev libhidapi-dev libudev-dev
+        run: |
+          sudo apt update
+          sudo apt-get -y install libftdi1-dev libhidapi-dev libudev-dev
 
       # Record the versions of all the tools used in the build
       - name: Version tools
@@ -119,7 +125,7 @@ jobs:
     strategy:
       matrix:
         os:
-          - windows-2022
+          - windows-2025
       fail-fast: false
 
     # Steps represent a sequence of tasks that will be executed as part of the job
@@ -178,7 +184,7 @@ jobs:
     strategy:
       matrix:
         os:
-          - windows-2022
+          - windows-2025
         sys:
           - {abi: mingw64, env: x86_64, compiler: gcc}
           - {abi: ucrt64, env: ucrt-x86_64, compiler: gcc}
@@ -265,6 +271,7 @@ jobs:
         os:
           - macos-13
           - macos-14
+          - macos-15
           - macos-latest
       fail-fast: false
 
@@ -319,13 +326,14 @@ jobs:
     strategy:
       matrix:
         os:
-          - macos-13
           - macos-14
+          - macos-15
         compiler:
           - gcc@11
           - gcc@12
           - gcc@13
-          - gcc@14 # Don't use 'gcc', the symlink is versioned -- see below
+          - gcc@14
+          - gcc@15 # Don't use 'gcc', the symlink is versioned -- see below
       fail-fast: false
 
     # Steps represent a sequence of tasks that will be executed as part of the job
@@ -378,7 +386,7 @@ jobs:
           meson compile -C build
 
   size-diff:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
 
     steps:
       # Build a suitable runtime environment
@@ -394,12 +402,12 @@ jobs:
       - name: Setup ARM GCC
         uses: carlosperate/arm-none-eabi-gcc-action@v1
         with:
-          release: '12.2.Rel1'
+          release: '14.2.Rel1'
 
       # Install and setup a suitable Meson + Ninja
       - name: Setup Meson + Ninja
         run: |
-          sudo python3 -m pip install --upgrade pip setuptools wheel
+          sudo apt install -y python3-pip python3-setuptools python3-wheel
           sudo python3 -m pip install meson ninja
         working-directory: ${{ runner.temp }}
 

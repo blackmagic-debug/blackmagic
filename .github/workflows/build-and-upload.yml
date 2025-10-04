@@ -14,6 +14,10 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.job }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+  actions: write
+
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
   # This workflow contains a job for each supported OS in the form `build-<os>`
@@ -98,6 +102,12 @@ jobs:
           meson setup build --cross-file cross-file/${{ matrix.probe }}.ini
           meson compile -C build
           mkdir src/artefacts
+          case "${{ matrix.probe }}" in
+            native-*)
+              mv build/blackmagic_native_firmware.elf build/blackmagic_${{ matrix.probe }}_firmware.elf
+              mv build/blackmagic_native_firmware.bin build/blackmagic_${{ matrix.probe }}_firmware.bin
+              ;;
+          esac
           mv build/blackmagic_*_firmware.{elf,bin} src/artefacts
 
       # Package up the artefacts and upload them

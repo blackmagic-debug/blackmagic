@@ -290,13 +290,22 @@ static void riscv_reset(target_s *target);
 
 void riscv_dmi_init(riscv_dmi_s *const dmi)
 {
-	/* If we don't currently know how to talk to this DMI, warn and fail */
+	/*
+	 * The DMI version does not actually matter here, the implementation details have already been
+	 * abstracted away at this point and we have a generic DMI to work with
+	 * 
+	 * But the dminfo register (at 0x11) of v0.11 DM is incompatible with dmstatus (also at 0x11) of
+	 * later versions, meaning we can't easily/reliably determine the version of the DM.
+	 * We ignore all v0.11 DMI's in the hope we don't encounter a v0.11 DM with a later version DMI.
+	 */
 	if (dmi->version == RISCV_DEBUG_UNKNOWN)
 		return;
 	if (dmi->version == RISCV_DEBUG_0_11) {
-		DEBUG_INFO("RISC-V debug v0.11 not presently supported\n");
+		DEBUG_INFO("RISC-V debug v0.11 DMI is not presently supported\n");
 		return;
 	}
+	if (dmi->version == RISCV_DEBUG_NONSTANDARD)
+		DEBUG_INFO("RISC-V non-standard DMI, proceeding anyway\n");
 
 	/* Iterate through the possible DMs and probe implemented ones */
 	/* The first DM is always at base address 0 */
@@ -310,8 +319,11 @@ void riscv_dmi_init(riscv_dmi_s *const dmi)
 		}
 		const riscv_debug_version_e dm_version = riscv_dm_version(dm_status);
 
-		/* If the DM is not unimplemented, allocate a structure for it and do further processing */
-		if (dm_version != RISCV_DEBUG_UNIMPL) {
+		/*
+		 * If the DM is not unimplemented and is a supported version,
+		 * allocate a structure for it and do further processing
+		 */
+		if (dm_version == RISCV_DEBUG_0_13 || dm_version == RISCV_DEBUG_1_0) {
 			riscv_dm_s *dbg_module = calloc(1, sizeof(*dbg_module));
 			if (!dbg_module) { /* calloc failed: heap exhaustion */
 				DEBUG_WARN("calloc: failed in %s\n", __func__);
@@ -325,7 +337,8 @@ void riscv_dmi_init(riscv_dmi_s *const dmi)
 			/* If we failed to discover any Harts, free the structure */
 			if (!dbg_module->ref_count)
 				free(dbg_module);
-		}
+		} else if (dm_version != RISCV_DEBUG_UNIMPL)
+			DEBUG_INFO("Ignoring DM with unsupported version\n");
 
 		/* Read out the address of the next DM */
 		if (!riscv_dmi_read(dmi, base_addr + RV_DM_NEXT_DM, &base_addr)) {
@@ -422,7 +435,7 @@ static void riscv_hart_read_ids(riscv_hart_s *const hart)
 static size_t riscv_snprint_isa_subset(
 	char *const string_buffer, const size_t buffer_size, const uint8_t access_width, const uint32_t extensions)
 {
-	size_t offset = snprintf(string_buffer, buffer_size, "rv%" PRIu8, access_width);
+	size_t offset = snprintf(string_buffer, buffer_size, "rv%u", access_width);
 
 	const bool is_embedded = extensions & RV_ISA_EXT_EMBEDDED;
 
@@ -557,16 +570,30 @@ static void riscv_hart_free(void *const priv)
 
 static bool riscv_dmi_read(riscv_dmi_s *const dmi, const uint32_t address, uint32_t *const value)
 {
-	const bool result = dmi->read(dmi, address, value);
+	bool result = false;
+	do {
+		result = dmi->read(dmi, address, value);
+	} while (dmi->fault == RV_DMI_TOO_SOON);
+
 	if (result)
 		DEBUG_PROTO("%s:  %08" PRIx32 " -> %08" PRIx32 "\n", __func__, address, *value);
+	else
+		DEBUG_WARN("%s:  %08" PRIx32 " failed: %u\n", __func__, address, dmi->fault);
 	return result;
 }
 
 static bool riscv_dmi_write(riscv_dmi_s *const dmi, const uint32_t address, const uint32_t value)
 {
 	DEBUG_PROTO("%s: %08" PRIx32 " <- %08" PRIx32 "\n", __func__, address, value);
-	return dmi->write(dmi, address, value);
+
+	bool result = false;
+	do {
+		result = dmi->write(dmi, address, value);
+	} while (dmi->fault == RV_DMI_TOO_SOON);
+
+	if (!result)
+		DEBUG_WARN("%s:  %08" PRIx32 " failed: %u\n", __func__, address, dmi->fault);
+	return result;
 }
 
 bool riscv_dm_read(riscv_dm_s *dbg_module, const uint8_t address, uint32_t *const value)
@@ -594,6 +621,9 @@ static riscv_debug_version_e riscv_dm_version(const uint32_t status)
 	case 3:
 		DEBUG_INFO("RISC-V debug v1.0 DM\n");
 		return RISCV_DEBUG_1_0;
+	case 15:
+		DEBUG_INFO("RISC-V debug non-standard DM\n");
+		return RISCV_DEBUG_NONSTANDARD;
 	default:
 		break;
 	}
