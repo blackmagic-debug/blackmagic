@@ -174,7 +174,7 @@ static bool lpc55xx_flash_prepare(target_flash_s *flash);
 static bool lpc55xx_flash_erase(target_flash_s *flash, target_addr_t addr, size_t len);
 static bool lpc55xx_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t len);
 
-static target_addr_t lpc55xx_get_bootloader_tree_address(target_s *target)
+static target_addr32_t lpc55xx_get_bootloader_tree_address(target_s *const target)
 {
 	switch (target_mem32_read32(target, LPC55xx_CHIPID_ADDRESS)) {
 	//case LPC5512_CHIPID:
@@ -206,7 +206,7 @@ static target_addr_t lpc55xx_get_bootloader_tree_address(target_s *target)
 	}
 }
 
-static const char *lpc55xx_get_device_name(uint32_t chipid)
+static const char *lpc55xx_get_device_name(const uint32_t chipid)
 {
 	switch (chipid) {
 	case LPC5502_CHIPID:
@@ -237,60 +237,61 @@ static const char *lpc55xx_get_device_name(uint32_t chipid)
 	}
 }
 
-static int lpc55xx_get_rom_api_version(target_s *target, target_addr_t bootloader_tree_address)
+static int lpc55xx_get_rom_api_version(target_s *const target, const target_addr32_t bootloader_tree_address)
 {
 	return ((target_mem32_read32(target, bootloader_tree_address + 0x4) >> 16) & 0xff) == 3 ? 1 : 0;
 }
 
-static target_addr_t lpc55xx_get_flash_table_address(target_s *target, target_addr_t bootloader_tree_address)
+static target_addr32_t lpc55xx_get_flash_table_address(
+	target_s *const target, const target_addr32_t bootloader_tree_address)
 {
 	return target_mem32_read32(target, bootloader_tree_address + 0x10);
 }
 
-static target_addr_t lpc55xx_get_flash_init_address(target_s *target)
+static target_addr32_t lpc55xx_get_flash_init_address(target_s *const target)
 {
-	target_addr_t bootloader_tree_address = lpc55xx_get_bootloader_tree_address(target);
+	const target_addr32_t bootloader_tree_address = lpc55xx_get_bootloader_tree_address(target);
 
-	target_addr_t flash_table_address = lpc55xx_get_flash_table_address(target, bootloader_tree_address);
+	const target_addr32_t flash_table_address = lpc55xx_get_flash_table_address(target, bootloader_tree_address);
 	return target_mem32_read32(target, flash_table_address + sizeof(uint32_t));
 }
 
-static target_addr_t lpc55xx_get_flash_erase_address(target_s *target)
+static target_addr32_t lpc55xx_get_flash_erase_address(target_s *const target)
 {
-	target_addr_t bootloader_tree_address = lpc55xx_get_bootloader_tree_address(target);
+	const target_addr32_t bootloader_tree_address = lpc55xx_get_bootloader_tree_address(target);
 
 	if (lpc55xx_get_rom_api_version(target, bootloader_tree_address) == 0)
 		return 0x1300413bU; // UNTESTED: found in SDK, not referenced in UM
 
-	target_addr_t flash_table_address = lpc55xx_get_flash_table_address(target, bootloader_tree_address);
+	const target_addr32_t flash_table_address = lpc55xx_get_flash_table_address(target, bootloader_tree_address);
 	return target_mem32_read32(target, flash_table_address + (2U * sizeof(uint32_t)));
 }
 
-static target_addr_t lpc55xx_get_flash_program_address(target_s *target)
+static target_addr32_t lpc55xx_get_flash_program_address(target_s *const target)
 {
-	target_addr_t bootloader_tree_address = lpc55xx_get_bootloader_tree_address(target);
+	const target_addr32_t bootloader_tree_address = lpc55xx_get_bootloader_tree_address(target);
 
 	if (lpc55xx_get_rom_api_version(target, bootloader_tree_address) == 0)
 		return 0x1300419dU; // UNTESTED: found in SDK, not referenced in UM
 
-	target_addr_t flash_table_address = lpc55xx_get_flash_table_address(target, bootloader_tree_address);
+	const target_addr32_t flash_table_address = lpc55xx_get_flash_table_address(target, bootloader_tree_address);
 	return target_mem32_read32(target, flash_table_address + (3U * sizeof(uint32_t)));
 }
 
-static target_addr_t lpc55xx_get_ffr_init_address(target_s *target)
+static target_addr32_t lpc55xx_get_ffr_init_address(target_s *const target)
 {
-	target_addr_t bootloader_tree_address = lpc55xx_get_bootloader_tree_address(target);
-	target_addr_t flash_table_address = lpc55xx_get_flash_table_address(target, bootloader_tree_address);
+	const target_addr32_t bootloader_tree_address = lpc55xx_get_bootloader_tree_address(target);
+	const target_addr32_t flash_table_address = lpc55xx_get_flash_table_address(target, bootloader_tree_address);
 
 	if (lpc55xx_get_rom_api_version(target, bootloader_tree_address) == 0)
 		return target_mem32_read32(target, flash_table_address + (7U * sizeof(uint32_t)));
 	return target_mem32_read32(target, flash_table_address + (10U * sizeof(uint32_t)));
 }
 
-static target_addr_t lpc55xx_get_ffr_get_uuid_address(target_s *target)
+static target_addr32_t lpc55xx_get_ffr_get_uuid_address(target_s *const target)
 {
-	target_addr_t bootloader_tree_address = lpc55xx_get_bootloader_tree_address(target);
-	target_addr_t flash_table_address = lpc55xx_get_flash_table_address(target, bootloader_tree_address);
+	const target_addr32_t bootloader_tree_address = lpc55xx_get_bootloader_tree_address(target);
+	const target_addr32_t flash_table_address = lpc55xx_get_flash_table_address(target, bootloader_tree_address);
 
 	if (lpc55xx_get_rom_api_version(target, bootloader_tree_address) == 0)
 		return target_mem32_read32(target, flash_table_address + (10U * sizeof(uint32_t)));
