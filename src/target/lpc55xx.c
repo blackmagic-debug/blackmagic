@@ -554,7 +554,8 @@ static bool lpc55xx_enter_flash_mode(target_s *const target)
 	// Execute a small binary patch which just disables interrupts and then hits
 	// a breakpoint, to allow the flash IAP calls to run undisturbed. This patch
 	// consists of the instructions CPSID I; BKPT; in ARM Thumb encoding.
-	target_mem32_write32(target, LPC55xx_CODE_PATCH_ADDRESS, 0xbe00b672U);
+	target_mem32_write16(target, LPC55xx_CODE_PATCH_ADDRESS, 0xb672U);
+	target_mem32_write16(target, LPC55xx_CODE_PATCH_ADDRESS + 2U, CORTEX_THUMB_BREAKPOINT);
 	target_reg_write(target, CORTEX_REG_PC, &reg_pc_value, sizeof(uint32_t));
 
 	target_halt_resume(target, false);
