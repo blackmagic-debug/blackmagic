@@ -298,7 +298,8 @@ static target_addr32_t lpc55xx_get_ffr_get_uuid_address(target_s *const target)
 	return target_mem32_read32(target, flash_table_address + (13U * sizeof(uint32_t)));
 }
 
-static lpc55xx_iap_status_e iap_call_raw(target_s *target, lpc55xx_iap_cmd_e cmd, uint32_t r1, uint32_t r2, uint32_t r3)
+static lpc55xx_iap_status_e iap_call_raw(
+	target_s *const target, const lpc55xx_iap_cmd_e cmd, const uint32_t r1, const uint32_t r2, const uint32_t r3)
 {
 	/* Prepare the registers for the IAP call. R0 is always flash_config */
 	uint32_t regs[CORTEXM_GENERAL_REG_COUNT + CORTEX_FLOAT_REG_COUNT + CORTEXM_TRUSTZONE_REG_COUNT];
@@ -351,9 +352,9 @@ static lpc55xx_iap_status_e iap_call_raw(target_s *target, lpc55xx_iap_cmd_e cmd
 	return (lpc55xx_iap_status_e)regs[0];
 }
 
-static target_flash_s *lpc55xx_add_flash(target_s *target)
+static target_flash_s *lpc55xx_add_flash(target_s *const target)
 {
-	target_flash_s *flash = calloc(1, sizeof(*flash));
+	target_flash_s *const flash = calloc(1, sizeof(*flash));
 	if (!flash) { /* calloc failed: heap exhaustion */
 		DEBUG_ERROR("calloc: failed in %s\n", __func__);
 		return NULL;
@@ -458,7 +459,7 @@ bool lpc55xx_probe(target_s *const target)
 	return true;
 }
 
-static void lpc55xx_prepare_flash_config(target_s *target, target_addr_t address)
+static void lpc55xx_prepare_flash_config(target_s *const target, const target_addr_t address)
 {
 	/*
 	 * The flash config structure is 60 bytes in size, zero it out as that
@@ -472,7 +473,7 @@ static void lpc55xx_prepare_flash_config(target_s *target, target_addr_t address
 	target_mem32_write(target, address, &config, sizeof(config));
 }
 
-static bool lpc55xx_flash_init(target_s *target, lpc55xx_flash_config_s *config)
+static bool lpc55xx_flash_init(target_s *const target, lpc55xx_flash_config_s *const config)
 {
 	uint8_t backup_memory[LPC55xx_SCRATCH_MEMORY_LEN];
 	uint32_t regs[CORTEXM_GENERAL_REG_COUNT + CORTEX_FLOAT_REG_COUNT + CORTEXM_TRUSTZONE_REG_COUNT];
@@ -501,7 +502,7 @@ exit:
 	return success;
 }
 
-static bool lpc55xx_get_uuid(target_s *target, uint8_t *uuid)
+static bool lpc55xx_get_uuid(target_s *const target, uint8_t *const uuid)
 {
 	uint8_t backup_memory[LPC55xx_SCRATCH_MEMORY_LEN + LPC55xx_UUID_LEN];
 	uint32_t regs[CORTEXM_GENERAL_REG_COUNT + CORTEX_FLOAT_REG_COUNT + CORTEXM_TRUSTZONE_REG_COUNT];
@@ -542,7 +543,7 @@ exit:
 	return success;
 }
 
-static bool lpc55xx_enter_flash_mode(target_s *target)
+static bool lpc55xx_enter_flash_mode(target_s *const target)
 {
 	// NOTE! The usual way to go about this would be to just reset the target to
 	// put it back into a known state. Unfortunately target_reset hangs for this
@@ -564,7 +565,7 @@ static bool lpc55xx_enter_flash_mode(target_s *target)
 	return true;
 }
 
-static bool lpc55xx_flash_prepare(target_flash_s *flash)
+static bool lpc55xx_flash_prepare(target_flash_s *const flash)
 {
 	lpc55xx_prepare_flash_config(flash->t, LPC55xx_FLASH_CONFIG_ADDRESS);
 
@@ -577,7 +578,7 @@ static bool lpc55xx_flash_prepare(target_flash_s *flash)
 	return status == IAP_STATUS_FLASH_SUCCESS;
 }
 
-static bool lpc55xx_flash_erase(target_flash_s *flash, target_addr_t addr, size_t len)
+static bool lpc55xx_flash_erase(target_flash_s *const flash, const target_addr_t addr, const size_t len)
 {
 	const lpc55xx_iap_status_e status =
 		iap_call_raw(flash->t, IAP_CMD_FLASH_ERASE, addr, (uint32_t)len, LPC55xx_ERASE_KEY);
@@ -586,7 +587,8 @@ static bool lpc55xx_flash_erase(target_flash_s *flash, target_addr_t addr, size_
 	return status == IAP_STATUS_FLASH_SUCCESS;
 }
 
-static bool lpc55xx_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t len)
+static bool lpc55xx_flash_write(
+	target_flash_s *const flash, const target_addr_t dest, const void *const src, const size_t len)
 {
 	target_mem32_write(flash->t, LPC55xx_WRITE_BUFFER_ADDRESS, src, len);
 
@@ -597,7 +599,7 @@ static bool lpc55xx_flash_write(target_flash_s *flash, target_addr_t dest, const
 	return status == IAP_STATUS_FLASH_SUCCESS;
 }
 
-static bool lpc55xx_read_uid(target_s *target, int argc, const char **argv)
+static bool lpc55xx_read_uid(target_s *const target, const int argc, const char **const argv)
 {
 	(void)argc;
 	(void)argv;
@@ -648,12 +650,12 @@ void lpc55_dp_prepare(adiv5_debug_port_s *const dp)
 	/* At this point we assume that we've got access to the debug mailbox and can continue normally. */
 }
 
-bool lpc55_dmap_probe(adiv5_access_port_s *ap)
+bool lpc55_dmap_probe(adiv5_access_port_s *const ap)
 {
 	if (ap->idr != LPC55_DMAP_IDR)
 		return false;
 
-	target_s *target = target_new();
+	target_s *const target = target_new();
 	if (!target)
 		return false;
 
@@ -669,7 +671,7 @@ bool lpc55_dmap_probe(adiv5_access_port_s *ap)
 	return true;
 }
 
-static void lpc55_dmap_ap_free(void *priv)
+static void lpc55_dmap_ap_free(void *const priv)
 {
 	adiv5_ap_unref(priv);
 }
