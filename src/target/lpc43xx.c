@@ -290,10 +290,10 @@ static bool lpc43xx_iap_mass_erase(target_s *target, platform_timeout_s *print_p
 static void lpc43xx_wdt_set_period(target_s *target);
 static void lpc43xx_wdt_kick(target_s *target);
 
-static void lpc43xx_add_iap_flash(target_s *target, uint32_t iap_entry, uint8_t bank, uint8_t base_sector,
-	uint32_t addr, size_t len, size_t erasesize)
+static void lpc43xx_add_iap_flash(target_s *const target, const uint32_t iap_entry, const uint8_t bank,
+	const uint8_t base_sector, const uint32_t addr, const size_t len, const size_t erasesize)
 {
-	lpc_flash_s *flash = lpc_add_flash(target, addr, len, IAP_PGM_CHUNKSIZE);
+	lpc_flash_s *const flash = lpc_add_flash(target, addr, len, IAP_PGM_CHUNKSIZE);
 	flash->f.blocksize = erasesize;
 	flash->f.erase = lpc43xx_iap_flash_erase;
 	flash->bank = bank;
@@ -480,7 +480,7 @@ bool lpc43xx_probe(target_s *const target)
 
 	/* 4 is for rev '-' parts with on-chip Flash, 7 is for rev 'A' parts with on-chip Flash */
 	if (chip_code == 4U || chip_code == 7U) {
-		lpc43xx_priv_s *priv = calloc(1, sizeof(lpc43xx_priv_s));
+		lpc43xx_priv_s *const priv = calloc(1, sizeof(*priv));
 		if (!priv) { /* calloc failed: heap exhaustion */
 			DEBUG_ERROR("calloc: failed in %s\n", __func__);
 			return false;
@@ -556,7 +556,7 @@ static uint8_t lpc43x0_read_boot_src(target_s *const target)
 
 static void lpc43x0_determine_flash_interface(target_s *const target)
 {
-	lpc43x0_priv_s *priv = (lpc43x0_priv_s *)target->target_storage;
+	lpc43x0_priv_s *const priv = (lpc43x0_priv_s *)target->target_storage;
 	/*
 	 * If the device is not operating out of SRAM1 (meaning the boot ROM booted to a XIP mode)
 	 * then we can analyse the active configuration and take it at face value - that will work.
@@ -623,7 +623,7 @@ static bool lpc43x0_attach(target_s *const target)
 		return false;
 
 	if (!target->target_storage) {
-		lpc43x0_priv_s *priv = calloc(1, sizeof(lpc43x0_priv_s));
+		lpc43x0_priv_s *const priv = calloc(1, sizeof(*priv));
 		if (!priv) { /* calloc failed: heap exhaustion */
 			DEBUG_ERROR("calloc: failed in %s\n", __func__);
 			return false;
@@ -798,7 +798,7 @@ static lpc43xx_partid_s lpc43x0_spi_read_partid(target_s *const target)
 
 static void lpc43x0_spi_abort(target_s *const target)
 {
-	lpc43x0_priv_s *const priv = (lpc43x0_priv_s *)target->target_storage;
+	const lpc43x0_priv_s *const priv = (lpc43x0_priv_s *)target->target_storage;
 	if (priv->interface == FLASH_SPIFI) {
 		/* If in SPIFI mode, reset the controller to get to a known state */
 		target_mem32_write32(target, LPC43x0_SPIFI_STAT, LPC43x0_SPIFI_STATUS_RESET);
@@ -871,7 +871,7 @@ static void lpc43x0_spi_setup_xfer(
 static void lpc43x0_spi_read(target_s *const target, const uint16_t command, const target_addr_t address,
 	void *const buffer, const size_t length)
 {
-	lpc43x0_priv_s *const priv = (lpc43x0_priv_s *)target->target_storage;
+	const lpc43x0_priv_s *const priv = (lpc43x0_priv_s *)target->target_storage;
 	if (priv->interface == FLASH_SPIFI) {
 		lpc43x0_spi_setup_xfer(target, command, address, length);
 		uint8_t *const data = (uint8_t *)buffer;
@@ -895,7 +895,7 @@ static void lpc43x0_spi_read(target_s *const target, const uint16_t command, con
 static void lpc43x0_spi_write(target_s *const target, const uint16_t command, const target_addr_t address,
 	const void *const buffer, const size_t length)
 {
-	lpc43x0_priv_s *const priv = (lpc43x0_priv_s *)target->target_storage;
+	const lpc43x0_priv_s *const priv = (lpc43x0_priv_s *)target->target_storage;
 	if (priv->interface == FLASH_SPIFI) {
 		lpc43x0_spi_setup_xfer(target, command, address, length);
 		const uint8_t *const data = (const uint8_t *)buffer;
@@ -915,9 +915,9 @@ static void lpc43x0_spi_write(target_s *const target, const uint16_t command, co
 	}
 }
 
-static void lpc43x0_spi_run_command(target_s *const target, const uint16_t command, target_addr_t address)
+static void lpc43x0_spi_run_command(target_s *const target, const uint16_t command, const target_addr_t address)
 {
-	lpc43x0_priv_s *const priv = (lpc43x0_priv_s *)target->target_storage;
+	const lpc43x0_priv_s *const priv = (lpc43x0_priv_s *)target->target_storage;
 	if (priv->interface == FLASH_SPIFI) {
 		lpc43x0_spi_setup_xfer(target, command, address, 0U);
 		lpc43x0_spi_wait_complete(target);
@@ -992,7 +992,7 @@ static lpc43xx_partid_s lpc43xx_iap_read_partid(target_s *const target)
 	return result;
 }
 
-static bool lpc43xx_iap_flash_erase(target_flash_s *flash, const target_addr_t addr, const size_t len)
+static bool lpc43xx_iap_flash_erase(target_flash_s *const flash, const target_addr_t addr, const size_t len)
 {
 	if (!lpc43xx_iap_init(flash))
 		return false;
@@ -1019,7 +1019,7 @@ static bool lpc43xx_iap_mass_erase(target_s *const target, platform_timeout_s *c
 
 /* XXX: Why does this command exist at all? Thsi should already be being provided by other layers before this one */
 /* Reset all major systems _except_ debug */
-static bool lpc43xx_cmd_reset(target_s *target, int argc, const char **argv)
+static bool lpc43xx_cmd_reset(target_s *const target, const int argc, const char **const argv)
 {
 	(void)argc;
 	(void)argv;
@@ -1035,7 +1035,7 @@ static bool lpc43xx_cmd_reset(target_s *target, int argc, const char **argv)
  * This is done independently of writing to give the user a chance to verify flash
  * before changing it.
  */
-static bool lpc43xx_cmd_mkboot(target_s *target, int argc, const char **argv)
+static bool lpc43xx_cmd_mkboot(target_s *const target, const int argc, const char **const argv)
 {
 	/* Usage: mkboot 0 or mkboot 1 */
 	if (argc != 2) {
@@ -1052,7 +1052,7 @@ static bool lpc43xx_cmd_mkboot(target_s *target, int argc, const char **argv)
 	lpc43xx_iap_init(target->flash);
 
 	/* special command to compute/write magic vector for signature */
-	lpc_flash_s *flash = (lpc_flash_s *)target->flash;
+	lpc_flash_s *const flash = (lpc_flash_s *)target->flash;
 	if (lpc_iap_call(flash, NULL, IAP_CMD_SET_ACTIVE_BANK, bank, CPU_CLK_KHZ)) {
 		tc_printf(target, "Set bootable failed.\n");
 		return false;
@@ -1062,20 +1062,20 @@ static bool lpc43xx_cmd_mkboot(target_s *target, int argc, const char **argv)
 	return true;
 }
 
-static void lpc43xx_wdt_set_period(target_s *target)
+static void lpc43xx_wdt_set_period(target_s *const target)
 {
 	/* Check if WDT is on */
-	uint32_t wdt_mode = target_mem32_read32(target, LPC43xx_WDT_MODE);
+	const uint32_t wdt_mode = target_mem32_read32(target, LPC43xx_WDT_MODE);
 
 	/* If WDT on, we can't disable it, but we may be able to set a long period */
 	if (wdt_mode && !(wdt_mode & LPC43xx_WDT_PROTECT))
 		target_mem32_write32(target, LPC43xx_WDT_CNT, LPC43xx_WDT_PERIOD_MAX);
 }
 
-static void lpc43xx_wdt_kick(target_s *target)
+static void lpc43xx_wdt_kick(target_s *const target)
 {
 	/* Check if WDT is on */
-	uint32_t wdt_mode = target_mem32_read32(target, LPC43xx_WDT_MODE);
+	const uint32_t wdt_mode = target_mem32_read32(target, LPC43xx_WDT_MODE);
 
 	/* If WDT on, kick it so we don't get the target reset */
 	if (wdt_mode) {
