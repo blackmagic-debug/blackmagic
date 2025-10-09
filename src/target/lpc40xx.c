@@ -70,7 +70,8 @@ static bool lpc40xx_mass_erase(target_s *target, platform_timeout_s *print_proge
 iap_status_e lpc40xx_iap_call(
 	target_s *target, iap_result_s *result, platform_timeout_s *print_progess, iap_cmd_e cmd, ...);
 
-static void lpc40xx_add_flash(target_s *target, uint32_t addr, size_t len, size_t erasesize, uint8_t base_sector)
+static void lpc40xx_add_flash(
+	target_s *const target, const uint32_t addr, const size_t len, const size_t erasesize, const uint8_t base_sector)
 {
 	lpc_flash_s *flash = lpc_add_flash(target, addr, len, IAP_PGM_CHUNKSIZE);
 	flash->f.blocksize = erasesize;
@@ -81,7 +82,7 @@ static void lpc40xx_add_flash(target_s *target, uint32_t addr, size_t len, size_
 	flash->iap_msp = IAP_RAM_BASE + MIN_RAM_SIZE - RAM_USAGE_FOR_IAP_ROUTINES;
 }
 
-bool lpc40xx_probe(target_s *target)
+bool lpc40xx_probe(target_s *const target)
 {
 	if ((target->cpuid & CORTEX_CPUID_PARTNO_MASK) != CORTEX_M4 ||
 		(target->target_options & CORTEXM_TOPT_FLAVOUR_FLOAT) != 0)
@@ -95,7 +96,7 @@ bool lpc40xx_probe(target_s *target)
 	target_halt_request(target);
 
 	/* Allocate private storage so the flash mode entry/exit routines can save state */
-	lpc40xx_priv_s *priv = calloc(1, sizeof(*priv));
+	lpc40xx_priv_s *const priv = calloc(1, sizeof(*priv));
 	if (!priv) { /* calloc failed: heap exhaustion */
 		DEBUG_ERROR("calloc: failed in %s\n", __func__);
 		return false;
@@ -190,7 +191,7 @@ static bool lpc40xx_mass_erase(target_s *const target, platform_timeout_s *const
  * Target has been reset, make sure to remap the boot ROM
  * from 0x00000000 leaving the user flash visible
  */
-static void lpc40xx_extended_reset(target_s *target)
+static void lpc40xx_extended_reset(target_s *const target)
 {
 	/*
 	 * Transition the memory map to user mode (if it wasn't already) to ensure
