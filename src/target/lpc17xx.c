@@ -38,19 +38,19 @@
 #include "cortex.h"
 #include "lpc_common.h"
 
-#define IAP_PGM_CHUNKSIZE 4096U
+#define LPC17xx_SRAM_SIZE_MIN 8192U // LPC1751
+#define LPC17xx_SRAM_IAP_SIZE 32U   // IAP routines use 32 bytes at top of ram
 
-#define MIN_RAM_SIZE               8192U // LPC1751
-#define RAM_USAGE_FOR_IAP_ROUTINES 32U   // IAP routines use 32 bytes at top of ram
+#define LPC17xx_IAP_ENTRYPOINT_LOCATION 0x1fff1ff1U
+#define LPC17xx_IAP_RAM_BASE            0x10000000U
 
-#define IAP_ENTRYPOINT 0x1fff1ff1U
-#define IAP_RAM_BASE   0x10000000U
+#define LPC17xx_IAP_PGM_CHUNKSIZE 4096U
+
+#define LPC17xx_FLASH_NUM_SECTOR 30U
 
 #define LPC17xx_MEMMAP   UINT32_C(0x400fc040)
 #define LPC17xx_MPU_BASE UINT32_C(0xe000ed90)
 #define LPC17xx_MPU_CTRL (LPC17xx_MPU_BASE + 0x04U)
-
-#define FLASH_NUM_SECTOR 30U
 
 typedef struct iap_config {
 	uint32_t command;
@@ -78,13 +78,13 @@ iap_status_e lpc17xx_iap_call(
 
 static void lpc17xx_add_flash(target_s *target, uint32_t addr, size_t len, size_t erasesize, uint8_t base_sector)
 {
-	lpc_flash_s *flash = lpc_add_flash(target, addr, len, IAP_PGM_CHUNKSIZE);
+	lpc_flash_s *flash = lpc_add_flash(target, addr, len, LPC17xx_IAP_PGM_CHUNKSIZE);
 	flash->f.blocksize = erasesize;
 	flash->base_sector = base_sector;
 	flash->f.write = lpc_flash_write_magic_vect;
-	flash->iap_entry = IAP_ENTRYPOINT;
-	flash->iap_ram = IAP_RAM_BASE;
-	flash->iap_msp = IAP_RAM_BASE + MIN_RAM_SIZE - RAM_USAGE_FOR_IAP_ROUTINES;
+	flash->iap_entry = LPC17xx_IAP_ENTRYPOINT_LOCATION;
+	flash->iap_ram = LPC17xx_IAP_RAM_BASE;
+	flash->iap_msp = LPC17xx_IAP_RAM_BASE + LPC17xx_SRAM_SIZE_MIN - LPC17xx_SRAM_IAP_SIZE;
 }
 
 bool lpc17xx_probe(target_s *target)
@@ -182,17 +182,18 @@ static bool lpc17xx_mass_erase(target_s *const target, platform_timeout_s *const
 {
 	iap_result_s result;
 
-	if (lpc17xx_iap_call(target, &result, print_progess, IAP_CMD_PREPARE, 0, FLASH_NUM_SECTOR - 1U)) {
+	if (lpc17xx_iap_call(target, &result, print_progess, IAP_CMD_PREPARE, 0, LPC17xx_FLASH_NUM_SECTOR - 1U)) {
 		DEBUG_ERROR("%s: prepare failed %" PRIu32 "\n", __func__, result.return_code);
 		return false;
 	}
 
-	if (lpc17xx_iap_call(target, &result, print_progess, IAP_CMD_ERASE, 0, FLASH_NUM_SECTOR - 1U, CPU_CLK_KHZ)) {
+	if (lpc17xx_iap_call(
+			target, &result, print_progess, IAP_CMD_ERASE, 0, LPC17xx_FLASH_NUM_SECTOR - 1U, CPU_CLK_KHZ)) {
 		DEBUG_ERROR("%s: erase failed %" PRIu32 "\n", __func__, result.return_code);
 		return false;
 	}
 
-	if (lpc17xx_iap_call(target, &result, print_progess, IAP_CMD_BLANKCHECK, 0, FLASH_NUM_SECTOR - 1U)) {
+	if (lpc17xx_iap_call(target, &result, print_progess, IAP_CMD_BLANKCHECK, 0, LPC17xx_FLASH_NUM_SECTOR - 1U)) {
 		DEBUG_ERROR("%s: blankcheck failed %" PRIu32 "\n", __func__, result.return_code);
 		return false;
 	}
@@ -247,8 +248,8 @@ iap_status_e lpc17xx_iap_call(
 		frame.config.params[i] = 0U;
 
 	/* Copy the structure to RAM */
-	target_mem32_write(target, IAP_RAM_BASE, &frame, sizeof(iap_frame_s));
-	const uint32_t iap_params_addr = IAP_RAM_BASE + offsetof(iap_frame_s, config);
+	target_mem32_write(target, LPC17xx_IAP_RAM_BASE, &frame, sizeof(iap_frame_s));
+	const uint32_t iap_params_addr = LPC17xx_IAP_RAM_BASE + offsetof(iap_frame_s, config);
 
 	/* Set up for the call to the IAP ROM */
 	uint32_t regs[CORTEXM_GENERAL_REG_COUNT];
@@ -258,11 +259,11 @@ iap_status_e lpc17xx_iap_call(
 	/* And r1 to the same so we re-use the same memory for the results */
 	regs[1U] = iap_params_addr;
 	/* Set the top of stack to the top of the RAM block we're using */
-	regs[CORTEX_REG_MSP] = IAP_RAM_BASE + MIN_RAM_SIZE;
+	regs[CORTEX_REG_MSP] = LPC17xx_IAP_RAM_BASE + LPC17xx_SRAM_SIZE_MIN;
 	/* Point the return address to our breakpoint opcode (thumb mode) */
-	regs[CORTEX_REG_LR] = IAP_RAM_BASE | 1U;
+	regs[CORTEX_REG_LR] = LPC17xx_IAP_RAM_BASE | 1U;
 	/* And set the program counter to the IAP ROM entrypoint */
-	regs[CORTEX_REG_PC] = IAP_ENTRYPOINT;
+	regs[CORTEX_REG_PC] = LPC17xx_IAP_ENTRYPOINT_LOCATION;
 	target_regs_write(target, regs);
 
 	platform_timeout_s timeout;
