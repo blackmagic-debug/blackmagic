@@ -2,6 +2,9 @@
  * This file is part of the Black Magic Debug project.
  *
  * Copyright (C) 2012 Gareth McMullin <gareth@blacksphere.co.nz>
+ * Copyright (C) 2022-2025 1BitSquared <info@1bitsquared.com>
+ * Written by Akila Ravihansa Perera <ravihansa3000@gmail.com>
+ * Modified by Rachel Mant <git@dragonmux.network>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,18 +20,23 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+/*
+ * This file implements support for LPC17xx series devices, providing
+ * memory maps and Flash programming routines.
+ *
+ * References and details about the IAP variant used here:
+ * LPC1759/58/56/54/52/51 32-bit ARM Cortex-M3, Product data sheet, Rev. 8.7
+ *   https://www.nxp.com/docs/en/data-sheet/LPC1759_58_56_54_52_51.pdf
+ * and (behind their login wall):
+ * UM10360 - LPC176x/5x User manual
+ *   https://www.nxp.com/webapp/Download?colCode=UM10360&location=null
+ */
+
 #include "general.h"
 #include "target.h"
 #include "target_internal.h"
 #include "cortex.h"
 #include "lpc_common.h"
-
-/*
- * For detailed documentation on how this code works and the IAP variant used here, see:
- * https://www.nxp.com/docs/en/data-sheet/LPC1759_58_56_54_52_51.pdf
- * and (behind their login wall):
- * https://cache.nxp.com/secured/assets/documents/en/user-guide/UM10360.pdf?fileExt=.pdf
- */
 
 #define IAP_PGM_CHUNKSIZE 4096U
 
