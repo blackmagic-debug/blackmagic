@@ -29,10 +29,15 @@
 #include "lpc_common.h"
 
 /*
- * For detailed documentation on how this code works and the IAP variant used here, see:
- * https://www.nxp.com/docs/en/data-sheet/LPC1759_58_56_54_52_51.pdf
+ * This file implements support for LPC40xx series devices, providing
+ * memory maps and Flash programming routines.
+ *
+ * References and details about the IAP variant used here:
+ * LPC408x/7x 32-bit ARM Cortex-M4, Product data sheet, Rev. 3
+ *   https://www.nxp.com/docs/en/data-sheet/LPC408X_7X.pdf
  * and (behind their login wall):
- * https://cache.nxp.com/secured/assets/documents/en/user-guide/UM10360.pdf?fileExt=.pdf
+ * UM10562 - LPC408x/407x User manual, Rev. 3
+ *   https://www.nxp.com/webapp/Download?colCode=UM10562&location=null
  */
 
 #define LPC40xx_MEMMAP   UINT32_C(0x400fc040)
