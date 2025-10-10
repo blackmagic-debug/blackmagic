@@ -3,7 +3,7 @@
  *
  * Copyright (C) 2014 Allen Ibara <aibara>
  * Copyright (C) 2015 Gareth McMullin <gareth@blacksphere.co.nz>
- * Copyright (C) 2022-2024 1BitSquared <info@1bitsquared.com>
+ * Copyright (C) 2022-2025 1BitSquared <info@1bitsquared.com>
  * Rewritten by Rachel Mant <git@dragonmux.network>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -67,8 +67,6 @@
 #define LPC43xx_PARTID_FLASH_CONFIG_43x3 0x44U
 #define LPC43xx_PARTID_FLASH_CONFIG_43x5 0x22U
 #define LPC43xx_PARTID_FLASH_CONFIG_43x7 0x00U
-
-#define IAP_ENTRYPOINT_LOCATION 0x10400100U
 
 #define LPC43xx_SHADOW_BASE      0x00000000U
 #define LPC43xx_SHADOW_SIZE      0x10000000U
@@ -154,12 +152,13 @@
 #define LPC43xx_WDT_PERIOD_MAX 0xffffffU
 #define LPC43xx_WDT_PROTECT    (1U << 4U)
 
-#define IAP_RAM_SIZE LPC43xx_ETBAHB_SRAM_SIZE
-#define IAP_RAM_BASE LPC43xx_ETBAHB_SRAM_BASE
+#define LPC43xx_IAP_ENTRYPOINT_LOCATION 0x10400100U
+#define LPC43xx_IAP_RAM_SIZE            LPC43xx_ETBAHB_SRAM_SIZE
+#define LPC43xx_IAP_RAM_BASE            LPC43xx_ETBAHB_SRAM_BASE
 
-#define IAP_PGM_CHUNKSIZE 4096U
+#define LPC43xx_IAP_PGM_CHUNKSIZE 4096U
 
-#define FLASH_NUM_SECTOR 15U
+#define LPC43xx_FLASH_NUM_SECTOR 15U
 
 #define LPC43xx_FLASH_BANK_A        0U
 #define LPC43xx_FLASH_BANK_A_BASE   0x1a000000U
@@ -293,21 +292,21 @@ static void lpc43xx_wdt_kick(target_s *target);
 static void lpc43xx_add_iap_flash(target_s *const target, const uint32_t iap_entry, const uint8_t bank,
 	const uint8_t base_sector, const uint32_t addr, const size_t len, const size_t erasesize)
 {
-	lpc_flash_s *const flash = lpc_add_flash(target, addr, len, IAP_PGM_CHUNKSIZE);
+	lpc_flash_s *const flash = lpc_add_flash(target, addr, len, LPC43xx_IAP_PGM_CHUNKSIZE);
 	flash->f.blocksize = erasesize;
 	flash->f.erase = lpc43xx_iap_flash_erase;
 	flash->bank = bank;
 	flash->base_sector = base_sector;
 	flash->iap_entry = iap_entry;
-	flash->iap_ram = IAP_RAM_BASE;
-	flash->iap_msp = IAP_RAM_BASE + IAP_RAM_SIZE;
+	flash->iap_ram = LPC43xx_IAP_RAM_BASE;
+	flash->iap_msp = LPC43xx_IAP_RAM_BASE + LPC43xx_IAP_RAM_SIZE;
 	flash->wdt_kick = lpc43xx_wdt_kick;
 }
 
 static void lpc43xx_detect(target_s *const target, const lpc43xx_partid_s part_id)
 {
 	lpc43xx_priv_s *const priv = (lpc43xx_priv_s *)target->target_storage;
-	const uint32_t iap_entry = target_mem32_read32(target, IAP_ENTRYPOINT_LOCATION);
+	const uint32_t iap_entry = target_mem32_read32(target, LPC43xx_IAP_ENTRYPOINT_LOCATION);
 	uint32_t sram_ahb_size = 0;
 
 	switch (part_id.part) {
@@ -972,9 +971,9 @@ static lpc43xx_partid_s lpc43xx_iap_read_partid(target_s *const target)
 	lpc_flash_s flash;
 	flash.f.t = target;
 	flash.wdt_kick = lpc43xx_wdt_kick;
-	flash.iap_entry = target_mem32_read32(target, IAP_ENTRYPOINT_LOCATION);
-	flash.iap_ram = IAP_RAM_BASE;
-	flash.iap_msp = IAP_RAM_BASE + IAP_RAM_SIZE;
+	flash.iap_entry = target_mem32_read32(target, LPC43xx_IAP_ENTRYPOINT_LOCATION);
+	flash.iap_ram = LPC43xx_IAP_RAM_BASE;
+	flash.iap_msp = LPC43xx_IAP_RAM_BASE + LPC43xx_IAP_RAM_SIZE;
 
 	/* Prepare a failure result in case readback fails */
 	lpc43xx_partid_s result;
@@ -1008,8 +1007,8 @@ static bool lpc43xx_iap_mass_erase(target_s *const target, platform_timeout_s *c
 	/* FIXME: since this is looking like bank mass erases, maybe this should be in flash->mass_erase */
 	for (size_t bank = 0; bank < priv->flash_banks; ++bank) {
 		lpc_flash_s *const flash = (lpc_flash_s *)target->flash;
-		if (lpc_iap_call(flash, NULL, IAP_CMD_PREPARE, 0, FLASH_NUM_SECTOR - 1U, bank) ||
-			lpc_iap_call(flash, NULL, IAP_CMD_ERASE, 0, FLASH_NUM_SECTOR - 1U, CPU_CLK_KHZ, bank))
+		if (lpc_iap_call(flash, NULL, IAP_CMD_PREPARE, 0, LPC43xx_FLASH_NUM_SECTOR - 1U, bank) ||
+			lpc_iap_call(flash, NULL, IAP_CMD_ERASE, 0, LPC43xx_FLASH_NUM_SECTOR - 1U, CPU_CLK_KHZ, bank))
 			return false;
 		target_print_progress(print_progess);
 	}
