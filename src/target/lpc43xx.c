@@ -20,6 +20,24 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+/*
+ * This file implements support for LPC43xx series devices, providing
+ * memory maps and Flash programming routines.
+ *
+ * References and details about the IAP variant used here:
+ * LPC435x/3x/2x/1x 32-bit ARM Cortex-M4/M0 MCU, Product data sheet, Rev. 5.4
+ *   https://www.nxp.com/docs/en/data-sheet/LPC435X_3X_2X_1X.pdf
+ * LPC436x 32-bit ARM Cortex-M4/M0 MCU, Product data sheet, Rev. 1.3
+ *   https://www.nxp.com/docs/en/data-sheet/LPC436X.pdf
+ * LPC4350/30/20/10 32-bit ARM Cortex-M4/M0 flashless MCU, Product data sheet, Rev. 4.6
+ *   https://www.nxp.com/docs/en/data-sheet/LPC4350_30_20_10.pdf
+ * LPC4370 32-bit ARM Cortex-M4 + 2 x M0 MCU, Product Datasheet, Rev. 2.4
+ *   https://www.nxp.com/docs/en/data-sheet/LPC4370.pdf
+ * and (behind their login wall):
+ * UM10503 - LPC43xx/LPC43Sxx ARM Cortex®-M4/M0 multi-core microcontroller, User manual, Rev. 2.5
+ *   https://www.nxp.com/webapp/Download?colCode=UM10503&location=null
+ */
+
 #include <string.h>
 #include "general.h"
 #include "target.h"
