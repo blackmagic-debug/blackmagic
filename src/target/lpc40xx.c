@@ -1,9 +1,8 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
- * Copyright (C) 2012 Gareth McMullin <gareth@blacksphere.co.nz>
  * Copyright (C) 2023 Vegard Storheil Eriksen <zyp@jvnv.net>
- * Copyright (C) 2025 1BitSquared <info@1bitsquared.com>
+ * Copyright (C) 2024-2025 1BitSquared <info@1bitsquared.com>
  * Written by Vegard Storheil Eriksen <zyp@jvnv.net>
  * Modified by Rachel Mant <git@dragonmux.network>
  *
@@ -29,10 +28,15 @@
 #include "lpc_common.h"
 
 /*
- * For detailed documentation on how this code works and the IAP variant used here, see:
- * https://www.nxp.com/docs/en/data-sheet/LPC1759_58_56_54_52_51.pdf
+ * This file implements support for LPC40xx series devices, providing
+ * memory maps and Flash programming routines.
+ *
+ * References and details about the IAP variant used here:
+ * LPC408x/7x 32-bit ARM Cortex-M4 microcontroller, Product data sheet, Rev. 3
+ *   https://www.nxp.com/docs/en/data-sheet/LPC408X_7X.pdf
  * and (behind their login wall):
- * https://cache.nxp.com/secured/assets/documents/en/user-guide/UM10360.pdf?fileExt=.pdf
+ * UM10562 - LPC408x/407x User manual, Rev. 3
+ *   https://www.nxp.com/webapp/Download?colCode=UM10562&location=null
  */
 
 #define LPC40xx_SRAM_SIZE_MIN 8192U // LPC1751
