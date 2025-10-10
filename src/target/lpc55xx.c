@@ -42,10 +42,10 @@
  * LPC55S1x/LPC551x 32-bit Arm Cortex®-M33, Product data sheet, Rev. 1.8
  *   https://www.nxp.com/docs/en/nxp/data-sheets/LPC55S1x_LPC551x_DS.pdf
  * and (behind their login wall):
- * UM11424 - LPC55S0x/LPC550x User manual
- *   https://cache.nxp.com/secured/assets/documents/en/nxp/user-guides/UM11424.pdf?fileExt=.pdf
- * UM11295 - LPC55S1x/LPC551x User manual
- *   https://cache.nxp.com/secured/assets/documents/en/nxp/user-guides/UM11295.pdf?fileExt=.pdf
+ * UM11424 - LPC55S0x/LPC550x User manual, Rev. 1.3
+ *   https://www.nxp.com/webapp/Download?colCode=UM11424&location=null
+ * UM11295 - LPC55S1x/LPC551x User manual, Rev. 1.7
+ *   https://www.nxp.com/webapp/Download?colCode=UM11295&location=null
  */
 
 #include "general.h"
