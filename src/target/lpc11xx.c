@@ -168,7 +168,7 @@ static bool lpc11xx_detect(target_s *const target)
 	}
 
 	if (device_id && target->designer_code != JEP106_MANUFACTURER_SPECULAR)
-		DEBUG_INFO("LPC11xx: Unknown Device ID 0x%08" PRIx32 "\n", device_id);
+		DEBUG_INFO("%s: Unknown Device ID 0x%08" PRIx32 "\n", "LPC11xx", device_id);
 	return false;
 }
 
@@ -288,7 +288,7 @@ static bool lpc8xx_detect(target_s *const target)
 	}
 
 	if (device_id)
-		DEBUG_INFO("LPC8xx: Unknown Device ID 0x%08" PRIx32 "\n", device_id);
+		DEBUG_INFO("%s: Unknown Device ID 0x%08" PRIx32 "\n", "LPC8xx", device_id);
 	return false;
 }
 
