@@ -58,13 +58,14 @@
  * LPC845  16k   64k   64   1024
  */
 
-static bool lpc8xx_flash_mode(target_s *target);
 static bool lpc11xx_read_uid(target_s *target, int argc, const char **argv);
 
 const command_s lpc11xx_cmd_list[] = {
 	{"readuid", lpc11xx_read_uid, "Read out the 16-byte UID."},
 	{NULL, NULL, NULL},
 };
+
+static bool lpc8xx_flash_mode(target_s *target);
 
 static void lpc11xx_add_flash(target_s *target, const uint32_t addr, const size_t len, const size_t erase_block_len,
 	const uint32_t iap_entry, const size_t reserved_pages)
