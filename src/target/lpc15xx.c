@@ -46,8 +46,8 @@ const command_s lpc15xx_cmd_list[] = {
 static void lpc15xx_add_flash(target_s *target, uint32_t addr, size_t len, size_t erasesize)
 {
 	struct lpc_flash *flash = lpc_add_flash(target, addr, len, IAP_PGM_CHUNKSIZE);
-	flash->f.blocksize = erasesize;
-	flash->f.write = lpc_flash_write_magic_vect;
+	flash->target_flash.blocksize = erasesize;
+	flash->target_flash.write = lpc_flash_write_magic_vect;
 	flash->iap_entry = IAP_ENTRYPOINT;
 	flash->iap_ram = IAP_RAM_BASE;
 	flash->iap_msp = IAP_RAM_BASE + MIN_RAM_SIZE - RAM_USAGE_FOR_IAP_ROUTINES;
