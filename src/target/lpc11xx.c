@@ -305,11 +305,11 @@ static bool lpc8xx_flash_mode(target_s *const target)
 	return true;
 }
 
-static bool lpc11xx_read_uid(target_s *target, int argc, const char **argv)
+static bool lpc11xx_read_uid(target_s *const target, const int argc, const char **const argv)
 {
 	(void)argc;
 	(void)argv;
-	lpc_flash_s *flash = (lpc_flash_s *)target->flash;
+	lpc_flash_s *const flash = (lpc_flash_s *)target->flash;
 	iap_result_s result = {0};
 	if (lpc_iap_call(flash, &result, IAP_CMD_READUID))
 		return false;
