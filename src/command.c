@@ -574,19 +574,6 @@ static bool cmd_halt_timeout(target_s *target, int argc, const char **argv)
 	return true;
 }
 
-static bool cmd_reset_halt(target_s *target, int argc, const char **argv)
-{
-	(void)target;
-	uint32_t pulse_len_ms = 0;
-	if (argc > 1)
-		pulse_len_ms = strtoul(argv[1], NULL, 0);
-	target_list_free();
-	platform_nrst_set_val(true);
-	platform_delay(pulse_len_ms);
-	platform_nrst_set_val(false);
-	return true;
-}
-
 static bool cmd_reset(target_s *target, int argc, const char **argv)
 {
 	(void)target;
