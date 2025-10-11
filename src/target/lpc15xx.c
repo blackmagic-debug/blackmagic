@@ -45,7 +45,7 @@ const command_s lpc15xx_cmd_list[] = {
 	{NULL, NULL, NULL},
 };
 
-static void lpc15xx_add_flash(target_s *target, uint32_t addr, size_t len, size_t erasesize)
+static void lpc15xx_add_flash(target_s *const target, const uint32_t addr, const size_t len, const size_t erasesize)
 {
 	struct lpc_flash *flash = lpc_add_flash(target, addr, len, LPC15xx_IAP_PGM_CHUNKSIZE);
 	flash->target_flash.blocksize = erasesize;
@@ -55,7 +55,7 @@ static void lpc15xx_add_flash(target_s *target, uint32_t addr, size_t len, size_
 	flash->iap_msp = LPC15xx_IAP_RAM_BASE + LPC15xx_SRAM_SIZE_MIN - LPC15xx_SRAM_IAP_SIZE;
 }
 
-bool lpc15xx_probe(target_s *target)
+bool lpc15xx_probe(target_s *const target)
 {
 	/* Read the device ID register */
 	const uint32_t device_id = target_mem32_read32(target, LPC15xx_DEVICE_ID);
@@ -81,15 +81,15 @@ bool lpc15xx_probe(target_s *target)
 	target->driver = "LPC15xx";
 	target_add_ram32(target, 0x02000000, ram_size);
 	lpc15xx_add_flash(target, 0x00000000, 0x40000, 0x1000);
-	target_add_commands(target, lpc15xx_cmd_list, "LPC15xx");
+	target_add_commands(target, lpc15xx_cmd_list, target->driver);
 	return true;
 }
 
-static bool lpc15xx_read_uid(target_s *target, int argc, const char **argv)
+static bool lpc15xx_read_uid(target_s *const target, const int argc, const char **const argv)
 {
 	(void)argc;
 	(void)argv;
-	struct lpc_flash *flash = (struct lpc_flash *)target->flash;
+	lpc_flash_s *const flash = (lpc_flash_s *)target->flash;
 	iap_result_s result = {0};
 	if (lpc_iap_call(flash, &result, IAP_CMD_READUID))
 		return false;
