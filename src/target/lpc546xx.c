@@ -52,14 +52,13 @@
 #define IAP_PGM_CHUNKSIZE 4096U
 
 static bool lpc546xx_cmd_read_partid(target_s *target, int argc, const char **argv);
-static bool lpc546xx_cmd_read_uid(target_s *target, int argc, const char **argv);
 static bool lpc546xx_cmd_reset_attach(target_s *target, int argc, const char **argv);
 static bool lpc546xx_cmd_reset(target_s *target, int argc, const char **argv);
 static bool lpc546xx_cmd_write_sector(target_s *target, int argc, const char **argv);
 
 const command_s lpc546xx_cmd_list[] = {
 	{"read_partid", lpc546xx_cmd_read_partid, "Read out the 32-bit part ID using IAP."},
-	{"read_uid", lpc546xx_cmd_read_uid, "Read out the 16-byte UID."},
+	{"read_uid", lpc_cmd_read_uid, "Read out the 16-byte UID."},
 	{"reset_attach", lpc546xx_cmd_reset_attach,
 		"Reset target. Reset debug registers. Re-attach debugger. This restores "
 		"the chip to the very start of program execution, after the ROM bootloader."},
@@ -185,23 +184,6 @@ static bool lpc546xx_cmd_read_partid(target_s *const target, const int argc, con
 	if (lpc_iap_call(flash, &result, IAP_CMD_PARTID))
 		return false;
 	tc_printf(target, "PART ID: 0x%08" PRIx32 "\n", result.values[0]);
-	return true;
-}
-
-static bool lpc546xx_cmd_read_uid(target_s *const target, const int argc, const char **const argv)
-{
-	(void)argc;
-	(void)argv;
-	lpc_flash_s *const flash = (lpc_flash_s *)target->flash;
-	iap_result_s result = {0};
-	if (lpc_iap_call(flash, &result, IAP_CMD_READUID))
-		return false;
-	uint8_t uid[16U] = {0};
-	memcpy(&uid, result.values, sizeof(uid));
-	tc_printf(target, "UID: 0x");
-	for (uint32_t i = 0; i < sizeof(uid); ++i)
-		tc_printf(target, "%02x", uid[i]);
-	tc_printf(target, "\n");
 	return true;
 }
 
