@@ -70,6 +70,13 @@ typedef struct lpc17xx_priv {
 	uint32_t memmap_state;
 } lpc17xx_priv_s;
 
+static bool lpc17xx_read_uid(target_s *target, int argc, const char **argv);
+
+const command_s lpc17xx_cmd_list[] = {
+	{"readuid", lpc17xx_read_uid, "Read out the 16-byte UID."},
+	{NULL, NULL, NULL},
+};
+
 static void lpc17xx_extended_reset(target_s *target);
 static bool lpc17xx_enter_flash_mode(target_s *target);
 static bool lpc17xx_exit_flash_mode(target_s *target);
@@ -157,6 +164,7 @@ bool lpc17xx_probe(target_s *const target)
 	target_add_ram32(target, 0x20080000U, 0x4000U);
 	lpc17xx_add_flash(target, 0x00000000U, 0x10000U, 0x1000U, 0);
 	lpc17xx_add_flash(target, 0x00010000U, 0x70000U, 0x8000U, 16);
+	target_add_commands(target, lpc17xx_cmd_list, target->driver);
 	return true;
 }
 
@@ -215,6 +223,22 @@ static void lpc17xx_extended_reset(target_s *const target)
 	 * See §33.6 Debug memory re-mapping, pg655 of UM10360 for more details.
 	 */
 	target_mem32_write32(target, LPC17xx_MEMMAP, 1);
+}
+
+static bool lpc17xx_read_uid(target_s *const target, const int argc, const char **const argv)
+{
+	(void)argc;
+	(void)argv;
+	iap_result_s result = {0};
+	if (lpc17xx_iap_call(target, &result, NULL, IAP_CMD_READUID))
+		return false;
+	uint8_t uid[16U] = {0};
+	memcpy(&uid, result.values, sizeof(uid));
+	tc_printf(target, "UID: 0x");
+	for (size_t i = 0; i < sizeof(uid); ++i)
+		tc_printf(target, "%02x", uid[i]);
+	tc_printf(target, "\n");
+	return true;
 }
 
 void lpc17xx_save_state(target_s *const target, const uint32_t iap_ram, iap_frame_s *const frame, uint32_t *const regs)
