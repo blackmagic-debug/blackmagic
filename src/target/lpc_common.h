@@ -88,6 +88,9 @@ typedef struct lpc_flash {
 	uint32_t iap_msp;
 } lpc_flash_s;
 
+bool lpc_cmd_read_uid(target_s *target, int argc, const char **argv);
+void lpc_add_commands(target_s *target);
+
 lpc_flash_s *lpc_add_flash(target_s *target, target_addr_t addr, size_t length, size_t write_size);
 iap_status_e lpc_iap_call(lpc_flash_s *flash, iap_result_s *result, iap_cmd_e cmd, ...);
 bool lpc_flash_erase(target_flash_s *flash, target_addr_t addr, size_t len);

@@ -25,6 +25,7 @@
 #include "target_internal.h"
 #include "cortexm.h"
 #include "lpc_common.h"
+#include "buffer_utils.h"
 
 #include <stdarg.h>
 
@@ -79,6 +80,11 @@ static const char *const iap_error[] = {
 	"Page is invalid",
 };
 #endif
+
+const command_s lpc_cmd_list[] = {
+	{"readuid", lpc_cmd_read_uid, "Read out the 16-byte UID."},
+	{NULL, NULL, NULL},
+};
 
 static bool lpc_flash_write(target_flash_s *target_flash, target_addr_t dest, const void *src, size_t len);
 
@@ -372,4 +378,31 @@ bool lpc_flash_write_magic_vect(target_flash_s *flash, target_addr_t dest, const
 		vectors[7] = ~sum + 1U;
 	}
 	return lpc_flash_write(flash, dest, src, len);
+}
+
+void lpc_add_commands(target_s *target)
+{
+	target_add_commands(target, lpc_cmd_list, target->driver);
+}
+
+bool lpc_cmd_read_uid(target_s *const target, const int argc, const char **const argv)
+{
+	(void)argc;
+	(void)argv;
+	/* Extract a LPC Flash instance to use for the IAP call information */
+	lpc_flash_s *const flash = (lpc_flash_s *)target->flash;
+	iap_result_s result = {0};
+	/* Ask the device for the UID data */
+	if (lpc_iap_call(flash, &result, IAP_CMD_READUID))
+		return false;
+	/* Extract the data out from the values array as a series of LE numbers */
+	uint8_t uid[16U] = {0};
+	for (size_t i = 0U; i < 4U; ++i)
+		write_le4(uid, i * 4U, result.values[i]);
+	/* Display the extracted data */
+	tc_printf(target, "UID: 0x");
+	for (uint32_t i = 0; i < ARRAY_LENGTH(uid); ++i)
+		tc_printf(target, "%02x", uid[i]);
+	tc_printf(target, "\n");
+	return true;
 }

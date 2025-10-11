@@ -58,13 +58,6 @@
  * LPC845  16k   64k   64   1024
  */
 
-static bool lpc11xx_read_uid(target_s *target, int argc, const char **argv);
-
-const command_s lpc11xx_cmd_list[] = {
-	{"readuid", lpc11xx_read_uid, "Read out the 16-byte UID."},
-	{NULL, NULL, NULL},
-};
-
 static bool lpc8xx_flash_mode(target_s *target);
 
 static void lpc11xx_add_flash(target_s *target, const uint32_t addr, const size_t len, const size_t erase_block_len,
@@ -296,29 +289,12 @@ bool lpc11xx_probe(target_s *const target)
 {
 	const bool result = lpc11xx_detect(target) || lpc8xx_detect(target);
 	if (result)
-		target_add_commands(target, lpc11xx_cmd_list, target->driver);
+		lpc_add_commands(target);
 	return result;
 }
 
 static bool lpc8xx_flash_mode(target_s *const target)
 {
 	(void)target;
-	return true;
-}
-
-static bool lpc11xx_read_uid(target_s *const target, const int argc, const char **const argv)
-{
-	(void)argc;
-	(void)argv;
-	lpc_flash_s *const flash = (lpc_flash_s *)target->flash;
-	iap_result_s result = {0};
-	if (lpc_iap_call(flash, &result, IAP_CMD_READUID))
-		return false;
-	uint8_t uid[16U] = {0};
-	memcpy(&uid, result.values, sizeof(uid));
-	tc_printf(target, "UID: 0x");
-	for (size_t i = 0; i < sizeof(uid); ++i)
-		tc_printf(target, "%02x", uid[i]);
-	tc_printf(target, "\n");
 	return true;
 }
