@@ -311,8 +311,8 @@ static void lpc43xx_add_iap_flash(target_s *const target, const uint32_t iap_ent
 	const uint8_t base_sector, const uint32_t addr, const size_t len, const size_t erasesize)
 {
 	lpc_flash_s *const flash = lpc_add_flash(target, addr, len, LPC43xx_IAP_PGM_CHUNKSIZE);
-	flash->f.blocksize = erasesize;
-	flash->f.erase = lpc43xx_iap_flash_erase;
+	flash->target_flash.blocksize = erasesize;
+	flash->target_flash.erase = lpc43xx_iap_flash_erase;
 	flash->bank = bank;
 	flash->base_sector = base_sector;
 	flash->iap_entry = iap_entry;
@@ -987,7 +987,7 @@ static lpc43xx_partid_s lpc43xx_iap_read_partid(target_s *const target)
 {
 	/* Define a fake Flash structure so we can invoke the IAP system */
 	lpc_flash_s flash;
-	flash.f.t = target;
+	flash.target_flash.t = target;
 	flash.wdt_kick = lpc43xx_wdt_kick;
 	flash.iap_entry = target_mem32_read32(target, LPC43xx_IAP_ENTRYPOINT_LOCATION);
 	flash.iap_ram = LPC43xx_IAP_RAM_BASE;
@@ -1000,7 +1000,8 @@ static lpc43xx_partid_s lpc43xx_iap_read_partid(target_s *const target)
 
 	/* Read back the part ID */
 	iap_result_s iap_result;
-	if (!lpc43xx_iap_init(&flash.f) || lpc_iap_call(&flash, &iap_result, IAP_CMD_PARTID) != IAP_STATUS_CMD_SUCCESS)
+	if (!lpc43xx_iap_init(&flash.target_flash) ||
+		lpc_iap_call(&flash, &iap_result, IAP_CMD_PARTID) != IAP_STATUS_CMD_SUCCESS)
 		return result;
 
 	/* Prepare the result and return it */

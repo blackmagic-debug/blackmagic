@@ -77,12 +77,12 @@ typedef struct iap_result {
 #define CPU_CLK_KHZ 12000U
 
 typedef struct lpc_flash {
-	target_flash_s f;
+	target_flash_s target_flash;
 	uint8_t base_sector;
 	uint8_t bank;
 	uint8_t reserved_pages;
 	/* Info filled in by specific driver */
-	void (*wdt_kick)(target_s *t);
+	void (*wdt_kick)(target_s *target);
 	uint32_t iap_entry;
 	uint32_t iap_ram;
 	uint32_t iap_msp;
@@ -90,7 +90,7 @@ typedef struct lpc_flash {
 
 lpc_flash_s *lpc_add_flash(target_s *target, target_addr_t addr, size_t length, size_t write_size);
 iap_status_e lpc_iap_call(lpc_flash_s *flash, iap_result_s *result, iap_cmd_e cmd, ...);
-bool lpc_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
-bool lpc_flash_write_magic_vect(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
+bool lpc_flash_erase(target_flash_s *flash, target_addr_t addr, size_t len);
+bool lpc_flash_write_magic_vect(target_flash_s *flash, target_addr_t dest, const void *src, size_t len);
 
 #endif /* TARGET_LPC_COMMON_H */

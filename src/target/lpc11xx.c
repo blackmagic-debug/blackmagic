@@ -68,8 +68,8 @@ static void lpc11xx_add_flash(target_s *target, const uint32_t addr, const size_
 	const uint32_t iap_entry, const size_t reserved_pages)
 {
 	lpc_flash_s *const flash = lpc_add_flash(target, addr, len, IAP_PGM_CHUNKSIZE);
-	flash->f.blocksize = erase_block_len;
-	flash->f.write = lpc_flash_write_magic_vect;
+	flash->target_flash.blocksize = erase_block_len;
+	flash->target_flash.write = lpc_flash_write_magic_vect;
 	flash->iap_entry = iap_entry;
 	flash->iap_ram = IAP_RAM_BASE;
 	flash->iap_msp = IAP_RAM_BASE + MIN_RAM_SIZE - RAM_USAGE_FOR_IAP_ROUTINES;

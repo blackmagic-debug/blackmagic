@@ -117,10 +117,10 @@ static void lpc546xx_add_flash(target_s *const target, const target_addr32_t iap
 	const target_addr32_t addr, const size_t len, const size_t erasesize)
 {
 	lpc_flash_s *const flash = lpc_add_flash(target, addr, len, IAP_PGM_CHUNKSIZE);
-	flash->f.blocksize = erasesize;
-	flash->f.erase = lpc546xx_flash_erase;
+	flash->target_flash.blocksize = erasesize;
+	flash->target_flash.erase = lpc546xx_flash_erase;
 	/* LPC546xx devices require the checksum value written into the vector table in sector 0 */
-	flash->f.write = lpc_flash_write_magic_vect;
+	flash->target_flash.write = lpc_flash_write_magic_vect;
 	flash->bank = 0;
 	flash->base_sector = base_sector;
 	flash->iap_entry = iap_entry;

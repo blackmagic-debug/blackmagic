@@ -81,9 +81,9 @@ static void lpc40xx_add_flash(
 	target_s *const target, const uint32_t addr, const size_t len, const size_t erasesize, const uint8_t base_sector)
 {
 	lpc_flash_s *flash = lpc_add_flash(target, addr, len, LPC40xx_IAP_PGM_CHUNKSIZE);
-	flash->f.blocksize = erasesize;
+	flash->target_flash.blocksize = erasesize;
 	flash->base_sector = base_sector;
-	flash->f.write = lpc_flash_write_magic_vect;
+	flash->target_flash.write = lpc_flash_write_magic_vect;
 	flash->iap_entry = LPC40xx_IAP_ENTRYPOINT_LOCATION;
 	flash->iap_ram = LPC40xx_IAP_RAM_BASE;
 	flash->iap_msp = LPC40xx_IAP_RAM_BASE + LPC40xx_SRAM_SIZE_MIN - LPC40xx_SRAM_IAP_SIZE;
