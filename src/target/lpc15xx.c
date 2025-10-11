@@ -4,6 +4,8 @@
  * Copyright (C) 2011 Mike Smith <drziplok@me.com>
  * Copyright (C) 2016 Gareth McMullin <gareth@blacksphere.co.nz>
  * Copyright (C) 2016 David Lawrence <dlaw@markforged.com>
+ * Copyright (C) 2022-2025 1BitSquared <info@1bitsquared.com>
+ * Modified by Rachel Mant <git@dragonmux.network>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,15 +28,15 @@
 #include "cortexm.h"
 #include "lpc_common.h"
 
-#define IAP_PGM_CHUNKSIZE 512U /* Should fit in RAM on any device */
+#define LPC15xx_SRAM_SIZE_MIN 1024U
+#define LPC15xx_SRAM_IAP_SIZE 32U /* IAP routines use 32 bytes at top of ram */
 
-#define MIN_RAM_SIZE               1024U
-#define RAM_USAGE_FOR_IAP_ROUTINES 32U /* IAP routines use 32 bytes at top of ram */
+#define LPC15xx_IAP_ENTRYPOINT_LOCATION 0x03000205U
+#define LPC15xx_IAP_RAM_BASE            0x02000000U
 
-#define IAP_ENTRYPOINT 0x03000205U
-#define IAP_RAM_BASE   0x02000000U
+#define LPC15xx_IAP_PGM_CHUNKSIZE 512U /* Should fit in RAM on any device */
 
-#define LPC15XX_DEVICE_ID 0x400743f8U
+#define LPC15xx_DEVICE_ID 0x400743f8U
 
 static bool lpc15xx_read_uid(target_s *target, int argc, const char **argv);
 
@@ -45,18 +47,18 @@ const command_s lpc15xx_cmd_list[] = {
 
 static void lpc15xx_add_flash(target_s *target, uint32_t addr, size_t len, size_t erasesize)
 {
-	struct lpc_flash *flash = lpc_add_flash(target, addr, len, IAP_PGM_CHUNKSIZE);
+	struct lpc_flash *flash = lpc_add_flash(target, addr, len, LPC15xx_IAP_PGM_CHUNKSIZE);
 	flash->target_flash.blocksize = erasesize;
 	flash->target_flash.write = lpc_flash_write_magic_vect;
-	flash->iap_entry = IAP_ENTRYPOINT;
-	flash->iap_ram = IAP_RAM_BASE;
-	flash->iap_msp = IAP_RAM_BASE + MIN_RAM_SIZE - RAM_USAGE_FOR_IAP_ROUTINES;
+	flash->iap_entry = LPC15xx_IAP_ENTRYPOINT_LOCATION;
+	flash->iap_ram = LPC15xx_IAP_RAM_BASE;
+	flash->iap_msp = LPC15xx_IAP_RAM_BASE + LPC15xx_SRAM_SIZE_MIN - LPC15xx_SRAM_IAP_SIZE;
 }
 
 bool lpc15xx_probe(target_s *target)
 {
-	/* read the device ID register */
-	const uint32_t device_id = target_mem32_read32(target, LPC15XX_DEVICE_ID);
+	/* Read the device ID register */
+	const uint32_t device_id = target_mem32_read32(target, LPC15xx_DEVICE_ID);
 
 	uint32_t ram_size = 0;
 	switch (device_id) {
