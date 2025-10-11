@@ -173,10 +173,10 @@ iap_status_e lpc_iap_call(lpc_flash_s *const flash, iap_result_s *const result, 
 	const size_t params_count = lpc_iap_params(cmd);
 	va_list params;
 	va_start(params, cmd);
-	for (size_t i = 0; i < params_count; ++i)
+	for (size_t i = 0U; i < params_count; ++i)
 		frame.config.params[i] = va_arg(params, uint32_t);
 	va_end(params);
-	for (size_t i = params_count; i < 4; ++i)
+	for (size_t i = params_count; i < 4U; ++i)
 		frame.config.params[i] = 0U;
 
 	/* Set the result code to something notable to help with checking if the call ran */
@@ -193,9 +193,9 @@ iap_status_e lpc_iap_call(lpc_flash_s *const flash, iap_result_s *const result, 
 	uint32_t regs[CORTEXM_GENERAL_REG_COUNT + CORTEX_FLOAT_REG_COUNT];
 	memset(regs, 0, target->regs_size);
 	/* Point r0 to the start of the config block */
-	regs[0] = flash->iap_ram + offsetof(iap_frame_s, config);
+	regs[0U] = flash->iap_ram + offsetof(iap_frame_s, config);
 	/* And r1 to the next block memory after for the results */
-	regs[1] = iap_results_addr;
+	regs[1U] = iap_results_addr;
 	/* Set the top of stack to the location of the RAM block the target uses */
 	regs[CORTEX_REG_MSP] = flash->iap_msp;
 	/* Point the return address to our breakpoint opcode (thumb mode) */
