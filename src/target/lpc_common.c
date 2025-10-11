@@ -104,7 +104,7 @@ lpc_flash_s *lpc_add_flash(
 
 static uint8_t lpc_sector_for_addr(lpc_flash_s *flash, uint32_t addr)
 {
-	return flash->base_sector + (addr - flash->target_flash.start) / flash->target_flash.blocksize;
+	return flash->base_sector + ((addr - flash->target_flash.start) / flash->target_flash.blocksize);
 }
 
 static inline bool lpc_is_full_erase(lpc_flash_s *flash, const uint32_t begin, const uint32_t end)
@@ -304,7 +304,7 @@ bool lpc_flash_erase(target_flash_s *target_flash, target_addr_t addr, size_t le
 
 	if (last_full_sector != end) {
 		const uint32_t page_start = (addr + len - LPX80X_SECTOR_SIZE) / LPX80X_PAGE_SIZE;
-		const uint32_t page_end = page_start + LPX80X_SECTOR_SIZE / LPX80X_PAGE_SIZE - 1U - flash->reserved_pages;
+		const uint32_t page_end = page_start + (LPX80X_SECTOR_SIZE / LPX80X_PAGE_SIZE) - 1U - flash->reserved_pages;
 
 		if (lpc_iap_call(flash, NULL, IAP_CMD_PREPARE, end, end, flash->bank) != IAP_STATUS_CMD_SUCCESS)
 			return false;
