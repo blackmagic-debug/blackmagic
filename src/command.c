@@ -117,6 +117,7 @@ const command_s cmd_list[] = {
 	{"halt_timeout", cmd_halt_timeout, "Timeout to wait until Cortex-M is halted: [TIMEOUT, default 2000ms]"},
 	{"connect_rst", cmd_connect_reset, "Configure connect under reset: [enable|disable]"},
 	{"reset", cmd_reset, "Pulse the nRST line - disconnects target: [PULSE_LEN, default 0ms]"},
+	{"reset_halt", cmd_reset, "Reset the target and halt at the first instruction"},
 	{"tdi_low_reset", cmd_tdi_low_reset,
 		"Pulse nRST with TDI set low to attempt to wake certain targets up (eg LPC82x)"},
 #ifdef PLATFORM_HAS_POWER_SWITCH

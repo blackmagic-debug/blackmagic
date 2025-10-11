@@ -41,6 +41,7 @@ static void dap_jtag_tms_seq(uint32_t tms_states, size_t clock_cycles);
 static void dap_jtag_tdi_tdo_seq(uint8_t *data_out, bool final_tms, const uint8_t *data_in, size_t clock_cycles);
 static void dap_jtag_tdi_seq(bool final_tms, const uint8_t *data_in, size_t clock_cycles);
 static bool dap_jtag_next(bool tms, bool tdi);
+static void dap_jtag_cycle(const bool tms, const bool tdi, const size_t clock_cycles);
 
 bool dap_jtag_init(void)
 {
@@ -60,6 +61,7 @@ bool dap_jtag_init(void)
 	jtag_proc.jtagtap_tms_seq = dap_jtag_tms_seq;
 	jtag_proc.jtagtap_tdi_tdo_seq = dap_jtag_tdi_tdo_seq;
 	jtag_proc.jtagtap_tdi_seq = dap_jtag_tdi_seq;
+	jtag_proc.jtagtap_cycle = dap_jtag_cycle;
 
 	/* Ensure we're in JTAG mode */
 	for (size_t i = 0; i <= 50U; ++i)
@@ -146,4 +148,10 @@ bool dap_jtag_configure(void)
 	if (!dap_run_cmd(request, 2U + jtag_dev_count, &response, 1U) || response != DAP_RESPONSE_OK)
 		DEBUG_ERROR("dap_jtag_configure failed with %02x\n", response);
 	return response == DAP_RESPONSE_OK;
+}
+
+static void dap_jtag_cycle(const bool tms, const bool tdi, const size_t clock_cycles)
+{
+	for (size_t cycle = 0U; cycle < clock_cycles; ++cycle)
+		dap_jtag_next(tms, tdi);
 }

@@ -70,6 +70,8 @@ typedef struct cortexar_priv {
 		uint32_t spsr[5U];
 		uint64_t d[16U];
 		uint32_t fpcsr;
+		uint32_t dfsr;
+		uint32_t dfar;
 	} core_regs;
 
 	/* Fault status/address cache */
@@ -194,6 +196,7 @@ typedef struct cortexar_priv {
 #define CORTEXAR_CPSR_MODE_HYP  0x0000001aU
 #define CORTEXAR_CPSR_MODE_SYS  0x0000001fU
 #define CORTEXAR_CPSR_THUMB     (1U << 5U)
+#define CORTEXAR_CPSR_BE        (1U << 9U)
 
 /* CPSR remap position for GDB XML mapping */
 #define CORTEXAR_CPSR_GDB_REMAP_POS 25U
@@ -249,7 +252,7 @@ static const uint16_t cortexar_spsr_encodings[5] = {
 	(((opc1) << 21U) | ((crn) << 16U) | ((rt) << 12U) | ((coproc) << 8U) | ((opc2) << 5U) | (crm))
 /* Packs a CRn and CRm value for the coprocessor IO routines below to unpack */
 #define ENCODE_CP_REG(n, m, opc1, opc2) \
-	((((n) & 0xfU) << 4U) | ((m) & 0xfU) | (((opc1) & 0x7U) << 8U) | (((opc2) & 0x7U) << 12U))
+	((((n)&0xfU) << 4U) | ((m)&0xfU) | (((opc1)&0x7U) << 8U) | (((opc2)&0x7U) << 12U))
 
 /*
  * Instruction encodings for coprocessor load/store
@@ -286,10 +289,10 @@ static const uint16_t cortexar_spsr_encodings[5] = {
  * The fourth is `STRH r1, [r0], #+2` to store a uint16_t to [r0] from r1 and increment
  * the address in r0 by 2, writing the new address back to r0.
  */
-#define ARM_LDRB_R0_R1_INSN 0xe4f01001U
-#define ARM_LDRH_R0_R1_INSN 0xe0f010b2U
-#define ARM_STRB_R1_R0_INSN 0xe4e01001U
-#define ARM_STRH_R1_R0_INSN 0xe0e010b2U
+#define ARM_LDRB_R0_R1_INSN 0xe4d01001U
+#define ARM_LDRH_R0_R1_INSN 0xe0d010b2U
+#define ARM_STRB_R1_R0_INSN 0xe4c01001U
+#define ARM_STRH_R1_R0_INSN 0xe0c010b2U
 
 /* Instruction encodings for synchronisation barriers */
 #define ARM_ISB_INSN 0xe57ff06fU
@@ -348,6 +351,7 @@ static const uint16_t cortexar_spsr_encodings[5] = {
 #define TOPT_FLAVOUR_SEC_EXT  (1U << 2U) /* If set, core has security extensions */
 #define TOPT_FLAVOUR_VIRT_EXT (1U << 3U) /* If set, core has virtualisation extensions */
 #define TOPT_FLAVOUR_VIRT_MEM (1U << 4U) /* If set, core uses the virtual memory model, not protected */
+#define TOPT_FLAVOUR_BE       (1U << 5U) /* If set, core is big endian, not little endian */
 
 #define CORTEXAR_STATUS_DATA_FAULT        (1U << 0U)
 #define CORTEXAR_STATUS_MMU_FAULT         (1U << 1U)
@@ -699,7 +703,6 @@ static target_addr_t cortexar_virt_to_phys(target_s *const target, const target_
 static bool cortexar_oslock_unlock(target_s *const target)
 {
 	const uint32_t lock_status = cortex_dbg_read32(target, CORTEXAR_DBG_OSLSR);
-	DEBUG_TARGET("%s: OS lock status: %08" PRIx32 "\n", __func__, lock_status);
 	/* Check if the lock is implemented, then if it is, if it's set */
 	if (((lock_status & CORTEXAR_DBG_OSLSR_OS_LOCK_MODEL) == CORTEXAR_DBG_OSLSR_OS_LOCK_MODEL_FULL ||
 			(lock_status & CORTEXAR_DBG_OSLSR_OS_LOCK_MODEL) == CORTEXAR_DBG_OSLSR_OS_LOCK_MODEL_PARTIAL) &&
@@ -886,6 +889,16 @@ static target_s *cortexar_probe(
 	} else
 		target_check_error(target);
 
+	/* Read the CPSR to figure out if this target is big endian. This clobbers r0, so save
+	 * r0 beforehand and restore it after the read is complete.
+	 */
+	uint32_t r0 = cortexar_core_reg_read(target, 0U);
+	cortexar_run_insn(target, ARM_MRS_R0_CPSR_INSN);
+	priv->core_regs.cpsr = cortexar_core_reg_read(target, 0U);
+	cortexar_core_reg_write(target, 0U, r0);
+	if (priv->core_regs.cpsr & CORTEXAR_CPSR_BE)
+		target->target_options |= TOPT_FLAVOUR_BE;
+
 	return target;
 }
 
@@ -922,6 +935,13 @@ bool cortexr_probe(adiv5_access_port_s *const ap, const target_addr_t base_addre
 	if (!target)
 		return false;
 
+	switch (target->designer_code) {
+	/* TI omitted the designer code on TMS570 */
+	case 0:
+		PROBE(ti_tms570_probe);
+		break;
+	}
+
 #if CONFIG_BMDA == 0
 	gdb_outf("Please report unknown device with Designer 0x%x Part ID 0x%x\n", target->designer_code, target->part_id);
 #else
@@ -949,7 +969,7 @@ bool cortexar_attach(target_s *const target)
 	target_halt_reason_e reason = TARGET_HALT_RUNNING;
 	while (!platform_timeout_is_expired(&timeout) && reason == TARGET_HALT_RUNNING)
 		reason = target_halt_poll(target, NULL);
-	if (reason != TARGET_HALT_REQUEST) {
+	if ((reason != TARGET_HALT_REQUEST) && (reason != TARGET_HALT_BREAKPOINT)) {
 		DEBUG_ERROR("Failed to halt the core\n");
 		return false;
 	}
@@ -999,6 +1019,36 @@ static bool cortexar_check_error(target_s *const target)
 	return fault || cortex_check_error(target);
 }
 
+static inline uint32_t cortexar_endian_dp_read(target_s *const target, const uint16_t addr)
+{
+	cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
+	uint32_t value = adiv5_dp_read(priv->base.ap->dp, addr);
+	extern bool skip_swap;
+	if ((target->target_options & TOPT_FLAVOUR_BE) && !skip_swap) {
+		uint8_t tmp_value[4];
+		// The instruction run gave us back a value that we interpreted as little endian, however
+		write_le4(tmp_value, 0, value);
+		// This target is big endian, so convert to the opposite representation
+		value = read_be4(tmp_value, 0);
+	}
+	return value;
+}
+
+static inline void cortexar_endian_dp_write(target_s *const target, const uint16_t addr, uint32_t value)
+{
+	cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
+	extern bool skip_swap;
+
+	if ((target->target_options & TOPT_FLAVOUR_BE) && !skip_swap) {
+		uint8_t tmp_value[4];
+		// The instruction run gave us back a value that we interpreted as little endian, however
+		write_le4(tmp_value, 0, value);
+		// This target is big endian, so convert to the opposite representation
+		value = read_be4(tmp_value, 0);
+	}
+	adiv5_dp_write(priv->base.ap->dp, addr, value);
+}
+
 /* Fast path for cortexar_mem_read(). Assumes the address to read data from is already loaded in r0. */
 static inline bool cortexar_mem_read_fast(target_s *const target, uint32_t *const dest, const size_t count)
 {
@@ -1016,7 +1066,7 @@ static inline bool cortexar_mem_read_fast(target_s *const target, uint32_t *cons
 		/* Run the transfer, hammering the DTR */
 		for (size_t offset = 0; offset < count; ++offset) {
 			/* Read the next value, which is the value for the last instruction run */
-			const uint32_t value = adiv5_dp_read(priv->base.ap->dp, ADIV5_AP_DB(CORTEXAR_BANKED_DTRRX));
+			const uint32_t value = cortexar_endian_dp_read(target, ADIV5_AP_DB(CORTEXAR_BANKED_DTRRX));
 			/* If we've run the instruction at least once, store it */
 			if (offset)
 				dest[offset - 1U] = value;
@@ -1026,7 +1076,7 @@ static inline bool cortexar_mem_read_fast(target_s *const target, uint32_t *cons
 		/* Go back into DCC Normal (Non-blocking) mode */
 		adiv5_dp_write(priv->base.ap->dp, ADIV5_AP_DB(CORTEXAR_BANKED_DCSR), dbg_dcsr | CORTEXAR_DBG_DCSR_DCC_NORMAL);
 		/* Grab the value of the last instruction run now it won't run again */
-		dest[count - 1U] = adiv5_dp_read(priv->base.ap->dp, ADIV5_AP_DB(CORTEXAR_BANKED_DTRRX));
+		dest[count - 1U] = cortexar_endian_dp_read(target, ADIV5_AP_DB(CORTEXAR_BANKED_DTRRX));
 		/* Check if the instruction triggered a synchronous data abort */
 		return cortexar_check_data_abort(target, status);
 	}
@@ -1035,6 +1085,14 @@ static inline bool cortexar_mem_read_fast(target_s *const target, uint32_t *cons
 	for (size_t offset = 0; offset < count; ++offset) {
 		if (!cortexar_run_read_insn(target, ARM_LDC_R0_POSTINC4_DTRTX_INSN, dest + offset))
 			return false; /* Propagate failure if it happens */
+		extern bool skip_swap;
+		if ((target->target_options & TOPT_FLAVOUR_BE) && !skip_swap) {
+			uint8_t value[4];
+			// The instruction run gave us back a value that we interpreted as little endian, however
+			write_le4(value, 0, dest[offset]);
+			// This target is big endian, so convert to the opposite representation
+			dest[offset] = read_be4(value, 0);
+		}
 	}
 	return true; /* Signal success */
 }
@@ -1160,7 +1218,7 @@ static inline bool cortexar_mem_write_fast(target_s *const target, const uint32_
 		adiv5_dp_write(priv->base.ap->dp, ADIV5_AP_DB(CORTEXAR_BANKED_ITR), ARM_STC_DTRRX_R0_POSTINC4_INSN);
 		/* Run the transfer, hammering the DTR */
 		for (size_t offset = 0; offset < count; ++offset)
-			adiv5_dp_write(priv->base.ap->dp, ADIV5_AP_DB(CORTEXAR_BANKED_DTRTX), src[offset]);
+			cortexar_endian_dp_write(target, ADIV5_AP_DB(CORTEXAR_BANKED_DTRTX), src[offset]);
 		/* Now read out the status from the DCSR in case anything went wrong */
 		const uint32_t status = adiv5_dp_read(priv->base.ap->dp, ADIV5_AP_DB(CORTEXAR_BANKED_DCSR));
 		/* Go back into DCC Normal (Non-blocking) mode */
@@ -1171,7 +1229,13 @@ static inline bool cortexar_mem_write_fast(target_s *const target, const uint32_
 
 	/* Write each of the uint32_t's checking for failure */
 	for (size_t offset = 0; offset < count; ++offset) {
-		if (!cortexar_run_write_insn(target, ARM_STC_DTRRX_R0_POSTINC4_INSN, src[offset]))
+		uint32_t value;
+		extern bool skip_swap;
+		if ((target->target_options & TOPT_FLAVOUR_BE) && !skip_swap)
+			value = read_be4((const void *)src, offset * 4U);
+		else
+			value = read_le4((const void *)src, offset * 4U);
+		if (!cortexar_run_write_insn(target, ARM_STC_DTRRX_R0_POSTINC4_INSN, value))
 			return false; /* Propagate failure if it happens */
 	}
 	return true; /* Signal success */
@@ -1271,12 +1335,31 @@ static void cortexar_regs_read(target_s *const target, void *const data)
 {
 	const cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
 	uint32_t *const regs = (uint32_t *)data;
+	extern bool skip_swap;
 	/* Copy the register values out from our cache */
-	memcpy(regs, priv->core_regs.r, sizeof(priv->core_regs.r));
-	regs[CORTEX_REG_CPSR] = priv->core_regs.cpsr;
+	for (size_t reg_index = 0; reg_index < sizeof(priv->core_regs.r) / sizeof(*priv->core_regs.r); reg_index++)
+		if ((target->target_options & TOPT_FLAVOUR_BE) && !skip_swap)
+			write_be4(data, reg_index * 4, priv->core_regs.r[reg_index]);
+		else
+			write_le4(data, reg_index * 4, priv->core_regs.r[reg_index]);
+	if ((target->target_options & TOPT_FLAVOUR_BE) && !skip_swap) {
+		uint8_t value[4];
+		write_le4(value, 0, priv->core_regs.cpsr);
+		regs[CORTEX_REG_CPSR] = read_be4(value, 0);
+	} else
+		regs[CORTEX_REG_CPSR] = priv->core_regs.cpsr;
 	if (target->target_options & TOPT_FLAVOUR_FLOAT) {
-		memcpy(regs + CORTEXAR_GENERAL_REG_COUNT, priv->core_regs.d, sizeof(priv->core_regs.d));
-		regs[CORTEX_REG_FPCSR] = priv->core_regs.fpcsr;
+		for (size_t reg_index = 0; reg_index < sizeof(priv->core_regs.d) / sizeof(*priv->core_regs.d); reg_index++)
+			if ((target->target_options & TOPT_FLAVOUR_BE) && !skip_swap)
+				write_be4(data, (CORTEXAR_GENERAL_REG_COUNT + reg_index) * 4, priv->core_regs.d[reg_index]);
+			else
+				write_le4(data, (CORTEXAR_GENERAL_REG_COUNT + reg_index) * 4, priv->core_regs.d[reg_index]);
+		if ((target->target_options & TOPT_FLAVOUR_BE) && !skip_swap) {
+			uint8_t value[4];
+			write_le4(value, 0, priv->core_regs.fpcsr);
+			regs[CORTEX_REG_FPCSR] = read_be4(value, 0);
+		} else
+			regs[CORTEX_REG_FPCSR] = priv->core_regs.fpcsr;
 	}
 }
 
@@ -1284,12 +1367,31 @@ static void cortexar_regs_write(target_s *const target, const void *const data)
 {
 	cortexar_priv_s *const priv = (cortexar_priv_s *)target->priv;
 	const uint32_t *const regs = (const uint32_t *)data;
+	extern bool skip_swap;
 	/* Copy the new register values into our cache */
-	memcpy(priv->core_regs.r, regs, sizeof(priv->core_regs.r));
-	priv->core_regs.cpsr = regs[CORTEX_REG_CPSR];
+	for (size_t reg_index = 0; reg_index < sizeof(priv->core_regs.r) / sizeof(*priv->core_regs.r); reg_index++)
+		if ((target->target_options & TOPT_FLAVOUR_BE) && !skip_swap)
+			priv->core_regs.r[reg_index] = read_be4(data, reg_index * 4);
+		else
+			priv->core_regs.r[reg_index] = read_le4(data, reg_index * 4);
+	if ((target->target_options & TOPT_FLAVOUR_BE) && !skip_swap) {
+		uint8_t value[4];
+		write_le4(value, 0, regs[CORTEX_REG_CPSR]);
+		priv->core_regs.cpsr = read_be4(value, 0);
+	} else
+		priv->core_regs.cpsr = regs[CORTEX_REG_CPSR];
 	if (target->target_options & TOPT_FLAVOUR_FLOAT) {
-		memcpy(priv->core_regs.d, regs + CORTEXAR_GENERAL_REG_COUNT, sizeof(priv->core_regs.d));
-		priv->core_regs.fpcsr = regs[CORTEX_REG_FPCSR];
+		for (size_t reg_index = 0; reg_index < sizeof(priv->core_regs.r) / sizeof(*priv->core_regs.r); reg_index++)
+			if ((target->target_options & TOPT_FLAVOUR_BE) && !skip_swap)
+				priv->core_regs.d[reg_index] = read_be4(data, (reg_index + CORTEXAR_GENERAL_REG_COUNT) * 4);
+			else
+				priv->core_regs.d[reg_index] = read_le4(data, (reg_index + CORTEXAR_GENERAL_REG_COUNT) * 4);
+		if ((target->target_options & TOPT_FLAVOUR_BE) && !skip_swap) {
+			uint8_t value[4];
+			write_le4(value, 0, regs[CORTEX_REG_FPCSR]);
+			priv->core_regs.fpcsr = read_be4(value, 0);
+		} else
+			priv->core_regs.fpcsr = regs[CORTEX_REG_FPCSR];
 	}
 }
 
@@ -1325,6 +1427,7 @@ static size_t cortexar_reg_width(const size_t reg)
 
 static size_t cortexar_reg_read(target_s *const target, const uint32_t reg, void *const data, const size_t max)
 {
+	extern bool skip_swap;
 	/* Try to get a pointer to the storage for the requested register, and return -1 if that fails */
 	const void *const reg_ptr = cortexar_reg_ptr(target, reg);
 	if (!reg_ptr)
@@ -1334,12 +1437,32 @@ static size_t cortexar_reg_read(target_s *const target, const uint32_t reg, void
 	if (max < reg_width)
 		return 0;
 	/* Finally, copy the register data out and return the width */
-	memcpy(data, reg_ptr, reg_width);
+	switch (reg_width) {
+	case 4: {
+		uint32_t value;
+		if ((target->target_options & TOPT_FLAVOUR_BE) && !skip_swap)
+			value = read_be4(reg_ptr, 0);
+		else
+			value = read_le4(reg_ptr, 0);
+		write_le4(data, 0, value);
+		break;
+	}
+	case 8: {
+		uint64_t value;
+		if ((target->target_options & TOPT_FLAVOUR_BE) && !skip_swap)
+			value = read_be8(reg_ptr, 0);
+		else
+			value = read_le8(reg_ptr, 0);
+		write_le8(data, 0, value);
+		break;
+	}
+	}
 	return reg_width;
 }
 
 static size_t cortexar_reg_write(target_s *const target, const uint32_t reg, const void *const data, const size_t max)
 {
+	extern bool skip_swap;
 	/* Try to get a pointer to the storage for the requested register, and return -1 if that fails */
 	void *const reg_ptr = cortexar_reg_ptr(target, reg);
 	if (!reg_ptr)
@@ -1349,7 +1472,24 @@ static size_t cortexar_reg_write(target_s *const target, const uint32_t reg, con
 	if (max < reg_width)
 		return 0;
 	/* Finally, copy the new register data in and return the width */
-	memcpy(reg_ptr, data, reg_width);
+	switch (reg_width) {
+	case 4: {
+		uint32_t value = read_le4(data, 0);
+		if ((target->target_options & TOPT_FLAVOUR_BE) && !skip_swap)
+			write_be4(reg_ptr, 0, value);
+		else
+			write_le4(reg_ptr, 0, value);
+		break;
+	}
+	case 8: {
+		uint64_t value = read_le8(data, 0);
+		if ((target->target_options & TOPT_FLAVOUR_BE) && !skip_swap)
+			write_be8(reg_ptr, 0, value);
+		else
+			write_le8(reg_ptr, 0, value);
+		break;
+	}
+	}
 	return reg_width;
 }
 
@@ -1389,7 +1529,7 @@ static void cortexar_reset(target_s *const target)
 #endif
 
 	/* 10ms delay to ensure bootroms have had time to run */
-	platform_delay(10);
+	// platform_delay(10);
 	/* Ignore any initial errors out of reset */
 	target_check_error(target);
 }
@@ -1497,6 +1637,10 @@ static void cortexar_halt_resume(target_s *const target, const bool step)
 	/* Invalidate all the instruction caches if we're on a VMSA model device */
 	if (target->target_options & TOPT_FLAVOUR_VIRT_MEM)
 		cortexar_coproc_write(target, CORTEXAR_ICIALLU, 0U);
+	else {
+		cortexar_coproc_write(target, CORTEXAR_ICIALLU, 0U);
+		// cortexar_run_insn(target, ARM_ISB_INSN);
+	}
 	/* Mark the fault status and address cache invalid */
 	priv->core_status &= ~CORTEXAR_STATUS_FAULT_CACHE_VALID;
 
