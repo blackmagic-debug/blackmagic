@@ -1,9 +1,10 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
- * Copyright (C) 2014 Allen Ibara <aibara>
- * Copyright (C) 2015 Gareth McMullin <gareth@blacksphere.co.nz>
  * Copyright (C) 2020 Eivind Bergem <eivindbergem>
+ * Copyright (C) 2023-2025 1BitSquared <info@1bitsquared.com>
+ * Written by Eivind Bergem <eivindbergem>
+ * Modified by Rachel Mant <git@dragonmux.network>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,6 +18,18 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+/*
+ * This file implements support for LPC546xx series devices, providing
+ * memory maps and Flash programming routines.
+ *
+ * References and details about the IAP variant used here:
+ * LPC546xx 32-bit ARM Cortex-M4 microcontroller, Product data sheet, Rev. 2.8
+ *   https://www.nxp.com/docs/en/data-sheet/LPC546XX.pdf
+ * and (behind their login wall):
+ * UM10912 - LPC546xx User manual, Rev. 2.4
+ *   https://www.nxp.com/webapp/Download?colCode=UM10912&location=null
  */
 
 #include <string.h>
