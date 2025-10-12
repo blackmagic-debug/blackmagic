@@ -43,9 +43,6 @@ static void lpc15xx_add_flash(target_s *const target, const uint32_t addr, const
 	struct lpc_flash *flash = lpc_add_flash(target, addr, len, LPC15xx_IAP_PGM_CHUNKSIZE);
 	flash->target_flash.blocksize = erasesize;
 	flash->target_flash.write = lpc_flash_write_magic_vect;
-	flash->iap_entry = LPC15xx_IAP_ENTRYPOINT_LOCATION;
-	flash->iap_ram = LPC15xx_IAP_RAM_BASE;
-	flash->iap_msp = LPC15xx_IAP_RAM_BASE + LPC15xx_SRAM_SIZE_MIN - LPC15xx_SRAM_IAP_SIZE;
 }
 
 bool lpc15xx_probe(target_s *const target)
@@ -71,6 +68,21 @@ bool lpc15xx_probe(target_s *const target)
 		return false;
 	}
 
+	/* Allocate the private structure needed for lpc_iap_call() to work */
+	lpc_priv_s *const priv = calloc(1, sizeof(*priv));
+	if (!priv) { /* calloc failed: heap exhaustion */
+		DEBUG_ERROR("calloc: failed in %s\n", __func__);
+		return false;
+	}
+	target->target_storage = priv;
+
+	/* Set the structure up for this target */
+	priv->iap_params = lpc_iap_params;
+	priv->iap_entry = LPC15xx_IAP_ENTRYPOINT_LOCATION;
+	priv->iap_ram = LPC15xx_IAP_RAM_BASE;
+	priv->iap_msp = LPC15xx_IAP_RAM_BASE + LPC15xx_SRAM_SIZE_MIN - LPC15xx_SRAM_IAP_SIZE;
+
+	/* Register Flash and RAM maps + target-specific commands */
 	target->driver = "LPC15xx";
 	target_add_ram32(target, 0x02000000, ram_size);
 	lpc15xx_add_flash(target, 0x00000000, 0x40000, 0x1000);

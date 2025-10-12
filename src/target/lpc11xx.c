@@ -43,7 +43,7 @@
 #define LPC8xx_DEVICE_ID  0x400483f8U
 
 /*
- * CHIP    Ram Flash page sector   Rsvd pages  EEPROM
+ * Chip    RAM Flash page sector   Rsvd pages  EEPROM
  * LPX80x   2k   16k   64   1024            2
  * LPC804   4k   32k   64   1024            2
  * LPC8N04  8k   32k   64   1024           32
@@ -60,16 +60,31 @@
 
 static bool lpc8xx_flash_mode(target_s *target);
 
-static void lpc11xx_add_flash(target_s *target, const uint32_t addr, const size_t len, const size_t erase_block_len,
-	const uint32_t iap_entry, const size_t reserved_pages)
+static void lpc11xx_add_flash(
+	target_s *target, const uint32_t addr, const size_t len, const size_t erase_block_len, const size_t reserved_pages)
 {
 	lpc_flash_s *const flash = lpc_add_flash(target, addr, len, LPC11xx_IAP_PGM_CHUNKSIZE);
 	flash->target_flash.blocksize = erase_block_len;
 	flash->target_flash.write = lpc_flash_write_magic_vect;
-	flash->iap_entry = iap_entry;
-	flash->iap_ram = LPC11xx_IAP_RAM_BASE;
-	flash->iap_msp = LPC11xx_IAP_RAM_BASE + LPC11xx_SRAM_SIZE_MIN - LPC11xx_SRAM_IAP_SIZE;
 	flash->reserved_pages = reserved_pages;
+}
+
+static bool lpc11xx_priv_init(target_s *const target, const target_addr32_t iap_entry)
+{
+	/* Allocate the private structure needed for lpc_iap_call() to work */
+	lpc_priv_s *const priv = calloc(1, sizeof(*priv));
+	if (!priv) { /* calloc failed: heap exhaustion */
+		DEBUG_ERROR("calloc: failed in %s\n", __func__);
+		return false;
+	}
+	target->target_storage = priv;
+
+	/* Set the structure up for this target */
+	priv->iap_params = lpc_iap_params;
+	priv->iap_entry = iap_entry;
+	priv->iap_ram = LPC11xx_IAP_RAM_BASE;
+	priv->iap_msp = LPC11xx_IAP_RAM_BASE + LPC11xx_SRAM_SIZE_MIN - LPC11xx_SRAM_IAP_SIZE;
+	return true;
 }
 
 static bool lpc11xx_detect(target_s *const target)
@@ -128,26 +143,25 @@ static bool lpc11xx_detect(target_s *const target)
 	case 0x2980002bU: /* LPC11u24x/401 - 32K Flash 8K SRAM */
 		target->driver = "LPC11xx";
 		target_add_ram32(target, LPC11xx_SRAM_BASE, 0x2000);
-		lpc11xx_add_flash(target, LPC11xx_FLASH_BASE, 0x20000, 0x1000, LPC11xx_IAP_ENTRYPOINT_LOCATION, 0);
-		return true;
-
+		lpc11xx_add_flash(target, LPC11xx_FLASH_BASE, 0x20000, 0x1000, 0);
+		break;
 	case 0x0a24902bU:
 	case 0x1a24902bU:
 		target->driver = "LPC1112";
 		target_add_ram32(target, LPC11xx_SRAM_BASE, 0x1000);
-		lpc11xx_add_flash(target, LPC11xx_FLASH_BASE, 0x10000, 0x1000, LPC11xx_IAP_ENTRYPOINT_LOCATION, 0);
-		return true;
+		lpc11xx_add_flash(target, LPC11xx_FLASH_BASE, 0x10000, 0x1000, 0);
+		break;
 	case 0x1000002bU: /* FX LPC11U6 32 kB SRAM/256 kB flash (max) */
 		target->driver = "LPC11U6";
 		target_add_ram32(target, LPC11xx_SRAM_BASE, 0x8000);
-		lpc11xx_add_flash(target, LPC11xx_FLASH_BASE, 0x40000, 0x1000, LPC11xx_IAP_ENTRYPOINT_LOCATION, 0);
-		return true;
+		lpc11xx_add_flash(target, LPC11xx_FLASH_BASE, 0x40000, 0x1000, 0);
+		break;
 	case 0x3000002bU:
 	case 0x3d00002bU:
 		target->driver = "LPC1343";
 		target_add_ram32(target, LPC11xx_SRAM_BASE, 0x2000);
-		lpc11xx_add_flash(target, LPC11xx_FLASH_BASE, 0x8000, 0x1000, LPC11xx_IAP_ENTRYPOINT_LOCATION, 0);
-		return true;
+		lpc11xx_add_flash(target, LPC11xx_FLASH_BASE, 0x8000, 0x1000, 0);
+		break;
 	case 0x00008a04U: /* LPC8N04 (see UM11074 Rev.1.3 §4.5.19) */
 		target->driver = "LPC8N04";
 		target_add_ram32(target, LPC11xx_SRAM_BASE, 0x2000);
@@ -156,13 +170,15 @@ static bool lpc11xx_detect(target_s *const target)
 		 * contain the initialization code and IAP firmware.
 		 * Do not touch them!
 		 */
-		lpc11xx_add_flash(target, LPC11xx_FLASH_BASE, 0x7800, 0x400, LPC11xx_IAP_ENTRYPOINT_LOCATION, 0);
-		return true;
+		lpc11xx_add_flash(target, LPC11xx_FLASH_BASE, 0x7800, 0x400, 0);
+		break;
+	default:
+		if (device_id && target->designer_code != JEP106_MANUFACTURER_SPECULAR)
+			DEBUG_INFO("%s: Unknown Device ID 0x%08" PRIx32 "\n", "LPC11xx", device_id);
+		return false;
 	}
 
-	if (device_id && target->designer_code != JEP106_MANUFACTURER_SPECULAR)
-		DEBUG_INFO("%s: Unknown Device ID 0x%08" PRIx32 "\n", "LPC11xx", device_id);
-	return false;
+	return lpc11xx_priv_init(target, LPC11xx_IAP_ENTRYPOINT_LOCATION);
 }
 
 static bool lpc8xx_detect(target_s *const target)
@@ -180,18 +196,18 @@ static bool lpc8xx_detect(target_s *const target)
 	 * LPC11U3x variants.
 	 */
 	const uint32_t device_id = target_mem32_read32(target, LPC8xx_DEVICE_ID);
-	target->enter_flash_mode = lpc8xx_flash_mode;
-	target->exit_flash_mode = lpc8xx_flash_mode;
+	target_addr32_t iap_entry = 0U;
 
 	switch (device_id) {
-	case 0x00008021U: /* LPC802M001JDH20 - 16K Flash 2K SRAM */
+	case 0x00008021U: /* LPC802M001JDH20/LPC802UK - 16KiB Flash 2KiB SRAM */
 	case 0x00008022U: /* LPC802M011JDH20 */
 	case 0x00008023U: /* LPC802M001JDH16 */
 	case 0x00008024U: /* LPC802M001JHI33 */
 		target->driver = "LPC802";
 		target_add_ram32(target, LPC11xx_SRAM_BASE, 0x800);
-		lpc11xx_add_flash(target, LPC11xx_FLASH_BASE, 0x4000, 0x400, LPC8xx_IAP_ENTRYPOINT_LOCATION, 2);
-		return true;
+		lpc11xx_add_flash(target, LPC11xx_FLASH_BASE, 0x4000, 0x400, 2);
+		iap_entry = LPC8xx_IAP_ENTRYPOINT_LOCATION;
+		break;
 	case 0x00008040U: /* LPC804M101JBD64 - 32K Flash 4K SRAM */
 	case 0x00008041U: /* LPC804M101JDH20 */
 	case 0x00008042U: /* LPC804M101JDH24 */
@@ -199,8 +215,9 @@ static bool lpc8xx_detect(target_s *const target)
 	case 0x00008044U: /* LPC804M101JHI33 */
 		target->driver = "LPC804";
 		target_add_ram32(target, LPC11xx_SRAM_BASE, 0x1000);
-		lpc11xx_add_flash(target, LPC11xx_FLASH_BASE, 0x8000, 0x400, LPC8xx_IAP_ENTRYPOINT_LOCATION, 2);
-		return true;
+		lpc11xx_add_flash(target, LPC11xx_FLASH_BASE, 0x8000, 0x400, 2);
+		iap_entry = LPC8xx_IAP_ENTRYPOINT_LOCATION;
+		break;
 	case 0x00008100U: /* LPC810M021FN8 - 4K Flash 1K SRAM */
 	case 0x00008110U: /* LPC811M001JDH16 - 8K Flash 2K SRAM */
 	case 0x00008120U: /* LPC812M101JDH16 - 16K Flash 4K SRAM */
@@ -208,42 +225,48 @@ static bool lpc8xx_detect(target_s *const target)
 	case 0x00008122U: /* LPC812M101JDH20 / LPC812M101JTB16 - 16K Flash 4K SRAM */
 		target->driver = "LPC81x";
 		target_add_ram32(target, LPC11xx_SRAM_BASE, 0x1000);
-		lpc11xx_add_flash(target, LPC11xx_FLASH_BASE, 0x4000, 0x400, LPC11xx_IAP_ENTRYPOINT_LOCATION, 0);
-		return true;
+		lpc11xx_add_flash(target, LPC11xx_FLASH_BASE, 0x4000, 0x400, 0);
+		iap_entry = LPC11xx_IAP_ENTRYPOINT_LOCATION;
+		break;
 	case 0x00008221U: /* LPC822M101JHI33 - 16K Flash 4K SRAM */
 	case 0x00008222U: /* LPC822M101JDH20 */
 	case 0x00008241U: /* LPC824M201JHI33 - 32K Flash 8K SRAM */
 	case 0x00008242U: /* LPC824M201JDH20 */
 		target->driver = "LPC82x";
 		target_add_ram32(target, LPC11xx_SRAM_BASE, 0x2000);
-		lpc11xx_add_flash(target, LPC11xx_FLASH_BASE, 0x8000, 0x400, LPC11xx_IAP_ENTRYPOINT_LOCATION, 0);
-		return true;
+		lpc11xx_add_flash(target, LPC11xx_FLASH_BASE, 0x8000, 0x400, 0);
+		iap_entry = LPC11xx_IAP_ENTRYPOINT_LOCATION;
+		break;
 	case 0x00008322U: /* LPC832M101FDH20 - 16K Flash 4K SRAM */
 		target->driver = "LPC832";
 		target_add_ram32(target, LPC11xx_SRAM_BASE, 0x1000);
-		lpc11xx_add_flash(target, LPC11xx_FLASH_BASE, 0x4000, 0x400, LPC11xx_IAP_ENTRYPOINT_LOCATION, 0);
-		return true;
+		lpc11xx_add_flash(target, LPC11xx_FLASH_BASE, 0x4000, 0x400, 0);
+		iap_entry = LPC11xx_IAP_ENTRYPOINT_LOCATION;
+		break;
 	case 0x00008341U: /* LPC834M101FHI33 - 32K Flash 4K SRAM */
 		target->driver = "LPC834";
 		target_add_ram32(target, LPC11xx_SRAM_BASE, 0x1000);
-		lpc11xx_add_flash(target, LPC11xx_FLASH_BASE, 0x8000, 0x400, LPC11xx_IAP_ENTRYPOINT_LOCATION, 0);
-		return true;
+		lpc11xx_add_flash(target, LPC11xx_FLASH_BASE, 0x8000, 0x400, 0);
+		iap_entry = LPC11xx_IAP_ENTRYPOINT_LOCATION;
+		break;
 	case 0x00008441U: /* LPC844M201JBD64 - 64K Flash 8K SRAM */
 	case 0x00008442U: /* LPC844M201JBD48 */
 	case 0x00008443U: /* LPC844M201JHI48, note UM11029 Rev.1.4 table 29 is wrong, see table 174 (in same manual) */
 	case 0x00008444U: /* LPC844M201JHI33 */
 		target->driver = "LPC844";
 		target_add_ram32(target, LPC11xx_SRAM_BASE, 0x2000);
-		lpc11xx_add_flash(target, LPC11xx_FLASH_BASE, 0x10000, 0x400, LPC8xx_IAP_ENTRYPOINT_LOCATION, 0);
-		return true;
+		lpc11xx_add_flash(target, LPC11xx_FLASH_BASE, 0x10000, 0x400, 0);
+		iap_entry = LPC8xx_IAP_ENTRYPOINT_LOCATION;
+		break;
 	case 0x00008451U: /* LPC845M301JBD64 - 64K Flash 16K SRAM */
 	case 0x00008452U: /* LPC845M301JBD48 */
 	case 0x00008453U: /* LPC845M301JHI48 */
 	case 0x00008454U: /* LPC845M301JHI33 */
 		target->driver = "LPC845";
 		target_add_ram32(target, LPC11xx_SRAM_BASE, 0x4000);
-		lpc11xx_add_flash(target, LPC11xx_FLASH_BASE, 0x10000, 0x400, LPC8xx_IAP_ENTRYPOINT_LOCATION, 0);
-		return true;
+		lpc11xx_add_flash(target, LPC11xx_FLASH_BASE, 0x10000, 0x400, 0);
+		iap_entry = LPC8xx_IAP_ENTRYPOINT_LOCATION;
+		break;
 	case 0x0003d440U: /* LPC11U34/311 - 40K Flash 8K SRAM */
 	case 0x0001cc40U: /* LPC11U34/421 - 48K Flash 8K SRAM */
 	case 0x0001bc40U: /* LPC11U35/401 - 64K Flash 8K SRAM */
@@ -254,8 +277,9 @@ static bool lpc8xx_detect(target_s *const target)
 	case 0x00007c40U: /* LPC11U37FBD64/501 */
 		target->driver = "LPC11U3x";
 		target_add_ram32(target, LPC11xx_SRAM_BASE, 0x2000);
-		lpc11xx_add_flash(target, LPC11xx_FLASH_BASE, 0x20000, 0x1000, LPC11xx_IAP_ENTRYPOINT_LOCATION, 0);
-		return true;
+		lpc11xx_add_flash(target, LPC11xx_FLASH_BASE, 0x20000, 0x1000, 0);
+		iap_entry = LPC11xx_IAP_ENTRYPOINT_LOCATION;
+		break;
 	case 0x00010013U: /* LPC1111/103 - 8K Flash 2K SRAM */
 	case 0x00010012U: /* LPC1111/203 - 8K Flash 4K SRAM */
 	case 0x00020023U: /* LPC1112/103 - 16K Flash 2K SRAM */
@@ -269,20 +293,26 @@ static bool lpc8xx_detect(target_s *const target)
 	case 0x00050080U: /* LPC1115/303 - 64K Flash 8K SRAM */
 		target->driver = "LPC11xx-XL";
 		target_add_ram32(target, LPC11xx_SRAM_BASE, 0x2000);
-		lpc11xx_add_flash(target, LPC11xx_FLASH_BASE, 0x20000, 0x1000, LPC11xx_IAP_ENTRYPOINT_LOCATION, 0);
-		return true;
+		lpc11xx_add_flash(target, LPC11xx_FLASH_BASE, 0x20000, 0x1000, 0);
+		iap_entry = LPC11xx_IAP_ENTRYPOINT_LOCATION;
+		break;
 	case 0x00140040U: /* LPC1124/303 - 32K Flash 8K SRAM */
 	case 0x00150080U: /* LPC1125/303 - 64K Flash 8K SRAM */
 		target->driver = "LPC112x";
 		target_add_ram32(target, LPC11xx_SRAM_BASE, 0x2000U);
-		lpc11xx_add_flash(target, LPC11xx_FLASH_BASE, device_id == 0x00140040U ? 0x8000U : 0x10000U, 0x1000,
-			LPC11xx_IAP_ENTRYPOINT_LOCATION, 0);
-		return true;
+		lpc11xx_add_flash(target, LPC11xx_FLASH_BASE, device_id == 0x00140040U ? 0x8000U : 0x10000U, 0x1000, 0);
+		iap_entry = LPC11xx_IAP_ENTRYPOINT_LOCATION;
+		break;
+	default:
+		if (device_id)
+			DEBUG_INFO("%s: Unknown Device ID 0x%08" PRIx32 "\n", "LPC8xx", device_id);
+		return false;
 	}
 
-	if (device_id)
-		DEBUG_INFO("%s: Unknown Device ID 0x%08" PRIx32 "\n", "LPC8xx", device_id);
-	return false;
+	/* Set up the target structure to work for Flash programming */
+	target->enter_flash_mode = lpc8xx_flash_mode;
+	target->exit_flash_mode = lpc8xx_flash_mode;
+	return lpc11xx_priv_init(target, iap_entry);
 }
 
 bool lpc11xx_probe(target_s *const target)

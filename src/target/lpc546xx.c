@@ -112,8 +112,8 @@ static const lpc546xx_device_s *lpc546xx_get_device(const uint32_t chipid)
 	return NULL;
 }
 
-static void lpc546xx_add_flash(target_s *const target, const target_addr32_t iap_entry, const uint8_t base_sector,
-	const target_addr32_t addr, const size_t len, const size_t erasesize)
+static void lpc546xx_add_flash(target_s *const target, const uint8_t base_sector, const target_addr32_t addr,
+	const size_t len, const size_t erasesize)
 {
 	lpc_flash_s *const flash = lpc_add_flash(target, addr, len, IAP_PGM_CHUNKSIZE);
 	flash->target_flash.blocksize = erasesize;
@@ -122,17 +122,15 @@ static void lpc546xx_add_flash(target_s *const target, const target_addr32_t iap
 	flash->target_flash.write = lpc_flash_write_magic_vect;
 	flash->bank = 0;
 	flash->base_sector = base_sector;
-	flash->iap_entry = iap_entry;
-	flash->iap_ram = IAP_RAM_BASE;
-	flash->iap_msp = IAP_RAM_BASE + IAP_RAM_SIZE;
-	flash->wdt_kick = lpc546xx_wdt_kick;
 }
 
 bool lpc546xx_probe(target_s *const target)
 {
+	/* Read the chip ID register */
 	const uint32_t chipid = target_mem32_read32(target, LPC546XX_CHIPID);
 
 	DEBUG_INFO("LPC546xx: Part ID 0x%08" PRIx32 "\n", chipid);
+	/* Try and identify the part is possible */
 	const lpc546xx_device_s *const device = lpc546xx_get_device(chipid);
 	if (!device)
 		return false;
@@ -146,7 +144,23 @@ bool lpc546xx_probe(target_s *const target)
 	 */
 	const uint32_t sram123_size = (uint32_t)device->sram123_kbytes * 1024U;
 
-	lpc546xx_add_flash(target, IAP_ENTRYPOINT_LOCATION, 0, 0x0, flash_size, 0x8000);
+	/* Allocate the private structure needed for lpc_iap_call() to work */
+	lpc_priv_s *const priv = calloc(1, sizeof(*priv));
+	if (!priv) { /* calloc failed: heap exhaustion */
+		DEBUG_ERROR("calloc: failed in %s\n", __func__);
+		return false;
+	}
+	target->target_storage = priv;
+
+	/* Set the structure up for this target */
+	priv->wdt_kick = lpc546xx_wdt_kick;
+	priv->iap_params = lpc_iap_params;
+	priv->iap_entry = IAP_ENTRYPOINT_LOCATION;
+	priv->iap_ram = IAP_RAM_BASE;
+	priv->iap_msp = IAP_RAM_BASE + IAP_RAM_SIZE;
+
+	/* Register Flash and RAM maps + target-specific commands */
+	lpc546xx_add_flash(target, 0, 0x0, flash_size, 0x8000);
 
 	/*
 	 * Note: upper 96kiB is only usable after enabling the appropriate control
@@ -179,9 +193,8 @@ static bool lpc546xx_cmd_read_partid(target_s *const target, const int argc, con
 {
 	(void)argc;
 	(void)argv;
-	lpc_flash_s *const flash = (lpc_flash_s *)target->flash;
 	iap_result_s result;
-	if (lpc_iap_call(flash, &result, IAP_CMD_PARTID))
+	if (lpc_iap_call(target, &result, IAP_CMD_PARTID))
 		return false;
 	tc_printf(target, "PART ID: 0x%08" PRIx32 "\n", result.values[0]);
 	return true;

@@ -23,7 +23,7 @@
 #include "general.h"
 #include "target.h"
 #include "target_internal.h"
-#include "cortex.h"
+#include "cortexm.h"
 #include "cortex_internal.h"
 #include "lpc_common.h"
 
@@ -39,7 +39,7 @@
  *   https://www.nxp.com/webapp/Download?colCode=UM10562&location=null
  */
 
-#define LPC40xx_SRAM_SIZE_MIN 8192U // LPC1751
+#define LPC40xx_SRAM_SIZE_MIN 8192U // LPC40??
 #define LPC40xx_SRAM_IAP_SIZE 32U   // IAP routines use 32 bytes at top of ram
 
 #define LPC40xx_IAP_ENTRYPOINT_LOCATION 0x1fff1ff1U
@@ -66,6 +66,7 @@ typedef struct BMD_ALIGN_DECL(4) iap_frame {
 } iap_frame_s;
 
 typedef struct lpc40xx_priv {
+	lpc_priv_s base;
 	uint32_t mpu_ctrl_state;
 	uint32_t memmap_state;
 } lpc40xx_priv_s;
@@ -74,6 +75,8 @@ static void lpc40xx_extended_reset(target_s *target);
 static bool lpc40xx_enter_flash_mode(target_s *target);
 static bool lpc40xx_exit_flash_mode(target_s *target);
 static bool lpc40xx_mass_erase(target_s *target, platform_timeout_s *print_progess);
+
+static size_t lpc40xx_iap_params(iap_cmd_e cmd);
 iap_status_e lpc40xx_iap_call(
 	target_s *target, iap_result_s *result, platform_timeout_s *print_progess, iap_cmd_e cmd, ...);
 
@@ -84,9 +87,6 @@ static void lpc40xx_add_flash(
 	flash->target_flash.blocksize = erasesize;
 	flash->base_sector = base_sector;
 	flash->target_flash.write = lpc_flash_write_magic_vect;
-	flash->iap_entry = LPC40xx_IAP_ENTRYPOINT_LOCATION;
-	flash->iap_ram = LPC40xx_IAP_RAM_BASE;
-	flash->iap_msp = LPC40xx_IAP_RAM_BASE + LPC40xx_SRAM_SIZE_MIN - LPC40xx_SRAM_IAP_SIZE;
 }
 
 bool lpc40xx_probe(target_s *const target)
@@ -109,6 +109,12 @@ bool lpc40xx_probe(target_s *const target)
 		return false;
 	}
 	target->target_storage = priv;
+
+	/* Set the structure up for this target */
+	priv->base.iap_params = lpc40xx_iap_params;
+	priv->base.iap_entry = LPC40xx_IAP_ENTRYPOINT_LOCATION;
+	priv->base.iap_ram = LPC40xx_IAP_RAM_BASE;
+	priv->base.iap_msp = LPC40xx_IAP_RAM_BASE + LPC40xx_SRAM_SIZE_MIN;
 
 	/* Prepare Flash mode */
 	lpc40xx_enter_flash_mode(target);
@@ -225,6 +231,8 @@ static size_t lpc40xx_iap_params(const iap_cmd_e cmd)
 iap_status_e lpc40xx_iap_call(
 	target_s *const target, iap_result_s *const result, platform_timeout_s *const print_progess, iap_cmd_e cmd, ...)
 {
+	const lpc_priv_s *const priv = (const lpc_priv_s *)target->target_storage;
+
 	/* Set up our IAP frame with the break opcode and command to run */
 	iap_frame_s frame = {
 		.opcode = CORTEX_THUMB_BREAKPOINT,
@@ -232,7 +240,7 @@ iap_status_e lpc40xx_iap_call(
 	};
 
 	/* Fill out the remainder of the parameters */
-	const size_t params_count = lpc40xx_iap_params(cmd);
+	const size_t params_count = priv->iap_params(cmd);
 	va_list params;
 	va_start(params, cmd);
 	for (size_t i = 0; i < params_count; ++i)
@@ -242,8 +250,8 @@ iap_status_e lpc40xx_iap_call(
 		frame.config.params[i] = 0U;
 
 	/* Copy the structure to RAM */
-	target_mem32_write(target, LPC40xx_IAP_RAM_BASE, &frame, sizeof(iap_frame_s));
-	const uint32_t iap_params_addr = LPC40xx_IAP_RAM_BASE + offsetof(iap_frame_s, config);
+	target_mem32_write(target, priv->iap_ram, &frame, sizeof(iap_frame_s));
+	const uint32_t iap_params_addr = priv->iap_ram + offsetof(iap_frame_s, config);
 
 	/* Set up for the call to the IAP ROM */
 	uint32_t regs[CORTEXM_GENERAL_REG_COUNT];
@@ -253,11 +261,13 @@ iap_status_e lpc40xx_iap_call(
 	/* And r1 to the same so we re-use the same memory for the results */
 	regs[1U] = iap_params_addr;
 	/* Set the top of stack to the top of the RAM block we're using */
-	regs[CORTEX_REG_MSP] = LPC40xx_IAP_RAM_BASE + LPC40xx_SRAM_SIZE_MIN;
+	regs[CORTEX_REG_MSP] = priv->iap_msp;
 	/* Point the return address to our breakpoint opcode (thumb mode) */
-	regs[CORTEX_REG_LR] = LPC40xx_IAP_RAM_BASE | 1U;
+	regs[CORTEX_REG_LR] = priv->iap_ram | 1U;
 	/* And set the program counter to the IAP ROM entrypoint */
-	regs[CORTEX_REG_PC] = LPC40xx_IAP_ENTRYPOINT_LOCATION;
+	regs[CORTEX_REG_PC] = priv->iap_entry;
+	/* Finally set up xPSR to indicate a suitable instruction mode, no fault */
+	regs[CORTEX_REG_XPSR] = CORTEXM_XPSR_THUMB;
 	target_regs_write(target, regs);
 
 	platform_timeout_s timeout;

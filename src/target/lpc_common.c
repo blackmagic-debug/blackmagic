@@ -108,19 +108,21 @@ lpc_flash_s *lpc_add_flash(
 	return lpc_flash;
 }
 
-static uint8_t lpc_sector_for_addr(lpc_flash_s *flash, uint32_t addr)
+static uint8_t lpc_sector_for_addr(const lpc_flash_s *const flash, const target_addr32_t addr)
 {
 	return flash->base_sector + ((addr - flash->target_flash.start) / flash->target_flash.blocksize);
 }
 
-static inline bool lpc_is_full_erase(lpc_flash_s *flash, const uint32_t begin, const uint32_t end)
+static inline bool lpc_is_full_erase(
+	const lpc_flash_s *const flash, const target_addr32_t begin, const target_addr32_t end)
 {
 	const target_addr_t addr = flash->target_flash.start;
 	const size_t len = flash->target_flash.length;
 	return begin == lpc_sector_for_addr(flash, addr) && end == lpc_sector_for_addr(flash, addr + len - 1U);
 }
 
-void lpc_save_state(target_s *const target, const uint32_t iap_ram, iap_frame_s *const frame, uint32_t *const regs)
+void lpc_save_state(
+	target_s *const target, const target_addr32_t iap_ram, iap_frame_s *const frame, uint32_t *const regs)
 {
 	/* Save IAP RAM to restore after IAP call */
 	target_mem32_read(target, frame, iap_ram, sizeof(iap_frame_s));
@@ -129,13 +131,13 @@ void lpc_save_state(target_s *const target, const uint32_t iap_ram, iap_frame_s 
 }
 
 void lpc_restore_state(
-	target_s *const target, const uint32_t iap_ram, const iap_frame_s *const frame, const uint32_t *const regs)
+	target_s *const target, const target_addr32_t iap_ram, const iap_frame_s *const frame, const uint32_t *const regs)
 {
 	target_mem32_write(target, iap_ram, frame, sizeof(iap_frame_s));
 	target_regs_write(target, regs);
 }
 
-static size_t lpc_iap_params(const iap_cmd_e cmd)
+size_t lpc_iap_params(const iap_cmd_e cmd)
 {
 	switch (cmd) {
 	case IAP_CMD_PREPARE:
@@ -152,13 +154,13 @@ static size_t lpc_iap_params(const iap_cmd_e cmd)
 	}
 }
 
-iap_status_e lpc_iap_call(lpc_flash_s *const flash, iap_result_s *const result, iap_cmd_e cmd, ...)
+iap_status_e lpc_iap_call(target_s *const target, iap_result_s *const result, iap_cmd_e cmd, ...)
 {
-	target_s *const target = flash->target_flash.t;
+	const lpc_priv_s *const priv = (const lpc_priv_s *)target->target_storage;
 
 	/* Poke the WDT before each IAP call, if it is on */
-	if (flash->wdt_kick)
-		flash->wdt_kick(target);
+	if (priv->wdt_kick)
+		priv->wdt_kick(target);
 
 	/* Save IAP RAM and target registers to restore after IAP call */
 	iap_frame_s saved_frame;
@@ -167,7 +169,7 @@ iap_status_e lpc_iap_call(lpc_flash_s *const flash, iap_result_s *const result, 
 	 * The Cortex register IO routines will avoid touching the unused slots and this avoids a VLA.
 	 */
 	uint32_t saved_regs[CORTEXM_GENERAL_REG_COUNT + CORTEX_FLOAT_REG_COUNT];
-	lpc_save_state(target, flash->iap_ram, &saved_frame, saved_regs);
+	lpc_save_state(target, priv->iap_ram, &saved_frame, saved_regs);
 
 	/* Set up our IAP frame with the break opcode and command to run */
 	iap_frame_s frame = {
@@ -176,7 +178,7 @@ iap_status_e lpc_iap_call(lpc_flash_s *const flash, iap_result_s *const result, 
 	};
 
 	/* Fill out the remainder of the parameters */
-	const size_t params_count = lpc_iap_params(cmd);
+	const size_t params_count = priv->iap_params(cmd);
 	va_list params;
 	va_start(params, cmd);
 	for (size_t i = 0U; i < params_count; ++i)
@@ -192,29 +194,30 @@ iap_status_e lpc_iap_call(lpc_flash_s *const flash, iap_result_s *const result, 
 		frame.config.params[0], frame.config.params[1], frame.config.params[2], frame.config.params[3]);
 
 	/* Copy the structure to RAM */
-	target_mem32_write(target, flash->iap_ram, &frame, sizeof(iap_frame_s));
-	const uint32_t iap_results_addr = flash->iap_ram + offsetof(iap_frame_s, result);
+	target_mem32_write(target, priv->iap_ram, &frame, sizeof(iap_frame_s));
+	const uint32_t iap_results_addr = priv->iap_ram + offsetof(iap_frame_s, result);
 
 	/* Set up for the call to the IAP ROM */
 	uint32_t regs[CORTEXM_GENERAL_REG_COUNT + CORTEX_FLOAT_REG_COUNT];
 	memset(regs, 0, target->regs_size);
 	/* Point r0 to the start of the config block */
-	regs[0U] = flash->iap_ram + offsetof(iap_frame_s, config);
+	regs[0U] = priv->iap_ram + offsetof(iap_frame_s, config);
 	/* And r1 to the next block memory after for the results */
 	regs[1U] = iap_results_addr;
 	/* Set the top of stack to the location of the RAM block the target uses */
-	regs[CORTEX_REG_MSP] = flash->iap_msp;
+	regs[CORTEX_REG_MSP] = priv->iap_msp;
 	/* Point the return address to our breakpoint opcode (thumb mode) */
-	regs[CORTEX_REG_LR] = flash->iap_ram | 1U;
+	regs[CORTEX_REG_LR] = priv->iap_ram | 1U;
 	/* And set the program counter to the IAP ROM entrypoint */
-	regs[CORTEX_REG_PC] = flash->iap_entry;
+	regs[CORTEX_REG_PC] = priv->iap_entry;
 	/* Finally set up xPSR to indicate a suitable instruction mode, no fault */
-	regs[CORTEX_REG_XPSR] = (flash->iap_entry & 1U) ? CORTEXM_XPSR_THUMB : 0U;
+	regs[CORTEX_REG_XPSR] = (priv->iap_entry & 1U) ? CORTEXM_XPSR_THUMB : 0U;
 	target_regs_write(target, regs);
 
 	/* Figure out if we're about to execute a mass erase or not */
-	const bool full_erase =
-		cmd == IAP_CMD_ERASE && lpc_is_full_erase(flash, frame.config.params[0], frame.config.params[1]);
+	const bool full_erase = cmd == IAP_CMD_ERASE &&
+		lpc_is_full_erase((lpc_flash_s *)target_flash_for_addr(target, frame.config.params[0]), frame.config.params[0],
+			frame.config.params[1]);
 
 	platform_timeout_s timeout;
 	platform_timeout_set(&timeout, 500);
@@ -227,7 +230,7 @@ iap_status_e lpc_iap_call(lpc_flash_s *const flash, iap_result_s *const result, 
 		else if (cmd == IAP_CMD_PARTID && platform_timeout_is_expired(&timeout)) {
 			target_halt_request(target);
 			/* Restore the original data in RAM and registers */
-			lpc_restore_state(target, flash->iap_ram, &saved_frame, saved_regs);
+			lpc_restore_state(target, priv->iap_ram, &saved_frame, saved_regs);
 			return IAP_STATUS_INVALID_COMMAND;
 		}
 	}
@@ -247,10 +250,10 @@ iap_status_e lpc_iap_call(lpc_flash_s *const flash, iap_result_s *const result, 
 			fault_address |= 1U;
 
 		/* If the fault is not because of our break instruction at the end of the IAP sequence */
-		if (fault_address != (flash->iap_ram | 1U)) {
+		if (fault_address != (priv->iap_ram | 1U)) {
 			DEBUG_WARN("%s: Failure due to fault (%" PRIu32 ")\n", __func__, status & CORTEXM_XPSR_EXCEPTION_MASK);
 			DEBUG_WARN("\t-> Fault at %08" PRIx32 "\n", fault_address);
-			lpc_restore_state(target, flash->iap_ram, &saved_frame, saved_regs);
+			lpc_restore_state(target, priv->iap_ram, &saved_frame, saved_regs);
 			return IAP_STATUS_INVALID_COMMAND;
 		}
 	}
@@ -260,7 +263,7 @@ iap_status_e lpc_iap_call(lpc_flash_s *const flash, iap_result_s *const result, 
 	target_mem32_read(target, &results, iap_results_addr, sizeof(iap_result_s));
 
 	/* Restore the original data in RAM and registers */
-	lpc_restore_state(target, flash->iap_ram, &saved_frame, saved_regs);
+	lpc_restore_state(target, priv->iap_ram, &saved_frame, saved_regs);
 
 	/* If the user expected a result, set the result (16 bytes). */
 	if (result != NULL)
@@ -284,12 +287,13 @@ iap_status_e lpc_iap_call(lpc_flash_s *const flash, iap_result_s *const result, 
 
 bool lpc_flash_erase(target_flash_s *target_flash, target_addr_t addr, size_t len)
 {
-	lpc_flash_s *flash = (lpc_flash_s *)target_flash;
+	target_s *const target = target_flash->t;
+	const lpc_flash_s *const flash = (const lpc_flash_s *)target_flash;
 	const uint32_t start = lpc_sector_for_addr(flash, addr);
 	const uint32_t end = lpc_sector_for_addr(flash, addr + len - 1U);
 	uint32_t last_full_sector = end;
 
-	if (lpc_iap_call(flash, NULL, IAP_CMD_PREPARE, start, end, flash->bank) != IAP_STATUS_CMD_SUCCESS)
+	if (lpc_iap_call(target, NULL, IAP_CMD_PREPARE, start, end, flash->bank) != IAP_STATUS_CMD_SUCCESS)
 		return false;
 
 	/* Only LPC80x has reserved pages!*/
@@ -298,12 +302,12 @@ bool lpc_flash_erase(target_flash_s *target_flash, target_addr_t addr, size_t le
 
 	if (start <= last_full_sector) {
 		/* Sector erase */
-		if (lpc_iap_call(flash, NULL, IAP_CMD_ERASE, start, last_full_sector, CPU_CLK_KHZ, flash->bank) !=
+		if (lpc_iap_call(target, NULL, IAP_CMD_ERASE, start, last_full_sector, CPU_CLK_KHZ, flash->bank) !=
 			IAP_STATUS_CMD_SUCCESS)
 			return false;
 
 		/* Check erase ok */
-		if (lpc_iap_call(flash, NULL, IAP_CMD_BLANKCHECK, start, last_full_sector, flash->bank) !=
+		if (lpc_iap_call(target, NULL, IAP_CMD_BLANKCHECK, start, last_full_sector, flash->bank) !=
 			IAP_STATUS_CMD_SUCCESS)
 			return false;
 	}
@@ -312,10 +316,10 @@ bool lpc_flash_erase(target_flash_s *target_flash, target_addr_t addr, size_t le
 		const uint32_t page_start = (addr + len - LPX80X_SECTOR_SIZE) / LPX80X_PAGE_SIZE;
 		const uint32_t page_end = page_start + (LPX80X_SECTOR_SIZE / LPX80X_PAGE_SIZE) - 1U - flash->reserved_pages;
 
-		if (lpc_iap_call(flash, NULL, IAP_CMD_PREPARE, end, end, flash->bank) != IAP_STATUS_CMD_SUCCESS)
+		if (lpc_iap_call(target, NULL, IAP_CMD_PREPARE, end, end, flash->bank) != IAP_STATUS_CMD_SUCCESS)
 			return false;
 
-		if (lpc_iap_call(flash, NULL, IAP_CMD_ERASE_PAGE, page_start, page_end, CPU_CLK_KHZ, flash->bank) !=
+		if (lpc_iap_call(target, NULL, IAP_CMD_ERASE_PAGE, page_start, page_end, CPU_CLK_KHZ, flash->bank) !=
 			IAP_STATUS_CMD_SUCCESS)
 			return false;
 		/* Blank check omitted!*/
@@ -325,14 +329,16 @@ bool lpc_flash_erase(target_flash_s *target_flash, target_addr_t addr, size_t le
 
 static bool lpc_flash_write(target_flash_s *target_flash, target_addr_t dest, const void *src, size_t len)
 {
-	lpc_flash_s *flash = (lpc_flash_s *)target_flash;
+	target_s *const target = target_flash->t;
+	const lpc_priv_s *const priv = (const lpc_priv_s *)target->target_storage;
+	const lpc_flash_s *const flash = (const lpc_flash_s *)target_flash;
 	/* Prepare... */
 	const uint32_t sector = lpc_sector_for_addr(flash, dest);
-	if (lpc_iap_call(flash, NULL, IAP_CMD_PREPARE, sector, sector, flash->bank) != IAP_STATUS_CMD_SUCCESS) {
+	if (lpc_iap_call(target, NULL, IAP_CMD_PREPARE, sector, sector, flash->bank) != IAP_STATUS_CMD_SUCCESS) {
 		DEBUG_ERROR("Prepare failed\n");
 		return false;
 	}
-	const uint32_t bufaddr = ALIGN(flash->iap_ram + sizeof(iap_frame_s), 4U);
+	const uint32_t bufaddr = ALIGN(priv->iap_ram + sizeof(iap_frame_s), 4U);
 	target_mem32_write(flash->target_flash.t, bufaddr, src, len);
 	/* Only LPC80x has reserved pages!*/
 	if (!flash->reserved_pages || dest + len <= target_flash->length - len) {
@@ -340,7 +346,7 @@ static bool lpc_flash_write(target_flash_s *target_flash, target_addr_t dest, co
 		 * Write payload to target ram,
 		 * set the destination address and program
 		 */
-		if (lpc_iap_call(flash, NULL, IAP_CMD_PROGRAM, dest, bufaddr, len, CPU_CLK_KHZ) != IAP_STATUS_CMD_SUCCESS)
+		if (lpc_iap_call(target, NULL, IAP_CMD_PROGRAM, dest, bufaddr, len, CPU_CLK_KHZ) != IAP_STATUS_CMD_SUCCESS)
 			return false;
 	} else {
 		/*
@@ -348,12 +354,12 @@ static bool lpc_flash_write(target_flash_s *target_flash, target_addr_t dest, co
 		 * Silently ignore write to the 2 reserved pages at top!
 		 */
 		for (size_t offset = 0; offset < len - (0x40U * (size_t)flash->reserved_pages); offset += LPX80X_PAGE_SIZE) {
-			if (lpc_iap_call(flash, NULL, IAP_CMD_PREPARE, sector, sector, flash->bank) != IAP_STATUS_CMD_SUCCESS) {
+			if (lpc_iap_call(target, NULL, IAP_CMD_PREPARE, sector, sector, flash->bank) != IAP_STATUS_CMD_SUCCESS) {
 				DEBUG_ERROR("Prepare failed\n");
 				return false;
 			}
 			/* Set the destination address and program */
-			if (lpc_iap_call(flash, NULL, IAP_CMD_PROGRAM, dest + offset, bufaddr + offset, LPX80X_PAGE_SIZE,
+			if (lpc_iap_call(target, NULL, IAP_CMD_PROGRAM, dest + offset, bufaddr + offset, LPX80X_PAGE_SIZE,
 					CPU_CLK_KHZ) != IAP_STATUS_CMD_SUCCESS)
 				return false;
 		}
@@ -389,11 +395,9 @@ bool lpc_cmd_read_uid(target_s *const target, const int argc, const char **const
 {
 	(void)argc;
 	(void)argv;
-	/* Extract a LPC Flash instance to use for the IAP call information */
-	lpc_flash_s *const flash = (lpc_flash_s *)target->flash;
 	iap_result_s result = {0};
 	/* Ask the device for the UID data */
-	if (lpc_iap_call(flash, &result, IAP_CMD_READUID))
+	if (lpc_iap_call(target, &result, IAP_CMD_READUID))
 		return false;
 	/* Extract the data out from the values array as a series of LE numbers */
 	uint8_t uid[16U] = {0};

@@ -261,6 +261,7 @@ typedef struct lpc43xx_spi_flash {
 } lpc43xx_spi_flash_s;
 
 typedef struct lpc43xx_priv {
+	lpc_priv_s base;
 	uint8_t flash_banks;
 	uint32_t mpu_ctrl;
 	uint32_t shadow_map;
@@ -299,7 +300,7 @@ static void lpc43x0_spi_write(
 	target_s *target, uint16_t command, target_addr_t address, const void *buffer, size_t length);
 static void lpc43x0_spi_run_command(target_s *target, uint16_t command, target_addr_t address);
 
-static bool lpc43xx_iap_init(target_flash_s *flash);
+static bool lpc43xx_iap_init(target_s *target);
 static lpc43xx_partid_s lpc43xx_iap_read_partid(target_s *target);
 static bool lpc43xx_enter_flash_mode(target_s *target);
 static bool lpc43xx_iap_flash_erase(target_flash_s *flash, target_addr_t addr, size_t len);
@@ -307,24 +308,19 @@ static bool lpc43xx_iap_mass_erase(target_s *target, platform_timeout_s *print_p
 static void lpc43xx_wdt_set_period(target_s *target);
 static void lpc43xx_wdt_kick(target_s *target);
 
-static void lpc43xx_add_iap_flash(target_s *const target, const uint32_t iap_entry, const uint8_t bank,
-	const uint8_t base_sector, const uint32_t addr, const size_t len, const size_t erasesize)
+static void lpc43xx_add_iap_flash(target_s *const target, const uint8_t bank, const uint8_t base_sector,
+	const uint32_t addr, const size_t len, const size_t erasesize)
 {
 	lpc_flash_s *const flash = lpc_add_flash(target, addr, len, LPC43xx_IAP_PGM_CHUNKSIZE);
 	flash->target_flash.blocksize = erasesize;
 	flash->target_flash.erase = lpc43xx_iap_flash_erase;
 	flash->bank = bank;
 	flash->base_sector = base_sector;
-	flash->iap_entry = iap_entry;
-	flash->iap_ram = LPC43xx_IAP_RAM_BASE;
-	flash->iap_msp = LPC43xx_IAP_RAM_BASE + LPC43xx_IAP_RAM_SIZE;
-	flash->wdt_kick = lpc43xx_wdt_kick;
 }
 
 static void lpc43xx_detect(target_s *const target, const lpc43xx_partid_s part_id)
 {
 	lpc43xx_priv_s *const priv = (lpc43xx_priv_s *)target->target_storage;
-	const uint32_t iap_entry = target_mem32_read32(target, LPC43xx_IAP_ENTRYPOINT_LOCATION);
 	uint32_t sram_ahb_size = 0;
 
 	switch (part_id.part) {
@@ -360,12 +356,12 @@ static void lpc43xx_detect(target_s *const target, const lpc43xx_partid_s part_i
 	target_add_ram32(target, LPC43xx_ETBAHB_SRAM_BASE, LPC43xx_ETBAHB_SRAM_SIZE);
 
 	/* All parts with Flash have the first 64kiB bank A region */
-	lpc43xx_add_iap_flash(target, iap_entry, LPC43xx_FLASH_BANK_A, 0U, LPC43xx_FLASH_BANK_A_BASE, LPC43xx_FLASH_64kiB,
-		LPC43xx_FLASH_8kiB);
+	lpc43xx_add_iap_flash(
+		target, LPC43xx_FLASH_BANK_A, 0U, LPC43xx_FLASH_BANK_A_BASE, LPC43xx_FLASH_64kiB, LPC43xx_FLASH_8kiB);
 	/* All parts other than LP43x2 with Flash have the first 64kiB bank B region */
 	if (part_id.flash_config != LPC43xx_PARTID_FLASH_CONFIG_43x2) {
-		lpc43xx_add_iap_flash(target, iap_entry, LPC43xx_FLASH_BANK_B, 0U, LPC43xx_FLASH_BANK_B_BASE,
-			LPC43xx_FLASH_64kiB, LPC43xx_FLASH_8kiB);
+		lpc43xx_add_iap_flash(
+			target, LPC43xx_FLASH_BANK_B, 0U, LPC43xx_FLASH_BANK_B_BASE, LPC43xx_FLASH_64kiB, LPC43xx_FLASH_8kiB);
 		priv->flash_banks = 2;
 	} else
 		priv->flash_banks = 1;
@@ -373,34 +369,29 @@ static void lpc43xx_detect(target_s *const target, const lpc43xx_partid_s part_i
 	switch (part_id.flash_config) {
 	case LPC43xx_PARTID_FLASH_CONFIG_43x2:
 		/* LP43x2 parts have a full bank A but not bank B */
-		lpc43xx_add_iap_flash(target, iap_entry, LPC43xx_FLASH_BANK_A, 8U,
-			LPC43xx_FLASH_BANK_A_BASE + LPC43xx_FLASH_64kiB, LPC43xx_FLASH_192kiB + LPC43xx_FLASH_256kiB,
-			LPC43xx_FLASH_64kiB);
+		lpc43xx_add_iap_flash(target, LPC43xx_FLASH_BANK_A, 8U, LPC43xx_FLASH_BANK_A_BASE + LPC43xx_FLASH_64kiB,
+			LPC43xx_FLASH_192kiB + LPC43xx_FLASH_256kiB, LPC43xx_FLASH_64kiB);
 		break;
 	case LPC43xx_PARTID_FLASH_CONFIG_43x3:
 		/* LP43x3 parts have the first 256kiB of both bank A and bank B */
-		lpc43xx_add_iap_flash(target, iap_entry, LPC43xx_FLASH_BANK_A, 8U,
-			LPC43xx_FLASH_BANK_A_BASE + LPC43xx_FLASH_64kiB, LPC43xx_FLASH_192kiB, LPC43xx_FLASH_64kiB);
-		lpc43xx_add_iap_flash(target, iap_entry, LPC43xx_FLASH_BANK_B, 8U,
-			LPC43xx_FLASH_BANK_B_BASE + LPC43xx_FLASH_64kiB, LPC43xx_FLASH_192kiB, LPC43xx_FLASH_64kiB);
+		lpc43xx_add_iap_flash(target, LPC43xx_FLASH_BANK_A, 8U, LPC43xx_FLASH_BANK_A_BASE + LPC43xx_FLASH_64kiB,
+			LPC43xx_FLASH_192kiB, LPC43xx_FLASH_64kiB);
+		lpc43xx_add_iap_flash(target, LPC43xx_FLASH_BANK_B, 8U, LPC43xx_FLASH_BANK_B_BASE + LPC43xx_FLASH_64kiB,
+			LPC43xx_FLASH_192kiB, LPC43xx_FLASH_64kiB);
 		break;
 	case LPC43xx_PARTID_FLASH_CONFIG_43x5:
 		/* LP43x3 parts have the first 256kiB and an additional 128kiB of both bank A and bank B */
-		lpc43xx_add_iap_flash(target, iap_entry, LPC43xx_FLASH_BANK_A, 8U,
-			LPC43xx_FLASH_BANK_A_BASE + LPC43xx_FLASH_64kiB, LPC43xx_FLASH_192kiB + LPC43xx_FLASH_128kiB,
-			LPC43xx_FLASH_64kiB);
-		lpc43xx_add_iap_flash(target, iap_entry, LPC43xx_FLASH_BANK_B, 8U,
-			LPC43xx_FLASH_BANK_B_BASE + LPC43xx_FLASH_64kiB, LPC43xx_FLASH_192kiB + LPC43xx_FLASH_128kiB,
-			LPC43xx_FLASH_64kiB);
+		lpc43xx_add_iap_flash(target, LPC43xx_FLASH_BANK_A, 8U, LPC43xx_FLASH_BANK_A_BASE + LPC43xx_FLASH_64kiB,
+			LPC43xx_FLASH_192kiB + LPC43xx_FLASH_128kiB, LPC43xx_FLASH_64kiB);
+		lpc43xx_add_iap_flash(target, LPC43xx_FLASH_BANK_B, 8U, LPC43xx_FLASH_BANK_B_BASE + LPC43xx_FLASH_64kiB,
+			LPC43xx_FLASH_192kiB + LPC43xx_FLASH_128kiB, LPC43xx_FLASH_64kiB);
 		break;
 	case LPC43xx_PARTID_FLASH_CONFIG_43x7:
 		/* LP43x3 parts have the full 512kiB each of both bank A and bank B */
-		lpc43xx_add_iap_flash(target, iap_entry, LPC43xx_FLASH_BANK_A, 8U,
-			LPC43xx_FLASH_BANK_A_BASE + LPC43xx_FLASH_64kiB, LPC43xx_FLASH_192kiB + LPC43xx_FLASH_256kiB,
-			LPC43xx_FLASH_64kiB);
-		lpc43xx_add_iap_flash(target, iap_entry, LPC43xx_FLASH_BANK_B, 8U,
-			LPC43xx_FLASH_BANK_B_BASE + LPC43xx_FLASH_64kiB, LPC43xx_FLASH_192kiB + LPC43xx_FLASH_256kiB,
-			LPC43xx_FLASH_64kiB);
+		lpc43xx_add_iap_flash(target, LPC43xx_FLASH_BANK_A, 8U, LPC43xx_FLASH_BANK_A_BASE + LPC43xx_FLASH_64kiB,
+			LPC43xx_FLASH_192kiB + LPC43xx_FLASH_256kiB, LPC43xx_FLASH_64kiB);
+		lpc43xx_add_iap_flash(target, LPC43xx_FLASH_BANK_B, 8U, LPC43xx_FLASH_BANK_B_BASE + LPC43xx_FLASH_64kiB,
+			LPC43xx_FLASH_192kiB + LPC43xx_FLASH_256kiB, LPC43xx_FLASH_64kiB);
 		break;
 	}
 
@@ -503,6 +494,12 @@ bool lpc43xx_probe(target_s *const target)
 			return false;
 		}
 		target->target_storage = priv;
+
+		priv->base.wdt_kick = lpc43xx_wdt_kick;
+		priv->base.iap_params = lpc_iap_params;
+		priv->base.iap_entry = target_mem32_read32(target, LPC43xx_IAP_ENTRYPOINT_LOCATION);
+		priv->base.iap_ram = LPC43xx_IAP_RAM_BASE;
+		priv->base.iap_msp = LPC43xx_IAP_RAM_BASE + LPC43xx_IAP_RAM_SIZE;
 
 		const lpc43xx_partid_s part_id = lpc43xx_iap_read_partid(target);
 		DEBUG_WARN("LPC43xx part ID: 0x%08" PRIx32 ":%02x\n", part_id.part, part_id.flash_config);
@@ -944,11 +941,9 @@ static void lpc43x0_spi_run_command(target_s *const target, const uint16_t comma
 
 /* LPC43xx IAP On-board Flash part routines */
 
-static bool lpc43xx_iap_init(target_flash_s *const target_flash)
+static bool lpc43xx_iap_init(target_s *const target)
 {
-	target_s *const target = target_flash->t;
 	lpc43xx_priv_s *const priv = (lpc43xx_priv_s *)target->target_storage;
-	lpc_flash_s *const flash = (lpc_flash_s *)target_flash;
 	/* If on the M4 core, check and set the shadow region mapping */
 	if ((target->cpuid & CORTEX_CPUID_PARTNO_MASK) == CORTEX_M4) {
 		priv->shadow_map = target_mem32_read32(target, LPC43xx_M4MEMMAP);
@@ -976,7 +971,7 @@ static bool lpc43xx_iap_init(target_flash_s *const target_flash)
 	 * returning IAP_CMD_INIT. Test instead that it didn't fail by testing for the internally
 	 * generated IAP_STATUS_INVALID_COMMAND used by lpc_iap_call()'s failure paths.
 	 */
-	return lpc_iap_call(flash, NULL, IAP_CMD_INIT) != IAP_STATUS_INVALID_COMMAND;
+	return lpc_iap_call(target, NULL, IAP_CMD_INIT) != IAP_STATUS_INVALID_COMMAND;
 }
 
 /*
@@ -985,14 +980,6 @@ static bool lpc43xx_iap_init(target_flash_s *const target_flash)
  */
 static lpc43xx_partid_s lpc43xx_iap_read_partid(target_s *const target)
 {
-	/* Define a fake Flash structure so we can invoke the IAP system */
-	lpc_flash_s flash;
-	flash.target_flash.t = target;
-	flash.wdt_kick = lpc43xx_wdt_kick;
-	flash.iap_entry = target_mem32_read32(target, LPC43xx_IAP_ENTRYPOINT_LOCATION);
-	flash.iap_ram = LPC43xx_IAP_RAM_BASE;
-	flash.iap_msp = LPC43xx_IAP_RAM_BASE + LPC43xx_IAP_RAM_SIZE;
-
 	/* Prepare a failure result in case readback fails */
 	lpc43xx_partid_s result;
 	result.part = LPC43xx_PARTID_INVALID;
@@ -1000,8 +987,7 @@ static lpc43xx_partid_s lpc43xx_iap_read_partid(target_s *const target)
 
 	/* Read back the part ID */
 	iap_result_s iap_result;
-	if (!lpc43xx_iap_init(&flash.target_flash) ||
-		lpc_iap_call(&flash, &iap_result, IAP_CMD_PARTID) != IAP_STATUS_CMD_SUCCESS)
+	if (!lpc43xx_iap_init(target) || lpc_iap_call(target, &iap_result, IAP_CMD_PARTID) != IAP_STATUS_CMD_SUCCESS)
 		return result;
 
 	/* Prepare the result and return it */
@@ -1012,7 +998,7 @@ static lpc43xx_partid_s lpc43xx_iap_read_partid(target_s *const target)
 
 static bool lpc43xx_iap_flash_erase(target_flash_s *const flash, const target_addr_t addr, const size_t len)
 {
-	if (!lpc43xx_iap_init(flash))
+	if (!lpc43xx_iap_init(flash->t))
 		return false;
 	return lpc_flash_erase(flash, addr, len);
 }
@@ -1021,13 +1007,12 @@ static bool lpc43xx_iap_mass_erase(target_s *const target, platform_timeout_s *c
 {
 	lpc43xx_priv_s *const priv = (lpc43xx_priv_s *)target->target_storage;
 
-	lpc43xx_iap_init(target->flash);
+	lpc43xx_iap_init(target);
 
 	/* FIXME: since this is looking like bank mass erases, maybe this should be in flash->mass_erase */
 	for (size_t bank = 0; bank < priv->flash_banks; ++bank) {
-		lpc_flash_s *const flash = (lpc_flash_s *)target->flash;
-		if (lpc_iap_call(flash, NULL, IAP_CMD_PREPARE, 0, LPC43xx_FLASH_NUM_SECTOR - 1U, bank) ||
-			lpc_iap_call(flash, NULL, IAP_CMD_ERASE, 0, LPC43xx_FLASH_NUM_SECTOR - 1U, CPU_CLK_KHZ, bank))
+		if (lpc_iap_call(target, NULL, IAP_CMD_PREPARE, 0, LPC43xx_FLASH_NUM_SECTOR - 1U, bank) ||
+			lpc_iap_call(target, NULL, IAP_CMD_ERASE, 0, LPC43xx_FLASH_NUM_SECTOR - 1U, CPU_CLK_KHZ, bank))
 			return false;
 		target_print_progress(print_progess);
 	}
@@ -1067,11 +1052,10 @@ static bool lpc43xx_cmd_mkboot(target_s *const target, const int argc, const cha
 		return false;
 	}
 
-	lpc43xx_iap_init(target->flash);
+	lpc43xx_iap_init(target);
 
-	/* special command to compute/write magic vector for signature */
-	lpc_flash_s *const flash = (lpc_flash_s *)target->flash;
-	if (lpc_iap_call(flash, NULL, IAP_CMD_SET_ACTIVE_BANK, bank, CPU_CLK_KHZ)) {
+	/* Special command to compute/write magic vector for signature */
+	if (lpc_iap_call(target, NULL, IAP_CMD_SET_ACTIVE_BANK, bank, CPU_CLK_KHZ)) {
 		tc_printf(target, "Set bootable failed.\n");
 		return false;
 	}

@@ -66,6 +66,7 @@ typedef struct BMD_ALIGN_DECL(4) iap_frame {
 } iap_frame_s;
 
 typedef struct lpc17xx_priv {
+	lpc_priv_s base;
 	uint32_t mpu_ctrl_state;
 	uint32_t memmap_state;
 } lpc17xx_priv_s;
@@ -81,6 +82,8 @@ static void lpc17xx_extended_reset(target_s *target);
 static bool lpc17xx_enter_flash_mode(target_s *target);
 static bool lpc17xx_exit_flash_mode(target_s *target);
 static bool lpc17xx_mass_erase(target_s *target, platform_timeout_s *print_progess);
+
+static size_t lpc17xx_iap_params(iap_cmd_e cmd);
 iap_status_e lpc17xx_iap_call(
 	target_s *target, iap_result_s *result, platform_timeout_s *print_progess, iap_cmd_e cmd, ...);
 
@@ -91,9 +94,6 @@ static void lpc17xx_add_flash(
 	flash->target_flash.blocksize = erasesize;
 	flash->base_sector = base_sector;
 	flash->target_flash.write = lpc_flash_write_magic_vect;
-	flash->iap_entry = LPC17xx_IAP_ENTRYPOINT_LOCATION;
-	flash->iap_ram = LPC17xx_IAP_RAM_BASE;
-	flash->iap_msp = LPC17xx_IAP_RAM_BASE + LPC17xx_SRAM_SIZE_MIN - LPC17xx_SRAM_IAP_SIZE;
 }
 
 bool lpc17xx_probe(target_s *const target)
@@ -115,6 +115,12 @@ bool lpc17xx_probe(target_s *const target)
 		return false;
 	}
 	target->target_storage = priv;
+
+	/* Set the structure up for this target */
+	priv->base.iap_params = lpc17xx_iap_params;
+	priv->base.iap_entry = LPC17xx_IAP_ENTRYPOINT_LOCATION;
+	priv->base.iap_ram = LPC17xx_IAP_RAM_BASE;
+	priv->base.iap_msp = LPC17xx_IAP_RAM_BASE + LPC17xx_SRAM_SIZE_MIN - LPC17xx_SRAM_IAP_SIZE;
 
 	/* Prepare Flash mode */
 	lpc17xx_enter_flash_mode(target);
@@ -272,7 +278,7 @@ static size_t lpc17xx_iap_params(const iap_cmd_e cmd)
 iap_status_e lpc17xx_iap_call(
 	target_s *const target, iap_result_s *const result, platform_timeout_s *const print_progess, iap_cmd_e cmd, ...)
 {
-	lpc_flash_s *flash = (lpc_flash_s *)target->flash;
+	const lpc_priv_s *const priv = (const lpc_priv_s *)target->target_storage;
 
 	/* Save IAP RAM and target registers to restore after IAP call */
 	iap_frame_s saved_frame;
@@ -281,7 +287,7 @@ iap_status_e lpc17xx_iap_call(
 	 * The Cortex register IO routines will avoid touching the unused slots and this avoids a VLA.
 	 */
 	uint32_t saved_regs[CORTEXM_GENERAL_REG_COUNT];
-	lpc17xx_save_state(target, flash->iap_ram, &saved_frame, saved_regs);
+	lpc17xx_save_state(target, priv->iap_ram, &saved_frame, saved_regs);
 
 	/* Set up our IAP frame with the break opcode and command to run */
 	iap_frame_s frame = {
@@ -290,7 +296,7 @@ iap_status_e lpc17xx_iap_call(
 	};
 
 	/* Fill out the remainder of the parameters */
-	const size_t params_count = lpc17xx_iap_params(cmd);
+	const size_t params_count = priv->iap_params(cmd);
 	va_list params;
 	va_start(params, cmd);
 	for (size_t i = 0U; i < params_count; ++i)
@@ -306,22 +312,22 @@ iap_status_e lpc17xx_iap_call(
 		frame.config.params[0], frame.config.params[1], frame.config.params[2], frame.config.params[3]);
 
 	/* Copy the structure to RAM */
-	target_mem32_write(target, flash->iap_ram, &frame, sizeof(iap_frame_s));
-	const uint32_t iap_results_addr = flash->iap_ram + offsetof(iap_frame_s, result);
+	target_mem32_write(target, priv->iap_ram, &frame, sizeof(iap_frame_s));
+	const uint32_t iap_results_addr = priv->iap_ram + offsetof(iap_frame_s, result);
 
 	/* Set up for the call to the IAP ROM */
 	uint32_t regs[CORTEXM_GENERAL_REG_COUNT];
 	memset(regs, 0, target->regs_size);
 	/* Point r0 to the start of the config block */
-	regs[0U] = flash->iap_ram + offsetof(iap_frame_s, config);
+	regs[0U] = priv->iap_ram + offsetof(iap_frame_s, config);
 	/* And r1 to the same so we re-use the same memory for the results */
 	regs[1U] = iap_results_addr;
 	/* Set the top of stack to the top of the RAM block we're using */
-	regs[CORTEX_REG_MSP] = flash->iap_msp;
+	regs[CORTEX_REG_MSP] = priv->iap_msp;
 	/* Point the return address to our breakpoint opcode (thumb mode) */
-	regs[CORTEX_REG_LR] = flash->iap_ram | 1U;
+	regs[CORTEX_REG_LR] = priv->iap_ram | 1U;
 	/* And set the program counter to the IAP ROM entrypoint */
-	regs[CORTEX_REG_PC] = flash->iap_entry;
+	regs[CORTEX_REG_PC] = priv->iap_entry;
 	/* Finally set up xPSR to indicate a suitable instruction mode, no fault */
 	regs[CORTEX_REG_XPSR] = CORTEXM_XPSR_THUMB;
 	target_regs_write(target, regs);
@@ -336,7 +342,7 @@ iap_status_e lpc17xx_iap_call(
 		else if (cmd == IAP_CMD_PARTID && platform_timeout_is_expired(&timeout)) {
 			target_halt_request(target);
 			/* Restore the original data in RAM and registers */
-			lpc17xx_restore_state(target, flash->iap_ram, &saved_frame, saved_regs);
+			lpc17xx_restore_state(target, priv->iap_ram, &saved_frame, saved_regs);
 			return IAP_STATUS_INVALID_COMMAND;
 		}
 	}
@@ -345,6 +351,6 @@ iap_status_e lpc17xx_iap_call(
 	target_mem32_read(target, result, iap_results_addr, sizeof(iap_result_s));
 
 	/* Restore the original data in RAM and registers */
-	lpc17xx_restore_state(target, flash->iap_ram, &saved_frame, saved_regs);
+	lpc17xx_restore_state(target, priv->iap_ram, &saved_frame, saved_regs);
 	return result->return_code;
 }
