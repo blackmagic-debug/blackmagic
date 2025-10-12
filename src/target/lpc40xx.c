@@ -53,18 +53,6 @@
 #define LPC40xx_MPU_BASE UINT32_C(0xe000ed90)
 #define LPC40xx_MPU_CTRL (LPC40xx_MPU_BASE + 0x04U)
 
-typedef struct iap_config {
-	uint32_t command;
-	uint32_t params[4];
-} iap_config_s;
-
-typedef struct BMD_ALIGN_DECL(4) iap_frame {
-	/* The start of an IAP stack frame is the opcode we set as the return point. */
-	uint16_t opcode;
-	/* There's then a hidden alignment field here, followed by the IAP call setup */
-	iap_config_s config;
-} iap_frame_s;
-
 typedef struct lpc40xx_priv {
 	lpc_priv_s base;
 	uint32_t mpu_ctrl_state;
@@ -77,8 +65,6 @@ static bool lpc40xx_exit_flash_mode(target_s *target);
 static bool lpc40xx_mass_erase(target_s *target, platform_timeout_s *print_progess);
 
 static size_t lpc40xx_iap_params(iap_cmd_e cmd);
-iap_status_e lpc40xx_iap_call(
-	target_s *target, iap_result_s *result, platform_timeout_s *print_progess, iap_cmd_e cmd, ...);
 
 static void lpc40xx_add_flash(
 	target_s *const target, const uint32_t addr, const size_t len, const size_t erasesize, const uint8_t base_sector)
@@ -120,7 +106,7 @@ bool lpc40xx_probe(target_s *const target)
 	lpc40xx_enter_flash_mode(target);
 	/* Read the Part ID */
 	iap_result_s result;
-	lpc40xx_iap_call(target, &result, NULL, IAP_CMD_PARTID);
+	lpc_iap_call(target, &result, IAP_CMD_PARTID);
 	/* Transition back to normal mode and resume the target */
 	lpc40xx_exit_flash_mode(target);
 	target_halt_resume(target, false);
@@ -180,20 +166,20 @@ static bool lpc40xx_exit_flash_mode(target_s *const target)
 
 static bool lpc40xx_mass_erase(target_s *const target, platform_timeout_s *const print_progess)
 {
+	(void)print_progess;
 	iap_result_s result;
 
-	if (lpc40xx_iap_call(target, &result, print_progess, IAP_CMD_PREPARE, 0, LPC40xx_FLASH_NUM_SECTOR - 1U)) {
+	if (lpc_iap_call(target, &result, IAP_CMD_PREPARE, 0, LPC40xx_FLASH_NUM_SECTOR - 1U)) {
 		DEBUG_ERROR("%s: prepare failed %" PRIu32 "\n", __func__, result.return_code);
 		return false;
 	}
 
-	if (lpc40xx_iap_call(
-			target, &result, print_progess, IAP_CMD_ERASE, 0, LPC40xx_FLASH_NUM_SECTOR - 1U, CPU_CLK_KHZ)) {
+	if (lpc_iap_call(target, &result, IAP_CMD_ERASE, 0, LPC40xx_FLASH_NUM_SECTOR - 1U, CPU_CLK_KHZ)) {
 		DEBUG_ERROR("%s: erase failed %" PRIu32 "\n", __func__, result.return_code);
 		return false;
 	}
 
-	if (lpc40xx_iap_call(target, &result, print_progess, IAP_CMD_BLANKCHECK, 0, LPC40xx_FLASH_NUM_SECTOR - 1U)) {
+	if (lpc_iap_call(target, &result, IAP_CMD_BLANKCHECK, 0, LPC40xx_FLASH_NUM_SECTOR - 1U)) {
 		DEBUG_ERROR("%s: blankcheck failed %" PRIu32 "\n", __func__, result.return_code);
 		return false;
 	}
@@ -226,64 +212,4 @@ static size_t lpc40xx_iap_params(const iap_cmd_e cmd)
 	default:
 		return 0U;
 	}
-}
-
-iap_status_e lpc40xx_iap_call(
-	target_s *const target, iap_result_s *const result, platform_timeout_s *const print_progess, iap_cmd_e cmd, ...)
-{
-	const lpc_priv_s *const priv = (const lpc_priv_s *)target->target_storage;
-
-	/* Set up our IAP frame with the break opcode and command to run */
-	iap_frame_s frame = {
-		.opcode = CORTEX_THUMB_BREAKPOINT,
-		{.command = cmd},
-	};
-
-	/* Fill out the remainder of the parameters */
-	const size_t params_count = priv->iap_params(cmd);
-	va_list params;
-	va_start(params, cmd);
-	for (size_t i = 0; i < params_count; ++i)
-		frame.config.params[i] = va_arg(params, uint32_t);
-	va_end(params);
-	for (size_t i = params_count; i < 4U; ++i)
-		frame.config.params[i] = 0U;
-
-	/* Copy the structure to RAM */
-	target_mem32_write(target, priv->iap_ram, &frame, sizeof(iap_frame_s));
-	const uint32_t iap_params_addr = priv->iap_ram + offsetof(iap_frame_s, config);
-
-	/* Set up for the call to the IAP ROM */
-	uint32_t regs[CORTEXM_GENERAL_REG_COUNT];
-	target_regs_read(target, regs);
-	/* Point r0 to the start of the config block */
-	regs[0] = iap_params_addr;
-	/* And r1 to the same so we re-use the same memory for the results */
-	regs[1U] = iap_params_addr;
-	/* Set the top of stack to the top of the RAM block we're using */
-	regs[CORTEX_REG_MSP] = priv->iap_msp;
-	/* Point the return address to our breakpoint opcode (thumb mode) */
-	regs[CORTEX_REG_LR] = priv->iap_ram | 1U;
-	/* And set the program counter to the IAP ROM entrypoint */
-	regs[CORTEX_REG_PC] = priv->iap_entry;
-	/* Finally set up xPSR to indicate a suitable instruction mode, no fault */
-	regs[CORTEX_REG_XPSR] = CORTEXM_XPSR_THUMB;
-	target_regs_write(target, regs);
-
-	platform_timeout_s timeout;
-	platform_timeout_set(&timeout, 500U);
-	/* Start the target and wait for it to halt again */
-	target_halt_resume(target, false);
-	while (!target_halt_poll(target, NULL)) {
-		if (print_progess)
-			target_print_progress(print_progess);
-		else if (cmd == IAP_CMD_PARTID && platform_timeout_is_expired(&timeout)) {
-			target_halt_request(target);
-			return IAP_STATUS_INVALID_COMMAND;
-		}
-	}
-
-	/* Copy back just the results */
-	target_mem32_read(target, result, iap_params_addr, sizeof(iap_result_s));
-	return result->return_code;
 }
