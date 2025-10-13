@@ -71,6 +71,13 @@ static void riscv32_regs_write(target_s *target, const void *data);
 static int riscv32_breakwatch_set(target_s *target, breakwatch_s *breakwatch);
 static int riscv32_breakwatch_clear(target_s *target, breakwatch_s *breakwatch);
 
+bool hazard3_probe(target_s *const target)
+{
+	target->driver = "Hazard3";
+	target_add_ram32(target, 0x0, 131072);
+	return true;
+}
+
 bool riscv32_probe(target_s *const target)
 {
 	/* 'E' base ISA has 16 GPRs + PC, 'I' base ISA has 32 GPRs + PC */
@@ -94,6 +101,9 @@ bool riscv32_probe(target_s *const target)
 		break;
 	case JEP106_MANUFACTURER_RASPBERRY:
 		PROBE(rp2350_probe);
+		break;
+	case 0xe77:
+		PROBE(hazard3_probe);
 		break;
 	default:
 		break;
