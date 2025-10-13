@@ -93,6 +93,12 @@ if advertise_noackmode
 	libbmd_core_args += ['-DADVERTISE_NOACKMODE=1']
 endif
 
+# Check if we should enable the RISC-V Debug remote protocol acceleration and do so if required
+enable_riscv_accel = get_option('enable_riscv_accel')
+if enable_riscv_accel
+	bmd_core_args += ['-DCONFIG_RISCV_ACCEL=1']
+endif
+
 # Get BMD targets dependency
 subdir('target')
 
@@ -126,6 +132,7 @@ summary(
 		'RTT support': rtt_support,
 		'RVSWD support': rvswd_support,
 		'Advertise QStartNoAckMode': advertise_noackmode,
+		'RISC-V acceleration': enable_riscv_accel,
 	},
 	bool_yn: true,
 	section: 'Black Magic Debug',

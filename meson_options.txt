@@ -37,19 +37,25 @@ option(
 		'ch579',
 		'efm',
 		'gd32',
+		'gd32_rv',
 		'hc32',
 		'lpc',
 		'mm32',
 		'nrf',
 		'nxp',
 		'puya',
+		'renesas_ra',
+		'renesas_rz',
 		'renesas',
 		'rp',
 		'sam',
+		'stm32f1',
+		'stm32f4',
 		'stm',
 		'ti',
 		'xilinx'
 	],
+	value: [],
 	description: 'Enabled debug targets'
 )
 option(
