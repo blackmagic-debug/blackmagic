@@ -48,7 +48,16 @@
 
 #define LPC15xx_IAP_PGM_CHUNKSIZE 512U /* Should fit in RAM on any device */
 
-#define LPC15xx_DEVICE_ID 0x400743f8U
+#define LPC15xx_SYSCON_BASE       0x4007400U
+#define LPC15xx_SYSCON_DEVICE_ID0 (LPC15xx_SYSCON_BASE + 0x3f8U)
+
+/* Taken from Device ID0 register in §3.6.51 of UM10736 rev 1.2, pg73 */
+#define ID_LPC1517 0x00001517U
+#define ID_LPC1518 0x00001518U
+#define ID_LPC1519 0x00001519U
+#define ID_LPC1547 0x00001547U
+#define ID_LPC1548 0x00001548U
+#define ID_LPC1549 0x00001549U
 
 static void lpc15xx_add_flash(target_s *const target, const uint32_t addr, const size_t len, const size_t erasesize)
 {
@@ -60,20 +69,20 @@ static void lpc15xx_add_flash(target_s *const target, const uint32_t addr, const
 bool lpc15xx_probe(target_s *const target)
 {
 	/* Read the device ID register */
-	const uint32_t device_id = target_mem32_read32(target, LPC15xx_DEVICE_ID);
+	const uint32_t device_id = target_mem32_read32(target, LPC15xx_SYSCON_DEVICE_ID0);
 
 	uint32_t ram_size = 0;
 	switch (device_id) {
-	case 0x00001549U:
-	case 0x00001519U:
+	case ID_LPC1549:
+	case ID_LPC1519:
 		ram_size = 0x9000U;
 		break;
-	case 0x00001548U:
-	case 0x00001518U:
+	case ID_LPC1548:
+	case ID_LPC1518:
 		ram_size = 0x5000U;
 		break;
-	case 0x00001547U:
-	case 0x00001517U:
+	case ID_LPC1547:
+	case ID_LPC1517:
 		ram_size = 0x3000U;
 		break;
 	default:
