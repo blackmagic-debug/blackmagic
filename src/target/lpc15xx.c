@@ -21,6 +21,18 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+/*
+ * This file implements support for LPC15xx series devices, providing
+ * memory maps and Flash programming routines.
+ *
+ * References and details about the IAP variant used here:
+ * LPC15xx 32-bit ARM Cortex-M3 microcontroller, Product data sheet, Rev. 1.1
+ *   https://www.nxp.com/docs/en/data-sheet/LPC15XX.pdf
+ * and (behind their login wall):
+ * UM10736 - LPC15xx User manual, Rev. 1.2
+ *   https://www.nxp.com/webapp/Download?colCode=UM10736&location=null
+ */
+
 #include <string.h>
 #include "general.h"
 #include "target.h"
