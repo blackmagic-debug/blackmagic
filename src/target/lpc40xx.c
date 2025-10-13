@@ -20,13 +20,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "general.h"
-#include "target.h"
-#include "target_internal.h"
-#include "cortexm.h"
-#include "cortex_internal.h"
-#include "lpc_common.h"
-
 /*
  * This file implements support for LPC40xx series devices, providing
  * memory maps and Flash programming routines.
@@ -38,6 +31,13 @@
  * UM10562 - LPC408x/407x User manual, Rev. 3
  *   https://www.nxp.com/webapp/Download?colCode=UM10562&location=null
  */
+
+#include "general.h"
+#include "target.h"
+#include "target_internal.h"
+#include "cortexm.h"
+#include "cortex_internal.h"
+#include "lpc_common.h"
 
 #define LPC40xx_SRAM_SIZE_MIN 8192U // LPC40??
 #define LPC40xx_SRAM_IAP_SIZE 32U   // IAP routines use 32 bytes at top of ram
