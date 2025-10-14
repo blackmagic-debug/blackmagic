@@ -20,6 +20,64 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+/*
+ * This file implements support for LPC15xx and LPC8xx series devices, providing
+ * memory maps and Flash programming routines.
+ *
+ * References and details about the IAP variant used here:
+ * LPC802 32-bit ARM Cortex-M0+ microcontroller, Product data sheet, Rev. 1.9
+ *   https://www.nxp.com/docs/en/data-sheet/LPC802.pdf
+ * LPC804 32-bit ARM Cortex-M0+ microcontroller, Product data sheet, Rev. 2.1
+ *   https://www.nxp.com/docs/en/nxp/data-sheets/LPC804_DS.pdf
+ * LPC81xM 32-bit ARM Cortex-M0+ microcontroller, Product data sheet, Rev. 4.7
+ *   https://www.nxp.com/docs/en/data-sheet/LPC81XM.pdf
+ * LPC82x 32-bit ARM Cortex-M0+ microcontroller, Product data sheet, Rev. 1.5
+ *   https://www.nxp.com/docs/en/data-sheet/LPC82X.pdf
+ * LPC83x 32-bit ARM Cortex-M0+ microcontroller, Product data sheet, Rev. 1.2
+ *   https://www.nxp.com/docs/en/data-sheet/LPC83X.pdf
+ * LPC84x 32-bit ARM Cortex-M0+ microcontroller, Product data sheet, Rev. 2.1
+ *   https://www.nxp.com/docs/en/data-sheet/LPC84x.pdf
+ * LPC8N04 32-bit ARM Cortex-M0+ microcontroller, Product data sheet, Rev. 1.4
+ *   https://www.nxp.com/docs/en/data-sheet/LPC8N04.pdf
+ * LPC11Axx 32-bit ARM Cortex-M0 microcontroller, Product data sheet, Rev. 4
+ *   https://www.nxp.com/docs/en/data-sheet/LPC11AXX.pdf
+ * LPC111xLV/LPC11xxLVUK 32-bit ARM Cortex-M0 microcontroller, Product data sheet, Rev. 2
+ *   https://www.nxp.com/docs/en/data-sheet/LPC111XLV_LPC11XXLVUK.pdf
+ * LPC11U1x 32-bit ARM Cortex-M0 microcontroller, Product data sheet, Rev. 2.2
+ *   https://www.nxp.com/docs/en/data-sheet/LPC11U1X.pdf
+ * LPC11U2x 32-bit ARM Cortex-M0 microcontroller, Product data sheet, Rev. 2.3
+ *   https://www.nxp.com/docs/en/data-sheet/LPC11U2X.pdf
+ * LPC11U3x 32-bit ARM Cortex-M0 microcontroller, Product data sheet, Rev. 2.5
+ *   https://www.nxp.com/docs/en/data-sheet/LPC11U3X.pdf
+ * LPC11U6x 32-bit ARM Cortex-M0+ microcontroller, Product data sheet, Rev. 1.5
+ *   https://www.nxp.com/docs/en/data-sheet/LPC11U6X.pdf
+ * and (behind their login wall):
+ * UM11045 - LPC802 User manual, Rev. 1.5
+ *   https://www.nxp.com/webapp/Download?colCode=UM11045&location=null
+ * UM11065 - LPC804 User manual, Rev. 1.4
+ *   https://www.nxp.com/webapp/Download?colCode=UM11065&location=null
+ * UM10601 - LPC81x User manual, Rev. 1.7
+ *   https://www.nxp.com/webapp/Download?colCode=UM10601&location=null
+ * UM10800 - LPC82x User manual, Rev. 1.4
+ *   https://www.nxp.com/webapp/Download?colCode=UM10800&location=null
+ * UM11021 - LPC83x User manual, Rev. 1.1
+ *   https://www.nxp.com/webapp/Download?colCode=UM11021&location=null
+ * UM11029 - LPC84x User manual, Rev. 1.7
+ *   https://www.nxp.com/webapp/Download?colCode=UM11029&location=null
+ * UM11074 - LPC8N04 User manual, Rev. 1.3
+ *   https://www.nxp.com/webapp/Download?colCode=UM11074&location=null
+ * UM10429 - LPC1102/04 User manual, Rev. 6
+ *   https://www.nxp.com/webapp/Download?colCode=UM10429&location=null
+ * UM10398 - LPC111x/LPC11Cxx User manual, Rev. 12.5
+ *   https://www.nxp.com/webapp/Download?colCode=UM10398&location=null
+ * UM10578 - LPC11xxLV user manual, Rev. 1
+ *   https://www.nxp.com/webapp/Download?colCode=UM10578&location=null
+ * UM10462 - LPC11U3x/2x/1x User manual, Rev, 5.5
+ *   https://www.nxp.com/webapp/Download?colCode=UM10462&location=null
+ * UM10839 - LPC112x User manual, Rev. 1.0
+ *   https://www.nxp.com/webapp/Download?colCode=UM10839&location=null
+ */
+
 #include <string.h>
 #include "general.h"
 #include "target.h"
