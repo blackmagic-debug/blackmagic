@@ -66,12 +66,16 @@
  *   https://www.nxp.com/webapp/Download?colCode=UM11029&location=null
  * UM11074 - LPC8N04 User manual, Rev. 1.3
  *   https://www.nxp.com/webapp/Download?colCode=UM11074&location=null
+ * UM10429 - LPC1102/04 User manual, Rev. 6
+ *   https://www.nxp.com/webapp/Download?colCode=UM10429&location=null
  * UM10398 - LPC111x/LPC11Cxx User manual, Rev. 12.5
  *   https://www.nxp.com/webapp/Download?colCode=UM10398&location=null
  * UM10578 - LPC11xxLV user manual, Rev. 1
  *   https://www.nxp.com/webapp/Download?colCode=UM10578&location=null
  * UM10462 - LPC11U3x/2x/1x User manual, Rev, 5.5
  *   https://www.nxp.com/webapp/Download?colCode=UM10462&location=null
+ * UM10839 - LPC112x User manual, Rev. 1.0
+ *   https://www.nxp.com/webapp/Download?colCode=UM10839&location=null
  */
 
 #include <string.h>
