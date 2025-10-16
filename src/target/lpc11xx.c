@@ -86,9 +86,10 @@
 #include "lpc_common.h"
 
 /* Common memory map constants for LPC11xx and LPC8xx parts */
-#define LPC11xx_FLASH_BASE      0x00000000U
-#define LPC11xx_SRAM_BASE       0x10000000U
-#define LPC8xx_FLASH_ERASE_SIZE 0x00000400U
+#define LPC11xx_FLASH_BASE       0x00000000U
+#define LPC11xx_SRAM_BASE        0x10000000U
+#define LPC8xx_FLASH_ERASE_SIZE  0x00000400U
+#define LPC11xx_FLASH_ERASE_SIZE 0x00001000U
 
 /* Memory map constants for LPC802 parts */
 #define LPC802_FLASH_SIZE 0x00004000U
@@ -116,6 +117,10 @@
 #define LPC84x_FLASH_SIZE 0x00010000U
 #define LPC844_SRAM_SIZE  0x00002000U
 #define LPC845_SRAM_SIZE  0x00004000U
+/* Memory map constants for LPC111x-XL parts */
+#define LPC111x_SRAM_2KiB 0x00000800U
+#define LPC111x_SRAM_4KiB 0x00001000U
+#define LPC111x_SRAM_8KiB 0x00002000U
 
 /* IAP constants and locations */
 #define LPC11xx_SRAM_SIZE_MIN 1024U
@@ -128,9 +133,9 @@
 #define LPC11xx_IAP_PGM_CHUNKSIZE 512U /* Should fit in RAM on any device */
 
 /* SYSCON and device ID register locations */
-#define LPC8xx_SYSCON_BASE      0x40048000U
-#define LPC8xx_SYSCON_DEVICE_ID (LPC8xx_SYSCON_BASE + 0x3f8U)
-#define LPC11xx_DEVICE_ID       0x400483f4U
+#define LPC11xx_SYSCON_BASE      0x40048000U
+#define LPC8xx_SYSCON_DEVICE_ID  (LPC11xx_SYSCON_BASE + 0x3f8U)
+#define LPC11xx_SYSCON_DEVICE_ID (LPC11xx_SYSCON_BASE + 0x3f4U)
 
 /* Taken from UM11045 §6.6.29 Device ID register, pg72 */
 #define ID_LPC802M001JDH20 0x00008021U /* LPC802M001JDH20/LPC802UK */
@@ -170,6 +175,36 @@
 #define ID_LPC845M301JHI33 0x00008454U
 #define ID_LPC84x_MASK     0x000000f0U
 #define ID_LPC844          0x00000040U
+/* Taken from UM10398 §25.5.11 Read Part Identification number, pg431 */
+#define ID_LPC1111_203         0x00010012U
+#define ID_LPC1111_103         0x00010013U
+#define ID_LPC1112_203         0x00020022U
+#define ID_LPC1112_103         0x00020023U
+#define ID_LPC1113_303         0x00030030U
+#define ID_LPC1113_203         0x00030032U
+#define ID_LPC1114_303         0x00040040U
+#define ID_LPC1114_203         0x00040042U
+#define ID_LPC1114_323         0x00040060U
+#define ID_LPC1114_333         0x00040070U
+#define ID_LPC1115_303         0x00050080U
+#define ID_LPC111x_SRAM_MASK   (0xfU << 0U)
+#define ID_LPC111x_SRAM_2KiB   (0x3U << 0U)
+#define ID_LPC111x_SRAM_4KiB   (0x2U << 0U)
+#define ID_LPC111x_SRAM_8KiB   (0x0U << 0U)
+#define ID_LPC111x_FLASH_SHIFT 4U
+#define ID_LPC111x_FLASH_MASK  (0xfU << ID_LPC111x_FLASH_SHIFT)
+/* Taken from UM10462 §20.13.11 Read Part Identification number, pg407 */
+#define ID_LPC11U34_311    0x0003d440U
+#define ID_LPC11U34_421    0x0001cc40U
+#define ID_LPC11U35_401    0x0001bc40U
+#define ID_LPC11U35_501    0x0000bc40U
+#define ID_LPC11U36_401    0x00019c40U
+#define ID_LPC11U37x48_401 0x00017c40U
+#define ID_LPC11U37x64_401 0x00007c44U
+#define ID_LPC11U37x64_501 0x00007c40U
+/* Taken from UM10839 §18.4.11 Read Part Identification number, pg 271 */
+#define ID_LPC1124 0x00140040U
+#define ID_LPC1125 0x00150080U
 
 /*
  * Chip    RAM Flash page sector   Rsvd pages  EEPROM
@@ -228,7 +263,7 @@ static bool lpc11xx_detect(target_s *const target)
 	 *   2) the LPC11U3x series, see UM10462 Rev.5.5 §3.1
 	 * But see the comment for the LPC8xx series below.
 	 */
-	const uint32_t device_id = target_mem32_read32(target, LPC11xx_DEVICE_ID);
+	const uint32_t device_id = target_mem32_read32(target, LPC11xx_SYSCON_DEVICE_ID);
 
 	switch (device_id) {
 	case 0x0a07102bU: /* LPC1110 - 4K Flash 1K SRAM */
@@ -404,40 +439,49 @@ static bool lpc8xx_detect(target_s *const target)
 		lpc11xx_add_flash(target, LPC11xx_FLASH_BASE, LPC84x_FLASH_SIZE, LPC8xx_FLASH_ERASE_SIZE, 0U);
 		iap_entry = LPC8xx_IAP_ENTRYPOINT_LOCATION;
 		break;
-	case 0x0003d440U: /* LPC11U34/311 - 40K Flash 8K SRAM */
-	case 0x0001cc40U: /* LPC11U34/421 - 48K Flash 8K SRAM */
-	case 0x0001bc40U: /* LPC11U35/401 - 64K Flash 8K SRAM */
-	case 0x0000bc40U: /* LPC11U35/501 - 64K Flash 8K SRAM */
-	case 0x00019c40U: /* LPC11U36/401 - 96K Flash 8K SRAM */
-	case 0x00017c40U: /* LPC11U37FBD48/401 - 128K Flash 8K SRAM */
-	case 0x00007c44U: /* LPC11U37HFBD64/401 */
-	case 0x00007c40U: /* LPC11U37FBD64/501 */
+	case ID_LPC11U34_311: /* 40KiB Flash, 8KiB SRAM */
+	case ID_LPC11U34_421: /* 48KiB Flash, 8KiB SRAM */
+	case ID_LPC11U35_401: /* 64KiB Flash, 8KiB SRAM */
+	case ID_LPC11U35_501:
+	case ID_LPC11U36_401:    /* 96KiB Flash, 8KiB SRAM */
+	case ID_LPC11U37x48_401: /* 128KiB Flash, 8KiB SRAM */
+	case ID_LPC11U37x64_401:
+	case ID_LPC11U37x64_501:
 		target->driver = "LPC11U3x";
 		target_add_ram32(target, LPC11xx_SRAM_BASE, 0x2000);
 		lpc11xx_add_flash(target, LPC11xx_FLASH_BASE, 0x20000, 0x1000, 0);
 		iap_entry = LPC11xx_IAP_ENTRYPOINT_LOCATION;
 		break;
-	case 0x00010013U: /* LPC1111/103 - 8K Flash 2K SRAM */
-	case 0x00010012U: /* LPC1111/203 - 8K Flash 4K SRAM */
-	case 0x00020023U: /* LPC1112/103 - 16K Flash 2K SRAM */
-	case 0x00020022U: /* LPC1112/203 - 16K Flash 4K SRAM */
-	case 0x00030030U: /* LPC1113/303 - 24K Flash 8K SRAM */
-	case 0x00030032U: /* LPC1113/203 - 24K Flash 4K SRAM */
-	case 0x00040040U: /* LPC1114/303 - 32K Flash 8K SRAM */
-	case 0x00040042U: /* LPC1114/203 - 32K Flash 4K SRAM */
-	case 0x00040060U: /* LPC1114/323 - 48K Flash 8K SRAM */
-	case 0x00040070U: /* LPC1114/333 - 56K Flash 8K SRAM */
-	case 0x00050080U: /* LPC1115/303 - 64K Flash 8K SRAM */
-		target->driver = "LPC11xx-XL";
-		target_add_ram32(target, LPC11xx_SRAM_BASE, 0x2000);
-		lpc11xx_add_flash(target, LPC11xx_FLASH_BASE, 0x20000, 0x1000, 0);
+	case ID_LPC1111_103:   /* 8KiB Flash, 2KiB SRAM */
+	case ID_LPC1111_203:   /* 8KiB Flash, 4KiB SRAM */
+	case ID_LPC1112_103:   /* 16KiB Flash, 2KiB SRAM */
+	case ID_LPC1112_203:   /* 16KiB Flash, 4KiB SRAM */
+	case ID_LPC1113_203:   /* 24KiB Flash, 4KiB SRAM */
+	case ID_LPC1113_303:   /* 24KiB Flash, 8KiB SRAM */
+	case ID_LPC1114_203:   /* 32KiB Flash, 4KiB SRAM */
+	case ID_LPC1114_303:   /* 32KiB Flash, 8KiB SRAM */
+	case ID_LPC1114_323:   /* 48KiB Flash, 8KiB SRAM */
+	case ID_LPC1114_333:   /* 56KiB Flash, 8KiB SRAM */
+	case ID_LPC1115_303: { /* 64KiB Flash, 8KiB SRAM */
+		target->driver = "LPC111x-XL";
+		/* Available Flash on these parts is encoded as the second nibble of the part number as a multiple of 8KiB */
+		const uint32_t flash_size = ((device_id & ID_LPC111x_FLASH_MASK) >> ID_LPC111x_FLASH_SHIFT) * 8192U;
+		const uint8_t sram_enc = (uint8_t)(device_id & ID_LPC111x_SRAM_MASK);
+		if (sram_enc == ID_LPC111x_SRAM_2KiB)
+			target_add_ram32(target, LPC11xx_SRAM_BASE, LPC111x_SRAM_2KiB);
+		else if (sram_enc == ID_LPC111x_SRAM_4KiB)
+			target_add_ram32(target, LPC11xx_SRAM_BASE, LPC111x_SRAM_4KiB);
+		else
+			target_add_ram32(target, LPC11xx_SRAM_BASE, LPC111x_SRAM_8KiB);
+		lpc11xx_add_flash(target, LPC11xx_FLASH_BASE, flash_size, LPC11xx_FLASH_ERASE_SIZE, 0);
 		iap_entry = LPC11xx_IAP_ENTRYPOINT_LOCATION;
 		break;
-	case 0x00140040U: /* LPC1124/303 - 32K Flash 8K SRAM */
-	case 0x00150080U: /* LPC1125/303 - 64K Flash 8K SRAM */
+	}
+	case ID_LPC1124: /* 32KiB Flash, 8KiB SRAM */
+	case ID_LPC1125: /* 64KiB Flash, 8KiB SRAM */
 		target->driver = "LPC112x";
 		target_add_ram32(target, LPC11xx_SRAM_BASE, 0x2000U);
-		lpc11xx_add_flash(target, LPC11xx_FLASH_BASE, device_id == 0x00140040U ? 0x8000U : 0x10000U, 0x1000, 0);
+		lpc11xx_add_flash(target, LPC11xx_FLASH_BASE, device_id == ID_LPC1124 ? 0x8000U : 0x10000U, 0x1000, 0);
 		iap_entry = LPC11xx_IAP_ENTRYPOINT_LOCATION;
 		break;
 	default:
