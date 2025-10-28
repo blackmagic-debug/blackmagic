@@ -117,6 +117,9 @@
 #define LPC84x_FLASH_SIZE 0x00010000U
 #define LPC844_SRAM_SIZE  0x00002000U
 #define LPC845_SRAM_SIZE  0x00004000U
+/* Memory map constants for LPC8N04 parts */
+#define LPC8N04_FLASH_SIZE 0x00007800U
+#define LPC8N04_SRAM_SIZE  0x00002000U
 /* Memory map constants for LPC111x-XL parts */
 #define LPC111x_SRAM_2KiB 0x00000800U
 #define LPC111x_SRAM_4KiB 0x00001000U
@@ -186,6 +189,8 @@
 #define ID_LPC845M301JHI33 0x00008454U
 #define ID_LPC84x_MASK     0x000000f0U
 #define ID_LPC844          0x00000040U
+/* Taken from UM11074 §4.5.19 Device ID register, pg23 */
+#define ID_LPC8N04 0x00008a04U
 /* Taken from UM10389 §3.5.37 Device ID register, pg45 */
 #define ID_LPC1110_0     0x0a07102bU
 #define ID_LPC1110_1     0x1a07102bU
@@ -374,15 +379,15 @@ static bool lpc11xx_detect(target_s *const target)
 		target_add_ram32(target, LPC11xx_SRAM_BASE, 0x2000);
 		lpc11xx_add_flash(target, LPC11xx_FLASH_BASE, 0x8000, 0x1000, 0);
 		break;
-	case 0x00008a04U: /* LPC8N04 (see UM11074 Rev.1.3 §4.5.19) */
+	case ID_LPC8N04:
 		target->driver = "LPC8N04";
-		target_add_ram32(target, LPC11xx_SRAM_BASE, 0x2000);
+		target_add_ram32(target, LPC11xx_SRAM_BASE, LPC8N04_SRAM_SIZE);
 		/*
-		 * UM11074/ Flash controller/15.2: The two topmost sectors
+		 * UM11074 §15.2 Flash controller, pg97: The two topmost sectors
 		 * contain the initialization code and IAP firmware.
 		 * Do not touch them!
 		 */
-		lpc11xx_add_flash(target, LPC11xx_FLASH_BASE, 0x7800, 0x400, 0);
+		lpc11xx_add_flash(target, LPC11xx_FLASH_BASE, LPC8N04_FLASH_SIZE, LPC8xx_FLASH_ERASE_SIZE, 0U);
 		break;
 	default:
 		if (device_id && target->designer_code != JEP106_MANUFACTURER_SPECULAR)
