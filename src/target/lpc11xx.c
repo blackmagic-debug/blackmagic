@@ -235,6 +235,17 @@
 #define ID_LPC111x_SRAM_8KiB   (0x0U << 0U)
 #define ID_LPC111x_FLASH_SHIFT 4U
 #define ID_LPC111x_FLASH_MASK  (0xfU << ID_LPC111x_FLASH_SHIFT)
+/* Taken from UM10462 §3.5.424 Device ID register, pg44 */
+#define ID_LPC11U12_201_0 0x095c802bU
+#define ID_LPC11U12_201_1 0x295c802bU
+#define ID_LPC11U13_201_0 0x097a802bU
+#define ID_LPC11U13_201_1 0x297a802bU
+#define ID_LPC11U14_201_0 0x0998802bU
+#define ID_LPC11U14_201_1 0x2998802bU
+#define ID_LPC11U22_301   0x2954402bU
+#define ID_LPC11U23_301   0x2972402bU
+#define ID_LPC11U24_301   0x2988402bU
+#define ID_LPC11U24_401   0x2980002bU
 /* Taken from UM10462 §20.13.11 Read Part Identification number, pg407 */
 #define ID_LPC11U34_311    0x0003d440U
 #define ID_LPC11U34_421    0x0001cc40U
@@ -338,16 +349,16 @@ static bool lpc11xx_detect(target_s *const target)
 	case ID_LPC11C22_301:
 	case ID_LPC11C14_301: /* 32KiB Flash, 8KiB SRAM */
 	case ID_LPC11C24_301:
-	case 0x095c802bU: /* LPC11u12x/201 - 16K Flash 4K SRAM */
-	case 0x295c802bU: /* LPC11u12x/201 - 16K Flash 4K SRAM */
-	case 0x097a802bU: /* LPC11u13/201 - 24K Flash 4K SRAM */
-	case 0x297a802bU: /* LPC11u13/201 - 24K Flash 4K SRAM */
-	case 0x0998802bU: /* LPC11u14/201 - 32K Flash 4K SRAM */
-	case 0x2998802bU: /* LPC11u14/201 - 32K Flash 4K SRAM */
-	case 0x2954402bU: /* LPC11u22/301 - 16K Flash 6K SRAM */
-	case 0x2972402bU: /* LPC11u23/301 - 24K Flash 6K SRAM */
-	case 0x2988402bU: /* LPC11u24x/301 - 32K Flash 6K SRAM */
-	case 0x2980002bU: /* LPC11u24x/401 - 32K Flash 8K SRAM */
+	case ID_LPC11U12_201_0: /* 16KiB Flash, 4KiB SRAM */
+	case ID_LPC11U12_201_1:
+	case ID_LPC11U13_201_0: /* 24KiB Flash, 4KiB SRAM */
+	case ID_LPC11U13_201_1:
+	case ID_LPC11U14_201_0: /* 32KiB Flash, 4KiB SRAM */
+	case ID_LPC11U14_201_1:
+	case ID_LPC11U22_301: /* 16KiB Flash, 6KiB SRAM */
+	case ID_LPC11U23_301: /* 24KiB Flash, 6KiB SRAM */
+	case ID_LPC11U24_301: /* 32KiB Flash, 6KiB SRAM */
+	case ID_LPC11U24_401: /* 32KiB Flash, 8KiB SRAM */
 		target->driver = "LPC11xx";
 		target_add_ram32(target, LPC11xx_SRAM_BASE, 0x2000);
 		lpc11xx_add_flash(target, LPC11xx_FLASH_BASE, 0x8000, 0x1000, 0);
