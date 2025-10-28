@@ -186,6 +186,37 @@
 #define ID_LPC845M301JHI33 0x00008454U
 #define ID_LPC84x_MASK     0x000000f0U
 #define ID_LPC844          0x00000040U
+/* Taken from UM10389 §3.5.37 Device ID register, pg45 */
+#define ID_LPC1110_0     0x0a07102bU
+#define ID_LPC1110_1     0x1a07102bU
+#define ID_LPC1111_002_0 0x0a16d02bU
+#define ID_LPC1111_002_1 0x1a16d02bU
+#define ID_LPC1111_101   0x041e502bU
+#define ID_LPC1111_102   0x2516d02bU
+#define ID_LPC1111_201   0x0416502bU
+#define ID_LPC1111_202   0x2516902bU
+#define ID_LPC1112_101_0 0x042d502bU
+#define ID_LPC1112_101_1 0x2524d02bU
+#define ID_LPC1112_102_0 0x0a23902bU
+#define ID_LPC1112_102_1 0x1a23902bU
+#define ID_LPC1112_102_2 0x0a24902bU
+#define ID_LPC1112_102_3 0x1a24902bU
+#define ID_LPC1112_201   0x0425502bU
+#define ID_LPC1112_202   0x2524902bU
+#define ID_LPC1113_201   0x0434502bU
+#define ID_LPC1113_202   0x2532902bU
+#define ID_LPC1113_301   0x0434102bU
+#define ID_LPC1113_302   0x2532102bU
+#define ID_LPC1114_102_0 0x0a40902bU
+#define ID_LPC1114_102_1 0x1a40902bU
+#define ID_LPC1114_201   0x0444502bU
+#define ID_LPC1114_202   0x2540902bU
+#define ID_LPC1114_301   0x0444102bU
+#define ID_LPC1114_302   0x2540102bU
+#define ID_LPC11C12_301  0x1421102bU
+#define ID_LPC11C14_301  0x1440102bU
+#define ID_LPC11C22_301  0x1431102bU
+#define ID_LPC11C24_301  0x1430102bU
 /* Taken from UM10398 §25.5.11 Read Part Identification number, pg431 */
 #define ID_LPC1111_203         0x00010012U
 #define ID_LPC1111_103         0x00010013U
@@ -213,7 +244,7 @@
 #define ID_LPC11U37x48_401 0x00017c40U
 #define ID_LPC11U37x64_401 0x00007c44U
 #define ID_LPC11U37x64_501 0x00007c40U
-/* Taken from UM10839 §18.4.11 Read Part Identification number, pg 271 */
+/* Taken from UM10839 §18.4.11 Read Part Identification number, pg271 */
 #define ID_LPC1124 0x00140040U
 #define ID_LPC1125 0x00150080U
 
@@ -269,7 +300,7 @@ static bool lpc11xx_detect(target_s *const target)
 	 *
 	 * For LPC11xx & LPC11Cxx see UM10398 Rev. 12.4 §26.5.11 Table 387
 	 * For LPC11Uxx see UM10462 Rev. 5.5 §20.13.11 Table 377
-	 * Nota Bene: the DEVICE_ID register at address 0x400483f4 is not valid for:
+	 * NB: the DEVICE_ID register at address 0x400483f4 is not valid for:
 	 *   1) the LPC11xx & LPC11Cxx "XL" series, see UM10398 Rev.12.4 §3.1
 	 *   2) the LPC11U3x series, see UM10462 Rev.5.5 §3.1
 	 * But see the comment for the LPC8xx series below.
@@ -277,35 +308,36 @@ static bool lpc11xx_detect(target_s *const target)
 	const uint32_t device_id = target_mem32_read32(target, LPC11xx_SYSCON_DEVICE_ID);
 
 	switch (device_id) {
-	case 0x0a07102bU: /* LPC1110 - 4K Flash 1K SRAM */
-	case 0x1a07102bU: /* LPC1110 - 4K Flash 1K SRAM */
-	case 0x0a16d02bU: /* LPC1111/002 - 8K Flash 2K SRAM */
-	case 0x1a16d02bU: /* LPC1111/002 - 8K Flash 2K SRAM */
-	case 0x041e502bU: /* LPC1111/101 - 8K Flash 2K SRAM */
-	case 0x2516d02bU: /* LPC1111/101/102 - 8K Flash 2K SRAM */
-	case 0x0416502bU: /* LPC1111/201 - 8K Flash 4K SRAM */
-	case 0x2516902bU: /* LPC1111/201/202 - 8K Flash 4K SRAM */
-	case 0x0a23902bU: /* LPC1112/102 - 16K Flash 4K SRAM */
-	case 0x1a23902bU: /* LPC1112/102 - 16K Flash 4K SRAM */
-	case 0x042d502bU: /* LPC1112/101 - 16K Flash 2K SRAM */
-	case 0x2524d02bU: /* LPC1112/101/102 - 16K Flash 2K SRAM */
-	case 0x0425502bU: /* LPC1112/201 - 16K Flash 4K SRAM */
-	case 0x2524902bU: /* LPC1112/201/202 - 16K Flash 4K SRAM */
-	case 0x0434502bU: /* LPC1113/201 - 24K Flash 4K SRAM */
-	case 0x2532902bU: /* LPC1113/201/202 - 24K Flash 4K SRAM */
-	case 0x0434102bU: /* LPC1113/301 - 24K Flash 8K SRAM */
-	case 0x2532102bU: /* LPC1113/301/302 - 24K Flash 8K SRAM */
-	case 0x0a40902bU: /* LPC1114/102 - 32K Flash 4K SRAM */
-	case 0x1a40902bU: /* LPC1114/102 - 32K Flash 4K SRAM */
-	case 0x0444502bU: /* LPC1114/201 - 32K Flash 4K SRAM */
-	case 0x2540902bU: /* LPC1114/201/202 - 32K Flash 4K SRAM */
-	case 0x0444102bU: /* LPC1114/301 - 32K Flash 8K SRAM */
-	case 0x2540102bU: /* LPC1114/301/302 & LPC11D14/302 - 32K Flash 8K SRAM */
-	case 0x00050080U: /* LPC1115/303 - 64K Flash 8K SRAM (Redundant? see UM10398, XL has Device ID at different address) */
-	case 0x1421102bU: /* LPC11c12/301 - 16K Flash 8K SRAM */
-	case 0x1440102bU: /* LPC11c14/301 - 32K Flash 8K SRAM */
-	case 0x1431102bU: /* LPC11c22/301 - 16K Flash 8K SRAM */
-	case 0x1430102bU: /* LPC11c24/301 - 32K Flash 8K SRAM */
+	case ID_LPC1110_0: /* 4KiB Flash, 1KiB SRAM */
+	case ID_LPC1110_1:
+	case ID_LPC1111_002_0: /* 8KiB Flash, 2KiB SRAM */
+	case ID_LPC1111_002_1:
+	case ID_LPC1111_101:
+	case ID_LPC1111_102:
+	case ID_LPC1111_201: /* 8KiB Flash, 4KiB SRAM */
+	case ID_LPC1111_202:
+	case ID_LPC1112_101_0: /* 16KiB Flash 2KiB SRAM */
+	case ID_LPC1112_101_1:
+	case ID_LPC1112_102_0: /* 16KiB Flash, 4KiB SRAM */
+	case ID_LPC1112_102_1:
+	case ID_LPC1112_102_2:
+	case ID_LPC1112_102_3:
+	case ID_LPC1112_201:
+	case ID_LPC1112_202:
+	case ID_LPC1113_201: /* 24KiB Flash 4KiB SRAM */
+	case ID_LPC1113_202:
+	case ID_LPC1113_301: /* 24KiB Flash, 8KiB SRAM */
+	case ID_LPC1113_302:
+	case ID_LPC1114_102_0: /* 32KiB Flash, 4KiB SRAM */
+	case ID_LPC1114_102_1:
+	case ID_LPC1114_201:
+	case ID_LPC1114_202:
+	case ID_LPC1114_301: /* 32KiB Flash, 8KiB SRAM */
+	case ID_LPC1114_302:
+	case ID_LPC11C12_301: /* 16KiB Flash, 8KiB SRAM */
+	case ID_LPC11C22_301:
+	case ID_LPC11C14_301: /* 32KiB Flash, 8KiB SRAM */
+	case ID_LPC11C24_301:
 	case 0x095c802bU: /* LPC11u12x/201 - 16K Flash 4K SRAM */
 	case 0x295c802bU: /* LPC11u12x/201 - 16K Flash 4K SRAM */
 	case 0x097a802bU: /* LPC11u13/201 - 24K Flash 4K SRAM */
@@ -318,13 +350,7 @@ static bool lpc11xx_detect(target_s *const target)
 	case 0x2980002bU: /* LPC11u24x/401 - 32K Flash 8K SRAM */
 		target->driver = "LPC11xx";
 		target_add_ram32(target, LPC11xx_SRAM_BASE, 0x2000);
-		lpc11xx_add_flash(target, LPC11xx_FLASH_BASE, 0x20000, 0x1000, 0);
-		break;
-	case 0x0a24902bU:
-	case 0x1a24902bU:
-		target->driver = "LPC1112";
-		target_add_ram32(target, LPC11xx_SRAM_BASE, 0x1000);
-		lpc11xx_add_flash(target, LPC11xx_FLASH_BASE, 0x10000, 0x1000, 0);
+		lpc11xx_add_flash(target, LPC11xx_FLASH_BASE, 0x8000, 0x1000, 0);
 		break;
 	case 0x1000002bU: /* FX LPC11U6 32 kB SRAM/256 kB flash (max) */
 		target->driver = "LPC11U6";
