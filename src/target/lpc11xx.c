@@ -21,7 +21,7 @@
  */
 
 /*
- * This file implements support for LPC15xx and LPC8xx series devices, providing
+ * This file implements support for LPC11xx, LPC13xx and LPC8xx series devices, providing
  * memory maps and Flash programming routines.
  *
  * References and details about the IAP variant used here:
@@ -51,6 +51,8 @@
  *   https://www.nxp.com/docs/en/data-sheet/LPC11U3X.pdf
  * LPC11U6x 32-bit ARM Cortex-M0+ microcontroller, Product data sheet, Rev. 1.5
  *   https://www.nxp.com/docs/en/data-sheet/LPC11U6X.pdf
+ * LPC13111/13/42/43 32-bit ARM Cortex-M3 microcontroller, Product data sheet, Rev. 5
+ *   https://www.nxp.com/docs/en/data-sheet/LPC1311_13_42_43.pdf
  * and (behind their login wall):
  * UM11045 - LPC802 User manual, Rev. 1.5
  *   https://www.nxp.com/webapp/Download?colCode=UM11045&location=null
@@ -78,6 +80,8 @@
  *   https://www.nxp.com/webapp/Download?colCode=UM10732&location=null
  * UM10839 - LPC112x User manual, Rev. 1.0
  *   https://www.nxp.com/webapp/Download?colCode=UM10839&location=null
+ * UM10375 - LPC1311/13/42/43 User Manual, Rev. 5
+ *   https://www.nxp.com/webapp/Download?colCode=UM10375&location=null
  */
 
 #include <string.h>
@@ -285,6 +289,13 @@
 /* Taken from UM10839 §18.4.11 Read Part Identification number, pg271 */
 #define ID_LPC1124 0x00140040U
 #define ID_LPC1125 0x00150080U
+/* Taken from UM10375 §3.5.48 Device ID register, pg43 */
+#define ID_LPC1311    0x2c42502bU
+#define ID_LPC1311_01 0x1816902bU
+#define ID_LPC1313    0x2c40102bU
+#define ID_LPC1313_01 0x1830102bU
+#define ID_LPC1342    0x3d01402bU
+#define ID_LPC1343    0x3d00002bU
 
 /*
  * Chip    RAM Flash page sector   Rsvd pages  EEPROM
@@ -390,9 +401,14 @@ static bool lpc11xx_detect(target_s *const target)
 		target_add_ram32(target, LPC11xx_SRAM_BASE, 0x2000);
 		lpc11xx_add_flash(target, LPC11xx_FLASH_BASE, 0x8000, 0x1000, 0);
 		break;
+	case ID_LPC1311: /* 8KiB Flash, 4KiB SRAM */
+	case ID_LPC1311_01:
+	case ID_LPC1313: /* 32KiB Flash, 8KiB SRAM */
+	case ID_LPC1313_01:
+	case ID_LPC1342: /* 16KiB Flash, 4KiB SRAM */
+	case ID_LPC1343: /* 32KiB Flash, 8KiB SRAM */
 	case 0x3000002bU:
-	case 0x3d00002bU:
-		target->driver = "LPC1343";
+		target->driver = "LPC13xx";
 		target_add_ram32(target, LPC11xx_SRAM_BASE, 0x2000);
 		lpc11xx_add_flash(target, LPC11xx_FLASH_BASE, 0x8000, 0x1000, 0);
 		break;
