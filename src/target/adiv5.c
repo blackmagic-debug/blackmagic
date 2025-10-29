@@ -466,6 +466,16 @@ void adiv5_dp_init(adiv5_debug_port_s *const dp)
 		return;
 	}
 
+	// if (dp->target_designer_code == JEP106_MANUFACTURER_NORDIC && dp->target_partno == 0x70U) {
+	// 	// nRF5340 requires special handling due to the AP lacking a register for checking
+	// 	// APPROTECT status. Instead, the only way to check if it's protected is to enumerate
+	// 	// the list of APs and check if the network core is present.
+	// 	if (nrf5340_prepare(dp)) {
+	// 		adiv5_dp_unref(dp);
+	// 		return;
+	// 	}
+	// }
+
 	/* Try to power cycle the APs, affecting a reset on them */
 	if (!adiv5_power_cycle_aps(dp)) {
 		/* Clean up by freeing the DP - no APs have been constructed at this point, so this is safe */
@@ -514,6 +524,7 @@ void adiv5_dp_init(adiv5_debug_port_s *const dp)
 
 		kinetis_mdm_probe(ap);
 		nrf51_ctrl_ap_probe(ap);
+		nrf5340_ctrl_ap_probe(ap);
 		nrf54l_ctrl_ap_probe(ap);
 		efm32_aap_probe(ap);
 		lpc55_dmap_probe(ap);
