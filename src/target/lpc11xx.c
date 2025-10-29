@@ -74,6 +74,8 @@
  *   https://www.nxp.com/webapp/Download?colCode=UM10578&location=null
  * UM10462 - LPC11U3x/2x/1x User manual, Rev, 5.5
  *   https://www.nxp.com/webapp/Download?colCode=UM10462&location=null
+ * UM10732 - LPC11U6x/Ex User manual, Rev, 1.9
+ *   https://www.nxp.com/webapp/Download?colCode=UM10732&location=null
  * UM10839 - LPC112x User manual, Rev. 1.0
  *   https://www.nxp.com/webapp/Download?colCode=UM10839&location=null
  */
@@ -131,6 +133,13 @@
 #define LPC11U36_FLASH_SIZE     0x00018000U
 #define LPC11U37_FLASH_SIZE     0x00020000U
 #define LPC11U3x_SRAM_SIZE      0x00002000U
+/* Memory map constants for LPC11U6x parts */
+#define LPC11x66_FLASH_SIZE 0x00010000U
+#define LPC11x67_FLASH_SIZE 0x00020000U
+#define LPC11x68_FLASH_SIZE 0x00040000U
+#define LPC11x66_SRAM_SIZE  0x00003000U
+#define LPC11x67_SRAM_SIZE  0x00005000U
+#define LPC11x68_SRAM_SIZE  0x00009000U
 /* Memory map constants for LPC112x parts */
 #define LPC1124_FLASH_SIZE 0x00008000U
 #define LPC1125_FLASH_SIZE 0x00010000U
@@ -260,6 +269,19 @@
 #define ID_LPC11U37x48_401 0x00017c40U
 #define ID_LPC11U37x64_401 0x00007c44U
 #define ID_LPC11U37x64_501 0x00007c40U
+/* Taken from UM10732 §4.4.9 Device ID register, pg61 */
+#define ID_LPC11E66           0x0000dcc1U
+#define ID_LPC11E67           0x0000bc81U
+#define ID_LPC11E68           0x00007c01U
+#define ID_LPC11U66           0x0000dcc8U
+#define ID_LPC11U67           0x0000bc88U
+#define ID_LPC11U67_100       0x0000bc80U
+#define ID_LPC11U68           0x00007c08U
+#define ID_LPC11U68_100       0x00007c00U
+#define ID_LPC11x6x_PART_MASK (0xfU << 12U)
+#define ID_LPC11x6x_PART_xx6  (0xdU << 12U)
+#define ID_LPC11x6x_PART_xx7  (0xbU << 12U)
+#define ID_LPC11x6x_PART_xx8  (0x7U << 12U)
 /* Taken from UM10839 §18.4.11 Read Part Identification number, pg271 */
 #define ID_LPC1124 0x00140040U
 #define ID_LPC1125 0x00150080U
@@ -367,11 +389,6 @@ static bool lpc11xx_detect(target_s *const target)
 		target->driver = "LPC11xx";
 		target_add_ram32(target, LPC11xx_SRAM_BASE, 0x2000);
 		lpc11xx_add_flash(target, LPC11xx_FLASH_BASE, 0x8000, 0x1000, 0);
-		break;
-	case 0x1000002bU: /* FX LPC11U6 32 kB SRAM/256 kB flash (max) */
-		target->driver = "LPC11U6";
-		target_add_ram32(target, LPC11xx_SRAM_BASE, 0x8000);
-		lpc11xx_add_flash(target, LPC11xx_FLASH_BASE, 0x40000, 0x1000, 0);
 		break;
 	case 0x3000002bU:
 	case 0x3d00002bU:
@@ -513,6 +530,26 @@ static bool lpc8xx_detect(target_s *const target)
 		else
 			lpc11xx_add_flash(target, LPC11xx_FLASH_BASE, LPC11U37_FLASH_SIZE, LPC11xx_FLASH_ERASE_SIZE, 0U);
 		iap_entry = LPC11xx_IAP_ENTRYPOINT_LOCATION;
+		break;
+	case ID_LPC11E66: /* 64KiB Flash, 12KiB SRAM */
+	case ID_LPC11U66:
+	case ID_LPC11E67: /* 128KiB Flash, 20KiB SRAM */
+	case ID_LPC11U67:
+	case ID_LPC11U67_100:
+	case ID_LPC11E68: /* 256KiB Flash, 36KiB SRAM */
+	case ID_LPC11U68:
+	case ID_LPC11U68_100:
+		target->driver = "LPC11U6x";
+		if ((device_id & ID_LPC11x6x_PART_MASK) == ID_LPC11x6x_PART_xx6) {
+			target_add_ram32(target, LPC11xx_SRAM_BASE, LPC11x66_SRAM_SIZE);
+			lpc11xx_add_flash(target, LPC11xx_FLASH_BASE, LPC11x66_FLASH_SIZE, LPC11xx_FLASH_ERASE_SIZE, 0U);
+		} else if ((device_id & ID_LPC11x6x_PART_MASK) == ID_LPC11x6x_PART_xx7) {
+			target_add_ram32(target, LPC11xx_SRAM_BASE, LPC11x67_SRAM_SIZE);
+			lpc11xx_add_flash(target, LPC11xx_FLASH_BASE, LPC11x67_FLASH_SIZE, LPC11xx_FLASH_ERASE_SIZE, 0U);
+		} else if ((device_id & ID_LPC11x6x_PART_MASK) == ID_LPC11x6x_PART_xx8) {
+			target_add_ram32(target, LPC11xx_SRAM_BASE, LPC11x68_SRAM_SIZE);
+			lpc11xx_add_flash(target, LPC11xx_FLASH_BASE, LPC11x68_FLASH_SIZE, LPC11xx_FLASH_ERASE_SIZE, 0U);
+		}
 		break;
 	case ID_LPC1111_103:   /* 8KiB Flash, 2KiB SRAM */
 	case ID_LPC1111_203:   /* 8KiB Flash, 4KiB SRAM */
