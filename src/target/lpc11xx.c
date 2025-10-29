@@ -130,7 +130,7 @@
 #define LPC111x_SRAM_2KiB 0x00000800U
 #define LPC111x_SRAM_4KiB 0x00001000U
 #define LPC111x_SRAM_8KiB 0x00002000U
-/* Memory map constants for LPC11Uxx parts */
+/* Memory map constants for LPC11U3x parts */
 #define LPC11U34_311_FLASH_SIZE 0x0000a000U
 #define LPC11U34_421_FLASH_SIZE 0x0000c000U
 #define LPC11U35_FLASH_SIZE     0x00010000U
@@ -148,6 +148,12 @@
 #define LPC1124_FLASH_SIZE 0x00008000U
 #define LPC1125_FLASH_SIZE 0x00010000U
 #define LPC112x_SRAM_SIZE  0x00002000U
+/* Memory map constants for LPC13xx parts */
+#define LPC1311_FLASH_SIZE 0x00002000U
+#define LPC1342_FLASH_SIZE 0x00004000U
+#define LPC13x3_FLASH_SIZE 0x00008000U
+#define LPC13xx_SRAM_SIZE  0x00001000U
+#define LPC13x3_SRAM_SIZE  0x00002000U
 
 /* IAP constants and locations */
 #define LPC11xx_SRAM_SIZE_MIN 1024U
@@ -290,12 +296,16 @@
 #define ID_LPC1124 0x00140040U
 #define ID_LPC1125 0x00150080U
 /* Taken from UM10375 §3.5.48 Device ID register, pg43 */
-#define ID_LPC1311    0x2c42502bU
-#define ID_LPC1311_01 0x1816902bU
-#define ID_LPC1313    0x2c40102bU
-#define ID_LPC1313_01 0x1830102bU
-#define ID_LPC1342    0x3d01402bU
-#define ID_LPC1343    0x3d00002bU
+#define ID_LPC1311             0x2c42502bU
+#define ID_LPC1311_01          0x1816902bU
+#define ID_LPC1313             0x2c40102bU
+#define ID_LPC1313_01          0x1830102bU
+#define ID_LPC1342             0x3d01402bU
+#define ID_LPC1343             0x3d00002bU
+#define ID_LPC13xx_FLASH_MASK  (0x3U << 16U)
+#define ID_LPC13xx_FLASH_32KiB (0x0U << 16U)
+#define ID_LPC13xx_FLASH_16KiB (0x1U << 16U)
+#define ID_LPC13xx_FLASH_8KiB  (0x2U << 16U)
 
 /*
  * Chip    RAM Flash page sector   Rsvd pages  EEPROM
@@ -409,8 +419,16 @@ static bool lpc11xx_detect(target_s *const target)
 	case ID_LPC1343: /* 32KiB Flash, 8KiB SRAM */
 	case 0x3000002bU:
 		target->driver = "LPC13xx";
-		target_add_ram32(target, LPC11xx_SRAM_BASE, 0x2000);
-		lpc11xx_add_flash(target, LPC11xx_FLASH_BASE, 0x8000, 0x1000, 0);
+		if ((device_id & ID_LPC13xx_FLASH_MASK) == ID_LPC13xx_FLASH_32KiB)
+			target_add_ram32(target, LPC11xx_SRAM_BASE, LPC13x3_SRAM_SIZE);
+		else
+			target_add_ram32(target, LPC11xx_SRAM_BASE, LPC13xx_SRAM_SIZE);
+		if ((device_id & ID_LPC13xx_FLASH_MASK) == ID_LPC13xx_FLASH_32KiB)
+			lpc11xx_add_flash(target, LPC11xx_FLASH_BASE, LPC13x3_FLASH_SIZE, LPC11xx_FLASH_ERASE_SIZE, 0U);
+		else if ((device_id & ID_LPC13xx_FLASH_MASK) == ID_LPC13xx_FLASH_16KiB)
+			lpc11xx_add_flash(target, LPC11xx_FLASH_BASE, LPC1342_FLASH_SIZE, LPC11xx_FLASH_ERASE_SIZE, 0U);
+		else if ((device_id & ID_LPC13xx_FLASH_MASK) == ID_LPC13xx_FLASH_8KiB)
+			lpc11xx_add_flash(target, LPC11xx_FLASH_BASE, LPC1311_FLASH_SIZE, LPC11xx_FLASH_ERASE_SIZE, 0U);
 		break;
 	case ID_LPC8N04:
 		target->driver = "LPC8N04";
