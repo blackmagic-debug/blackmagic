@@ -101,6 +101,7 @@ CORTEXM_PROBE_WEAK_NOP(efm32_aap_probe)
 CORTEXM_PROBE_WEAK_NOP(kinetis_mdm_probe)
 CORTEXM_PROBE_WEAK_NOP(lpc55_dmap_probe)
 CORTEXM_PROBE_WEAK_NOP(nrf51_ctrl_ap_probe)
+CORTEXM_PROBE_WEAK_NOP(nrf5340_ctrl_ap_probe)
 CORTEXM_PROBE_WEAK_NOP(nrf54l_ctrl_ap_probe)
 CORTEXM_PROBE_WEAK_NOP(rp2040_rescue_probe)
 
