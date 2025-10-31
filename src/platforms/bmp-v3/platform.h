@@ -37,6 +37,8 @@
 #define PLATFORMS_BMP_V3_PLATFORM_H
 
 #include "gpio.h"
+#include "timing.h"
+#include "timing_stm32.h"
 
 #define PLATFORM_IDENT "v3 "
 
@@ -93,5 +95,71 @@
  */
 
 /* Hardware definitions... */
+#define TCK_PORT     GPIOB
+#define TCK_PIN      GPIO13
+#define TMS_PORT     GPIOB
+#define TMS_PIN      GPIO12
+#define TDI_PORT     GPIOB
+#define TDI_PIN      GPIO15
+#define TDO_PORT     GPIOB
+#define TDO_PIN      GPIO14
+#define TCK_DIR_PORT GPIOC
+#define TCK_DIR_PIN  GPIO15
+#define TMS_DIR_PORT GPIOC
+#define TMS_DIR_PIN  GPIO14
+
+#define SWCLK_PORT     GPIOB
+#define SWDIO_PORT     GPIOB
+#define SWCLK_PIN      GPIO13
+#define SWDIO_PIN      GPIO12
+#define SWCLK_DIR_PORT GPIOC
+#define SWCLK_DIR_PIN  GPIO15
+#define SWDIO_DIR_PORT GPIOC
+#define SWDIO_DIR_PIN  GPIO14
+
+#define EXT_SPI           SPI2
+#define EXT_SPI_SCLK_PORT GPIOB
+#define EXT_SPI_SCLK_PIN  GPIO13
+#define EXT_SPI_CS_PORT   GPIOB
+#define EXT_SPI_CS_PIN    GPIO12
+#define EXT_SPI_POCI_PORT GPIOB
+#define EXT_SPI_POCI_PIN  GPIO14
+#define EXT_SPI_PICO_PORT GPIOB
+#define EXT_SPI_PICO_PIN  GPIO15
+
+#define NRST_PORT       GPIOH
+#define NRST_PIN        GPIO1
+#define NRST_SENSE_PORT GPIOH
+#define NRST_SENSE_PIN  GPIO0
+
+#define SWO_PORT GPIOA
+#define SWO_PIN  GPIO1
+
+#define TPWR_EN_PORT    GPIOA
+#define TPWR_EN_PIN     GPIO5
+#define TPWR_SENSE_PORT GPIOB
+#define TPWR_SENSE_PIN  GPIO2
+
+#define USB_PORT   GPIOA
+#define USB_DP_PIN GPIO12
+#define USB_DM_PIN GPIO11
+
+#define USB_VBUS_PORT GPIOA
+#define USB_VBUS_PIN  GPIO9
+
+#define LED0_PORT         GPIOB
+#define LED0_PIN          GPIO5
+#define LED1_PORT         GPIOB
+#define LED1_PIN          GPIO4
+#define LED2_PORT         GPIOA
+#define LED2_PIN          GPIO10
+#define LED3_PORT         GPIOA
+#define LED3_PIN          GPIO8
+#define LED_UART_PORT     LED0_PORT
+#define LED_UART_PIN      LED0_PIN
+#define LED_IDLE_RUN_PORT LED1_PORT
+#define LED_IDLE_RUN_PIN  LED1_PIN
+#define LED_ERROR_PORT    LED2_PORT
+#define LED_ERROR_PIN     LED2_PIN
 
 #endif /* PLATFORMS_BMP_V3_PLATFORM_H */
