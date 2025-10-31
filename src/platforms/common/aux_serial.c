@@ -338,14 +338,22 @@ void aux_serial_get_encoding(usb_cdc_line_coding_s *const coding)
 void aux_serial_set_led(const aux_serial_led_e led)
 {
 	aux_serial_led_state |= led;
+#ifdef LED_UART_PORT
+	gpio_set(LED_UART_PORT, LED_UART_PIN);
+#else
 	gpio_set(LED_PORT_UART, LED_UART);
+#endif
 }
 
 void aux_serial_clear_led(const aux_serial_led_e led)
 {
 	aux_serial_led_state &= ~led;
 	if (!aux_serial_led_state)
+#ifdef LED_UART_PORT
+		gpio_clear(LED_UART_PORT, LED_UART_PIN);
+#else
 		gpio_clear(LED_PORT_UART, LED_UART);
+#endif
 }
 
 char *aux_serial_current_transmit_buffer(void)

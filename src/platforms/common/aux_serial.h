@@ -25,9 +25,9 @@
 #include <libopencm3/usb/cdc.h>
 #include "usb_types.h"
 
-#if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4) || defined(STM32F7)
+#if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4) || defined(STM32F7) || defined(STM32U5)
 /* XXX: Does the st_usbfs_v2_usb_driver work on F3 with 128 byte buffers? */
-#if defined(STM32F1) || defined(STM32F3) || defined(STM32F4)
+#if defined(STM32F1) || defined(STM32F3) || defined(STM32F4) || defined(STM32U5)
 #define USART_DMA_BUF_SHIFT 7U
 #elif defined(STM32F0)
 /* The st_usbfs_v2_usb_driver only works with up to 64-byte buffers on the F0 parts */

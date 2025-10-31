@@ -162,4 +162,28 @@
 #define LED_ERROR_PORT    LED2_PORT
 #define LED_ERROR_PIN     LED2_PIN
 
+#define TMS_SET_MODE()                                                        \
+	do {                                                                      \
+		gpio_set(TMS_DIR_PORT, TMS_DIR_PIN);                                  \
+		gpio_mode_setup(TMS_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, TMS_PIN); \
+	} while (0)
+
+#define USB_DRIVER otgfs_usb_driver
+#define USB_IRQ    NVIC_USB_IRQ
+#define USB_ISR(x) usb_isr(x)
+/*
+ * Interrupt priorities. Low numbers are high priority.
+ * TIM5 is used for SWO capture and must be highest priority.
+ */
+#define IRQ_PRI_USB          (1U << 4U)
+#define IRQ_PRI_USBUSART     (2U << 4U)
+#define IRQ_PRI_USBUSART_DMA (2U << 4U)
+#define IRQ_PRI_USB_VBUS     (14U << 4U)
+#define IRQ_PRI_SWO_TIM      (0U << 4U)
+#define IRQ_PRI_SWO_DMA      (0U << 4U)
+
+#define SET_RUN_STATE(state)   running_status = (state)
+#define SET_IDLE_STATE(state)  gpio_set_val(LED_IDLE_RUN_PORT, LED_IDLE_RUN_PIN, state)
+#define SET_ERROR_STATE(state) gpio_set_val(LED_ERROR_PORT, LED_ERROR_PIN, state)
+
 #endif /* PLATFORMS_BMP_V3_PLATFORM_H */
