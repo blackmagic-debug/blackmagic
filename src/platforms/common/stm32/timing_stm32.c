@@ -84,7 +84,11 @@ void sys_tick_handler(void)
 
 	if (morse_tick >= MORSECNT) {
 		if (running_status)
+#ifdef LED_IDLE_RUN_PORT
+			gpio_toggle(LED_IDLE_RUN_PORT, LED_IDLE_RUN_PIN);
+#else
 			gpio_toggle(LED_PORT, LED_IDLE_RUN);
+#endif
 		usb_config_morse_msg_update();
 		SET_ERROR_STATE(morse_update());
 		morse_tick = 0;
