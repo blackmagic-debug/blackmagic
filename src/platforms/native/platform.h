@@ -1,8 +1,11 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
- * Copyright (C) 2011  Black Sphere Technologies Ltd.
+ * Copyright (C) 2011 Black Sphere Technologies Ltd.
+ * Copyright (C) 2021-2025 1BitSquared <info@1bitsquared.com>
  * Written by Gareth McMullin <gareth@blacksphere.co.nz>
+ * Modified by Piotr Esden-Tempski <piotr@1bitsquared.com>
+ * Modified by Rachel Mant <git@dragonmux.network>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
