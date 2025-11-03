@@ -1,7 +1,7 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
- * Copyright (C) 2022 1BitSquared <info@1bitsquared.com>
+ * Copyright (C) 2022-2025 1BitSquared <info@1bitsquared.com>
  * Written by Rachel Mant <git@dragonmux.network>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -18,7 +18,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4) || defined(STM32F7)
+#if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4) || defined(STM32F7) || defined(STM32U5)
 #include <libopencm3/stm32/rcc.h>
 #include <libopencm3/stm32/usart.h>
 #include <libopencm3/stm32/dma.h>
@@ -42,7 +42,7 @@ static uint16_t aux_serial_receive_write_index = 0;
 /* FIFO out pointer, writes assumed to be atomic, should be only incremented outside RX ISR */
 static uint16_t aux_serial_receive_read_index = 0;
 
-#if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4) || defined(STM32F7)
+#if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4) || defined(STM32F7) || defined(STM32U5)
 static char aux_serial_transmit_buffer[2U][AUX_UART_BUFFER_SIZE];
 static uint16_t aux_serial_transmit_buffer_index = 0;
 static uint16_t aux_serial_transmit_buffer_consumed = 0;
@@ -120,7 +120,7 @@ void bmd_usart_set_baudrate(uint32_t usart, uint32_t baud_rate)
 	usart_set_baudrate(usart, baud_rate);
 }
 
-#if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4) || defined(STM32F7)
+#if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4) || defined(STM32F7) || defined(STM32U5)
 void aux_serial_init(void)
 {
 	/* Enable clocks */
@@ -253,7 +253,7 @@ void aux_serial_set_encoding(const usb_cdc_line_coding_s *const coding)
 	usart_disable(USBUSART);
 	bmd_usart_set_baudrate(USBUSART, coding->dwDTERate);
 
-#if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4) || defined(STM32F7)
+#if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4) || defined(STM32F7) || defined(STM32U5)
 	if (coding->bParityType != USB_CDC_NO_PARITY)
 		usart_set_databits(USBUSART, coding->bDataBits + 1U <= 8U ? 8 : 9);
 	else
@@ -334,7 +334,7 @@ void aux_serial_get_encoding(usb_cdc_line_coding_s *const coding)
 		coding->bDataBits = data_bits - 1;
 }
 
-#if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4) || defined(STM32F7)
+#if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4) || defined(STM32F7) || defined(STM32U5)
 void aux_serial_set_led(const aux_serial_led_e led)
 {
 	aux_serial_led_state |= led;
