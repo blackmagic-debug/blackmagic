@@ -168,6 +168,18 @@
 		gpio_mode_setup(TMS_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, TMS_PIN); \
 	} while (0)
 
+#define SWDIO_MODE_FLOAT()                                                       \
+	do {                                                                         \
+		gpio_clear(SWDIO_DIR_PORT, SWDIO_DIR_PIN);                               \
+		gpio_mode_setup(SWDIO_PORT, GPIO_MODE_INPUT, GPIO_PUPD_NONE, SWDIO_PIN); \
+	} while (0)
+
+#define SWDIO_MODE_DRIVE()                                                        \
+	do {                                                                          \
+		gpio_set(SWDIO_DIR_PORT, SWDIO_DIR_PIN);                                  \
+		gpio_mode_setup(SWDIO_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, SWDIO_PIN); \
+	} while (0)
+
 #define USB_DRIVER otgfs_usb_driver
 #define USB_IRQ    NVIC_USB_IRQ
 #define USB_ISR(x) usb_isr(x)
