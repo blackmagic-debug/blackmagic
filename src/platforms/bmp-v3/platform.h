@@ -40,6 +40,8 @@
 #include "timing.h"
 #include "timing_stm32.h"
 
+#define PLATFORM_HAS_TRACESWO
+
 #define PLATFORM_IDENT "v3 "
 
 /*
@@ -193,6 +195,31 @@
 #define IRQ_PRI_USB_VBUS     (14U << 4U)
 #define IRQ_PRI_SWO_TIM      (0U << 4U)
 #define IRQ_PRI_SWO_DMA      (0U << 4U)
+
+/* Use TIM5 Input 2 (from PA1/SWO) for Manchester data recovery */
+#define SWO_TIM TIM5
+#define SWO_TIM_CLK_EN()
+#define SWO_TIM_IRQ         NVIC_TIM5_IRQ
+#define SWO_TIM_ISR(x)      tim5_isr(x)
+#define SWO_IC_IN           TIM_IC_IN_TI2
+#define SWO_IC_RISING       TIM_IC2
+#define SWO_CC_RISING       TIM5_CCR2
+#define SWO_ITR_RISING      TIM_DIER_CC2IE
+#define SWO_STATUS_RISING   TIM_SR_CC2IF
+#define SWO_IC_FALLING      TIM_IC1
+#define SWO_CC_FALLING      TIM5_CCR1
+#define SWO_STATUS_FALLING  TIM_SR_CC1IF
+#define SWO_STATUS_OVERFLOW (TIM_SR_CC1OF | TIM_SR_CC2OF)
+#define SWO_TRIG_IN         TIM_SMCR_TS_TI2FP2
+#define SWO_TIM_PIN_AF      GPIO_AF2
+
+/* Use PA1 (UART4) for UART/NRZ/Async data recovery */
+#define SWO_UART        USART4
+#define SWO_UART_CLK    RCC_UART4
+#define SWO_UART_DR     USART4_RDR
+#define SWO_UART_PORT   SWO_PORT
+#define SWO_UART_RX_PIN SWO_PIN
+#define SWO_UART_PIN_AF GPIO_AF8
 
 #define SET_RUN_STATE(state)   running_status = (state)
 #define SET_IDLE_STATE(state)  gpio_set_val(LED_IDLE_RUN_PORT, LED_IDLE_RUN_PIN, state)
