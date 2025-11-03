@@ -36,7 +36,7 @@ static uint32_t count_in;
 static uint32_t out_ptr;
 static char buffer_out[CDCACM_PACKET_SIZE];
 static char buffer_in[CDCACM_PACKET_SIZE];
-#if defined(STM32F4) || defined(STM32F7)
+#if defined(STM32F4) || defined(STM32F7) || defined(STM32U5)
 static volatile uint32_t count_new;
 static char double_buffer_out[CDCACM_PACKET_SIZE];
 #endif
@@ -64,7 +64,7 @@ void gdb_if_flush(const bool force)
 
 	/* We need to send an empty packet for some hosts to accept this as a complete transfer. */
 	if (force && count_in == CDCACM_PACKET_SIZE) {
-		/* 
+		/*
 		 * libopencm3 needs a change for us to confirm when that transfer is complete,
 		 * so we just send a packet containing a null character for now.
 		 */
@@ -76,7 +76,7 @@ void gdb_if_flush(const bool force)
 	count_in = 0U;
 }
 
-#if defined(STM32F4) || defined(STM32F7)
+#if defined(STM32F4) || defined(STM32F7) || defined(STM32U5)
 void gdb_usb_out_cb(usbd_device *dev, uint8_t ep)
 {
 	(void)ep;
@@ -91,7 +91,7 @@ static void gdb_if_update_buf(void)
 {
 	while (usb_get_config() != 1)
 		continue;
-#if !defined(STM32F4) && !defined(STM32F7)
+#if !defined(STM32F4) && !defined(STM32F7) && !defined(STM32U5)
 	count_out = usbd_ep_read_packet(usbdev, CDCACM_GDB_ENDPOINT, buffer_out, CDCACM_PACKET_SIZE);
 	out_ptr = 0;
 #else
