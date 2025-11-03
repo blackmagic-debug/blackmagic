@@ -196,6 +196,15 @@
 #define IRQ_PRI_SWO_TIM      (0U << 4U)
 #define IRQ_PRI_SWO_DMA      (0U << 4U)
 
+#define USBUSART_DMA_BUS       GPDMA1
+#define USBUSART_DMA_CLK       RCC_GPDMA1
+#define USBUSART_DMA_TX_CHAN   DMA_CHANNEL0
+#define USBUSART_DMA_RX_CHAN   DMA_CHANNEL1
+#define USBUSART_DMA_TX_IRQ    NVIC_GPDMA1_CH0_IRQ
+#define USBUSART_DMA_TX_ISR(x) gpdma1_ch0_isr(x)
+#define USBUSART_DMA_RX_IRQ    NVIC_GPDMA1_CH1_IRQ
+#define USBUSART_DMA_RX_ISR(x) gpdma1_ch1_isr(x)
+
 /* Use TIM5 Input 2 (from PA1/SWO) for Manchester data recovery */
 #define SWO_TIM TIM5
 #define SWO_TIM_CLK_EN()
@@ -220,6 +229,12 @@
 #define SWO_UART_PORT   SWO_PORT
 #define SWO_UART_RX_PIN SWO_PIN
 #define SWO_UART_PIN_AF GPIO_AF8
+
+#define SWO_DMA_BUS    GPDMA1
+#define SWO_DMA_CLK    RCC_GPDMA1
+#define SWO_DMA_CHAN   DMA_CHANNEL2
+#define SWO_DMA_IRQ    NVIC_GPDMA1_CH2_IRQ
+#define SWO_DMA_ISR(x) gpdma1_ch2_isr(x)
 
 #define SET_RUN_STATE(state)   running_status = (state)
 #define SET_IDLE_STATE(state)  gpio_set_val(LED_IDLE_RUN_PORT, LED_IDLE_RUN_PIN, state)
