@@ -68,7 +68,7 @@ void swo_manchester_init(void)
 	/* Make sure the timer block is clocked on platforms that don't do this in their `platform_init()` */
 	SWO_TIM_CLK_EN();
 
-#if defined(STM32F4) || defined(STM32F0) || defined(STM32F3) || defined(STM32F7)
+#if defined(STM32F4) || defined(STM32F0) || defined(STM32F3) || defined(STM32F7) || defined(STM32U5)
 	/* Set any required pin alt-function configuration - TIM3/TIM4/TIM5 are AF2 */
 	gpio_mode_setup(SWO_PORT, GPIO_MODE_AF, GPIO_PUPD_NONE, SWO_PIN);
 	gpio_set_af(SWO_PORT, SWO_TIM_PIN_AF, SWO_PIN);
@@ -122,7 +122,7 @@ void swo_manchester_deinit(void)
 	swo_data_bit_index = 0U;
 	swo_half_bit_period = 0U;
 
-#if defined(STM32F4) || defined(STM32F0) || defined(STM32F3) || defined(STM32F7)
+#if defined(STM32F4) || defined(STM32F0) || defined(STM32F3) || defined(STM32F7) || defined(STM32U5)
 	gpio_mode_setup(SWO_PORT, GPIO_MODE_INPUT, GPIO_PUPD_NONE, SWO_PIN);
 #else
 	/* Put the GPIO back into normal service as a GPIO */
