@@ -49,7 +49,7 @@ void aux_serial_init(void);
 void aux_serial_set_encoding(const usb_cdc_line_coding_s *coding);
 void aux_serial_get_encoding(usb_cdc_line_coding_s *coding);
 
-#if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4) || defined(STM32F7)
+#if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4) || defined(STM32F7) || defined(STM32U5)
 typedef enum aux_serial_led {
 	AUX_SERIAL_LED_TX = (1U << 0U),
 	AUX_SERIAL_LED_RX = (1U << 1U)
@@ -68,7 +68,7 @@ size_t aux_serial_transmit_buffer_fullness(void);
 /* Send a number of bytes staged into the current transmit buffer */
 void aux_serial_send(size_t len);
 
-#if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4) || defined(STM32F7)
+#if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4) || defined(STM32F7) || defined(STM32U5)
 void aux_serial_update_receive_buffer_fullness(void);
 bool aux_serial_receive_buffer_empty(void);
 void aux_serial_drain_receive_buffer(void);
