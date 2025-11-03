@@ -61,9 +61,18 @@ static void usb_config_morse_msg_update(void)
 void platform_timing_init(void)
 {
 	/* Setup heartbeat timer */
+#ifndef STM32U5
 	systick_set_clocksource(STK_CSR_CLKSOURCE_AHB_DIV8);
+#else
+	rcc_set_peripheral_clk_sel(SYS_TICK_BASE, RCC_CCIPR1_SYSTICKSEL_HCLK_DIV8);
+	systick_set_clocksource(STK_CSR_CLKSOURCE_EXT);
+#endif
 	/* Interrupt us at 1kHz */
+#ifndef STM32U5
 	systick_set_reload((rcc_ahb_frequency / (8U * SYSTICKHZ)) - 1U);
+#else
+	systick_set_reload((rcc_get_bus_clk_freq(RCC_SYSTICKCLK) / SYSTICKHZ) - 1U);
+#endif
 	/* SYSTICK_IRQ with low priority */
 	nvic_set_priority(NVIC_SYSTICK_IRQ, 14U << 4U);
 	systick_interrupt_enable();
@@ -182,7 +191,11 @@ void platform_max_frequency_set(const uint32_t frequency)
 		target_clk_divider = (ratio - BITBANG_DIVIDER_OFFSET) / BITBANG_DIVIDER_FACTOR;
 	}
 #else
+#ifndef STM32U5
 	uint32_t divisor = rcc_ahb_frequency - USED_SWD_CYCLES * frequency;
+#else
+	uint32_t divisor = rcc_get_bus_clk_freq(RCC_AHBCLK) - USED_SWD_CYCLES * frequency;
+#endif
 	/* If we now have an insanely big divisor, the above operation wrapped to a negative signed number. */
 	if (divisor >= 0x80000000U) {
 		target_clk_divider = UINT32_MAX;
@@ -210,7 +223,11 @@ uint32_t platform_max_frequency_get(void)
 	const uint32_t ratio = (target_clk_divider * BITBANG_DIVIDER_FACTOR) + BITBANG_DIVIDER_OFFSET;
 	return rcc_ahb_frequency / ratio;
 #else
+#ifndef STM32U5
 	uint32_t result = rcc_ahb_frequency;
+#else
+	uint32_t result = rcc_get_bus_clk_freq(RCC_AHBCLK);
+#endif
 	result /= USED_SWD_CYCLES + CYCLES_PER_CNT * target_clk_divider;
 	return result;
 #endif
