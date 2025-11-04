@@ -41,6 +41,7 @@
 #include "timing_stm32.h"
 
 #define PLATFORM_HAS_TRACESWO
+#define PLATFORM_MULTI_UART
 
 #define PLATFORM_IDENT "v3 "
 
@@ -182,6 +183,16 @@
 		gpio_mode_setup(SWDIO_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, SWDIO_PIN); \
 	} while (0)
 
+#define UART_PIN_SETUP()                                                                   \
+	do {                                                                                   \
+		gpio_set_af(AUX_UART1_PORT, GPIO_AF7, AUX_UART1_TX_PIN | AUX_UART1_RX_PIN);        \
+		gpio_mode_setup(AUX_UART1_PORT, GPIO_MODE_AF, GPIO_PUPD_NONE, AUX_UART1_TX_PIN);   \
+		gpio_mode_setup(AUX_UART1_PORT, GPIO_MODE_AF, GPIO_PUPD_PULLUP, AUX_UART1_RX_PIN); \
+		gpio_set_af(AUX_UART2_PORT, GPIO_AF7, AUX_UART2_TX_PIN | AUX_UART2_RX_PIN);        \
+		gpio_mode_setup(AUX_UART2_PORT, GPIO_MODE_AF, GPIO_PUPD_NONE, AUX_UART2_TX_PIN);   \
+		gpio_mode_setup(AUX_UART2_PORT, GPIO_MODE_AF, GPIO_PUPD_PULLUP, AUX_UART2_RX_PIN); \
+	} while (0)
+
 #define USB_DRIVER otgfs_usb_driver
 #define USB_IRQ    NVIC_USB_IRQ
 #define USB_ISR(x) usb_isr(x)
@@ -190,19 +201,37 @@
  * TIM5 is used for SWO capture and must be highest priority.
  */
 #define IRQ_PRI_USB          (1U << 4U)
-#define IRQ_PRI_USBUSART     (2U << 4U)
-#define IRQ_PRI_USBUSART_DMA (2U << 4U)
+#define IRQ_PRI_AUX_UART     (2U << 4U)
+#define IRQ_PRI_AUX_UART_DMA (2U << 4U)
 #define IRQ_PRI_USB_VBUS     (14U << 4U)
 #define IRQ_PRI_SWO_TIM      (0U << 4U)
 #define IRQ_PRI_SWO_DMA      (0U << 4U)
+
+/* PA2/3 as USART2 TX/RX */
+#define AUX_UART1        USART2
+#define AUX_UART1_CLK    RCC_USART2
+#define AUX_UART1_IRQ    NVIC_USART2_IRQ
+#define AUX_UART1_ISR(x) usart2_isr(x)
+#define AUX_UART1_PORT   GPIOA
+#define AUX_UART1_TX_PIN GPIO2
+#define AUX_UART1_RX_PIN GPIO3
+
+/* PB6/7 as USART1 TX/RX */
+#define AUX_UART2        USART1
+#define AUX_UART2_CLK    RCC_USART1
+#define AUX_UART2_IRQ    NVIC_USART1_IRQ
+#define AUX_UART2_ISR(x) usart1_isr(x)
+#define AUX_UART2_PORT   GPIOB
+#define AUX_UART2_TX_PIN GPIO6
+#define AUX_UART2_RX_PIN GPIO7
 
 #define USBUSART_DMA_BUS       GPDMA1
 #define USBUSART_DMA_CLK       RCC_GPDMA1
 #define USBUSART_DMA_TX_CHAN   DMA_CHANNEL0
 #define USBUSART_DMA_RX_CHAN   DMA_CHANNEL1
-#define USBUSART_DMA_TX_IRQ    NVIC_GPDMA1_CH0_IRQ
+#define AUX_UART_DMA_TX_IRQ    NVIC_GPDMA1_CH0_IRQ
 #define USBUSART_DMA_TX_ISR(x) gpdma1_ch0_isr(x)
-#define USBUSART_DMA_RX_IRQ    NVIC_GPDMA1_CH1_IRQ
+#define AUX_UART_DMA_RX_IRQ    NVIC_GPDMA1_CH1_IRQ
 #define USBUSART_DMA_RX_ISR(x) gpdma1_ch1_isr(x)
 
 /* Use TIM5 Input 2 (from PA1/SWO) for Manchester data recovery */

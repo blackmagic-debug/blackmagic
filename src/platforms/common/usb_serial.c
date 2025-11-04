@@ -348,7 +348,14 @@ static void debug_serial_append_char(const char c)
 
 size_t debug_serial_debug_write(const char *buf, const size_t len)
 {
-	if (nvic_get_active_irq(USB_IRQ) || nvic_get_active_irq(USBUSART_IRQ) || nvic_get_active_irq(USBUSART_DMA_RX_IRQ))
+	if (nvic_get_active_irq(USB_IRQ) ||
+#ifndef PLATFORM_MULTI_UART
+		nvic_get_active_irq(USBUSART_IRQ) || nvic_get_active_irq(USBUSART_DMA_RX_IRQ)
+#else
+		nvic_get_active_irq(AUX_UART1_IRQ) || nvic_get_active_irq(AUX_UART2_IRQ) ||
+		nvic_get_active_irq(AUX_UART_DMA_RX_IRQ)
+#endif
+	)
 		return 0;
 
 	CM_ATOMIC_CONTEXT();
