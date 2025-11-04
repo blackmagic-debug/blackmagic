@@ -87,10 +87,17 @@ static char aux_serial_transmit_buffer[AUX_UART_BUFFER_SIZE];
 #define usart_set_parity(uart, parity)     uart_set_parity(uart, parity)
 #endif
 
-void bmd_usart_set_baudrate(uint32_t usart, uint32_t baud_rate)
+#ifndef PLATFORM_MULTI_UART
+#define AUX_UART USBUSART
+#else
+static uintptr_t active_uart = 0U;
+#define AUX_UART active_uart
+#endif
+
+void bmd_usart_set_baudrate(const uintptr_t usart, const uint32_t baud_rate)
 {
 	/* If the new baud rate is out of supported range for a given USART, then keep previous */
-#if defined(LM4F)
+#ifdef LM4F
 	/* Are we running off the internal clock or system clock? */
 	const uint32_t clock = UART_CC(usart) == UART_CC_CS_PIOSC ? 16000000U : rcc_get_system_clock_frequency();
 #else
@@ -98,7 +105,7 @@ void bmd_usart_set_baudrate(uint32_t usart, uint32_t baud_rate)
 #endif
 	const uint32_t baud_lowest = clock / 65535U;
 	const uint32_t baud_highest_16x = clock / 16U;
-#if defined(USART_CR1_OVER8)
+#ifdef USART_CR1_OVER8
 	const uint32_t baud_highest_8x = clock / 8U;
 
 	/* Four-way range match */
@@ -121,23 +128,43 @@ void bmd_usart_set_baudrate(uint32_t usart, uint32_t baud_rate)
 }
 
 #if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4) || defined(STM32F7) || defined(STM32U5)
+void aux_serial_uart_init(const uintptr_t uart_base)
+{
+#ifndef STM32U5
+	bmd_usart_set_baudrate(uart_base, 38400U);
+#else
+	bmd_usart_set_baudrate(uart_base, 115200U);
+#endif
+	usart_set_databits(uart_base, 8);
+	usart_set_stopbits(uart_base, USART_STOPBITS_1);
+	usart_set_mode(uart_base, USART_MODE_TX_RX);
+	usart_set_parity(uart_base, USART_PARITY_NONE);
+	usart_set_flow_control(uart_base, USART_FLOWCONTROL_NONE);
+	USART_CR1(uart_base) |= USART_CR1_IDLEIE;
+}
+
 void aux_serial_init(void)
 {
-	/* Enable clocks */
+/* Enable clocks */
+#ifndef PLATFORM_MULTI_UART
 	rcc_periph_clock_enable(USBUSART_CLK);
+#else
+	rcc_periph_clock_enable(AUX_UART1_CLK);
+	rcc_periph_clock_enable(AUX_UART2_CLK);
+#endif
 	rcc_periph_clock_enable(USBUSART_DMA_CLK);
 
 	/* Setup UART parameters */
 	UART_PIN_SETUP();
-	bmd_usart_set_baudrate(USBUSART, 38400);
-	usart_set_databits(USBUSART, 8);
-	usart_set_stopbits(USBUSART, USART_STOPBITS_1);
-	usart_set_mode(USBUSART, USART_MODE_TX_RX);
-	usart_set_parity(USBUSART, USART_PARITY_NONE);
-	usart_set_flow_control(USBUSART, USART_FLOWCONTROL_NONE);
-	USART_CR1(USBUSART) |= USART_CR1_IDLEIE;
+#ifndef PLATFORM_MULTI_UART
+	aux_serial_uart_init(USBUSART);
+#else
+	aux_serial_uart_init(AUX_UART1);
+	aux_serial_uart_init(AUX_UART2);
+#endif
 
-	/* Setup USART TX DMA */
+	/* Set up data register defines if we're not in multi-UART mode */
+#ifndef PLATFORM_MULTI_UART
 #if !defined(USBUSART_TDR) && defined(USBUSART_DR)
 #define USBUSART_TDR USBUSART_DR
 #elif !defined(USBUSART_TDR)
@@ -148,8 +175,13 @@ void aux_serial_init(void)
 #elif !defined(USBUSART_RDR)
 #define USBUSART_RDR USART_DR(USBUSART)
 #endif
+#endif
+
+	/* Setup USART TX DMA */
 	dma_channel_reset(USBUSART_DMA_BUS, USBUSART_DMA_TX_CHAN);
+#ifndef PLATFORM_MULTI_UART
 	dma_set_peripheral_address(USBUSART_DMA_BUS, USBUSART_DMA_TX_CHAN, (uintptr_t)&USBUSART_TDR);
+#endif
 	dma_enable_memory_increment_mode(USBUSART_DMA_BUS, USBUSART_DMA_TX_CHAN);
 	dma_set_peripheral_size(USBUSART_DMA_BUS, USBUSART_DMA_TX_CHAN, DMA_PSIZE_8BIT);
 	dma_set_memory_size(USBUSART_DMA_BUS, USBUSART_DMA_TX_CHAN, DMA_MSIZE_8BIT);
@@ -166,7 +198,9 @@ void aux_serial_init(void)
 
 	/* Setup USART RX DMA */
 	dma_channel_reset(USBUSART_DMA_BUS, USBUSART_DMA_RX_CHAN);
+#ifndef PLATFORM_MULTI_UART
 	dma_set_peripheral_address(USBUSART_DMA_BUS, USBUSART_DMA_RX_CHAN, (uintptr_t)&USBUSART_RDR);
+#endif
 	dma_set_memory_address(USBUSART_DMA_BUS, USBUSART_DMA_RX_CHAN, (uintptr_t)aux_serial_receive_buffer);
 	dma_set_number_of_data(USBUSART_DMA_BUS, USBUSART_DMA_RX_CHAN, AUX_UART_BUFFER_SIZE);
 	dma_enable_memory_increment_mode(USBUSART_DMA_BUS, USBUSART_DMA_RX_CHAN);
@@ -187,6 +221,7 @@ void aux_serial_init(void)
 	dma_enable_channel(USBUSART_DMA_BUS, USBUSART_DMA_RX_CHAN);
 
 	/* Enable interrupts */
+#ifndef PLATFORM_MULTI_UART
 	nvic_set_priority(USBUSART_IRQ, IRQ_PRI_USBUSART);
 #if defined(USBUSART_DMA_RXTX_IRQ)
 	nvic_set_priority(USBUSART_DMA_RXTX_IRQ, IRQ_PRI_USBUSART_DMA);
@@ -200,6 +235,16 @@ void aux_serial_init(void)
 #else
 	nvic_enable_irq(USBUSART_DMA_TX_IRQ);
 	nvic_enable_irq(USBUSART_DMA_RX_IRQ);
+#endif
+#else
+	nvic_set_priority(AUX_UART1_IRQ, IRQ_PRI_AUX_UART);
+	nvic_set_priority(AUX_UART2_IRQ, IRQ_PRI_AUX_UART);
+	nvic_set_priority(AUX_UART_DMA_TX_IRQ, IRQ_PRI_AUX_UART_DMA);
+	nvic_set_priority(AUX_UART_DMA_RX_IRQ, IRQ_PRI_AUX_UART_DMA);
+	nvic_enable_irq(AUX_UART1_IRQ);
+	nvic_enable_irq(AUX_UART2_IRQ);
+	nvic_enable_irq(AUX_UART_DMA_TX_IRQ);
+	nvic_enable_irq(AUX_UART_DMA_RX_IRQ);
 #endif
 
 	/* Finally enable the USART */
@@ -238,7 +283,7 @@ void aux_serial_init(void)
 	/* Enable interrupts */
 	uart_enable_interrupts(UART0, UART_INT_RX | UART_INT_RT);
 
-	/* Finally enable the USART. */
+	/* Finally enable the USART */
 	uart_enable(USBUART);
 
 	//nvic_set_priority(USBUSART_IRQ, IRQ_PRI_USBUSART);
@@ -246,18 +291,17 @@ void aux_serial_init(void)
 }
 #endif
 
-void aux_serial_set_encoding(const usb_cdc_line_coding_s *const coding)
+static void aux_serial_setup_uart(const uintptr_t uart, const usb_cdc_line_coding_s *const coding)
 {
-	/* Some devices require that the usart is disabled before
-	 * changing the usart registers. */
-	usart_disable(USBUSART);
-	bmd_usart_set_baudrate(USBUSART, coding->dwDTERate);
+	/* Some devices require that the usart is disabled before changing the usart registers */
+	usart_disable(uart);
+	bmd_usart_set_baudrate(uart, coding->dwDTERate);
 
 #if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4) || defined(STM32F7) || defined(STM32U5)
 	if (coding->bParityType != USB_CDC_NO_PARITY)
-		usart_set_databits(USBUSART, coding->bDataBits + 1U <= 8U ? 8 : 9);
+		usart_set_databits(uart, coding->bDataBits + 1U <= 8U ? 8 : 9);
 	else
-		usart_set_databits(USBUSART, coding->bDataBits <= 8U ? 8 : 9);
+		usart_set_databits(uart, coding->bDataBits <= 8U ? 8 : 9);
 #elif defined(LM4F)
 	uart_set_databits(USBUART, coding->bDataBits);
 #endif
@@ -274,32 +318,42 @@ void aux_serial_set_encoding(const usb_cdc_line_coding_s *const coding)
 	default:
 		break;
 	}
-	usart_set_stopbits(USBUSART, stop_bits);
+	usart_set_stopbits(uart, stop_bits);
 
 	switch (coding->bParityType) {
 	case USB_CDC_NO_PARITY:
 	default:
-		usart_set_parity(USBUSART, USART_PARITY_NONE);
+		usart_set_parity(uart, USART_PARITY_NONE);
 		break;
 	case USB_CDC_ODD_PARITY:
-		usart_set_parity(USBUSART, USART_PARITY_ODD);
+		usart_set_parity(uart, USART_PARITY_ODD);
 		break;
 	case USB_CDC_EVEN_PARITY:
-		usart_set_parity(USBUSART, USART_PARITY_EVEN);
+		usart_set_parity(uart, USART_PARITY_EVEN);
 		break;
 	}
-	usart_enable(USBUSART);
+	usart_enable(uart);
+}
+
+void aux_serial_set_encoding(const usb_cdc_line_coding_s *const coding)
+{
+#ifndef PLATFORM_MULTI_UART
+	aux_serial_setup_uart(AUX_UART, coding);
+#else
+	aux_serial_setup_uart(AUX_UART1, coding);
+	aux_serial_setup_uart(AUX_UART2, coding);
+#endif
 }
 
 void aux_serial_get_encoding(usb_cdc_line_coding_s *const coding)
 {
-	coding->dwDTERate = usart_get_baudrate(USBUSART);
+	coding->dwDTERate = usart_get_baudrate(AUX_UART);
 
-	switch (usart_get_stopbits(USBUSART)) {
+	switch (usart_get_stopbits(AUX_UART)) {
 	case USART_STOPBITS_1:
 		coding->bCharFormat = USB_CDC_1_STOP_BITS;
 		break;
-#if !defined(LM4F)
+#ifndef LM4F
 	/*
 	 * Only include this back mapping on non-Tiva-C platforms as USART_STOPBITS_1 and
 	 * USART_STOPBITS_1_5 are the same thing on LM4F
@@ -314,7 +368,7 @@ void aux_serial_get_encoding(usb_cdc_line_coding_s *const coding)
 		break;
 	}
 
-	switch (usart_get_parity(USBUSART)) {
+	switch (usart_get_parity(AUX_UART)) {
 	case USART_PARITY_NONE:
 	default:
 		coding->bParityType = USB_CDC_NO_PARITY;
@@ -327,7 +381,7 @@ void aux_serial_get_encoding(usb_cdc_line_coding_s *const coding)
 		break;
 	}
 
-	const uint32_t data_bits = usart_get_databits(USBUSART);
+	const uint32_t data_bits = usart_get_databits(AUX_UART);
 	if (coding->bParityType == USB_CDC_NO_PARITY)
 		coding->bDataBits = data_bits;
 	else
@@ -472,6 +526,7 @@ static void aux_serial_dma_receive_isr(const uint8_t usart_irq, const uint8_t dm
 	nvic_enable_irq(usart_irq);
 }
 
+#ifndef PLATFORM_MULTI_UART
 #if defined(USBUSART_ISR)
 void USBUSART_ISR(void)
 {
@@ -502,6 +557,17 @@ void USBUSART2_ISR(void)
 #else
 	aux_serial_receive_isr(USBUSART2, USBUSART2_DMA_RX_IRQ);
 #endif
+}
+#endif
+#else
+void AUX_UART1_ISR(void)
+{
+	aux_serial_receive_isr(AUX_UART1, AUX_UART_DMA_RX_IRQ);
+}
+
+void AUX_UART2_ISR(void)
+{
+	aux_serial_receive_isr(AUX_UART2, AUX_UART_DMA_RX_IRQ);
 }
 #endif
 
