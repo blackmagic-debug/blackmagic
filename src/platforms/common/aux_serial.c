@@ -87,7 +87,7 @@ static char aux_serial_transmit_buffer[AUX_UART_BUFFER_SIZE];
 #define usart_set_parity(uart, parity)     uart_set_parity(uart, parity)
 #endif
 
-void bmd_usart_set_baudrate(uint32_t usart, uint32_t baud_rate)
+void bmd_usart_set_baudrate(const uintptr_t usart, const uint32_t baud_rate)
 {
 	/* If the new baud rate is out of supported range for a given USART, then keep previous */
 #if defined(LM4F)
@@ -121,23 +121,43 @@ void bmd_usart_set_baudrate(uint32_t usart, uint32_t baud_rate)
 }
 
 #if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4) || defined(STM32F7) || defined(STM32U5)
+void aux_serial_uart_init(const uintptr_t uart_base)
+{
+#ifndef STM32U5
+	bmd_usart_set_baudrate(uart_base, 38400U);
+#else
+	bmd_usart_set_baudrate(uart_base, 115200U);
+#endif
+	usart_set_databits(uart_base, 8);
+	usart_set_stopbits(uart_base, USART_STOPBITS_1);
+	usart_set_mode(uart_base, USART_MODE_TX_RX);
+	usart_set_parity(uart_base, USART_PARITY_NONE);
+	usart_set_flow_control(uart_base, USART_FLOWCONTROL_NONE);
+	USART_CR1(uart_base) |= USART_CR1_IDLEIE;
+}
+
 void aux_serial_init(void)
 {
-	/* Enable clocks */
+/* Enable clocks */
+#ifndef PLATFORM_MULTI_UART
 	rcc_periph_clock_enable(USBUSART_CLK);
+#else
+	rcc_periph_clock_enable(AUX_UART1_CLK);
+	rcc_periph_clock_enable(AUX_UART2_CLK);
+#endif
 	rcc_periph_clock_enable(USBUSART_DMA_CLK);
 
 	/* Setup UART parameters */
 	UART_PIN_SETUP();
-	bmd_usart_set_baudrate(USBUSART, 38400);
-	usart_set_databits(USBUSART, 8);
-	usart_set_stopbits(USBUSART, USART_STOPBITS_1);
-	usart_set_mode(USBUSART, USART_MODE_TX_RX);
-	usart_set_parity(USBUSART, USART_PARITY_NONE);
-	usart_set_flow_control(USBUSART, USART_FLOWCONTROL_NONE);
-	USART_CR1(USBUSART) |= USART_CR1_IDLEIE;
+#ifndef PLATFORM_MULTI_UART
+	aux_serial_uart_init(USBUSART);
+#else
+	aux_serial_uart_init(AUX_UART1);
+	aux_serial_uart_init(AUX_UART2);
+#endif
 
-	/* Setup USART TX DMA */
+	/* Set up data register defines if we're not in multi-UART mode */
+#ifndef PLATFORM_MULTI_UART
 #if !defined(USBUSART_TDR) && defined(USBUSART_DR)
 #define USBUSART_TDR USBUSART_DR
 #elif !defined(USBUSART_TDR)
@@ -148,8 +168,13 @@ void aux_serial_init(void)
 #elif !defined(USBUSART_RDR)
 #define USBUSART_RDR USART_DR(USBUSART)
 #endif
+#endif
+
+	/* Setup USART TX DMA */
 	dma_channel_reset(USBUSART_DMA_BUS, USBUSART_DMA_TX_CHAN);
+#ifndef PLATFORM_MULTI_UART
 	dma_set_peripheral_address(USBUSART_DMA_BUS, USBUSART_DMA_TX_CHAN, (uintptr_t)&USBUSART_TDR);
+#endif
 	dma_enable_memory_increment_mode(USBUSART_DMA_BUS, USBUSART_DMA_TX_CHAN);
 	dma_set_peripheral_size(USBUSART_DMA_BUS, USBUSART_DMA_TX_CHAN, DMA_PSIZE_8BIT);
 	dma_set_memory_size(USBUSART_DMA_BUS, USBUSART_DMA_TX_CHAN, DMA_MSIZE_8BIT);
@@ -166,7 +191,9 @@ void aux_serial_init(void)
 
 	/* Setup USART RX DMA */
 	dma_channel_reset(USBUSART_DMA_BUS, USBUSART_DMA_RX_CHAN);
+#ifndef PLATFORM_MULTI_UART
 	dma_set_peripheral_address(USBUSART_DMA_BUS, USBUSART_DMA_RX_CHAN, (uintptr_t)&USBUSART_RDR);
+#endif
 	dma_set_memory_address(USBUSART_DMA_BUS, USBUSART_DMA_RX_CHAN, (uintptr_t)aux_serial_receive_buffer);
 	dma_set_number_of_data(USBUSART_DMA_BUS, USBUSART_DMA_RX_CHAN, AUX_UART_BUFFER_SIZE);
 	dma_enable_memory_increment_mode(USBUSART_DMA_BUS, USBUSART_DMA_RX_CHAN);
@@ -187,6 +214,7 @@ void aux_serial_init(void)
 	dma_enable_channel(USBUSART_DMA_BUS, USBUSART_DMA_RX_CHAN);
 
 	/* Enable interrupts */
+#ifndef PLATFORM_MULTI_UART
 	nvic_set_priority(USBUSART_IRQ, IRQ_PRI_USBUSART);
 #if defined(USBUSART_DMA_RXTX_IRQ)
 	nvic_set_priority(USBUSART_DMA_RXTX_IRQ, IRQ_PRI_USBUSART_DMA);
@@ -200,6 +228,16 @@ void aux_serial_init(void)
 #else
 	nvic_enable_irq(USBUSART_DMA_TX_IRQ);
 	nvic_enable_irq(USBUSART_DMA_RX_IRQ);
+#endif
+#else
+	nvic_set_priority(AUX_UART1_IRQ, IRQ_PRI_AUX_UART);
+	nvic_set_priority(AUX_UART2_IRQ, IRQ_PRI_AUX_UART);
+	nvic_set_priority(AUX_UART_DMA_TX_IRQ, IRQ_PRI_AUX_UART_DMA);
+	nvic_set_priority(AUX_UART_DMA_RX_IRQ, IRQ_PRI_AUX_UART_DMA);
+	nvic_enable_irq(AUX_UART1_IRQ);
+	nvic_enable_irq(AUX_UART2_IRQ);
+	nvic_enable_irq(AUX_UART_DMA_TX_IRQ);
+	nvic_enable_irq(AUX_UART_DMA_RX_IRQ);
 #endif
 
 	/* Finally enable the USART */
@@ -472,6 +510,7 @@ static void aux_serial_dma_receive_isr(const uint8_t usart_irq, const uint8_t dm
 	nvic_enable_irq(usart_irq);
 }
 
+#ifndef PLATFORM_MULTI_UART
 #if defined(USBUSART_ISR)
 void USBUSART_ISR(void)
 {
@@ -502,6 +541,17 @@ void USBUSART2_ISR(void)
 #else
 	aux_serial_receive_isr(USBUSART2, USBUSART2_DMA_RX_IRQ);
 #endif
+}
+#endif
+#else
+void AUX_UART1_ISR(void)
+{
+	aux_serial_receive_isr(AUX_UART1, AUX_UART_DMA_RX_IRQ);
+}
+
+void AUX_UART2_ISR(void)
+{
+	aux_serial_receive_isr(AUX_UART2, AUX_UART_DMA_RX_IRQ);
 }
 #endif
 
