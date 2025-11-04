@@ -59,6 +59,30 @@ static inline void write_be4(uint8_t *const buffer, const size_t offset, const u
 	buffer[offset + 3U] = value & 0xffU;
 }
 
+static inline void write_le8(uint8_t *const buffer, const size_t offset, const uint64_t value)
+{
+	buffer[offset + 0U] = value & 0xffU;
+	buffer[offset + 1U] = (value >> 8U) & 0xffU;
+	buffer[offset + 2U] = (value >> 16U) & 0xffU;
+	buffer[offset + 3U] = (value >> 24U) & 0xffU;
+	buffer[offset + 4U] = (value >> 32U) & 0xffU;
+	buffer[offset + 5U] = (value >> 40U) & 0xffU;
+	buffer[offset + 6U] = (value >> 48U) & 0xffU;
+	buffer[offset + 7U] = (value >> 56U) & 0xffU;
+}
+
+static inline void write_be8(uint8_t *const buffer, const size_t offset, const uint64_t value)
+{
+	buffer[offset + 0U] = (value >> 56U) & 0xffU;
+	buffer[offset + 1U] = (value >> 48U) & 0xffU;
+	buffer[offset + 2U] = (value >> 40U) & 0xffU;
+	buffer[offset + 3U] = (value >> 32U) & 0xffU;
+	buffer[offset + 4U] = (value >> 24U) & 0xffU;
+	buffer[offset + 5U] = (value >> 16U) & 0xffU;
+	buffer[offset + 6U] = (value >> 8U) & 0xffU;
+	buffer[offset + 7U] = value & 0xffU;
+}
+
 static inline uint16_t read_le2(const uint8_t *const buffer, const size_t offset)
 {
 	uint8_t data[2U];
@@ -87,6 +111,14 @@ static inline uint64_t read_be8(const uint8_t *const buffer, const size_t offset
 	return ((uint64_t)data[0] << 56U) | ((uint64_t)data[1] << 48U) | ((uint64_t)data[2] << 40U) |
 		((uint64_t)data[3] << 32U) | ((uint64_t)data[4] << 24U) | ((uint64_t)data[5] << 16U) |
 		((uint64_t)data[6] << 8U) | data[7];
+}
+
+static inline uint64_t read_le8(const uint8_t *const buffer, const size_t offset)
+{
+	return ((uint64_t)buffer[offset + 7] << 56U) | ((uint64_t)buffer[offset + 6] << 48U) |
+		((uint64_t)buffer[offset + 5] << 40U) | ((uint64_t)buffer[offset + 4] << 32U) |
+		((uint64_t)buffer[offset + 3] << 24U) | ((uint64_t)buffer[offset + 2] << 16U) |
+		((uint64_t)buffer[offset + 1] << 8U) | buffer[offset + 0];
 }
 
 static inline size_t write_char(char *const buffer, const size_t buffer_size, const size_t offset, const char c)

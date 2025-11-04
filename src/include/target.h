@@ -55,6 +55,7 @@ bool bmda_rvswd_scan(void);
 bool adiv5_swd_scan(void);
 bool adiv5_swd_scan_targetid(uint32_t targetid);
 bool jtag_scan(void);
+bool jtag_discover(void);
 bool onboard_flash_scan(void);
 
 size_t target_foreach(void (*callback)(size_t index, target_s *target, void *context), void *context);
@@ -71,8 +72,10 @@ void target_detach(target_s *target);
 /* Memory access functions */
 bool target_mem_map(target_s *target, char *buf, size_t len);
 bool target_mem32_read(target_s *target, void *dest, target_addr_t src, size_t len);
+bool target_mem32_read_unswapped(target_s *const target, void *const dest, const target_addr_t src, const size_t len);
 bool target_mem64_read(target_s *target, void *dest, target_addr64_t src, size_t len);
 bool target_mem32_write(target_s *target, target_addr_t dest, const void *src, size_t len);
+bool target_mem32_write_unswapped(target_s *target, target_addr_t dest, const void *src, size_t len);
 bool target_mem64_write(target_s *target, target_addr64_t dest, const void *src, size_t len);
 bool target_mem_access_needs_halt(target_s *target);
 /* Flash memory access functions */

@@ -312,10 +312,21 @@ bool target_check_error(target_s *target)
 	return false;
 }
 
+bool skip_swap = false;
+
 /* Memory access functions */
 bool target_mem32_read(target_s *const target, void *const dest, const target_addr_t src, const size_t len)
 {
 	return target_mem64_read(target, dest, src, len);
+}
+
+/* Memory access functions */
+bool target_mem32_read_unswapped(target_s *const target, void *const dest, const target_addr_t src, const size_t len)
+{
+	skip_swap = true;
+	bool val = target_mem64_read(target, dest, src, len);
+	skip_swap = false;
+	return val;
 }
 
 bool target_mem64_read(target_s *const target, void *const dest, const target_addr64_t src, const size_t len)
@@ -337,6 +348,14 @@ bool target_mem64_read(target_s *const target, void *const dest, const target_ad
 bool target_mem32_write(target_s *const target, const target_addr_t dest, const void *const src, const size_t len)
 {
 	return target_mem64_write(target, dest, src, len);
+}
+
+bool target_mem32_write_unswapped(target_s *const target, const target_addr_t dest, const void *const src, const size_t len)
+{
+	skip_swap = true;
+	bool val = target_mem64_write(target, dest, src, len);
+	skip_swap = false;
+	return val;
 }
 
 bool target_mem64_write(target_s *const target, const target_addr64_t dest, const void *const src, const size_t len)
@@ -406,7 +425,6 @@ void target_reset(target_s *target)
 
 void target_halt_request(target_s *target)
 {
-	DEBUG_TARGET("Halting target\n");
 	if (target->halt_request)
 		target->halt_request(target);
 }
@@ -439,10 +457,10 @@ target_halt_reason_e target_halt_poll(target_s *target, target_addr64_t *watch)
 {
 	if (target->halt_poll) {
 		const target_halt_reason_e reason = target->halt_poll(target, watch);
-#ifndef DEBUG_TARGET_IS_NOOP
-		if (reason != TARGET_HALT_RUNNING)
-			DEBUG_TARGET("Target halted: %s\n", target_halt_reason_str(reason));
-#endif
+// #ifndef DEBUG_TARGET_IS_NOOP
+// 		if (reason != TARGET_HALT_RUNNING)
+// 			DEBUG_TARGET("Target halted: %s\n", target_halt_reason_str(reason));
+// #endif
 		return reason;
 	}
 	/* XXX: Is this actually the desired fallback behaviour? */
@@ -451,7 +469,7 @@ target_halt_reason_e target_halt_poll(target_s *target, target_addr64_t *watch)
 
 void target_halt_resume(target_s *target, bool step)
 {
-	DEBUG_TARGET("%s target\n", step ? "Single stepping" : "Resuming");
+	// DEBUG_TARGET("%s target\n", step ? "Single stepping" : "Resuming");
 	if (target->halt_resume)
 		target->halt_resume(target, step);
 }

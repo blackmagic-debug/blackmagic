@@ -121,6 +121,7 @@ static char xmit_buf[RTT_UP_BUF_SIZE];
  * [Algo] Rolling hash; Rabin-Karp string search
  * - 0: https://yurichev.com/news/20210205_rolling_hash/
  */
+
 static uint32_t fast_search(target_s *const cur_target, const uint32_t ram_start, const uint32_t ram_end)
 {
 	static const uint32_t hash_len = 16;
@@ -140,12 +141,17 @@ static uint32_t fast_search(target_s *const cur_target, const uint32_t ram_start
 			gdb_outf("rtt: read fail at 0x%" PRIx32 "\r\n", addr);
 			return 0;
 		}
+		fprintf(stderr, "RTT @ 0x%08x: ", addr);
 		for (uint32_t i = 0; i < buf_siz; i++) {
+			fprintf(stderr, " %02x", srch_buf[i + hash_len]);
 			hash = (hash + q - remainder * srch_buf[i] % q) % q;
 			hash = ((hash << 8U) + srch_buf[i + hash_len]) % q;
-			if (pattern == hash)
+			if (pattern == hash) {
+				fprintf(stderr, "\n");
 				return addr + i - hash_len + 1U;
+			}
 		}
+		fprintf(stderr, "\n");
 	}
 	/* no match */
 	return 0;
@@ -209,7 +215,7 @@ static void find_rtt(target_s *const cur_target)
 		DEBUG_INFO("rtt: match at 0x%" PRIx32 "\n", rtt_cbaddr);
 		/* read number of rtt up and down channels from target */
 		uint32_t num_buf[2];
-		if (target_mem32_read(cur_target, num_buf, rtt_cbaddr + 16U, sizeof(num_buf)))
+		if (target_mem32_read_unswapped(cur_target, num_buf, rtt_cbaddr + 16U, sizeof(num_buf)))
 			return;
 		rtt_num_up_chan = num_buf[0];
 		if (rtt_num_up_chan > MAX_RTT_CHAN)
@@ -233,6 +239,10 @@ static void find_rtt(target_s *const cur_target)
 		/* clear channel data */
 		memset(rtt_channel, 0, sizeof rtt_channel);
 
+		/* save first 24 bytes of control block */
+		if (target_mem32_read_unswapped(cur_target, saved_cblock_header, rtt_cbaddr, sizeof(saved_cblock_header)))
+			return;
+
 		/* auto channel: enable output channel 0, channel 1 and first input channel */
 		if (rtt_auto_channel) {
 			for (uint32_t i = 0; i < MAX_RTT_CHAN; i++)
@@ -243,12 +253,9 @@ static void find_rtt(target_s *const cur_target)
 				rtt_channel_enabled[rtt_num_up_chan] = true;
 		}
 
-		/* save first 24 bytes of control block */
-		if (target_mem32_read(cur_target, saved_cblock_header, rtt_cbaddr, sizeof(saved_cblock_header)))
-			return;
 
 		rtt_found = true;
-		DEBUG_INFO("rtt found\n");
+		DEBUG_INFO("rtt found -- %d up channels and %d down channels\n", num_buf[0], num_buf[1]);
 	}
 }
 
@@ -276,8 +283,10 @@ static rtt_retval_e read_rtt(target_s *const cur_target, const uint32_t i)
 	if (cur_target == NULL || rtt_channel[i].buf_addr == 0 || rtt_channel[i].buf_size == 0)
 		return RTT_IDLE;
 
-	if (rtt_channel[i].head >= rtt_channel[i].buf_size || rtt_channel[i].tail >= rtt_channel[i].buf_size)
+	if (rtt_channel[i].head >= rtt_channel[i].buf_size || rtt_channel[i].tail >= rtt_channel[i].buf_size) {
+		DEBUG_TARGET("write head: %d  buf_size: %d  tail: %d\n", rtt_channel[i].head, rtt_channel[i].buf_size, rtt_channel[i].tail);
 		return RTT_ERR;
+	}
 
 	/* write recv_buf to target rtt 'down' buf */
 	while (true) {
@@ -287,7 +296,7 @@ static rtt_retval_e read_rtt(target_s *const cur_target, const uint32_t i)
 		const int ch = rtt_getchar(channel);
 		if (ch == -1)
 			break;
-		if (target_mem32_write(cur_target, rtt_channel[i].buf_addr + rtt_channel[i].head, &ch, 1))
+		if (target_mem32_write_unswapped(cur_target, rtt_channel[i].buf_addr + rtt_channel[i].head, &ch, 1))
 			return RTT_ERR;
 		/* advance head pointer */
 		rtt_channel[i].head = next_head;
@@ -295,8 +304,10 @@ static rtt_retval_e read_rtt(target_s *const cur_target, const uint32_t i)
 
 	/* update head of target 'down' buffer */
 	const uint32_t head_addr = rtt_cbaddr + 24U + i * 24U + 12U;
-	if (target_mem32_write(cur_target, head_addr, &rtt_channel[i].head, sizeof(rtt_channel[i].head)))
+	if (target_mem32_write_unswapped(cur_target, head_addr, &rtt_channel[i].head, sizeof(rtt_channel[i].head))) {
+		DEBUG_TARGET("Again with the write failure\n");
 		return RTT_ERR;
+	}
 	return RTT_OK;
 }
 
@@ -363,7 +374,7 @@ static rtt_retval_e print_rtt(target_s *const cur_target, const uint32_t i)
 
 	/* update tail of target 'up' buffer */
 	const uint32_t tail_addr = rtt_cbaddr + 24U + i * 24U + 16U;
-	if (target_mem32_write(cur_target, tail_addr, &rtt_channel[i].tail, sizeof(rtt_channel[i].tail)))
+	if (target_mem32_write_unswapped(cur_target, tail_addr, &rtt_channel[i].tail, sizeof(rtt_channel[i].tail)))
 		return RTT_ERR;
 
 	/* write buffer to usb */
@@ -413,9 +424,22 @@ void poll_rtt(target_s *const cur_target)
 		if (rtt_found) {
 			uint32_t cblock_header[6]; // first 24 bytes of control block
 			/* check control block not changed or corrupted */
-			if (target_mem32_read(cur_target, cblock_header, rtt_cbaddr, sizeof(cblock_header)) ||
-				memcmp(saved_cblock_header, cblock_header, sizeof(cblock_header)) != 0)
+			if (target_mem32_read_unswapped(cur_target, cblock_header, rtt_cbaddr, sizeof(cblock_header)) ||
+				memcmp(saved_cblock_header, cblock_header, sizeof(cblock_header)) != 0) {
+				fprintf(stderr, "Read %lu blocks from 0x%08x and it's different\n", sizeof(cblock_header), rtt_cbaddr);
+				unsigned int i;
+				fprintf(stderr, "saved: ");
+				for (i = 0; i < sizeof(cblock_header)/4; i++) {
+					fprintf(stderr, " %08x", saved_cblock_header[i]);
+				}
+				fprintf(stderr, "\n");
+				fprintf(stderr, "found: ");
+				for (i = 0; i < sizeof(cblock_header)/4; i++) {
+					fprintf(stderr, " %08x", cblock_header[i]);
+				}
+				fprintf(stderr, "\n");
 				rtt_found = false; // force searching control block next poll_rtt()
+			}
 		}
 
 		bool rtt_err = false;
@@ -424,7 +448,7 @@ void poll_rtt(target_s *const cur_target)
 		if (rtt_found && rtt_cbaddr) {
 			/* copy control block from target */
 			uint32_t rtt_cblock_size = sizeof(rtt_channel[0]) * (rtt_num_up_chan + rtt_num_down_chan);
-			if (target_mem32_read(cur_target, rtt_channel, rtt_cbaddr + 24U, rtt_cblock_size)) {
+			if (target_mem32_read_unswapped(cur_target, rtt_channel, rtt_cbaddr + 24U, rtt_cblock_size)) {
 				gdb_outf("rtt: read fail at 0x%" PRIx32 "\r\n", rtt_cbaddr + 24U);
 				rtt_err = true;
 			} else {
