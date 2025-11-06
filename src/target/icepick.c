@@ -120,7 +120,7 @@ void icepick_router_handler(const uint8_t dev_index)
 		DEBUG_ERROR("ICEPick is not a type-D controller (%08" PRIx32 ")\n", icepick_idcode);
 		return;
 	}
-	DEBUG_INFO("ICEPick type-D controller v%u.%u (%08" PRIx32 ")\n",
+	DEBUG_INFO("ICEPick type-D controller v%" PRIu32 ".%" PRIu32 " (%08" PRIx32 ")\n",
 		(icepick_idcode >> ICEPICK_MAJOR_SHIFT) & ICEPICK_MAJOR_MASK,
 		(icepick_idcode >> ICEPICK_MINOR_SHIFT) & ICEPICK_MINOR_MASK, icepick_idcode);
 
