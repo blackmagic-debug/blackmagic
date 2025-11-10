@@ -225,14 +225,14 @@
 #define AUX_UART2_TX_PIN GPIO6
 #define AUX_UART2_RX_PIN GPIO7
 
-#define USBUSART_DMA_BUS       GPDMA1
-#define USBUSART_DMA_CLK       RCC_GPDMA1
-#define USBUSART_DMA_TX_CHAN   DMA_CHANNEL0
-#define USBUSART_DMA_RX_CHAN   DMA_CHANNEL1
+#define AUX_UART_DMA_BUS       GPDMA1
+#define AUX_UART_DMA_CLK       RCC_GPDMA1
+#define AUX_UART_DMA_TX_CHAN   DMA_CHANNEL0
+#define AUX_UART_DMA_RX_CHAN   DMA_CHANNEL1
 #define AUX_UART_DMA_TX_IRQ    NVIC_GPDMA1_CH0_IRQ
-#define USBUSART_DMA_TX_ISR(x) gpdma1_ch0_isr(x)
+#define AUX_UART_DMA_TX_ISR(x) gpdma1_ch0_isr(x)
 #define AUX_UART_DMA_RX_IRQ    NVIC_GPDMA1_CH1_IRQ
-#define USBUSART_DMA_RX_ISR(x) gpdma1_ch1_isr(x)
+#define AUX_UART_DMA_RX_ISR(x) gpdma1_ch1_isr(x)
 
 /* Use TIM5 Input 2 (from PA1/SWO) for Manchester data recovery */
 #define SWO_TIM TIM5
