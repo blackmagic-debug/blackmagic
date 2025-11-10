@@ -59,6 +59,12 @@ static volatile uint8_t aux_serial_led_state = 0;
 #define DMA_MSIZE_8BIT DMA_SxCR_MSIZE_8BIT
 #define DMA_PL_HIGH    DMA_SxCR_PL_HIGH
 #define DMA_CGIF       DMA_ISR_FLAGS
+#elif defined(STM32U5)
+#define DMA_PL_HIGH          DMA_CxCR_PRIO_HIGH
+#define DMA_CGIF             DMA_ISR_FLAGS
+#define USBUSART_DMA_BUS     AUX_UART_DMA_BUS
+#define USBUSART_DMA_TX_CHAN AUX_UART_DMA_TX_CHAN
+#define USBUSART_DMA_RX_CHAN AUX_UART_DMA_RX_CHAN
 #else
 #define DMA_PSIZE_8BIT DMA_CCR_PSIZE_8BIT
 #define DMA_MSIZE_8BIT DMA_CCR_MSIZE_8BIT
@@ -92,6 +98,16 @@ static char aux_serial_transmit_buffer[AUX_UART_BUFFER_SIZE];
 #else
 static uintptr_t active_uart = 0U;
 #define AUX_UART active_uart
+#endif
+
+#ifdef STM32U5
+/* NOLINTBEGIN(clang-diagnostic-error, clang-diagnostic-pointer-to-int-cast) */
+/* Defines a linked list of things to be done at the completion of RX DMA */
+static const uintptr_t aux_serial_dma_receive_ll[] = {
+	/* This controls the next RX destination address to use */
+	(uintptr_t)aux_serial_receive_buffer,
+};
+/* NOLINTEND(clang-diagnostic-error, clang-diagnostic-pointer-to-int-cast) */
 #endif
 
 void bmd_usart_set_baudrate(const uintptr_t usart, const uint32_t baud_rate)
@@ -152,7 +168,11 @@ void aux_serial_init(void)
 	rcc_periph_clock_enable(AUX_UART1_CLK);
 	rcc_periph_clock_enable(AUX_UART2_CLK);
 #endif
+#ifndef PLATFORM_MULTI_UART
 	rcc_periph_clock_enable(USBUSART_DMA_CLK);
+#else
+	rcc_periph_clock_enable(AUX_UART_DMA_CLK);
+#endif
 
 	/* Setup UART parameters */
 	UART_PIN_SETUP();
@@ -182,6 +202,7 @@ void aux_serial_init(void)
 #ifndef PLATFORM_MULTI_UART
 	dma_set_peripheral_address(USBUSART_DMA_BUS, USBUSART_DMA_TX_CHAN, (uintptr_t)&USBUSART_TDR);
 #endif
+#ifndef STM32U5
 	dma_enable_memory_increment_mode(USBUSART_DMA_BUS, USBUSART_DMA_TX_CHAN);
 	dma_set_peripheral_size(USBUSART_DMA_BUS, USBUSART_DMA_TX_CHAN, DMA_PSIZE_8BIT);
 	dma_set_memory_size(USBUSART_DMA_BUS, USBUSART_DMA_TX_CHAN, DMA_MSIZE_8BIT);
@@ -195,9 +216,26 @@ void aux_serial_init(void)
 #else
 	dma_set_read_from_memory(USBUSART_DMA_BUS, USBUSART_DMA_TX_CHAN);
 #endif
+#else
+#ifndef PLATFORM_MULTI_UART
+	dma_set_destination_address(AUX_UART_DMA_BUS, AUX_UART_DMA_TX_CHAN, (uintptr_t)&USBUSART_TDR);
+#endif
+	dma_enable_source_increment_mode(AUX_UART_DMA_BUS, AUX_UART_DMA_TX_CHAN);
+	dma_disable_destination_increment_mode(AUX_UART_DMA_BUS, AUX_UART_DMA_TX_CHAN);
+	dma_set_source_width(AUX_UART_DMA_BUS, AUX_UART_DMA_TX_CHAN, DMA_CxTR1_DW_BYTE);
+	dma_set_destination_width(AUX_UART_DMA_BUS, AUX_UART_DMA_TX_CHAN, DMA_CxTR1_DW_BYTE);
+
+	dma_set_priority(AUX_UART_DMA_BUS, AUX_UART_DMA_TX_CHAN, DMA_PL_HIGH);
+	dma_enable_interrupts(AUX_UART_DMA_BUS, AUX_UART_DMA_TX_CHAN, DMA_TCIF);
+	dma_set_transfer_complete_mode(AUX_UART_DMA_BUS, AUX_UART_DMA_RX_CHAN, DMA_TRANSFER_COMPLETE_MODE_BLOCK);
+	dma_set_hardware_request(AUX_UART_DMA_BUS, AUX_UART_DMA_TX_CHAN);
+	dma_set_destination_flow_control(AUX_UART_DMA_BUS, AUX_UART_DMA_TX_CHAN);
+	dma_set_burst_flow_control(AUX_UART_DMA_BUS, AUX_UART_DMA_TX_CHAN);
+#endif
 
 	/* Setup USART RX DMA */
 	dma_channel_reset(USBUSART_DMA_BUS, USBUSART_DMA_RX_CHAN);
+#ifndef STM32U5
 #ifndef PLATFORM_MULTI_UART
 	dma_set_peripheral_address(USBUSART_DMA_BUS, USBUSART_DMA_RX_CHAN, (uintptr_t)&USBUSART_RDR);
 #endif
@@ -217,6 +255,26 @@ void aux_serial_init(void)
 	dma_enable_direct_mode(USBUSART_DMA_BUS, USBUSART_DMA_RX_CHAN);
 #else
 	dma_set_read_from_peripheral(USBUSART_DMA_BUS, USBUSART_DMA_RX_CHAN);
+#endif
+#else
+#ifndef PLATFORM_MULTI_UART
+	dma_set_source_address(AUX_UART_DMA_BUS, AUX_UART_DMA_RX_CHAN, (uintptr_t)&USBUSART_RDR);
+#endif
+	dma_set_destination_address(AUX_UART_DMA_BUS, AUX_UART_DMA_RX_CHAN, (uintptr_t)aux_serial_receive_buffer);
+	dma_set_number_of_data(AUX_UART_DMA_BUS, AUX_UART_DMA_RX_CHAN, AUX_UART_BUFFER_SIZE);
+	dma_disable_source_increment_mode(AUX_UART_DMA_BUS, AUX_UART_DMA_RX_CHAN);
+	dma_enable_destination_increment_mode(AUX_UART_DMA_BUS, AUX_UART_DMA_RX_CHAN);
+	dma_setup_linked_list(AUX_UART_DMA_BUS, AUX_UART_DMA_RX_CHAN, aux_serial_dma_receive_ll, DMA_CxLLR_UDA);
+	dma_set_source_width(AUX_UART_DMA_BUS, AUX_UART_DMA_RX_CHAN, DMA_CxTR1_DW_BYTE);
+	dma_set_destination_width(AUX_UART_DMA_BUS, AUX_UART_DMA_RX_CHAN, DMA_CxTR1_DW_BYTE);
+
+	dma_set_priority(AUX_UART_DMA_BUS, AUX_UART_DMA_RX_CHAN, DMA_PL_HIGH);
+	dma_enable_interrupts(AUX_UART_DMA_BUS, AUX_UART_DMA_RX_CHAN, DMA_HTIF | DMA_TCIF);
+	dma_set_transfer_complete_mode(AUX_UART_DMA_BUS, AUX_UART_DMA_RX_CHAN, DMA_TRANSFER_COMPLETE_MODE_BLOCK);
+	// dma_request_select(AUX_UART_DMA_BUS, AUX_UART_DMA_RX_CHAN, );
+	dma_set_hardware_request(AUX_UART_DMA_BUS, AUX_UART_DMA_RX_CHAN);
+	dma_set_source_flow_control(AUX_UART_DMA_BUS, AUX_UART_DMA_RX_CHAN);
+	dma_set_burst_flow_control(AUX_UART_DMA_BUS, AUX_UART_DMA_RX_CHAN);
 #endif
 	dma_enable_channel(USBUSART_DMA_BUS, USBUSART_DMA_RX_CHAN);
 
@@ -247,10 +305,19 @@ void aux_serial_init(void)
 	nvic_enable_irq(AUX_UART_DMA_RX_IRQ);
 #endif
 
-	/* Finally enable the USART */
+	/* Finally enable the USART(s) */
+#ifndef PLATFORM_MULTI_UART
 	usart_enable(USBUSART);
 	usart_enable_tx_dma(USBUSART);
 	usart_enable_rx_dma(USBUSART);
+#else
+	usart_enable(AUX_UART1);
+	/* Don't enable UART2 though because it has switchable TX/RX and must be handled differently */
+	usart_enable_tx_dma(AUX_UART1);
+	usart_enable_rx_dma(AUX_UART1);
+	usart_enable_tx_dma(AUX_UART2);
+	usart_enable_rx_dma(AUX_UART2);
+#endif
 }
 #elif defined(LM4F)
 void aux_serial_init(void)
@@ -428,7 +495,11 @@ void aux_serial_switch_transmit_buffers(void)
 {
 	/* Make the buffer we've been filling the active DMA buffer, and swap to the other */
 	char *const current_buffer = aux_serial_current_transmit_buffer();
+#ifndef STM32U5
 	dma_set_memory_address(USBUSART_DMA_BUS, USBUSART_DMA_TX_CHAN, (uintptr_t)current_buffer);
+#else
+	dma_set_source_address(USBUSART_DMA_BUS, USBUSART_DMA_TX_CHAN, (uintptr_t)current_buffer);
+#endif
 	dma_set_number_of_data(USBUSART_DMA_BUS, USBUSART_DMA_TX_CHAN, aux_serial_transmit_buffer_consumed);
 	dma_enable_channel(USBUSART_DMA_BUS, USBUSART_DMA_TX_CHAN);
 
@@ -519,7 +590,7 @@ static void aux_serial_dma_receive_isr(const uint8_t usart_irq, const uint8_t dm
 {
 	nvic_disable_irq(usart_irq);
 
-	/* Clear flags and transmit a packet*/
+	/* Clear flags and transmit a packet */
 	dma_clear_interrupt_flags(USBUSART_DMA_BUS, dma_rx_channel, DMA_CGIF);
 	debug_serial_run();
 
