@@ -62,6 +62,9 @@
 #define FLASH_SIZE_MAX_G0B_C (512U * 1024U) // 512kiB
 #define FLASH_SIZE_MAX_C01   (32U * 1024U)  // 32kiB
 #define FLASH_SIZE_MAX_C03   (32U * 1024U)  // 32kiB
+#define FLASH_SIZE_MAX_C05   (64U * 1024U)  // 64kiB
+#define FLASH_SIZE_MAX_C07   (128U * 1024U) // 128kiB
+#define FLASH_SIZE_MAX_C09   (256U * 1024U) // 256kiB
 
 #define STM32G0_FLASH_PAGE_SIZE        0x800U
 #define STM32G0_FLASH_BANK2_START_PAGE 256U
@@ -128,7 +131,7 @@
 #define STM32G0_FPEC_OPTION_KEY2      0x4c5d6e7fU
 #define STM32G0_FPEC_OPTION_RDP_MASK  0xffU
 #define STM32G0x1_FPEC_OPTION_DEFAULT 0xfffffeaaU
-#define STM32C0x1_FPEC_OPTION_DEFAULT 0xffffffaaU
+#define STM32C0x1_FPEC_OPTION_DEFAULT 0x3fffffaaU
 
 #define STM32G0_SRAM_BASE    0x20000000U
 #define STM32G03_4_SRAM_SIZE (8U * 1024U)   // 8kiB
@@ -136,8 +139,12 @@
 #define STM32G07_8_SRAM_SIZE (36U * 1024U)  // 36kiB
 #define STM32G0B_C_SRAM_SIZE (144U * 1024U) // 144kiB
 
-#define STM32C01_SRAM_SIZE (6U * 1024U)  // 6kiB
-#define STM32C03_SRAM_SIZE (12U * 1024U) // 12kiB
+#define STM32C01_SRAM_SIZE  (6U * 1024U)  // 6kiB
+#define STM32C03_SRAM_SIZE  (12U * 1024U) // 12kiB
+#define STM32C05_SRAM_SIZE  (12U * 1024U) // 12kiB
+#define STM32C07_SRAM_SIZE  (24U * 1024U) // 24kiB
+#define STM32C091_SRAM_SIZE (36U * 1024U) // 36kiB
+#define STM32C092_SRAM_SIZE (30U * 1024U) // 30kiB
 
 #define STM32U031_SRAM_SIZE (12U * 1024U) // 12kiB
 #define STM32U0x3_SRAM_SIZE (40U * 1024U) // 40kiB
@@ -166,8 +173,12 @@
  * The underscores in these definitions represent /'s, this means
  * that STM32G03_4 is supposed to refer to the G03/4 aka the G03 and G04.
  */
+/* From RM0490 §30.10.1 DBG device ID code register p1009 */
 #define ID_STM32C011  0x443U
 #define ID_STM32C031  0x453U
+#define ID_STM32C051  0x44cU
+#define ID_STM32C071  0x493U
+#define ID_STM32C09x  0x44dU /* STM32C091/092 */
 #define ID_STM32G03_4 0x466U
 #define ID_STM32G05_6 0x456U
 #define ID_STM32G07_8 0x460U
@@ -206,8 +217,8 @@ typedef struct stm32g0_option_register {
  * G0x0: OPTR = DFFFE1AA
  * 1101 1111 1111 1111 1110 0001 1010 1010
  *   *IRHEN               * ****BOREN
- * C0x1: OPTR = FFFFFFAA
- * 1111 1111 1111 1111 1111 1111 1010 1010
+ * C0x1: OPTR = 3FFFFFAA                    (From RM0490 §4.4.1 FLASH Option Bytes p66)
+ * 0011 1111 1111 1111 1111 1111 1010 1010
  *                             *BOREN
  * IRH and BOR are reserved on G0x0, it is safe to apply G0x1 options on G0x0.
  * The same for PCROP and SECR.
@@ -327,6 +338,25 @@ bool stm32g0_probe(target_s *const target)
 			return false;
 		}
 		target->part_id = dev_id;
+		break;
+	case ID_STM32C051:
+		/* SRAM 12kiB, Flash up to 64kiB */
+		ram_size = STM32C05_SRAM_SIZE;
+		flash_size = FLASH_SIZE_MAX_C05;
+		target->driver = "STM32C051";
+		break;
+	case ID_STM32C071:
+		/* SRAM 24kiB, Flash up to 128kiB */
+		ram_size = STM32C07_SRAM_SIZE;
+		flash_size = FLASH_SIZE_MAX_C07;
+		target->driver = "STM32C071";
+		break;
+	case ID_STM32C09x:
+		/* TODO: determine how to tell C091 and C092 apart here */
+		/* SRAM 30/36kiB, Flash up to 256kiB */
+		ram_size = STM32C091_SRAM_SIZE;
+		flash_size = FLASH_SIZE_MAX_C09;
+		target->driver = "STM32C09x";
 		break;
 	case ID_STM32G05_6:
 		/* SRAM 18kiB, Flash up to 64kiB */
@@ -701,7 +731,8 @@ static bool stm32g0_cmd_option(target_s *const target, const int argc, const cha
 	stm32g0_option_register_s options_req[OPT_REG_COUNT] = {{0}};
 
 	if (argc == 2 && strcasecmp(argv[1], "erase") == 0) {
-		if (target->part_id == ID_STM32C011 || target->part_id == ID_STM32C031)
+		if (target->part_id == ID_STM32C011 || target->part_id == ID_STM32C031 || target->part_id == ID_STM32C051 ||
+			target->part_id == ID_STM32C071 || target->part_id == ID_STM32C09x)
 			stm32g0_options_def[OPT_REG_OPTR].val = STM32C0x1_FPEC_OPTION_DEFAULT;
 		if (!stm32g0_option_write(target, stm32g0_options_def))
 			goto exit_error;
@@ -737,6 +768,9 @@ static bool stm32g0_cmd_uid(target_s *const target, const int argc, const char *
 	switch (target->part_id) {
 	case ID_STM32C011:
 	case ID_STM32C031:
+	case ID_STM32C051:
+	case ID_STM32C071:
+	case ID_STM32C09x:
 		uid_base = STM32C0_UID_BASE;
 		break;
 	case ID_STM32U031:
