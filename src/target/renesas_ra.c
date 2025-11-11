@@ -39,10 +39,12 @@
 #include "cortexm.h"
 #include "adiv5.h"
 
+#define RENESAS_PARTID_RA2E1 0x0390U
 #define RENESAS_PARTID_RA2A1 0x01b0U
 #define RENESAS_PARTID_RA4M2 0x0340U
 #define RENESAS_PARTID_RA4M3 0x0310U
 #define RENESAS_PARTID_RA6M2 0x0150U
+#define RENESAS_PARTID_RA6M5 0x0360U
 
 /*
  * Part numbering scheme
@@ -407,18 +409,18 @@ bool renesas_ra_probe(target_s *const target)
 
 	/* Read the PNR */
 	switch (target->part_id) {
-		// case :
+	case RENESAS_PARTID_RA2E1:
 		/* mcus with PNR located at 0x01001c10
 		 * ra2l1 (part_id wanted)
-		 * ra2e1 (part_id wanted)
 		 * ra2e2 (part_id wanted)
 		 */
-		// if (!renesas_pnr_read(t, RENESAS_FIXED1_PNR, pnr))
-		//	return false;
-		// break;
+		if (!renesas_pnr_read(target, RENESAS_FIXED1_PNR, pnr))
+			return false;
+		 break;
 
 	case RENESAS_PARTID_RA4M2:
 	case RENESAS_PARTID_RA4M3:
+	case RENESAS_PARTID_RA6M5:
 		/* mcus with PNR located at 0x010080f0
 		 * ra4e1 (part_id wanted)
 		 * ra4e2 (part_id wanted)
