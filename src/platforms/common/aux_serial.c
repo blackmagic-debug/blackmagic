@@ -50,7 +50,7 @@ static bool aux_serial_transmit_complete = true;
 
 static volatile uint8_t aux_serial_led_state = 0;
 
-#if !defined(STM32U5)
+#ifndef STM32U5
 #ifdef DMA_STREAM0
 #define dma_channel_reset(dma, channel)   dma_stream_reset(dma, channel)
 #define dma_enable_channel(dma, channel)  dma_enable_stream(dma, channel)
@@ -93,10 +93,17 @@ static char aux_serial_transmit_buffer[AUX_UART_BUFFER_SIZE];
 #define usart_set_parity(uart, parity)     uart_set_parity(uart, parity)
 #endif
 
+#ifndef PLATFORM_MULTI_UART
+#define AUX_UART USBUSART
+#else
+static uintptr_t active_uart = 0U;
+#define AUX_UART active_uart
+#endif
+
 void bmd_usart_set_baudrate(const uintptr_t usart, const uint32_t baud_rate)
 {
 	/* If the new baud rate is out of supported range for a given USART, then keep previous */
-#if defined(LM4F)
+#ifdef LM4F
 	/* Are we running off the internal clock or system clock? */
 	const uint32_t clock = UART_CC(usart) == UART_CC_CS_PIOSC ? 16000000U : rcc_get_system_clock_frequency();
 #else
@@ -104,7 +111,7 @@ void bmd_usart_set_baudrate(const uintptr_t usart, const uint32_t baud_rate)
 #endif
 	const uint32_t baud_lowest = clock / 65535U;
 	const uint32_t baud_highest_16x = clock / 16U;
-#if defined(USART_CR1_OVER8)
+#ifdef USART_CR1_OVER8
 	const uint32_t baud_highest_8x = clock / 8U;
 
 	/* Four-way range match */
@@ -344,14 +351,14 @@ void aux_serial_set_encoding(const usb_cdc_line_coding_s *const coding)
 {
 	/* Some devices require that the usart is disabled before
 	 * changing the usart registers. */
-	usart_disable(USBUSART);
-	bmd_usart_set_baudrate(USBUSART, coding->dwDTERate);
+	usart_disable(AUX_UART);
+	bmd_usart_set_baudrate(AUX_UART, coding->dwDTERate);
 
 #if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4) || defined(STM32F7) || defined(STM32U5)
 	if (coding->bParityType != USB_CDC_NO_PARITY)
-		usart_set_databits(USBUSART, coding->bDataBits + 1U <= 8U ? 8 : 9);
+		usart_set_databits(AUX_UART, coding->bDataBits + 1U <= 8U ? 8 : 9);
 	else
-		usart_set_databits(USBUSART, coding->bDataBits <= 8U ? 8 : 9);
+		usart_set_databits(AUX_UART, coding->bDataBits <= 8U ? 8 : 9);
 #elif defined(LM4F)
 	uart_set_databits(USBUART, coding->bDataBits);
 #endif
@@ -368,32 +375,32 @@ void aux_serial_set_encoding(const usb_cdc_line_coding_s *const coding)
 	default:
 		break;
 	}
-	usart_set_stopbits(USBUSART, stop_bits);
+	usart_set_stopbits(AUX_UART, stop_bits);
 
 	switch (coding->bParityType) {
 	case USB_CDC_NO_PARITY:
 	default:
-		usart_set_parity(USBUSART, USART_PARITY_NONE);
+		usart_set_parity(AUX_UART, USART_PARITY_NONE);
 		break;
 	case USB_CDC_ODD_PARITY:
-		usart_set_parity(USBUSART, USART_PARITY_ODD);
+		usart_set_parity(AUX_UART, USART_PARITY_ODD);
 		break;
 	case USB_CDC_EVEN_PARITY:
-		usart_set_parity(USBUSART, USART_PARITY_EVEN);
+		usart_set_parity(AUX_UART, USART_PARITY_EVEN);
 		break;
 	}
-	usart_enable(USBUSART);
+	usart_enable(AUX_UART);
 }
 
 void aux_serial_get_encoding(usb_cdc_line_coding_s *const coding)
 {
-	coding->dwDTERate = usart_get_baudrate(USBUSART);
+	coding->dwDTERate = usart_get_baudrate(AUX_UART);
 
-	switch (usart_get_stopbits(USBUSART)) {
+	switch (usart_get_stopbits(AUX_UART)) {
 	case USART_STOPBITS_1:
 		coding->bCharFormat = USB_CDC_1_STOP_BITS;
 		break;
-#if !defined(LM4F)
+#ifndef LM4F
 	/*
 	 * Only include this back mapping on non-Tiva-C platforms as USART_STOPBITS_1 and
 	 * USART_STOPBITS_1_5 are the same thing on LM4F
@@ -408,7 +415,7 @@ void aux_serial_get_encoding(usb_cdc_line_coding_s *const coding)
 		break;
 	}
 
-	switch (usart_get_parity(USBUSART)) {
+	switch (usart_get_parity(AUX_UART)) {
 	case USART_PARITY_NONE:
 	default:
 		coding->bParityType = USB_CDC_NO_PARITY;
@@ -421,7 +428,7 @@ void aux_serial_get_encoding(usb_cdc_line_coding_s *const coding)
 		break;
 	}
 
-	const uint32_t data_bits = usart_get_databits(USBUSART);
+	const uint32_t data_bits = usart_get_databits(AUX_UART);
 	if (coding->bParityType == USB_CDC_NO_PARITY)
 		coding->bDataBits = data_bits;
 	else
