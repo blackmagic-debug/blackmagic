@@ -259,11 +259,12 @@
 #define SWO_UART_RX_PIN SWO_PIN
 #define SWO_UART_PIN_AF GPIO_AF8
 
-#define SWO_DMA_BUS    GPDMA1
-#define SWO_DMA_CLK    RCC_GPDMA1
-#define SWO_DMA_CHAN   DMA_CHANNEL2
-#define SWO_DMA_IRQ    NVIC_GPDMA1_CH2_IRQ
-#define SWO_DMA_ISR(x) gpdma1_ch2_isr(x)
+#define SWO_DMA_BUS     GPDMA1
+#define SWO_DMA_CLK     RCC_GPDMA1
+#define SWO_DMA_CHAN    DMA_CHANNEL2
+#define SWO_DMA_IRQ     NVIC_GPDMA1_CH2_IRQ
+#define SWO_DMA_ISR(x)  gpdma1_ch2_isr(x)
+#define SWO_DMA_REQ_SRC GPDMA1_CxTR2_REQSEL_UART4_RX
 
 #define SET_RUN_STATE(state)   running_status = (state)
 #define SET_IDLE_STATE(state)  gpio_set_val(LED_IDLE_RUN_PORT, LED_IDLE_RUN_PIN, state)
