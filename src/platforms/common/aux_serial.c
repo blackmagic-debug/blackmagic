@@ -211,6 +211,9 @@ void aux_serial_init(void)
 	dma_set_priority(AUX_UART_DMA_BUS, AUX_UART_DMA_TX_CHAN, DMA_PL_HIGH);
 	dma_enable_interrupts(AUX_UART_DMA_BUS, AUX_UART_DMA_TX_CHAN, DMA_TCIF);
 	// dma_request_select(AUX_UART_DMA_BUS, AUX_UART_DMA_TX_CHAN, );
+	dma_set_hardware_request(AUX_UART_DMA_BUS, AUX_UART_DMA_TX_CHAN);
+	dma_set_destination_flow_control(AUX_UART_DMA_BUS, AUX_UART_DMA_TX_CHAN);
+	dma_set_block_flow_control(AUX_UART_DMA_BUS, AUX_UART_DMA_TX_CHAN);
 #endif
 
 	/* Setup USART RX DMA */
@@ -251,6 +254,9 @@ void aux_serial_init(void)
 	dma_set_priority(AUX_UART_DMA_BUS, AUX_UART_DMA_RX_CHAN, DMA_PL_HIGH);
 	dma_enable_interrupts(AUX_UART_DMA_BUS, AUX_UART_DMA_RX_CHAN, DMA_HTIF | DMA_TCIF);
 	// dma_request_select(AUX_UART_DMA_BUS, AUX_UART_DMA_RX_CHAN, );
+	dma_set_hardware_request(AUX_UART_DMA_BUS, AUX_UART_DMA_RX_CHAN);
+	dma_set_source_flow_control(AUX_UART_DMA_BUS, AUX_UART_DMA_RX_CHAN);
+	dma_set_block_flow_control(AUX_UART_DMA_BUS, AUX_UART_DMA_RX_CHAN);
 #endif
 	dma_enable_channel(USBUSART_DMA_BUS, USBUSART_DMA_RX_CHAN);
 
