@@ -45,7 +45,7 @@
 #include <libopencm3/stm32/usart.h>
 #include <libopencm3/stm32/dma.h>
 
-#if defined(DMA_STREAM0)
+#ifdef DMA_STREAM0
 #define dma_channel_reset(dma, channel)   dma_stream_reset(dma, channel)
 #define dma_enable_channel(dma, channel)  dma_enable_stream(dma, channel)
 #define dma_disable_channel(dma, channel) dma_disable_stream(dma, channel)
@@ -53,10 +53,22 @@
 #define DMA_PSIZE_8BIT DMA_SxCR_PSIZE_8BIT
 #define DMA_MSIZE_8BIT DMA_SxCR_MSIZE_8BIT
 #define DMA_PL_HIGH    DMA_SxCR_PL_HIGH
+#elif defined(STM32U5)
+#define DMA_PL_HIGH DMA_CxCR_PRIO_HIGH
 #else
 #define DMA_PSIZE_8BIT DMA_CCR_PSIZE_8BIT
 #define DMA_MSIZE_8BIT DMA_CCR_MSIZE_8BIT
 #define DMA_PL_HIGH    DMA_CCR_PL_HIGH
+#endif
+
+#ifdef STM32U5
+/* NOLINTBEGIN(clang-diagnostic-error, clang-diagnostic-pointer-to-int-cast) */
+/* Defines a linked list of things to be done at the completion of DMA */
+static uintptr_t swo_uart_dma_ll[] = {
+	/* This controls the next RX destination address to use, however is only known at runtime */
+	0U,
+};
+/* NOLINTEND(clang-diagnostic-error, clang-diagnostic-pointer-to-int-cast) */
 #endif
 
 void swo_uart_init(const uint32_t baudrate)
@@ -87,20 +99,33 @@ void swo_uart_init(const uint32_t baudrate)
 
 	/* Set up DMA channel and tell the DMA subsystem where to put the data received from the UART */
 	dma_channel_reset(SWO_DMA_BUS, SWO_DMA_CHAN);
+#ifndef STM32U5
 	// NOLINTNEXTLINE(clang-diagnostic-pointer-to-int-cast,performance-no-int-to-ptr)
 	dma_set_peripheral_address(SWO_DMA_BUS, SWO_DMA_CHAN, (uintptr_t)&SWO_UART_DR);
 	// NOLINTNEXTLINE(clang-diagnostic-pointer-to-int-cast)
 	dma_set_memory_address(SWO_DMA_BUS, SWO_DMA_CHAN, (uintptr_t)swo_buffer);
+#else
+	// NOLINTNEXTLINE(clang-diagnostic-pointer-to-int-cast,performance-no-int-to-ptr)
+	dma_set_source_address(SWO_DMA_BUS, SWO_DMA_CHAN, (uintptr_t)&SWO_UART_DR);
+	// NOLINTNEXTLINE(clang-diagnostic-pointer-to-int-cast)
+	dma_set_destination_address(SWO_DMA_BUS, SWO_DMA_CHAN, (uintptr_t)swo_buffer);
+#endif
 	/* Define the buffer length and configure this as a peripheral -> memory transfer */
 	dma_set_number_of_data(SWO_DMA_BUS, SWO_DMA_CHAN, SWO_BUFFER_SIZE);
-#if defined(DMA_STREAM0)
+#ifdef DMA_STREAM0
 	dma_set_transfer_mode(SWO_DMA_BUS, SWO_DMA_CHAN, DMA_SxCR_DIR_PERIPHERAL_TO_MEM);
 	dma_channel_select(SWO_DMA_BUS, SWO_DMA_CHAN, SWO_DMA_TRG);
 	dma_set_dma_flow_control(SWO_DMA_BUS, SWO_DMA_CHAN);
 	dma_enable_direct_mode(SWO_DMA_BUS, SWO_DMA_CHAN);
+#elif defined(STM32U5)
+	dma_request_select(SWO_DMA_BUS, SWO_DMA_CHAN, SWO_DMA_REQ_SRC);
+	dma_set_hardware_request(SWO_DMA_BUS, SWO_DMA_CHAN);
+	dma_set_source_flow_control(SWO_DMA_BUS, SWO_DMA_CHAN);
+	dma_set_burst_flow_control(SWO_DMA_BUS, SWO_DMA_CHAN);
 #else
 	dma_set_read_from_peripheral(SWO_DMA_BUS, SWO_DMA_CHAN);
 #endif
+#ifndef STM32U5
 	dma_enable_memory_increment_mode(SWO_DMA_BUS, SWO_DMA_CHAN);
 	/* Define it as being bytewise into a circular buffer with high priority */
 	dma_set_peripheral_size(SWO_DMA_BUS, SWO_DMA_CHAN, DMA_PSIZE_8BIT);
@@ -110,6 +135,20 @@ void swo_uart_init(const uint32_t baudrate)
 	/* Enable the 50% and 100% interrupts so we can update the buffer counters to initiate the USB half of the picture */
 	dma_enable_transfer_complete_interrupt(SWO_DMA_BUS, SWO_DMA_CHAN);
 	dma_enable_half_transfer_interrupt(SWO_DMA_BUS, SWO_DMA_CHAN);
+#else
+	dma_disable_source_increment_mode(SWO_DMA_BUS, SWO_DMA_CHAN);
+	dma_enable_destination_increment_mode(SWO_DMA_BUS, SWO_DMA_CHAN);
+	/* Define it as being bytewise into a circular buffer with high priority */
+	dma_set_source_width(SWO_DMA_BUS, SWO_DMA_CHAN, DMA_CxTR1_DW_BYTE);
+	dma_set_destination_width(SWO_DMA_BUS, SWO_DMA_CHAN, DMA_CxTR1_DW_BYTE);
+	dma_set_priority(SWO_DMA_BUS, SWO_DMA_CHAN, DMA_PL_HIGH);
+	/* Set up the address of the buffer to loop back to each time DMA completes */
+	swo_uart_dma_ll[0] = (uintptr_t)swo_buffer;
+	dma_setup_linked_list(SWO_DMA_BUS, SWO_DMA_CHAN, swo_uart_dma_ll, DMA_CxLLR_UDA);
+	/* Enable the 50% and 100% interrupts so we can update the buffer counters to initiate the USB half of the picture */
+	dma_enable_interrupts(SWO_DMA_BUS, SWO_DMA_CHAN, DMA_TCIF | DMA_HTIF);
+	dma_set_transfer_complete_mode(SWO_DMA_BUS, SWO_DMA_CHAN, DMA_TRANSFER_COMPLETE_MODE_BLOCK);
+#endif
 	/* Enable DMA trigger on receive for the UART */
 	usart_enable_rx_dma(SWO_UART);
 
