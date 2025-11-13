@@ -73,16 +73,30 @@
 #define PNR_SERIES(pnr3, pnr4, pnr5, pnr6) (((pnr3) << 24U) | ((pnr4) << 16U) | ((pnr5) << 8U) | (pnr6))
 
 typedef enum {
+    // RA0
+	PNR_SERIES_RA0L1 = PNR_SERIES('A', '0', 'L', '1'),
+	PNR_SERIES_RA0E1 = PNR_SERIES('A', '0', 'E', '1'),
+	PNR_SERIES_RA0E2 = PNR_SERIES('A', '0', 'E', '2'),
+    // RA2
 	PNR_SERIES_RA2L1 = PNR_SERIES('A', '2', 'L', '1'),
+	PNR_SERIES_RA2L2 = PNR_SERIES('A', '2', 'L', '2'),
 	PNR_SERIES_RA2E1 = PNR_SERIES('A', '2', 'E', '1'),
 	PNR_SERIES_RA2E2 = PNR_SERIES('A', '2', 'E', '2'),
+	PNR_SERIES_RA2E3 = PNR_SERIES('A', '2', 'E', '3'),
 	PNR_SERIES_RA2A1 = PNR_SERIES('A', '2', 'A', '1'),
+	PNR_SERIES_RA2A2 = PNR_SERIES('A', '2', 'A', '2'),
+	PNR_SERIES_RA2T1 = PNR_SERIES('A', '2', 'T', '1'),
+    // RA4
 	PNR_SERIES_RA4M1 = PNR_SERIES('A', '4', 'M', '1'),
 	PNR_SERIES_RA4M2 = PNR_SERIES('A', '4', 'M', '2'),
 	PNR_SERIES_RA4M3 = PNR_SERIES('A', '4', 'M', '3'),
 	PNR_SERIES_RA4E1 = PNR_SERIES('A', '4', 'E', '1'),
 	PNR_SERIES_RA4E2 = PNR_SERIES('A', '4', 'E', '2'),
 	PNR_SERIES_RA4W1 = PNR_SERIES('A', '4', 'W', '1'),
+	PNR_SERIES_RA4C1 = PNR_SERIES('A', '4', 'C', '1'),
+	PNR_SERIES_RA4T1 = PNR_SERIES('A', '4', 'T', '1'),
+	PNR_SERIES_RA4L1 = PNR_SERIES('A', '4', 'L', '1'),
+    // RA6
 	PNR_SERIES_RA6M1 = PNR_SERIES('A', '6', 'M', '1'),
 	PNR_SERIES_RA6M2 = PNR_SERIES('A', '6', 'M', '2'),
 	PNR_SERIES_RA6M3 = PNR_SERIES('A', '6', 'M', '3'),
@@ -92,6 +106,17 @@ typedef enum {
 	PNR_SERIES_RA6E2 = PNR_SERIES('A', '6', 'E', '2'),
 	PNR_SERIES_RA6T1 = PNR_SERIES('A', '6', 'T', '1'),
 	PNR_SERIES_RA6T2 = PNR_SERIES('A', '6', 'T', '2'),
+	PNR_SERIES_RA6T3 = PNR_SERIES('A', '6', 'T', '3'),
+    // RA8
+	PNR_SERIES_RA8M1 = PNR_SERIES('A', '8', 'M', '1'),
+	PNR_SERIES_RA8M2 = PNR_SERIES('A', '8', 'M', '2'),
+	PNR_SERIES_RA8E1 = PNR_SERIES('A', '8', 'E', '1'),
+	PNR_SERIES_RA8E2 = PNR_SERIES('A', '8', 'E', '2'),
+	PNR_SERIES_RA8T1 = PNR_SERIES('A', '8', 'T', '1'),
+	PNR_SERIES_RA8T2 = PNR_SERIES('A', '8', 'T', '2'),
+	PNR_SERIES_RA8D1 = PNR_SERIES('A', '8', 'D', '1'),
+	PNR_SERIES_RA8D2 = PNR_SERIES('A', '8', 'D', '2'),
+	PNR_SERIES_RA8P1 = PNR_SERIES('A', '8', 'P', '1'),
 } renesas_pnr_series_e;
 
 /* Code flash memory size */
@@ -151,6 +176,8 @@ typedef enum {
 /* PNR/UID location by series
  * newer series have a 'Flash Root Table'
  * older series have a fixed location in the flash memory
+ *
+ * TODO: UPDATE
  *
  * ra2l1 - Fixed location 1
  * ra2e1 - Fixed location 1
@@ -439,7 +466,7 @@ static void renesas_add_flash(target_s *const target, const target_addr_t addr, 
 
 	/*
 	 * Renesas RA MCUs can have one of two kinds of flash memory, MF3/4 and RV40
-	 * Flash type by series:
+	 * Flash type by series: (TODO: Update)
 	 * ra2l1 - MF4
 	 * ra2e1 - MF4
 	 * ra2e2 - MF4
@@ -590,6 +617,7 @@ bool renesas_ra_probe(target_s *const target)
 	target->target_storage = priv;
 	target->driver = (char *)priv->pnr;
 
+    // TODO: Update with more models
 	switch (priv->series) {
 	case PNR_SERIES_RA2L1:
 	case PNR_SERIES_RA2A1:
@@ -1013,6 +1041,7 @@ static bool renesas_uid(target_s *const target, const int argc, const char **con
 	const renesas_priv_s *const priv = (renesas_priv_s *)target->target_storage;
 	target_addr_t uid_addr;
 
+    //TODO: Update
 	switch (priv->series) {
 	case PNR_SERIES_RA2L1:
 	case PNR_SERIES_RA2E1:
