@@ -212,12 +212,108 @@ typedef enum {
  * Block Size: Code area: 2 KB (except RA2A1 is 1KB), Data area: 1 KB
  * Program/Erase unit Program: Code area: 64 bits, Data area: 8 bits
  *					  Erase:  1 block
+ *			   RA2E1: Program: Code area: 32 bits, Data area: 8 bits
+ *      		      Ref: R01UH0852EJ0170, Flash Memory Overview, §35.1, pg 915
  */
 #define MF3_CF_BLOCK_SIZE       (0x800U)
 #define MF3_RA2A1_CF_BLOCK_SIZE (0x400U)
 #define MF3_DF_BLOCK_SIZE       (0x400U)
 #define MF3_CF_WRITE_SIZE       (0x40U)
+#define MF3_RA2E1_CF_WRITE_SIZE (0x20U)
 #define MF3_DF_WRITE_SIZE       (0x1U)
+
+/* MF3/4 Flash commands*/
+/* Taken from R01AN5367EU0120, (MF3) Software Commands, §1.5.2, pg 35
+ * and R01UH0852EJ0170, Flash Control Register, §35.3.10, pg 924 */
+#define MF3_CMD_PROGRAM          0x1U
+#define MF3_CMD_CF_BLANK_CHECK   0x3U
+#define MF3_CMD_BLOCK_ERASE      0x4U
+#define MF3_CMD_CONSECUTIVE_READ 0x5U
+#define MF3_CMD_CHIP_ERASE       0x6U
+#define MF3_CMD_DF_BLANK_CHECK   0xbU
+
+#define MF3_BASE UINT32_C(0x407ec000)
+
+#define MF3_DFLCTL       (MF3_BASE + 0x090U) /* Data Flash Control */
+#define MF3_DFLCTL_DFLEN (1U)                /* Data Flash Access Enable */
+
+#define MF3_FENTRYR            (MF3_BASE + 0x3fb2U) /* Flash P/E Mode Entry */
+#define MF3_FENTRYR_KEY_OFFSET 8U
+#define MF3_FENTRYR_KEY        (0xaaU << MF3_FENTRYR_KEY_OFFSET)
+#define MF3_FENTRYR_PE_CF      (1U)       /* Enable CF Program/Erase */
+#define MF3_FENTRYR_PE_DF      (1U << 7U) /* Enable DF Program/Erase */
+
+#define MF3_FCR      (MF3_BASE + 0x114U) /* Command Register */
+#define MF3_FCR_DRC  (1U << 4U)          /* Data Read Complete */
+#define MF3_FCR_STOP (1U << 6U)          /* Forced Processing Stop */
+#define MF3_FCR_OPST (1U << 7U)          /* Processing Start */
+
+// Seems to duplicate FSTATR2 ?
+#define MF3_FSTATR0          (MF3_BASE + 0x128U) /* Flash Status 0 (RA4) */
+#define MF3_FSTATR0_ERERR0   (1U << 0U)          /* Erase Error */
+#define MF3_FSTATR0_PRGERR0  (1U << 1U)          /* Program Error */
+#define MF3_FSTATR0_PRGERR01 (1U << 2U)          /* Extra Area Program Error */
+#define MF3_FSTATR0_BCERR0   (1U << 3U)          /* Blank Check Error */
+#define MF3_FSTATR0_ILGLERR  (1U << 4U)          /* Illegal Command Error */
+#define MF3_FSTATR0_EILGLERR (1U << 5U)          /* Extra Area Illegal Command Error */
+
+#define MF3_FSTATR1       (MF3_BASE + 0x12cU) /* Flash Status 1 */
+#define MF3_FSTATR1_DRRDY (1U << 1U)          /* Data Read Ready */
+#define MF3_FSTATR1_FRDY  (1U << 6U)          /* Flash Ready */
+#define MF3_FSTATR1_EXRDY (1U << 7U)          /* Extra Area Ready */
+
+#define MF3_FSTATR2          (MF3_BASE + 0x1f0U) /* Flash Status 2 */
+#define MF3_FSTATR2_ERRERR   (1U << 0U)          /* Erase Error */
+#define MF3_FSTATR2_PRGERR   (1U << 1U)          /* Program Error */
+#define MF3_FSTATR2_PRGERR01 (1U << 2U)          /* Extra Area Program Error */
+#define MF3_FSTATR2_BCERR    (1U << 3U)          /* Blank Check Error */
+#define MF3_FSTATR2_ILGLERR  (1U << 4U)          /* Illegal Command Error */
+#define MF3_FSTATR2_EILGLERR (1U << 5U)          /* Extra Area Illegal Command Error */
+
+#define MF3_FSTATR01         (MF3_BASE + 0x13cU) /* Flash Status 01 (RA4) */
+#define MF3_FSTATR01_ERERR1  (1U << 0U)          /* Erase Error */
+#define MF3_FSTATR01_PRGERR1 (1U << 1U)          /* Program Error */
+#define MF3_FSTATR01_BCERR1  (1U << 3U)          /* Blank Check Error */
+
+#define MF3_FPR     (MF3_BASE + 0x180U) /* Flash Mode Protection */
+#define MF3_FPR_KEY 0xa5U
+
+/* And here is where RA4 and RA2 implementations diverge. FMS2 is specified as
+ * read/write 0 for RA2, and (011) is specified as Setting Prohibited. TODO:
+ * Verify this...
+ *
+ * FMS2  FMS1  FMS0 | Mode
+ * -------------------------------------
+ *  0     0     0   | Read only
+ *  0     1     0   | Data flash P/E
+ * (1)    0     1   | Code flash P/E
+ *  0     1     1   | Discharge Mode 1
+ *  1     1     1   | Discharge Mode 2
+ *
+ * Taken from R01AN5367EU0120, Flash P/E Mode Control Register, §1.2.5, pg 12
+ * and R01UH0852EJ0170, Flash P/E Mode Control Register, §35.3.6, pg 921 */
+#define MF3_FPMCR       (MF3_BASE + 0x100U) /* Flash P/E Mode Control */
+#define MF3_FPMCR_FMS0  (1U << 1U)          /* Operating Mode Select 0 */
+#define MF3_FPMCR_RPDIS (1U << 3U)          /* Code Flash P/E Disable */
+#define MF3_FPMCR_FMS1  (1U << 4U)          /* Operating Mode Select 1 */
+#define MF3_FPMCR_FMS2  (1U << 7U)          /* Operating Mode Select 2 */
+
+#define MF3_FSARL (MF3_BASE + 0x108U) /* Start Addr Low */
+#define MF3_FSARH (MF3_BASE + 0x110U) /* Start Addr High */
+#define MF3_FEARL (MF3_BASE + 0x118U) /* End Addr Low */
+#define MF3_FEARH (MF3_BASE + 0x120U) /* End Addr High */
+
+#define MF3_FWBL0 (MF3_BASE + 0x130U) /* Write Buffer 0 Low */
+#define MF3_FWBH0 (MF3_BASE + 0x138U) /* Write Buffer 0 High */
+#define MF3_FWBL1 (MF3_BASE + 0x140U) /* Write Buffer 1 Low (RA4) */
+#define MF3_FWBH1 (MF3_BASE + 0x144U) /* Write Buffer 1 High (RA4) */
+#define MF3_FRBL0 (MF3_BASE + 0x188U) /* Write Buffer 0 Low */
+#define MF3_FRBH0 (MF3_BASE + 0x190U) /* Write Buffer 0 High */
+#define MF3_FRBL1 (MF3_BASE + 0x148U) /* Write Buffer 1 Low (RA4) */
+#define MF3_FRBH1 (MF3_BASE + 0x14cU) /* Write Buffer 1 High (RA4) */
+
+/* RA4M1 has a flash cache, which needs to be disabled before writing */
+//TODO
 
 /* RV40 Flash */
 /*
@@ -383,9 +479,9 @@ static void renesas_add_flash(target_s *const target, const target_addr_t addr, 
 	case PNR_SERIES_RA6M2:
 	case PNR_SERIES_RA6M3:
 	case PNR_SERIES_RA6M4:
+	case PNR_SERIES_RA6M5:
 	case PNR_SERIES_RA6E1:
 	case PNR_SERIES_RA6E2:
-	case PNR_SERIES_RA6M5:
 	case PNR_SERIES_RA6T1:
 	case PNR_SERIES_RA6T2:
 		target->enter_flash_mode = renesas_enter_flash_mode;
@@ -416,7 +512,7 @@ bool renesas_ra_probe(target_s *const target)
 		 */
 		if (!renesas_pnr_read(target, RENESAS_FIXED1_PNR, pnr))
 			return false;
-		 break;
+		break;
 
 	case RENESAS_PARTID_RA4M2:
 	case RENESAS_PARTID_RA4M3:
