@@ -239,6 +239,8 @@
 #define SWO_TIM_CLK_EN()
 #define SWO_TIM_IRQ         NVIC_TIM5_IRQ
 #define SWO_TIM_ISR(x)      tim5_isr(x)
+#define SWO_IC_IN_CH        TIM_IC2        /* Input channel 2 */
+#define SWO_IC_IN_CH_SEL    TIM_IC_SEL_IN0 /* TIM5_CH2 from the input mux */
 #define SWO_IC_IN           TIM_IC_IN_TI2
 #define SWO_IC_RISING       TIM_IC2
 #define SWO_CC_RISING       TIM5_CCR2
