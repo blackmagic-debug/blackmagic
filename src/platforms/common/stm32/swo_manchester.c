@@ -4,7 +4,7 @@
  * Copyright (C) 2012 Black Sphere Technologies Ltd.
  * Written by Gareth McMullin <gareth@blacksphere.co.nz>
  * Modified by Uwe Bonnes <bon@elektron.ikp.physik.tu-darmstadt.de>
- * Copyright (C) 2024 1BitSquared <info@1bitsquared.com>
+ * Copyright (C) 2024-2026 1BitSquared <info@1bitsquared.com>
  * Modified by Rachel Mant <git@dragonmux.network>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -75,6 +75,11 @@ void swo_manchester_init(void)
 #else
 	/* Then make sure the IO pin used is properly set up as an input routed to the timer */
 	gpio_set_mode(SWO_PORT, GPIO_MODE_INPUT, GPIO_CNF_INPUT_FLOAT, SWO_PIN);
+#endif
+
+#ifdef STM32U5
+	/* Route the correct input signal to the input channel in the input multiplexer */
+	timer_ic_input_selection(SWO_TIM, SWO_IC_IN_CH, SWO_IC_IN_CH_SEL);
 #endif
 
 	/*
