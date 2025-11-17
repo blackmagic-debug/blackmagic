@@ -30,7 +30,7 @@
 
 probe_bmp_includes = include_directories('.')
 
-probe_bmp_sources = files()
+probe_bmp_sources = files('platform.c')
 
 probe_bmp_args = [
 	'-DDFU_SERIAL_LENGTH=9',
