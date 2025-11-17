@@ -77,6 +77,11 @@ void swo_manchester_init(void)
 	gpio_set_mode(SWO_PORT, GPIO_MODE_INPUT, GPIO_CNF_INPUT_FLOAT, SWO_PIN);
 #endif
 
+#ifdef STM32U5
+	/* Route the correct input signal to the input channel in the input multiplexer */
+	timer_ic_input_selection(SWO_TIM, SWO_IC_IN_CH, SWO_IC_IN_CH_SEL);
+#endif
+
 	/*
 	 * Start setting the timer block up by picking a pair of cross-linked capture channels suitable for the input,
 	 * and configure them to consume the input channel for the SWO pin. We use one in rising edge mode and the
