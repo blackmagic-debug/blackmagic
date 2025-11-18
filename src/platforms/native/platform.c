@@ -27,7 +27,6 @@
 #include "morse.h"
 
 #include <libopencm3/cm3/vector.h>
-#include <libopencm3/stm32/rcc.h>
 #include <libopencm3/cm3/scb.h>
 #include <libopencm3/cm3/scs.h>
 #include <libopencm3/cm3/nvic.h>
