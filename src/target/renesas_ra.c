@@ -74,11 +74,11 @@
 #define PNR_SERIES(pnr3, pnr4, pnr5, pnr6) (((pnr3) << 24U) | ((pnr4) << 16U) | ((pnr5) << 8U) | (pnr6))
 
 typedef enum {
-    // RA0
+	// RA0
 	PNR_SERIES_RA0L1 = PNR_SERIES('A', '0', 'L', '1'),
 	PNR_SERIES_RA0E1 = PNR_SERIES('A', '0', 'E', '1'),
 	PNR_SERIES_RA0E2 = PNR_SERIES('A', '0', 'E', '2'),
-    // RA2
+	// RA2
 	PNR_SERIES_RA2L1 = PNR_SERIES('A', '2', 'L', '1'),
 	PNR_SERIES_RA2L2 = PNR_SERIES('A', '2', 'L', '2'),
 	PNR_SERIES_RA2E1 = PNR_SERIES('A', '2', 'E', '1'),
@@ -87,7 +87,7 @@ typedef enum {
 	PNR_SERIES_RA2A1 = PNR_SERIES('A', '2', 'A', '1'),
 	PNR_SERIES_RA2A2 = PNR_SERIES('A', '2', 'A', '2'),
 	PNR_SERIES_RA2T1 = PNR_SERIES('A', '2', 'T', '1'),
-    // RA4
+	// RA4
 	PNR_SERIES_RA4M1 = PNR_SERIES('A', '4', 'M', '1'),
 	PNR_SERIES_RA4M2 = PNR_SERIES('A', '4', 'M', '2'),
 	PNR_SERIES_RA4M3 = PNR_SERIES('A', '4', 'M', '3'),
@@ -97,7 +97,7 @@ typedef enum {
 	PNR_SERIES_RA4C1 = PNR_SERIES('A', '4', 'C', '1'),
 	PNR_SERIES_RA4T1 = PNR_SERIES('A', '4', 'T', '1'),
 	PNR_SERIES_RA4L1 = PNR_SERIES('A', '4', 'L', '1'),
-    // RA6
+	// RA6
 	PNR_SERIES_RA6M1 = PNR_SERIES('A', '6', 'M', '1'),
 	PNR_SERIES_RA6M2 = PNR_SERIES('A', '6', 'M', '2'),
 	PNR_SERIES_RA6M3 = PNR_SERIES('A', '6', 'M', '3'),
@@ -108,7 +108,7 @@ typedef enum {
 	PNR_SERIES_RA6T1 = PNR_SERIES('A', '6', 'T', '1'),
 	PNR_SERIES_RA6T2 = PNR_SERIES('A', '6', 'T', '2'),
 	PNR_SERIES_RA6T3 = PNR_SERIES('A', '6', 'T', '3'),
-    // RA8
+	// RA8
 	PNR_SERIES_RA8M1 = PNR_SERIES('A', '8', 'M', '1'),
 	PNR_SERIES_RA8M2 = PNR_SERIES('A', '8', 'M', '2'),
 	PNR_SERIES_RA8E1 = PNR_SERIES('A', '8', 'E', '1'),
@@ -244,7 +244,7 @@ typedef enum {
  *      		      Ref: R01UH0852EJ0170, Flash Memory Overview, §35.1, pg 915
  */
 #define MF3_CF_BLOCK_SIZE       (0x800U)
-#define MF3_RA2A1_CF_BLOCK_SIZE (0x400U)
+#define MF3_RA2A1_CF_BLOCK_SIZE (0x400U) // Contradicted by RA2A1 Ref Manual
 #define MF3_DF_BLOCK_SIZE       (0x400U)
 #define MF3_CF_WRITE_SIZE       (0x40U)
 #define MF3_RA2E1_CF_WRITE_SIZE (0x20U)
@@ -426,6 +426,42 @@ static renesas_pnr_series_e renesas_series(const uint8_t *pnr);
 static uint32_t renesas_flash_size(const uint8_t *pnr);
 
 static bool renesas_enter_flash_mode(target_s *target);
+static bool renesas_enter_mf3_flash_mode(target_s *target);
+
+static bool renesas_mf3_prepare(target_flash_s *flash);
+static bool renesas_mf3_done(target_flash_s *flash);
+static bool renesas_mf3_flash_erase(target_flash_s *flash, target_addr_t addr, size_t len);
+static bool renesas_mf3_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t len);
+
+static void renesas_add_mf3_flash(target_s *const target, const target_addr_t addr, const size_t length)
+{
+	target_flash_s *flash = calloc(1, sizeof(*flash));
+	if (!flash) { /* calloc failed: heap exhaustion */
+		DEBUG_ERROR("calloc: failed in %s\n", __func__);
+		return;
+	}
+
+	const bool code_flash = addr < RENESAS_CF_END;
+
+	flash->start = addr;
+	flash->length = length;
+	flash->erased = 0xffU;
+	flash->erase = renesas_mf3_flash_erase;
+	flash->write = renesas_mf3_flash_write;
+	flash->prepare = renesas_mf3_prepare;
+	flash->done = renesas_mf3_done;
+
+	if (code_flash) {
+		flash->blocksize = MF3_CF_BLOCK_SIZE;
+		//TODO Make this generic
+		flash->writesize = MF3_RA2E1_CF_WRITE_SIZE;
+	} else {
+		flash->blocksize = MF3_DF_BLOCK_SIZE;
+		flash->writesize = MF3_DF_WRITE_SIZE;
+	}
+
+	target_add_flash(target, flash);
+}
 
 static bool renesas_rv40_prepare(target_flash_s *flash);
 static bool renesas_rv40_done(target_flash_s *flash);
@@ -496,7 +532,14 @@ static void renesas_add_flash(target_s *const target, const target_addr_t addr, 
 	case PNR_SERIES_RA2A1:
 	case PNR_SERIES_RA4M1:
 	case PNR_SERIES_RA4W1:
-		/* FIXME: implement MF3/4 flash */
+		/*
+		 * We need a new enter_flash_mode here because the MF3/4 parts don't
+		 * seem to have the SYSC_FWEPROR register. Alternatively, we could
+		 * duplicate the switch statement inside enter_flash_mode, but this
+		 * feels slightly cleaner
+		 */
+		target->enter_flash_mode = renesas_enter_mf3_flash_mode;
+		renesas_add_mf3_flash(target, addr, length);
 		return;
 
 	case PNR_SERIES_RA4M2:
@@ -618,7 +661,7 @@ bool renesas_ra_probe(target_s *const target)
 	target->target_storage = priv;
 	target->driver = (char *)priv->pnr;
 
-    // TODO: Update with more models
+	// TODO: Update with more models
 	switch (priv->series) {
 	case PNR_SERIES_RA2L1:
 	case PNR_SERIES_RA2A1:
@@ -1033,6 +1076,67 @@ static bool renesas_rv40_flash_write(target_flash_s *const flash, target_addr_t 
 	return !renesas_rv40_error_check(target, RV40_FSTATR_PRGERR | RV40_FSTATR_ILGLERR);
 }
 
+static bool renesas_enter_mf3_flash_mode(target_s *const target)
+{
+	/*
+	 * Make sure that we are in the Code Flash/Data Flash Read mode, as a reset
+	 * starts us in the Data Flash Disabled mode (R01AN5367EU0120, Sequencer Modes,
+	 * §1.5.1, pg 35)
+	 */
+	target_mem32_write8(target, MF3_DFLCTL, MF3_DFLCTL_DFLEN);
+	return true;
+}
+
+static bool renesas_mf3_pe_mode(target_s *const target, const pe_mode_e pe_mode)
+{
+	/* See "Switching to Code Flash P/E Mode": §35.13.3.2 of the RA2E1 manual R01UH0852EJ0170. */
+	/* Set PE/READ mode. Note that this is very similar to the RV40 mode control,
+	 * just with a different target register address. This probably ought to be
+	 * deduplicated, but getting it working is more important first
+	 */
+	uint16_t fentryr = 0;
+	uint8_t fpmcr = 0;
+	switch (pe_mode) {
+	case PE_MODE_CF:
+		fentryr |= FENTRYR_PE_CF;
+		fpmcr |= MF3_FPMCR_FMS0; // & ~(MF3_FPMCR_FMS1 | MF3_FPMCR_RPDIS);
+		break;
+	case PE_MODE_DF:
+		fentryr |= FENTRYR_PE_DF;
+		fpmcr |= MF3_FPMCR_FMS1; // & ~(MF3_FPMCR_FMS0 | MF3_FPMCR_RPDIS);
+		break;
+	case PE_MODE_READ:
+		fpmcr |= MF3_FPMCR_RPDIS; // & ~(MF3_FPMCR_FMS0 | MF3_FPMCR_FMS1);
+		break;
+	default:
+		break;
+	}
+	target_mem32_write16(target, MF3_FENTRYR, FENTRYR_KEY | fentryr);
+
+	/*
+	 * Perform a series of writes to unlock the mode control register and set it
+	 * to the appropriate state. Right now, this primarily focuses on the RA2
+	 * implementation (i.e. ignoring FMS2) as that is what I have to test on
+	 * currently.
+	 */
+	target_mem32_write8(target, MF3_FPR, MF3_FPR_KEY);
+	target_mem32_write8(target, MF3_FPMCR, fpmcr);
+	target_mem32_write8(target, MF3_FPMCR, ~fpmcr);
+	target_mem32_write8(target, MF3_FPMCR, fpmcr);
+
+	platform_timeout_s timeout;
+	platform_timeout_set(&timeout, 10);
+
+	/* Wait for the operation to complete or timeout, Read until FENTRYR and FRDY is set */
+	while (target_mem32_read16(target, MF3_FENTRYR) != fentryr ||
+		!(target_mem32_read8(target, MF3_FSTATR1) & MF3_FSTATR1_FRDY)) {
+		if (target_check_error(target) || platform_timeout_is_expired(&timeout))
+			return false;
+	}
+
+	return true;
+}
+
 /* Reads the 16-byte unique id */
 static bool renesas_uid(target_s *const target, const int argc, const char **const argv)
 {
@@ -1042,7 +1146,7 @@ static bool renesas_uid(target_s *const target, const int argc, const char **con
 	const renesas_priv_s *const priv = (renesas_priv_s *)target->target_storage;
 	target_addr_t uid_addr;
 
-    //TODO: Update
+	//TODO: Update
 	switch (priv->series) {
 	case PNR_SERIES_RA2L1:
 	case PNR_SERIES_RA2E1:
