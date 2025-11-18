@@ -246,8 +246,8 @@ typedef enum {
 #define MF3_CF_BLOCK_SIZE       (0x800U)
 #define MF3_RA2A1_CF_BLOCK_SIZE (0x400U) // Contradicted by RA2A1 Ref Manual
 #define MF3_DF_BLOCK_SIZE       (0x400U)
-#define MF3_CF_WRITE_SIZE       (0x40U)
-#define MF3_RA2E1_CF_WRITE_SIZE (0x20U)
+#define MF3_CF_WRITE_SIZE       (0x8U)
+#define MF3_RA2E1_CF_WRITE_SIZE (0x4U)
 #define MF3_DF_WRITE_SIZE       (0x1U)
 
 /* MF3/4 Flash commands*/
@@ -265,7 +265,7 @@ typedef enum {
 #define MF3_DFLCTL       (MF3_BASE + 0x090U) /* Data Flash Control */
 #define MF3_DFLCTL_DFLEN (1U)                /* Data Flash Access Enable */
 
-#define MF3_FENTRYR            (MF3_BASE + 0x3fb2U) /* Flash P/E Mode Entry */
+#define MF3_FENTRYR            (MF3_BASE + 0x3fb0U) /* Flash P/E Mode Entry */
 #define MF3_FENTRYR_KEY_OFFSET 8U
 #define MF3_FENTRYR_KEY        (0xaaU << MF3_FENTRYR_KEY_OFFSET)
 #define MF3_FENTRYR_PE_CF      (1U)       /* Enable CF Program/Erase */
@@ -291,7 +291,7 @@ typedef enum {
 #define MF3_FSTATR1_EXRDY (1U << 7U)          /* Extra Area Ready */
 
 #define MF3_FSTATR2          (MF3_BASE + 0x1f0U) /* Flash Status 2 */
-#define MF3_FSTATR2_ERRERR   (1U << 0U)          /* Erase Error */
+#define MF3_FSTATR2_ERERR    (1U << 0U)          /* Erase Error */
 #define MF3_FSTATR2_PRGERR   (1U << 1U)          /* Program Error */
 #define MF3_FSTATR2_PRGERR01 (1U << 2U)          /* Extra Area Program Error */
 #define MF3_FSTATR2_BCERR    (1U << 3U)          /* Blank Check Error */
@@ -305,6 +305,9 @@ typedef enum {
 
 #define MF3_FPR     (MF3_BASE + 0x180U) /* Flash Mode Protection */
 #define MF3_FPR_KEY 0xa5U
+
+#define MF3_FRESETR       (MF3_BASE + 0x124U) /* Flash Reset */
+#define MF3_FRESETR_RESET (1U << 0U)          /* Trigger software reset of flash */
 
 /* And here is where RA4 and RA2 implementations diverge. FMS2 is specified as
  * read/write 0 for RA2, and (011) is specified as Setting Prohibited. TODO:
@@ -335,10 +338,10 @@ typedef enum {
 #define MF3_FWBH0 (MF3_BASE + 0x138U) /* Write Buffer 0 High */
 #define MF3_FWBL1 (MF3_BASE + 0x140U) /* Write Buffer 1 Low (RA4) */
 #define MF3_FWBH1 (MF3_BASE + 0x144U) /* Write Buffer 1 High (RA4) */
-#define MF3_FRBL0 (MF3_BASE + 0x188U) /* Write Buffer 0 Low */
-#define MF3_FRBH0 (MF3_BASE + 0x190U) /* Write Buffer 0 High */
-#define MF3_FRBL1 (MF3_BASE + 0x148U) /* Write Buffer 1 Low (RA4) */
-#define MF3_FRBH1 (MF3_BASE + 0x14cU) /* Write Buffer 1 High (RA4) */
+#define MF3_FRBL0 (MF3_BASE + 0x188U) /* Read Buffer 0 Low */
+#define MF3_FRBH0 (MF3_BASE + 0x190U) /* Read Buffer 0 High */
+#define MF3_FRBL1 (MF3_BASE + 0x148U) /* Read Buffer 1 Low (RA4) */
+#define MF3_FRBH1 (MF3_BASE + 0x14cU) /* Read Buffer 1 High (RA4) */
 
 /* RA4M1 has a flash cache, which needs to be disabled before writing */
 //TODO
@@ -1118,6 +1121,9 @@ static bool renesas_mf3_pe_mode(target_s *const target, const pe_mode_e pe_mode)
 	 * to the appropriate state. Right now, this primarily focuses on the RA2
 	 * implementation (i.e. ignoring FMS2) as that is what I have to test on
 	 * currently.
+	 *
+	 * Might also need a 5 us delay here (unlikely given the speed at which this
+	 * will be occurring is limited by the debug link) when changing to data flash p/e mode.
 	 */
 	target_mem32_write8(target, MF3_FPR, MF3_FPR_KEY);
 	target_mem32_write8(target, MF3_FPMCR, fpmcr);
@@ -1135,6 +1141,63 @@ static bool renesas_mf3_pe_mode(target_s *const target, const pe_mode_e pe_mode)
 	}
 
 	return true;
+}
+
+static bool renesas_mf3_error_check(target_s *const target, const uint16_t error_bits)
+{
+	// TODO: update with RA4 consideration
+	const uint8_t fstatr2 = target_mem32_read16(target, MF3_FSTATR2);
+
+	/* Check if status indicates a programming error */
+	if (fstatr2 & error_bits) {
+		/* Stop the flash */
+		target_mem32_write8(target, MF3_FCR, MF3_FCR_STOP);
+
+		platform_timeout_s timeout;
+		platform_timeout_set(&timeout, 10);
+
+		/* Wait until the operation has completed or timeout */
+		/* Read FRDY bit until it has been set to 1 indicating that the current operation is complete.*/
+		while (!(target_mem32_read8(target, MF3_FSTATR1) & MF3_FSTATR1_FRDY)) {
+			if (target_check_error(target) || platform_timeout_is_expired(&timeout))
+				return true;
+		}
+
+		/* Reset the flash controller */
+		target_mem32_write8(target, MF3_FRESETR, MF3_FRESETR_RESET);
+		target_mem32_write8(target, MF3_FRESETR, 0);
+	}
+
+	return false;
+}
+
+static bool renesas_mf3_prepare(target_flash_s *const flash)
+{
+	target_s *const target = flash->t;
+
+	if (!(target_mem32_read8(target, MF3_FSTATR1) & MF3_FSTATR1_FRDY) ||
+		target_mem32_read16(target, MF3_FENTRYR) != 0) {
+		DEBUG_WARN("flash is not ready, may be hanging mid unfinished command due to something going wrong, "
+				   "please power on reset the device\n");
+
+		return false;
+	}
+
+	/* Code flash or data flash operation */
+	const bool code_flash = flash->start < RENESAS_CF_END;
+
+	/* Transition to PE mode */
+	const pe_mode_e pe_mode = code_flash ? PE_MODE_CF : PE_MODE_DF;
+
+	return renesas_mf3_pe_mode(target, pe_mode) && !renesas_mf3_error_check(target, MF3_FSTATR2_ILGLERR);
+}
+
+static bool renesas_mf3_done(target_flash_s *const flash)
+{
+	target_s *const target = flash->t;
+
+	/* Return to read mode */
+	return renesas_mf3_pe_mode(target, PE_MODE_READ);
 }
 
 /* Reads the 16-byte unique id */
