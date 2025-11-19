@@ -33,9 +33,25 @@
 
 #include "general.h"
 #include "platform.h"
+#include "usb.h"
 
+#include <libopencm3/cm3/vector.h>
+#include <libopencm3/cm3/scb.h>
 #include <libopencm3/stm32/rcc.h>
 #include <libopencm3/stm32/spi.h>
+
+void platform_init(void)
+{
+	/* Enable the FPU as we're in hard float mode and defined it to the compiler */
+	SCB_CPACR |= SCB_CPACR_CP10_FULL | SCB_CPACR_CP11_FULL;
+
+	/* Set up the NVIC vector table for the firmware */
+	SCB_VTOR = (uintptr_t)&vector_table; // NOLINT(clang-diagnostic-pointer-to-int-cast, performance-no-int-to-ptr)
+
+	/* Bring up timing and USB */
+	platform_timing_init();
+	blackmagic_usb_init();
+}
 
 void platform_nrst_set_val(bool assert)
 {
