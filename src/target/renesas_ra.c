@@ -1200,6 +1200,67 @@ static bool renesas_mf3_done(target_flash_s *const flash)
 	return renesas_mf3_pe_mode(target, PE_MODE_READ);
 }
 
+static bool renesas_mf3_flash_write(target_flash_s *const flash, target_addr_t dest, const void *src, size_t len)
+{
+	target_s *const target = flash->t;
+
+	/* code flash or data flash operation */
+	const bool code_flash = dest < RENESAS_CF_END;
+
+	/* write size for code flash / data flash FIXME: RA2E1 vs others */
+	const uint8_t write_size = code_flash ? MF3_RA2E1_CF_WRITE_SIZE : MF3_DF_WRITE_SIZE;
+
+	/* set start address */
+	target_mem32_write16(target, MF3_FSARL, (const uint16_t)(dest & 0xffffU));
+	target_mem32_write16(target, MF3_FSARH, (const uint16_t)((dest >> 16) & 0xffffU));
+
+	while (len) {
+		/* set the data to be written (Adjust for RA4!) */
+		if (code_flash) {
+			target_mem32_write16(target, MF3_FWBL0, *(const uint16_t *)src);
+			target_mem32_write16(target, MF3_FWBH0, *((const uint16_t *)src + 1U));
+		} else {
+			target_mem32_write16(target, MF3_FWBL0, *(const uint8_t *)src);
+		}
+
+		src = (const uint8_t *)src + write_size;
+
+		/* decrement length remaining */
+		len -= write_size;
+
+		/* trigger write command */
+		target_mem32_write8(target, MF3_FCR, MF3_FCR_OPST | MF3_CMD_PROGRAM);
+
+		platform_timeout_s timeout;
+		platform_timeout_set(&timeout, 10);
+
+		/* Wait until the operation has completed or timeout */
+		/* Read FRDY bit until it has been set to 1 indicating that the current operation is complete.*/
+		while (!(target_mem32_read8(target, MF3_FSTATR1) & MF3_FSTATR1_FRDY)) {
+			if (target_check_error(target) || platform_timeout_is_expired(&timeout))
+				return false;
+		}
+
+		/*
+		 * Clear the command register (Figure 35.21, Flowchart for consecutive
+		 * programming of the code flash, pg 953, R01UH0852EJ0170) and wait
+		 * until ready again
+		 */
+		target_mem32_write8(target, MF3_FCR, MF3_CMD_PROGRAM);
+		target_mem32_write8(target, MF3_FCR, 0);
+
+		platform_timeout_set(&timeout, 10);
+
+		/* Read FRDY bit until it has been set to 1 indicating that the current operation is complete.*/
+		while (!(target_mem32_read8(target, MF3_FSTATR1) & MF3_FSTATR1_FRDY)) {
+			if (target_check_error(target) || platform_timeout_is_expired(&timeout))
+				return false;
+		}
+	}
+
+	return !renesas_mf3_error_check(target, MF3_FSTATR2_PRGERR | MF3_FSTATR2_ILGLERR);
+}
+
 /* Reads the 16-byte unique id */
 static bool renesas_uid(target_s *const target, const int argc, const char **const argv)
 {
