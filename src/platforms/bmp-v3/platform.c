@@ -45,6 +45,17 @@ static void adc_init(void);
 
 void platform_init(void)
 {
+	/* Enable peripherals */
+	rcc_periph_clock_enable(RCC_OTGFS);
+	rcc_periph_clock_enable(RCC_CRS);
+	rcc_periph_clock_enable(RCC_GPIOA);
+	rcc_periph_clock_enable(RCC_GPIOB);
+	rcc_periph_clock_enable(RCC_GPIOC);
+	rcc_periph_clock_enable(RCC_GPIOH);
+	/* Make sure to power up the timer used for trace */
+	rcc_periph_clock_enable(RCC_TIM5);
+	rcc_periph_clock_enable(RCC_CRC);
+
 	/* Bring up the ADC */
 	adc_init();
 
