@@ -393,7 +393,7 @@ uint32_t platform_target_voltage_sense(void)
 	if (hwversion == 0)
 		return 0;
 
-	uint8_t channel = 8;
+	const uint8_t channel = 8U;
 	adc_set_regular_sequence(ADC1, 1, &channel);
 
 	adc_start_conversion_direct(ADC1);
