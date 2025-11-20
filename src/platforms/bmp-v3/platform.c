@@ -38,16 +38,43 @@
 #include <libopencm3/cm3/vector.h>
 #include <libopencm3/cm3/scb.h>
 #include <libopencm3/stm32/rcc.h>
+#include <libopencm3/stm32/adc.h>
 #include <libopencm3/stm32/spi.h>
+
+static void adc_init(void);
 
 void platform_init(void)
 {
+	/* Bring up the ADC */
+	adc_init();
+
 	/* Set up the NVIC vector table for the firmware */
 	SCB_VTOR = (uintptr_t)&vector_table; // NOLINT(clang-diagnostic-pointer-to-int-cast, performance-no-int-to-ptr)
 
 	/* Bring up timing and USB */
 	platform_timing_init();
 	blackmagic_usb_init();
+}
+
+static void adc_init(void)
+{
+	rcc_periph_clock_enable(RCC_ADC1_2);
+
+	gpio_mode_setup(TPWR_SENSE_PORT, GPIO_MODE_ANALOG, GPIO_PUPD_NONE, TPWR_SENSE_PIN);
+
+	adc_power_off(ADC1);
+	adc_set_single_conversion_mode(ADC1);
+	adc_disable_external_trigger_regular(ADC1);
+	adc_set_right_aligned(ADC1);
+	adc_set_sample_time_on_all_channels(ADC1, ADC_SMPR_SMP_814DOT5CYC);
+	adc_enable_temperature_sensor();
+	adc_power_on(ADC1);
+
+	/* Wait for the ADC to finish starting up */
+	for (volatile size_t i = 0; i < 800000U; ++i)
+		continue;
+
+	adc_calibrate(ADC1);
 }
 
 void platform_nrst_set_val(bool assert)
@@ -69,6 +96,37 @@ bool platform_nrst_get_val(void)
 bool platform_target_get_power(void)
 {
 	return !gpio_get(TPWR_EN_PORT, TPWR_EN_PIN);
+}
+
+uint32_t platform_target_voltage_sense(void)
+{
+	/*
+	 * Returns the voltage in tenths of a volt (so 33 means 3.3V).
+	 * BMPv3 uses ADC1_IN17 for target power sense
+	 */
+	const uint8_t channel = 17U;
+	adc_set_regular_sequence(ADC1, 1, &channel);
+
+	adc_start_conversion_regular(ADC1);
+
+	/* Wait for end of conversion */
+	while (!adc_eoc(ADC1))
+		continue;
+
+	uint32_t val = adc_read_regular(ADC1); /* 0-4095 */
+	/* Clear EOC bit to acknowledge and rest for the next time */
+	adc_clear_eos(ADC1);
+	return (val * 99U) / 8191U;
+}
+
+const char *platform_target_voltage(void)
+{
+	static char ret[] = "0.0V";
+	uint32_t val = platform_target_voltage_sense();
+	ret[0] = '0' + val / 10U;
+	ret[2] = '0' + val % 10U;
+
+	return ret;
 }
 
 void platform_target_clk_output_enable(bool enable)
