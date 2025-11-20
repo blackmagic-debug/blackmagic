@@ -38,7 +38,10 @@
 #include <libopencm3/cm3/vector.h>
 #include <libopencm3/cm3/scb.h>
 #include <libopencm3/stm32/rcc.h>
+#include <libopencm3/stm32/adc.h>
 #include <libopencm3/stm32/spi.h>
+
+static void adc_init(void);
 
 void platform_init(void)
 {
@@ -48,9 +51,39 @@ void platform_init(void)
 	/* Set up the NVIC vector table for the firmware */
 	SCB_VTOR = (uintptr_t)&vector_table; // NOLINT(clang-diagnostic-pointer-to-int-cast, performance-no-int-to-ptr)
 
+	/* Power up the analog domain */
+	pwr_enable_vdda();
+
+	/* Bring up the ADC */
+	adc_init();
+
 	/* Bring up timing and USB */
 	platform_timing_init();
 	blackmagic_usb_init();
+}
+
+static void adc_init(void)
+{
+	/*
+	 * Configure the ADC/DAC mux and bring the peripheral clock up, knocking it down from 160MHz to 40MHz
+	 * to bring it into range for the peripheral per the f(ADC) characteristic of 5MHz <= f(ADC) <= 55MHz
+	 */
+	rcc_set_peripheral_clk_sel(ADC1, RCC_CCIPR3_ADCDACSEL_SYSCLK);
+	rcc_periph_clock_enable(RCC_ADC1_2);
+	adc_ungate_power(ADC1);
+	adc_set_common_prescaler(ADC12_CCR_PRESC_DIV4);
+
+	gpio_mode_setup(TPWR_SENSE_PORT, GPIO_MODE_ANALOG, GPIO_PUPD_NONE, TPWR_SENSE_PIN);
+
+	adc_power_off(ADC1);
+	adc_set_single_conversion_mode(ADC1);
+	adc_disable_external_trigger_regular(ADC1);
+	adc_set_sample_time(ADC1, 17U, ADC12_SMPR_SMP_68CYC);
+	adc_channel_preselect(ADC1, 17U);
+	adc_enable_temperature_sensor();
+	adc_calibrate_linearity(ADC1);
+	adc_calibrate(ADC1);
+	adc_power_on(ADC1);
 }
 
 void platform_nrst_set_val(bool assert)
@@ -72,6 +105,36 @@ bool platform_nrst_get_val(void)
 bool platform_target_get_power(void)
 {
 	return !gpio_get(TPWR_EN_PORT, TPWR_EN_PIN);
+}
+
+uint32_t platform_target_voltage_sense(void)
+{
+	/*
+	 * Returns the voltage in tenths of a volt (so 33 means 3.3V).
+	 * BMPv3 uses ADC1_IN17 for target power sense
+	 */
+	const uint8_t channel = 17U;
+	adc_set_regular_sequence(ADC1, 1U, &channel);
+	adc_clear_eoc(ADC1);
+
+	adc_start_conversion_regular(ADC1);
+
+	/* Wait for end of conversion */
+	while (!adc_eoc(ADC1))
+		continue;
+
+	const uint32_t voltage = adc_read_regular(ADC1); /* 0-16383 */
+	return (voltage * 99U) / 32767U;
+}
+
+const char *platform_target_voltage(void)
+{
+	static char result[] = "0.0V";
+	uint32_t voltage = platform_target_voltage_sense();
+	result[0] = (char)('0' + (voltage / 10U));
+	result[2] = (char)('0' + (voltage % 10U));
+
+	return result;
 }
 
 void platform_target_clk_output_enable(bool enable)
