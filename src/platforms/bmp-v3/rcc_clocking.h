@@ -41,6 +41,8 @@
 static struct rcc_pll_config rcc_hsi_config =
 {
 	RCC_HSI,
+	RCC_PLLCKSELR_PLLSRC_,
+	0U,
 };
 
 #endif /* PLATFORMS_BMP_V3_RCC_CLOCKING_H */
