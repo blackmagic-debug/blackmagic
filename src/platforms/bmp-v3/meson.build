@@ -34,6 +34,7 @@ probe_bmp_sources = files('platform.c')
 
 probe_bmp_args = [
 	'-DDFU_SERIAL_LENGTH=9',
+	'-DBLACKMAGICPROBE_V3',
 ]
 
 trace_protocol = get_option('trace_protocol')
