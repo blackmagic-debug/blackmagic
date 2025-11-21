@@ -45,8 +45,12 @@
 
 static void adc_init(void);
 
+int hwversion = -1;
+
 void platform_init(void)
 {
+	hwversion = 0;
+
 	/* Enable peripherals */
 	rcc_periph_clock_enable(RCC_OTGFS);
 	rcc_periph_clock_enable(RCC_CRS);
@@ -88,6 +92,11 @@ static void adc_init(void)
 		continue;
 
 	adc_calibrate(ADC1);
+}
+
+int platform_hwversion(void)
+{
+	return hwversion;
 }
 
 void platform_nrst_set_val(bool assert)

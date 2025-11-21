@@ -45,6 +45,8 @@
 
 #define PLATFORM_IDENT "v3 "
 
+extern int hwversion;
+
 /*
  * Important pin mappings for BMPv3:
  *
