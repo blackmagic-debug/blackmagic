@@ -45,11 +45,13 @@ target_s *target_list = NULL;
 
 static bool target_cmd_mass_erase(target_s *target, int argc, const char **argv);
 static bool target_cmd_range_erase(target_s *target, int argc, const char **argv);
+static bool target_cmd_blank_check(target_s *target, int argc, const char **argv);
 static bool target_cmd_redirect_output(target_s *target, int argc, const char **argv);
 
 const command_s target_cmd_list[] = {
 	{"erase_mass", target_cmd_mass_erase, "Erase whole device Flash"},
 	{"erase_range", target_cmd_range_erase, "Erase a range of memory on a device"},
+	{"blank_check", target_cmd_blank_check, "Blank-check device Flash"},
 	{"redirect_stdout", target_cmd_redirect_output, "Redirect semihosting output to aux USB serial"},
 	{NULL, NULL, NULL},
 };
@@ -563,6 +565,16 @@ static bool target_cmd_range_erase(target_s *const target, const int argc, const
 	const uint32_t length = strtoul(argv[2], NULL, 0);
 
 	return target_flash_erase(target, addr, length);
+}
+
+static bool target_cmd_blank_check(target_s *const target, const int argc, const char **const argv)
+{
+	(void)argc;
+	(void)argv;
+	gdb_out("Blank-checking device Flash: ");
+	const bool result = target_flash_blank_check(target);
+	gdb_out("done\n");
+	return result;
 }
 
 static bool target_cmd_redirect_output(target_s *target, int argc, const char **argv)

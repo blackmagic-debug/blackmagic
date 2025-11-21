@@ -391,3 +391,60 @@ bool target_flash_complete(target_s *target)
 	target_exit_flash_mode(target);
 	return result;
 }
+
+static bool flash_blank_check(target_flash_s *flash, target_addr_t src, size_t len, target_addr_t *mismatch)
+{
+	bool result = true; /* Catch false returns with &= */
+	target_s *target = flash->t;
+	platform_timeout_s timeout;
+	platform_timeout_set(&timeout, 500);
+
+	/* Pick smaller of: len = option bytes (8), writebufsize (1024), len = flash page (8192) */
+	const size_t chunksize = flash->writebufsize < len ? flash->writebufsize : len;
+
+	for (size_t offset = 0U; offset < len; offset += chunksize) {
+		/* Fetch chunk into sector buffer */
+		target_mem32_read(target, flash->buf, src + offset, chunksize);
+
+		/* Compare bytewise with erased value */
+		const uint8_t erased = flash->erased;
+		for (size_t i = 0; i < chunksize; i++) {
+			if (flash->buf[i] != erased) {
+				*mismatch = src + i;
+				return false;
+			}
+		}
+		target_print_progress(&timeout);
+	}
+	return result;
+}
+
+bool target_flash_blank_check(target_s *target)
+{
+	if (!target->flash)
+		return false;
+
+	bool result = true;
+	target_addr_t mismatch = 0;
+
+	for (target_flash_s *flash = target->flash; flash; flash = flash->next) {
+		if (!flash->buf && !flash_buffer_alloc(flash))
+			return false;
+
+		const target_addr_t local_end = flash->start + flash->length;
+		for (target_addr_t local_start = flash->start; local_start < local_end; local_start += flash->blocksize) {
+			result = flash_blank_check(flash, local_start, flash->blocksize, &mismatch);
+			if (!result)
+				tc_printf(target, "Has data at 0x%08" PRIx32 "\n", mismatch);
+			else
+				tc_printf(target, "Blank 0x%08" PRIx32 "+%" PRIu32 "\n", local_start, (uint32_t)flash->blocksize);
+		}
+		/* Free the operation buffer */
+		if (flash->buf) {
+			free(flash->buf);
+			flash->buf = NULL;
+		}
+	}
+
+	return result;
+}

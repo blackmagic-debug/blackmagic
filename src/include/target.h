@@ -80,6 +80,7 @@ bool target_flash_erase(target_s *target, target_addr_t addr, size_t len);
 bool target_flash_write(target_s *target, target_addr_t dest, const void *src, size_t len);
 bool target_flash_complete(target_s *target);
 bool target_flash_mass_erase(target_s *target);
+bool target_flash_blank_check(target_s *target);
 
 /* Register access functions */
 size_t target_regs_size(target_s *target);
