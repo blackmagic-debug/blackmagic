@@ -37,9 +37,11 @@
 
 #include <libopencm3/cm3/vector.h>
 #include <libopencm3/cm3/scb.h>
+#include <libopencm3/usb/usbd.h>
 #include <libopencm3/stm32/rcc.h>
 #include <libopencm3/stm32/adc.h>
 #include <libopencm3/stm32/spi.h>
+#include <libopencm3/cm3/systick.h>
 
 static void adc_init(void);
 
@@ -146,6 +148,24 @@ const char *platform_target_voltage(void)
 	result[2] = (char)('0' + (voltage % 10U));
 
 	return result;
+}
+
+void platform_request_boot(void)
+{
+	/* Disconnect USB cable */
+	usbd_disconnect(usbdev, true);
+	gpio_mode_setup(USB_PORT, GPIO_MODE_INPUT, GPIO_PUPD_PULLDOWN, USB_DP_PIN | USB_DM_PIN);
+	/* Make sure we drive the USB reset condition for at least 10ms */
+	while (!(STK_CSR & STK_CSR_COUNTFLAG))
+		continue;
+	for (size_t count = 0U; count < 10U * SYSTICKMS; ++count) {
+		while (!(STK_CSR & STK_CSR_COUNTFLAG))
+			continue;
+	}
+
+	/* Drive boot request pin */
+	gpio_mode_setup(BNT_BOOT_REQ_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, BTN_BOOT_REQ_PIN);
+	gpio_clear(BNT_BOOT_REQ_PORT, BTN_BOOT_REQ_PIN);
 }
 
 void platform_target_clk_output_enable(bool enable)
