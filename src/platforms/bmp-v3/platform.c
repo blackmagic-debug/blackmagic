@@ -71,6 +71,12 @@ void platform_init(void)
 	rcc_periph_clock_enable(RCC_TIM5);
 	rcc_periph_clock_enable(RCC_CRC);
 
+	/* Setup GPIO ports */
+	gpio_mode_setup(TCK_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, TCK_PIN);
+	gpio_mode_setup(TMS_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, TMS_PIN);
+	gpio_mode_setup(TDI_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, TDI_PIN);
+	gpio_mode_setup(TDO_PORT, GPIO_MODE_INPUT, GPIO_PUPD_NONE, TDO_PIN);
+
 	/* Bring up the ADC */
 	adc_init();
 
