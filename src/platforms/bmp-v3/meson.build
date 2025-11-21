@@ -32,6 +32,8 @@ probe_bmp_includes = include_directories('.')
 
 probe_bmp_sources = files('platform.c')
 
+probe_bmp_dfu_sources = files('bootloader.c')
+
 probe_bmp_args = [
 	'-DDFU_SERIAL_LENGTH=9',
 	'-DBLACKMAGICPROBE_V3',
@@ -53,7 +55,8 @@ probe_bmp_common_link_args = [
 ]
 
 probe_bmp_link_args = [
-	#'-Wl,-Ttext=0x8002000',
+	# Reserve two pages for the bootloader
+	'-Wl,-Ttext=0x8004000',
 ]
 
 probe_host = declare_dependency(
@@ -62,6 +65,14 @@ probe_host = declare_dependency(
 	compile_args: probe_bmp_args,
 	link_args: probe_bmp_common_link_args + probe_bmp_link_args,
 	dependencies: [platform_common, platform_stm32u5, probe_bmp_dependencies],
+)
+
+probe_bootloader = declare_dependency(
+	include_directories: [platform_common_includes, probe_bmp_includes],
+	sources: probe_bmp_dfu_sources,
+	compile_args: probe_bmp_args,
+	link_args: probe_bmp_common_link_args,
+	dependencies: platform_stm32u5_dfu,
 )
 
 summary(
