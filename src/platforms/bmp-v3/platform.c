@@ -34,11 +34,14 @@
 #include "general.h"
 #include "platform.h"
 #include "usb.h"
+#include "rcc_clocking.h"
 
 #include <libopencm3/cm3/vector.h>
 #include <libopencm3/cm3/scb.h>
+#include <libopencm3/cm3/scs.h>
 #include <libopencm3/usb/usbd.h>
 #include <libopencm3/stm32/rcc.h>
+#include <libopencm3/stm32/crs.h>
 #include <libopencm3/stm32/adc.h>
 #include <libopencm3/stm32/spi.h>
 #include <libopencm3/cm3/systick.h>
@@ -50,6 +53,7 @@ int hwversion = -1;
 void platform_init(void)
 {
 	hwversion = 0;
+	SCS_DEMCR |= SCS_DEMCR_VC_MON_EN;
 
 	/* Enable the FPU as we're in hard float mode and defined it to the compiler */
 	SCB_CPACR |= SCB_CPACR_CP10_FULL | SCB_CPACR_CP11_FULL;
@@ -57,8 +61,16 @@ void platform_init(void)
 	/* Set up the NVIC vector table for the firmware */
 	SCB_VTOR = (uintptr_t)&vector_table; // NOLINT(clang-diagnostic-pointer-to-int-cast, performance-no-int-to-ptr)
 
+	/* Bring up the PLLs, set up HSI48 for USB, and set up the clock recovery system for that */
+	rcc_clock_setup_pll(&rcc_hsi_config);
+	rcc_clock_setup_hsi48();
+	crs_autotrim_usb_enable();
+	/* Power up USB controller */
+	pwr_enable_vddusb();
 	/* Power up the analog domain */
 	pwr_enable_vdda();
+	/* Route HSI48 to the USB controller */
+	rcc_set_iclk_clksel(RCC_CCIPR1_ICLKSEL_HSI48);
 
 	/* Enable peripherals */
 	rcc_periph_clock_enable(RCC_OTGFS);
