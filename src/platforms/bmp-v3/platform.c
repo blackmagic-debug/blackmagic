@@ -45,8 +45,12 @@
 
 static void adc_init(void);
 
+int hwversion = -1;
+
 void platform_init(void)
 {
+	hwversion = 0;
+
 	/* Enable the FPU as we're in hard float mode and defined it to the compiler */
 	SCB_CPACR |= SCB_CPACR_CP10_FULL | SCB_CPACR_CP11_FULL;
 
@@ -97,6 +101,11 @@ static void adc_init(void)
 	adc_calibrate_linearity(ADC1);
 	adc_calibrate(ADC1);
 	adc_power_on(ADC1);
+}
+
+int platform_hwversion(void)
+{
+	return hwversion;
 }
 
 void platform_nrst_set_val(bool assert)
