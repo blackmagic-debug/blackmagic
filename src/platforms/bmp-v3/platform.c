@@ -34,9 +34,11 @@
 #include "general.h"
 #include "platform.h"
 #include "usb.h"
+#include "rcc_clocking.h"
 
 #include <libopencm3/cm3/vector.h>
 #include <libopencm3/cm3/scb.h>
+#include <libopencm3/cm3/scs.h>
 #include <libopencm3/usb/usbd.h>
 #include <libopencm3/stm32/rcc.h>
 #include <libopencm3/stm32/adc.h>
@@ -50,6 +52,9 @@ int hwversion = -1;
 void platform_init(void)
 {
 	hwversion = 0;
+	SCS_DEMCR |= SCS_DEMCR_VC_MON_EN;
+
+	rcc_clock_setup_pll(&rcc_hsi_config);
 
 	/* Enable peripherals */
 	rcc_periph_clock_enable(RCC_OTGFS);
