@@ -150,6 +150,9 @@
 #define USB_VBUS_PORT GPIOA
 #define USB_VBUS_PIN  GPIO9
 
+#define BNT_BOOT_REQ_PORT GPIOA
+#define BTN_BOOT_REQ_PIN  GPIO15
+
 #define LED0_PORT         GPIOB
 #define LED0_PIN          GPIO5
 #define LED1_PORT         GPIOB
