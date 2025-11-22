@@ -37,12 +37,36 @@
 #define PLATFORMS_BMP_V3_RCC_CLOCKING_H
 
 #include <libopencm3/stm32/rcc.h>
+#include <libopencm3/stm32/pwr.h>
+#include <libopencm3/stm32/flash.h>
 
-static struct rcc_pll_config rcc_hsi_config =
-{
-	RCC_HSI,
-	RCC_PLLCKSELR_PLLSRC_,
-	0U,
+static struct rcc_pll_config rcc_hsi_config = {
+	.sysclock_source = RCC_MSIS,
+	.hse_frequency = 0U,
+	.msis_range = RCC_MSIS_RANGE_48MHZ,
+	.pll1 =
+		{
+			.pll_source = RCC_PLLCFGR_PLLSRC_MSIS,
+			.divm = 0U,
+		},
+	.pll2 =
+		{
+			.pll_source = RCC_PLLCFGR_PLLSRC_NONE,
+			.divm = 0U,
+		},
+	.pll3 =
+		{
+			.pll_source = RCC_PLLCFGR_PLLSRC_NONE,
+			.divm = 0U,
+		},
+	.hpre = RCC_CFGR2_HPRE_NODIV,
+	.ppre1 = RCC_PPRE_NODIV,
+	.ppre2 = RCC_PPRE_NODIV,
+	.ppre3 = RCC_PPRE_NODIV,
+	.dpre = RCC_CFGR2_DPRE_DEFAULT,
+	.flash_waitstates = FLASH_ACR_LATENCY_15WS,
+	.voltage_scale = PWR_VOS_SCALE_1, /* 1.2V -> 160MHz f(max) */
+	.power_mode = PWR_SYS_LDO,
 };
 
 #endif /* PLATFORMS_BMP_V3_RCC_CLOCKING_H */

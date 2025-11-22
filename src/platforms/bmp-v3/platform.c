@@ -41,6 +41,7 @@
 #include <libopencm3/cm3/scs.h>
 #include <libopencm3/usb/usbd.h>
 #include <libopencm3/stm32/rcc.h>
+#include <libopencm3/stm32/crs.h>
 #include <libopencm3/stm32/adc.h>
 #include <libopencm3/stm32/spi.h>
 #include <libopencm3/cm3/systick.h>
@@ -54,7 +55,10 @@ void platform_init(void)
 	hwversion = 0;
 	SCS_DEMCR |= SCS_DEMCR_VC_MON_EN;
 
+	/* Bring up the PLLs, set up HSI48 for USB, and set up the clock recovery system for that */
 	rcc_clock_setup_pll(&rcc_hsi_config);
+	rcc_clock_setup_hsi48();
+	crs_autotrim_usb_enable();
 
 	/* Enable peripherals */
 	rcc_periph_clock_enable(RCC_OTGFS);
