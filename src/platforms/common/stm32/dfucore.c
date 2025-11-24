@@ -2,6 +2,7 @@
  * This file is part of the Black Magic Debug project.
  *
  * Copyright (C) 2013 Gareth McMullin <gareth@blacksphere.co.nz>
+ * Copyright (C) 2025 1BitSquared <info@1bitsquared.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -42,6 +43,9 @@
 #define DFU_IFACE_STRING_OFFSET 54
 #define DFU_IFACE_STRING        "@Internal Flash   /0x08000000/1*016Ka,3*016Kg,1*064Kg,000*128Kg"
 #endif
+#elif defined(STM32U5)
+#define DFU_IFACE_STRING        "@Internal Flash/0x08000000/2*8Ka,000*8Kg"
+#define DFU_IFACE_STRING_OFFSET 33
 #endif
 #include <libopencm3/stm32/flash.h>
 
@@ -302,7 +306,8 @@ void dfu_init(const usbd_driver *driver)
 {
 	get_dev_unique_id();
 
-	usbdev = usbd_init(driver, &dev_desc, &config, usb_strings, 4, usbd_control_buffer, sizeof(usbd_control_buffer));
+	usbdev = usbd_init(driver, &dev_desc, &config, usb_strings, ARRAY_LENGTH(usb_strings), usbd_control_buffer,
+		sizeof(usbd_control_buffer));
 
 	usbd_register_control_callback(usbdev, USB_REQ_TYPE_CLASS | USB_REQ_TYPE_INTERFACE,
 		USB_REQ_TYPE_TYPE | USB_REQ_TYPE_RECIPIENT, usbdfu_control_request);
@@ -317,7 +322,7 @@ void dfu_main(void)
 #if defined(DFU_IFACE_STRING_OFFSET)
 static void set_dfu_iface_string(uint32_t size)
 {
-	char *const p = if_string + DFU_IFACE_STRING_OFFSET;
+	char *const sectors = if_string + DFU_IFACE_STRING_OFFSET;
 #if DFU_IFACE_PAGESIZE > 1
 	size /= DFU_IFACE_PAGESIZE;
 #endif
@@ -326,16 +331,16 @@ static void set_dfu_iface_string(uint32_t size)
 	 * Fill the size digits by hand.
 	 */
 	if (size >= 999) {
-		p[0] = '9';
-		p[1] = '9';
-		p[2] = '9';
+		sectors[0] = '9';
+		sectors[1] = '9';
+		sectors[2] = '9';
 		return;
 	}
-	p[2] = (char)(48U + (size % 10U));
+	sectors[2] = (char)(48U + (size % 10U));
 	size /= 10U;
-	p[1] = (char)(48U + (size % 10U));
+	sectors[1] = (char)(48U + (size % 10U));
 	size /= 10U;
-	p[0] = (char)(48U + size);
+	sectors[0] = (char)(48U + size);
 }
 #else
 #define set_dfu_iface_string(x)
@@ -345,10 +350,17 @@ static void get_dev_unique_id(void)
 {
 	/* Calculated the upper flash limit from the exported data in the parameter block*/
 	uint32_t fuse_flash_size = desig_get_flash_size();
+#ifdef STM32F1
 	/* Handle F103x8 as F103xB. */
 	if (fuse_flash_size == 0x40U)
 		fuse_flash_size = 0x80U;
+#endif
+#ifdef STM32U5
+	/* STM32U5 uses a 16KiB reservation, not 8 for the bootloader. Convert size to 8KiB sectors. */
+	set_dfu_iface_string((fuse_flash_size - 16U) / 8U);
+#else
 	set_dfu_iface_string(fuse_flash_size - 8U);
+#endif
 	max_address = FLASH_BASE + (fuse_flash_size << 10U);
 	read_serial_number();
 }
