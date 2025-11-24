@@ -4,6 +4,7 @@
  * Copyright (C) 2022-2023 1BitSquared <info@1bitsquared.com>
  * Written by Rafael Silva <perigoso@riseup.net>
  * Modified by Rachel Mant <git@dragonmux.network>
+ * Modified by Sage Myers <desertsagebrush>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
