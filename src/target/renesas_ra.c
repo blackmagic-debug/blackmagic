@@ -1200,6 +1200,77 @@ static bool renesas_mf3_done(target_flash_s *const flash)
 	return renesas_mf3_pe_mode(target, PE_MODE_READ);
 }
 
+/* This could be improved by leveraging the built-in blank-checking... */
+static bool renesas_mf3_flash_erase(target_flash_s *const flash, target_addr_t addr, size_t len)
+{
+	target_s *const target = flash->t;
+
+	/* Code flash or data flash operation */
+	const bool code_flash = addr < RENESAS_CF_END;
+
+	while (len) {
+		/* Set block start address*/
+		target_mem32_write16(target, MF3_FSARL, (const uint16_t)(addr & 0xffffU));
+		target_mem32_write16(target, MF3_FSARH, (const uint16_t)((addr >> 16) & 0xffffU));
+
+		/* Increment block address */
+		uint16_t block_size;
+		if (code_flash)
+			block_size = MF3_CF_BLOCK_SIZE;
+		else
+			block_size = MF3_DF_BLOCK_SIZE;
+
+		/* Point to the end of the block */
+		addr += block_size - 1U;
+		len -= block_size;
+
+		/* Set block end address*/
+		target_mem32_write16(target, MF3_FEARL, (const uint16_t)(addr & 0xffffU));
+		target_mem32_write16(target, MF3_FEARH, (const uint16_t)((addr >> 16) & 0xffffU));
+
+		/* Adjust to the start of the next block */
+		addr += 1U;
+
+		/* Send the Block Erase command */
+		target_mem32_write8(target, MF3_FCR, MF3_FCR_OPST | MF3_CMD_BLOCK_ERASE);
+
+		/*
+		 * The reference manual quotes a max erase time of 355 ms for the 2KB block
+		 * size; set a timeout a bit longer than that.
+		 * See Table 39.53-55, Code flash characteristics, pg 1026, R01UH0852EJ0170
+		 */
+		platform_timeout_s timeout;
+		platform_timeout_set(&timeout, 400);
+
+		/* Read FRDY bit until it has been set to 1 indicating that the current operation is complete.*/
+		while (!(target_mem32_read8(target, MF3_FSTATR1) & MF3_FSTATR1_FRDY)) {
+			if (target_check_error(target) || platform_timeout_is_expired(&timeout))
+				return false;
+		}
+
+		/*
+		 * Clear the command register (Figure 35.23, Flowchart for Code Flash
+		 * Block Erase Procedure, pg 955, R01UH0852EJ0170) and wait
+		 * until ready again
+		 */
+		target_mem32_write8(target, MF3_FCR, MF3_CMD_BLOCK_ERASE);
+		target_mem32_write8(target, MF3_FCR, 0);
+
+		platform_timeout_set(&timeout, 10);
+
+		/* Read FRDY bit until it has been set to 1 indicating that the current operation is complete.*/
+		while (!(target_mem32_read8(target, MF3_FSTATR1) & MF3_FSTATR1_FRDY)) {
+			if (target_check_error(target) || platform_timeout_is_expired(&timeout))
+				return false;
+		}
+
+		if (renesas_mf3_error_check(target, MF3_FSTATR2_ERERR | MF3_FSTATR2_ILGLERR))
+			return false;
+	}
+
+	return true;
+}
+
 static bool renesas_mf3_flash_write(target_flash_s *const flash, target_addr_t dest, const void *src, size_t len)
 {
 	target_s *const target = flash->t;
