@@ -216,6 +216,8 @@ platform_stm32f7_dfu = declare_dependency(
 ## STM32U5 Platform
 ## ________________
 
+platform_stm32u5_dfu_sources = files('dfu_u5.c')
+
 platform_stm32u5_args = [
 	'-mcpu=cortex-m33',
 	'-mfloat-abi=hard',
@@ -236,7 +238,7 @@ platform_stm32u5 = declare_dependency(
 )
 
 platform_stm32u5_dfu = declare_dependency(
-	sources: platform_stm32f4_dfu_sources,
+	sources: platform_stm32u5_dfu_sources,
 	compile_args: platform_stm32u5_args,
 	link_args: platform_stm32u5_link_args,
 	dependencies: [platform_stm32_dfu_common, dependency('opencm3_stm32u5')],
