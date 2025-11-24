@@ -2,6 +2,7 @@
  * This file is part of the Black Magic Debug project.
  *
  * Copyright (C) 2013 Gareth McMullin <gareth@blacksphere.co.nz>
+ * Copyright (C) 2025 1BitSquared <info@1bitsquared.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -42,6 +43,9 @@
 #define DFU_IFACE_STRING_OFFSET 54
 #define DFU_IFACE_STRING        "@Internal Flash   /0x08000000/1*016Ka,3*016Kg,1*064Kg,000*128Kg"
 #endif
+#elif defined(STM32U5)
+#define DFU_IFACE_STRING        "@Internal Flash   /0x08000000/8*001Ka,000*001Kg"
+#define DFU_IFACE_STRING_OFFSET 38
 #endif
 #include <libopencm3/stm32/flash.h>
 
