@@ -228,7 +228,7 @@ typedef enum {
 /* Flash Memory Control */
 #define FENTRYR_KEY_OFFSET 8U
 #define FENTRYR_KEY        (0xaaU << FENTRYR_KEY_OFFSET)
-#define FENTRYR_PE_CF      (1U)
+#define FENTRYR_PE_CF      1U
 #define FENTRYR_PE_DF      (1U << 7U)
 
 /* Renesas RA MCUs can have one of two kinds of flash memory, MF3/4 and RV40 */
@@ -244,12 +244,12 @@ typedef enum {
  *			   RA2E1: Program: Code area: 32 bits, Data area: 8 bits
  *      		      Ref: R01UH0852EJ0170, Flash Memory Overview, §35.1, pg 915
  */
-#define MF3_CF_BLOCK_SIZE       (0x800U)
-#define MF3_RA2A1_CF_BLOCK_SIZE (0x400U) // Contradicted by RA2A1 Ref Manual
-#define MF3_DF_BLOCK_SIZE       (0x400U)
-#define MF3_CF_WRITE_SIZE       (0x8U)
-#define MF3_RA2E1_CF_WRITE_SIZE (0x4U)
-#define MF3_DF_WRITE_SIZE       (0x1U)
+#define MF3_CF_BLOCK_SIZE       0x800U
+#define MF3_RA2A1_CF_BLOCK_SIZE 0x400U // Contradicted by RA2A1 Ref Manual
+#define MF3_DF_BLOCK_SIZE       0x400U
+#define MF3_CF_WRITE_SIZE       0x8U
+#define MF3_RA2E1_CF_WRITE_SIZE 0x4U
+#define MF3_DF_WRITE_SIZE       0x1U
 
 /* MF3/4 Flash commands*/
 /* Taken from R01AN5367EU0120, (MF3) Software Commands, §1.5.2, pg 35
@@ -354,12 +354,12 @@ typedef enum {
  * Program/Erase unit Program: Code area: 128 Bytes, Data area: 4/8/16 Bytes
  *					  Erase: 1 block
  */
-#define RV40_CF_REGION0_SIZE       (0x10000U)
-#define RV40_CF_REGION0_BLOCK_SIZE (0x2000U)
-#define RV40_CF_REGION1_BLOCK_SIZE (0x8000U)
-#define RV40_DF_BLOCK_SIZE         (0x40U)
-#define RV40_CF_WRITE_SIZE         (0x80U)
-#define RV40_DF_WRITE_SIZE         (0x4U)
+#define RV40_CF_REGION0_SIZE       0x10000U
+#define RV40_CF_REGION0_BLOCK_SIZE 0x2000U
+#define RV40_CF_REGION1_BLOCK_SIZE 0x8000U
+#define RV40_DF_BLOCK_SIZE         0x40U
+#define RV40_CF_WRITE_SIZE         0x80U
+#define RV40_DF_WRITE_SIZE         0x4U
 
 /* RV40 Flash Commands */
 #define RV40_CMD               UINT32_C(0x407e0000)
