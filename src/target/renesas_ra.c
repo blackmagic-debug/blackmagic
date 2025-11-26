@@ -1138,9 +1138,8 @@ static bool renesas_mf3_pe_mode(target_s *const target, const pe_mode_e pe_mode)
 	platform_timeout_s timeout;
 	platform_timeout_set(&timeout, 10);
 
-	/* Wait for the operation to complete or timeout, Read until FENTRYR and FRDY is set */
-	while (target_mem32_read16(target, MF3_FENTRYR) != fentryr ||
-		!(target_mem32_read8(target, MF3_FSTATR1) & MF3_FSTATR1_FRDY)) {
+	/* Wait for the operation to complete or timeout, Read until FENTRYR is set */
+	while (target_mem32_read16(target, MF3_FENTRYR) != fentryr) {
 		if (target_check_error(target) || platform_timeout_is_expired(&timeout))
 			return false;
 	}
@@ -1155,6 +1154,7 @@ static bool renesas_mf3_error_check(target_s *const target, const uint16_t error
 
 	/* Check if status indicates a programming error */
 	if (fstatr2 & error_bits) {
+		DEBUG_WARN("Flash encountered an error; FSTATR2: 0x%x\n", fstatr2);
 		/* Stop the flash */
 		target_mem32_write8(target, MF3_FCR, MF3_FCR_STOP);
 
@@ -1171,6 +1171,8 @@ static bool renesas_mf3_error_check(target_s *const target, const uint16_t error
 		/* Reset the flash controller */
 		target_mem32_write8(target, MF3_FRESETR, MF3_FRESETR_RESET);
 		target_mem32_write8(target, MF3_FRESETR, 0);
+
+		return true;
 	}
 
 	return false;
@@ -1180,13 +1182,11 @@ static bool renesas_mf3_prepare(target_flash_s *const flash)
 {
 	target_s *const target = flash->t;
 
-	if (!(target_mem32_read8(target, MF3_FSTATR1) & MF3_FSTATR1_FRDY) ||
-		target_mem32_read16(target, MF3_FENTRYR) != 0) {
-		DEBUG_ERROR("Flash is not ready, may be hanging mid unfinished command due to something going wrong, "
-					"please power on reset the device\n");
-
-		return false;
-	}
+	/* This doesn't check to see if the FRDY bit is set, unlike the RV40 flash,
+	 * as FRDY is only set after a command executes and is zero on reset. Thus,
+	 * if you've attached after a reset and haven't done anything, it will be
+	 * zero and erroneously trigger the check.
+	 */
 
 	/* Code flash or data flash operation */
 	const bool code_flash = flash->start < RENESAS_CF_END;
@@ -1255,8 +1255,8 @@ static bool renesas_mf3_flash_erase(target_flash_s *const flash, target_addr_t a
 
 		platform_timeout_set(&timeout, 10);
 
-		/* Read FRDY bit until it has been set to 1 indicating that the current operation is complete.*/
-		while (!(target_mem32_read8(target, MF3_FSTATR1) & MF3_FSTATR1_FRDY)) {
+		/* Read FRDY bit until it has been set to 0. */
+		while ((target_mem32_read8(target, MF3_FSTATR1) & MF3_FSTATR1_FRDY)) {
 			if (target_check_error(target) || platform_timeout_is_expired(&timeout))
 				return false;
 		}
@@ -1319,14 +1319,17 @@ static bool renesas_mf3_flash_write(target_flash_s *const flash, target_addr_t d
 
 		platform_timeout_set(&timeout, 10);
 
-		/* Read FRDY bit until it has been set to 1 indicating that the current operation is complete.*/
-		while (!(target_mem32_read8(target, MF3_FSTATR1) & MF3_FSTATR1_FRDY)) {
+		/* Read FRDY bit until it has been set to 0 */
+		while ((target_mem32_read8(target, MF3_FSTATR1) & MF3_FSTATR1_FRDY)) {
 			if (target_check_error(target) || platform_timeout_is_expired(&timeout))
 				return false;
 		}
+
+		if (renesas_mf3_error_check(target, MF3_FSTATR2_PRGERR | MF3_FSTATR2_ILGLERR))
+			return false;
 	}
 
-	return !renesas_mf3_error_check(target, MF3_FSTATR2_PRGERR | MF3_FSTATR2_ILGLERR);
+	return true;
 }
 
 /* Reads the 16-byte unique id */
