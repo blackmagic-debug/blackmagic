@@ -1210,31 +1210,24 @@ static bool renesas_mf3_flash_erase(target_flash_s *const flash, target_addr_t a
 {
 	target_s *const target = flash->t;
 
-	/* Code flash or data flash operation */
-	const bool code_flash = addr < RENESAS_CF_END;
+	/* Choose the correct block size based on the address to write to */
+	uint16_t block_size;
+	if (addr < RENESAS_CF_END)
+		block_size = MF3_CF_BLOCK_SIZE;
+	else
+		block_size = MF3_DF_BLOCK_SIZE;
 
-	while (len) {
-		/* Set block start address*/
-		target_mem32_write16(target, MF3_FSARL, (const uint16_t)(addr & 0xffffU));
-		target_mem32_write16(target, MF3_FSARH, (const uint16_t)((addr >> 16) & 0xffffU));
+	for (uint32_t i = 0; i < len; i += block_size) {
+		uint32_t block_addr = addr + i;
 
-		/* Increment block address */
-		uint16_t block_size;
-		if (code_flash)
-			block_size = MF3_CF_BLOCK_SIZE;
-		else
-			block_size = MF3_DF_BLOCK_SIZE;
+		/* Set block start address */
+		target_mem32_write16(target, MF3_FSARL, (uint16_t)(block_addr & 0xffffU));
+		target_mem32_write16(target, MF3_FSARH, (uint16_t)((block_addr >> 16) & 0xffffU));
 
-		/* Point to the end of the block */
-		addr += block_size - 1U;
-		len -= block_size;
-
-		/* Set block end address*/
-		target_mem32_write16(target, MF3_FEARL, (const uint16_t)(addr & 0xffffU));
-		target_mem32_write16(target, MF3_FEARH, (const uint16_t)((addr >> 16) & 0xffffU));
-
-		/* Adjust to the start of the next block */
-		addr += 1U;
+		/* Set block end address */
+		block_addr += block_size - 1;
+		target_mem32_write16(target, MF3_FEARL, (uint16_t)(block_addr & 0xffffU));
+		target_mem32_write16(target, MF3_FEARH, (uint16_t)((block_addr >> 16) & 0xffffU));
 
 		/* Send the Block Erase command */
 		target_mem32_write8(target, MF3_FCR, MF3_FCR_OPST | MF3_CMD_BLOCK_ERASE);
@@ -1255,8 +1248,7 @@ static bool renesas_mf3_flash_erase(target_flash_s *const flash, target_addr_t a
 
 		/*
 		 * Clear the command register (Figure 35.23, Flowchart for Code Flash
-		 * Block Erase Procedure, pg 955, R01UH0852EJ0170) and wait
-		 * until ready again
+		 * Block Erase Procedure, pg 955, R01UH0852EJ0170) and wait until ready again
 		 */
 		target_mem32_write8(target, MF3_FCR, MF3_CMD_BLOCK_ERASE);
 		target_mem32_write8(target, MF3_FCR, 0);
