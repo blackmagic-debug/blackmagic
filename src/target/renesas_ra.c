@@ -1123,8 +1123,12 @@ static bool renesas_mf3_pe_mode(target_s *const target, const pe_mode_e pe_mode)
 	 * implementation (i.e. ignoring FMS2) as that is what I have to test on
 	 * currently.
 	 *
-	 * Might also need a 5 us delay here (unlikely given the speed at which this
-	 * will be occurring is limited by the debug link) when changing to data flash p/e mode.
+	 * Might also need a 2-15us delay here (t_DIS or t_MS) due to state change times
+	 * depending on which states you are changing between (unlikely given the speed
+	 * at which this will be occurring is limited by the debug link). See the Code
+	 * flash characteristics table in the Electrical Characteristics section of the
+	 * appropriate User Manual (For RA2E1, it would be table 39.53 in section
+	 * 39.10.1, page 1026)
 	 */
 	target_mem32_write8(target, MF3_FPR, MF3_FPR_KEY);
 	target_mem32_write8(target, MF3_FPMCR, fpmcr);
@@ -1178,8 +1182,8 @@ static bool renesas_mf3_prepare(target_flash_s *const flash)
 
 	if (!(target_mem32_read8(target, MF3_FSTATR1) & MF3_FSTATR1_FRDY) ||
 		target_mem32_read16(target, MF3_FENTRYR) != 0) {
-		DEBUG_WARN("flash is not ready, may be hanging mid unfinished command due to something going wrong, "
-				   "please power on reset the device\n");
+		DEBUG_ERROR("Flash is not ready, may be hanging mid unfinished command due to something going wrong, "
+					"please power on reset the device\n");
 
 		return false;
 	}
