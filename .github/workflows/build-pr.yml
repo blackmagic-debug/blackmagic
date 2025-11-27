@@ -35,7 +35,7 @@ jobs:
         os:
           - {id: ubuntu-24.04, name: noble}
         arm-compiler:
-          - '14.2.Rel1'
+          - '14.3.Rel1'
         probe:
           - '96b_carbon'
           - 'blackpill-f401cc'
@@ -402,7 +402,7 @@ jobs:
       - name: Setup ARM GCC
         uses: carlosperate/arm-none-eabi-gcc-action@v1
         with:
-          release: '14.2.Rel1'
+          release: '14.3.Rel1'
 
       # Install and setup a suitable Meson + Ninja
       - name: Setup Meson + Ninja
