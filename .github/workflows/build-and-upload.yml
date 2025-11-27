@@ -30,7 +30,7 @@ jobs:
     strategy:
       matrix:
         os:
-          - {id: ubuntu-22.04, name: jammy}
+          - {id: ubuntu-24.04, name: noble}
         compiler:
           - '14.3.Rel1'
         probe:
@@ -147,7 +147,7 @@ jobs:
     strategy:
       matrix:
         os:
-          - {id: ubuntu-22.04, name: jammy}
+          - {id: ubuntu-24.04, name: noble}
         compiler:
           - 'clang-13' # Native Clang compiler for the CI image
           - 'clang-18' # Latest Clang compiler from the apt mirror
