@@ -22,6 +22,7 @@
 #include "platform.h"
 #include "version.h"
 #include "serialno.h"
+#include "buffer_utils.h"
 #include <string.h>
 
 #include <libopencm3/stm32/desig.h>
@@ -149,18 +150,12 @@ static const char *const usb_strings[] = {
 	if_string,
 };
 
-static uint32_t get_le32(const void *vp)
-{
-	const uint8_t *p = vp;
-	return ((uint32_t)p[3] << 24U) + ((uint32_t)p[2] << 16U) + (p[1] << 8U) + p[0];
-}
-
 static uint8_t usbdfu_getstatus(uint32_t *poll_timeout)
 {
 	switch (usbdfu_state) {
 	case STATE_DFU_DNLOAD_SYNC:
 		usbdfu_state = STATE_DFU_DNBUSY;
-		*poll_timeout = dfu_poll_timeout(prog.buf[0], get_le32(prog.buf + 1U), prog.blocknum);
+		*poll_timeout = dfu_poll_timeout(prog.buf[0], read_le4(prog.buf, 1U), prog.blocknum);
 		return DFU_STATUS_OK;
 
 	case STATE_DFU_MANIFEST_SYNC:
@@ -184,7 +179,7 @@ static void usbdfu_getstatus_complete(usbd_device *dev, usb_setup_data_s *req)
 
 		flash_unlock();
 		if (prog.blocknum == 0) {
-			const uint32_t addr = get_le32(prog.buf + 1U);
+			const uint32_t addr = read_le4(prog.buf, 1U);
 			switch (prog.buf[0]) {
 			case CMD_ERASE:
 				if (addr < app_address || addr >= max_address) {
@@ -240,7 +235,7 @@ static usbd_request_return_codes_e usbdfu_control_request(usbd_device *dev, usb_
 			prog.len = *len;
 			memcpy(prog.buf, data, *len);
 			if (req->wValue == 0 && prog.buf[0] == CMD_SETADDR) {
-				uint32_t addr = get_le32(prog.buf + 1U);
+				uint32_t addr = read_le4(prog.buf, 1U);
 				if (addr < app_address || addr >= max_address) {
 					current_error = DFU_STATUS_ERR_TARGET;
 					usbdfu_state = STATE_DFU_ERROR;
