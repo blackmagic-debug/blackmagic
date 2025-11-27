@@ -32,7 +32,7 @@ jobs:
         os:
           - {id: ubuntu-22.04, name: jammy}
         compiler:
-          - '12.2.Rel1'
+          - '14.3.Rel1'
         probe:
           - '96b_carbon'
           - 'blackpill-f401cc'
