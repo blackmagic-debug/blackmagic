@@ -414,6 +414,32 @@ const jtag_dev_descr_s dev_descr[] = {
 #endif
 		.handler = riscv_jtag_dtm_handler,
 	},
+	{
+		.idcode = 0x00012c25U,
+		.idmask = 0x0fffffffU,
+#if ENABLE_DEBUG == 1
+		.descr = "ESP32-P4",
+#endif
+		.handler = riscv_jtag_dtm_handler,
+		.ir_quirks =
+			{
+				.ir_length = 5U,
+				.ir_value = 5U,
+			},
+	},
+	{
+		.idcode = 0x00012c25U,
+		.idmask = 0x0fffffffU,
+#if ENABLE_DEBUG == 1
+		.descr = "ESP32-P4",
+#endif
+		.handler = riscv_jtag_dtm_handler,
+		.ir_quirks =
+			{
+				.ir_length = 5U,
+				.ir_value = 1U,
+			},
+	},
 #endif
 #if defined(CONFIG_CORTEXAR) && defined(CONFIG_TI_ICEPICK)
 	{
