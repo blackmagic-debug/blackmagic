@@ -43,7 +43,7 @@
 #include "platform.h"
 #include "rcc_clocking.h"
 
-uintptr_t app_address = 0x08002000U;
+uintptr_t app_address = 0x08004000U;
 uint8_t dfu_activity_counter = 0U;
 
 void dfu_detach(void)
