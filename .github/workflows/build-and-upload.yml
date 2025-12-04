@@ -149,10 +149,10 @@ jobs:
         os:
           - {id: ubuntu-24.04, name: noble}
         compiler:
-          - 'clang-13' # Native Clang compiler for the CI image
-          - 'clang-18' # Latest Clang compiler from the apt mirror
-          - 'gcc-11' # Native GCC compiler for the CI image
-          - 'gcc-13' # Latest GCC compiler from the toolchain PPA
+          - 'clang-16' # Native Clang compiler for the CI image
+          - 'clang-20' # Latest Clang compiler from the apt mirror
+          - 'gcc-12' # Native GCC compiler for the CI image
+          - 'gcc-16' # Latest GCC compiler from the toolchain PPA
       fail-fast: false
 
     # Steps represent a sequence of tasks that will be executed as part of the job
