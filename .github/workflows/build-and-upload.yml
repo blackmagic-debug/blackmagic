@@ -149,7 +149,7 @@ jobs:
         os:
           - {id: ubuntu-24.04, name: noble}
         compiler:
-          - 'clang-16' # Native Clang compiler for the CI image
+          - 'clang-17' # Native Clang compiler for the CI image
           - 'clang-20' # Latest Clang compiler from the apt mirror
           - 'gcc-12' # Native GCC compiler for the CI image
           - 'gcc-16' # Latest GCC compiler from the toolchain PPA
