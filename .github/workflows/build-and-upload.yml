@@ -205,7 +205,7 @@ jobs:
       # Install and setup a suitable Meson + Ninja
       - name: Setup Meson + Ninja
         run: |
-          sudo python3 -m pip install --upgrade pip setuptools wheel
+          sudo apt install -y python3-pip python3-setuptools python3-wheel
           sudo python3 -m pip install meson ninja
         working-directory: ${{ runner.temp }}
 
