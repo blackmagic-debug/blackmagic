@@ -1,0 +1,22 @@
+Bootloader Upgrade on Stlink
+============================
+
+Beside accessing the SWD pins direct like explained on
+https://embdev.net/articles/STM_Discovery_as_Black_Magic_Probe
+an updated bootloader can also be programmed via DFU. This requires three
+steps:
+1. Prepare bootloader update
+Normal BMP has to be replaced by the upgrade programm:
+ dfu-util -s 0x08002000:leave -D dfu_upgrade.bin
+Wait until Dual color led flashes red, indicating DFU is active for the
+bootloader.
+
+2. Flash new bootloader
+ dfu-util -s 0x08000000 -D blackmagic_dfu.bin
+Wait until Dual color led flashes green, indicating bootloader is active.
+
+If not, unplug USB, keep black reset button pressed, replug USB.
+Wait until Dual color led flashes green.
+
+3. Flash BMP
+ dfu-util -s 0x08002000:leave:force -D blackmagic.bin

@@ -1,0 +1,7 @@
+== SWD Connector CN2 --
+1 VDD_TARGET VDD from application
+2   SWCLK    SWD clock
+3    GND     Ground
+4   SWDIO    SWD data input/output
+5    NRST    RESET of target MCU
+6    SWO     Reserved
