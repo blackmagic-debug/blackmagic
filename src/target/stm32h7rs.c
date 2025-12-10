@@ -273,9 +273,19 @@ static void stm32h7rs_detach(target_s *target)
 static bool stm32h7rs_flash_busy_wait(target_s *const target, const uint32_t regbase)
 {
 	uint32_t status = FLASH_SR_BSY | FLASH_SR_QW;
+	
+	/* EMEB - clear any pending flash interrupts that could hurt us */
+	uint32_t istatus = target_mem32_read32(target, FPEC1_BASE + FLASH_ISR) &
+		FLASH_ISR_ERROR_MASK;
+	if(istatus != 0U)
+	{
+		DEBUG_INFO("%s: FLASH_ISR %08" PRIx32 " - clearing\n", __func__, istatus);
+			target_mem32_write32(target, FPEC1_BASE + FLASH_ICR, istatus);
+	}
+	
 	while (status & (FLASH_SR_BSY | FLASH_SR_QW)) {
 		status = target_mem32_read32(target, regbase + FLASH_SR);
-		uint32_t istatus = target_mem32_read32(target, regbase + FLASH_ISR);
+		istatus = target_mem32_read32(target, regbase + FLASH_ISR);
 		if ((istatus & FLASH_ISR_ERROR_MASK) || target_check_error(target)) {
 			DEBUG_ERROR("%s: error status %08" PRIx32 "\n", __func__, istatus);
 			target_mem32_write32(target, regbase + FLASH_ICR, istatus & FLASH_ISR_ERROR_MASK);
@@ -365,7 +375,7 @@ static bool stm32h7rs_flash_write(
 	target_flash_s *const target_flash, const target_addr_t dest, const void *const src, const size_t len)
 {
 	target_s *target = target_flash->t;
-	const stm32h7rs_flash_s *const flash = (stm32h7rs_flash_s *)target_flash;
+	const stm32h7rs_flash_s *const flash = (stm32h7rs_flash_s *)target_flash;	
 	/* Unlock the Flash */
 	if (!stm32h7rs_flash_unlock(target, dest))
 		return false;
