@@ -714,7 +714,6 @@ bool renesas_ra_probe(target_s *const target)
 		 * ra4e1 (part_id wanted)
 		 * ra4e2 (part_id wanted)
 		 * ra6m4 (part_id wanted)
-		 * ra6m5 (part_id wanted)
 		 * ra6e1 (part_id wanted)
 		 * ra6e2 (part_id wanted)
 		 * ra6t2 (part_id wanted)
@@ -724,9 +723,9 @@ bool renesas_ra_probe(target_s *const target)
 		break;
 
 	case RENESAS_PARTID_RA2A1:
+	case RENESAS_PARTID_RA4M1:
 	case RENESAS_PARTID_RA6M2:
 		/* mcus with Flash Root Table
-		 * ra4m1 *undocumented (part_id wanted)
 		 * ra4w1 *undocumented (part_id wanted)
 		 * ra6m1 (part_id wanted)
 		 * ra6m3 (part_id wanted)
