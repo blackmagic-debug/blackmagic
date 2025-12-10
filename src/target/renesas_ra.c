@@ -67,7 +67,7 @@
  *
  * Renesas Flash MCUs have an internal 16 byte read only register that stores
  * the part number, the code is stored ascii encoded, starting from the lowest memory address
- * except for pnrs stored in 'FIXED_PNR1', where the code is stored in reverse order (but the last 3 bytes are still 0x20 aka ' ')
+ * except for pnrs stored in 'FIXED_PNR1/3/4', where the code is stored in reverse order (but the last 3 bytes are still 0x20 aka ' ')
  */
 
 /* family + series + group no */
@@ -176,21 +176,29 @@ typedef enum {
  */
 
 /* PNR/UID location by series
- * newer series have a 'Flash Root Table'
- * older series have a fixed location in the flash memory
+ * Some series have a 'Flash Root Table'
+ * Other series have a fixed location in the flash memory
  *
- * TODO: UPDATE
- *
+ * ra0l1 - Fixed location 3
+ * ra0e1 - Fixed location 3
+ * ra0e2 - Fixed location 3
  * ra2l1 - Fixed location 1
+ * ra2l2 - Fixed location 4 (?!)
  * ra2e1 - Fixed location 1
  * ra2e2 - Fixed location 1
- * ra2a1 - Flash Root Table *undocumented
- * ra4m1 - Flash Root Table *undocumented
+ * ra2e3 - Fixed location 1
+ * ra2a1 - Flash Root Table
+ * ra2a2 - Fixed location 1
+ * ra2t1 - Fixed location 1
+ * ra4m1 - Flash Root Table
  * ra4m2 - Fixed location 2 *undocumented
  * ra4m3 - Fixed location 2 *undocumented
  * ra4e1 - Fixed location 2
  * ra4e2 - Fixed location 2
  * ra4w1 - Flash Root Table *undocumented
+ * ra4c1 - Fixed location 2
+ * ra4t1 - Fixed location 2
+ * ra4l1 - Fixed location 2
  * ra6m1 - Flash Root Table
  * ra6m2 - Flash Root Table
  * ra6m3 - Flash Root Table
@@ -200,6 +208,16 @@ typedef enum {
  * ra6e2 - Fixed location 2
  * ra6t1 - Flash Root Table
  * ra6t2 - Fixed location 2
+ * ra6t3 - Fixed location 2
+ * ra8m1 - Fixed location 5 (!!)
+ * ra8m2 - Fixed location 6 (!!)
+ * ra8e1 - Fixed location 5
+ * ra8e2 - Fixed location 5
+ * ra8t1 - Fixed location 5
+ * ra8t2 - Fixed location 6
+ * ra8d1 - Fixed location 5
+ * ra8d2 - Fixed location 6
+ * ra8p1 - Fixed location 6
  */
 #define RENESAS_FIXED1_UID    UINT32_C(0x01001c00) /* Unique ID Register */
 #define RENESAS_FIXED1_PNR    UINT32_C(0x01001c10) /* Part Numbering Register */
@@ -208,6 +226,33 @@ typedef enum {
 #define RENESAS_FIXED2_UID    UINT32_C(0x01008190) /* Unique ID Register */
 #define RENESAS_FIXED2_PNR    UINT32_C(0x010080f0) /* Part Numbering Register */
 #define RENESAS_FIXED2_MCUVER UINT32_C(0x010081b0) /* MCU Version Register */
+
+// R01UH1143EJ0110, Flash Register Descriptions, §29.3.24-26, pg 685
+#define RENESAS_FIXED3_UID    UINT32_C(0x01011070) /* Unique ID Register */
+#define RENESAS_FIXED3_PNR    UINT32_C(0x01011080) /* Part Numbering Register */
+#define RENESAS_FIXED3_MCUVER UINT32_C(0x01011090) /* MCU Version Register */
+
+// R01UH1080EJ0110, Flash Register Descriptions, §38.3.27-29, pg 1226
+#define RENESAS_FIXED4_UID    UINT32_C(0x01011110) /* Unique ID Register */
+#define RENESAS_FIXED4_PNR    UINT32_C(0x01011120) /* Part Numbering Register */
+#define RENESAS_FIXED4_MCUVER UINT32_C(0x01011130) /* MCU Version Register */
+
+// R01UH0994EJ0120, Flash Register Descriptions, §52.4.5-6, pg 2416
+// This one comes in secure/non-secure flavours, since there is TrustZone in play.
+// It seems to be Fixed2 at a different offset.
+#define RENESAS_FIXED5_UID           UINT32_C(0x13008190) /* Unique ID Register */
+#define RENESAS_FIXED5_PNR           UINT32_C(0x130080f0) /* Part Numbering Register */
+#define RENESAS_FIXED5_MCUVER        UINT32_C(0x130081b0) /* MCU Version Register */
+#define RENESAS_FIXED5_SECURE_UID    UINT32_C(0x03008190) /* Unique ID Register */
+#define RENESAS_FIXED5_SECURE_PNR    UINT32_C(0x030080f0) /* Part Numbering Register */
+#define RENESAS_FIXED5_SECURE_MCUVER UINT32_C(0x030081b0) /* MCU Version Register */
+
+// R01UH1066EJ0120, Flash Register Descriptions, §59.5.41-43, pg 3537
+// Despite the RA8M2 supporting and using TrustZone, these only have one
+// address...
+#define RENESAS_FIXED6_UID    UINT32_C(0x02f07b00) /* Unique ID Register */
+#define RENESAS_FIXED6_PNR    UINT32_C(0x02c1ec38) /* Part Numbering Register */
+#define RENESAS_FIXED6_MCUVER UINT32_C(0x02c1ec48) /* MCU Version Register */
 
 /* The FMIFRT is a read-only register that stores the Flash Root Table address */
 #define RENESAS_FMIFRT             UINT32_C(0x407fb19c)
@@ -240,9 +285,15 @@ typedef enum {
  * MF3/4 Flash Memory Specifications
  * Block Size: Code area: 2 KB (except RA2A1 is 1KB), Data area: 1 KB
  * Program/Erase unit Program: Code area: 64 bits, Data area: 8 bits
- *					  Erase:  1 block
- *			   RA2E1: Program: Code area: 32 bits, Data area: 8 bits
- *      		      Ref: R01UH0852EJ0170, Flash Memory Overview, §35.1, pg 915
+ *                      Erase: 1 block
+ *          RA0xx: Block size: Code area: 2 KB, Data area: 256B
+ *                    Program: Code area: 32 bits, Data area: 8 bits
+ *                      Erase: 1 block
+ *                        Ref: R01UH1143EJ0110, Flash Memory Overview, §29.1, pg 669
+ *            RA2xx*: Program: Code area: 32 bits, Data area: 8 bits
+ *                        Ref: R01UH0852EJ0170, Flash Memory Overview, §35.1, pg 915
+ *
+ * *Other than RA2A1, evidently. It is listed as 64-bit CF programming units
  */
 #define MF3_CF_BLOCK_SIZE       0x800U
 #define MF3_RA2A1_CF_BLOCK_SIZE 0x400U // Contradicted by RA2A1 Ref Manual
@@ -352,7 +403,10 @@ typedef enum {
  * RV40F Flash Memory Specifications
  * Block Size: Code area: 8 KB/32KB  Data area: 64 Bytes
  * Program/Erase unit Program: Code area: 128 Bytes, Data area: 4/8/16 Bytes
- *					  Erase: 1 block
+ *                      Erase: 1 block
+ *       RA4[CL]1: Block Size: Code area: 2 KB, Data area: 256 Bytes
+ *                    Program: Code area: 8 Bytes, Data area: 1 Byte
+ *                        Ref: R01UH1137EJ0110, Flash Memory Overview, §39.1, pg 1404
  */
 #define RV40_CF_REGION0_SIZE       0x10000U
 #define RV40_CF_REGION0_BLOCK_SIZE 0x2000U
@@ -410,6 +464,21 @@ typedef enum {
 
 #define RV40_FCPSR         (RV40_BASE + 0xe0U)
 #define RV40_FCPSR_ESUSPMD 1U
+
+/* Renesas MRAM */
+/*
+ * Some newer chips eschew the traditional RV40 or MF3/4 flash solutions for a
+ * MRAM based solution (and include an OSPI flash in the device package). The
+ * MRAM interface appears to be loosely structured on the RV40 flash architecture,
+ * from a brief glance through the block diagrams
+ *
+ * Program buffer: 1/2/4/8 Bytes
+ *      Code MRAM: 32 Bytes
+ *
+ * Chips containing: RA8M2, RA8T2, RA8D2, RA8P1
+ */
+
+//TODO: Implement MRAM
 
 static bool renesas_uid(target_s *t, int argc, const char **argv);
 
@@ -506,18 +575,30 @@ static void renesas_add_flash(target_s *const target, const target_addr_t addr, 
 	renesas_priv_s *priv = (renesas_priv_s *)target->target_storage;
 
 	/*
-	 * Renesas RA MCUs can have one of two kinds of flash memory, MF3/4 and RV40
-	 * Flash type by series: (TODO: Update)
+	 * Renesas RA MCUs can have one of two kinds of flash memory, MF3/4 and
+	 * RV40, or MRAM code memory and an external OSPI flash.
+	 *
+	 * Flash type by series:
+	 * ra0l1 - MF3/4
+	 * ra0e1 - MF3/4
+	 * ra0e2 - MF3/4
 	 * ra2l1 - MF4
+	 * ra2l2 - MF3/4
 	 * ra2e1 - MF4
 	 * ra2e2 - MF4
+	 * ra2e3 - MF3/4
 	 * ra2a1 - MF3
+	 * ra2a2 - MF3/4
+	 * ra2t1 - MF3/4
 	 * ra4m1 - MF3
 	 * ra4m2 - RV40
 	 * ra4m3 - RV40
 	 * ra4e1 - RV40
 	 * ra4e2 - RV40
 	 * ra4w1 - MF3
+	 * ra4c1 - RV40
+	 * ra4t1 - RV40
+	 * ra4l1 - RV40
 	 * ra6m1 - RV40
 	 * ra6m2 - RV40
 	 * ra6m3 - RV40
@@ -527,13 +608,33 @@ static void renesas_add_flash(target_s *const target, const target_addr_t addr, 
 	 * ra6e2 - RV40
 	 * ra6t1 - RV40
 	 * ra6t2 - RV40
+	 * ra6t3 - RV40
+	 * ra8m1 - RV40
+	 * ra8m2 - MRAM + OSPI Flash
+	 * ra8e1 - RV40
+	 * ra8e2 - RV40
+	 * ra8t1 - RV40
+	 * ra8t2 - MRAM + OSPI Flash
+	 * ra8d1 - RV40
+	 * ra8d2 - MRAM + OSPI Flash
+	 * ra8p1 - MRAM + OSPI Flash
+	 *
+	 * This needs to be adjusted as the RA8 parts tend to be dual-bank flash or
+	 * other fancier memory configurations
 	 */
 
 	switch (priv->series) {
+	case PNR_SERIES_RA0L1:
+	case PNR_SERIES_RA0E1:
+	case PNR_SERIES_RA0E2:
 	case PNR_SERIES_RA2L1:
+	case PNR_SERIES_RA2L2:
 	case PNR_SERIES_RA2E1:
 	case PNR_SERIES_RA2E2:
+	case PNR_SERIES_RA2E3:
 	case PNR_SERIES_RA2A1:
+	case PNR_SERIES_RA2A2:
+	case PNR_SERIES_RA2T1:
 	case PNR_SERIES_RA4M1:
 	case PNR_SERIES_RA4W1:
 		/*
@@ -550,6 +651,9 @@ static void renesas_add_flash(target_s *const target, const target_addr_t addr, 
 	case PNR_SERIES_RA4M3:
 	case PNR_SERIES_RA4E1:
 	case PNR_SERIES_RA4E2:
+	case PNR_SERIES_RA4T1:
+	case PNR_SERIES_RA4L1:
+	case PNR_SERIES_RA4C1:
 	case PNR_SERIES_RA6M1:
 	case PNR_SERIES_RA6M2:
 	case PNR_SERIES_RA6M3:
@@ -559,8 +663,22 @@ static void renesas_add_flash(target_s *const target, const target_addr_t addr, 
 	case PNR_SERIES_RA6E2:
 	case PNR_SERIES_RA6T1:
 	case PNR_SERIES_RA6T2:
+	case PNR_SERIES_RA6T3:
+	case PNR_SERIES_RA8M1:
+	case PNR_SERIES_RA8E1:
+	case PNR_SERIES_RA8E2:
+	case PNR_SERIES_RA8T1:
+	case PNR_SERIES_RA8D1:
+		/* TODO: Support the parts with dual-bank flash properly */
 		target->enter_flash_mode = renesas_enter_flash_mode;
 		renesas_add_rv40_flash(target, addr, length);
+		return;
+
+	case PNR_SERIES_RA8M2:
+	case PNR_SERIES_RA8T2:
+	case PNR_SERIES_RA8D2:
+	case PNR_SERIES_RA8P1:
+		/* FIXME: MRAM/OSPI flashing not implemented currently */
 		return;
 
 	default:
@@ -628,6 +746,8 @@ bool renesas_ra_probe(target_s *const target)
 		 *
 		 * try the fixed address RENESAS_FIXED2_PNR first, as it should lead to less illegal/erroneous
 		 * memory accesses in case of failure, and is the most common case
+		 *
+		 * TODO: Update with the new known locations
 		 */
 
 		if (renesas_pnr_read(target, RENESAS_FIXED2_PNR, pnr)) {
