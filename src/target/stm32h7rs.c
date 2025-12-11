@@ -118,9 +118,9 @@
 #define STM32H7RS_DBGMCU_IDCODE_REV_SHIFT 16U
 
 #define STM32H7RS_FLASH_BANK1_BASE    0x08000000U
-#define STM32H7RS_FLASH_BANK_SIZE     0x00100000U
+#define STM32H7RS_FLASH_BANK_SIZE     0x00010000U
 #define NUM_SECTOR_PER_BANK         8U
-#define FLASH_SECTOR_SIZE           0x20000U
+#define FLASH_SECTOR_SIZE           0x2000U
 
 #define ID_STM32H7RS 0x485U /* RM0477 */
 
@@ -151,6 +151,8 @@ static bool stm32h7rs_attach(target_s *target);
 static void stm32h7rs_detach(target_s *target);
 static bool stm32h7rs_flash_erase(target_flash_s *target_flash, target_addr_t addr, size_t len);
 static bool stm32h7rs_flash_write(target_flash_s *target_flash, target_addr_t dest, const void *src, size_t len);
+static bool stm32h7rs_flash_prepare(target_flash_s *target_flash);
+static bool stm32h7rs_flash_done(target_flash_s *target_flash);
 static bool stm32h7rs_mass_erase(target_s *target, platform_timeout_s *const print_progess);
 
 static void stm32h7rs_add_flash(target_s *target, uint32_t addr, size_t length, size_t blocksize)
@@ -167,6 +169,8 @@ static void stm32h7rs_add_flash(target_s *target, uint32_t addr, size_t length, 
 	target_flash->blocksize = blocksize;
 	target_flash->erase = stm32h7rs_flash_erase;
 	target_flash->write = stm32h7rs_flash_write;
+	target_flash->prepare = stm32h7rs_flash_prepare;
+	target_flash->done = stm32h7rs_flash_done;
 	target_flash->writesize = 2048;
 	target_flash->erased = 0xffU;
 	flash->regbase = FPEC1_BASE;
@@ -239,7 +243,7 @@ bool stm32h7rs_probe(target_s *target)
 	/* Build the Flash map */
 	switch (target->part_id) {
 	case ID_STM32H7RS:
-		stm32h7rs_add_flash(target, STM32H7RS_FLASH_BANK1_BASE, 0x10000U, 0x2000U);
+		stm32h7rs_add_flash(target, STM32H7RS_FLASH_BANK1_BASE, STM32H7RS_FLASH_BANK_SIZE, FLASH_SECTOR_SIZE);
 		break;
 	default:
 		break;
@@ -274,18 +278,9 @@ static bool stm32h7rs_flash_busy_wait(target_s *const target, const uint32_t reg
 {
 	uint32_t status = FLASH_SR_BSY | FLASH_SR_QW;
 	
-	/* EMEB - clear any pending flash interrupts that could hurt us */
-	uint32_t istatus = target_mem32_read32(target, FPEC1_BASE + FLASH_ISR) &
-		FLASH_ISR_ERROR_MASK;
-	if(istatus != 0U)
-	{
-		DEBUG_INFO("%s: FLASH_ISR %08" PRIx32 " - clearing\n", __func__, istatus);
-			target_mem32_write32(target, FPEC1_BASE + FLASH_ICR, istatus);
-	}
-	
 	while (status & (FLASH_SR_BSY | FLASH_SR_QW)) {
 		status = target_mem32_read32(target, regbase + FLASH_SR);
-		istatus = target_mem32_read32(target, regbase + FLASH_ISR);
+		uint32_t istatus = target_mem32_read32(target, regbase + FLASH_ISR);
 		if ((istatus & FLASH_ISR_ERROR_MASK) || target_check_error(target)) {
 			DEBUG_ERROR("%s: error status %08" PRIx32 "\n", __func__, istatus);
 			target_mem32_write32(target, regbase + FLASH_ICR, istatus & FLASH_ISR_ERROR_MASK);
@@ -295,13 +290,57 @@ static bool stm32h7rs_flash_busy_wait(target_s *const target, const uint32_t reg
 	return true;
 }
 
+static bool stm32h7rs_flash_wait_complete(target_s *const target, const uint32_t regbase)
+{
+	uint32_t status = FLASH_SR_QW, istatus = 0U;
+	/* Loop waiting for the queuewait bit to clear and EOP to set, indicating completion of all ongoing operations */
+	while (!(istatus & FLASH_ISR_EOP) && (status & FLASH_SR_QW)) {
+		status = target_mem32_read32(target, regbase + FLASH_SR);
+		istatus = target_mem32_read32(target, regbase + FLASH_ISR);
+		/* If an error occurs, make noises */
+		if (target_check_error(target)) {
+			DEBUG_ERROR("%s: error reading status\n", __func__);
+			return false;
+		}
+	}
+	/* Now the operation's complete, we can check the error bits */
+	if (istatus & FLASH_ISR_ERROR_MASK)
+		DEBUG_ERROR("%s: Flash error: %08" PRIx32 "\n", __func__, istatus);
+	target_mem32_write32(target, regbase + FLASH_ICR,
+		istatus & (FLASH_ISR_EOP | FLASH_ISR_ERROR_MASK));
+	/* Return whether any errors occured */
+	return !(istatus & FLASH_ISR_ERROR_MASK);
+}
+
 static bool stm32h7rs_flash_unlock(target_s *const target, const uint32_t addr)
 {
 	(void)addr;
 	const uint32_t regbase = FPEC1_BASE;
+	/* EMEB - clear any pending flash interrupts that could hurt us */
+	uint32_t istatus = target_mem32_read32(target, FPEC1_BASE + FLASH_ISR) &
+		FLASH_ISR_ERROR_MASK;
+	if(istatus != 0U)
+	{
+		DEBUG_INFO("%s: FLASH_ISR %08" PRIx32 " - clearing\n", __func__, istatus);
+			target_mem32_write32(target, FPEC1_BASE + FLASH_ICR, istatus);
+	}
+	
+#if 0
+	// EMEB original zyp code
 	/* Wait for any pending operations to complete */
 	if (!stm32h7rs_flash_busy_wait(target, regbase))
 		return false;
+#else
+	// EMEB new code based on H7 driver
+	/* Read out the Flash status and tend to any pending conditions */
+	const uint32_t status = target_mem32_read32(target, regbase + FLASH_SR);
+	/* Start by checking if there are any pending ongoing operations */
+	if (status & FLASH_SR_QW) {
+		/* Wait for any pending operations to complete */
+		if (!stm32h7rs_flash_wait_complete(target, regbase))
+			return false;
+	}
+#endif
 	/* Unlock the device Flash if not already unlocked (it's an error to re-key the controller if it is) */
 	if (target_mem32_read32(target, regbase + FLASH_CR) & FLASH_CR_LOCK) {
 		/* Enable Flash controller access */
@@ -312,7 +351,25 @@ static bool stm32h7rs_flash_unlock(target_s *const target, const uint32_t addr)
 	return !(target_mem32_read32(target, regbase + FLASH_CR) & FLASH_CR_LOCK);
 }
 
-///* Helper for offsetting FLASH_CR bits correctly */
+static bool stm32h7rs_flash_prepare(target_flash_s *const target_flash)
+{
+	target_s *target = target_flash->t;
+	const stm32h7rs_flash_s *const flash = (stm32h7rs_flash_s *)target_flash;
+
+	/* Unlock the Flash controller to prepare it for operations */
+	return stm32h7rs_flash_unlock(target, flash->regbase);
+}
+
+static bool stm32h7rs_flash_done(target_flash_s *const target_flash)
+{
+	target_s *target = target_flash->t;
+	const stm32h7rs_flash_s *const flash = (stm32h7rs_flash_s *)target_flash;
+	/* Lock the Flash controller to complete operations */
+	target_mem32_write32(target, flash->regbase + FLASH_CR, FLASH_CR_LOCK);
+	return true;
+}
+
+///* Helper for offsetting FLASH_CR bits correctly EMEB - not needed for just H7R/S */
 //static uint32_t stm32h7rs_flash_cr(uint32_t sector_size, const uint32_t ctrl, int snb)
 //{
 //	uint32_t command = ctrl;
@@ -338,6 +395,8 @@ static bool stm32h7rs_flash_unlock(target_s *const target, const uint32_t addr)
 
 static bool stm32h7rs_flash_erase(target_flash_s *const target_flash, target_addr_t addr, const size_t len)
 {
+#if 0
+	// EMEB original zyp code
 	const uint32_t sector_size = target_flash->blocksize;
 	target_s *target = target_flash->t;
 	const stm32h7rs_flash_s *const flash = (stm32h7rs_flash_s *)target_flash;
@@ -368,7 +427,28 @@ static bool stm32h7rs_flash_erase(target_flash_s *const target_flash, target_add
 		if (!stm32h7rs_flash_busy_wait(target, reg_base))
 			return false;
 	}
-	return true;
+	return stm32h7rs_flash_wait_complete(target, flash->regbase);
+#else
+	// EMEB new code based on latest H7 driver
+	(void)len;
+	/* Erases are always done one sector at a time - the target Flash API guarantees this */
+	target_s *target = target_flash->t;
+	const stm32h7rs_flash_s *const flash = (stm32h7rs_flash_s *)target_flash;
+
+	/* Calculate the sector to erase and set the operation runnning */
+	const uint32_t sector = (addr - target_flash->start) / target_flash->blocksize;
+	const uint32_t ctrl = FLASH_CR_SER | (sector << FLASH_CR_SSN_SHIFT);
+	target_mem32_write32(target, flash->regbase + FLASH_CR, ctrl);
+	target_mem32_write32(target, flash->regbase + FLASH_CR, ctrl | FLASH_CR_START);
+
+	/* Wait for the operation to complete and report errors */
+	DEBUG_INFO("Erasing, ctrl = %08" PRIx32 " status = %08" PRIx32 "\n",
+		target_mem32_read32(target, flash->regbase + FLASH_CR), target_mem32_read32(target, flash->regbase + FLASH_SR));
+
+	/* Wait for the operation to complete and report errors */
+	return stm32h7rs_flash_wait_complete(target, flash->regbase);
+	
+#endif
 }
 
 static bool stm32h7rs_flash_write(
@@ -389,6 +469,8 @@ static bool stm32h7rs_flash_write(
 	/* does H7 stall?*/
 
 	/* Write the data to the Flash */
+#if 0
+	/* original from zyp's 2024 version w/o queue waiting */
 	target_mem32_write(target, dest, src, len);
 
 	/* Wait for the operation to complete and report errors */
@@ -398,6 +480,27 @@ static bool stm32h7rs_flash_write(
 	/* Close write windows */
 	target_mem32_write32(target, flash->regbase + FLASH_CR, 0);
 	return true;
+#else
+	/* New stuff from H7 driver - adapted for 16 byte flash wordsize */
+	for (size_t offset = 0U; offset < len; offset += 16U) {
+		const size_t amount = MIN(len - offset, 16U);
+		target_mem32_write(target, dest + offset, ((const uint8_t *)src) + offset, amount);
+		/*
+		 * If this is the final chunk and the amount is not a multiple of 16
+		 * bytes, make sure the write is forced to complete per RM0468 §5.3.8
+		 * "Single write sequence" pg215
+		 */
+		if (amount < 16U)
+			target_mem32_write32(target, flash->regbase + FLASH_CR, ctrl_pg | FLASH_CR_FW);
+		
+		/* wait for QW bit to clear */
+		while (target_mem32_read32(target, flash->regbase + FLASH_SR) & FLASH_SR_QW)
+			continue;
+	}
+
+	/* Wait for the operation to complete and report errors */
+	return stm32h7rs_flash_wait_complete(target, flash->regbase);
+#endif
 }
 
 static bool stm32h7rs_erase_bank(
