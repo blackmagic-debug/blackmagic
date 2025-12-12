@@ -348,6 +348,7 @@ static bool stm32h7rs_flash_done(target_flash_s *const target_flash)
 
 static bool stm32h7rs_flash_erase(target_flash_s *const target_flash, target_addr_t addr, const size_t len)
 {
+	(void) len;	// prevent unused param warning
 	/* Erases are always done one sector at a time - the target Flash API guarantees this */
 	target_s *target = target_flash->t;
 	const stm32h7rs_flash_s *const flash = (stm32h7rs_flash_s *)target_flash;
@@ -400,6 +401,7 @@ static bool stm32h7rs_flash_write(
 static bool stm32h7rs_erase_bank(
 	target_s *const target, const align_e psize, const uint32_t start_addr, const uint32_t reg_base)
 {
+	(void) psize; // prevent unused param warning
 	if (!stm32h7rs_flash_unlock(target, start_addr)) {
 		DEBUG_ERROR("Bank erase: Unlock bank failed\n");
 		return false;
