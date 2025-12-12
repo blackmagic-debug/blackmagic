@@ -46,8 +46,8 @@
 //#define FLASH_OPTCR     0x018U
 //#define FLASH_OPTSR_CUR 0x01cU
 //#define FLASH_OPTSR     0x020U
-//#define FLASH_CRCCR     0x050U
-//#define FLASH_CRCDATA   0x05cU
+#define FLASH_CRCCR     0x050U
+#define FLASH_CRCDATA   0x05cU
 
 /* Flash Program and Erase Controller Register Map */
 #define FPEC1_BASE          0x52002000U
@@ -81,17 +81,17 @@
 #define FLASH_CR_SSN_SHIFT      6U
 //#define FLASH_CR_SNB_1   (1U << 8U)
 //#define FLASH_CR_SNB     (3U << 8U)
-//#define FLASH_CR_CRC_EN  (1U << 15U)
+#define FLASH_CR_CRC_EN  (1U << 15U)
 //
 //#define FLASH_OPTCR_OPTLOCK (1U << 0U)
 //#define FLASH_OPTCR_OPTSTRT (1U << 1U)
 //
 //#define FLASH_OPTSR_IWDG1_SW (1U << 4U)
 //
-//#define FLASH_CRCCR_ALL_BANK    (1U << 7U)
-//#define FLASH_CRCCR_START_CRC   (1U << 16U)
-//#define FLASH_CRCCR_CLEAN_CRC   (1U << 17U)
-//#define FLASH_CRCCR_CRC_BURST_3 (3U << 20U)
+#define FLASH_CRCCR_ALL_BANK    (1U << 7U)
+#define FLASH_CRCCR_START_CRC   (1U << 16U)
+#define FLASH_CRCCR_CLEAN_CRC   (1U << 17U)
+#define FLASH_CRCCR_CRC_BURST_3 (3U << 20U)
 
 #define STM32H7RS_FLASH_KEY1 0x45670123U
 #define STM32H7RS_FLASH_KEY2 0xcdef89abU
@@ -99,13 +99,29 @@
 #define STM32H7RS_OPT_KEY1 0x08192a3bU
 #define STM32H7RS_OPT_KEY2 0x4c5d6e7fU
 
-#define DBGMCU_IDCODE        0x5c001000U
 #define STM32H7RS_FLASH_SIZE   0x1ff1e880U
-#define STM32H7Bx_FLASH_SIZE 0x08fff80cU
+#define STM32H7RS_FLASH_BANK1_BASE    0x08000000U
+#define STM32H7RS_FLASH_BANK_SIZE     0x00010000U
+#define NUM_SECTOR_PER_BANK         8U
+#define FLASH_SECTOR_SIZE           0x2000U
+
+/* WWDG base address and register map */
+#define STM32H7RS_WWDG_BASE     0x40002c00U
+#define STM32H7RS_WWDG_CR       (STM32H7RS_WWDG_BASE + 0x00)
+#define STM32H7RS_WWDG_CR_RESET 0x0000007fU
+
+/* IWDG base address and register map */
+#define STM32H7RS_IWDG_BASE      0x58004800U
+#define STM32H7RS_IWDG_KEY       (STM32H7RS_IWDG_BASE + 0x00U)
+#define STM32H7RS_IWDG_KEY_RESET 0x0000aaaaU
+
 /* Access from processor address space.
  * Access via the APB-D is at 0xe00e1000 */
+#define DBGMCU_IDCODE        0x5c001000U
 #define DBGMCU_IDC  (DBGMCU_IDCODE + 0U)
 #define DBGMCU_CR   (DBGMCU_IDCODE + 4U)
+#define DBGMCU_APB1FREEZE (DBGMCU_IDCODE + 0x03cU)
+#define DBGMCU_APB4FREEZE (DBGMCU_IDCODE + 0x054U)
 #define DBGSLEEP_D1 (1U << 0U)
 #define DBGSTOP_D1  (1U << 1U)
 #define DBGSTBY_D1  (1U << 2U)
@@ -113,14 +129,11 @@
 #define DBGSTBY_D3  (1U << 8U)
 #define D1DBGCKEN   (1U << 21U)
 #define D3DBGCKEN   (1U << 22U)
+#define DBGMCU_APB1FREEZE_WWDG1   (1U << 11U)
+#define DBGMCU_APB4FREEZE_IWDG1   (1U << 18U)
 
 #define STM32H7RS_DBGMCU_IDCODE_DEV_MASK  0x00000fffU
 #define STM32H7RS_DBGMCU_IDCODE_REV_SHIFT 16U
-
-#define STM32H7RS_FLASH_BANK1_BASE    0x08000000U
-#define STM32H7RS_FLASH_BANK_SIZE     0x00010000U
-#define NUM_SECTOR_PER_BANK         8U
-#define FLASH_SECTOR_SIZE           0x2000U
 
 #define ID_STM32H7RS 0x485U /* RM0477 */
 
@@ -135,14 +148,14 @@ typedef struct stm32h7rs_priv {
 } stm32h7rs_priv_s;
 
 static bool stm32h7rs_uid(target_s *target, int argc, const char **argv);
-//static bool stm32h7rs_crc(target_s *target, int argc, const char **argv);
+static bool stm32h7rs_crc(target_s *target, int argc, const char **argv);
 static bool stm32h7rs_cmd_psize(target_s *target, int argc, const char **argv);
 static bool stm32h7rs_cmd_rev(target_s *target, int argc, const char **argv);
 
 const command_s stm32h7rs_cmd_list[] = {
 	{"psize", stm32h7rs_cmd_psize, "Configure flash write parallelism: (x8|x16|x32|x64(default))"},
 	{"uid", stm32h7rs_uid, "Print unique device ID"},
-	//{"crc", stm32h7rs_crc, "Print CRC of both banks"},
+	{"crc", stm32h7rs_crc, "Print CRC of bank 1"},
 	{"revision", stm32h7rs_cmd_rev, "Returns the Device ID and Revision"},
 	{NULL, NULL, NULL},
 };
@@ -202,23 +215,24 @@ bool stm32h7rs_probe(target_s *target)
 	target_add_commands(target, stm32h7rs_cmd_list, target->driver);
 	
 	/* EMEB - Decide which of these is correct */
-#if 1
+#if 0
 	/* RM0433 Rev 4 is not really clear, what bits are needed in DBGMCU_CR. Maybe more flags needed? */
 	const uint32_t dbgmcu_ctrl = DBGSLEEP_D1 | D1DBGCKEN;
 	target_mem32_write32(target, DBGMCU_CR, dbgmcu_ctrl);
 #else
 	/* Now we have a stable debug environment, make sure the WDTs can't bonk the processor out from under us */
-	target_mem32_write32(target, STM32H7_DBGMCU_APB3FREEZE, STM32H7_DBGMCU_APB3FREEZE_WWDG1);
-	target_mem32_write32(target, STM32H7_DBGMCU_APB4FREEZE, STM32H7_DBGMCU_APB4FREEZE_IWDG1);
+	target_mem32_write32(target, DBGMCU_APB1FREEZE, DBGMCU_APB1FREEZE_WWDG1);
+	target_mem32_write32(target, DBGMCU_APB4FREEZE, DBGMCU_APB4FREEZE_IWDG1);
 	/*
+	 * EMEB - this is redundant w/ stuff that happens at attach()
 	 * Make sure that both domain D1 and D3 debugging are enabled and that we can keep
 	 * debugging through sleep, stop and standby states for domain D1
 	 */
-	target_mem32_write32(target, STM32H7_DBGMCU_CONFIG,
-		target_mem32_read32(target, STM32H7_DBGMCU_CONFIG) | STM32H7_DBGMCU_CONFIG_DBGSLEEP_D1 |
-			STM32H7_DBGMCU_CONFIG_DBGSTOP_D1 | STM32H7_DBGMCU_CONFIG_DBGSTBY_D1 | STM32H7_DBGMCU_CONFIG_D1DBGCKEN |
-			STM32H7_DBGMCU_CONFIG_D3DBGCKEN);
-	stm32h7_configure_wdts(target);
+	target_mem32_write32(target, DBGMCU_CR,
+		target_mem32_read32(target, DBGMCU_CR) | DBGSLEEP_D1 |
+			DBGSTOP_D1 | DBGSTBY_D1 | D1DBGCKEN | D3DBGCKEN);
+	target_mem32_write32(target, STM32H7RS_WWDG_CR, STM32H7RS_WWDG_CR_RESET);
+	target_mem32_write32(target, STM32H7RS_IWDG_KEY, STM32H7RS_IWDG_KEY_RESET);
 #endif
 	
 	/* Build the RAM map - EMEB: ITCM/DTCM are too big -shared w/ AXI */
@@ -256,6 +270,7 @@ static bool stm32h7rs_attach(target_s *target)
 {
 	if (!cortexm_attach(target))
 		return false;
+#if 0
 	/*
 	 * If IWDG runs as HARDWARE watchdog (§44.3.4) erase
 	 * will be aborted by the Watchdog and erase fails!
@@ -264,13 +279,29 @@ static bool stm32h7rs_attach(target_s *target)
 	//const uint32_t optsr = target_mem_read32(target, FPEC1_BASE + FLASH_OPTSR);
 	//if (!(optsr & FLASH_OPTSR_IWDG1_SW))
 	//	tc_printf(target, "Hardware IWDG running. Expect failure. Set IWDG1_SW!");
+#else
+	/*
+	 * Make sure that both domain D1 and D3 debugging are enabled and that we can keep
+	 * debugging through sleep, stop and standby states for domain D1 - this is duplicated as it's undone by detach.
+	 */
+	target_mem32_write32(target, DBGMCU_CR,
+		DBGSLEEP_D1 | DBGSTOP_D1 | DBGSTBY_D1 | D1DBGCKEN | D3DBGCKEN);
+	target_mem32_write32(target, STM32H7RS_WWDG_CR, STM32H7RS_WWDG_CR_RESET);
+	target_mem32_write32(target, STM32H7RS_IWDG_KEY, STM32H7RS_IWDG_KEY_RESET);
+#endif
 	return true;
 }
 
 static void stm32h7rs_detach(target_s *target)
 {
+#if 0
 	//stm32h7rs_priv_s *ps = (stm32h7rs_priv_s *)target->target_storage;
 	//target_mem_write32(target, DBGMCU_CR, ps->dbg_cr);
+#else
+	target_mem32_write32(target, DBGMCU_CR,
+		target_mem32_read32(target, DBGMCU_CR) &
+			~(DBGSLEEP_D1 | DBGSTOP_D1 | DBGSTBY_D1 | D1DBGCKEN | D3DBGCKEN));
+#endif
 	cortexm_detach(target);
 }
 
@@ -296,17 +327,14 @@ static bool stm32h7rs_flash_wait_complete(target_s *const target, const uint32_t
 	return !(istatus & FLASH_ISR_ERROR_MASK);
 }
 
-static bool stm32h7rs_flash_unlock(target_s *const target, const uint32_t addr)
+static bool stm32h7rs_flash_unlock(target_s *const target, const uint32_t regbase)
 {
-	(void)addr;
-	const uint32_t regbase = FPEC1_BASE;
-	/* EMEB - clear any pending flash interrupts that could hurt us */
-	uint32_t istatus = target_mem32_read32(target, FPEC1_BASE + FLASH_ISR) &
-		FLASH_ISR_ERROR_MASK;
-	if(istatus != 0U)
+	/* clear any pending flash interrupts that could hurt us */
+	uint32_t istatus = target_mem32_read32(target, FPEC1_BASE + FLASH_ISR);
+	if (istatus & FLASH_ISR_ERROR_MASK)
 	{
 		DEBUG_INFO("%s: FLASH_ISR %08" PRIx32 " - clearing\n", __func__, istatus);
-			target_mem32_write32(target, FPEC1_BASE + FLASH_ICR, istatus);
+		target_mem32_write32(target, FPEC1_BASE + FLASH_ICR, istatus & FLASH_ISR_ERROR_MASK);
 	}
 	
 	/* Read out the Flash status and tend to any pending conditions */
@@ -348,7 +376,7 @@ static bool stm32h7rs_flash_done(target_flash_s *const target_flash)
 
 static bool stm32h7rs_flash_erase(target_flash_s *const target_flash, target_addr_t addr, const size_t len)
 {
-	(void) len;	// prevent unused param warning
+	(void) len;
 	/* Erases are always done one sector at a time - the target Flash API guarantees this */
 	target_s *target = target_flash->t;
 	const stm32h7rs_flash_s *const flash = (stm32h7rs_flash_s *)target_flash;
@@ -399,10 +427,9 @@ static bool stm32h7rs_flash_write(
 }
 
 static bool stm32h7rs_erase_bank(
-	target_s *const target, const align_e psize, const uint32_t start_addr, const uint32_t reg_base)
+	target_s *const target, const uint32_t reg_base)
 {
-	(void) psize; // prevent unused param warning
-	if (!stm32h7rs_flash_unlock(target, start_addr)) {
+	if (!stm32h7rs_flash_unlock(target, reg_base)) {
 		DEBUG_ERROR("Bank erase: Unlock bank failed\n");
 		return false;
 	}
@@ -435,18 +462,8 @@ static bool stm32h7rs_check_bank(target_s *const target, const uint32_t reg_base
 
 static bool stm32h7rs_mass_erase(target_s *target, platform_timeout_s *const print_progess)
 {
-	align_e psize = ALIGN_64BIT;
-	/*
-	 * XXX: What is this and why does it exist?
-	 * A dry-run walk-through says it'll pull out the psize for the first Flash region added by stm32h7rs_probe()
-	 * because all Flash regions added by stm32h7rs_add_flash match the if condition. This looks redundant and wrong.
-	 */
-	for (target_flash_s *flash = target->flash; flash; flash = flash->next) {
-		if (flash->write == stm32h7rs_flash_write)
-			psize = ((struct stm32h7rs_flash *)flash)->psize;
-	}
 	/* Send mass erase Flash start instruction */
-	if (!stm32h7rs_erase_bank(target, psize, STM32H7RS_FLASH_BANK1_BASE, FPEC1_BASE))
+	if (!stm32h7rs_erase_bank(target, FPEC1_BASE))
 		return false;
 
 	/* Wait for the banks to finish erasing */
@@ -478,47 +495,46 @@ static bool stm32h7rs_uid(target_s *target, int argc, const char **argv)
 	return true;
 }
 
-//static bool stm32h7rs_crc_bank(target_s *target, uint32_t addr)
-//{
-//	const uint32_t reg_base = FPEC1_BASE;
-//	if (!stm32h7rs_flash_unlock(target, addr))
-//		return false;
-//
-//	target_mem_write32(target, reg_base + FLASH_CR, FLASH_CR_CRC_EN);
-//	const uint32_t crc_ctrl = FLASH_CRCCR_CRC_BURST_3 | FLASH_CRCCR_CLEAN_CRC | FLASH_CRCCR_ALL_BANK;
-//	target_mem_write32(target, reg_base + FLASH_CRCCR, crc_ctrl);
-//	target_mem_write32(target, reg_base + FLASH_CRCCR, crc_ctrl | FLASH_CRCCR_START_CRC);
-//	uint32_t status = FLASH_SR_CRC_BUSY;
-//#if ENABLE_DEBUG == 1
-//	const uint8_t bank = reg_base == FPEC1_BASE ? 1 : 2;
-//#endif
-//	while (status & FLASH_SR_CRC_BUSY) {
-//		status = target_mem_read32(target, reg_base + FLASH_SR);
-//		if (target_check_error(target)) {
-//			DEBUG_ERROR("CRC bank %u: comm failed\n", bank);
-//			return false;
-//		}
-//		if (status & FLASH_SR_ERROR_READ) {
-//			DEBUG_ERROR("CRC bank %u: error status %08" PRIx32 "\n", bank, status);
-//			return false;
-//		}
-//	}
-//	return true;
-//}
-//
-//static bool stm32h7rs_crc(target_s *target, int argc, const char **argv)
-//{
-//	(void)argc;
-//	(void)argv;
-//	if (!stm32h7rs_crc_bank(target, STM32H7RS_FLASH_BANK1_BASE))
-//		return false;
-//	uint32_t crc1 = target_mem_read32(target, FPEC1_BASE + FLASH_CRCDATA);
-//	if (!stm32h7rs_crc_bank(target, STM32H7RS_FLASH_BANK2_BASE))
-//		return false;
-//	uint32_t crc2 = 0;//TODO: remove: target_mem_read32(target, FPEC2_BASE + FLASH_CRCDATA);
-//	tc_printf(target, "CRC: bank1 0x%08lx, bank2 0x%08lx\n", crc1, crc2);
-//	return true;
-//}
+static bool stm32h7rs_crc_bank(target_s *target, uint32_t addr)
+{
+	(void) addr;
+	const uint32_t reg_base = FPEC1_BASE;
+	if (!stm32h7rs_flash_unlock(target, reg_base))
+		return false;
+
+	target_mem32_write32(target, reg_base + FLASH_CR, FLASH_CR_CRC_EN);
+	const uint32_t crc_ctrl = FLASH_CRCCR_CRC_BURST_3 | FLASH_CRCCR_CLEAN_CRC | FLASH_CRCCR_ALL_BANK;
+	target_mem32_write32(target, reg_base + FLASH_CRCCR, crc_ctrl);
+	target_mem32_write32(target, reg_base + FLASH_CRCCR, crc_ctrl | FLASH_CRCCR_START_CRC);
+	uint32_t status = FLASH_SR_CRC_BUSY;
+#if ENABLE_DEBUG == 1
+	const uint8_t bank = reg_base == FPEC1_BASE ? 1 : 2;
+#endif
+	while (status & FLASH_SR_CRC_BUSY) {
+		status = target_mem32_read32(target, reg_base + FLASH_SR);
+		if (target_check_error(target)) {
+			DEBUG_ERROR("CRC bank %u: comm failed\n", bank);
+			return false;
+		}
+		uint32_t istatus = target_mem32_read32(target, reg_base + FLASH_ISR);
+		if (istatus & FLASH_ISR_ERROR_READ) {
+			DEBUG_ERROR("CRC bank %u: error status %08" PRIx32 "\n", bank, istatus);
+			return false;
+		}
+	}
+	return true;
+}
+
+static bool stm32h7rs_crc(target_s *target, int argc, const char **argv)
+{
+	(void)argc;
+	(void)argv;
+	if (!stm32h7rs_crc_bank(target, STM32H7RS_FLASH_BANK1_BASE))
+		return false;
+	uint32_t crc1 = target_mem32_read32(target, FPEC1_BASE + FLASH_CRCDATA);
+	tc_printf(target, "CRC: bank1 0x%08" PRIx32 "\n", crc1);
+	return true;
+}
 
 static bool stm32h7rs_cmd_psize(target_s *target, int argc, const char **argv)
 {
