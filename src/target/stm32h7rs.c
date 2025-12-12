@@ -270,7 +270,7 @@ static bool stm32h7rs_attach(target_s *target)
 {
 	if (!cortexm_attach(target))
 		return false;
-#if 0
+#if 1
 	/*
 	 * If IWDG runs as HARDWARE watchdog (§44.3.4) erase
 	 * will be aborted by the Watchdog and erase fails!
@@ -294,7 +294,7 @@ static bool stm32h7rs_attach(target_s *target)
 
 static void stm32h7rs_detach(target_s *target)
 {
-#if 0
+#if 1
 	//stm32h7rs_priv_s *ps = (stm32h7rs_priv_s *)target->target_storage;
 	//target_mem_write32(target, DBGMCU_CR, ps->dbg_cr);
 #else
