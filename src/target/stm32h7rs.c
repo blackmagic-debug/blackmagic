@@ -35,91 +35,91 @@
 #include "stm32_common.h"
 
 /* Flash Program and Erase Controller Register Map */
-#define FPEC1_BASE				0x52002000U
-#define FLASH_ACR				0x000U
-#define FLASH_KEYR				0x004U
-#define FLASH_CR				0x010U
-#define FLASH_SR				0x014U
-#define FLASH_IER				0x020U
-#define FLASH_ISR				0x024U
-#define FLASH_ICR				0x028U
-#define FLASH_CRCCR				0x030U
-#define FLASH_CRCDATA			0x03cU
-#define FLASH_SR_BSY			(1U << 0U)
-#define FLASH_SR_WBNE			(1U << 1U)
-#define FLASH_SR_QW				(1U << 2U)
-#define FLASH_SR_CRC_BUSY		(1U << 3U)
-#define FLASH_ISR_EOP			(1U << 16U)
-#define FLASH_ISR_WRPERR		(1U << 17U)
-#define FLASH_ISR_PGSERR		(1U << 18U)
-#define FLASH_ISR_STRBERR		(1U << 19U)
-#define FLASH_ISR_INCERR		(1U << 21U)
-#define FLASH_ISR_RDSERR		(1U << 24U)
-#define FLASH_ISR_SNECCERR		(1U << 25U)
-#define FLASH_ISR_DBECCERR		(1U << 26U)
-#define FLASH_ISR_CRCEND		(1U << 27U)
-#define FLASH_ISR_CRCRDERR		(1U << 28U)
-#define FLASH_ISR_ERROR_READ	(FLASH_ISR_RDSERR | FLASH_ISR_SNECCERR | FLASH_ISR_DBECCERR)
-#define FLASH_ISR_ERROR_MASK 	\
+#define FPEC1_BASE           0x52002000U
+#define FLASH_ACR            0x000U
+#define FLASH_KEYR           0x004U
+#define FLASH_CR             0x010U
+#define FLASH_SR             0x014U
+#define FLASH_IER            0x020U
+#define FLASH_ISR            0x024U
+#define FLASH_ICR            0x028U
+#define FLASH_CRCCR          0x030U
+#define FLASH_CRCDATA        0x03cU
+#define FLASH_SR_BSY         (1U << 0U)
+#define FLASH_SR_WBNE        (1U << 1U)
+#define FLASH_SR_QW          (1U << 2U)
+#define FLASH_SR_CRC_BUSY    (1U << 3U)
+#define FLASH_ISR_EOP        (1U << 16U)
+#define FLASH_ISR_WRPERR     (1U << 17U)
+#define FLASH_ISR_PGSERR     (1U << 18U)
+#define FLASH_ISR_STRBERR    (1U << 19U)
+#define FLASH_ISR_INCERR     (1U << 21U)
+#define FLASH_ISR_RDSERR     (1U << 24U)
+#define FLASH_ISR_SNECCERR   (1U << 25U)
+#define FLASH_ISR_DBECCERR   (1U << 26U)
+#define FLASH_ISR_CRCEND     (1U << 27U)
+#define FLASH_ISR_CRCRDERR   (1U << 28U)
+#define FLASH_ISR_ERROR_READ (FLASH_ISR_RDSERR | FLASH_ISR_SNECCERR | FLASH_ISR_DBECCERR)
+#define FLASH_ISR_ERROR_MASK \
 	(FLASH_ISR_WRPERR | FLASH_ISR_PGSERR | FLASH_ISR_STRBERR | FLASH_ISR_INCERR | FLASH_ISR_ERROR_READ)
-#define FLASH_CR_LOCK			(1U << 0U)
-#define FLASH_CR_PG				(1U << 1U)
-#define FLASH_CR_SER			(1U << 2U)
-#define FLASH_CR_BER			(1U << 3U)
-#define FLASH_CR_FW				(1U << 4U)
-#define FLASH_CR_START			(1U << 5U)
-#define FLASH_CR_SSN_SHIFT		6U
-#define FLASH_CR_CRC_EN			(1U << 17U)
-#define FLASH_CRCCR_ALL_BANK	(1U << 7U)
-#define FLASH_CRCCR_START_CRC	(1U << 16U)
-#define FLASH_CRCCR_CLEAN_CRC	(1U << 17U)
-#define FLASH_CRCCR_CRC_BURST_3	(3U << 20U)
+#define FLASH_CR_LOCK           (1U << 0U)
+#define FLASH_CR_PG             (1U << 1U)
+#define FLASH_CR_SER            (1U << 2U)
+#define FLASH_CR_BER            (1U << 3U)
+#define FLASH_CR_FW             (1U << 4U)
+#define FLASH_CR_START          (1U << 5U)
+#define FLASH_CR_SSN_SHIFT      6U
+#define FLASH_CR_CRC_EN         (1U << 17U)
+#define FLASH_CRCCR_ALL_BANK    (1U << 7U)
+#define FLASH_CRCCR_START_CRC   (1U << 16U)
+#define FLASH_CRCCR_CLEAN_CRC   (1U << 17U)
+#define FLASH_CRCCR_CRC_BURST_3 (3U << 20U)
 
-#define STM32H7RS_FLASH_KEY1	0x45670123U
-#define STM32H7RS_FLASH_KEY2	0xcdef89abU
+#define STM32H7RS_FLASH_KEY1 0x45670123U
+#define STM32H7RS_FLASH_KEY2 0xcdef89abU
 
-#define STM32H7RS_OPT_KEY1		0x08192a3bU
-#define STM32H7RS_OPT_KEY2		0x4c5d6e7fU
+#define STM32H7RS_OPT_KEY1 0x08192a3bU
+#define STM32H7RS_OPT_KEY2 0x4c5d6e7fU
 
-#define STM32H7RS_FLASH_SIZE	0x1ff1e880U
-#define STM32H7RS_FLASH_BANK1_BASE	0x08000000U
-#define STM32H7RS_FLASH_BANK_SIZE	0x00010000U
-#define NUM_SECTOR_PER_BANK		8U
-#define FLASH_SECTOR_SIZE		0x2000U
+#define STM32H7RS_FLASH_SIZE       0x1ff1e880U
+#define STM32H7RS_FLASH_BANK1_BASE 0x08000000U
+#define STM32H7RS_FLASH_BANK_SIZE  0x00010000U
+#define NUM_SECTOR_PER_BANK        8U
+#define FLASH_SECTOR_SIZE          0x2000U
 
 /* WWDG base address and register map */
-#define STM32H7RS_WWDG_BASE		0x40002c00U
-#define STM32H7RS_WWDG_CR		(STM32H7RS_WWDG_BASE + 0x00)
-#define STM32H7RS_WWDG_CR_RESET	0x0000007fU
+#define STM32H7RS_WWDG_BASE     0x40002c00U
+#define STM32H7RS_WWDG_CR       (STM32H7RS_WWDG_BASE + 0x00)
+#define STM32H7RS_WWDG_CR_RESET 0x0000007fU
 
 /* IWDG base address and register map */
-#define STM32H7RS_IWDG_BASE		0x58004800U
-#define STM32H7RS_IWDG_KEY		(STM32H7RS_IWDG_BASE + 0x00U)
-#define STM32H7RS_IWDG_KEY_RESET	0x0000aaaaU
+#define STM32H7RS_IWDG_BASE      0x58004800U
+#define STM32H7RS_IWDG_KEY       (STM32H7RS_IWDG_BASE + 0x00U)
+#define STM32H7RS_IWDG_KEY_RESET 0x0000aaaaU
 
 /* 
  * Access from processor address space.
  * Access via the APB-D is at 0xe00e1000
  */
-#define DBGMCU_IDCODE			0x5c001000U
-#define DBGMCU_IDC				(DBGMCU_IDCODE + 0U)
-#define DBGMCU_CR				(DBGMCU_IDCODE + 4U)
-#define DBGMCU_APB1FREEZE		(DBGMCU_IDCODE + 0x03cU)
-#define DBGMCU_APB4FREEZE		(DBGMCU_IDCODE + 0x054U)
-#define DBGSLEEP_D1				(1U << 0U)
-#define DBGSTOP_D1				(1U << 1U)
-#define DBGSTBY_D1				(1U << 2U)
-#define DBGSTOP_D3				(1U << 7U)
-#define DBGSTBY_D3				(1U << 8U)
-#define D1DBGCKEN				(1U << 21U)
-#define D3DBGCKEN				(1U << 22U)
-#define DBGMCU_APB1FREEZE_WWDG1	(1U << 11U)
-#define DBGMCU_APB4FREEZE_IWDG1	(1U << 18U)
+#define DBGMCU_IDCODE           0x5c001000U
+#define DBGMCU_IDC              (DBGMCU_IDCODE + 0U)
+#define DBGMCU_CR               (DBGMCU_IDCODE + 4U)
+#define DBGMCU_APB1FREEZE       (DBGMCU_IDCODE + 0x03cU)
+#define DBGMCU_APB4FREEZE       (DBGMCU_IDCODE + 0x054U)
+#define DBGSLEEP_D1             (1U << 0U)
+#define DBGSTOP_D1              (1U << 1U)
+#define DBGSTBY_D1              (1U << 2U)
+#define DBGSTOP_D3              (1U << 7U)
+#define DBGSTBY_D3              (1U << 8U)
+#define D1DBGCKEN               (1U << 21U)
+#define D3DBGCKEN               (1U << 22U)
+#define DBGMCU_APB1FREEZE_WWDG1 (1U << 11U)
+#define DBGMCU_APB4FREEZE_IWDG1 (1U << 18U)
 
-#define STM32H7RS_DBGMCU_IDCODE_DEV_MASK	0x00000fffU
-#define STM32H7RS_DBGMCU_IDCODE_REV_SHIFT	16U
+#define STM32H7RS_DBGMCU_IDCODE_DEV_MASK  0x00000fffU
+#define STM32H7RS_DBGMCU_IDCODE_REV_SHIFT 16U
 
-#define ID_STM32H7RS			0x485U /* RM0477 */
+#define ID_STM32H7RS 0x485U /* RM0477 */
 
 /*
  * Uncomment this to enable DBGMCU setup in attach() and detach()
@@ -187,9 +187,9 @@ bool stm32h7rs_probe(target_s *target)
 	const adiv5_access_port_s *const ap = cortex_ap(target);
 	if (ap->partno != ID_STM32H7RS)
 		return false;
-	
+
 	target->part_id = ap->partno;
-	
+
 	/* Save private storage */
 	stm32h7rs_priv_s *priv = calloc(1, sizeof(*priv));
 	if (!priv) { /* calloc failed: heap exhaustion */
@@ -198,13 +198,13 @@ bool stm32h7rs_probe(target_s *target)
 	}
 	target->target_storage = priv;
 	priv->dbg_cr = target_mem32_read32(target, DBGMCU_CR);
-	
+
 	target->driver = "STM32H7R/S";
 	target->attach = stm32h7rs_attach;
 	target->detach = stm32h7rs_detach;
 	target->mass_erase = stm32h7rs_mass_erase;
 	target_add_commands(target, stm32h7rs_cmd_list, target->driver);
-	
+
 	/* Now we have a stable debug environment, make sure the WDTs can't bonk the processor out from under us */
 	target_mem32_write32(target, DBGMCU_APB1FREEZE, DBGMCU_APB1FREEZE_WWDG1);
 	target_mem32_write32(target, DBGMCU_APB4FREEZE, DBGMCU_APB4FREEZE_IWDG1);
@@ -213,12 +213,10 @@ bool stm32h7rs_probe(target_s *target)
 	 * debugging through sleep, stop and standby states for domain D1
 	 */
 	target_mem32_write32(target, DBGMCU_CR,
-		target_mem32_read32(target, DBGMCU_CR) | DBGSLEEP_D1 |
-			DBGSTOP_D1 | DBGSTBY_D1 | D1DBGCKEN | D3DBGCKEN);
+		target_mem32_read32(target, DBGMCU_CR) | DBGSLEEP_D1 | DBGSTOP_D1 | DBGSTBY_D1 | D1DBGCKEN | D3DBGCKEN);
 	target_mem32_write32(target, STM32H7RS_WWDG_CR, STM32H7RS_WWDG_CR_RESET);
 	target_mem32_write32(target, STM32H7RS_IWDG_KEY, STM32H7RS_IWDG_KEY_RESET);
 
-	
 	/* Build the RAM map */
 	switch (target->part_id) {
 	case ID_STM32H7RS: {
@@ -259,8 +257,7 @@ static bool stm32h7rs_attach(target_s *target)
 	 * Make sure that both domain D1 and D3 debugging are enabled and that we can keep
 	 * debugging through sleep, stop and standby states for domain D1 - this is duplicated as it's undone by detach.
 	 */
-	target_mem32_write32(target, DBGMCU_CR,
-		DBGSLEEP_D1 | DBGSTOP_D1 | DBGSTBY_D1 | D1DBGCKEN | D3DBGCKEN);
+	target_mem32_write32(target, DBGMCU_CR, DBGSLEEP_D1 | DBGSTOP_D1 | DBGSTBY_D1 | D1DBGCKEN | D3DBGCKEN);
 	target_mem32_write32(target, STM32H7RS_WWDG_CR, STM32H7RS_WWDG_CR_RESET);
 	target_mem32_write32(target, STM32H7RS_IWDG_KEY, STM32H7RS_IWDG_KEY_RESET);
 #endif
@@ -274,8 +271,7 @@ static void stm32h7rs_detach(target_s *target)
 	 * undo DBGMCU setup done in attach()
 	 */
 	target_mem32_write32(target, DBGMCU_CR,
-		target_mem32_read32(target, DBGMCU_CR) &
-			~(DBGSLEEP_D1 | DBGSTOP_D1 | DBGSTBY_D1 | D1DBGCKEN | D3DBGCKEN));
+		target_mem32_read32(target, DBGMCU_CR) & ~(DBGSLEEP_D1 | DBGSTOP_D1 | DBGSTBY_D1 | D1DBGCKEN | D3DBGCKEN));
 #endif
 	cortexm_detach(target);
 }
@@ -297,8 +293,7 @@ static bool stm32h7rs_flash_wait_complete(target_s *const target, const uint32_t
 	/* Now the operation's complete, we can check the error bits */
 	if (istatus & FLASH_ISR_ERROR_MASK)
 		DEBUG_ERROR("%s: Flash error: %08" PRIx32 "\n", __func__, istatus);
-	target_mem32_write32(target, regbase + FLASH_ICR,
-		istatus & (FLASH_ISR_EOP | FLASH_ISR_ERROR_MASK));
+	target_mem32_write32(target, regbase + FLASH_ICR, istatus & (FLASH_ISR_EOP | FLASH_ISR_ERROR_MASK));
 	/* Return whether any errors occured */
 	return !(istatus & FLASH_ISR_ERROR_MASK);
 }
@@ -307,12 +302,11 @@ static bool stm32h7rs_flash_unlock(target_s *const target, const uint32_t regbas
 {
 	/* clear any pending flash interrupts that could hurt us */
 	uint32_t istatus = target_mem32_read32(target, FPEC1_BASE + FLASH_ISR);
-	if (istatus & FLASH_ISR_ERROR_MASK)
-	{
+	if (istatus & FLASH_ISR_ERROR_MASK) {
 		DEBUG_INFO("%s: FLASH_ISR %08" PRIx32 " - clearing\n", __func__, istatus);
 		target_mem32_write32(target, FPEC1_BASE + FLASH_ICR, istatus & FLASH_ISR_ERROR_MASK);
 	}
-	
+
 	/* Read out the Flash status and tend to any pending conditions */
 	const uint32_t status = target_mem32_read32(target, regbase + FLASH_SR);
 	/* Start by checking if there are any pending ongoing operations */
@@ -321,7 +315,7 @@ static bool stm32h7rs_flash_unlock(target_s *const target, const uint32_t regbas
 		if (!stm32h7rs_flash_wait_complete(target, regbase))
 			return false;
 	}
-	
+
 	/* Unlock the device Flash if not already unlocked (it's an error to re-key the controller if it is) */
 	if (target_mem32_read32(target, regbase + FLASH_CR) & FLASH_CR_LOCK) {
 		/* Enable Flash controller access */
@@ -352,7 +346,7 @@ static bool stm32h7rs_flash_done(target_flash_s *const target_flash)
 
 static bool stm32h7rs_flash_erase(target_flash_s *const target_flash, target_addr_t addr, const size_t len)
 {
-	(void) len;
+	(void)len;
 	/* Erases are always done one sector at a time - the target Flash API guarantees this */
 	target_s *target = target_flash->t;
 	const stm32h7rs_flash_s *const flash = (stm32h7rs_flash_s *)target_flash;
@@ -375,7 +369,7 @@ static bool stm32h7rs_flash_write(
 	target_flash_s *const target_flash, const target_addr_t dest, const void *const src, const size_t len)
 {
 	target_s *target = target_flash->t;
-	const stm32h7rs_flash_s *const flash = (stm32h7rs_flash_s *)target_flash;	
+	const stm32h7rs_flash_s *const flash = (stm32h7rs_flash_s *)target_flash;
 
 	/* Prepare the Flash write operation */
 	const uint32_t ctrl_pg = FLASH_CR_PG;
@@ -392,7 +386,7 @@ static bool stm32h7rs_flash_write(
 		 */
 		if (amount < 16U)
 			target_mem32_write32(target, flash->regbase + FLASH_CR, ctrl_pg | FLASH_CR_FW);
-		
+
 		/* wait for QW bit to clear */
 		while (target_mem32_read32(target, flash->regbase + FLASH_SR) & FLASH_SR_QW)
 			continue;
@@ -402,8 +396,7 @@ static bool stm32h7rs_flash_write(
 	return stm32h7rs_flash_wait_complete(target, flash->regbase);
 }
 
-static bool stm32h7rs_erase_bank(
-	target_s *const target, const uint32_t reg_base)
+static bool stm32h7rs_erase_bank(target_s *const target, const uint32_t reg_base)
 {
 	if (!stm32h7rs_flash_unlock(target, reg_base)) {
 		DEBUG_ERROR("Bank erase: Unlock bank failed\n");
@@ -416,7 +409,8 @@ static bool stm32h7rs_erase_bank(
 	return true;
 }
 
-static bool stm32h7rs_wait_erase_bank(target_s *const target, platform_timeout_s *const timeout, const uint32_t reg_base)
+static bool stm32h7rs_wait_erase_bank(
+	target_s *const target, platform_timeout_s *const timeout, const uint32_t reg_base)
 {
 	while (target_mem32_read32(target, reg_base + FLASH_SR) & FLASH_SR_QW) {
 		if (target_check_error(target)) {
@@ -465,8 +459,7 @@ static bool stm32h7rs_crc_bank(target_s *target)
 		return false;
 
 	target_mem32_write32(target, reg_base + FLASH_CR, FLASH_CR_CRC_EN);
-	const uint32_t crc_ctrl = 
-		FLASH_CRCCR_CLEAN_CRC | FLASH_CRCCR_CRC_BURST_3 | FLASH_CRCCR_ALL_BANK;
+	const uint32_t crc_ctrl = FLASH_CRCCR_CLEAN_CRC | FLASH_CRCCR_CRC_BURST_3 | FLASH_CRCCR_ALL_BANK;
 	target_mem32_write32(target, reg_base + FLASH_CRCCR, crc_ctrl | FLASH_CRCCR_START_CRC);
 	uint32_t status = FLASH_SR_CRC_BUSY;
 	while (status & FLASH_SR_CRC_BUSY) {
