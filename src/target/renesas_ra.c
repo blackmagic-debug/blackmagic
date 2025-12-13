@@ -34,6 +34,12 @@
 
 /* Support for the Renesas RA family of microcontrollers (Arm Core) */
 
+/*
+ * This has the framework for support for the RA8 families, but due to changes
+ * in their memory map, it is *very* unlikely that this will work out of the box
+ * as it has not been tested against any RA8 families.
+ */
+
 #include "general.h"
 #include "target.h"
 #include "target_internal.h"
@@ -62,7 +68,7 @@
  *  |    |   |   |    \_____________________ Group number
  *  |    |   |   \__________________________ Series name
  *  |    |   \______________________________ Family (A: RA)
- *  |    \__________________________________ Flash memory
+ *  |    \__________________________________ Memory type (F: Flash, K: MRAM, J: MRAM + SiP Flash)
  *  \_______________________________________ Renesas microcontroller (always 'R7')
  *
  * Renesas Flash MCUs have an internal 16 byte read only register that stores
@@ -109,6 +115,7 @@ typedef enum {
 	PNR_SERIES_RA6T1 = PNR_SERIES('A', '6', 'T', '1'),
 	PNR_SERIES_RA6T2 = PNR_SERIES('A', '6', 'T', '2'),
 	PNR_SERIES_RA6T3 = PNR_SERIES('A', '6', 'T', '3'),
+	PNR_SERIES_RA6W1 = PNR_SERIES('A', '6', 'W', '1'),
 	// RA8
 	PNR_SERIES_RA8M1 = PNR_SERIES('A', '8', 'M', '1'),
 	PNR_SERIES_RA8M2 = PNR_SERIES('A', '8', 'M', '2'),
@@ -136,11 +143,13 @@ typedef enum {
 	PNR_MEMSIZE_1MB = 'F',
 	PNR_MEMSIZE_1_5MB = 'G',
 	PNR_MEMSIZE_2MB = 'H',
+	PNR_MEMSIZE_5MB = 'R', // 1MB MRAM + 4MB SiP Flash
+	PNR_MEMSIZE_9MB = 'S', // 1MB MRAM + 8MB SiP Flash
 } renesas_pnr_memsize_e;
 
 /* For future reference, if we want to add an info command
  *
- * Package type
+ * Package type (Could use updating)
  * FP: LQFP 100 pins 0.5 mm pitch
  * FN: LQFP 80 pins 0.5 mm pitch
  * FM: LQFP 64 pins 0.5 mm pitch
@@ -209,6 +218,7 @@ typedef enum {
  * ra6t1 - Flash Root Table
  * ra6t2 - Fixed location 2
  * ra6t3 - Fixed location 2
+ * ra6w1 - FIXME -- Lacking user manual as of 2025/12/12, so unknown.
  * ra8m1 - Fixed location 5 (!!)
  * ra8m2 - Fixed location 6 (!!)
  * ra8e1 - Fixed location 5
@@ -278,6 +288,14 @@ typedef enum {
 
 /* Renesas RA MCUs can have one of two kinds of flash memory, MF3/4 and RV40 */
 
+/* This is broken with the addition of the RA8 families -- by default, they have
+ * their code flash located at 0x12000000/0x02000000, which is above this point.
+ * Unfortunately, we can't just increase this to that address, as some
+ * other series locate their data flash at 0x08000000.
+ *
+ * FIXME -- This still needs addressing, but I also do not have any RA8 chips to
+ * test against.
+ */
 #define RENESAS_CF_END UINT32_C(0x00300000) /* End of Flash (maximum possible across families) */
 
 /* MF3/4 Flash */
@@ -609,6 +627,7 @@ static void renesas_add_flash(target_s *const target, const target_addr_t addr, 
 	 * ra6t1 - RV40
 	 * ra6t2 - RV40
 	 * ra6t3 - RV40
+     * ra6w1 - No internal flash, only O/QSPI
 	 * ra8m1 - RV40
 	 * ra8m2 - MRAM + OSPI Flash
 	 * ra8e1 - RV40
@@ -681,6 +700,10 @@ static void renesas_add_flash(target_s *const target, const target_addr_t addr, 
 		/* FIXME: MRAM/OSPI flashing not implemented currently */
 		return;
 
+	case PNR_SERIES_RA6W1:
+		/* No internal flash */
+		return;
+
 	default:
 		return;
 	}
@@ -702,6 +725,9 @@ bool renesas_ra_probe(target_s *const target)
 		/* mcus with PNR located at 0x01001c10
 		 * ra2l1 (part_id wanted)
 		 * ra2e2 (part_id wanted)
+		 * ra2e3 (part_id wanted)
+		 * ra2a2 (part_id wanted)
+		 * ra2t1 (part_id wanted)
 		 */
 		if (!renesas_pnr_read(target, RENESAS_FIXED1_PNR, pnr))
 			return false;
@@ -713,14 +739,59 @@ bool renesas_ra_probe(target_s *const target)
 		/* mcus with PNR located at 0x010080f0
 		 * ra4e1 (part_id wanted)
 		 * ra4e2 (part_id wanted)
+		 * ra4c1 (part_id wanted)
+		 * ra4t1 (part_id wanted)
+		 * ra4l1 (part_id wanted)
 		 * ra6m4 (part_id wanted)
 		 * ra6e1 (part_id wanted)
 		 * ra6e2 (part_id wanted)
 		 * ra6t2 (part_id wanted)
+		 * ra6t3 (part_id wanted)
 		 */
 		if (!renesas_pnr_read(target, RENESAS_FIXED2_PNR, pnr))
 			return false;
 		break;
+
+		// case:
+		/* mcus with PNR located at 0x01011080
+		 * ra0l1 (part_id wanted)
+		 * ra0e1 (part_id wanted)
+		 * ra0e2 (part_id wanted)
+		 */
+		// if(!renesas_pnr_read(target, RENESAS_FIXED3_PNR, pnr))
+		// 	return false;
+		// break;
+
+		// case:
+		/* mcus with PNR located at 0x01011120
+		 * ra2l2 (part_id wanted)
+		 */
+		// if(!renesas_pnr_read(target, RENESAS_FIXED4_PNR, pnr))
+		// 	return false;
+		// break;
+
+		// case:
+		/* mcus with PNR located at 0x130080f0
+		 * ra8m1 (part_id wanted)
+		 * ra8e1 (part_id wanted)
+		 * ra8e2 (part_id wanted)
+		 * ra8t1 (part_id wanted)
+		 * ra8d1 (part_id wanted)
+		 */
+		// if(!renesas_pnr_read(target, RENESAS_FIXED5_PNR, pnr))
+		// 	return false;
+		// break;
+
+		// case:
+		/* mcus with PNR located at 0x02c1ec38
+		 * ra8m2 (part_id wanted)
+		 * ra8t2 (part_id wanted)
+		 * ra8d2 (part_id wanted)
+		 * ra8p1 (part_id wanted)
+		 */
+		// if(!renesas_pnr_read(target, RENESAS_FIXED6_PNR, pnr))
+		// 	return false;
+		// break;
 
 	case RENESAS_PARTID_RA2A1:
 	case RENESAS_PARTID_RA4M1:
@@ -744,9 +815,9 @@ bool renesas_ra_probe(target_s *const target)
 		 * but experimentally there doesn't seem to be an issue with these in particular
 		 *
 		 * try the fixed address RENESAS_FIXED2_PNR first, as it should lead to less illegal/erroneous
-		 * memory accesses in case of failure, and is the most common case
+		 * memory accesses in case of failure, and is the most common case.
 		 *
-		 * TODO: Update with the new known locations
+		 * These are tried in order of most to least common.
 		 */
 
 		if (renesas_pnr_read(target, RENESAS_FIXED2_PNR, pnr)) {
@@ -768,6 +839,29 @@ bool renesas_ra_probe(target_s *const target)
 			break;
 		}
 
+		if (renesas_pnr_read(target, RENESAS_FIXED5_PNR, pnr)) {
+			DEBUG_WARN("Found renesas chip (%.*s) with %s and unsupported Part ID 0x%x, please report it\n",
+				(int)sizeof(pnr), pnr, "pnr location RENESAS_FIXED5_PNR", target->part_id);
+			break;
+		}
+		if (renesas_pnr_read(target, RENESAS_FIXED6_PNR, pnr)) {
+			DEBUG_WARN("Found renesas chip (%.*s) with %s and unsupported Part ID 0x%x, please report it\n",
+				(int)sizeof(pnr), pnr, "pnr location RENESAS_FIXED6_PNR", target->part_id);
+			break;
+		}
+
+		if (renesas_pnr_read(target, RENESAS_FIXED3_PNR, pnr)) {
+			DEBUG_WARN("Found renesas chip (%.*s) with %s and unsupported Part ID 0x%x, please report it\n",
+				(int)sizeof(pnr), pnr, "pnr location RENESAS_FIXED3_PNR", target->part_id);
+			break;
+		}
+
+		if (renesas_pnr_read(target, RENESAS_FIXED4_PNR, pnr)) {
+			DEBUG_WARN("Found renesas chip (%.*s) with %s and unsupported Part ID 0x%x, please report it\n",
+				(int)sizeof(pnr), pnr, "pnr location RENESAS_FIXED4_PNR", target->part_id);
+			break;
+		}
+
 		return false;
 	}
 
@@ -784,8 +878,22 @@ bool renesas_ra_probe(target_s *const target)
 	target->target_storage = priv;
 	target->driver = (char *)priv->pnr;
 
-	// TODO: Update with more models
 	switch (priv->series) {
+	case PNR_SERIES_RA0L1:
+		renesas_add_flash(target, 0x40100000, 1U * 1024U); /* Data flash memory 1 KB 0x40100000 */
+		target_add_ram32(target, 0x20004000, 16U * 1024U); /* SRAM 16 KB 0x20004000 */
+		break;
+
+	case PNR_SERIES_RA0E2:
+		renesas_add_flash(target, 0x40100000, 2U * 1024U); /* Data flash memory 2 KB 0x40100000 */
+		target_add_ram32(target, 0x20004000, 16U * 1024U); /* SRAM 16 KB 0x20004000 */
+		break;
+
+	case PNR_SERIES_RA0E1:
+		renesas_add_flash(target, 0x40100000, 1U * 1024U); /* Data flash memory 1 KB 0x40100000 */
+		target_add_ram32(target, 0x20004000, 12U * 1024U); /* SRAM 12 KB 0x20004000 */
+		break;
+
 	case PNR_SERIES_RA2L1:
 	case PNR_SERIES_RA2A1:
 	case PNR_SERIES_RA4M1:
@@ -793,14 +901,26 @@ bool renesas_ra_probe(target_s *const target)
 		target_add_ram32(target, 0x20000000, 32U * 1024U); /* SRAM 32 KB 0x20000000 */
 		break;
 
+	case PNR_SERIES_RA2A2:
+		renesas_add_flash(target, 0x40100000, 8U * 1024U); /* Data flash memory 8 KB 0x40100000 */
+		target_add_ram32(target, 0x20000000, 48U * 1024U); /* SRAM 48 KB 0x20000000 */
+		break;
+
 	case PNR_SERIES_RA2E1:
+	case PNR_SERIES_RA2L2:
 		renesas_add_flash(target, 0x40100000, 4U * 1024U); /* Data flash memory 4 KB 0x40100000 */
 		target_add_ram32(target, 0x20004000, 16U * 1024U); /* SRAM 16 KB 0x20004000 */
 		break;
 
 	case PNR_SERIES_RA2E2:
+	case PNR_SERIES_RA2T1:
 		renesas_add_flash(target, 0x40100000, 2U * 1024U); /* Data flash memory 2 KB 0x40100000 */
 		target_add_ram32(target, 0x20004000, 8U * 1024U);  /* SRAM 8 KB 0x20004000 */
+		break;
+
+	case PNR_SERIES_RA2E3:
+		renesas_add_flash(target, 0x40100000, 2U * 1024U); /* Data flash memory 2 KB 0x40100000 */
+		target_add_ram32(target, 0x20004000, 16U * 1024U); /* SRAM 16 KB 0x20004000 */
 		break;
 
 	case PNR_SERIES_RA4M2:
@@ -821,6 +941,23 @@ bool renesas_ra_probe(target_s *const target)
 	case PNR_SERIES_RA4W1:
 		renesas_add_flash(target, 0x40100000, 8U * 1024U); /* Data flash memory 8 KB 0x40100000 */
 		target_add_ram32(target, 0x20000000, 96U * 1024U); /* SRAM 96 KB 0x20000000 */
+		break;
+
+	case PNR_SERIES_RA4C1:
+		renesas_add_flash(target, 0x08000000, 8U * 1024U); /* Data flash memory 8 KB 0x08000000 */
+		target_add_ram32(target, 0x20000000, 96U * 1024U); /* SRAM 96 KB 0x20000000 */
+		/* Potential for external mem-mapped QSPI at 0x60000000--0x68000000 */
+		break;
+
+	case PNR_SERIES_RA4L1:
+		renesas_add_flash(target, 0x08000000, 8U * 1024U); /* Data flash memory 8 KB 0x08000000 */
+		target_add_ram32(target, 0x20000000, 64U * 1024U); /* SRAM 64 KB 0x20000000 */
+		/* Potential for external mem-mapped QSPI at 0x60000000--0x68000000 */
+		break;
+
+	case PNR_SERIES_RA4T1:
+		renesas_add_flash(target, 0x08000000, 4U * 1024U); /* Data flash memory 4 KB 0x08000000 */
+		target_add_ram32(target, 0x20000000, 40U * 1024U); /* SRAM 40 KB 0x20000000 */
 		break;
 
 	case PNR_SERIES_RA6M1:
@@ -870,6 +1007,101 @@ bool renesas_ra_probe(target_s *const target)
 		target_add_ram32(target, 0x28000000, 1024U);        /* Standby SRAM 1 KB 0x28000000 */
 		break;
 
+	case PNR_SERIES_RA6T3:
+		renesas_add_flash(target, 0x08000000, 4U * 1024U); /* Data flash memory 4 KB 0x08000000 */
+		target_add_ram32(target, 0x20000000, 40U * 1024U); /* SRAM 40 KB 0x20000000 */
+		break;
+
+	case PNR_SERIES_RA6W1:
+		/* TODO: Handle external QSPI-mapped flash! */
+		/* FIXME: Update when the User Manual is released... */
+		target_add_ram32(target, 0x20000000, 256U * 1024U); /* SRAM0 256 KB 0x20000000 */
+		target_add_ram32(target, 0x20040000, 256U * 1024U); /* SRAM1 256 KB 0x20000000 */
+		target_add_ram32(target, 0x20080000, 128U * 1024U); /* SRAM2 128 KB 0x20000000 */
+		target_add_ram32(target, 0x28600000, 64U * 1024U);  /* Retention RAM 64 KB 0x28600000 */
+		break;
+
+	/* All the RA8 families have TrustZone and thus have their main flash memory
+	 * located at a different location from all the other families. That's the
+	 * reason for duplicating the add commands/etc for these parts
+	 */
+	case PNR_SERIES_RA8M1:
+		/* These are the non-secure aliases */
+		renesas_add_flash(target, 0x37000000, 12U * 1024U); /* Data flash memory 12 KB 0x37000000 */
+		target_add_ram32(target, 0x32000000, 384U * 1024U); /* SRAM0 384 KB 0x32000000 */
+		target_add_ram32(target, 0x32060000, 512U * 1024U); /* SRAM1 512 KB 0x32060000 */
+		target_add_ram32(target, 0x30000000, 64U * 1024U);  /* DTCM 64 KB 0x30000000 */
+		target_add_ram32(target, 0x10000000, 64U * 1024U);  /* ITCM 64 KB 0x10000000 */
+		target_add_ram32(target, 0x36000000, 1024U);        /* Standby SRAM 1 KB 0x36000000 */
+
+		renesas_add_flash(target, 0x12000000, renesas_flash_size(pnr)); /* Code flash memory 0x12000000 */
+		target_add_commands(target, renesas_cmd_list, target->driver);
+		return true;
+
+	case PNR_SERIES_RA8E1:
+		/* These are the non-secure aliases */
+		renesas_add_flash(target, 0x37000000, 12U * 1024U); /* Data flash memory 12 KB 0x37000000 */
+		target_add_ram32(target, 0x32040000, 128U * 1024U); /* SRAM0 128 KB 0x32040000 */
+		target_add_ram32(target, 0x32060000, 512U * 1024U); /* SRAM1 512 KB 0x32060000 */
+		target_add_ram32(target, 0x30000000, 16U * 1024U);  /* DTCM 16 KB 0x30000000 */
+		target_add_ram32(target, 0x10000000, 16U * 1024U);  /* ITCM 16 KB 0x10000000 */
+		target_add_ram32(target, 0x36000000, 1024U);        /* Standby SRAM 1 KB 0x36000000 */
+
+		renesas_add_flash(target, 0x12000000, renesas_flash_size(pnr)); /* Code flash memory 0x12000000 */
+		target_add_commands(target, renesas_cmd_list, target->driver);
+		return true;
+
+	case PNR_SERIES_RA8E2:
+		/* These are the non-secure aliases */
+		renesas_add_flash(target, 0x37000000, 12U * 1024U); /* Data flash memory 12 KB 0x37000000 */
+		target_add_ram32(target, 0x32060000, 512U * 1024U); /* SRAM1 512 KB 0x32060000 */
+		target_add_ram32(target, 0x30000000, 16U * 1024U);  /* DTCM 16 KB 0x30000000 */
+		target_add_ram32(target, 0x10000000, 16U * 1024U);  /* ITCM 16 KB 0x10000000 */
+		target_add_ram32(target, 0x36000000, 1024U);        /* Standby SRAM 1 KB 0x36000000 */
+
+		renesas_add_flash(target, 0x12000000, renesas_flash_size(pnr)); /* Code flash memory 0x12000000 */
+		target_add_commands(target, renesas_cmd_list, target->driver);
+		return true;
+
+	case PNR_SERIES_RA8T1:
+	case PNR_SERIES_RA8D1:
+		/* These are the non-secure aliases */
+		renesas_add_flash(target, 0x37000000, 12U * 1024U); /* Data flash memory 12 KB 0x37000000 */
+		target_add_ram32(target, 0x32000000, 384U * 1024U); /* SRAM0 384 KB 0x32000000 */
+		target_add_ram32(target, 0x32060000, 512U * 1024U); /* SRAM1 512 KB 0x32060000 */
+		target_add_ram32(target, 0x30000000, 64U * 1024U);  /* DTCM 64 KB 0x30000000 */
+		target_add_ram32(target, 0x10000000, 64U * 1024U);  /* ITCM 64 KB 0x10000000 */
+		target_add_ram32(target, 0x36000000, 1024U);        /* Standby SRAM 1 KB 0x36000000 */
+
+		renesas_add_flash(target, 0x12000000, renesas_flash_size(pnr)); /* Code flash memory 0x12000000 */
+		target_add_commands(target, renesas_cmd_list, target->driver);
+		return true;
+
+	/* These are the MRAM/SiP models */
+	case PNR_SERIES_RA8M2:
+	case PNR_SERIES_RA8T2:
+	case PNR_SERIES_RA8D2:
+	case PNR_SERIES_RA8P1:
+		/* These are the non-secure aliases */
+		/* TODO: Handle the multi-core TCM and the extra ECC regions*/
+		target_add_ram32(target, 0x32000000, 512U * 1024U); /* SRAM0 512 KB 0x32000000 */
+		target_add_ram32(target, 0x32080000, 512U * 1024U); /* SRAM1 512 KB 0x32080000 */
+		target_add_ram32(target, 0x32100000, 512U * 1024U); /* SRAM2 512 KB 0x32100000 */
+		target_add_ram32(target, 0x32180000, 128U * 1024U); /* SRAM3 128 KB 0x32180000 */
+
+		uint32_t flash = renesas_flash_size(pnr);
+
+		// Check for the SiP variant with SPI Flash
+		if (flash > (2048U * 1024U)) {
+			renesas_add_flash(target, 0x12000000, 1024U * 1024U);         /* Code MRAM 0x12000000 */
+			renesas_add_flash(target, 0x18000000, flash - 1024U * 1024U); /* External SPI 0x18000000 */
+		} else {
+			renesas_add_flash(target, 0x12000000, flash); /* Code MRAM 0x12000000 */
+		}
+
+		target_add_commands(target, renesas_cmd_list, target->driver);
+		return true;
+
 	default:
 		return false;
 	}
@@ -905,7 +1137,7 @@ static bool renesas_pnr_read(target_s *const target, const target_addr_t base, u
 		pnrr[i] = target_mem32_read32(target, base + i * 4U);
 
 	/* Write bytewise into provided container */
-	if (base == RENESAS_FIXED1_PNR) {
+	if (base == RENESAS_FIXED1_PNR || base == RENESAS_FIXED3_PNR || base == RENESAS_FIXED4_PNR) {
 		/* Renesas... look what you made me do...  */
 		/* reverse order, see 'Part numbering scheme' note for context */
 		for (size_t i = 0U; i < 13U; i++)
@@ -954,6 +1186,10 @@ static uint32_t renesas_flash_size(const uint8_t *const pnr)
 		return UINT32_C(1536 * 1024);
 	case PNR_MEMSIZE_2MB:
 		return UINT32_C(2048 * 1024);
+	case PNR_MEMSIZE_5MB:
+		return UINT32_C(5120 * 1024);
+	case PNR_MEMSIZE_9MB:
+		return UINT32_C(9216 * 1024);
 	default:
 		return 0;
 	}
