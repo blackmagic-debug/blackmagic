@@ -61,5 +61,6 @@ typedef struct rtt_channel {
 extern rtt_channel_s rtt_channel[MAX_RTT_CHAN];
 
 void poll_rtt(target_s *cur_target);
+void rtt_load_recv_buf(const char *data_buf, size_t len);
 
 #endif /* INCLUDE_RTT_H */
