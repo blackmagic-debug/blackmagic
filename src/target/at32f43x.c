@@ -299,6 +299,9 @@ static bool at32f43_detect(target_s *target, const uint16_t part_id)
 	target->attach = at32f43_attach;
 	target->detach = at32f43_detach;
 
+	/* On AT32F435/F437 SoC, Cortex-M4F allows SRAM access without halting */
+	target->target_options |= TOPT_NON_HALTING_MEM_IO;
+
 	at32f43_configure_dbgmcu(target);
 	return true;
 }
