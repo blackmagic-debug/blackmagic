@@ -686,6 +686,8 @@ static bool at32f425_detect(target_s *target, const uint16_t part_id)
 #endif
 	// All parts have 20 KiB SRAM
 	target_add_ram32(target, 0x20000000, 20U * 1024U);
+	/* On AT32F425 SoC, Cortex-M4 allows SRAM access without halting */
+	target->target_options |= TOPT_NON_HALTING_MEM_IO;
 	target->driver = "AT32F425";
 	target->part_id = part_id;
 	target->target_options |= STM32F1_TOPT_32BIT_WRITES;
