@@ -118,6 +118,8 @@ bool nrf54l_probe(target_s *target)
 	case NRF54L_PARTNO:
 		target->driver = "nRF54L";
 		target->target_options |= TOPT_INHIBIT_NRST;
+		/* On nRF54L SoC, Cortex-M33 allows SRAM access without halting */
+		target->target_options |= TOPT_NON_HALTING_MEM_IO;
 		break;
 	default:
 		return false;
