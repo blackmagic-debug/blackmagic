@@ -35,6 +35,7 @@
 #include "platform.h"
 #include "usb.h"
 #include "rcc_clocking.h"
+#include "aux_serial.h"
 
 #include <libopencm3/cm3/vector.h>
 #include <libopencm3/cm3/scb.h>
@@ -89,12 +90,25 @@ void platform_init(void)
 	gpio_mode_setup(TDI_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, TDI_PIN);
 	gpio_mode_setup(TDO_PORT, GPIO_MODE_INPUT, GPIO_PUPD_NONE, TDO_PIN);
 
+	gpio_set_af(AUX_UART1_PORT, GPIO_AF7, AUX_UART1_TX_PIN | AUX_UART1_RX_PIN);
+	gpio_set_output_options(AUX_UART1_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_100MHZ, AUX_UART1_TX_PIN | AUX_UART1_RX_PIN);
+	gpio_mode_setup(AUX_UART1_PORT, GPIO_MODE_AF, GPIO_PUPD_NONE, AUX_UART1_TX_PIN);
+	gpio_mode_setup(AUX_UART1_PORT, GPIO_MODE_AF, GPIO_PUPD_PULLUP, AUX_UART1_RX_PIN);
+
+	gpio_set_af(AUX_UART2_PORT, GPIO_AF7, AUX_UART2_TX_PIN | AUX_UART2_RX_PIN);
+	gpio_set_output_options(AUX_UART2_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_100MHZ, AUX_UART2_TX_PIN | AUX_UART2_RX_PIN);
+	gpio_mode_setup(AUX_UART2_PORT, GPIO_MODE_AF, GPIO_PUPD_NONE, AUX_UART2_TX_PIN);
+	gpio_mode_setup(AUX_UART2_PORT, GPIO_MODE_AF, GPIO_PUPD_PULLUP, AUX_UART2_RX_PIN);
+
 	/* Bring up the ADC */
 	adc_init();
 
 	/* Bring up timing and USB */
 	platform_timing_init();
 	blackmagic_usb_init();
+
+	/* Bring up the aux serial interface */
+	aux_serial_init();
 }
 
 static void adc_init(void)
