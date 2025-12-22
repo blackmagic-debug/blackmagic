@@ -46,6 +46,9 @@
 #include <libopencm3/stm32/adc.h>
 #include <libopencm3/stm32/spi.h>
 #include <libopencm3/cm3/systick.h>
+#include <libopencm3/cm3/assert.h>
+
+#define BOOTLOADER_ADDRESS 0x08000000U
 
 static void adc_init(void);
 
@@ -216,6 +219,18 @@ void platform_request_boot(void)
 	/* Drive boot request pin */
 	gpio_mode_setup(BNT_BOOT_REQ_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, BTN_BOOT_REQ_PIN);
 	gpio_clear(BNT_BOOT_REQ_PORT, BTN_BOOT_REQ_PIN);
+
+	/* Reset core to enter bootloader */
+	/* Reload PC and SP with their POR values from the start of Flash */
+	const uint32_t stack_pointer = *((uint32_t *)BOOTLOADER_ADDRESS);
+	/* clang-format off */
+	__asm__(
+		"msr msp, %1\n"     /* Load the system stack register with the new stack pointer */
+		"ldr pc, [%0, 4]\n" /* Jump to the bootloader */
+		: : "l"(BOOTLOADER_ADDRESS), "l"(stack_pointer) : "r0"
+	);
+	/* clang-format on */
+	cm3_assert_not_reached();
 }
 
 void platform_target_clk_output_enable(bool enable)
