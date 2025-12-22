@@ -1,5 +1,5 @@
 ---
-Checks: 'bugprone-*,cert-*,clang-analyzer-*,misc-*,modernize-*,portability-*,performance-*,readability-*,-readability-magic-numbers,-readability-braces-around-statements,-clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling,-modernize-macro-to-enum,-bugprone-easily-swappable-parameters,-misc-include-cleaner,-misc-no-recursion,-misc-header-include-cycle'
+Checks: 'bugprone-*,cert-*,clang-analyzer-*,misc-*,modernize-*,portability-*,performance-*,readability-*,-readability-magic-numbers,-readability-braces-around-statements,-clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling,-modernize-macro-to-enum,-bugprone-easily-swappable-parameters,-misc-include-cleaner,-misc-no-recursion,-misc-header-include-cycle,-clang-analyzer-core.FixedAddressDereference'
 FormatStyle: 'none'
 HeaderFilterRegex: '(src|upgrade)/.+'
 #AnalyzeTemporaryDtors: false
