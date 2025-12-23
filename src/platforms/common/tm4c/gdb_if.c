@@ -57,7 +57,7 @@ void gdb_if_flush(const bool force)
 
 	/* We need to send an empty packet for some hosts to accept this as a complete transfer. */
 	if (force && count_in == CDCACM_PACKET_SIZE) {
-		/* 
+		/*
 		 * libopencm3 needs a change for us to confirm when that transfer is complete,
 		 * so we just send a packet containing a null character for now.
 		 */
@@ -69,7 +69,7 @@ void gdb_if_flush(const bool force)
 	count_in = 0U;
 }
 
-void gdb_usb_out_cb(usbd_device *dev, uint8_t ep)
+void gdb_usb_receive_callback(usbd_device *dev, uint8_t ep)
 {
 	(void)ep;
 	static char buf[CDCACM_PACKET_SIZE];
