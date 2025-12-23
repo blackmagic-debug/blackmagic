@@ -77,7 +77,7 @@ void gdb_usb_putchar(const char ch, const bool flush)
 		gdb_usb_flush(flush);
 }
 
-void gdb_usb_out_cb(usbd_device *dev, uint8_t ep)
+void gdb_usb_receive_callback(usbd_device *dev, uint8_t ep)
 {
 	(void)ep;
 	usbd_ep_nak_set(dev, CDCACM_GDB_ENDPOINT, 1);

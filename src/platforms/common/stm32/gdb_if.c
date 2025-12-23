@@ -77,7 +77,7 @@ void gdb_if_flush(const bool force)
 }
 
 #if defined(STM32F4) || defined(STM32F7) || defined(STM32U5)
-void gdb_usb_out_cb(usbd_device *dev, uint8_t ep)
+void gdb_usb_receive_callback(usbd_device *dev, uint8_t ep)
 {
 	(void)ep;
 	usbd_ep_nak_set(dev, CDCACM_GDB_ENDPOINT, 1);

@@ -61,6 +61,12 @@
 #include <libopencm3/stm32/dma.h>
 #endif
 
+#ifdef USB_HS
+#define DEBUG_SERIAL_RECEIVE_SIZE CDCACM_PACKET_SIZE
+#else
+#define DEBUG_SERIAL_RECEIVE_SIZE (CDCACM_PACKET_SIZE / 2U)
+#endif
+
 static bool gdb_serial_dtr = true;
 
 static void usb_serial_set_state(usbd_device *dev, uint16_t iface, uint8_t ep);
@@ -159,46 +165,43 @@ void usb_serial_set_state(usbd_device *const dev, const uint16_t iface, const ui
 	uint8_t buf[10];
 	usb_cdc_notification_s *notif = (void *)buf;
 	/* We echo signals back to host as notification */
-	notif->bmRequestType = 0xa1;
+	notif->bmRequestType = 0xa1U;
 	notif->bNotification = USB_CDC_NOTIFY_SERIAL_STATE;
-	notif->wValue = 0;
+	notif->wValue = 0U;
 	notif->wIndex = iface;
-	notif->wLength = 2;
+	notif->wLength = 2U;
 	buf[8] = 3U;
 	buf[9] = 0U;
 	usbd_ep_write_packet(dev, ep, buf, sizeof(buf));
 }
 
-void usb_serial_set_config(usbd_device *dev, uint16_t value)
+void usb_serial_set_config(usbd_device *const dev, const uint16_t value)
 {
 	usb_config = value;
 
 	/* GDB interface */
 #if defined(STM32F4) || defined(LM4F) || defined(STM32F7) || defined(STM32U5)
-	usbd_ep_setup(dev, CDCACM_GDB_ENDPOINT, USB_ENDPOINT_ATTR_BULK, CDCACM_PACKET_SIZE, gdb_usb_out_cb);
+	usbd_ep_setup(dev, CDCACM_GDB_ENDPOINT | USB_REQ_TYPE_OUT, USB_ENDPOINT_ATTR_BULK, CDCACM_PACKET_SIZE,
+		gdb_usb_receive_callback);
 #else
-	usbd_ep_setup(dev, CDCACM_GDB_ENDPOINT, USB_ENDPOINT_ATTR_BULK, CDCACM_PACKET_SIZE, NULL);
+	usbd_ep_setup(dev, CDCACM_GDB_ENDPOINT | USB_REQ_TYPE_OUT, USB_ENDPOINT_ATTR_BULK, CDCACM_PACKET_SIZE, NULL);
 #endif
 	usbd_ep_setup(dev, CDCACM_GDB_ENDPOINT | USB_REQ_TYPE_IN, USB_ENDPOINT_ATTR_BULK, CDCACM_PACKET_SIZE, NULL);
 #if defined(STM32F4) && CDCACM_GDB_NOTIF_ENDPOINT >= 4
 	/* skip setup for unimplemented EP */
 #else
-	usbd_ep_setup(dev, CDCACM_GDB_NOTIF_ENDPOINT | USB_REQ_TYPE_IN, USB_ENDPOINT_ATTR_INTERRUPT, 16, NULL);
+	usbd_ep_setup(dev, CDCACM_GDB_NOTIF_ENDPOINT | USB_REQ_TYPE_IN, USB_ENDPOINT_ATTR_INTERRUPT, 16U, NULL);
 #endif
 
 	/* Serial interface */
-#if defined(USB_HS)
-	const uint16_t uart_epout_size = CDCACM_PACKET_SIZE;
-#else
-	const uint16_t uart_epout_size = CDCACM_PACKET_SIZE / 2U;
-#endif
-	usbd_ep_setup(dev, CDCACM_UART_ENDPOINT, USB_ENDPOINT_ATTR_BULK, uart_epout_size, debug_serial_receive_callback);
+	usbd_ep_setup(dev, CDCACM_UART_ENDPOINT | USB_REQ_TYPE_OUT, USB_ENDPOINT_ATTR_BULK, DEBUG_SERIAL_RECEIVE_SIZE,
+		debug_serial_receive_callback);
 	usbd_ep_setup(dev, CDCACM_UART_ENDPOINT | USB_REQ_TYPE_IN, USB_ENDPOINT_ATTR_BULK, CDCACM_PACKET_SIZE,
 		debug_serial_send_callback);
 #if defined(STM32F4) && CDCACM_UART_NOTIF_ENDPOINT >= 4
 	/* skip setup for unimplemented EP */
 #else
-	usbd_ep_setup(dev, CDCACM_UART_NOTIF_ENDPOINT | USB_REQ_TYPE_IN, USB_ENDPOINT_ATTR_INTERRUPT, 16, NULL);
+	usbd_ep_setup(dev, CDCACM_UART_NOTIF_ENDPOINT | USB_REQ_TYPE_IN, USB_ENDPOINT_ATTR_INTERRUPT, 16U, NULL);
 #endif
 
 #ifdef PLATFORM_HAS_TRACESWO
