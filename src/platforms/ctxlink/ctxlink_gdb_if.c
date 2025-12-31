@@ -34,13 +34,16 @@
 #include "gdb_if.h"
 #include "WiFi_Server.h"
 
+#include <stdatomic.h>
+
 static uint32_t gdb_receive_amount_available;
 static uint32_t gdb_send_amount_queued;
 static uint32_t gdb_receive_index;
 static char gdb_receive_buffer[CDCACM_PACKET_SIZE];
 static char gdb_send_buffer[CDCACM_PACKET_SIZE];
-static volatile uint32_t count_new;
-static char double_buffer_out[CDCACM_PACKET_SIZE];
+/* Variables used to get data out from the USB controller in interrupt context */
+static _Atomic uint32_t irq_count_received = ATOMIC_VAR_INIT(0U);
+static char irq_buffer_received[CDCACM_PACKET_SIZE];
 
 void gdb_usb_flush(const bool force)
 {
@@ -79,29 +82,27 @@ void gdb_usb_putchar(const char ch, const bool flush)
 
 void gdb_usb_receive_callback(usbd_device *dev, uint8_t ep)
 {
-	(void)ep;
-	usbd_ep_nak_set(dev, CDCACM_GDB_ENDPOINT, 1);
-	count_new = usbd_ep_read_packet(dev, CDCACM_GDB_ENDPOINT, double_buffer_out, CDCACM_PACKET_SIZE);
-	if (!count_new)
-		usbd_ep_nak_set(dev, CDCACM_GDB_ENDPOINT, 0);
+	/* We're here because of new data, so read it out the controller into our intermedate buffer */
+	irq_count_received = usbd_ep_read_packet(dev, ep, irq_buffer_received, CDCACM_PACKET_SIZE);
+	/* Now if that worked, mark the endpoint for NAK for the time being (undone in gdb_if_update_buf()) */
+	if (irq_count_received)
+		usbd_ep_nak_set(dev, CDCACM_GDB_ENDPOINT, 1);
 }
 
 static void gdb_if_update_buf(void)
 {
 	while (usb_get_config() != 1)
 		continue;
-	cm_disable_interrupts();
-	__asm__ volatile("isb");
-	if (count_new) {
-		memcpy(gdb_receive_buffer, double_buffer_out, count_new);
-		gdb_receive_amount_available = count_new;
-		count_new = 0;
+	/* Grab the amount of data presently available per the IRQ, and reset that value to 0 atomically */
+	const uint32_t bytes_available = atomic_exchange(&irq_count_received, 0U);
+	/* If there's data waiting for us, move it into the main buffer and prep the endpoint for more */
+	if (bytes_available) {
+		memcpy(gdb_receive_buffer, irq_buffer_received, bytes_available);
+		/* Save the amount available and reset the read index */
+		gdb_receive_amount_available = bytes_available;
 		gdb_receive_index = 0;
 		usbd_ep_nak_set(usbdev, CDCACM_GDB_ENDPOINT, 0);
-	}
-	cm_enable_interrupts();
-	__asm__ volatile("isb");
-	if (!gdb_receive_amount_available)
+	} else
 		__WFI();
 }
 
@@ -173,10 +174,9 @@ char gdb_if_getchar(void)
 	platform_tasks();
 	if (is_gdb_client_connected())
 		return wifi_get_next();
-	else if (usb_get_config() == 1)
+	if (usb_get_config() == 1)
 		return gdb_usb_getchar();
-	else
-		return 0xff;
+	return (char)0xff;
 }
 
 char gdb_if_getchar_to(uint32_t timeout)
