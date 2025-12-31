@@ -31,14 +31,17 @@
 #include "usb_serial.h"
 #include "gdb_if.h"
 
+#include <stdatomic.h>
+
 static uint32_t count_out;
 static uint32_t count_in;
 static uint32_t out_ptr;
 static char buffer_out[CDCACM_PACKET_SIZE];
 static char buffer_in[CDCACM_PACKET_SIZE];
 #if defined(STM32F4) || defined(STM32F7) || defined(STM32U5)
-static volatile uint32_t count_new;
-static char double_buffer_out[CDCACM_PACKET_SIZE];
+/* Variables used to get data out from the USB controller in interrupt context */
+static _Atomic uint32_t irq_count_received = ATOMIC_VAR_INIT(0U);
+static char irq_buffer_received[CDCACM_PACKET_SIZE];
 #endif
 
 void gdb_if_putchar(const char c, const bool flush)
@@ -79,11 +82,11 @@ void gdb_if_flush(const bool force)
 #if defined(STM32F4) || defined(STM32F7) || defined(STM32U5)
 void gdb_usb_receive_callback(usbd_device *dev, uint8_t ep)
 {
-	(void)ep;
-	usbd_ep_nak_set(dev, CDCACM_GDB_ENDPOINT, 1);
-	count_new = usbd_ep_read_packet(dev, CDCACM_GDB_ENDPOINT, double_buffer_out, CDCACM_PACKET_SIZE);
-	if (!count_new)
-		usbd_ep_nak_set(dev, CDCACM_GDB_ENDPOINT, 0);
+	/* We're here because of new data, so read it out the controller into our intermedate buffer */
+	irq_count_received = usbd_ep_read_packet(dev, ep, irq_buffer_received, CDCACM_PACKET_SIZE);
+	/* Now if that worked, mark the endpoint for NAK for the time being (undone in gdb_if_update_buf()) */
+	if (irq_count_received)
+		usbd_ep_nak_set(dev, CDCACM_GDB_ENDPOINT, 1);
 }
 #endif
 
@@ -94,26 +97,24 @@ static void gdb_if_update_buf(void)
 #if !defined(STM32F4) && !defined(STM32F7) && !defined(STM32U5)
 	count_out = usbd_ep_read_packet(usbdev, CDCACM_GDB_ENDPOINT, buffer_out, CDCACM_PACKET_SIZE);
 	out_ptr = 0;
+	/* If this didn't dequeue any data, wait for more so the next loop around is more successfull */
+	if (!count_out)
+		__WFI();
 #else
-	cm_disable_interrupts();
-	__asm__ volatile("isb");
-	/* count_new will become 0 by the time of decision to WFI, so save a copy at entry */
-	const uint32_t count_new_saved = count_new;
-	if (count_new) {
-		memcpy(buffer_out, double_buffer_out, count_new);
-		count_out = count_new;
-		count_new = 0;
+	/* Grab the amount of data presently available per the IRQ, and reset that value to 0 atomically */
+	const uint32_t bytes_available = atomic_exchange(&irq_count_received, 0U);
+	/* If there's data waiting for us, move it into the main buffer and prep the endpoint for more */
+	if (bytes_available) {
+		memcpy(buffer_out, irq_buffer_received, bytes_available);
+		/* Save the amount available and reset the read index */
+		count_out = bytes_available;
 		out_ptr = 0;
 		usbd_ep_nak_set(usbdev, CDCACM_GDB_ENDPOINT, 0);
 	}
-	cm_enable_interrupts();
-	__asm__ volatile("isb");
-	/* Wait for Host OUT packets (count_new is 0 by now, so use the copy saved at entry) */
-	if (!count_new_saved)
+	/* If this didn't dequeue any data, wait for more so the next loop around is more successfull */
+	else
 		__WFI();
 #endif
-	if (!count_out)
-		__WFI();
 }
 
 char gdb_if_getchar(void)
