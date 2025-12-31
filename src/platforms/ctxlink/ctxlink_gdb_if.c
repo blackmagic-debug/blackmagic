@@ -34,30 +34,30 @@
 #include "gdb_if.h"
 #include "WiFi_Server.h"
 
-static uint32_t count_out;
-static uint32_t count_in;
-static uint32_t out_ptr;
-static char buffer_out[CDCACM_PACKET_SIZE];
-static char buffer_in[CDCACM_PACKET_SIZE];
+static uint32_t gdb_receive_amount_available;
+static uint32_t gdb_send_amount_queued;
+static uint32_t gdb_receive_index;
+static char gdb_receive_buffer[CDCACM_PACKET_SIZE];
+static char gdb_send_buffer[CDCACM_PACKET_SIZE];
 static volatile uint32_t count_new;
 static char double_buffer_out[CDCACM_PACKET_SIZE];
 
 void gdb_usb_flush(const bool force)
 {
 	/* Flush only if there is data to flush */
-	if (count_in == 0U)
+	if (gdb_send_amount_queued == 0U)
 		return;
 
 	/* Refuse to send if USB isn't configured, and don't bother if nobody's listening */
 	if (usb_get_config() != 1U || !gdb_serial_get_dtr()) {
-		count_in = 0U;
+		gdb_send_amount_queued = 0U;
 		return;
 	}
-	while (usbd_ep_write_packet(usbdev, CDCACM_GDB_ENDPOINT, buffer_in, count_in) <= 0U)
+	while (usbd_ep_write_packet(usbdev, CDCACM_GDB_ENDPOINT, gdb_send_buffer, gdb_send_amount_queued) <= 0U)
 		continue;
 
 	/* We need to send an empty packet for some hosts to accept this as a complete transfer. */
-	if (force && count_in == CDCACM_PACKET_SIZE) {
+	if (force && gdb_send_amount_queued == CDCACM_PACKET_SIZE) {
 		/*
 		 * libopencm3 needs a change for us to confirm when that transfer is complete,
 		 * so we just send a packet containing a null character for now.
@@ -67,13 +67,13 @@ void gdb_usb_flush(const bool force)
 	}
 
 	/* Reset the buffer */
-	count_in = 0U;
+	gdb_send_amount_queued = 0U;
 }
 
 void gdb_usb_putchar(const char ch, const bool flush)
 {
-	buffer_in[count_in++] = ch;
-	if (flush || count_in == CDCACM_PACKET_SIZE)
+	gdb_send_buffer[gdb_send_amount_queued++] = ch;
+	if (flush || gdb_send_amount_queued == CDCACM_PACKET_SIZE)
 		gdb_usb_flush(flush);
 }
 
@@ -93,21 +93,21 @@ static void gdb_if_update_buf(void)
 	cm_disable_interrupts();
 	__asm__ volatile("isb");
 	if (count_new) {
-		memcpy(buffer_out, double_buffer_out, count_new);
-		count_out = count_new;
+		memcpy(gdb_receive_buffer, double_buffer_out, count_new);
+		gdb_receive_amount_available = count_new;
 		count_new = 0;
-		out_ptr = 0;
+		gdb_receive_index = 0;
 		usbd_ep_nak_set(usbdev, CDCACM_GDB_ENDPOINT, 0);
 	}
 	cm_enable_interrupts();
 	__asm__ volatile("isb");
-	if (!count_out)
+	if (!gdb_receive_amount_available)
 		__WFI();
 }
 
 char gdb_usb_getchar(void)
 {
-	while (out_ptr >= count_out) {
+	while (gdb_receive_index >= gdb_receive_amount_available) {
 		/*
 		 * Detach if port closed
 		 *
@@ -123,7 +123,7 @@ char gdb_usb_getchar(void)
 		gdb_if_update_buf();
 	}
 
-	return buffer_out[out_ptr++];
+	return gdb_receive_buffer[gdb_receive_index++];
 }
 
 char gdb_usb_getchar_to(const uint32_t timeout)
@@ -132,7 +132,7 @@ char gdb_usb_getchar_to(const uint32_t timeout)
 	platform_timeout_set(&receive_timeout, timeout);
 
 	/* Wait while we need more data or until the timeout expires */
-	while (out_ptr >= count_out && !platform_timeout_is_expired(&receive_timeout)) {
+	while (gdb_receive_index >= gdb_receive_amount_available && !platform_timeout_is_expired(&receive_timeout)) {
 		/*
 		 * Detach if port closed
 		 *
@@ -146,8 +146,8 @@ char gdb_usb_getchar_to(const uint32_t timeout)
 		gdb_if_update_buf();
 	}
 
-	if (out_ptr < count_out)
-		return buffer_out[out_ptr++];
+	if (gdb_receive_index < gdb_receive_amount_available)
+		return gdb_receive_buffer[gdb_receive_index++];
 	/* TODO Need to find a better way to error return than this. This provides '\xff' characters. */
 	return -1;
 }
