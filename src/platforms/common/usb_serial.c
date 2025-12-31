@@ -108,12 +108,14 @@ static usbd_request_return_codes_e gdb_serial_control_request(usbd_device *dev, 
 			return USBD_REQ_NOTSUPP;
 		usb_cdc_line_coding_s *line_coding = (usb_cdc_line_coding_s *)*buf;
 		/* This tells the host that we talk 1MBaud, 8-bit no parity w/ 1 stop bit */
-		line_coding->dwDTERate = 1 * 1000 * 1000;
+		line_coding->dwDTERate = UINT32_C(1) * 1000U * 1000U;
 		line_coding->bCharFormat = USB_CDC_1_STOP_BITS;
 		line_coding->bParityType = USB_CDC_NO_PARITY;
-		line_coding->bDataBits = 8;
+		line_coding->bDataBits = 8U;
 		return USBD_REQ_HANDLED;
 	}
+	default:
+		break;
 	}
 	return USBD_REQ_NOTSUPP;
 }
@@ -152,6 +154,8 @@ static usbd_request_return_codes_e debug_serial_control_request(usbd_device *dev
 			return USBD_REQ_NOTSUPP;
 		aux_serial_get_encoding((usb_cdc_line_coding_s *)*buf);
 		return USBD_REQ_HANDLED;
+	default:
+		break;
 	}
 	return USBD_REQ_NOTSUPP;
 }
