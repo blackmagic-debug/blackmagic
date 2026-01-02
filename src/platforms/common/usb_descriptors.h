@@ -71,7 +71,8 @@ static const usb_endpoint_descriptor_s gdb_comm_endp = {
 	.bEndpointAddress = CDCACM_GDB_NOTIF_ENDPOINT | USB_REQ_TYPE_IN,
 	.bmAttributes = USB_ENDPOINT_ATTR_INTERRUPT,
 	.wMaxPacketSize = 16,
-	.bInterval = USB_MAX_INTERVAL,
+	/* Poll for notifications only once every 125ms */
+	.bInterval = 125U,
 };
 
 static const usb_endpoint_descriptor_s gdb_data_endp[] = {
