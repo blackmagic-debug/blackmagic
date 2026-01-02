@@ -45,11 +45,14 @@
 #include <libopencm3/stm32/crs.h>
 #include <libopencm3/stm32/adc.h>
 #include <libopencm3/stm32/spi.h>
+#include <libopencm3/stm32/timer.h>
 #include <libopencm3/cm3/systick.h>
 #include <libopencm3/cm3/assert.h>
 
-#define BOOTLOADER_ADDRESS 0x08000000U
+#define BOOTLOADER_ADDRESS    0x08000000U
+#define TPWR_SOFT_START_STEPS 64U
 
+static void power_timer_init(void);
 static void adc_init(void);
 
 int hwversion = -1;
@@ -83,6 +86,8 @@ void platform_init(void)
 	rcc_periph_clock_enable(RCC_GPIOB);
 	rcc_periph_clock_enable(RCC_GPIOC);
 	rcc_periph_clock_enable(RCC_GPIOH);
+	/* Power up timer that's used for tpwr soft start */
+	rcc_periph_clock_enable(RCC_TIM2);
 	/* Make sure to power up the timer used for trace */
 	rcc_periph_clock_enable(RCC_TIM5);
 	rcc_periph_clock_enable(RCC_CRC);
@@ -112,6 +117,14 @@ void platform_init(void)
 	gpio_mode_setup(AUX_UART2_PORT, GPIO_MODE_AF, GPIO_PUPD_NONE, AUX_UART2_TX_PIN);
 	gpio_mode_setup(AUX_UART2_PORT, GPIO_MODE_AF, GPIO_PUPD_PULLUP, AUX_UART2_RX_PIN);
 
+	gpio_clear(TPWR_EN_PORT, TPWR_EN_PIN);
+	gpio_set_af(TPWR_EN_PORT, GPIO_AF1, TPWR_EN_PIN);
+	gpio_set_output_options(TPWR_EN_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_2MHZ, TPWR_EN_PIN);
+	gpio_mode_setup(TPWR_EN_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, TPWR_EN_PIN);
+
+	/* Set up the timer used for controlling tpwr soft start */
+	power_timer_init();
+
 	/* Bring up the ADC */
 	adc_init();
 
@@ -121,6 +134,35 @@ void platform_init(void)
 
 	/* Bring up the aux serial interface */
 	aux_serial_init();
+}
+
+/* Configure Timer 2 Channel 1 to allow tpwr to be soft start */
+static void power_timer_init(void)
+{
+	/*
+	 * Configure Timer 2 to run the power control pin PWM and switch the timer on
+	 * NB: We don't configure the pin mode here, but rather we configure it to the alt-mode and back in
+	 * platform_target_set_power() below.
+	 */
+	timer_set_mode(TIM2, TIM_CR1_CKD_CK_INT, TIM_CR1_CMS_EDGE, TIM_CR1_DIR_UP);
+	/* Use PWM mode 1 so the signal generated is low till it exceeds the set value */
+	timer_set_oc1_mode(TIM2, TIM_OCM_PWM1);
+	/* Mark the output active-high due to how this drives the target pin */
+	timer_set_oc_polarity_high(TIM2, TIM_OC1);
+	timer_enable_oc_output(TIM2, TIM_OC1);
+	timer_set_oc_value(TIM2, TIM_OC1, 0U);
+	/* Make sure dead-time is switched off as this interferes with correct waveform generation */
+	timer_set_deadtime(TIM2, 0U);
+	/*
+	 * Configure for 64 steps which also makes this output a 500kHz PWM signal
+	 * with the prescaling from APB1 (160MHz) to 32MHz (/5)
+	 */
+	timer_set_prescaler(TIM2, 4U);
+	timer_set_period(TIM2, TPWR_SOFT_START_STEPS - 1U);
+	timer_enable_break_main_output(TIM2);
+	timer_continuous_mode(TIM2);
+	timer_update_on_overflow(TIM2);
+	timer_enable_counter(TIM2);
 }
 
 static void adc_init(void)
@@ -171,6 +213,40 @@ bool platform_nrst_get_val(void)
 bool platform_target_get_power(void)
 {
 	return !gpio_get(TPWR_EN_PORT, TPWR_EN_PIN);
+}
+
+static inline void platform_wait_pwm_cycle(void)
+{
+	while (!timer_get_flag(TIM2, TIM_SR_UIF))
+		continue;
+	timer_clear_flag(TIM2, TIM_SR_UIF);
+}
+
+bool platform_target_set_power(const bool power)
+{
+	/* If we're turning power on */
+	if (power) {
+		/* Configure the pin to be driven by Timer 2 */
+		gpio_mode_setup(TPWR_EN_PORT, GPIO_MODE_AF, GPIO_PUPD_NONE, TPWR_EN_PIN);
+		timer_clear_flag(TIM2, TIM_SR_UIF);
+		/* Wait for one PWM cycle to have taken place */
+		platform_wait_pwm_cycle();
+		/* Soft start power on the target */
+		for (size_t step = 1U; step < TPWR_SOFT_START_STEPS; ++step) {
+			/* Set the new PWM value */
+			timer_set_oc_value(TIM2, TIM_OC1, step);
+			/* Wait for one PWM cycle to have taken place */
+			platform_wait_pwm_cycle();
+		}
+	}
+	/* Set the pin state */
+	gpio_set_val(TPWR_EN_PORT, TPWR_EN_PIN, power);
+	/* If we're turning power on, switch the pin back over to GPIO and reset the timer */
+	if (power) {
+		gpio_mode_setup(TPWR_EN_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, TPWR_EN_PIN);
+		timer_set_oc_value(TIM2, TIM_OC1, 0U);
+	}
+	return true;
 }
 
 uint32_t platform_target_voltage_sense(void)
