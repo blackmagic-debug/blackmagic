@@ -52,6 +52,7 @@
 #define BOOTLOADER_ADDRESS    0x08000000U
 #define TPWR_SOFT_START_STEPS 64U
 
+static void gpio_init(void);
 static void power_timer_init(void);
 static void adc_init(void);
 
@@ -93,34 +94,7 @@ void platform_init(void)
 	rcc_periph_clock_enable(RCC_CRC);
 
 	/* Setup GPIO ports */
-	gpio_mode_setup(TCK_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, TCK_PIN);
-	gpio_mode_setup(TMS_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, TMS_PIN);
-	gpio_mode_setup(TDI_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, TDI_PIN);
-	gpio_mode_setup(TDO_PORT, GPIO_MODE_INPUT, GPIO_PUPD_NONE, TDO_PIN);
-
-	gpio_set_output_options(LED0_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_25MHZ, LED0_PIN);
-	gpio_mode_setup(LED0_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, LED0_PIN);
-	gpio_set_output_options(LED1_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_25MHZ, LED1_PIN);
-	gpio_mode_setup(LED1_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, LED1_PIN);
-	gpio_set_output_options(LED2_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_25MHZ, LED2_PIN);
-	gpio_mode_setup(LED2_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, LED2_PIN);
-	gpio_set_output_options(LED3_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_25MHZ, LED3_PIN);
-	gpio_mode_setup(LED3_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, LED3_PIN);
-
-	gpio_set_af(AUX_UART1_PORT, GPIO_AF7, AUX_UART1_TX_PIN | AUX_UART1_RX_PIN);
-	gpio_set_output_options(AUX_UART1_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_100MHZ, AUX_UART1_TX_PIN | AUX_UART1_RX_PIN);
-	gpio_mode_setup(AUX_UART1_PORT, GPIO_MODE_AF, GPIO_PUPD_NONE, AUX_UART1_TX_PIN);
-	gpio_mode_setup(AUX_UART1_PORT, GPIO_MODE_AF, GPIO_PUPD_PULLUP, AUX_UART1_RX_PIN);
-
-	gpio_set_af(AUX_UART2_PORT, GPIO_AF7, AUX_UART2_TX_PIN | AUX_UART2_RX_PIN);
-	gpio_set_output_options(AUX_UART2_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_100MHZ, AUX_UART2_TX_PIN | AUX_UART2_RX_PIN);
-	gpio_mode_setup(AUX_UART2_PORT, GPIO_MODE_AF, GPIO_PUPD_NONE, AUX_UART2_TX_PIN);
-	gpio_mode_setup(AUX_UART2_PORT, GPIO_MODE_AF, GPIO_PUPD_PULLUP, AUX_UART2_RX_PIN);
-
-	gpio_clear(TPWR_EN_PORT, TPWR_EN_PIN);
-	gpio_set_af(TPWR_EN_PORT, GPIO_AF1, TPWR_EN_PIN);
-	gpio_set_output_options(TPWR_EN_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_2MHZ, TPWR_EN_PIN);
-	gpio_mode_setup(TPWR_EN_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, TPWR_EN_PIN);
+	gpio_init();
 
 	/* Set up the timer used for controlling tpwr soft start */
 	power_timer_init();
@@ -134,6 +108,43 @@ void platform_init(void)
 
 	/* Bring up the aux serial interface */
 	aux_serial_init();
+}
+
+static void gpio_init(void)
+{
+	/* Configure the pins used to interface to the debug interface of a target */
+	gpio_mode_setup(TCK_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, TCK_PIN);
+	gpio_mode_setup(TMS_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, TMS_PIN);
+	gpio_mode_setup(TDI_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, TDI_PIN);
+	gpio_mode_setup(TDO_PORT, GPIO_MODE_INPUT, GPIO_PUPD_NONE, TDO_PIN);
+
+	/* Configure the pins used to drive the LEDs */
+	gpio_set_output_options(LED0_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_25MHZ, LED0_PIN);
+	gpio_mode_setup(LED0_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, LED0_PIN);
+	gpio_set_output_options(LED1_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_25MHZ, LED1_PIN);
+	gpio_mode_setup(LED1_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, LED1_PIN);
+	gpio_set_output_options(LED2_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_25MHZ, LED2_PIN);
+	gpio_mode_setup(LED2_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, LED2_PIN);
+	gpio_set_output_options(LED3_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_25MHZ, LED3_PIN);
+	gpio_mode_setup(LED3_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, LED3_PIN);
+
+	/* Configure the first UART used for the AUX serial interface */
+	gpio_set_af(AUX_UART1_PORT, GPIO_AF7, AUX_UART1_TX_PIN | AUX_UART1_RX_PIN);
+	gpio_set_output_options(AUX_UART1_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_100MHZ, AUX_UART1_TX_PIN | AUX_UART1_RX_PIN);
+	gpio_mode_setup(AUX_UART1_PORT, GPIO_MODE_AF, GPIO_PUPD_NONE, AUX_UART1_TX_PIN);
+	gpio_mode_setup(AUX_UART1_PORT, GPIO_MODE_AF, GPIO_PUPD_PULLUP, AUX_UART1_RX_PIN);
+
+	/* Configure the second UART used for the AUX serial interface */
+	gpio_set_af(AUX_UART2_PORT, GPIO_AF7, AUX_UART2_TX_PIN | AUX_UART2_RX_PIN);
+	gpio_set_output_options(AUX_UART2_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_100MHZ, AUX_UART2_TX_PIN | AUX_UART2_RX_PIN);
+	gpio_mode_setup(AUX_UART2_PORT, GPIO_MODE_AF, GPIO_PUPD_NONE, AUX_UART2_TX_PIN);
+	gpio_mode_setup(AUX_UART2_PORT, GPIO_MODE_AF, GPIO_PUPD_PULLUP, AUX_UART2_RX_PIN);
+
+	/* Configure the pin used for tpwr control */
+	gpio_clear(TPWR_EN_PORT, TPWR_EN_PIN);
+	gpio_set_af(TPWR_EN_PORT, GPIO_AF1, TPWR_EN_PIN);
+	gpio_set_output_options(TPWR_EN_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_2MHZ, TPWR_EN_PIN);
+	gpio_mode_setup(TPWR_EN_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, TPWR_EN_PIN);
 }
 
 /* Configure Timer 2 Channel 1 to allow tpwr to be soft start */
