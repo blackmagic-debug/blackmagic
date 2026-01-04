@@ -402,10 +402,10 @@ uint32_t platform_target_voltage_sense(void)
 	while (!adc_eoc(ADC1))
 		continue;
 
-	uint32_t val = adc_read_regular(ADC1); /* 0-4095 */
+	uint32_t voltage = adc_read_regular(ADC1); /* 0-4095 */
 	/* Clear EOC bit. The GD32F103 does not automatically reset it on ADC read. */
 	ADC_SR(ADC1) &= ~ADC_SR_EOC;
-	return (val * 99U) / 8191U;
+	return (voltage * 99U) / 8191U;
 }
 
 const char *platform_target_voltage(void)
@@ -413,12 +413,12 @@ const char *platform_target_voltage(void)
 	if (hwversion == 0)
 		return gpio_get(GPIOB, GPIO0) ? "Present" : "Absent";
 
-	static char ret[] = "0.0V";
-	uint32_t val = platform_target_voltage_sense();
-	ret[0] = '0' + val / 10U;
-	ret[2] = '0' + val % 10U;
+	static char result[] = "0.0V";
+	uint32_t voltage = platform_target_voltage_sense();
+	result[0] = (char)('0' + (voltage / 10U));
+	result[2] = (char)('0' + (voltage % 10U));
 
-	return ret;
+	return result;
 }
 
 void platform_request_boot(void)
