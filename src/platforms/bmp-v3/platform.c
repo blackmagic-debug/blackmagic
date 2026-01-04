@@ -113,10 +113,16 @@ void platform_init(void)
 static void gpio_init(void)
 {
 	/* Configure the pins used to interface to the debug interface of a target */
+	gpio_set_output_options(TCK_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_50MHZ, TCK_PIN);
 	gpio_mode_setup(TCK_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, TCK_PIN);
+	gpio_set_output_options(TMS_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_50MHZ, TMS_PIN);
 	gpio_mode_setup(TMS_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, TMS_PIN);
+	gpio_set_output_options(TDI_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_50MHZ, TDI_PIN);
 	gpio_mode_setup(TDI_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, TDI_PIN);
 	gpio_mode_setup(TDO_PORT, GPIO_MODE_INPUT, GPIO_PUPD_NONE, TDO_PIN);
+	gpio_clear(NRST_PORT, NRST_PIN);
+	gpio_set_output_options(NRST_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_25MHZ, NRST_PIN);
+	gpio_mode_setup(NRST_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, NRST_PIN);
 
 	/* Configure the pins used to drive the LEDs */
 	gpio_set_output_options(LED0_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_25MHZ, LED0_PIN);
@@ -145,6 +151,8 @@ static void gpio_init(void)
 	gpio_set_af(TPWR_EN_PORT, GPIO_AF1, TPWR_EN_PIN);
 	gpio_set_output_options(TPWR_EN_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_2MHZ, TPWR_EN_PIN);
 	gpio_mode_setup(TPWR_EN_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, TPWR_EN_PIN);
+	/* And the one used to read back the voltage that's presently on the Vtgt pin */
+	gpio_mode_setup(TPWR_SENSE_PORT, GPIO_MODE_ANALOG, GPIO_PUPD_NONE, TPWR_SENSE_PIN);
 }
 
 /* Configure Timer 2 Channel 1 to allow tpwr to be soft start */
@@ -186,8 +194,6 @@ static void adc_init(void)
 	rcc_periph_clock_enable(RCC_ADC1_2);
 	adc_ungate_power(ADC1);
 	adc_set_common_prescaler(ADC12_CCR_PRESC_DIV4);
-
-	gpio_mode_setup(TPWR_SENSE_PORT, GPIO_MODE_ANALOG, GPIO_PUPD_NONE, TPWR_SENSE_PIN);
 
 	adc_power_off(ADC1);
 	adc_set_single_conversion_mode(ADC1);
