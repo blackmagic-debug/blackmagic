@@ -114,12 +114,20 @@ static void gpio_init(void)
 {
 	/* Configure the pins used to interface to the debug interface of a target */
 	gpio_set_output_options(TCK_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_50MHZ, TCK_PIN);
-	gpio_mode_setup(TCK_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, TCK_PIN);
+	gpio_mode_setup(TCK_PORT, GPIO_MODE_INPUT, GPIO_PUPD_NONE, TCK_PIN);
 	gpio_set_output_options(TMS_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_50MHZ, TMS_PIN);
 	gpio_mode_setup(TMS_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, TMS_PIN);
 	gpio_set_output_options(TDI_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_50MHZ, TDI_PIN);
 	gpio_mode_setup(TDI_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, TDI_PIN);
 	gpio_mode_setup(TDO_PORT, GPIO_MODE_INPUT, GPIO_PUPD_NONE, TDO_PIN);
+	/* Handle the direction pins */
+	gpio_clear(TCK_DIR_PORT, TCK_DIR_PIN);
+	gpio_set_output_options(TCK_DIR_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_50MHZ, TCK_DIR_PIN);
+	gpio_mode_setup(TCK_DIR_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, TCK_DIR_PIN);
+	gpio_clear(TMS_DIR_PORT, TMS_DIR_PIN);
+	gpio_set_output_options(TMS_DIR_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_50MHZ, TMS_DIR_PIN);
+	gpio_mode_setup(TMS_DIR_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, TMS_DIR_PIN);
+	/* Handle the nRST pin */
 	gpio_clear(NRST_PORT, NRST_PIN);
 	gpio_set_output_options(NRST_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_25MHZ, NRST_PIN);
 	gpio_mode_setup(NRST_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, NRST_PIN);
