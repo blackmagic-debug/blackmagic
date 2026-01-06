@@ -171,6 +171,20 @@ extern int hwversion;
 #define LED_ERROR_PORT    LED2_PORT
 #define LED_ERROR_PIN     LED2_PIN
 
+#define INT_QSPI          OCTOSPIM
+#define INT_SPI_SCLK_PORT GPIOB
+#define INT_SPI_SCLK_PIN  GPIO10
+#define INT_SPI_CS_PORT   GPIOA
+#define INT_SPI_CS_PIN    GPIO4
+#define INT_SPI_IO0_PORT  GPIOB
+#define INT_SPI_IO0_PIN   GPIO1
+#define INT_SPI_IO1_PORT  GPIOB
+#define INT_SPI_IO1_PIN   GPIO0
+#define INT_SPI_IO2_PORT  GPIOA
+#define INT_SPI_IO2_PIN   GPIO7
+#define INT_SPI_IO3_PORT  GPIOA
+#define INT_SPI_IO3_PIN   GPIO8
+
 #define TMS_SET_MODE()                                                        \
 	do {                                                                      \
 		gpio_set(TMS_DIR_PORT, TMS_DIR_PIN);                                  \
