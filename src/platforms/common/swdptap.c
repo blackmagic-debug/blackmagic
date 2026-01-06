@@ -1,8 +1,10 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
- * Copyright (C) 2011  Black Sphere Technologies Ltd.
+ * Copyright (C) 2011 Black Sphere Technologies Ltd.
+ * Copyright (C) 2022-2026 1BitSquared <info@1bitsquared.com>
  * Written by Gareth McMullin <gareth@blacksphere.co.nz>
+ * Modified by Rachel Mant <git@dragonmux.network>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -107,9 +109,9 @@ static uint32_t swdptap_seq_in_clk_delay(const size_t clock_cycles)
 	 * to a faster down-count that uses SUBS followed by BCS/BCC.
 	 */
 	for (size_t cycle = clock_cycles; cycle--;) {
+		const bool bit = gpio_get(SWDIO_IN_PORT, SWDIO_IN_PIN);
 		for (volatile uint32_t counter = target_clk_divider; counter > 0; --counter)
 			continue;
-		const bool bit = gpio_get(SWDIO_IN_PORT, SWDIO_IN_PIN);
 		gpio_set(SWCLK_PORT, SWCLK_PIN);
 		for (volatile uint32_t counter = target_clk_divider; counter > 0; --counter)
 			continue;
@@ -121,7 +123,7 @@ static uint32_t swdptap_seq_in_clk_delay(const size_t clock_cycles)
 		/* Reordering barrier */
 		__asm__("" ::: "memory");
 	}
-	value >>= (32U - clock_cycles);
+	value >>= 32U - clock_cycles;
 	return value;
 }
 
@@ -138,9 +140,9 @@ static uint32_t swdptap_seq_in_no_delay(const size_t clock_cycles)
 	 * to a faster down-count that uses SUBS followed by BCS/BCC.
 	 */
 	for (size_t cycle = clock_cycles; cycle--;) {
+		const bool bit = gpio_get(SWDIO_IN_PORT, SWDIO_IN_PIN);
 		/* Reordering barrier */
 		__asm__("" ::: "memory");
-		bool bit = gpio_get(SWDIO_IN_PORT, SWDIO_IN_PIN);
 		gpio_set(SWCLK_PORT, SWCLK_PIN);
 		__asm__("nop" ::: "memory");
 		value >>= 1U;
@@ -151,7 +153,7 @@ static uint32_t swdptap_seq_in_no_delay(const size_t clock_cycles)
 		/* Reordering barrier */
 		__asm__("" ::: "memory");
 	}
-	value >>= (32U - clock_cycles);
+	value >>= 32U - clock_cycles;
 	return value;
 }
 
