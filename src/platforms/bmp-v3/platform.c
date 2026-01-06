@@ -161,6 +161,24 @@ static void gpio_init(void)
 	gpio_mode_setup(TPWR_EN_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, TPWR_EN_PIN);
 	/* And the one used to read back the voltage that's presently on the Vtgt pin */
 	gpio_mode_setup(TPWR_SENSE_PORT, GPIO_MODE_ANALOG, GPIO_PUPD_NONE, TPWR_SENSE_PIN);
+
+	/* Configure the pins used for the on-board SPI Flash */
+	gpio_set_af(INT_SPI_SCLK_PORT, GPIO_AF10, INT_SPI_SCLK_PIN);
+	gpio_set_output_options(INT_SPI_SCLK_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_100MHZ, INT_SPI_SCLK_PIN);
+	gpio_mode_setup(INT_SPI_SCLK_PORT, GPIO_MODE_AF, GPIO_PUPD_NONE, INT_SPI_SCLK_PIN);
+	gpio_set_af(INT_SPI_CS_PORT, GPIO_AF3, INT_SPI_CS_PIN);
+	gpio_set_output_options(INT_SPI_CS_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_100MHZ, INT_SPI_CS_PIN);
+	gpio_mode_setup(INT_SPI_CS_PORT, GPIO_MODE_AF, GPIO_PUPD_NONE, INT_SPI_CS_PIN);
+	gpio_set_af(INT_SPI_IO0_PORT, GPIO_AF10, INT_SPI_IO0_PIN | INT_SPI_IO1_PIN);
+	gpio_set_output_options(INT_SPI_IO0_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_100MHZ, INT_SPI_IO0_PIN);
+	gpio_mode_setup(INT_SPI_IO0_PORT, GPIO_MODE_AF, GPIO_PUPD_NONE, INT_SPI_IO0_PIN);
+	gpio_set_output_options(INT_SPI_IO1_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_100MHZ, INT_SPI_IO1_PIN);
+	gpio_mode_setup(INT_SPI_IO1_PORT, GPIO_MODE_AF, GPIO_PUPD_NONE, INT_SPI_IO1_PIN);
+	gpio_set_af(INT_SPI_IO2_PORT, GPIO_AF10, INT_SPI_IO2_PIN | INT_SPI_IO3_PIN);
+	gpio_set_output_options(INT_SPI_IO2_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_100MHZ, INT_SPI_IO2_PIN);
+	gpio_mode_setup(INT_SPI_IO2_PORT, GPIO_MODE_AF, GPIO_PUPD_NONE, INT_SPI_IO2_PIN);
+	gpio_set_output_options(INT_SPI_IO3_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_100MHZ, INT_SPI_IO3_PIN);
+	gpio_mode_setup(INT_SPI_IO3_PORT, GPIO_MODE_AF, GPIO_PUPD_NONE, INT_SPI_IO3_PIN);
 }
 
 /* Configure Timer 2 Channel 1 to allow tpwr to be soft start */
