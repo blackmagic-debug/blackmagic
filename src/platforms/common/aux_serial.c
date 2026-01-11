@@ -128,7 +128,7 @@ void bmd_usart_set_baudrate(const uintptr_t usart, const uint32_t baud_rate)
 	if (baud_rate < baud_lowest) /* Too low */
 		return;
 	/* less-than-or-equal: Prefer OVER16 at exactly /16 */
-	else if (baud_rate > baud_lowest && baud_rate <= baud_highest_16x)
+	if (baud_rate > baud_lowest && baud_rate <= baud_highest_16x)
 		usart_set_oversampling(usart, USART_OVERSAMPLING_16);
 	else if (baud_rate > baud_highest_16x && baud_rate <= baud_highest_8x)
 		usart_set_oversampling(usart, USART_OVERSAMPLING_8);
@@ -159,18 +159,36 @@ void aux_serial_uart_init(const uintptr_t uart_base)
 	USART_CR1(uart_base) |= USART_CR1_IDLEIE;
 }
 
+#ifdef PLATFORM_MULTI_UART
+void aux_serial_activate_uart(const uintptr_t uart_base)
+{
+	dma_set_destination_address(AUX_UART_DMA_BUS, AUX_UART_DMA_TX_CHAN, (uintptr_t)&USART_TDR(uart_base));
+	if (uart_base == AUX_UART1)
+		dma_request_select(AUX_UART_DMA_BUS, AUX_UART_DMA_TX_CHAN, AUX_UART1_DMA_REQSEL_TX);
+	else if (uart_base == AUX_UART2)
+		dma_request_select(AUX_UART_DMA_BUS, AUX_UART_DMA_TX_CHAN, AUX_UART2_DMA_REQSEL_TX);
+
+	dma_disable_channel(USBUSART_DMA_BUS, USBUSART_DMA_RX_CHAN);
+	dma_set_source_address(AUX_UART_DMA_BUS, AUX_UART_DMA_RX_CHAN, (uintptr_t)&USART_RDR(uart_base));
+	if (uart_base == AUX_UART1)
+		dma_request_select(AUX_UART_DMA_BUS, AUX_UART_DMA_RX_CHAN, AUX_UART1_DMA_REQSEL_RX);
+	else if (uart_base == AUX_UART2)
+		dma_request_select(AUX_UART_DMA_BUS, AUX_UART_DMA_RX_CHAN, AUX_UART2_DMA_REQSEL_RX);
+	dma_enable_channel(USBUSART_DMA_BUS, USBUSART_DMA_RX_CHAN);
+
+	active_uart = uart_base;
+}
+#endif
+
 void aux_serial_init(void)
 {
-/* Enable clocks */
+	/* Enable clocks */
 #ifndef PLATFORM_MULTI_UART
 	rcc_periph_clock_enable(USBUSART_CLK);
+	rcc_periph_clock_enable(USBUSART_DMA_CLK);
 #else
 	rcc_periph_clock_enable(AUX_UART1_CLK);
 	rcc_periph_clock_enable(AUX_UART2_CLK);
-#endif
-#ifndef PLATFORM_MULTI_UART
-	rcc_periph_clock_enable(USBUSART_DMA_CLK);
-#else
 	rcc_periph_clock_enable(AUX_UART_DMA_CLK);
 #endif
 
@@ -271,12 +289,13 @@ void aux_serial_init(void)
 	dma_set_priority(AUX_UART_DMA_BUS, AUX_UART_DMA_RX_CHAN, DMA_PL_HIGH);
 	dma_enable_interrupts(AUX_UART_DMA_BUS, AUX_UART_DMA_RX_CHAN, DMA_HTIF | DMA_TCIF);
 	dma_set_transfer_complete_mode(AUX_UART_DMA_BUS, AUX_UART_DMA_RX_CHAN, DMA_TRANSFER_COMPLETE_MODE_BLOCK);
-	// dma_request_select(AUX_UART_DMA_BUS, AUX_UART_DMA_RX_CHAN, );
 	dma_set_hardware_request(AUX_UART_DMA_BUS, AUX_UART_DMA_RX_CHAN);
 	dma_set_source_flow_control(AUX_UART_DMA_BUS, AUX_UART_DMA_RX_CHAN);
 	dma_set_burst_flow_control(AUX_UART_DMA_BUS, AUX_UART_DMA_RX_CHAN);
 #endif
+#ifndef PLATFORM_MULTI_UART
 	dma_enable_channel(USBUSART_DMA_BUS, USBUSART_DMA_RX_CHAN);
+#endif
 
 	/* Enable interrupts */
 #ifndef PLATFORM_MULTI_UART
@@ -303,6 +322,9 @@ void aux_serial_init(void)
 	nvic_enable_irq(AUX_UART2_IRQ);
 	nvic_enable_irq(AUX_UART_DMA_TX_IRQ);
 	nvic_enable_irq(AUX_UART_DMA_RX_IRQ);
+
+	/* Activate the default UART (UART1) */
+	aux_serial_activate_uart(AUX_UART1);
 #endif
 
 	/* Finally enable the USART(s) */
@@ -565,7 +587,9 @@ static void aux_serial_receive_isr(const uint32_t usart, const uint8_t dma_irq)
 
 static void aux_serial_dma_transmit_isr(const uint8_t dma_tx_channel)
 {
+#ifndef STM32U5
 	nvic_disable_irq(USB_IRQ);
+#endif
 
 	/* Stop DMA */
 	dma_disable_channel(USBUSART_DMA_BUS, dma_tx_channel);
@@ -583,7 +607,9 @@ static void aux_serial_dma_transmit_isr(const uint8_t dma_tx_channel)
 		aux_serial_transmit_complete = true;
 	}
 
+#ifndef STM32U5
 	nvic_enable_irq(USB_IRQ);
+#endif
 }
 
 static void aux_serial_dma_receive_isr(const uint8_t usart_irq, const uint8_t dma_rx_channel)
@@ -642,49 +668,68 @@ void AUX_UART2_ISR(void)
 }
 #endif
 
-#if defined(USBUSART_DMA_TX_ISR)
+#ifdef USBUSART_DMA_TX_ISR
 void USBUSART_DMA_TX_ISR(void)
 {
 	aux_serial_dma_transmit_isr(USBUSART_DMA_TX_CHAN);
 }
 #endif
 
-#if defined(USBUSART1_DMA_TX_ISR)
+#ifdef USBUSART1_DMA_TX_ISR
 void USBUSART1_DMA_TX_ISR(void)
 {
 	aux_serial_dma_transmit_isr(USBUSART1_DMA_TX_CHAN);
 }
 #endif
 
-#if defined(USBUSART2_DMA_TX_ISR)
+#ifdef USBUSART2_DMA_TX_ISR
 void USBUSART2_DMA_TX_ISR(void)
 {
 	aux_serial_dma_transmit_isr(USBUSART2_DMA_TX_CHAN);
 }
 #endif
 
-#if defined(USBUSART_DMA_RX_ISR)
+#ifdef AUX_UART_DMA_TX_ISR
+void AUX_UART_DMA_TX_ISR(void)
+{
+	aux_serial_dma_transmit_isr(AUX_UART_DMA_TX_CHAN);
+}
+#endif
+
+#ifdef USBUSART_DMA_RX_ISR
 void USBUSART_DMA_RX_ISR(void)
 {
 	aux_serial_dma_receive_isr(USBUSART_IRQ, USBUSART_DMA_RX_CHAN);
 }
 #endif
 
-#if defined(USBUSART1_DMA_RX_ISR)
+#ifdef USBUSART1_DMA_RX_ISR
 void USBUSART1_DMA_RX_ISR(void)
 {
 	aux_serial_dma_receive_isr(USBUSART1_IRQ, USBUSART1_DMA_RX_CHAN);
 }
 #endif
 
-#if defined(USBUSART2_DMA_RX_ISR)
+#ifdef USBUSART2_DMA_RX_ISR
 void USBUSART2_DMA_RX_ISR(void)
 {
 	aux_serial_dma_receive_isr(USBUSART2_IRQ, USBUSART2_DMA_RX_CHAN);
 }
 #endif
 
-#if defined(USBUSART_DMA_RXTX_ISR)
+#ifdef AUX_UART_DMA_RX_ISR
+void AUX_UART_DMA_RX_ISR(void)
+{
+	uint8_t rx_irq = UINT8_MAX;
+	if (active_uart == AUX_UART1)
+		rx_irq = AUX_UART1_IRQ;
+	else if (active_uart == AUX_UART2)
+		rx_irq = AUX_UART2_IRQ;
+	aux_serial_dma_receive_isr(rx_irq, AUX_UART_DMA_RX_CHAN);
+}
+#endif
+
+#ifdef USBUSART_DMA_RXTX_ISR
 void USBUSART_DMA_RXTX_ISR(void)
 {
 	if (dma_get_interrupt_flag(USBUSART_DMA_BUS, USBUSART_DMA_RX_CHAN, DMA_CGIF))
