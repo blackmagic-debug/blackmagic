@@ -60,7 +60,7 @@ static volatile uint8_t aux_serial_led_state = 0;
 #define DMA_PL_HIGH    DMA_SxCR_PL_HIGH
 #define DMA_CGIF       DMA_ISR_FLAGS
 #elif defined(STM32U5)
-#define DMA_PL_HIGH          DMA_CxCR_PRIO_HIGH
+#define DMA_PL_HIGH          DMA_CxCR_PRIO_VERY_HIGH
 #define DMA_CGIF             DMA_ISR_FLAGS
 #define USBUSART_DMA_BUS     AUX_UART_DMA_BUS
 #define USBUSART_DMA_TX_CHAN AUX_UART_DMA_TX_CHAN
@@ -605,6 +605,8 @@ static void aux_serial_receive_isr(const uintptr_t uart, const uint8_t dma_irq)
 
 #ifndef STM32U5
 	nvic_enable_irq(dma_irq);
+#else
+	dma_enable_channel(USBUSART_DMA_BUS, USBUSART_DMA_RX_CHAN);
 #endif
 }
 
@@ -637,13 +639,19 @@ static void aux_serial_dma_transmit_isr(const uint8_t dma_tx_channel)
 
 static void aux_serial_dma_receive_isr(const uint8_t usart_irq, const uint8_t dma_rx_channel)
 {
+#ifndef STM32U5
 	nvic_disable_irq(usart_irq);
+#else
+	(void)usart_irq;
+#endif
 
 	/* Clear flags and transmit a packet */
 	dma_clear_interrupt_flags(USBUSART_DMA_BUS, dma_rx_channel, DMA_CGIF);
 	debug_serial_run();
 
+#ifndef STM32U5
 	nvic_enable_irq(usart_irq);
+#endif
 }
 
 #ifndef PLATFORM_MULTI_UART
