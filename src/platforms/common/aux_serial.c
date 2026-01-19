@@ -157,6 +157,9 @@ void aux_serial_uart_init(const uintptr_t uart_base)
 	usart_set_parity(uart_base, USART_PARITY_NONE);
 	usart_set_flow_control(uart_base, USART_FLOWCONTROL_NONE);
 	USART_CR1(uart_base) |= USART_CR1_IDLEIE;
+#ifdef STM32U5
+	USART_CR3(uart_base) |= USART_CR3_EIE;
+#endif
 }
 
 #ifdef PLATFORM_MULTI_UART
@@ -566,23 +569,43 @@ void aux_serial_stage_receive_buffer(void)
 		aux_serial_receive_buffer, aux_serial_receive_read_index, aux_serial_receive_write_index);
 }
 
-static void aux_serial_receive_isr(const uint32_t usart, const uint8_t dma_irq)
+static void aux_serial_receive_isr(const uintptr_t uart, const uint8_t dma_irq)
 {
+#ifndef STM32U5
 	nvic_disable_irq(dma_irq);
 
 	/* Get IDLE flag and reset interrupt flags */
-	const bool is_idle = usart_get_flag(usart, USART_FLAG_IDLE);
-	usart_recv(usart);
+	const bool is_idle = usart_get_flag(uart, USART_FLAG_IDLE);
+	usart_recv(uart);
+#else
+	(void)dma_irq;
+	// Inspect the status register for errors, and reset those bits so DMA can continue
+	const uint32_t status = USART_ISR(uart);
+	// Handle noise errors
+	if ((status & USART_ISR_NF) != 0U)
+		USART_ICR(uart) = USART_ICR_NCF;
+	// Handle framing errors
+	if ((status & USART_ISR_FE) != 0U)
+		USART_ICR(uart) = USART_ICR_FECF;
+	// Handle overrun errors
+	if ((status & USART_ISR_ORE) != 0U)
+		USART_ICR(uart) = USART_ICR_ORECF;
+
+	// Decode if idle happened
+	const bool is_idle = (status & USART_ISR_IDLE) != 0;
+#endif
 
 	/* If line is now idle, then transmit a packet */
 	if (is_idle) {
 #ifdef USART_ICR_IDLECF
-		USART_ICR(usart) = USART_ICR_IDLECF;
+		USART_ICR(uart) = USART_ICR_IDLECF;
 #endif
 		debug_serial_run();
 	}
 
+#ifndef STM32U5
 	nvic_enable_irq(dma_irq);
+#endif
 }
 
 static void aux_serial_dma_transmit_isr(const uint8_t dma_tx_channel)
