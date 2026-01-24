@@ -297,9 +297,13 @@ static bool jtag_sanity_check(void)
 	/* Transition to Shift-DR */
 	DEBUG_INFO("Change state to Shift-DR\n");
 	jtagtap_shift_dr();
+	/* Preload entire DR chain of BYPASS with known 0 value */
+	jtag_proc.jtagtap_cycle(false, false, jtag_dev_count);
+
 	/* Count devices on chain */
 	size_t device = 0;
 	for (; device <= jtag_dev_count; ++device) {
+		/* Read back the known 0's, shift out 1's, expect reading 1 after the chain loops */
 		if (jtag_proc.jtagtap_next(false, true))
 			break;
 		/* Configure the DR pre/post scan values */
