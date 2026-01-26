@@ -1,7 +1,7 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
- * Copyright (C) 2022-2025 1BitSquared <info@1bitsquared.com>
+ * Copyright (C) 2022-2026 1BitSquared <info@1bitsquared.com>
  * Written by Rachel Mant <git@dragonmux.network>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -18,6 +18,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "general.h"
+#include "platform.h"
+#include "usb_serial.h"
+#include "aux_serial.h"
+
 #if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4) || defined(STM32F7) || defined(STM32U5)
 #include <libopencm3/stm32/rcc.h>
 #include <libopencm3/stm32/usart.h>
@@ -30,11 +35,6 @@
 #error "Unknown processor target"
 #endif
 #include <libopencm3/cm3/nvic.h>
-
-#include "general.h"
-#include "platform.h"
-#include "usb_serial.h"
-#include "aux_serial.h"
 
 static char aux_serial_receive_buffer[AUX_UART_BUFFER_SIZE];
 /* FIFO in pointer, writes assumed to be atomic, should be only incremented within RX ISR */
