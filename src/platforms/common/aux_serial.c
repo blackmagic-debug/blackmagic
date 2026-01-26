@@ -306,16 +306,31 @@ void aux_serial_init(void)
 #ifdef PLATFORM_MULTI_UART
 	/* Configure the EXTI logic to listen on the RX pins to determine which is currently active */
 	exti_set_trigger(AUX_UART1_RX_DETECT_EXTI, EXTI_TRIGGER_RISING);
+	exti_set_trigger(AUX_UART2_RX_DETECT_EXTI, EXTI_TRIGGER_RISING);
 	exti_select_source(AUX_UART1_RX_DETECT_EXTI, AUX_UART1_PORT);
+	exti_select_source(AUX_UART2_RX_DETECT_EXTI, AUX_UART2_PORT);
+
 	/* Activate the default UART (UART1) if RX is already high on it */
-	if (gpio_get(AUX_UART1_PORT, AUX_UART1_RX_PIN))
+	if (gpio_get(AUX_UART1_PORT, AUX_UART1_RX_PIN)) {
 		aux_serial_activate_uart(AUX_UART1);
-	else
-		/* Otherwise enable the EXTI to determine when the pin goes high */
+		exti_enable_request(AUX_UART2_RX_DETECT_EXTI);
+	}
+	/* Activate the secondary UART (UART2) if either of the pins is already high */
+	else if (gpio_get(AUX_UART2_PORT, AUX_UART2_RX_PIN | AUX_UART2_TX_PIN)) {
+		aux_serial_activate_uart(AUX_UART2);
 		exti_enable_request(AUX_UART1_RX_DETECT_EXTI);
+	} else {
+		/* Otherwise just enable the EXTIs for both to see which comes up first */
+		exti_enable_request(AUX_UART1_RX_DETECT_EXTI);
+		exti_enable_request(AUX_UART2_RX_DETECT_EXTI);
+	}
 
 	nvic_set_priority(AUX_UART1_RX_DETECT_IRQ, IRQ_PRI_AUX_UART);
+	nvic_set_priority(AUX_UART2_RX_DETECT_IRQ1, IRQ_PRI_AUX_UART);
+	nvic_set_priority(AUX_UART2_RX_DETECT_IRQ2, IRQ_PRI_AUX_UART);
 	nvic_enable_irq(AUX_UART1_RX_DETECT_IRQ);
+	nvic_enable_irq(AUX_UART2_RX_DETECT_IRQ1);
+	nvic_enable_irq(AUX_UART2_RX_DETECT_IRQ2);
 #endif
 
 	/* Enable interrupts */
@@ -795,7 +810,29 @@ void AUX_UART1_RX_DETECT_ISR(void)
 	aux_serial_activate_uart(AUX_UART1);
 	exti_reset_request(AUX_UART1_RX_DETECT_EXTI);
 	exti_disable_request(AUX_UART1_RX_DETECT_EXTI);
-	/* exti_enable_request(AUX_UART2_RX_DETECT_EXTI); */
+	exti_enable_request(AUX_UART2_RX_DETECT_EXTI);
+}
+
+void aux_uart2_rx_detect_isr(void)
+{
+	/*
+	 * UART2 just became active, so bring it up and disable the EXTI for it, making sure UART1's is
+	 * active in case the user swaps UARTs over
+	 */
+	aux_serial_activate_uart(AUX_UART2);
+	exti_reset_request(AUX_UART2_RX_DETECT_EXTI);
+	exti_disable_request(AUX_UART2_RX_DETECT_EXTI);
+	exti_enable_request(AUX_UART1_RX_DETECT_EXTI);
+}
+
+void AUX_UART2_RX_DETECT_ISR1(void)
+{
+	aux_uart2_rx_detect_isr();
+}
+
+void AUX_UART2_RX_DETECT_ISR2(void)
+{
+	aux_uart2_rx_detect_isr();
 }
 #endif
 #elif defined(LM4F)
