@@ -232,13 +232,22 @@ extern int hwversion;
 #define AUX_UART1_RX_DETECT_ISR(x) exti3_isr(x)
 
 /* PB6/7 as USART1 TX/RX */
-#define AUX_UART2        USART1
-#define AUX_UART2_CLK    RCC_USART1
-#define AUX_UART2_IRQ    NVIC_USART1_IRQ
-#define AUX_UART2_ISR(x) usart1_isr(x)
-#define AUX_UART2_PORT   GPIOB
-#define AUX_UART2_TX_PIN GPIO6
-#define AUX_UART2_RX_PIN GPIO7
+#define AUX_UART2                   USART1
+#define AUX_UART2_CLK               RCC_USART1
+#define AUX_UART2_IRQ               NVIC_USART1_IRQ
+#define AUX_UART2_ISR(x)            usart1_isr(x)
+#define AUX_UART2_PORT              GPIOB
+#define AUX_UART2_TX_PIN            GPIO6
+#define AUX_UART2_RX_PIN            GPIO7
+#define AUX_UART2_DIR_PORT          GPIOC
+#define AUX_UART2_DIR_PIN           GPIO13
+#define AUX_UART2_RX_DETECT_EXTI1   EXTI7
+#define AUX_UART2_RX_DETECT_EXTI2   EXTI6
+#define AUX_UART2_RX_DETECT_EXTI    (AUX_UART2_RX_DETECT_EXTI1 | AUX_UART2_RX_DETECT_EXTI2)
+#define AUX_UART2_RX_DETECT_IRQ1    NVIC_EXTI7_IRQ
+#define AUX_UART2_RX_DETECT_IRQ2    NVIC_EXTI6_IRQ
+#define AUX_UART2_RX_DETECT_ISR1(x) exti7_isr(x)
+#define AUX_UART2_RX_DETECT_ISR2(x) exti6_isr(x)
 
 #define AUX_UART_DMA_BUS        GPDMA1
 #define AUX_UART_DMA_CLK        RCC_GPDMA1
