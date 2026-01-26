@@ -28,6 +28,9 @@
 #include <libopencm3/stm32/usart.h>
 #include <libopencm3/stm32/dma.h>
 #include <libopencm3/cm3/cortex.h>
+#ifdef PLATFORM_MULTI_UART
+#include <libopencm3/stm32/exti.h>
+#endif
 #elif defined(LM4F)
 #include <libopencm3/lm4f/rcc.h>
 #include <libopencm3/lm4f/uart.h>
@@ -300,6 +303,21 @@ void aux_serial_init(void)
 	dma_enable_channel(USBUSART_DMA_BUS, USBUSART_DMA_RX_CHAN);
 #endif
 
+#ifdef PLATFORM_MULTI_UART
+	/* Configure the EXTI logic to listen on the RX pins to determine which is currently active */
+	exti_set_trigger(AUX_UART1_RX_DETECT_EXTI, EXTI_TRIGGER_RISING);
+	exti_select_source(AUX_UART1_RX_DETECT_EXTI, AUX_UART1_PORT);
+	/* Activate the default UART (UART1) if RX is already high on it */
+	if (gpio_get(AUX_UART1_PORT, AUX_UART1_RX_PIN))
+		aux_serial_activate_uart(AUX_UART1);
+	else
+		/* Otherwise enable the EXTI to determine when the pin goes high */
+		exti_enable_request(AUX_UART1_RX_DETECT_EXTI);
+
+	nvic_set_priority(AUX_UART1_RX_DETECT_IRQ, IRQ_PRI_AUX_UART);
+	nvic_enable_irq(AUX_UART1_RX_DETECT_IRQ);
+#endif
+
 	/* Enable interrupts */
 #ifndef PLATFORM_MULTI_UART
 	nvic_set_priority(USBUSART_IRQ, IRQ_PRI_USBUSART);
@@ -325,9 +343,6 @@ void aux_serial_init(void)
 	nvic_enable_irq(AUX_UART2_IRQ);
 	nvic_enable_irq(AUX_UART_DMA_TX_IRQ);
 	nvic_enable_irq(AUX_UART_DMA_RX_IRQ);
-
-	/* Activate the default UART (UART1) */
-	aux_serial_activate_uart(AUX_UART1);
 #endif
 
 	/* Finally enable the USART(s) */
@@ -767,6 +782,20 @@ void USBUSART_DMA_RXTX_ISR(void)
 		USBUSART_DMA_RX_ISR();
 	if (dma_get_interrupt_flag(USBUSART_DMA_BUS, USBUSART_DMA_TX_CHAN, DMA_CGIF))
 		USBUSART_DMA_TX_ISR();
+}
+#endif
+
+#ifdef PLATFORM_MULTI_UART
+void AUX_UART1_RX_DETECT_ISR(void)
+{
+	/*
+	 * UART1 just became active, so bring it up and disable the EXTI for it, making sure UART2's is
+	 * active in case the user swaps UARTs over.
+	 */
+	aux_serial_activate_uart(AUX_UART1);
+	exti_reset_request(AUX_UART1_RX_DETECT_EXTI);
+	exti_disable_request(AUX_UART1_RX_DETECT_EXTI);
+	/* exti_enable_request(AUX_UART2_RX_DETECT_EXTI); */
 }
 #endif
 #elif defined(LM4F)
