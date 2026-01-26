@@ -220,13 +220,16 @@ extern int hwversion;
 #define IRQ_PRI_SWO_DMA      (0U << 4U)
 
 /* PA2/3 as USART2 TX/RX */
-#define AUX_UART1        USART2
-#define AUX_UART1_CLK    RCC_USART2
-#define AUX_UART1_IRQ    NVIC_USART2_IRQ
-#define AUX_UART1_ISR(x) usart2_isr(x)
-#define AUX_UART1_PORT   GPIOA
-#define AUX_UART1_TX_PIN GPIO2
-#define AUX_UART1_RX_PIN GPIO3
+#define AUX_UART1                  USART2
+#define AUX_UART1_CLK              RCC_USART2
+#define AUX_UART1_IRQ              NVIC_USART2_IRQ
+#define AUX_UART1_ISR(x)           usart2_isr(x)
+#define AUX_UART1_PORT             GPIOA
+#define AUX_UART1_TX_PIN           GPIO2
+#define AUX_UART1_RX_PIN           GPIO3
+#define AUX_UART1_RX_DETECT_EXTI   EXTI3
+#define AUX_UART1_RX_DETECT_IRQ    NVIC_EXTI3_IRQ
+#define AUX_UART1_RX_DETECT_ISR(x) exti3_isr(x)
 
 /* PB6/7 as USART1 TX/RX */
 #define AUX_UART2        USART1
