@@ -414,6 +414,14 @@ const jtag_dev_descr_s dev_descr[] = {
 #endif
 		.handler = riscv_jtag_dtm_handler,
 	},
+	{
+		.idcode = 0xdeadbeefU,
+		.idmask = 0xffffffffU,
+#if ENABLE_DEBUG == 1
+		.descr = "RISC-V Hazard3 DTM.",
+#endif
+		.handler = riscv_jtag_dtm_handler,
+	},
 #endif
 #if defined(CONFIG_CORTEXAR) && defined(CONFIG_TI_ICEPICK)
 	{
