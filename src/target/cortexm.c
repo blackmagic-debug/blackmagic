@@ -1525,7 +1525,9 @@ static const char *cortexm_target_description(target_s *const target)
 {
 	const size_t description_length = cortexm_build_target_description(NULL, 0, target->target_options) + 1U;
 	char *const description = malloc(description_length);
-	if (description)
+	if (!description) /* malloc failed: heap exhaustion */
+		DEBUG_ERROR("malloc: failed in %s\n", __func__);
+	else
 		cortexm_build_target_description(description, description_length, target->target_options);
 	return description;
 }
