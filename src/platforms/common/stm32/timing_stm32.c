@@ -151,9 +151,31 @@ __attribute__((weak)) void platform_ospeed_update(const uint32_t frequency)
  * per delay loop count with 2 delay loops per clock
  */
 
+#if defined(STM32F4)
+/* Values for STM32F411 at 96 MHz */
+#define USED_SWD_CYCLES_NODELAY 12
+#define USED_SWD_CYCLES         24
+#define CYCLES_PER_CNT          12
+#elif defined(GD32F1)
+/* Values for GD32F103 at 72 MHz */
+#define USED_SWD_CYCLES_NODELAY 14
+#define USED_SWD_CYCLES         30
+#define CYCLES_PER_CNT          14
+#elif defined(STM32F1)
 /* Values for STM32F103 at 72 MHz */
+#define USED_SWD_CYCLES_NODELAY 16
+#define USED_SWD_CYCLES         34
+#define CYCLES_PER_CNT          17
+#elif defined(STM32F0)
+/* Values for STM32F072 at 48 MHz */
+#define USED_SWD_CYCLES_NODELAY 24
+#define USED_SWD_CYCLES         30
+#define CYCLES_PER_CNT          17
+#else
+/* Inherit defaults for other platforms (F3, F7) */
 #define USED_SWD_CYCLES 22
 #define CYCLES_PER_CNT  10
+#endif
 
 void platform_max_frequency_set(const uint32_t frequency)
 {
@@ -206,8 +228,10 @@ uint32_t platform_max_frequency_get(void)
 	const uint32_t ratio = (target_clk_divider * BITBANG_DIVIDER_FACTOR) + BITBANG_DIVIDER_OFFSET;
 	return rcc_ahb_frequency / ratio;
 #else
+	if (target_clk_divider == UINT32_MAX)
+		return rcc_ahb_frequency / USED_SWD_CYCLES_NODELAY;
 	uint32_t result = rcc_ahb_frequency;
-	result /= USED_SWD_CYCLES + CYCLES_PER_CNT * target_clk_divider;
+	result /= USED_SWD_CYCLES + CYCLES_PER_CNT * target_clk_divider * 2U;
 	return result;
 #endif
 }

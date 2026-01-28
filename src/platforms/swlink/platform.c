@@ -215,3 +215,73 @@ uint8_t platform_spi_xfer(const spi_bus_e bus, const uint8_t value)
 	(void)bus;
 	return value;
 }
+
+#ifdef PLATFORM_HAS_CUSTOM_COMMANDS
+
+#include "swd.h"
+#include "gdb_packet.h"
+#include "target_internal.h"
+#include <libopencm3/cm3/dwt.h>
+
+static bool cmd_swdptap_calibration(target_s *target, int argc, const char **argv);
+
+const command_s platform_cmd_list[] = {
+	{"calibrate_swd", cmd_swdptap_calibration, "Calibrate SW-DP TAP timings"},
+	{NULL, NULL, NULL},
+};
+
+static void swdptap_linereset_measured(bool no_delay)
+{
+	const uint32_t ts_pre = dwt_read_cycle_counter();
+	/* for robustness, we use 60 HIGH cycles and 4 idle cycles */
+	swd_proc.seq_out(0xffffffffU, 32U);
+	swd_proc.seq_out(0x0fffffffU, 32U);
+	swd_proc.seq_out(0xffffffffU, 32U);
+	swd_proc.seq_out(0x0fffffffU, 32U);
+	swd_proc.seq_out(0xffffffffU, 32U);
+	swd_proc.seq_out(0x0fffffffU, 32U);
+	swd_proc.seq_out(0xffffffffU, 32U);
+	swd_proc.seq_out(0x0fffffffU, 32U);
+	const uint32_t ts_post = dwt_read_cycle_counter();
+	const uint32_t cycles_spent = ts_post - ts_pre;
+	/* Subtract the overhead of function calls */
+	const uint32_t fncall_corr = no_delay ? (243U) : (133U);
+	/* Split the 64*4 into 16*16 for 216-240MHz clocks to not overflow a uint32_t */
+	const uint32_t freq_measured = rcc_ahb_frequency * 16U / (cycles_spent - fncall_corr) * 16U;
+	gdb_outf("Estimated %7lu Hz (%5lu cycles - %ld corr)\n", freq_measured, cycles_spent, fncall_corr);
+}
+
+static bool cmd_swdptap_calibration(target_s *target, int argc, const char **argv)
+{
+	(void)argc;
+	(void)argv;
+	if (target && target->attached)
+		target_detach(target);
+	platform_target_clk_output_enable(true);
+	if (!swd_proc.seq_out)
+		swdptap_init();
+	dwt_enable_cycle_counter();
+
+	uint32_t freq = 0;
+	gdb_outf("Platform core clock %lu\n", rcc_ahb_frequency);
+
+	/* Emit a _no_delay waveform */
+	target_clk_divider = UINT32_MAX;
+	freq = platform_max_frequency_get();
+	gdb_outf("Changing frequency to %lu (no_delay)\n", freq);
+	swdptap_linereset_measured(true);
+
+	/* Loop through a few _delay values */
+	for (uint32_t i = 0; i < 8; i++) {
+		target_clk_divider = i;
+		freq = platform_max_frequency_get();
+		gdb_outf("Changing frequency to %lu (divider=%lu)\n", freq, target_clk_divider);
+		swdptap_linereset_measured(false);
+	}
+
+	/* Reset frequency to medium */
+	platform_max_frequency_set(3000000U);
+	return true;
+}
+
+#endif
