@@ -42,8 +42,6 @@ static void jlink_jtag_tdi_seq(bool final_tms, const uint8_t *data_in, size_t cl
 static bool jlink_jtag_next(bool tms, bool tdi);
 static void jlink_jtag_cycle(bool tms, bool tdi, size_t clock_cycles);
 
-static const uint8_t jlink_switch_to_jtag_seq[9U] = {0xffU, 0xffU, 0xffU, 0xffU, 0xffU, 0xffU, 0xffU, 0x3cU, 0xe7U};
-
 bool jlink_jtag_init(void)
 {
 	DEBUG_PROBE("-> jlink_jtag_init\n");
@@ -56,7 +54,10 @@ bool jlink_jtag_init(void)
 
 	/* Ensure we're in JTAG mode */
 	DEBUG_PROBE("%s: Switch to JTAG\n", __func__);
-	if (!jlink_transfer(sizeof(jlink_switch_to_jtag_seq) * 8U, jlink_switch_to_jtag_seq, NULL, NULL)) {
+	jlink_jtag_cycle(true, false, 56U - 5U);
+	uint8_t tms_swd_to_jtag_seq[2] = {0x3cU, 0xe7U};
+	bool res = jlink_transfer(16U, tms_swd_to_jtag_seq, NULL, NULL);
+	if (!res) {
 		DEBUG_ERROR("Switch to JTAG failed\n");
 		return false;
 	}
