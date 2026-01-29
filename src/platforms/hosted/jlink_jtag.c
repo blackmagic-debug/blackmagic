@@ -123,6 +123,17 @@ static bool jlink_jtag_next(bool tms, bool tdi)
 
 static void jlink_jtag_cycle(const bool tms, const bool tdi, const size_t clock_cycles)
 {
-	for (size_t i = 0; i < clock_cycles; i++)
-		jlink_jtag_next(tms, tdi);
+	if (clock_cycles > 63U)
+		return;
+	const uint64_t all_ones = (UINT64_C(1) << clock_cycles) - 1U;
+	const uint64_t tms_pattern = tms ? all_ones : 0;
+	const uint64_t tdi_pattern = tdi ? all_ones : 0;
+	uint8_t tms_buf[8] = {0};
+	uint8_t tdi_buf[8] = {0};
+	memcpy(tms_buf, &tms_pattern, 8);
+	memcpy(tdi_buf, &tdi_pattern, 8);
+	DEBUG_PROBE("jtagtap_cycle tms=%u tdi=%u, clock cycles: %zu\n", tms, tdi, clock_cycles);
+	const bool result = jlink_transfer(clock_cycles, tms_buf, tdi_buf, NULL);
+	if (!result)
+		raise_exception(EXCEPTION_ERROR, "jtagtap_cycle failed");
 }
