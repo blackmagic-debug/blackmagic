@@ -342,7 +342,7 @@ bool stm32l1_probe(target_s *const target)
 	if (ap->partno != ID_STM32L1xxxB && ap->partno != ID_STM32L1xxxBxA && ap->partno != ID_STM32L1xxxC &&
 		ap->partno != ID_STM32L1xxxD && ap->partno != ID_STM32L1xxxE)
 		return false;
-	target->part_id = ap->partno;
+	target->part_id = target_mem32_read32(target, STM32L1_DBGMCU_IDCODE) & 0xfffU;
 
 	/* Now we have a stable debug environment, make sure the WDTs + WFI and WFE instructions can't cause problems */
 	stm32l1_configure_dbgmcu(target);
