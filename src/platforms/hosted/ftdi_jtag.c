@@ -166,7 +166,7 @@ static void ftdi_jtag_cycle(const bool tms, const bool tdi, const size_t clock_c
 	 * 0x8f CLK_BYTES: Length of 0..n will generate 1..1+n byte cycles,
 	 * i.e. emit 8..8*(n+1) clocks, so adjust clock_bytes down by 1.
 	 */
-	size_t clock_bytes = clock_cycles / 8U;
+	size_t clock_bytes = clock_cycles >> 3U;
 	if (clock_bytes > 0) {
 		clock_bytes--;
 		const uint8_t cmd8[3U] = {
@@ -177,7 +177,7 @@ static void ftdi_jtag_cycle(const bool tms, const bool tdi, const size_t clock_c
 		ftdi_buffer_write_arr(cmd8);
 	}
 	/* 0x8e CLK_BITS: Length of 0..7 will emit 1..8 clocks */
-	const uint8_t clock_bits = clock_cycles % 8U - 1U;
+	const uint8_t clock_bits = (clock_cycles & 7U) - 1U;
 	if (clock_bits >= 8U)
 		return;
 	const uint8_t cmd1[2U] = {
