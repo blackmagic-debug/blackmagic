@@ -268,7 +268,7 @@ static bool msp432_flash_write(
 	DEBUG_WARN("Flash protect: 0x%08" PRIX32 "\n", target_mem32_read32(target, mf->flash_protect_register));
 
 	/* Prepare input data */
-	uint32_t *regs = alloca(target->regs_size / sizeof(uint32_t)); // Use of VLA
+	uint32_t regs[CORTEXM_GENERAL_REG_COUNT + CORTEX_FLOAT_REG_COUNT];
 	target_regs_read(target, regs);
 	regs[0] = SRAM_WRITE_BUFFER; // Address of buffer to be flashed in R0
 	regs[1] = dest;              // Flash address to be write to in R1
