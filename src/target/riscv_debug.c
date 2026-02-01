@@ -674,8 +674,8 @@ static uint32_t riscv_hart_discover_isa(riscv_hart_s *const hart)
 	/* Now use the data count bits to divine an initial guess on the platform width */
 	data_registers &= RV_DM_ABST_STATUS_DATA_COUNT;
 	DEBUG_INFO("Hart has %" PRIu32 " data registers and %u progbuf registers\n", data_registers, hart->progbuf_size);
-	/* Memory access using less than 8 progbuf slots is not supported yet */
-	if (hart->progbuf_size >= 8)
+	/* Memory access using less than 2 progbuf slots is not supported yet */
+	if (hart->progbuf_size >= 2)
 		hart->flags |= RV_HART_FLAG_MEMORY_PROGBUF;
 	/* Check we have at least enough data registers for arg0 */
 	if (data_registers >= 4)
