@@ -69,10 +69,10 @@
 #define JEP106_MANUFACTURER_RENESAS      0x423U /* Renesas */
 #define JEP106_MANUFACTURER_XILINX       0x309U /* Xilinx - Technically 0x049, but they use Ikanos Communications' code */
 /*
- * This JEP code should belong to "Andes Technology Corporation", but is used on RISC-V by GigaDevice,
- * so in the unlikely event we need to support chips by them, here be dragons.
+ * This JEP code is used on RISC-V by GigaDevice, because
+ * "Note: The Bumblebee core used for this MCU is jointly developed by Nuclei System Technology and Andes Technology."
  */
-#define JEP106_MANUFACTURER_RV_GIGADEVICE 0x61eU
+#define JEP106_MANUFACTURER_ANDES 0x61eU /* Andes Technology Corporation */
 
 /*
  * Used by WCH (WinChipHead) aka Nanjing Qinheng Microelectronics

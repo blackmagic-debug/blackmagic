@@ -410,7 +410,7 @@ const jtag_dev_descr_s dev_descr[] = {
 		.idcode = 0x0000563dU,
 		.idmask = 0x0fffffffU,
 #if ENABLE_DEBUG == 1
-		.descr = "RISC-V debug v0.13.",
+		.descr = "Andes Tech RISC-V DTM.",
 #endif
 		.handler = riscv_jtag_dtm_handler,
 	},
