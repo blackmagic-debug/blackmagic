@@ -65,6 +65,7 @@ bool ch32vx_probe(target_s *target);
 bool gd32f1_probe(target_s *target);
 bool gd32f4_probe(target_s *target);
 bool gd32vf1_probe(target_s *target);
+bool gd32vw5_probe(target_s *target);
 bool hc32l110_probe(target_s *target);
 bool imxrt_probe(target_s *target);
 bool ke04_probe(target_s *target);

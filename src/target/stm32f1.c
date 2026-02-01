@@ -393,6 +393,21 @@ static void gd32vf1_detach(target_s *const target)
 	/* Now defer to the normal Cortex-M detach routine to complete the detach */
 	riscv_detach(target);
 }
+
+/* Identify RISC-V GD32VW5 chips */
+bool gd32vw5_probe(target_s *const target)
+{
+	const uint16_t device_id = target_mem32_read32(target, GD32E5_DBGMCU_BASE) & 0xfffU;
+	const uint32_t signature = target_mem32_read32(target, GD32Fx_FLASHSIZE);
+	const uint16_t flash_size = signature & 0xffffU;
+	const uint16_t ram_size = signature >> 16U;
+	DEBUG_WARN("Stub for detection of GD32VW553. DBG_ID=0x%x, RAM=%u, flash=%u\n", device_id, ram_size, flash_size);
+	target->driver = "GD32VW5";
+	target->part_id = device_id;
+	target_add_ram32(target, STM32F1_SRAM_BASE, ram_size * 1024U);
+	target_add_ram32(target, STM32F1_FLASH_BANK1_BASE, flash_size * 1024U);
+	return true;
+}
 #endif
 #endif
 

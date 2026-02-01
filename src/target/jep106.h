@@ -72,7 +72,8 @@
  * This JEP code is used on RISC-V by GigaDevice, because
  * "Note: The Bumblebee core used for this MCU is jointly developed by Nuclei System Technology and Andes Technology."
  */
-#define JEP106_MANUFACTURER_ANDES 0x61eU /* Andes Technology Corporation */
+#define JEP106_MANUFACTURER_ANDES  0x61eU /* Andes Technology Corporation */
+#define JEP106_MANUFACTURER_NUCLEI 0xa36U /* Nuclei System Technology */
 
 /*
  * Used by WCH (WinChipHead) aka Nanjing Qinheng Microelectronics
