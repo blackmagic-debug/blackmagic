@@ -95,11 +95,11 @@ bool riscv32_probe(target_s *const target)
 	case JEP106_MANUFACTURER_RASPBERRY:
 		PROBE(rp2350_probe);
 		break;
-	default:
-		break;
 	case JEP106_MANUFACTURER_WCH:
 		PROBE(ch32v003x_probe);
 		PROBE(ch32vx_probe);
+		break;
+	default:
 		break;
 	}
 
