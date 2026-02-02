@@ -33,14 +33,16 @@ lmi_stub = []
 efm32_stub = []
 rp2040_stub = []
 
-# If we're doing a firmware build, type to find hexdump
+# If we're doing a firmware build, type to find hexdump and objcopy
 if is_firmware_build
+	objcopy = find_program('objcopy', required: false)
 	hexdump = find_program('hexdump', required: false)
 else
+	objcopy = disabler()
 	hexdump = disabler()
 endif
 # If we cannot or we're not a firmware build, we're done
-if not hexdump.found()
+if not hexdump.found() or not objcopy.found()
 	subdir_done()
 endif
 
@@ -74,6 +76,19 @@ lmi_stub_elf = executable(
 	install: false,
 )
 
+lmi_stub_bin = custom_target(
+	'lmi_stub-bin',
+	command: [
+		objcopy,
+		'-Obinary',
+		'-j.text',
+		'@INPUT@',
+		'@OUTPUT@'
+	],
+	input: lmi_stub_elf,
+	output: 'lmi_stub.bin',
+)
+
 lmi_stub = custom_target(
 	'lmi_stub-hex',
 	command: [
@@ -82,7 +97,7 @@ lmi_stub = custom_target(
 		'-e', '/2 "0x%04X, "',
 		'@INPUT@'
 	],
-	input: lmi_stub_elf,
+	input: lmi_stub_bin,
 	output: 'lmi.stub',
 	capture: true,
 )
@@ -105,6 +120,19 @@ efm32_stub_elf = executable(
 	install: false,
 )
 
+efm32_stub_bin  = custom_target(
+	'efm32_stub-bin',
+	command: [
+		objcopy,
+		'-Obinary',
+		'-j.text',
+		'@INPUT@',
+		'@OUTPUT@'
+	],
+	input: efm32_stub_elf,
+	output: 'efm32_stub.bin',
+)
+
 efm32_stub = custom_target(
 	'efm32_stub-hex',
 	command: [
@@ -113,7 +141,7 @@ efm32_stub = custom_target(
 		'-e', '/2 "0x%04X, "',
 		'@INPUT@'
 	],
-	input: efm32_stub_elf,
+	input: efm32_stub_bin,
 	output: 'efm32.stub',
 	capture: true,
 )
@@ -136,6 +164,19 @@ rp2040_stub_elf = executable(
 	install: false,
 )
 
+rp2040_stub_bin  = custom_target(
+	'rp2040_stub-bin',
+	command: [
+		objcopy,
+		'-Obinary',
+		'-j.text',
+		'@INPUT@',
+		'@OUTPUT@'
+	],
+	input: rp2040_stub_elf,
+	output: 'rp2040_stub.bin',
+)
+
 rp2040_stub = custom_target(
 	'rp_stub-hex',
 	command: [
@@ -144,7 +185,7 @@ rp2040_stub = custom_target(
 		'-e', '/2 "0x%04X, "',
 		'@INPUT@'
 	],
-	input: rp2040_stub_elf,
+	input: rp2040_stub_bin,
 	output: 'rp.stub',
 	capture: true,
 )
