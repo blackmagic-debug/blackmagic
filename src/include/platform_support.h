@@ -84,4 +84,11 @@ uint8_t platform_spi_xfer(spi_bus_e bus, uint8_t value);
 const char *platform_ident(void);
 #endif
 
+#ifdef PLATFORM_MULTI_UART
+void platform_enable_uart2(void);
+void platform_disable_uart2(void);
+bool platform_is_uart2_enabled(void);
+void platform_switch_dir_uart2(void);
+#endif
+
 #endif /* INCLUDE_PLATFORM_SUPPORT_H */
