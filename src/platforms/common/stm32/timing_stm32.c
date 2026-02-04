@@ -29,13 +29,13 @@
 #include <libopencm3/stm32/adc.h>
 
 bool running_status = false;
-static volatile uint32_t time_ms = 0;
+static _Atomic uint32_t time_ms = 0;
 uint32_t target_clk_divider = 0;
 
 static size_t morse_tick = 0;
 #if defined(PLATFORM_HAS_POWER_SWITCH) && defined(STM32F1)
-static uint8_t monitor_ticks = 0;
-static uint8_t monitor_error_count = 0;
+static uint8_t monitor_ticks = 0U;
+static uint8_t monitor_error_count = 0U;
 
 /* Derived from calculating (1.2V / 3.0V) * 4096 */
 #define ADC_VREFINT_MAX 1638U
@@ -44,6 +44,9 @@ static uint8_t monitor_error_count = 0;
  * then applying an offset to adjust for being 10-20mV over
  */
 #define ADC_VREFINT_MIN 1404U
+#endif
+#ifdef PLATFORM_MULTI_UART
+static uint8_t uart_ticks = 0U;
 #endif
 
 static void usb_config_morse_msg_update(void)
@@ -146,6 +149,19 @@ void sys_tick_handler(void)
 			++monitor_ticks;
 	} else
 		monitor_ticks = 0;
+#endif
+
+#ifdef PLATFORM_MULTI_UART
+	/* Only do the toggling if the UART is not currently enabled */
+	if (!platform_is_uart2_enabled()) {
+		/* Every 10th tick, swap the direction of the UART */
+		if (++uart_ticks == 10U) {
+			platform_switch_dir_uart2();
+			/* And reset the counter back to 0 */
+			uart_ticks = 0U;
+		}
+	} else
+		uart_ticks = 0U;
 #endif
 }
 
