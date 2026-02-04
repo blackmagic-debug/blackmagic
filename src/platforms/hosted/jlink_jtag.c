@@ -123,15 +123,19 @@ static bool jlink_jtag_next(bool tms, bool tdi)
 
 static void jlink_jtag_cycle(const bool tms, const bool tdi, const size_t clock_cycles)
 {
-	uint8_t tms_buf[8] = {0};
-	uint8_t tdi_buf[8] = {0};
-	if (clock_cycles > 64U)
+	uint8_t tms_buf[512] = {0};
+	uint8_t tdi_buf[512] = {0};
+	if (clock_cycles > 4096U)
 		return;
-	const uint64_t all_ones = clock_cycles == 64U ? UINT64_MAX : (UINT64_C(1) << clock_cycles) - 1U;
-	const uint64_t tms_pattern = tms ? all_ones : 0U;
-	const uint64_t tdi_pattern = tdi ? all_ones : 0U;
-	memcpy(tms_buf, &tms_pattern, 8);
-	memcpy(tdi_buf, &tdi_pattern, 8);
+	const size_t clock_bytes = clock_cycles >> 3U;
+	memset(tms_buf, tms ? 0xffU : 0U, clock_bytes);
+	memset(tdi_buf, tdi ? 0xffU : 0U, clock_bytes);
+	const size_t clock_bits = clock_cycles & 7U;
+	if (clock_bits) {
+		const uint8_t ones = (1U << clock_bits) - 1U;
+		tms_buf[clock_bytes] = tms ? ones : 0U;
+		tdi_buf[clock_bytes] = tdi ? ones : 0U;
+	}
 	DEBUG_PROBE("jtagtap_cycle tms=%u tdi=%u, clock cycles: %zu\n", tms, tdi, clock_cycles);
 	const bool result = jlink_transfer(clock_cycles, tms_buf, tdi_buf, NULL);
 	if (!result)
