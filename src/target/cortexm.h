@@ -69,7 +69,7 @@ extern unsigned cortexm_wait_timeout;
 #define CORTEXM_DWT_MASK(i) (CORTEXM_DWT_BASE + 0x024U + (0x10U * (i)))
 #define CORTEXM_DWT_FUNC(i) (CORTEXM_DWT_BASE + 0x028U + (0x10U * (i)))
 
-/* Arm V8 External Debug Fault Status Register */
+/* ARMv8 External Debug Fault Status Register */
 #define CORTEXM_EDFSR (CORTEXM_SCS_BASE + 0xf98U)
 #define CORTEXM_ICSR  (CORTEXM_SCS_BASE + 0xd04U)
 /* Application Interrupt and Reset Control Register (AIRCR) */
@@ -191,9 +191,9 @@ extern unsigned cortexm_wait_timeout;
 #define CORTEXM_XPSR_THUMB          (1U << 24U)
 #define CORTEXM_XPSR_EXCEPTION_MASK 0x0000001fU
 
-/* ICSR for ArmV8m, the exception are the same as IPSR */
-#define CORTEXM_ICSR_VEC_PENDING(x) (((x) >> 12) & 0x1ff)
-#define CORTEXM_ICSR_VEC_ACTIVE(x)  (((x) >> 0) & 0x1ff)
+/* ICSR for ARMv8-M, the exception are the same as IPSR */
+#define CORTEXM_ICSR_VEC_PENDING(x) (((x) >> 12U) & 0x1ffU)
+#define CORTEXM_ICSR_VEC_ACTIVE(x)  (((x) >> 0U) & 0x1ffU)
 
 bool cortexm_attach(target_s *target);
 void cortexm_detach(target_s *target);

@@ -869,17 +869,14 @@ static target_halt_reason_e cortexm_halt_poll(target_s *target, target_addr64_t 
 	// so reading dfsr might not work.
 	// Instead, we check if there are pending faults on ICSR
 	// meaning we stopped while trying to execute a fault
-	// but maybe did not execut it
+	// but maybe did not execute it
 	if ((target->target_options & CORTEXM_TOPT_FLAVOUR_V8M)) {
 		const uint32_t icsr = target_mem32_read32(target, CORTEXM_ICSR);
 		const uint32_t pending = CORTEXM_ICSR_VEC_PENDING(icsr);
-		if (pending != 0 && pending < 8) //  catch all faults
-		{
+		if (pending > 0 && pending < 8) //  catch all faults
 			fault_state = true;
-		}
-	} else {
-		fault_state = !!(dfsr & CORTEXM_DFSR_VCATCH);
-	}
+	} else
+		fault_state = (dfsr & CORTEXM_DFSR_VCATCH) != 0U;
 	if (fault_state && cortexm_fault_unwind(target))
 		return TARGET_HALT_FAULT;
 
