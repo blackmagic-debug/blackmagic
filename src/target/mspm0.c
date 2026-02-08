@@ -387,7 +387,7 @@ static bool mspm0_mass_erase(target_s *const target, platform_timeout_s *const p
 			target_mem32_write32(target, MSPM0_FLASHCTL_CMDEXEC, MSPM0_FLASHCTL_CMDEXEC_EXEC);
 
 			uint32_t status = 0U;
-			while (status & MSPM0_FLASHCTL_STAT_DONE) {
+			while (!(status & MSPM0_FLASHCTL_STAT_DONE)) {
 				status = target_mem32_read32(target, MSPM0_FLASHCTL_STATCMD);
 				if (print_progess)
 					target_print_progress(print_progess);
