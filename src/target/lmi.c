@@ -229,5 +229,5 @@ static bool lmi_flash_write(target_flash_s *flash, target_addr_t dest, const voi
 	if (target_check_error(target))
 		return false;
 
-	return cortexm_run_stub(target, LMI_SRAM_BASE, dest, LMI_STUB_BUFFER_BASE, len, 0) == 0;
+	return cortexm_run_stub(target, LMI_SRAM_BASE, dest, LMI_STUB_BUFFER_BASE, len, 0, 0) == 0;
 }
