@@ -24,8 +24,6 @@
 #include "jep106.h"
 #include "cortexm.h"
 
-#define MSPM0_CONFIG_FLASH_DUMP_SUPPORT (CONFIG_BMDA == 1 || ENABLE_DEBUG == 1)
-
 #define MSPM0_SRAM_BASE            0x20000000U
 #define MSPM0_FLASH_MAIN           0x00000000U
 #define MSPM0_FLASH_NONMAIN        0x41c00000U /* One Sector, BANK0. Device boot configuration (BCR, BSL) */
@@ -108,99 +106,9 @@ static const uint16_t mspm0_flash_write_stub[] = {
 };
 #define STUB_BUFFER_BASE ALIGN(MSPM0_SRAM_BASE + sizeof(mspm0_flash_write_stub), 4)
 
-#if MSPM0_CONFIG_FLASH_DUMP_SUPPORT
-static bool mspm0_dump_factory_config(target_s *target, int argc, const char **argv);
-static bool mspm0_dump_bcr_config(target_s *target, int argc, const char **argv);
-
-static command_s mspm0_cmds_list[] = {
-	{"dump_factory", mspm0_dump_factory_config, "Display FACTORY registers"},
-	{"dump_bcr", mspm0_dump_bcr_config, "Display NONMAIN (BCR/BSL) registers"},
-	{NULL, NULL, NULL},
-};
-#endif
-
 static bool mspm0_flash_erase(target_flash_s *flash, target_addr_t addr, size_t length);
 static bool mspm0_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t length);
 static bool mspm0_mass_erase(target_s *target, platform_timeout_s *print_progess);
-
-#if MSPM0_CONFIG_FLASH_DUMP_SUPPORT
-typedef struct conf_register {
-	uint16_t reg_offset;
-	uint16_t size_words;
-	const char *id;
-} conf_register_s;
-
-static conf_register_s mspm0_factory_regs[] = {
-	{0x00U, 1U, "TRACEID"},
-	{0x04U, 1U, "DEVICEID"},
-	{0x08U, 1U, "USERID"},
-	{0x0cU, 1U, "BSLPIN_UART"},
-	{0x10U, 1U, "BSLPIN_I2C"},
-	{0x14U, 1U, "BSLPIN_INVOKE"},
-	{0x18U, 1U, "SRAMFLASH"},
-	{0x3cU, 1U, "TEMP_SENSE0"},
-	{0x7cU, 1U, "BOOTCRC"},
-	{0U, 0U, NULL},
-};
-
-static conf_register_s mspm0_bcr_regs[] = {
-	{0x00U, 1U, "BCRCONFIGID"},
-	{0x04U, 1U, "BOOTCFG0"},
-	{0x08U, 1U, "BOOTCFG1"},
-	{0x0cU, 4U, "PWDDEBUGLOCK"},
-	{0x1cU, 4U, "BOOTCFG2"},
-	{0x20U, 1U, "BOOTCFG3"},
-	{0x24U, 4U, "PWDMASSERASE"},
-	{0x34U, 4U, "PWDFACTORYRESET"},
-	{0x44U, 1U, "FLASHSWP0"},
-	{0x48U, 1U, "FLASHSWP1"},
-	{0x4cU, 1U, "BOOTCFG4"},
-	{0x50U, 1U, "APPCRCSTART"},
-	{0x54U, 1U, "APPCRCLENGTH"},
-	{0x58U, 1U, "APPCRC"},
-	{0x5cU, 1U, "BOOTCRC"},
-	{0x100U, 1U, "BSLCONFIGID"},
-	{0x104U, 1U, "BSLPINCFG0"},
-	{0x108U, 1U, "BSLPINCFG1"},
-	{0x10cU, 1U, "BSLCONFIG0"},
-	{0x110U, 8U, "BSLPW"},
-	{0x130U, 1U, "BSLPLUGINCFG"},
-	{0x134U, 4U, "BSLPLUGINHOOK"},
-	{0x144U, 1U, "PATCHHOOKID"},
-	{0x148U, 1U, "SBLADDRESS"},
-	{0x14cU, 1U, "BSLAPPVER"},
-	{0x150U, 1U, "BSLCONFIG1"},
-	{0x154U, 1U, "BSLCRC"},
-	{0U, 0U, NULL},
-};
-
-static void mspm0_dump_regs(target_s *const target, const conf_register_s *const regs, const uint32_t base)
-{
-	for (const conf_register_s *reg = regs; reg->id; ++reg) {
-		tc_printf(target, "%15s: ", reg->id);
-		for (size_t i = 0; i < reg->size_words; ++i) {
-			uint32_t value = target_mem32_read32(target, base + reg->reg_offset + (uint32_t)(i * 4U));
-			tc_printf(target, "0x%08" PRIx32 "%s", value, i == reg->size_words - 1U ? "\n" : " ");
-		}
-	}
-}
-
-static bool mspm0_dump_factory_config(target_s *const target, const int argc, const char **const argv)
-{
-	(void)argc;
-	(void)argv;
-	mspm0_dump_regs(target, mspm0_factory_regs, MSPM0_FLASH_FACTORY);
-	return true;
-}
-
-static bool mspm0_dump_bcr_config(target_s *const target, const int argc, const char **const argv)
-{
-	(void)argc;
-	(void)argv;
-	mspm0_dump_regs(target, mspm0_bcr_regs, MSPM0_FLASH_NONMAIN);
-	return true;
-}
-#endif
 
 static void mspm0_add_flash(
 	target_s *const target, const uint32_t base, const size_t length, const uint32_t banks, uint32_t write_size)
@@ -266,10 +174,6 @@ bool mspm0_probe(target_s *const target)
 	mspm0_add_flash(target, MSPM0_FLASH_MAIN, mainflash_size, main_num_banks, write_size);
 	if (dataflash_size != 0)
 		mspm0_add_flash(target, MSPM0_FLASH_DATA, dataflash_size, 1U, write_size);
-
-#if MSPM0_CONFIG_FLASH_DUMP_SUPPORT
-	target_add_commands(target, mspm0_cmds_list, "MSPM0");
-#endif
 
 	return true;
 }
