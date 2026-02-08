@@ -110,63 +110,69 @@ static command_s mspm0_cmds_list[] = {
 #endif
 
 #if MSPM0_CONFIG_FLASH_DUMP_SUPPORT
-typedef struct conf_register {
-	uint16_t reg_offset;
-	uint16_t size_words;
-	const char *id;
-} conf_register_s;
+#define MSPM0_ASSERT_PACKED_OFFSET(x) sizeof(char[((x) >> 2) >= 0x100 || (((x) & 0x3U) != 0) ? -1 : 1])
+#define MSPM0_PACKED_ENTRY(offset, len, ...) \
+	len, (uint8_t)((offset) >> (2 * MSPM0_ASSERT_PACKED_OFFSET(offset))), __VA_ARGS__,
 
-static conf_register_s mspm0_factory_regs[] = {
-	{0x00U, 1U, "TRACEID"},
-	{0x04U, 1U, "DEVICEID"},
-	{0x08U, 1U, "USERID"},
-	{0x0cU, 1U, "BSLPIN_UART"},
-	{0x10U, 1U, "BSLPIN_I2C"},
-	{0x14U, 1U, "BSLPIN_INVOKE"},
-	{0x18U, 1U, "SRAMFLASH"},
-	{0x3cU, 1U, "TEMP_SENSE0"},
-	{0x7cU, 1U, "BOOTCRC"},
-	{0U, 0U, NULL},
+/* clang-format off */
+static uint8_t const mspm0_factory_regs[] = {
+	MSPM0_PACKED_ENTRY(0x00U, 1U, 'T','R','A','C','E','I','D')
+	MSPM0_PACKED_ENTRY(0x04U, 1U, 'D','E','V','I','C','E','I','D')
+	MSPM0_PACKED_ENTRY(0x08U, 1U, 'U','S','E','R','I','D')
+	MSPM0_PACKED_ENTRY(0x0cU, 1U, 'B','S','L','P','I','N','_','U','A','R','T')
+	MSPM0_PACKED_ENTRY(0x10U, 1U, 'B','S','L','P','I','N','_','I','2','C')
+	MSPM0_PACKED_ENTRY(0x14U, 1U, 'B','S','L','P','I','N','_','I','N','V','O','K','E')
+	MSPM0_PACKED_ENTRY(0x18U, 1U, 'S','R','A','M','F','L','A','S','H')
+	MSPM0_PACKED_ENTRY(0x3cU, 1U, 'T','E','M','P','_','S','E','N','S','E','0')
+	MSPM0_PACKED_ENTRY(0x7cU, 1U, 'B','O','O','T','C','R','C')
+	0U
 };
 
-static conf_register_s mspm0_bcr_regs[] = {
-	{0x00U, 1U, "BCRCONFIGID"},
-	{0x04U, 1U, "BOOTCFG0"},
-	{0x08U, 1U, "BOOTCFG1"},
-	{0x0cU, 4U, "PWDDEBUGLOCK"},
-	{0x1cU, 4U, "BOOTCFG2"},
-	{0x20U, 1U, "BOOTCFG3"},
-	{0x24U, 4U, "PWDMASSERASE"},
-	{0x34U, 4U, "PWDFACTORYRESET"},
-	{0x44U, 1U, "FLASHSWP0"},
-	{0x48U, 1U, "FLASHSWP1"},
-	{0x4cU, 1U, "BOOTCFG4"},
-	{0x50U, 1U, "APPCRCSTART"},
-	{0x54U, 1U, "APPCRCLENGTH"},
-	{0x58U, 1U, "APPCRC"},
-	{0x5cU, 1U, "BOOTCRC"},
-	{0x100U, 1U, "BSLCONFIGID"},
-	{0x104U, 1U, "BSLPINCFG0"},
-	{0x108U, 1U, "BSLPINCFG1"},
-	{0x10cU, 1U, "BSLCONFIG0"},
-	{0x110U, 8U, "BSLPW"},
-	{0x130U, 1U, "BSLPLUGINCFG"},
-	{0x134U, 4U, "BSLPLUGINHOOK"},
-	{0x144U, 1U, "PATCHHOOKID"},
-	{0x148U, 1U, "SBLADDRESS"},
-	{0x14cU, 1U, "BSLAPPVER"},
-	{0x150U, 1U, "BSLCONFIG1"},
-	{0x154U, 1U, "BSLCRC"},
-	{0U, 0U, NULL},
+static uint8_t const mspm0_bcr_regs[] = {
+	MSPM0_PACKED_ENTRY(0x00U, 1U, 'B','C','R','C','O','N','F','I','G','I','D')
+	MSPM0_PACKED_ENTRY(0x04U, 1U, 'B','O','O','T','C','F','G','0')
+	MSPM0_PACKED_ENTRY(0x08U, 1U, 'B','O','O','T','C','F','G','1')
+	MSPM0_PACKED_ENTRY(0x0cU, 4U, 'P','W','D','D','E','B','U','G','L','O','C','K')
+	MSPM0_PACKED_ENTRY(0x1cU, 4U, 'B','O','O','T','C','F','G','2')
+	MSPM0_PACKED_ENTRY(0x20U, 1U, 'B','O','O','T','C','F','G','3')
+	MSPM0_PACKED_ENTRY(0x24U, 4U, 'P','W','D','M','A','S','S','E','R','A','S','E')
+	MSPM0_PACKED_ENTRY(0x34U, 4U, 'P','W','D','F','A','C','T','O','R','Y','R','E','S','E','T')
+	MSPM0_PACKED_ENTRY(0x44U, 1U, 'F','L','A','S','H','S','W','P','0')
+	MSPM0_PACKED_ENTRY(0x48U, 1U, 'F','L','A','S','H','S','W','P','1')
+	MSPM0_PACKED_ENTRY(0x4cU, 1U, 'B','O','O','T','C','F','G','4')
+	MSPM0_PACKED_ENTRY(0x50U, 1U, 'A','P','P','C','R','C','S','T','A','R','T')
+	MSPM0_PACKED_ENTRY(0x54U, 1U, 'A','P','P','C','R','C','L','E','N','G','T','H')
+	MSPM0_PACKED_ENTRY(0x58U, 1U, 'A','P','P','C','R','C')
+	MSPM0_PACKED_ENTRY(0x5cU, 1U, 'B','O','O','T','C','R','C')
+	MSPM0_PACKED_ENTRY(0x100U, 1U, 'B','S','L','C','O','N','F','I','G','I','D')
+	MSPM0_PACKED_ENTRY(0x104U, 1U, 'B','S','L','P','I','N','C','F','G','0')
+	MSPM0_PACKED_ENTRY(0x108U, 1U, 'B','S','L','P','I','N','C','F','G','1')
+	MSPM0_PACKED_ENTRY(0x10cU, 1U, 'B','S','L','C','O','N','F','I','G','0')
+	MSPM0_PACKED_ENTRY(0x110U, 8U, 'B','S','L','P','W')
+	MSPM0_PACKED_ENTRY(0x130U, 1U, 'B','S','L','P','L','U','G','I','N','C','F','G')
+	MSPM0_PACKED_ENTRY(0x134U, 4U, 'B','S','L','P','L','U','G','I','N','H','O','O','K')
+	MSPM0_PACKED_ENTRY(0x144U, 1U, 'P','A','T','C','H','H','O','O','K','I','D')
+	MSPM0_PACKED_ENTRY(0x148U, 1U, 'S','B','L','A','D','D','R','E','S','S')
+	MSPM0_PACKED_ENTRY(0x14cU, 1U, 'B','S','L','A','P','P','V','E','R')
+	MSPM0_PACKED_ENTRY(0x150U, 1U, 'B','S','L','C','O','N','F','I','G','1')
+	MSPM0_PACKED_ENTRY(0x154U, 1U, 'B','S','L','C','R','C')
+	0U
 };
+/* clang-format on */
 
-static void mspm0_dump_regs(target_s *const target, const conf_register_s *const regs, const uint32_t base)
+static void mspm0_dump_regs(target_s *const target, uint8_t const *regs, const uint32_t base)
 {
-	for (const conf_register_s *reg = regs; reg->id; ++reg) {
-		tc_printf(target, "%15s: ", reg->id);
-		for (size_t i = 0; i < reg->size_words; ++i) {
-			uint32_t value = target_mem32_read32(target, base + reg->reg_offset + (uint32_t)(i * 4U));
-			tc_printf(target, "0x%08" PRIx32 "%s", value, i == reg->size_words - 1U ? "\n" : " ");
+	while (*regs != 0) {
+		uint32_t words = *regs++;
+		uint32_t reg_offset = (uint32_t)*regs++ << 2;
+		char const *reg_name = (char const *)regs;
+		while (*regs >= ' ')
+			regs++;
+		int name_len = (char const *)regs - reg_name;
+		tc_printf(target, "%15.*s: ", name_len, reg_name);
+		for (size_t i = 0; i < words; ++i) {
+			uint32_t value = target_mem32_read32(target, base + reg_offset + (uint32_t)(i * 4U));
+			tc_printf(target, "0x%08" PRIx32 "%s", value, i == words - 1U ? "\n" : " ");
 		}
 	}
 }
