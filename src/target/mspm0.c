@@ -26,11 +26,6 @@
 
 #define MSPM0_CONFIG_FLASH_DUMP_SUPPORT (CONFIG_BMDA == 1 || ENABLE_DEBUG == 1)
 
-#define TI_DEVID_MSPM0C           0xbba1U /* MSPM0C110[34] */
-#define TI_DEVID_MSPM0L           0xbb82U /* MSPM0L110[56], MSPM0L13[04][456] */
-#define TI_DEVID_MSPM0L_1227_2228 0xbb9fU /* MSPM0L[12]22[78]*/
-#define TI_DEVID_MSPM0G           0xbb88U /* MSPM0G310[567], MSPM0G150[567], MSPM0G350[567] */
-
 #define MSPM0_SRAM_BASE             0x20000000U
 #define MSPM0_FLASH_MAIN            0x00000000U
 #define MSPM0_FLASH_NONMAIN         0x41c00000U /* One Sector, BANK0. Device boot configuration (BCR, BSL) */
@@ -193,6 +188,19 @@ static bool mspm0_dump_bcr_config(target_s *const target, const int argc, const 
 }
 #endif
 
+static uint16_t g_mspm0_partnums[] = {
+	0xbba1U, /* MSPM0C: 1103 1104 1103-Q1 1104-Q1 */
+	0x0bbbU, /* MSPM0C: 1105-Q1 1106-Q1 */
+	0xbbbaU, /* MSPM0C: 1105 1106 */
+	0xbb82U, /* MSPM0L: 1105 1106 1304 1305 1305 1344 1345 1346 1345-Q1 1346-Q1 */
+	0xbb9fU, /* MSPM0L: 1227 1228 2227 2228 1227-Q1 1228-Q1 2227-Q1 2228-Q1 */
+	0xbbb4U, /* MSPM0L: 1116 1117 1116-Q1 1117-Q1 */
+	0xbbc7U, /* MSPM0L: 1126 1127 2116 2117 */
+	0x0bbaU, /* MSPM0H: 3215 3216 */
+	0xbb88U, /* MSPM0G: 1105 1106 1107 1505 1506 1507 3105 3106 3107 3505 3506 3507 3105-Q1 3106-Q1 3107-Q1 3505-Q1 3506-Q1 3507-Q1 */
+	0xbba9U, /* MSPM0G: 1518 1519 3518 3519 3518-Q1 3519-Q1 3529-Q1 */
+};
+
 static void mspm0_add_flash(
 	target_s *const target, const uint32_t base, const size_t length, const uint32_t banks, uint32_t sram_size)
 {
@@ -233,10 +241,12 @@ bool mspm0_probe(target_s *const target)
 		return false;
 
 	const uint32_t partnum = (deviceid & MSPM0_DEVICEID_PARTNUM_MASK) >> MSPM0_DEVICEID_PARTNUM_SHIFT;
-	if (partnum != TI_DEVID_MSPM0C && partnum != TI_DEVID_MSPM0L && partnum != TI_DEVID_MSPM0L_1227_2228 &&
-		partnum != TI_DEVID_MSPM0G)
-		return false;
+	for (size_t i = 0; i < ARRAY_LENGTH(g_mspm0_partnums); ++i)
+		if (partnum == g_mspm0_partnums[i])
+			goto id_matched;
+	return false;
 
+id_matched:
 	target->driver = "MSPM0";
 	target->target_options |= TOPT_INHIBIT_NRST;
 	target->mass_erase = mspm0_mass_erase;
