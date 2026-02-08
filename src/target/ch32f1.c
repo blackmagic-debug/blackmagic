@@ -219,7 +219,7 @@ static bool ch32f1_flash_busy_wait(target_s *const target)
 static bool ch32f1_flash_eop_wait(target_s *const target)
 {
 	uint32_t status = CH32F1_FLASH_STATUS_EOP;
-	while (status & CH32F1_FLASH_STATUS_EOP) {
+	while (!(status & CH32F1_FLASH_STATUS_EOP)) {
 		status = target_mem32_read32(target, CH32F1_FLASH_STATUS);
 		if (target_check_error(target)) {
 			DEBUG_ERROR("ch32f1 flash write: comm error\n");
