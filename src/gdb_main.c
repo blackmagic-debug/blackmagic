@@ -557,7 +557,7 @@ static void exec_q_c(const char *packet, const size_t length)
 {
 	(void)packet;
 	(void)length;
-	gdb_put_packet_str("QC1");
+	gdb_put_packet_str("QCp1.1");
 }
 
 /*
@@ -571,7 +571,7 @@ static void exec_q_thread_info(const char *packet, const size_t length)
 {
 	(void)length;
 	if (packet[-11] == 'f' && cur_target)
-		gdb_put_packet_str("m1");
+		gdb_put_packet_str("mp1.1");
 	else
 		gdb_put_packet_str("l");
 }
