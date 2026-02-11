@@ -63,6 +63,9 @@ static bool cmd_jtag_scan(target_s *target, int argc, const char **argv);
 static bool cmd_swd_scan(target_s *target, int argc, const char **argv);
 #if defined(CONFIG_RVSWD) && defined(PLATFORM_HAS_RVSWD)
 static bool cmd_rvswd_scan(target_s *target, int argc, const char **argv);
+#if CONFIG_BMDA == 0
+bool bmp_rvswd_scan(void);
+#endif
 #endif
 static bool cmd_onboard_flash_scan(target_s *target, int argc, const char **argv);
 static bool cmd_auto_scan(target_s *target, int argc, const char **argv);
@@ -370,7 +373,7 @@ bool cmd_rvswd_scan(target_s *target, int argc, const char **argv)
 #if CONFIG_BMDA == 1
 		scan_result = bmda_rvswd_scan();
 #else
-		scan_result = false;
+		scan_result = bmp_rvswd_scan();
 #endif
 	}
 	CATCH () {
@@ -423,6 +426,9 @@ bool cmd_auto_scan(target_s *target, int argc, const char **argv)
 	{
 		{jtag_scan, "JTAG"},
 		{adiv5_swd_scan, "SWD"},
+#if defined(CONFIG_RVSWD) && defined(PLATFORM_HAS_RVSWD)
+		{bmp_rvswd_scan, "RVSWD"},
+#endif
 	};
 	/* clang-format on */
 #endif

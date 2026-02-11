@@ -29,6 +29,7 @@
 #include "timing_stm32.h"
 
 #define PLATFORM_HAS_TRACESWO
+#define PLATFORM_HAS_RVSWD
 
 #if ENABLE_DEBUG == 1
 #define PLATFORM_HAS_DEBUG
