@@ -101,6 +101,7 @@ typedef enum riscv_match_size {
 #define RV_HART_FLAG_MEMORY_ABSTRACT    (0U << 4U)
 #define RV_HART_FLAG_MEMORY_SYSBUS      (1U << 4U)
 #define RV_HART_FLAG_DATA_GPR_ONLY      (1U << 5U) /* Hart supports Abstract Data commands for GPRs only */
+#define RV_HART_FLAG_MEMORY_PROGBUF     (1U << 6U)
 
 typedef struct riscv_dmi riscv_dmi_s;
 
