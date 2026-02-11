@@ -32,14 +32,17 @@
 lmi_stub = []
 efm32_stub = []
 rp2040_stub = []
+mspm0_stub = []
 
 # If we're doing a firmware build, type to find hexdump and objcopy
 if is_firmware_build
 	objcopy = find_program('objcopy', required: false)
 	hexdump = find_program('hexdump', required: false)
+	objcopy = find_program('objcopy', required: false)
 else
 	objcopy = disabler()
 	hexdump = disabler()
+	objcopy = disabler()
 endif
 # If we cannot or we're not a firmware build, we're done
 if not hexdump.found() or not objcopy.found()
@@ -187,5 +190,37 @@ rp2040_stub = custom_target(
 	],
 	input: rp2040_stub_bin,
 	output: 'rp.stub',
+	capture: true,
+)
+
+# Flash stub for MSPM0 parts
+mspm0_stub_elf = executable(
+	'mspm0_stub.elf',
+	'mspm0.c',
+	c_args: [
+		'-mcpu=cortex-m0plus',
+		stub_build_args
+	],
+	link_args: [
+		'-mcpu=cortex-m0plus',
+		stub_build_args,
+		'-T', '@0@/mspm0.ld'.format(meson.current_source_dir()),
+	],
+	link_depends: files('mspm0.ld'),
+	pie: false,
+	install: false,
+)
+
+mspm0_stub_bin = custom_target(
+	command: [ objcopy, '-O', 'binary', '@INPUT@', '@OUTPUT@' ],
+	input: mspm0_stub_elf,
+	output: 'mspm0_stub.bin'
+)
+
+mspm0_stub = custom_target(
+	'mspm0_stub-hex',
+	command: [ hexdump, '-v', '-e', '/2 "0x%04X, "' , '@INPUT@' ],
+	input: mspm0_stub_bin,
+	output: 'mspm0.stub',
 	capture: true,
 )

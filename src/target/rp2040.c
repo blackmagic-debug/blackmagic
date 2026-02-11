@@ -354,7 +354,7 @@ static bool rp_flash_write(
 	if (target_mem32_write(target, RP_STUB_BUFFER_BASE, src, length))
 		return false;
 	return cortexm_run_stub(
-		target, RP_SRAM_BASE, dest - flash->start, RP_STUB_BUFFER_BASE, length, spi_flash->page_size);
+		target, RP_SRAM_BASE, dest - flash->start, RP_STUB_BUFFER_BASE, length, spi_flash->page_size, 0);
 }
 
 static void rp_spi_chip_select(target_s *const target, const uint32_t state)
