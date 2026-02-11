@@ -37,6 +37,7 @@
 #include "gdb_reg.h"
 #include "riscv_debug.h"
 #include "buffer_utils.h"
+#include "semihosting.h"
 
 #include <assert.h>
 
@@ -894,6 +895,31 @@ bool riscv_csr_write(riscv_hart_s *const hart, const uint16_t reg, const void *c
 	return true;
 }
 
+static target_addr_t riscv_pc_read(riscv_hart_s *const hart)
+{
+	target_addr_t data = 0;
+	riscv_csr_read(hart, RV_DPC, &data);
+	//riscv32_reg_read(target, 32, &data, sizeof(data));
+	return data;
+}
+
+static bool riscv_hostio_request(target_s *const target)
+{
+	/* Read out syscall number from a0/x10 and first argument from a1/x11 */
+	uint32_t syscall = 0U;
+	target_reg_read(target, 10, &syscall, sizeof(syscall));
+	uint32_t a1 = 0U;
+	target_reg_read(target, 11, &a1, sizeof(a1));
+
+	/* Hand off to the main semihosting implementation */
+	const int32_t result = semihosting_request(target, syscall, a1);
+
+	/* Write the result back to the target */
+	target_reg_write(target, 10, &result, sizeof(result));
+	/* Return if the request was in any way interrupted */
+	return target->tc->interrupted;
+}
+
 uint8_t riscv_mem_access_width(const riscv_hart_s *const hart, const target_addr_t address, const size_t length)
 {
 	/* Grab the Hart's most maxmimally aligned possible write width */
@@ -1106,6 +1132,19 @@ static void riscv_halt_resume(target_s *target, const bool step)
 	}
 	if (!riscv_csr_write(hart, RV_DCSR | RV_CSR_FORCE_32_BIT, &stepping_config))
 		return;
+	/* Step over coded breakpoints */
+	uint32_t dcsr_cause = 0U;
+	riscv_csr_read(hart, RV_DCSR, &dcsr_cause);
+	dcsr_cause &= RV_DCSR_CAUSE_MASK;
+	if (dcsr_cause == RV_HALT_CAUSE_EBREAK) {
+		/* Read the instruction to resume on */
+		uint32_t program_counter = riscv_pc_read(hart);
+		/* If it actually is a breakpoint instruction, update the program counter one past it. */
+		if (target_mem32_read32(target, program_counter) == RV_EBREAK) {
+			program_counter += 4U;
+			riscv_csr_write(hart, RV_DPC, &program_counter);
+		}
+	}
 	/* Request the hart to resume */
 	if (!riscv_dm_write(hart->dbg_module, RV_DM_CONTROL, hart->hartsel | RV_DM_CTRL_RESUME_REQ))
 		return;
@@ -1133,6 +1172,21 @@ static target_halt_reason_e riscv_halt_poll(target_s *const target, target_addr6
 	status &= RV_DCSR_CAUSE_MASK;
 	/* Dispatch on the cause code */
 	switch (status) {
+	case RV_HALT_CAUSE_EBREAK: {
+		/* If we've hit a programmed breakpoint, check for semihosting call. */
+		const target_addr_t program_counter = riscv_pc_read(hart);
+		uint32_t instructions[3] = {0};
+		target_mem32_read(target, &instructions, program_counter - 4U, 12);
+		/* A semihosting call is three consecutive uncompressed instructions: slli zero, zero 0x1f; ebreak, srai zero, zero, 7. */
+		if (instructions[0] == 0x01f01013 && instructions[1] == RV_EBREAK && instructions[2] == 0x40705013) {
+			if (riscv_hostio_request(target))
+				return TARGET_HALT_REQUEST;
+
+			riscv_halt_resume(target, false);
+			return TARGET_HALT_RUNNING;
+		}
+		return TARGET_HALT_BREAKPOINT;
+	}
 	case RV_HALT_CAUSE_TRIGGER:
 		/* XXX: Need to read out the triggers to find the one causing this, and grab the watch value */
 		return TARGET_HALT_BREAKPOINT;
