@@ -968,6 +968,10 @@ static void riscv_hart_discover_triggers(riscv_hart_s *const hart)
 		/* Now info's bottom 16 bits contain the supported trigger modes, so write this info to the slot in the hart */
 		hart->trigger_uses[trigger] = info;
 		DEBUG_TARGET("Hart trigger slot %" PRIu32 " modes: %04" PRIx32 "\n", trigger, info);
+		/* Display whatever contents of tdata2 (normally address to match for stale trigger) */
+		uint32_t tdata2 = 0;
+		riscv_csr_read(hart, RV_TRIG_DATA_2, &tdata2);
+		DEBUG_TARGET("Hart trigger slot %" PRIu32 " tdata2 = %08" PRIx32 "\n", trigger, tdata2);
 	}
 }
 
