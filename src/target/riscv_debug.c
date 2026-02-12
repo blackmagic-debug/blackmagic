@@ -1049,6 +1049,12 @@ bool riscv_attach(target_s *const target)
 	/* We then also need to select the Hart again so we're poking with the right one on the target */
 	if (!riscv_dm_write(hart->dbg_module, RV_DM_CONTROL, hart->hartsel))
 		return false;
+	/* Clear any stale triggers */
+	for (size_t trigger = 0; trigger < hart->triggers; trigger++) {
+		const uint32_t tdata1 = 0;
+		const uint32_t tdata2 = 0;
+		riscv_config_trigger(hart, trigger, RISCV_TRIGGER_MODE_UNUSED, &tdata1, &tdata2);
+	}
 	/* We then need to halt the hart so the attach process can function */
 	riscv_halt_request(target);
 	return true;
