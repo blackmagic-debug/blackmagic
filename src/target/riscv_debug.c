@@ -968,6 +968,10 @@ static void riscv_hart_discover_triggers(riscv_hart_s *const hart)
 		/* Now info's bottom 16 bits contain the supported trigger modes, so write this info to the slot in the hart */
 		hart->trigger_uses[trigger] = info;
 		DEBUG_TARGET("Hart trigger slot %" PRIu32 " modes: %04" PRIx32 "\n", trigger, info);
+		/* Display whatever contents of tdata2 (normally address to match for stale trigger) */
+		uint32_t tdata2 = 0;
+		riscv_csr_read(hart, RV_TRIG_DATA_2, &tdata2);
+		DEBUG_TARGET("Hart trigger slot %" PRIu32 " tdata2 = %08" PRIx32 "\n", trigger, tdata2);
 	}
 }
 
@@ -1045,6 +1049,12 @@ bool riscv_attach(target_s *const target)
 	/* We then also need to select the Hart again so we're poking with the right one on the target */
 	if (!riscv_dm_write(hart->dbg_module, RV_DM_CONTROL, hart->hartsel))
 		return false;
+	/* Clear any stale triggers */
+	for (size_t trigger = 0; trigger < hart->triggers; trigger++) {
+		const uint32_t tdata1 = 0;
+		const uint32_t tdata2 = 0;
+		riscv_config_trigger(hart, trigger, RISCV_TRIGGER_MODE_UNUSED, &tdata1, &tdata2);
+	}
 	/* We then need to halt the hart so the attach process can function */
 	riscv_halt_request(target);
 	return true;
@@ -1053,6 +1063,12 @@ bool riscv_attach(target_s *const target)
 void riscv_detach(target_s *const target)
 {
 	riscv_hart_s *const hart = riscv_hart_struct(target);
+	/* Clear any stale triggers */
+	for (size_t trigger = 0; trigger < hart->triggers; trigger++) {
+		const uint32_t tdata1 = 0;
+		const uint32_t tdata2 = 0;
+		riscv_config_trigger(hart, trigger, RISCV_TRIGGER_MODE_UNUSED, &tdata1, &tdata2);
+	}
 	/* Once we get done and the user's asked us to detach, we need to resume the hart */
 	riscv_halt_resume(target, false);
 	/* If the DMI needs steps done to quiesce it, finsh up with that */
