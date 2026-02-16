@@ -410,6 +410,7 @@ bool cortexm_probe(adiv5_access_port_s *ap)
 		break;
 	case JEP106_MANUFACTURER_NORDIC:
 		PROBE(nrf51_probe);
+		PROBE(nrf5340_probe);
 		PROBE(nrf54l_probe);
 		PROBE(nrf91_probe);
 		break;

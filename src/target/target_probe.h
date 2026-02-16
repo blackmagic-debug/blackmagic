@@ -47,10 +47,13 @@ bool cortexa_armv8_cti_probe(adiv5_access_port_s *ap, target_addr_t base_address
 bool riscv32_probe(target_s *target);
 bool riscv64_probe(target_s *target);
 
+bool nrf5340_prepare(adiv5_debug_port_s *const dp);
+
 bool efm32_aap_probe(adiv5_access_port_s *ap);
 bool kinetis_mdm_probe(adiv5_access_port_s *ap);
 bool lpc55_dmap_probe(adiv5_access_port_s *ap);
 bool nrf51_ctrl_ap_probe(adiv5_access_port_s *ap);
+bool nrf5340_ctrl_ap_probe(adiv5_access_port_s *ap);
 bool nrf54l_ctrl_ap_probe(adiv5_access_port_s *ap);
 bool rp2040_rescue_probe(adiv5_access_port_s *ap);
 
@@ -84,6 +87,7 @@ bool msp432e4_probe(target_s *target);
 bool msp432p4_probe(target_s *target);
 bool mspm0_probe(target_s *target);
 bool nrf51_probe(target_s *target);
+bool nrf5340_probe(target_s *target);
 bool nrf54l_probe(target_s *target);
 bool nrf91_probe(target_s *target);
 bool puya_probe(target_s *target);
