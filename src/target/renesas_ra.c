@@ -4,6 +4,7 @@
  * Copyright (C) 2022-2023 1BitSquared <info@1bitsquared.com>
  * Written by Rafael Silva <perigoso@riseup.net>
  * Modified by Rachel Mant <git@dragonmux.network>
+ * Modified by Sage Myers <desertsagebrush>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -33,16 +34,25 @@
 
 /* Support for the Renesas RA family of microcontrollers (Arm Core) */
 
+/*
+ * This has the framework for support for the RA8 families, but due to changes
+ * in their memory map, it is *very* unlikely that this will work out of the box
+ * as it has not been tested against any RA8 families.
+ */
+
 #include "general.h"
 #include "target.h"
 #include "target_internal.h"
 #include "cortexm.h"
 #include "adiv5.h"
 
+#define RENESAS_PARTID_RA2E1 0x0390U
 #define RENESAS_PARTID_RA2A1 0x01b0U
+#define RENESAS_PARTID_RA4M1 0x0160U
 #define RENESAS_PARTID_RA4M2 0x0340U
 #define RENESAS_PARTID_RA4M3 0x0310U
 #define RENESAS_PARTID_RA6M2 0x0150U
+#define RENESAS_PARTID_RA6M5 0x0360U
 
 /*
  * Part numbering scheme
@@ -58,12 +68,12 @@
  *  |    |   |   |    \_____________________ Group number
  *  |    |   |   \__________________________ Series name
  *  |    |   \______________________________ Family (A: RA)
- *  |    \__________________________________ Flash memory
+ *  |    \__________________________________ Memory type (F: Flash, K: MRAM, J: MRAM + SiP Flash)
  *  \_______________________________________ Renesas microcontroller (always 'R7')
  *
  * Renesas Flash MCUs have an internal 16 byte read only register that stores
  * the part number, the code is stored ascii encoded, starting from the lowest memory address
- * except for pnrs stored in 'FIXED_PNR1', where the code is stored in reverse order (but the last 3 bytes are still 0x20 aka ' ')
+ * except for pnrs stored in 'FIXED_PNR1/3/4', where the code is stored in reverse order (but the last 3 bytes are still 0x20 aka ' ')
  */
 
 /* family + series + group no */
@@ -71,16 +81,30 @@
 #define PNR_SERIES(pnr3, pnr4, pnr5, pnr6) (((pnr3) << 24U) | ((pnr4) << 16U) | ((pnr5) << 8U) | (pnr6))
 
 typedef enum {
+	// RA0
+	PNR_SERIES_RA0L1 = PNR_SERIES('A', '0', 'L', '1'),
+	PNR_SERIES_RA0E1 = PNR_SERIES('A', '0', 'E', '1'),
+	PNR_SERIES_RA0E2 = PNR_SERIES('A', '0', 'E', '2'),
+	// RA2
 	PNR_SERIES_RA2L1 = PNR_SERIES('A', '2', 'L', '1'),
+	PNR_SERIES_RA2L2 = PNR_SERIES('A', '2', 'L', '2'),
 	PNR_SERIES_RA2E1 = PNR_SERIES('A', '2', 'E', '1'),
 	PNR_SERIES_RA2E2 = PNR_SERIES('A', '2', 'E', '2'),
+	PNR_SERIES_RA2E3 = PNR_SERIES('A', '2', 'E', '3'),
 	PNR_SERIES_RA2A1 = PNR_SERIES('A', '2', 'A', '1'),
+	PNR_SERIES_RA2A2 = PNR_SERIES('A', '2', 'A', '2'),
+	PNR_SERIES_RA2T1 = PNR_SERIES('A', '2', 'T', '1'),
+	// RA4
 	PNR_SERIES_RA4M1 = PNR_SERIES('A', '4', 'M', '1'),
 	PNR_SERIES_RA4M2 = PNR_SERIES('A', '4', 'M', '2'),
 	PNR_SERIES_RA4M3 = PNR_SERIES('A', '4', 'M', '3'),
 	PNR_SERIES_RA4E1 = PNR_SERIES('A', '4', 'E', '1'),
 	PNR_SERIES_RA4E2 = PNR_SERIES('A', '4', 'E', '2'),
 	PNR_SERIES_RA4W1 = PNR_SERIES('A', '4', 'W', '1'),
+	PNR_SERIES_RA4C1 = PNR_SERIES('A', '4', 'C', '1'),
+	PNR_SERIES_RA4T1 = PNR_SERIES('A', '4', 'T', '1'),
+	PNR_SERIES_RA4L1 = PNR_SERIES('A', '4', 'L', '1'),
+	// RA6
 	PNR_SERIES_RA6M1 = PNR_SERIES('A', '6', 'M', '1'),
 	PNR_SERIES_RA6M2 = PNR_SERIES('A', '6', 'M', '2'),
 	PNR_SERIES_RA6M3 = PNR_SERIES('A', '6', 'M', '3'),
@@ -90,6 +114,18 @@ typedef enum {
 	PNR_SERIES_RA6E2 = PNR_SERIES('A', '6', 'E', '2'),
 	PNR_SERIES_RA6T1 = PNR_SERIES('A', '6', 'T', '1'),
 	PNR_SERIES_RA6T2 = PNR_SERIES('A', '6', 'T', '2'),
+	PNR_SERIES_RA6T3 = PNR_SERIES('A', '6', 'T', '3'),
+	PNR_SERIES_RA6W1 = PNR_SERIES('A', '6', 'W', '1'),
+	// RA8
+	PNR_SERIES_RA8M1 = PNR_SERIES('A', '8', 'M', '1'),
+	PNR_SERIES_RA8M2 = PNR_SERIES('A', '8', 'M', '2'),
+	PNR_SERIES_RA8E1 = PNR_SERIES('A', '8', 'E', '1'),
+	PNR_SERIES_RA8E2 = PNR_SERIES('A', '8', 'E', '2'),
+	PNR_SERIES_RA8T1 = PNR_SERIES('A', '8', 'T', '1'),
+	PNR_SERIES_RA8T2 = PNR_SERIES('A', '8', 'T', '2'),
+	PNR_SERIES_RA8D1 = PNR_SERIES('A', '8', 'D', '1'),
+	PNR_SERIES_RA8D2 = PNR_SERIES('A', '8', 'D', '2'),
+	PNR_SERIES_RA8P1 = PNR_SERIES('A', '8', 'P', '1'),
 } renesas_pnr_series_e;
 
 /* Code flash memory size */
@@ -107,11 +143,13 @@ typedef enum {
 	PNR_MEMSIZE_1MB = 'F',
 	PNR_MEMSIZE_1_5MB = 'G',
 	PNR_MEMSIZE_2MB = 'H',
+	PNR_MEMSIZE_5MB = 'R', // 1MB MRAM + 4MB SiP Flash
+	PNR_MEMSIZE_9MB = 'S', // 1MB MRAM + 8MB SiP Flash
 } renesas_pnr_memsize_e;
 
 /* For future reference, if we want to add an info command
  *
- * Package type
+ * Package type (Could use updating)
  * FP: LQFP 100 pins 0.5 mm pitch
  * FN: LQFP 80 pins 0.5 mm pitch
  * FM: LQFP 64 pins 0.5 mm pitch
@@ -147,19 +185,29 @@ typedef enum {
  */
 
 /* PNR/UID location by series
- * newer series have a 'Flash Root Table'
- * older series have a fixed location in the flash memory
+ * Some series have a 'Flash Root Table'
+ * Other series have a fixed location in the flash memory
  *
+ * ra0l1 - Fixed location 3
+ * ra0e1 - Fixed location 3
+ * ra0e2 - Fixed location 3
  * ra2l1 - Fixed location 1
+ * ra2l2 - Fixed location 4 (?!)
  * ra2e1 - Fixed location 1
  * ra2e2 - Fixed location 1
- * ra2a1 - Flash Root Table *undocumented
- * ra4m1 - Flash Root Table *undocumented
+ * ra2e3 - Fixed location 1
+ * ra2a1 - Flash Root Table
+ * ra2a2 - Fixed location 1
+ * ra2t1 - Fixed location 1
+ * ra4m1 - Flash Root Table
  * ra4m2 - Fixed location 2 *undocumented
  * ra4m3 - Fixed location 2 *undocumented
  * ra4e1 - Fixed location 2
  * ra4e2 - Fixed location 2
  * ra4w1 - Flash Root Table *undocumented
+ * ra4c1 - Fixed location 2
+ * ra4t1 - Fixed location 2
+ * ra4l1 - Fixed location 2
  * ra6m1 - Flash Root Table
  * ra6m2 - Flash Root Table
  * ra6m3 - Flash Root Table
@@ -169,6 +217,17 @@ typedef enum {
  * ra6e2 - Fixed location 2
  * ra6t1 - Flash Root Table
  * ra6t2 - Fixed location 2
+ * ra6t3 - Fixed location 2
+ * ra6w1 - FIXME -- Lacking user manual as of 2025/12/12, so unknown.
+ * ra8m1 - Fixed location 5 (!!)
+ * ra8m2 - Fixed location 6 (!!)
+ * ra8e1 - Fixed location 5
+ * ra8e2 - Fixed location 5
+ * ra8t1 - Fixed location 5
+ * ra8t2 - Fixed location 6
+ * ra8d1 - Fixed location 5
+ * ra8d2 - Fixed location 6
+ * ra8p1 - Fixed location 6
  */
 #define RENESAS_FIXED1_UID    UINT32_C(0x01001c00) /* Unique ID Register */
 #define RENESAS_FIXED1_PNR    UINT32_C(0x01001c10) /* Part Numbering Register */
@@ -177,6 +236,33 @@ typedef enum {
 #define RENESAS_FIXED2_UID    UINT32_C(0x01008190) /* Unique ID Register */
 #define RENESAS_FIXED2_PNR    UINT32_C(0x010080f0) /* Part Numbering Register */
 #define RENESAS_FIXED2_MCUVER UINT32_C(0x010081b0) /* MCU Version Register */
+
+// R01UH1143EJ0110, Flash Register Descriptions, §29.3.24-26, pg 685
+#define RENESAS_FIXED3_UID    UINT32_C(0x01011070) /* Unique ID Register */
+#define RENESAS_FIXED3_PNR    UINT32_C(0x01011080) /* Part Numbering Register */
+#define RENESAS_FIXED3_MCUVER UINT32_C(0x01011090) /* MCU Version Register */
+
+// R01UH1080EJ0110, Flash Register Descriptions, §38.3.27-29, pg 1226
+#define RENESAS_FIXED4_UID    UINT32_C(0x01011110) /* Unique ID Register */
+#define RENESAS_FIXED4_PNR    UINT32_C(0x01011120) /* Part Numbering Register */
+#define RENESAS_FIXED4_MCUVER UINT32_C(0x01011130) /* MCU Version Register */
+
+// R01UH0994EJ0120, Flash Register Descriptions, §52.4.5-6, pg 2416
+// This one comes in secure/non-secure flavours, since there is TrustZone in play.
+// It seems to be Fixed2 at a different offset.
+#define RENESAS_FIXED5_UID           UINT32_C(0x13008190) /* Unique ID Register */
+#define RENESAS_FIXED5_PNR           UINT32_C(0x130080f0) /* Part Numbering Register */
+#define RENESAS_FIXED5_MCUVER        UINT32_C(0x130081b0) /* MCU Version Register */
+#define RENESAS_FIXED5_SECURE_UID    UINT32_C(0x03008190) /* Unique ID Register */
+#define RENESAS_FIXED5_SECURE_PNR    UINT32_C(0x030080f0) /* Part Numbering Register */
+#define RENESAS_FIXED5_SECURE_MCUVER UINT32_C(0x030081b0) /* MCU Version Register */
+
+// R01UH1066EJ0120, Flash Register Descriptions, §59.5.41-43, pg 3537
+// Despite the RA8M2 supporting and using TrustZone, these only have one
+// address...
+#define RENESAS_FIXED6_UID    UINT32_C(0x02f07b00) /* Unique ID Register */
+#define RENESAS_FIXED6_PNR    UINT32_C(0x02c1ec38) /* Part Numbering Register */
+#define RENESAS_FIXED6_MCUVER UINT32_C(0x02c1ec48) /* MCU Version Register */
 
 /* The FMIFRT is a read-only register that stores the Flash Root Table address */
 #define RENESAS_FMIFRT             UINT32_C(0x407fb19c)
@@ -197,11 +283,19 @@ typedef enum {
 /* Flash Memory Control */
 #define FENTRYR_KEY_OFFSET 8U
 #define FENTRYR_KEY        (0xaaU << FENTRYR_KEY_OFFSET)
-#define FENTRYR_PE_CF      (1U)
+#define FENTRYR_PE_CF      1U
 #define FENTRYR_PE_DF      (1U << 7U)
 
 /* Renesas RA MCUs can have one of two kinds of flash memory, MF3/4 and RV40 */
 
+/* This is broken with the addition of the RA8 families -- by default, they have
+ * their code flash located at 0x12000000/0x02000000, which is above this point.
+ * Unfortunately, we can't just increase this to that address, as some
+ * other series locate their data flash at 0x08000000.
+ *
+ * FIXME -- This still needs addressing, but I also do not have any RA8 chips to
+ * test against.
+ */
 #define RENESAS_CF_END UINT32_C(0x00300000) /* End of Flash (maximum possible across families) */
 
 /* MF3/4 Flash */
@@ -209,27 +303,135 @@ typedef enum {
  * MF3/4 Flash Memory Specifications
  * Block Size: Code area: 2 KB (except RA2A1 is 1KB), Data area: 1 KB
  * Program/Erase unit Program: Code area: 64 bits, Data area: 8 bits
- *					  Erase:  1 block
+ *                      Erase: 1 block
+ *          RA0xx: Block size: Code area: 2 KB, Data area: 256B
+ *                    Program: Code area: 32 bits, Data area: 8 bits
+ *                      Erase: 1 block
+ *                        Ref: R01UH1143EJ0110, Flash Memory Overview, §29.1, pg 669
+ *            RA2xx*: Program: Code area: 32 bits, Data area: 8 bits
+ *                        Ref: R01UH0852EJ0170, Flash Memory Overview, §35.1, pg 915
+ *
+ * *Other than RA2A1, evidently. It is listed as 64-bit CF programming units
  */
-#define MF3_CF_BLOCK_SIZE       (0x800U)
-#define MF3_RA2A1_CF_BLOCK_SIZE (0x400U)
-#define MF3_DF_BLOCK_SIZE       (0x400U)
-#define MF3_CF_WRITE_SIZE       (0x40U)
-#define MF3_DF_WRITE_SIZE       (0x1U)
+#define MF3_CF_BLOCK_SIZE       0x800U
+#define MF3_RA2A1_CF_BLOCK_SIZE 0x400U // Contradicted by RA2A1 Ref Manual
+#define MF3_DF_BLOCK_SIZE       0x400U
+#define MF3_CF_WRITE_SIZE       0x8U
+#define MF3_RA2E1_CF_WRITE_SIZE 0x4U
+#define MF3_DF_WRITE_SIZE       0x1U
+
+/* MF3/4 Flash commands*/
+/* Taken from R01AN5367EU0120, (MF3) Software Commands, §1.5.2, pg 35
+ * and R01UH0852EJ0170, Flash Control Register, §35.3.10, pg 924 */
+#define MF3_CMD_PROGRAM          0x1U
+#define MF3_CMD_CF_BLANK_CHECK   0x3U
+#define MF3_CMD_BLOCK_ERASE      0x4U
+#define MF3_CMD_CONSECUTIVE_READ 0x5U
+#define MF3_CMD_CHIP_ERASE       0x6U
+#define MF3_CMD_DF_BLANK_CHECK   0xbU
+
+#define MF3_BASE UINT32_C(0x407ec000)
+
+#define MF3_DFLCTL       (MF3_BASE + 0x090U) /* Data Flash Control */
+#define MF3_DFLCTL_DFLEN (1U)                /* Data Flash Access Enable */
+
+#define MF3_FENTRYR            (MF3_BASE + 0x3fb0U) /* Flash P/E Mode Entry */
+#define MF3_FENTRYR_KEY_OFFSET 8U
+#define MF3_FENTRYR_KEY        (0xaaU << MF3_FENTRYR_KEY_OFFSET)
+#define MF3_FENTRYR_PE_CF      (1U)       /* Enable CF Program/Erase */
+#define MF3_FENTRYR_PE_DF      (1U << 7U) /* Enable DF Program/Erase */
+
+#define MF3_FCR      (MF3_BASE + 0x114U) /* Command Register */
+#define MF3_FCR_DRC  (1U << 4U)          /* Data Read Complete */
+#define MF3_FCR_STOP (1U << 6U)          /* Forced Processing Stop */
+#define MF3_FCR_OPST (1U << 7U)          /* Processing Start */
+
+// Seems to duplicate FSTATR2 ?
+#define MF3_FSTATR0          (MF3_BASE + 0x128U) /* Flash Status 0 (RA4) */
+#define MF3_FSTATR0_ERERR0   (1U << 0U)          /* Erase Error */
+#define MF3_FSTATR0_PRGERR0  (1U << 1U)          /* Program Error */
+#define MF3_FSTATR0_PRGERR01 (1U << 2U)          /* Extra Area Program Error */
+#define MF3_FSTATR0_BCERR0   (1U << 3U)          /* Blank Check Error */
+#define MF3_FSTATR0_ILGLERR  (1U << 4U)          /* Illegal Command Error */
+#define MF3_FSTATR0_EILGLERR (1U << 5U)          /* Extra Area Illegal Command Error */
+
+#define MF3_FSTATR1       (MF3_BASE + 0x12cU) /* Flash Status 1 */
+#define MF3_FSTATR1_DRRDY (1U << 1U)          /* Data Read Ready */
+#define MF3_FSTATR1_FRDY  (1U << 6U)          /* Flash Ready */
+#define MF3_FSTATR1_EXRDY (1U << 7U)          /* Extra Area Ready */
+
+#define MF3_FSTATR2          (MF3_BASE + 0x1f0U) /* Flash Status 2 */
+#define MF3_FSTATR2_ERERR    (1U << 0U)          /* Erase Error */
+#define MF3_FSTATR2_PRGERR   (1U << 1U)          /* Program Error */
+#define MF3_FSTATR2_PRGERR01 (1U << 2U)          /* Extra Area Program Error */
+#define MF3_FSTATR2_BCERR    (1U << 3U)          /* Blank Check Error */
+#define MF3_FSTATR2_ILGLERR  (1U << 4U)          /* Illegal Command Error */
+#define MF3_FSTATR2_EILGLERR (1U << 5U)          /* Extra Area Illegal Command Error */
+
+#define MF3_FSTATR01         (MF3_BASE + 0x13cU) /* Flash Status 01 (RA4) */
+#define MF3_FSTATR01_ERERR1  (1U << 0U)          /* Erase Error */
+#define MF3_FSTATR01_PRGERR1 (1U << 1U)          /* Program Error */
+#define MF3_FSTATR01_BCERR1  (1U << 3U)          /* Blank Check Error */
+
+#define MF3_FPR     (MF3_BASE + 0x180U) /* Flash Mode Protection */
+#define MF3_FPR_KEY 0xa5U
+
+#define MF3_FRESETR       (MF3_BASE + 0x124U) /* Flash Reset */
+#define MF3_FRESETR_RESET (1U << 0U)          /* Trigger software reset of flash */
+
+/* And here is where RA4 and RA2 implementations diverge. FMS2 is specified as
+ * read/write 0 for RA2, and (011) is specified as Setting Prohibited. TODO:
+ * Verify this...
+ *
+ * FMS2  FMS1  FMS0 | Mode
+ * -------------------------------------
+ *  0     0     0   | Read only
+ *  0     1     0   | Data flash P/E
+ * (1)    0     1   | Code flash P/E
+ *  0     1     1   | Discharge Mode 1
+ *  1     1     1   | Discharge Mode 2
+ *
+ * Taken from R01AN5367EU0120, Flash P/E Mode Control Register, §1.2.5, pg 12
+ * and R01UH0852EJ0170, Flash P/E Mode Control Register, §35.3.6, pg 921 */
+#define MF3_FPMCR       (MF3_BASE + 0x100U) /* Flash P/E Mode Control */
+#define MF3_FPMCR_FMS0  (1U << 1U)          /* Operating Mode Select 0 */
+#define MF3_FPMCR_RPDIS (1U << 3U)          /* Code Flash P/E Disable */
+#define MF3_FPMCR_FMS1  (1U << 4U)          /* Operating Mode Select 1 */
+#define MF3_FPMCR_FMS2  (1U << 7U)          /* Operating Mode Select 2 */
+
+#define MF3_FSARL (MF3_BASE + 0x108U) /* Start Addr Low */
+#define MF3_FSARH (MF3_BASE + 0x110U) /* Start Addr High */
+#define MF3_FEARL (MF3_BASE + 0x118U) /* End Addr Low */
+#define MF3_FEARH (MF3_BASE + 0x120U) /* End Addr High */
+
+#define MF3_FWBL0 (MF3_BASE + 0x130U) /* Write Buffer 0 Low */
+#define MF3_FWBH0 (MF3_BASE + 0x138U) /* Write Buffer 0 High */
+#define MF3_FWBL1 (MF3_BASE + 0x140U) /* Write Buffer 1 Low (RA4) */
+#define MF3_FWBH1 (MF3_BASE + 0x144U) /* Write Buffer 1 High (RA4) */
+#define MF3_FRBL0 (MF3_BASE + 0x188U) /* Read Buffer 0 Low */
+#define MF3_FRBH0 (MF3_BASE + 0x190U) /* Read Buffer 0 High */
+#define MF3_FRBL1 (MF3_BASE + 0x148U) /* Read Buffer 1 Low (RA4) */
+#define MF3_FRBH1 (MF3_BASE + 0x14cU) /* Read Buffer 1 High (RA4) */
+
+/* RA4M1 has a flash cache, which needs to be disabled before writing */
+//TODO
 
 /* RV40 Flash */
 /*
  * RV40F Flash Memory Specifications
  * Block Size: Code area: 8 KB/32KB  Data area: 64 Bytes
  * Program/Erase unit Program: Code area: 128 Bytes, Data area: 4/8/16 Bytes
- *					  Erase: 1 block
+ *                      Erase: 1 block
+ *       RA4[CL]1: Block Size: Code area: 2 KB, Data area: 256 Bytes
+ *                    Program: Code area: 8 Bytes, Data area: 1 Byte
+ *                        Ref: R01UH1137EJ0110, Flash Memory Overview, §39.1, pg 1404
  */
-#define RV40_CF_REGION0_SIZE       (0x10000U)
-#define RV40_CF_REGION0_BLOCK_SIZE (0x2000U)
-#define RV40_CF_REGION1_BLOCK_SIZE (0x8000U)
-#define RV40_DF_BLOCK_SIZE         (0x40U)
-#define RV40_CF_WRITE_SIZE         (0x80U)
-#define RV40_DF_WRITE_SIZE         (0x4U)
+#define RV40_CF_REGION0_SIZE       0x10000U
+#define RV40_CF_REGION0_BLOCK_SIZE 0x2000U
+#define RV40_CF_REGION1_BLOCK_SIZE 0x8000U
+#define RV40_DF_BLOCK_SIZE         0x40U
+#define RV40_CF_WRITE_SIZE         0x80U
+#define RV40_DF_WRITE_SIZE         0x4U
 
 /* RV40 Flash Commands */
 #define RV40_CMD               UINT32_C(0x407e0000)
@@ -281,6 +483,21 @@ typedef enum {
 #define RV40_FCPSR         (RV40_BASE + 0xe0U)
 #define RV40_FCPSR_ESUSPMD 1U
 
+/* Renesas MRAM */
+/*
+ * Some newer chips eschew the traditional RV40 or MF3/4 flash solutions for a
+ * MRAM based solution (and include an OSPI flash in the device package). The
+ * MRAM interface appears to be loosely structured on the RV40 flash architecture,
+ * from a brief glance through the block diagrams
+ *
+ * Program buffer: 1/2/4/8 Bytes
+ *      Code MRAM: 32 Bytes
+ *
+ * Chips containing: RA8M2, RA8T2, RA8D2, RA8P1
+ */
+
+//TODO: Implement MRAM
+
 static bool renesas_uid(target_s *t, int argc, const char **argv);
 
 const command_s renesas_cmd_list[] = {
@@ -300,6 +517,42 @@ static renesas_pnr_series_e renesas_series(const uint8_t *pnr);
 static uint32_t renesas_flash_size(const uint8_t *pnr);
 
 static bool renesas_enter_flash_mode(target_s *target);
+static bool renesas_enter_mf3_flash_mode(target_s *target);
+
+static bool renesas_mf3_prepare(target_flash_s *flash);
+static bool renesas_mf3_done(target_flash_s *flash);
+static bool renesas_mf3_flash_erase(target_flash_s *flash, target_addr_t addr, size_t len);
+static bool renesas_mf3_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t len);
+
+static void renesas_add_mf3_flash(target_s *const target, const target_addr_t addr, const size_t length)
+{
+	target_flash_s *flash = calloc(1, sizeof(*flash));
+	if (!flash) { /* calloc failed: heap exhaustion */
+		DEBUG_ERROR("calloc: failed in %s\n", __func__);
+		return;
+	}
+
+	const bool code_flash = addr < RENESAS_CF_END;
+
+	flash->start = addr;
+	flash->length = length;
+	flash->erased = 0xffU;
+	flash->erase = renesas_mf3_flash_erase;
+	flash->write = renesas_mf3_flash_write;
+	flash->prepare = renesas_mf3_prepare;
+	flash->done = renesas_mf3_done;
+
+	if (code_flash) {
+		flash->blocksize = MF3_CF_BLOCK_SIZE;
+		//TODO Make this generic
+		flash->writesize = MF3_RA2E1_CF_WRITE_SIZE;
+	} else {
+		flash->blocksize = MF3_DF_BLOCK_SIZE;
+		flash->writesize = MF3_DF_WRITE_SIZE;
+	}
+
+	target_add_flash(target, flash);
+}
 
 static bool renesas_rv40_prepare(target_flash_s *flash);
 static bool renesas_rv40_done(target_flash_s *flash);
@@ -340,18 +593,30 @@ static void renesas_add_flash(target_s *const target, const target_addr_t addr, 
 	renesas_priv_s *priv = (renesas_priv_s *)target->target_storage;
 
 	/*
-	 * Renesas RA MCUs can have one of two kinds of flash memory, MF3/4 and RV40
+	 * Renesas RA MCUs can have one of two kinds of flash memory, MF3/4 and
+	 * RV40, or MRAM code memory and an external OSPI flash.
+	 *
 	 * Flash type by series:
+	 * ra0l1 - MF3/4
+	 * ra0e1 - MF3/4
+	 * ra0e2 - MF3/4
 	 * ra2l1 - MF4
+	 * ra2l2 - MF3/4
 	 * ra2e1 - MF4
 	 * ra2e2 - MF4
+	 * ra2e3 - MF3/4
 	 * ra2a1 - MF3
+	 * ra2a2 - MF3/4
+	 * ra2t1 - MF3/4
 	 * ra4m1 - MF3
 	 * ra4m2 - RV40
 	 * ra4m3 - RV40
 	 * ra4e1 - RV40
 	 * ra4e2 - RV40
 	 * ra4w1 - MF3
+	 * ra4c1 - RV40
+	 * ra4t1 - RV40
+	 * ra4l1 - RV40
 	 * ra6m1 - RV40
 	 * ra6m2 - RV40
 	 * ra6m3 - RV40
@@ -361,33 +626,82 @@ static void renesas_add_flash(target_s *const target, const target_addr_t addr, 
 	 * ra6e2 - RV40
 	 * ra6t1 - RV40
 	 * ra6t2 - RV40
+	 * ra6t3 - RV40
+     * ra6w1 - No internal flash, only O/QSPI
+	 * ra8m1 - RV40
+	 * ra8m2 - MRAM + OSPI Flash
+	 * ra8e1 - RV40
+	 * ra8e2 - RV40
+	 * ra8t1 - RV40
+	 * ra8t2 - MRAM + OSPI Flash
+	 * ra8d1 - RV40
+	 * ra8d2 - MRAM + OSPI Flash
+	 * ra8p1 - MRAM + OSPI Flash
+	 *
+	 * This needs to be adjusted as the RA8 parts tend to be dual-bank flash or
+	 * other fancier memory configurations
 	 */
 
 	switch (priv->series) {
+	case PNR_SERIES_RA0L1:
+	case PNR_SERIES_RA0E1:
+	case PNR_SERIES_RA0E2:
 	case PNR_SERIES_RA2L1:
+	case PNR_SERIES_RA2L2:
 	case PNR_SERIES_RA2E1:
 	case PNR_SERIES_RA2E2:
+	case PNR_SERIES_RA2E3:
 	case PNR_SERIES_RA2A1:
+	case PNR_SERIES_RA2A2:
+	case PNR_SERIES_RA2T1:
 	case PNR_SERIES_RA4M1:
 	case PNR_SERIES_RA4W1:
-		/* FIXME: implement MF3/4 flash */
+		/*
+		 * We need a new enter_flash_mode here because the MF3/4 parts don't
+		 * seem to have the SYSC_FWEPROR register. Alternatively, we could
+		 * duplicate the switch statement inside enter_flash_mode, but this
+		 * feels slightly cleaner
+		 */
+		target->enter_flash_mode = renesas_enter_mf3_flash_mode;
+		renesas_add_mf3_flash(target, addr, length);
 		return;
 
 	case PNR_SERIES_RA4M2:
 	case PNR_SERIES_RA4M3:
 	case PNR_SERIES_RA4E1:
 	case PNR_SERIES_RA4E2:
+	case PNR_SERIES_RA4T1:
+	case PNR_SERIES_RA4L1:
+	case PNR_SERIES_RA4C1:
 	case PNR_SERIES_RA6M1:
 	case PNR_SERIES_RA6M2:
 	case PNR_SERIES_RA6M3:
 	case PNR_SERIES_RA6M4:
+	case PNR_SERIES_RA6M5:
 	case PNR_SERIES_RA6E1:
 	case PNR_SERIES_RA6E2:
-	case PNR_SERIES_RA6M5:
 	case PNR_SERIES_RA6T1:
 	case PNR_SERIES_RA6T2:
+	case PNR_SERIES_RA6T3:
+	case PNR_SERIES_RA8M1:
+	case PNR_SERIES_RA8E1:
+	case PNR_SERIES_RA8E2:
+	case PNR_SERIES_RA8T1:
+	case PNR_SERIES_RA8D1:
+		/* TODO: Support the parts with dual-bank flash properly */
 		target->enter_flash_mode = renesas_enter_flash_mode;
 		renesas_add_rv40_flash(target, addr, length);
+		return;
+
+	case PNR_SERIES_RA8M2:
+	case PNR_SERIES_RA8T2:
+	case PNR_SERIES_RA8D2:
+	case PNR_SERIES_RA8P1:
+		/* FIXME: MRAM/OSPI flashing not implemented currently */
+		return;
+
+	case PNR_SERIES_RA6W1:
+		/* No internal flash */
 		return;
 
 	default:
@@ -407,35 +721,82 @@ bool renesas_ra_probe(target_s *const target)
 
 	/* Read the PNR */
 	switch (target->part_id) {
-		// case :
+	case RENESAS_PARTID_RA2E1:
 		/* mcus with PNR located at 0x01001c10
 		 * ra2l1 (part_id wanted)
-		 * ra2e1 (part_id wanted)
 		 * ra2e2 (part_id wanted)
+		 * ra2e3 (part_id wanted)
+		 * ra2a2 (part_id wanted)
+		 * ra2t1 (part_id wanted)
 		 */
-		// if (!renesas_pnr_read(t, RENESAS_FIXED1_PNR, pnr))
-		//	return false;
-		// break;
+		if (!renesas_pnr_read(target, RENESAS_FIXED1_PNR, pnr))
+			return false;
+		break;
 
 	case RENESAS_PARTID_RA4M2:
 	case RENESAS_PARTID_RA4M3:
+	case RENESAS_PARTID_RA6M5:
 		/* mcus with PNR located at 0x010080f0
 		 * ra4e1 (part_id wanted)
 		 * ra4e2 (part_id wanted)
+		 * ra4c1 (part_id wanted)
+		 * ra4t1 (part_id wanted)
+		 * ra4l1 (part_id wanted)
 		 * ra6m4 (part_id wanted)
-		 * ra6m5 (part_id wanted)
 		 * ra6e1 (part_id wanted)
 		 * ra6e2 (part_id wanted)
 		 * ra6t2 (part_id wanted)
+		 * ra6t3 (part_id wanted)
 		 */
 		if (!renesas_pnr_read(target, RENESAS_FIXED2_PNR, pnr))
 			return false;
 		break;
 
+		// case:
+		/* mcus with PNR located at 0x01011080
+		 * ra0l1 (part_id wanted)
+		 * ra0e1 (part_id wanted)
+		 * ra0e2 (part_id wanted)
+		 */
+		// if(!renesas_pnr_read(target, RENESAS_FIXED3_PNR, pnr))
+		// 	return false;
+		// break;
+
+		// case:
+		/* mcus with PNR located at 0x01011120
+		 * ra2l2 (part_id wanted)
+		 */
+		// if(!renesas_pnr_read(target, RENESAS_FIXED4_PNR, pnr))
+		// 	return false;
+		// break;
+
+		// case:
+		/* mcus with PNR located at 0x130080f0
+		 * ra8m1 (part_id wanted)
+		 * ra8e1 (part_id wanted)
+		 * ra8e2 (part_id wanted)
+		 * ra8t1 (part_id wanted)
+		 * ra8d1 (part_id wanted)
+		 */
+		// if(!renesas_pnr_read(target, RENESAS_FIXED5_PNR, pnr))
+		// 	return false;
+		// break;
+
+		// case:
+		/* mcus with PNR located at 0x02c1ec38
+		 * ra8m2 (part_id wanted)
+		 * ra8t2 (part_id wanted)
+		 * ra8d2 (part_id wanted)
+		 * ra8p1 (part_id wanted)
+		 */
+		// if(!renesas_pnr_read(target, RENESAS_FIXED6_PNR, pnr))
+		// 	return false;
+		// break;
+
 	case RENESAS_PARTID_RA2A1:
+	case RENESAS_PARTID_RA4M1:
 	case RENESAS_PARTID_RA6M2:
 		/* mcus with Flash Root Table
-		 * ra4m1 *undocumented (part_id wanted)
 		 * ra4w1 *undocumented (part_id wanted)
 		 * ra6m1 (part_id wanted)
 		 * ra6m3 (part_id wanted)
@@ -454,7 +815,9 @@ bool renesas_ra_probe(target_s *const target)
 		 * but experimentally there doesn't seem to be an issue with these in particular
 		 *
 		 * try the fixed address RENESAS_FIXED2_PNR first, as it should lead to less illegal/erroneous
-		 * memory accesses in case of failure, and is the most common case
+		 * memory accesses in case of failure, and is the most common case.
+		 *
+		 * These are tried in order of most to least common.
 		 */
 
 		if (renesas_pnr_read(target, RENESAS_FIXED2_PNR, pnr)) {
@@ -476,6 +839,29 @@ bool renesas_ra_probe(target_s *const target)
 			break;
 		}
 
+		if (renesas_pnr_read(target, RENESAS_FIXED5_PNR, pnr)) {
+			DEBUG_WARN("Found renesas chip (%.*s) with %s and unsupported Part ID 0x%x, please report it\n",
+				(int)sizeof(pnr), pnr, "pnr location RENESAS_FIXED5_PNR", target->part_id);
+			break;
+		}
+		if (renesas_pnr_read(target, RENESAS_FIXED6_PNR, pnr)) {
+			DEBUG_WARN("Found renesas chip (%.*s) with %s and unsupported Part ID 0x%x, please report it\n",
+				(int)sizeof(pnr), pnr, "pnr location RENESAS_FIXED6_PNR", target->part_id);
+			break;
+		}
+
+		if (renesas_pnr_read(target, RENESAS_FIXED3_PNR, pnr)) {
+			DEBUG_WARN("Found renesas chip (%.*s) with %s and unsupported Part ID 0x%x, please report it\n",
+				(int)sizeof(pnr), pnr, "pnr location RENESAS_FIXED3_PNR", target->part_id);
+			break;
+		}
+
+		if (renesas_pnr_read(target, RENESAS_FIXED4_PNR, pnr)) {
+			DEBUG_WARN("Found renesas chip (%.*s) with %s and unsupported Part ID 0x%x, please report it\n",
+				(int)sizeof(pnr), pnr, "pnr location RENESAS_FIXED4_PNR", target->part_id);
+			break;
+		}
+
 		return false;
 	}
 
@@ -493,6 +879,21 @@ bool renesas_ra_probe(target_s *const target)
 	target->driver = (char *)priv->pnr;
 
 	switch (priv->series) {
+	case PNR_SERIES_RA0L1:
+		renesas_add_flash(target, 0x40100000, 1U * 1024U); /* Data flash memory 1 KB 0x40100000 */
+		target_add_ram32(target, 0x20004000, 16U * 1024U); /* SRAM 16 KB 0x20004000 */
+		break;
+
+	case PNR_SERIES_RA0E2:
+		renesas_add_flash(target, 0x40100000, 2U * 1024U); /* Data flash memory 2 KB 0x40100000 */
+		target_add_ram32(target, 0x20004000, 16U * 1024U); /* SRAM 16 KB 0x20004000 */
+		break;
+
+	case PNR_SERIES_RA0E1:
+		renesas_add_flash(target, 0x40100000, 1U * 1024U); /* Data flash memory 1 KB 0x40100000 */
+		target_add_ram32(target, 0x20004000, 12U * 1024U); /* SRAM 12 KB 0x20004000 */
+		break;
+
 	case PNR_SERIES_RA2L1:
 	case PNR_SERIES_RA2A1:
 	case PNR_SERIES_RA4M1:
@@ -500,14 +901,26 @@ bool renesas_ra_probe(target_s *const target)
 		target_add_ram32(target, 0x20000000, 32U * 1024U); /* SRAM 32 KB 0x20000000 */
 		break;
 
+	case PNR_SERIES_RA2A2:
+		renesas_add_flash(target, 0x40100000, 8U * 1024U); /* Data flash memory 8 KB 0x40100000 */
+		target_add_ram32(target, 0x20000000, 48U * 1024U); /* SRAM 48 KB 0x20000000 */
+		break;
+
 	case PNR_SERIES_RA2E1:
+	case PNR_SERIES_RA2L2:
 		renesas_add_flash(target, 0x40100000, 4U * 1024U); /* Data flash memory 4 KB 0x40100000 */
 		target_add_ram32(target, 0x20004000, 16U * 1024U); /* SRAM 16 KB 0x20004000 */
 		break;
 
 	case PNR_SERIES_RA2E2:
+	case PNR_SERIES_RA2T1:
 		renesas_add_flash(target, 0x40100000, 2U * 1024U); /* Data flash memory 2 KB 0x40100000 */
 		target_add_ram32(target, 0x20004000, 8U * 1024U);  /* SRAM 8 KB 0x20004000 */
+		break;
+
+	case PNR_SERIES_RA2E3:
+		renesas_add_flash(target, 0x40100000, 2U * 1024U); /* Data flash memory 2 KB 0x40100000 */
+		target_add_ram32(target, 0x20004000, 16U * 1024U); /* SRAM 16 KB 0x20004000 */
 		break;
 
 	case PNR_SERIES_RA4M2:
@@ -528,6 +941,23 @@ bool renesas_ra_probe(target_s *const target)
 	case PNR_SERIES_RA4W1:
 		renesas_add_flash(target, 0x40100000, 8U * 1024U); /* Data flash memory 8 KB 0x40100000 */
 		target_add_ram32(target, 0x20000000, 96U * 1024U); /* SRAM 96 KB 0x20000000 */
+		break;
+
+	case PNR_SERIES_RA4C1:
+		renesas_add_flash(target, 0x08000000, 8U * 1024U); /* Data flash memory 8 KB 0x08000000 */
+		target_add_ram32(target, 0x20000000, 96U * 1024U); /* SRAM 96 KB 0x20000000 */
+		/* Potential for external mem-mapped QSPI at 0x60000000--0x68000000 */
+		break;
+
+	case PNR_SERIES_RA4L1:
+		renesas_add_flash(target, 0x08000000, 8U * 1024U); /* Data flash memory 8 KB 0x08000000 */
+		target_add_ram32(target, 0x20000000, 64U * 1024U); /* SRAM 64 KB 0x20000000 */
+		/* Potential for external mem-mapped QSPI at 0x60000000--0x68000000 */
+		break;
+
+	case PNR_SERIES_RA4T1:
+		renesas_add_flash(target, 0x08000000, 4U * 1024U); /* Data flash memory 4 KB 0x08000000 */
+		target_add_ram32(target, 0x20000000, 40U * 1024U); /* SRAM 40 KB 0x20000000 */
 		break;
 
 	case PNR_SERIES_RA6M1:
@@ -577,6 +1007,101 @@ bool renesas_ra_probe(target_s *const target)
 		target_add_ram32(target, 0x28000000, 1024U);        /* Standby SRAM 1 KB 0x28000000 */
 		break;
 
+	case PNR_SERIES_RA6T3:
+		renesas_add_flash(target, 0x08000000, 4U * 1024U); /* Data flash memory 4 KB 0x08000000 */
+		target_add_ram32(target, 0x20000000, 40U * 1024U); /* SRAM 40 KB 0x20000000 */
+		break;
+
+	case PNR_SERIES_RA6W1:
+		/* TODO: Handle external QSPI-mapped flash! */
+		/* FIXME: Update when the User Manual is released... */
+		target_add_ram32(target, 0x20000000, 256U * 1024U); /* SRAM0 256 KB 0x20000000 */
+		target_add_ram32(target, 0x20040000, 256U * 1024U); /* SRAM1 256 KB 0x20000000 */
+		target_add_ram32(target, 0x20080000, 128U * 1024U); /* SRAM2 128 KB 0x20000000 */
+		target_add_ram32(target, 0x28600000, 64U * 1024U);  /* Retention RAM 64 KB 0x28600000 */
+		break;
+
+	/* All the RA8 families have TrustZone and thus have their main flash memory
+	 * located at a different location from all the other families. That's the
+	 * reason for duplicating the add commands/etc for these parts
+	 */
+	case PNR_SERIES_RA8M1:
+		/* These are the non-secure aliases */
+		renesas_add_flash(target, 0x37000000, 12U * 1024U); /* Data flash memory 12 KB 0x37000000 */
+		target_add_ram32(target, 0x32000000, 384U * 1024U); /* SRAM0 384 KB 0x32000000 */
+		target_add_ram32(target, 0x32060000, 512U * 1024U); /* SRAM1 512 KB 0x32060000 */
+		target_add_ram32(target, 0x30000000, 64U * 1024U);  /* DTCM 64 KB 0x30000000 */
+		target_add_ram32(target, 0x10000000, 64U * 1024U);  /* ITCM 64 KB 0x10000000 */
+		target_add_ram32(target, 0x36000000, 1024U);        /* Standby SRAM 1 KB 0x36000000 */
+
+		renesas_add_flash(target, 0x12000000, renesas_flash_size(pnr)); /* Code flash memory 0x12000000 */
+		target_add_commands(target, renesas_cmd_list, target->driver);
+		return true;
+
+	case PNR_SERIES_RA8E1:
+		/* These are the non-secure aliases */
+		renesas_add_flash(target, 0x37000000, 12U * 1024U); /* Data flash memory 12 KB 0x37000000 */
+		target_add_ram32(target, 0x32040000, 128U * 1024U); /* SRAM0 128 KB 0x32040000 */
+		target_add_ram32(target, 0x32060000, 512U * 1024U); /* SRAM1 512 KB 0x32060000 */
+		target_add_ram32(target, 0x30000000, 16U * 1024U);  /* DTCM 16 KB 0x30000000 */
+		target_add_ram32(target, 0x10000000, 16U * 1024U);  /* ITCM 16 KB 0x10000000 */
+		target_add_ram32(target, 0x36000000, 1024U);        /* Standby SRAM 1 KB 0x36000000 */
+
+		renesas_add_flash(target, 0x12000000, renesas_flash_size(pnr)); /* Code flash memory 0x12000000 */
+		target_add_commands(target, renesas_cmd_list, target->driver);
+		return true;
+
+	case PNR_SERIES_RA8E2:
+		/* These are the non-secure aliases */
+		renesas_add_flash(target, 0x37000000, 12U * 1024U); /* Data flash memory 12 KB 0x37000000 */
+		target_add_ram32(target, 0x32060000, 512U * 1024U); /* SRAM1 512 KB 0x32060000 */
+		target_add_ram32(target, 0x30000000, 16U * 1024U);  /* DTCM 16 KB 0x30000000 */
+		target_add_ram32(target, 0x10000000, 16U * 1024U);  /* ITCM 16 KB 0x10000000 */
+		target_add_ram32(target, 0x36000000, 1024U);        /* Standby SRAM 1 KB 0x36000000 */
+
+		renesas_add_flash(target, 0x12000000, renesas_flash_size(pnr)); /* Code flash memory 0x12000000 */
+		target_add_commands(target, renesas_cmd_list, target->driver);
+		return true;
+
+	case PNR_SERIES_RA8T1:
+	case PNR_SERIES_RA8D1:
+		/* These are the non-secure aliases */
+		renesas_add_flash(target, 0x37000000, 12U * 1024U); /* Data flash memory 12 KB 0x37000000 */
+		target_add_ram32(target, 0x32000000, 384U * 1024U); /* SRAM0 384 KB 0x32000000 */
+		target_add_ram32(target, 0x32060000, 512U * 1024U); /* SRAM1 512 KB 0x32060000 */
+		target_add_ram32(target, 0x30000000, 64U * 1024U);  /* DTCM 64 KB 0x30000000 */
+		target_add_ram32(target, 0x10000000, 64U * 1024U);  /* ITCM 64 KB 0x10000000 */
+		target_add_ram32(target, 0x36000000, 1024U);        /* Standby SRAM 1 KB 0x36000000 */
+
+		renesas_add_flash(target, 0x12000000, renesas_flash_size(pnr)); /* Code flash memory 0x12000000 */
+		target_add_commands(target, renesas_cmd_list, target->driver);
+		return true;
+
+	/* These are the MRAM/SiP models */
+	case PNR_SERIES_RA8M2:
+	case PNR_SERIES_RA8T2:
+	case PNR_SERIES_RA8D2:
+	case PNR_SERIES_RA8P1:
+		/* These are the non-secure aliases */
+		/* TODO: Handle the multi-core TCM and the extra ECC regions*/
+		target_add_ram32(target, 0x32000000, 512U * 1024U); /* SRAM0 512 KB 0x32000000 */
+		target_add_ram32(target, 0x32080000, 512U * 1024U); /* SRAM1 512 KB 0x32080000 */
+		target_add_ram32(target, 0x32100000, 512U * 1024U); /* SRAM2 512 KB 0x32100000 */
+		target_add_ram32(target, 0x32180000, 128U * 1024U); /* SRAM3 128 KB 0x32180000 */
+
+		uint32_t flash = renesas_flash_size(pnr);
+
+		// Check for the SiP variant with SPI Flash
+		if (flash > (2048U * 1024U)) {
+			renesas_add_flash(target, 0x12000000, 1024U * 1024U);         /* Code MRAM 0x12000000 */
+			renesas_add_flash(target, 0x18000000, flash - 1024U * 1024U); /* External SPI 0x18000000 */
+		} else {
+			renesas_add_flash(target, 0x12000000, flash); /* Code MRAM 0x12000000 */
+		}
+
+		target_add_commands(target, renesas_cmd_list, target->driver);
+		return true;
+
 	default:
 		return false;
 	}
@@ -612,7 +1137,7 @@ static bool renesas_pnr_read(target_s *const target, const target_addr_t base, u
 		pnrr[i] = target_mem32_read32(target, base + i * 4U);
 
 	/* Write bytewise into provided container */
-	if (base == RENESAS_FIXED1_PNR) {
+	if (base == RENESAS_FIXED1_PNR || base == RENESAS_FIXED3_PNR || base == RENESAS_FIXED4_PNR) {
 		/* Renesas... look what you made me do...  */
 		/* reverse order, see 'Part numbering scheme' note for context */
 		for (size_t i = 0U; i < 13U; i++)
@@ -661,6 +1186,10 @@ static uint32_t renesas_flash_size(const uint8_t *const pnr)
 		return UINT32_C(1536 * 1024);
 	case PNR_MEMSIZE_2MB:
 		return UINT32_C(2048 * 1024);
+	case PNR_MEMSIZE_5MB:
+		return UINT32_C(5120 * 1024);
+	case PNR_MEMSIZE_9MB:
+		return UINT32_C(9216 * 1024);
 	default:
 		return 0;
 	}
@@ -906,6 +1435,254 @@ static bool renesas_rv40_flash_write(target_flash_s *const flash, target_addr_t 
 	return !renesas_rv40_error_check(target, RV40_FSTATR_PRGERR | RV40_FSTATR_ILGLERR);
 }
 
+static bool renesas_enter_mf3_flash_mode(target_s *const target)
+{
+	/*
+	 * Make sure that we are in the Code Flash/Data Flash Read mode, as a reset
+	 * starts us in the Data Flash Disabled mode (R01AN5367EU0120, Sequencer Modes,
+	 * §1.5.1, pg 35)
+	 */
+	target_mem32_write8(target, MF3_DFLCTL, MF3_DFLCTL_DFLEN);
+	return true;
+}
+
+static bool renesas_mf3_pe_mode(target_s *const target, const pe_mode_e pe_mode)
+{
+	/* See "Switching to Code Flash P/E Mode": §35.13.3.2 of the RA2E1 manual R01UH0852EJ0170. */
+	/* Set PE/READ mode. Note that this is very similar to the RV40 mode control,
+	 * just with a different target register address. This probably ought to be
+	 * deduplicated, but getting it working is more important first
+	 */
+	uint16_t fentryr = 0;
+	uint8_t fpmcr = 0;
+	switch (pe_mode) {
+	case PE_MODE_CF:
+		fentryr |= FENTRYR_PE_CF;
+		fpmcr |= MF3_FPMCR_FMS0; // & ~(MF3_FPMCR_FMS1 | MF3_FPMCR_RPDIS);
+		break;
+	case PE_MODE_DF:
+		fentryr |= FENTRYR_PE_DF;
+		fpmcr |= MF3_FPMCR_FMS1; // & ~(MF3_FPMCR_FMS0 | MF3_FPMCR_RPDIS);
+		break;
+	case PE_MODE_READ:
+		fpmcr |= MF3_FPMCR_RPDIS; // & ~(MF3_FPMCR_FMS0 | MF3_FPMCR_FMS1);
+		break;
+	default:
+		break;
+	}
+	target_mem32_write16(target, MF3_FENTRYR, FENTRYR_KEY | fentryr);
+
+	/*
+	 * Perform a series of writes to unlock the mode control register and set it
+	 * to the appropriate state. Right now, this primarily focuses on the RA2
+	 * implementation (i.e. ignoring FMS2) as that is what I have to test on
+	 * currently.
+	 *
+	 * Might also need a 2-15us delay here (t_DIS or t_MS) due to state change times
+	 * depending on which states you are changing between (unlikely given the speed
+	 * at which this will be occurring is limited by the debug link). See the Code
+	 * flash characteristics table in the Electrical Characteristics section of the
+	 * appropriate User Manual (For RA2E1, it would be table 39.53 in section
+	 * 39.10.1, page 1026)
+	 */
+	target_mem32_write8(target, MF3_FPR, MF3_FPR_KEY);
+	target_mem32_write8(target, MF3_FPMCR, fpmcr);
+	target_mem32_write8(target, MF3_FPMCR, ~fpmcr);
+	target_mem32_write8(target, MF3_FPMCR, fpmcr);
+
+	platform_timeout_s timeout;
+	platform_timeout_set(&timeout, 10);
+
+	/* Wait for the operation to complete or timeout, Read until FENTRYR is set */
+	while (target_mem32_read16(target, MF3_FENTRYR) != fentryr) {
+		if (target_check_error(target) || platform_timeout_is_expired(&timeout))
+			return false;
+	}
+
+	return true;
+}
+
+static bool renesas_mf3_error_check(target_s *const target, const uint16_t error_bits)
+{
+	// TODO: update with RA4 consideration
+	const uint8_t fstatr2 = target_mem32_read16(target, MF3_FSTATR2);
+
+	/* Check if status indicates a programming error */
+	if (fstatr2 & error_bits) {
+		DEBUG_WARN("Flash encountered an error; FSTATR2: 0x%x\n", fstatr2);
+		/* Stop the flash */
+		target_mem32_write8(target, MF3_FCR, MF3_FCR_STOP);
+
+		platform_timeout_s timeout;
+		platform_timeout_set(&timeout, 10);
+
+		/* Wait until the operation has completed or timeout */
+		/* Read FRDY bit until it has been set to 1 indicating that the current operation is complete.*/
+		while (!(target_mem32_read8(target, MF3_FSTATR1) & MF3_FSTATR1_FRDY)) {
+			if (target_check_error(target) || platform_timeout_is_expired(&timeout))
+				return true;
+		}
+
+		/* Reset the flash controller */
+		target_mem32_write8(target, MF3_FRESETR, MF3_FRESETR_RESET);
+		target_mem32_write8(target, MF3_FRESETR, 0);
+
+		return true;
+	}
+
+	return false;
+}
+
+static bool renesas_mf3_prepare(target_flash_s *const flash)
+{
+	target_s *const target = flash->t;
+
+	/* This doesn't check to see if the FRDY bit is set, unlike the RV40 flash,
+	 * as FRDY is only set after a command executes and is zero on reset. Thus,
+	 * if you've attached after a reset and haven't done anything, it will be
+	 * zero and erroneously trigger the check.
+	 */
+
+	/* Code flash or data flash operation */
+	const bool code_flash = flash->start < RENESAS_CF_END;
+
+	/* Transition to PE mode */
+	const pe_mode_e pe_mode = code_flash ? PE_MODE_CF : PE_MODE_DF;
+
+	return renesas_mf3_pe_mode(target, pe_mode) && !renesas_mf3_error_check(target, MF3_FSTATR2_ILGLERR);
+}
+
+static bool renesas_mf3_done(target_flash_s *const flash)
+{
+	target_s *const target = flash->t;
+
+	/* Return to read mode */
+	return renesas_mf3_pe_mode(target, PE_MODE_READ);
+}
+
+/* This could be improved by leveraging the built-in blank-checking... */
+static bool renesas_mf3_flash_erase(target_flash_s *const flash, target_addr_t addr, size_t len)
+{
+	target_s *const target = flash->t;
+
+	/* Choose the correct block size based on the address to write to */
+	uint16_t block_size;
+	if (addr < RENESAS_CF_END)
+		block_size = MF3_CF_BLOCK_SIZE;
+	else
+		block_size = MF3_DF_BLOCK_SIZE;
+
+	for (uint32_t i = 0; i < len; i += block_size) {
+		uint32_t block_addr = addr + i;
+
+		/* Set block start address */
+		target_mem32_write16(target, MF3_FSARL, (uint16_t)(block_addr & 0xffffU));
+		target_mem32_write16(target, MF3_FSARH, (uint16_t)((block_addr >> 16) & 0xffffU));
+
+		/* Set block end address */
+		block_addr += block_size - 1;
+		target_mem32_write16(target, MF3_FEARL, (uint16_t)(block_addr & 0xffffU));
+		target_mem32_write16(target, MF3_FEARH, (uint16_t)((block_addr >> 16) & 0xffffU));
+
+		/* Send the Block Erase command */
+		target_mem32_write8(target, MF3_FCR, MF3_FCR_OPST | MF3_CMD_BLOCK_ERASE);
+
+		/*
+		 * The reference manual quotes a max erase time of 355 ms for the 2KB block
+		 * size; set a timeout a bit longer than that.
+		 * See Table 39.53-55, Code flash characteristics, pg 1026, R01UH0852EJ0170
+		 */
+		platform_timeout_s timeout;
+		platform_timeout_set(&timeout, 400);
+
+		/* Read FRDY bit until it has been set to 1 indicating that the current operation is complete.*/
+		while (!(target_mem32_read8(target, MF3_FSTATR1) & MF3_FSTATR1_FRDY)) {
+			if (target_check_error(target) || platform_timeout_is_expired(&timeout))
+				return false;
+		}
+
+		/*
+		 * Clear the command register (Figure 35.23, Flowchart for Code Flash
+		 * Block Erase Procedure, pg 955, R01UH0852EJ0170) and wait until ready again
+		 */
+		target_mem32_write8(target, MF3_FCR, MF3_CMD_BLOCK_ERASE);
+		target_mem32_write8(target, MF3_FCR, 0);
+
+		platform_timeout_set(&timeout, 10);
+
+		/* Read FRDY bit until it has been set to 0. */
+		while ((target_mem32_read8(target, MF3_FSTATR1) & MF3_FSTATR1_FRDY)) {
+			if (target_check_error(target) || platform_timeout_is_expired(&timeout))
+				return false;
+		}
+
+		if (renesas_mf3_error_check(target, MF3_FSTATR2_ERERR | MF3_FSTATR2_ILGLERR))
+			return false;
+	}
+
+	return true;
+}
+
+static bool renesas_mf3_flash_write(target_flash_s *const flash, target_addr_t dest, const void *src, size_t len)
+{
+	target_s *const target = flash->t;
+
+	/* code flash or data flash operation */
+	const bool code_flash = dest < RENESAS_CF_END;
+
+	/* write size for code flash / data flash FIXME: RA2E1 vs others */
+	const uint8_t write_size = code_flash ? MF3_RA2E1_CF_WRITE_SIZE : MF3_DF_WRITE_SIZE;
+
+	/* set start address */
+	target_mem32_write16(target, MF3_FSARL, (uint16_t)(dest & 0xffffU));
+	target_mem32_write16(target, MF3_FSARH, (uint16_t)((dest >> 16) & 0xffffU));
+
+	for (uint32_t off = 0; off < len; off += write_size) {
+		/* Set up the data to be written (Adjust for RA4!) */
+		if (code_flash) {
+			const uint16_t *buf = (const uint16_t *)src + off;
+			target_mem32_write16(target, MF3_FWBL0, buf[0]);
+			target_mem32_write16(target, MF3_FWBH0, buf[1]);
+		} else {
+			target_mem32_write16(target, MF3_FWBL0, *((const uint8_t *)src + off));
+		}
+
+		/* Dispatch the write command */
+		target_mem32_write8(target, MF3_FCR, MF3_FCR_OPST | MF3_CMD_PROGRAM);
+
+		platform_timeout_s timeout;
+		platform_timeout_set(&timeout, 10);
+
+		/* Wait until the operation has completed or timeout */
+		/* Read FRDY bit until it has been set to 1 indicating that the current operation is complete.*/
+		while (!(target_mem32_read8(target, MF3_FSTATR1) & MF3_FSTATR1_FRDY)) {
+			if (target_check_error(target) || platform_timeout_is_expired(&timeout))
+				return false;
+		}
+
+		/*
+		 * Clear the command register (Figure 35.21, Flowchart for consecutive
+		 * programming of the code flash, pg 953, R01UH0852EJ0170) and wait
+		 * until ready again
+		 */
+		target_mem32_write8(target, MF3_FCR, MF3_CMD_PROGRAM);
+		target_mem32_write8(target, MF3_FCR, 0);
+
+		platform_timeout_set(&timeout, 10);
+
+		/* Read FRDY bit until it has been set to 0 */
+		while ((target_mem32_read8(target, MF3_FSTATR1) & MF3_FSTATR1_FRDY)) {
+			if (target_check_error(target) || platform_timeout_is_expired(&timeout))
+				return false;
+		}
+
+		if (renesas_mf3_error_check(target, MF3_FSTATR2_PRGERR | MF3_FSTATR2_ILGLERR))
+			return false;
+	}
+
+	return true;
+}
+
 /* Reads the 16-byte unique id */
 static bool renesas_uid(target_s *const target, const int argc, const char **const argv)
 {
@@ -915,6 +1692,7 @@ static bool renesas_uid(target_s *const target, const int argc, const char **con
 	const renesas_priv_s *const priv = (renesas_priv_s *)target->target_storage;
 	target_addr_t uid_addr;
 
+	//TODO: Update
 	switch (priv->series) {
 	case PNR_SERIES_RA2L1:
 	case PNR_SERIES_RA2E1:
