@@ -39,9 +39,11 @@
 #include <libopencm3/cm3/cortex.h>
 #include <libopencm3/usb/dwc/otg_fs.h>
 #include <libopencm3/stm32/spi.h>
+#include <libopencm3/stm32/adc.h>
 
 jmp_buf fatal_error_jmpbuf;
 volatile uint32_t magic[2] __attribute__((section(".noinit")));
+static void adc_init();
 
 void platform_init(void)
 {
@@ -144,6 +146,7 @@ void platform_init(void)
 
 	/* By default, do not drive the SWD bus too fast. */
 	platform_max_frequency_set(2000000);
+	adc_init();
 }
 
 void platform_nrst_set_val(bool assert)
@@ -156,9 +159,55 @@ bool platform_nrst_get_val(void)
 	return gpio_get(NRST_PORT, NRST_PIN) == 0;
 }
 
+static void adc_init(void)
+{
+	rcc_periph_clock_enable(RCC_ADC1);
+	gpio_mode_setup(VTREF_PORT, GPIO_MODE_ANALOG, GPIO_PUPD_NONE, VTREF_PIN);
+	adc_power_off(ADC1);
+	/* Pclk2=Hclk=96 MHz, use ADCclk=24 MHz to stay below 36 per datasheet. Then 480 cycles take 20us. */
+	adc_set_clk_prescale(ADC_CCR_ADCPRE_BY4);
+	adc_set_sample_time(ADC1, VTREF_CHANNEL, ADC_SMPR_SMP_480CYC);
+	adc_set_sample_time(ADC1, ADC_CHANNEL_VREF, ADC_SMPR_SMP_480CYC);
+	adc_enable_temperature_sensor();
+}
+
+static uint16_t platform_adc_read(void)
+{
+	const uint8_t channel17 = ADC_CHANNEL_VREF;
+	const uint8_t channel_vtref = VTREF_CHANNEL;
+	adc_power_on(ADC1);
+	adc_set_regular_sequence(ADC1, 1, &channel17);
+	adc_start_conversion_regular(ADC1);
+	while (!adc_eoc(ADC1))
+		continue;
+	const uint16_t vrefint_sample = adc_read_regular(ADC1);
+	adc_set_regular_sequence(ADC1, 1, &channel_vtref);
+	adc_start_conversion_regular(ADC1);
+	while (!adc_eoc(ADC1))
+		continue;
+	const uint16_t value = adc_read_regular(ADC1);
+	/* Vrefint = 1.21V typ, Vdda = 3.3V, expected code of 1501 */
+	const uint16_t vrefint_expected = 1210U * 4095U / 3300U;
+	const uint16_t value_adj = value * vrefint_expected / vrefint_sample;
+	DEBUG_INFO("%s: Vrefint=%u, VTref=%u, returning %u\n", __func__, vrefint_sample, value, value_adj);
+	adc_power_off(ADC1);
+	return value_adj;
+}
+
 const char *platform_target_voltage(void)
 {
-	return "Unknown";
+	static char msg[8] = "0.000V";
+	const uint16_t vtref_sample = platform_adc_read();
+	/* Convert 0-4095 full-scale code to 0-3300 integer millivolts */
+	const uint32_t vtref_mv = vtref_sample * 3300U / 4095U;
+	/* Avoid printf_float */
+	//utoa_upper(vtref_mv, vtref_dec, 10);
+	msg[0] = '0' + vtref_mv / 1000U;
+	msg[1] = '.';
+	msg[2] = '0' + vtref_mv % 1000U / 100U;
+	msg[3] = '0' + vtref_mv % 100U / 10U;
+	msg[4] = '0' + vtref_mv % 10U;
+	return msg;
 }
 
 /*
