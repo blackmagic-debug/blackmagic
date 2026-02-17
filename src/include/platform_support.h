@@ -85,10 +85,18 @@ const char *platform_ident(void);
 #endif
 
 #ifdef PLATFORM_MULTI_UART
+typedef enum uart_state {
+	UART_STATE_UNKNOWN,
+	UART_STATE_IDLE,
+	UART_STATE_LOST,
+} uart_state_e;
+
 void platform_enable_uart2(void);
 void platform_disable_uart2(void);
 bool platform_is_uart2_enabled(void);
 void platform_switch_dir_uart2(void);
+void platform_uart2_state_change(uint32_t state);
+uart_state_e platform_uart2_state(void);
 #endif
 
 #endif /* INCLUDE_PLATFORM_SUPPORT_H */
