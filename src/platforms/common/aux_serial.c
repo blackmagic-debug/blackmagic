@@ -633,6 +633,10 @@ static void aux_serial_receive_isr(const uintptr_t uart, const uint8_t dma_irq)
 		debug_serial_run();
 	}
 
+#ifdef PLATFORM_MULTI_UART
+	if (uart == AUX_UART2)
+		platform_uart2_state_change(status);
+#endif
 #ifndef STM32U5
 	nvic_enable_irq(dma_irq);
 #else
@@ -819,6 +823,7 @@ void aux_uart2_rx_detect_isr(void)
 	 * UART2 just became active, so bring it up and disable the EXTI for it, making sure UART1's is
 	 * active in case the user swaps UARTs over
 	 */
+	platform_enable_uart2();
 	aux_serial_activate_uart(AUX_UART2);
 	exti_reset_request(AUX_UART2_RX_DETECT_EXTI);
 	exti_disable_request(AUX_UART2_RX_DETECT_EXTI);

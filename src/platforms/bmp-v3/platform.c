@@ -59,6 +59,8 @@ static void adc_init(void);
 
 int hwversion = -1;
 
+static uart_state_e uart2_state = UART_STATE_UNKNOWN;
+
 void platform_init(void)
 {
 	hwversion = 0;
@@ -454,8 +456,9 @@ void platform_enable_uart2(void)
 
 void platform_disable_uart2(void)
 {
-	/* Dsiable the UART (so we can go back into being able to change the pin swapping) */
+	/* Disable the UART (so we can go back into being able to change the pin swapping) */
 	usart_disable(AUX_UART2);
+	uart2_state = UART_STATE_UNKNOWN;
 	/* Reconfigure the GPIOs back to inputs so we can listen for which is high to watch for new connections */
 	gpio_mode_setup(AUX_UART2_PORT, GPIO_MODE_INPUT, GPIO_PUPD_NONE, AUX_UART2_TX_PIN | AUX_UART2_RX_PIN);
 }
@@ -469,4 +472,18 @@ void platform_switch_dir_uart2(void)
 {
 	/* Swap the directions of the BMPU connector UART pins */
 	gpio_toggle(AUX_UART2_DIR_PORT, AUX_UART2_DIR_PIN);
+}
+
+void platform_uart2_state_change(const uint32_t state)
+{
+	/* Make a note of whether either Idle or Framing Error have occured */
+	if (state & USART_ISR_IDLE)
+		uart2_state = UART_STATE_IDLE;
+	else if (state & USART_ISR_FE)
+		uart2_state = UART_STATE_LOST;
+}
+
+uart_state_e platform_uart2_state(void)
+{
+	return uart2_state;
 }

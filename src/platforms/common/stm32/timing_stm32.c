@@ -160,8 +160,23 @@ void sys_tick_handler(void)
 			/* And reset the counter back to 0 */
 			uart_ticks = 0U;
 		}
-	} else
-		uart_ticks = 0U;
+	} else {
+		/*
+		 * If the UART goes into framing error and that persists for more than a milisecond or two, then
+		 * it's probably safe to assume that the wires became disconnected and the UART is no longer active
+		 * in which case we then want to disable the UART and go back into swap scanning. Additionally, we'll
+		 * want to either make the other UART active, or make all UARTs inactive.
+		 */
+		const uart_state_e state = platform_uart2_state();
+		if (state == UART_STATE_LOST) {
+			if (++uart_ticks == 2U) {
+				platform_disable_uart2();
+				uart_ticks = 0U;
+			}
+		} else
+			/* Otherwise if the UART state is either not known or the UART is idle, reset the tick counter */
+			uart_ticks = 0U;
+	}
 #endif
 }
 
