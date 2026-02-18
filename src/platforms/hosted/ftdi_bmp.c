@@ -419,8 +419,10 @@ bool ftdi_lookup_cable_by_product(bmda_cli_options_s *cl_opts, const char *produ
 		return true;
 
 	for (const cable_desc_s *cable = &cable_desc[0]; cable->vendor; ++cable) {
+		/* USB Product string should contain partial BMD description as substring */
 		if (cable->description && strstr(product, cable->description) != 0) {
 			cl_opts->opt_cable = cable->name;
+			DEBUG_INFO("%s matched %s: %s\n", __func__, cable->name, cable->description);
 			return true;
 		}
 	}
