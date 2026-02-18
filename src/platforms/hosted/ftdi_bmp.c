@@ -364,10 +364,11 @@ const cable_desc_s cable_desc[] = {
 	{
 		/*
 		 * https://www.olimex.com/Products/ARM/JTAG/ARM-USB-TINY-H/
+		 * https://www.olimex.com/Products/ARM/JTAG/_resources/ARM-USB-TINY_and_TINY_H_manual.pdf
 		 *
 		 * schematics not available
 		 */
-		.vendor = 0x15b1U,
+		.vendor = 0x15baU,
 		.product = 0x002aU,
 		.interface = INTERFACE_A,
 		.init.data = {PIN4, PIN2 | PIN4},
