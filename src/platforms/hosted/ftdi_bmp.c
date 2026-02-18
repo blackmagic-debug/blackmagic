@@ -278,15 +278,17 @@ const cable_desc_s cable_desc[] = {
 	{
 		/*
 		 * http://www.olimex.com/dev/pdf/ARM-USB-OCD.pdf.
-		 * DBUS 4 global enables JTAG Buffer.
-		 * TCK and TMS are not independently switchable.
-		 * => SWD is not possible.
+		 * https://www.olimex.com/Products/ARM/JTAG/_resources/ARM-USB-OCD_and_OCD_H_manual.pdf
+		 * DBUS 4 (active low) enables JTAG output buffers.
+		 * TCK and TMS are not independently switchable. => SWD is not possible.
+		 * Because of strstr() matching HS devices against FS cable-desc (full prefix), HS cable-desc should come first.
 		 */
 		.vendor = 0x15baU,
 		.product = 0x002bU,
 		.interface = INTERFACE_A,
 		.init.data = {0, PIN3 | PIN1 | PIN0},
 		.init.dirs = {PIN4, PIN4 | PIN3 | PIN1 | PIN0},
+		.description = "Olimex OpenOCD JTAG ARM-USB-OCD-H",
 		.name = "arm-usb-ocd-h",
 	},
 	{
