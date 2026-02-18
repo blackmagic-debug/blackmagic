@@ -83,6 +83,8 @@ void platform_buffer_flush(void);
 #define PRODUCT_ID_WCHLINK_DAP  0x8011U /* WCH-Link in mode DAP */
 #define PRODUCT_ID_WCHLINKE_DAP 0x8012U /* WCH-LinkE in mode DAP */
 
+#define VENDOR_ID_OLIMEX 0x15baU
+
 typedef enum probe_type {
 	PROBE_TYPE_NONE = 0,
 	PROBE_TYPE_BMP,
