@@ -188,13 +188,6 @@ const cable_desc_s cable_desc[] = {
 		.description = "FTDISWD",
 	},
 	{
-		.vendor = 0x15b1U,
-		.product = 0x0003U,
-		.interface = INTERFACE_A,
-		.init.dirs[0] = PIN5,
-		.name = "olimex",
-	},
-	{
 		/*
 		 * Buffered connection from FTDI to JTAG/SWD.
 		 * TCK and TMS are not independently switchable.
@@ -379,6 +372,32 @@ const cable_desc_s cable_desc[] = {
 		.deassert_nrst.dirs[1] = ~PIN2,
 		.name = "arm-usb-tiny-h",
 		.description = "Olimex OpenOCD JTAG ARM-USB-TINY-H",
+	},
+	{
+		/*
+		 * https://www.olimex.com/Products/ARM/JTAG/_resources/ARM-USB-TINY_and_TINY_H_manual.pdf
+		 * JTAG-only, unbuffered.
+		 */
+		.vendor = 0x15baU,
+		.product = 0x0004U,
+		.interface = INTERFACE_A,
+		.description = "Olimex OpenOCD JTAG TINY",
+		.name = "arm-usb-tiny",
+	},
+	{
+		/*
+		 * https://www.olimex.com/Products/ARM/JTAG/_resources/ARM-USB-OCD.pdf
+		 * https://www.olimex.com/Products/ARM/JTAG/_resources/ARM-USB-OCD_and_OCD_H_manual.pdf
+		 * DBUS 4 (active-low) enables output buffers.
+		 * DBUS 6 is TSRST in (sense), CBUS 1 is TSRST out.
+		 * CBUS 0 is TRST, CBUS 2 is TRST buffer-enable. CBUS 3 is red LED.
+		 */
+		.vendor = 0x15baU,
+		.product = 0x0003U,
+		.interface = INTERFACE_A,
+		.init.dirs[0] = PIN4,
+		.description = "Olimex OpenOCD JTAG",
+		.name = "arm-usb-ocd",
 	},
 	{0},
 };
