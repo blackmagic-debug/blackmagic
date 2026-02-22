@@ -4,7 +4,7 @@
  * Copyright (C) 2012 Black Sphere Technologies Ltd.
  * Written by Gareth McMullin <gareth@blacksphere.co.nz>
  * Modified by Uwe Bonnes <bon@elektron.ikp.physik.tu-darmstadt.de>
- * Copyright (C) 2024 1BitSquared <info@1bitsquared.com>
+ * Copyright (C) 2024-2026 1BitSquared <info@1bitsquared.com>
  * Modified by Rachel Mant <git@dragonmux.network>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -68,13 +68,18 @@ void swo_manchester_init(void)
 	/* Make sure the timer block is clocked on platforms that don't do this in their `platform_init()` */
 	SWO_TIM_CLK_EN();
 
-#if defined(STM32F4) || defined(STM32F0) || defined(STM32F3) || defined(STM32F7)
+#if defined(STM32F4) || defined(STM32F0) || defined(STM32F3) || defined(STM32F7) || defined(STM32U5)
 	/* Set any required pin alt-function configuration - TIM3/TIM4/TIM5 are AF2 */
 	gpio_mode_setup(SWO_PORT, GPIO_MODE_AF, GPIO_PUPD_NONE, SWO_PIN);
 	gpio_set_af(SWO_PORT, SWO_TIM_PIN_AF, SWO_PIN);
 #else
 	/* Then make sure the IO pin used is properly set up as an input routed to the timer */
 	gpio_set_mode(SWO_PORT, GPIO_MODE_INPUT, GPIO_CNF_INPUT_FLOAT, SWO_PIN);
+#endif
+
+#ifdef STM32U5
+	/* Route the correct input signal to the input channel in the input multiplexer */
+	timer_ic_input_selection(SWO_TIM, SWO_IC_IN_CH, SWO_IC_IN_CH_SEL);
 #endif
 
 	/*
@@ -122,7 +127,7 @@ void swo_manchester_deinit(void)
 	swo_data_bit_index = 0U;
 	swo_half_bit_period = 0U;
 
-#if defined(STM32F4) || defined(STM32F0) || defined(STM32F3) || defined(STM32F7)
+#if defined(STM32F4) || defined(STM32F0) || defined(STM32F3) || defined(STM32F7) || defined(STM32U5)
 	gpio_mode_setup(SWO_PORT, GPIO_MODE_INPUT, GPIO_PUPD_NONE, SWO_PIN);
 #else
 	/* Put the GPIO back into normal service as a GPIO */

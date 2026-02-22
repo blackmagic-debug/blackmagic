@@ -1,6 +1,6 @@
 [wrap-git]
 url = https://github.com/blackmagic-debug/libopencm3
-revision = head
+revision = feature/stm32u5-support
 depth = 1
 
 [provide]

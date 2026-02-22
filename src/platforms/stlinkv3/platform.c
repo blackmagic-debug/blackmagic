@@ -38,7 +38,6 @@
 #include <libopencm3/usb/usbd.h>
 #include <libopencm3/stm32/adc.h>
 #include <libopencm3/stm32/spi.h>
-#include <libopencm3/stm32/adc.h>
 #include <libopencm3/stm32/syscfg.h>
 
 uint16_t srst_pin;
