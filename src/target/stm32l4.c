@@ -909,6 +909,7 @@ static bool stm32l4_flash_busy_wait(target_s *const target, platform_timeout_s *
 
 static bool stm32l4_flash_erase(target_flash_s *const flash, const target_addr_t addr, const size_t len)
 {
+	(void)len;
 	target_s *target = flash->t;
 	const stm32l4_flash_s *const sf = (stm32l4_flash_s *)flash;
 
@@ -920,21 +921,17 @@ static bool stm32l4_flash_erase(target_flash_s *const flash, const target_addr_t
 	if (!stm32l4_flash_busy_wait(target, NULL))
 		return false;
 
-	/* Erase the requested chunk of flash, one page at a time. */
-	for (size_t offset = 0; offset < len; offset += flash->blocksize) {
-		const uint32_t page = (addr + offset - STM32L4_FLASH_BANK1_BASE) / flash->blocksize;
-		const uint32_t bank_flags = addr + offset >= sf->bank1_start ? STM32L4_FPEC_CTRL_BANK_ERASE : 0;
-		const uint32_t ctrl = STM32L4_FPEC_CTRL_PAGE_ERASE | (page << STM32L4_FPEC_CTRL_PAGE_SHIFT) | bank_flags;
-		/* Flash page erase instruction */
-		stm32l4_flash_write32(target, STM32L4_FPEC_CTRL, ctrl);
-		/* write address to FMA */
-		stm32l4_flash_write32(target, STM32L4_FPEC_CTRL, ctrl | STM32L4_FPEC_CTRL_START);
+	/* Erase the requested chunk of flash */
+	const uint32_t page = (addr - STM32L4_FLASH_BANK1_BASE) / flash->blocksize;
+	const uint32_t bank_flags = addr >= sf->bank1_start ? STM32L4_FPEC_CTRL_BANK_ERASE : 0;
+	const uint32_t ctrl = STM32L4_FPEC_CTRL_PAGE_ERASE | (page << STM32L4_FPEC_CTRL_PAGE_SHIFT) | bank_flags;
+	/* Flash page erase instruction */
+	stm32l4_flash_write32(target, STM32L4_FPEC_CTRL, ctrl);
+	/* write address to FMA */
+	stm32l4_flash_write32(target, STM32L4_FPEC_CTRL, ctrl | STM32L4_FPEC_CTRL_START);
 
-		/* Wait for completion or an error */
-		if (!stm32l4_flash_busy_wait(target, NULL))
-			return false;
-	}
-	return true;
+	/* Wait for completion or an error */
+	return stm32l4_flash_busy_wait(target, NULL);
 }
 
 static bool stm32l4_flash_write(
