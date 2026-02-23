@@ -1864,8 +1864,9 @@ static const char *cortexar_target_description(target_s *const target)
 	const size_t description_length =
 		cortexar_build_target_description(NULL, 0, target->target_options & TOPT_FLAVOUR_FLOAT) + 1U;
 	char *const description = malloc(description_length);
-	if (description)
-		(void)cortexar_build_target_description(
-			description, description_length, target->target_options & TOPT_FLAVOUR_FLOAT);
+	if (!description) /* malloc failed: heap exhaustion */
+		DEBUG_ERROR("malloc: failed in %s\n", __func__);
+	else
+		cortexar_build_target_description(description, description_length, target->target_options & TOPT_FLAVOUR_FLOAT);
 	return description;
 }
