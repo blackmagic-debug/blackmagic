@@ -493,6 +493,8 @@ static const uint8_t stm32l4_opt_reg_offsets[9] = {0x20, 0x24, 0x28, 0x2c, 0x30,
 static const uint8_t stm32g4_opt_reg_offsets[11] = {0x20, 0x24, 0x28, 0x2c, 0x30, 0x70, 0x44, 0x48, 0x4c, 0x50, 0x74};
 static const uint8_t stm32wl_opt_reg_offsets[7] = {0x20, 0x24, 0x28, 0x2c, 0x30, 0x34, 0x38};
 static const uint8_t stm32wb_opt_reg_offsets[10] = {0x20, 0x24, 0x28, 0x2c, 0x30, 0x34, 0x38, 0x3c, 0x80, 0x84};
+static const uint8_t stm32u5_opt_reg_offsets[16] = {
+	0x40, 0x44, 0x48, 0x4c, 0x50, 0x54, 0x58, 0x5c, 0x60, 0x64, 0x68, 0x6c, 0x70, 0x74, 0x78, 0x7c};
 
 static const uint32_t stm32l4_default_options_values[9] = {
 	0xffeff8aaU,
@@ -548,6 +550,25 @@ static const uint32_t stm32wb_default_options_values[10] = {
 	0x00000000U, // Secure SRAM2 start address and CPU2 reset vector option bytes
 };
 
+static const uint32_t stm32u575_default_options_values[16] = {
+	0x1feff8aaU,
+	0x0800007fU,
+	0x0bf9007fU,
+	0x0c00007cU,
+	0xffffff80U,
+	0x7f807f80U,
+	0xff80ffffU,
+	0xff80ffffU,
+	0xffffff80U,
+	0x7f807f80U,
+	0xff80ffffU,
+	0xff80ffffU,
+	0x00000000U,
+	0x00000000U,
+	0x00000000U,
+	0x00000000U,
+};
+
 static_assert(ARRAY_LENGTH(stm32l4_opt_reg_offsets) == ARRAY_LENGTH(stm32l4_default_options_values),
 	"Number of stm32l4 option registers must match number of default values");
 static_assert(ARRAY_LENGTH(stm32g4_opt_reg_offsets) == ARRAY_LENGTH(stm32g4_default_options_values),
@@ -556,6 +577,8 @@ static_assert(ARRAY_LENGTH(stm32wl_opt_reg_offsets) == ARRAY_LENGTH(stm32wl_defa
 	"Number of stm32wl option registers must match number of default values");
 static_assert(ARRAY_LENGTH(stm32wb_opt_reg_offsets) == ARRAY_LENGTH(stm32wb_default_options_values),
 	"Number of stm32wb option registers must match number of default values");
+static_assert(ARRAY_LENGTH(stm32u5_opt_reg_offsets) == ARRAY_LENGTH(stm32u575_default_options_values),
+	"Number of stm32u5 option registers must match number of default values");
 
 /* Retrieve device basic information, just add to the vector to extend */
 static const stm32l4_device_info_s *stm32l4_get_device_info(const uint16_t device_id)
@@ -1035,6 +1058,12 @@ static stm32l4_option_bytes_info_s stm32l4_get_opt_bytes_info(const uint16_t par
 			.word_count = ARRAY_LENGTH(stm32wb_default_options_values),
 			.offsets = stm32wb_opt_reg_offsets,
 			.default_values = stm32wb_default_options_values,
+		};
+	case ID_STM32U575:
+		return (stm32l4_option_bytes_info_s){
+			.word_count = ARRAY_LENGTH(stm32u575_default_options_values),
+			.offsets = stm32u5_opt_reg_offsets,
+			.default_values = stm32u575_default_options_values,
 		};
 	default:
 		return (stm32l4_option_bytes_info_s){
