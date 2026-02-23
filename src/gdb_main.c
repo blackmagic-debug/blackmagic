@@ -506,7 +506,7 @@ static void exec_q_memory_map(const char *packet, const size_t length)
 		return;
 	}
 	char buf[1024];
-	target_mem_map(target, buf, sizeof(buf)); /* Fixme: Check size!*/
+	target_mem_map(target, buf, sizeof(buf)); /* Fixme: Check size! */
 	handle_q_string_reply(buf, packet);
 }
 
