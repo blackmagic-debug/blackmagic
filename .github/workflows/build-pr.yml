@@ -42,6 +42,7 @@ jobs:
           - 'blackpill-f401ce'
           - 'blackpill-f411ce'
           - 'bluepill'
+          - 'bmp-v3'
           - 'ctxlink'
           - 'f072'
           - 'f3'
