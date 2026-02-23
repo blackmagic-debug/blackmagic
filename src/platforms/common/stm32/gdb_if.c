@@ -31,40 +31,43 @@
 #include "usb_serial.h"
 #include "gdb_if.h"
 
-static uint32_t count_out;
-static uint32_t count_in;
-static uint32_t out_ptr;
-static char buffer_out[CDCACM_PACKET_SIZE];
-static char buffer_in[CDCACM_PACKET_SIZE];
-#if defined(STM32F4) || defined(STM32F7)
-static volatile uint32_t count_new;
-static char double_buffer_out[CDCACM_PACKET_SIZE];
+#include <stdatomic.h>
+
+static uint32_t gdb_receive_amount_available;
+static uint32_t gdb_send_amount_queued;
+static uint32_t gdb_receive_index;
+static char gdb_receive_buffer[CDCACM_PACKET_SIZE];
+static char gdb_send_buffer[CDCACM_PACKET_SIZE];
+#if defined(STM32F4) || defined(STM32F7) || defined(STM32U5)
+/* Variables used to get data out from the USB controller in interrupt context */
+static _Atomic uint32_t irq_count_received = ATOMIC_VAR_INIT(0U);
+static char irq_buffer_received[CDCACM_PACKET_SIZE];
 #endif
 
-void gdb_if_putchar(const char c, const bool flush)
+void gdb_if_putchar(const char ch, const bool flush)
 {
-	buffer_in[count_in++] = c;
-	if (flush || count_in == CDCACM_PACKET_SIZE)
+	gdb_send_buffer[gdb_send_amount_queued++] = ch;
+	if (flush || gdb_send_amount_queued == CDCACM_PACKET_SIZE)
 		gdb_if_flush(flush);
 }
 
 void gdb_if_flush(const bool force)
 {
 	/* Flush only if there is data to flush */
-	if (count_in == 0U)
+	if (gdb_send_amount_queued == 0U)
 		return;
 
 	/* Refuse to send if USB isn't configured, and don't bother if nobody's listening */
 	if (usb_get_config() != 1U || !gdb_serial_get_dtr()) {
-		count_in = 0U;
+		gdb_send_amount_queued = 0U;
 		return;
 	}
-	while (usbd_ep_write_packet(usbdev, CDCACM_GDB_ENDPOINT, buffer_in, count_in) <= 0U)
+	while (usbd_ep_write_packet(usbdev, CDCACM_GDB_ENDPOINT, gdb_send_buffer, gdb_send_amount_queued) <= 0U)
 		continue;
 
 	/* We need to send an empty packet for some hosts to accept this as a complete transfer. */
-	if (force && count_in == CDCACM_PACKET_SIZE) {
-		/* 
+	if (force && gdb_send_amount_queued == CDCACM_PACKET_SIZE) {
+		/*
 		 * libopencm3 needs a change for us to confirm when that transfer is complete,
 		 * so we just send a packet containing a null character for now.
 		 */
@@ -73,17 +76,17 @@ void gdb_if_flush(const bool force)
 	}
 
 	/* Reset the buffer */
-	count_in = 0U;
+	gdb_send_amount_queued = 0U;
 }
 
-#if defined(STM32F4) || defined(STM32F7)
-void gdb_usb_out_cb(usbd_device *dev, uint8_t ep)
+#if defined(STM32F4) || defined(STM32F7) || defined(STM32U5)
+void gdb_usb_receive_callback(usbd_device *dev, uint8_t ep)
 {
-	(void)ep;
-	usbd_ep_nak_set(dev, CDCACM_GDB_ENDPOINT, 1);
-	count_new = usbd_ep_read_packet(dev, CDCACM_GDB_ENDPOINT, double_buffer_out, CDCACM_PACKET_SIZE);
-	if (!count_new)
-		usbd_ep_nak_set(dev, CDCACM_GDB_ENDPOINT, 0);
+	/* We're here because of new data, so read it out the controller into our intermedate buffer */
+	irq_count_received = usbd_ep_read_packet(dev, ep, irq_buffer_received, CDCACM_PACKET_SIZE);
+	/* Now if that worked, mark the endpoint for NAK for the time being (undone in gdb_if_update_buf()) */
+	if (irq_count_received)
+		usbd_ep_nak_set(dev, CDCACM_GDB_ENDPOINT, 1);
 }
 #endif
 
@@ -91,34 +94,33 @@ static void gdb_if_update_buf(void)
 {
 	while (usb_get_config() != 1)
 		continue;
-#if !defined(STM32F4) && !defined(STM32F7)
-	count_out = usbd_ep_read_packet(usbdev, CDCACM_GDB_ENDPOINT, buffer_out, CDCACM_PACKET_SIZE);
-	out_ptr = 0;
+#if !defined(STM32F4) && !defined(STM32F7) && !defined(STM32U5)
+	gdb_receive_amount_available =
+		usbd_ep_read_packet(usbdev, CDCACM_GDB_ENDPOINT, gdb_receive_buffer, CDCACM_PACKET_SIZE);
+	gdb_receive_index = 0;
+	/* If this didn't dequeue any data, wait for more so the next loop around is more successfull */
+	if (!gdb_receive_amount_available)
+		__WFI();
 #else
-	cm_disable_interrupts();
-	__asm__ volatile("isb");
-	/* count_new will become 0 by the time of decision to WFI, so save a copy at entry */
-	const uint32_t count_new_saved = count_new;
-	if (count_new) {
-		memcpy(buffer_out, double_buffer_out, count_new);
-		count_out = count_new;
-		count_new = 0;
-		out_ptr = 0;
+	/* Grab the amount of data presently available per the IRQ, and reset that value to 0 atomically */
+	const uint32_t bytes_available = atomic_exchange(&irq_count_received, 0U);
+	/* If there's data waiting for us, move it into the main buffer and prep the endpoint for more */
+	if (bytes_available) {
+		memcpy(gdb_receive_buffer, irq_buffer_received, bytes_available);
+		/* Save the amount available and reset the read index */
+		gdb_receive_amount_available = bytes_available;
+		gdb_receive_index = 0;
 		usbd_ep_nak_set(usbdev, CDCACM_GDB_ENDPOINT, 0);
 	}
-	cm_enable_interrupts();
-	__asm__ volatile("isb");
-	/* Wait for Host OUT packets (count_new is 0 by now, so use the copy saved at entry) */
-	if (!count_new_saved)
+	/* If this didn't dequeue any data, wait for more so the next loop around is more successfull */
+	else
 		__WFI();
 #endif
-	if (!count_out)
-		__WFI();
 }
 
 char gdb_if_getchar(void)
 {
-	while (out_ptr >= count_out) {
+	while (gdb_receive_index >= gdb_receive_amount_available) {
 		/*
 		 * Detach if port closed
 		 *
@@ -133,7 +135,7 @@ char gdb_if_getchar(void)
 		gdb_if_update_buf();
 	}
 
-	return buffer_out[out_ptr++];
+	return gdb_receive_buffer[gdb_receive_index++];
 }
 
 char gdb_if_getchar_to(const uint32_t timeout)
@@ -142,7 +144,7 @@ char gdb_if_getchar_to(const uint32_t timeout)
 	platform_timeout_set(&receive_timeout, timeout);
 
 	/* Wait while we need more data or until the timeout expires */
-	while (out_ptr >= count_out && !platform_timeout_is_expired(&receive_timeout)) {
+	while (gdb_receive_index >= gdb_receive_amount_available && !platform_timeout_is_expired(&receive_timeout)) {
 		/*
 		 * Detach if port closed
 		 *
@@ -156,8 +158,8 @@ char gdb_if_getchar_to(const uint32_t timeout)
 		gdb_if_update_buf();
 	}
 
-	if (out_ptr < count_out)
-		return buffer_out[out_ptr++];
+	if (gdb_receive_index < gdb_receive_amount_available)
+		return gdb_receive_buffer[gdb_receive_index++];
 	/* XXX: Need to find a better way to error return than this. This provides '\xff' characters. */
 	return -1;
 }
