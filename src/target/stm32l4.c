@@ -765,6 +765,12 @@ bool stm32l4_probe(target_s *const target)
 			target->core = "M33+TZ";
 		}
 		break;
+	case ID_STM32U535:
+	case ID_STM32U5Fx:
+	case ID_STM32U59x:
+	case ID_STM32U575:
+		target->target_options |= TOPT_NON_HALTING_MEM_IO;
+		break;
 	default:
 		break;
 	}
