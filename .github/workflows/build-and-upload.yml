@@ -267,7 +267,7 @@ jobs:
     strategy:
       matrix:
         os:
-          - windows-2022
+          - windows-2025
         sys:
           - {abi: ucrt64, env: ucrt-x86_64, compiler: gcc}
       fail-fast: false
@@ -369,8 +369,9 @@ jobs:
     strategy:
       matrix:
         os:
-          - {id: macos-13, name: '13'}
           - {id: macos-14, name: '14'}
+          - {id: macos-15, name: '15'}
+          - {id: macos-26, name: '26'}
       fail-fast: false
 
     # Steps represent a sequence of tasks that will be executed as part of the job
