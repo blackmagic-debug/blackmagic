@@ -32,7 +32,7 @@ jobs:
         os:
           - {id: ubuntu-24.04, name: noble}
         compiler:
-          - '14.3.Rel1'
+          - '15.2.Rel1'
         probe:
           - '96b_carbon'
           - 'blackpill-f401cc'
