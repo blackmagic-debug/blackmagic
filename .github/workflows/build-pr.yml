@@ -425,14 +425,14 @@ jobs:
       # Build the base ref firmware for the largest Flash target available
       - name: Build base
         run: |
-          meson setup build --cross-file=cross-file/blackpill-f411ce.ini
+          meson setup build --cross-file=cross-file/bmp-v3.ini
           meson compile -C build > build.log
         working-directory: base
 
       # Build the PR `HEAD` ref firmware for the largest Flash target available
       - name: Build head
         run: |
-          meson setup build --cross-file=cross-file/blackpill-f411ce.ini
+          meson setup build --cross-file=cross-file/bmp-v3.ini
           meson compile -C build > build.log
         working-directory: head
 
