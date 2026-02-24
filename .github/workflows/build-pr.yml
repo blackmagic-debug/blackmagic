@@ -99,7 +99,7 @@ jobs:
 
       # Checkout the repository and branch to build under the default location
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           submodules: true
 
@@ -161,7 +161,7 @@ jobs:
 
       # Checkout the repository and branch to build under the default location
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       # Build the default BMDA configuration
       - name: Build full BMDA
@@ -241,7 +241,7 @@ jobs:
 
       # Checkout the repository and branch to build under the default location
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       # Install the dependencies needed for BMDA build
       - name: Install extra BMDA dependencies
@@ -301,7 +301,7 @@ jobs:
 
       # Checkout the repository and branch to build under the default location
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       # Build the default BMDA configuration
       - name: Build full BMDA
@@ -378,7 +378,7 @@ jobs:
 
       # Checkout the repository and branch to build under the default location
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       # Build the default BMDA configuration
       - name: Build full BMDA
@@ -412,12 +412,12 @@ jobs:
           sudo python3 -m pip install meson ninja
         working-directory: ${{ runner.temp }}
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           ref: ${{ github.base_ref }}
           path: base
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           path: head
