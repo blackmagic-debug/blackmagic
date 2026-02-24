@@ -196,6 +196,10 @@ extern bool debug_bmp;
 #define OB_SPI_CS_PORT GPIOA
 #define OB_SPI_CS      GPIO4
 
+#define VTREF_PORT    GPIOB
+#define VTREF_PIN     GPIO0
+#define VTREF_CHANNEL ADC_CHANNEL8
+
 /* USART2 with PA2 and PA3 is selected as USBUSART. Alternatively USART1 with PB6 and PB7 can be used. */
 #define USBUSART               USBUSART2
 #define USBUSART_CR1           USBUSART2_CR1
