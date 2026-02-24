@@ -126,7 +126,8 @@ jobs:
     strategy:
       matrix:
         os:
-          - windows-2025
+          - windows-2025 # Currently latest
+          - windows-2025-vs2026
       fail-fast: false
 
     # Steps represent a sequence of tasks that will be executed as part of the job
@@ -270,10 +271,9 @@ jobs:
     strategy:
       matrix:
         os:
-          - macos-13
           - macos-14
-          - macos-15
-          - macos-latest
+          - macos-15 # Currently latest
+          - macos-26
       fail-fast: false
 
     # Steps represent a sequence of tasks that will be executed as part of the job
