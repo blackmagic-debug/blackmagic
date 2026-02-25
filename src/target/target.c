@@ -273,20 +273,6 @@ static ssize_t map_flash(char *buf, size_t len, target_flash_s *flash)
 	return offset;
 }
 
-bool target_mem_map(target_s *target, char *tmp, size_t len)
-{
-	size_t offset = 0;
-	offset = snprintf(tmp + offset, len - offset, "<memory-map>");
-	/* Map each defined RAM */
-	for (target_ram_s *ram = target->ram; ram; ram = ram->next)
-		offset += map_ram(tmp + offset, len - offset, ram);
-	/* Map each defined Flash */
-	for (target_flash_s *flash = target->flash; flash; flash = flash->next)
-		offset += map_flash(tmp + offset, len - offset, flash);
-	offset += snprintf(tmp + offset, len - offset, "</memory-map>");
-	return offset < len - 1U;
-}
-
 size_t target_mem_map_chunk(
 	target_s *const target, char *const buffer, const size_t length, const uint32_t start_offset)
 {

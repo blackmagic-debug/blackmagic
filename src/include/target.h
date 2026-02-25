@@ -87,7 +87,6 @@ size_t target_reg_read(target_s *target, uint32_t reg, void *data, size_t max);
 size_t target_reg_write(target_s *target, uint32_t reg, const void *data, size_t size);
 
 /* Target metadata functions */
-bool target_mem_map(target_s *target, char *buf, size_t len);
 size_t target_mem_map_chunk(target_s *target, char *buffer, size_t length, uint32_t start_offset);
 size_t target_regs_size(target_s *target);
 const char *target_regs_description(target_s *target);
