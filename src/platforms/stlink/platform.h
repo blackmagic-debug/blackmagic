@@ -40,6 +40,8 @@
 extern bool debug_bmp;
 #endif
 
+#define PLATFORM_HAS_CUSTOM_COMMANDS
+
 #define PLATFORM_IDENT "(ST-Link/v2) "
 
 /* Hardware definitions... */
