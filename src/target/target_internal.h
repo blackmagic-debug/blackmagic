@@ -176,6 +176,8 @@ struct target {
 	target_ram_s *ram;
 	target_flash_s *flash;
 
+	uint32_t map_transfer_offset;
+
 	/* Other stuff */
 	const char *driver;
 	uint32_t cpuid;
