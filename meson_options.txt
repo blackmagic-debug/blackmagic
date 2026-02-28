@@ -40,6 +40,7 @@ option(
 		'efm',
 		'gd32',
 		'hc32',
+		'lattice',
 		'lpc',
 		'mm32',
 		'nrf',

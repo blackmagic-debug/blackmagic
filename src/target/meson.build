@@ -95,6 +95,7 @@ if is_firmware_build
 		'stm': 'STM32 (and clones) parts',
 		'ti': 'Texas Instruments parts',
 		'xilinx': 'Xilinx parts',
+		'lattice': 'Lattice parts',
 	}
 
 	# Check to see if the set of enabled targets is all of them and the
@@ -198,6 +199,13 @@ target_hc32 = declare_dependency(
 	sources: files('hc32l110.c'),
 	compile_args: ['-DCONFIG_HC32=1'],
 	dependencies: target_cortexm,
+)
+
+target_lattice = declare_dependency(
+	sources: files(
+		'lattice_ecp5.c',
+	),
+	compile_args: ['-DCONFIG_LATTICE=1'],
 )
 
 target_lpc = declare_dependency(
@@ -439,6 +447,7 @@ libbmd_target_deps = [
 	target_efm,
 	target_gd32,
 	target_hc32,
+	target_lattice,
 	target_lpc,
 	target_mm32,
 	target_nrf,

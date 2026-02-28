@@ -25,6 +25,7 @@
 #include "adiv5.h"
 #include "riscv_debug.h"
 #include "icepick.h"
+#include "lattice_ecp5.h"
 #include "jtag_devs.h"
 
 const jtag_dev_descr_s dev_descr[] = {
@@ -431,6 +432,138 @@ const jtag_dev_descr_s dev_descr[] = {
 		.descr = "TI ICEPick.",
 #endif
 		.handler = icepick_router_handler,
+	},
+#endif
+#ifdef CONFIG_LATTICE
+	{
+		.idcode = 0x21111043U,
+		.idmask = 0xffffffffU,
+#if ENABLE_DEBUG == 1
+		.descr = "LFE5U-12",
+#endif
+		.handler = lattice_ecp5_handler,
+		.ir_quirks =
+			{
+				.ir_length = 8U,
+				.ir_value = 0x5U,
+			},
+	},
+	{
+		.idcode = 0x41111043U,
+		.idmask = 0xffffffffU,
+#if ENABLE_DEBUG == 1
+		.descr = "LFE5U-25",
+#endif
+		.handler = lattice_ecp5_handler,
+		.ir_quirks =
+			{
+				.ir_length = 8U,
+				.ir_value = 0x5U,
+			},
+	},
+	{
+		.idcode = 0x41112043U,
+		.idmask = 0xffffffffU,
+#if ENABLE_DEBUG == 1
+		.descr = "LFE5U-45",
+#endif
+		.handler = lattice_ecp5_handler,
+		.ir_quirks =
+			{
+				.ir_length = 8U,
+				.ir_value = 0x5U,
+			},
+	},
+	{
+		.idcode = 0x41113043U,
+		.idmask = 0xffffffffU,
+#if ENABLE_DEBUG == 1
+		.descr = "LFE5U-85",
+#endif
+		.handler = lattice_ecp5_handler,
+		.ir_quirks =
+			{
+				.ir_length = 8U,
+				.ir_value = 0x5U,
+			},
+	},
+	{
+		.idcode = 0x01111043U,
+		.idmask = 0xffffffffU,
+#if ENABLE_DEBUG == 1
+		.descr = "LFE5UM-25",
+#endif
+		.handler = lattice_ecp5_handler,
+		.ir_quirks =
+			{
+				.ir_length = 8U,
+				.ir_value = 0x5U,
+			},
+	},
+	{
+		.idcode = 0x01112043U,
+		.idmask = 0xffffffffU,
+#if ENABLE_DEBUG == 1
+		.descr = "LFE5UM-45",
+#endif
+		.handler = lattice_ecp5_handler,
+		.ir_quirks =
+			{
+				.ir_length = 8U,
+				.ir_value = 0x5U,
+			},
+	},
+	{
+		.idcode = 0x01113043U,
+		.idmask = 0xffffffffU,
+#if ENABLE_DEBUG == 1
+		.descr = "LFE5UM-85",
+#endif
+		.handler = lattice_ecp5_handler,
+		.ir_quirks =
+			{
+				.ir_length = 8U,
+				.ir_value = 0x5U,
+			},
+	},
+	{
+		.idcode = 0x81111043U,
+		.idmask = 0xffffffffU,
+#if ENABLE_DEBUG == 1
+		.descr = "LFE5UM5G-25",
+#endif
+		.handler = lattice_ecp5_handler,
+		.ir_quirks =
+			{
+				.ir_length = 8U,
+				.ir_value = 0x5U,
+			},
+	},
+	{
+		.idcode = 0x81112043U,
+		.idmask = 0xffffffffU,
+#if ENABLE_DEBUG == 1
+		.descr = "LFE5UM5G-45",
+#endif
+		.handler = lattice_ecp5_handler,
+		.ir_quirks =
+			{
+				.ir_length = 8U,
+				.ir_value = 0x5U,
+			},
+	},
+	{
+		.idcode = 0x81113043U,
+		.idmask = 0xffffffffU,
+#if ENABLE_DEBUG == 1
+		.descr = "LFE5UM5G-85",
+#endif
+		.handler = lattice_ecp5_handler,
+		.ir_quirks =
+			{
+				.ir_length = 8U,
+				.ir_value = 0x5U,
+			},
 	},
 #endif
 #if ENABLE_DEBUG == 1
