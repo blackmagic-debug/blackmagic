@@ -74,6 +74,15 @@ static inline uint32_t read_le4(const uint8_t *const buffer, const size_t offset
 	return data[0U] | ((uint32_t)data[1U] << 8U) | ((uint32_t)data[2U] << 16U) | ((uint32_t)data[3U] << 24U);
 }
 
+static inline uint64_t read_le8(const uint8_t *const buffer, const size_t offset)
+{
+	uint8_t data[8U];
+	memcpy(data, buffer + offset, 8U);
+	return data[0U] | ((uint64_t)data[1U] << 8U) | ((uint64_t)data[2U] << 16U) | ((uint64_t)data[3U] << 24U) |
+		((uint64_t)data[4U] << 32U) | ((uint64_t)data[5U] << 40U) | ((uint64_t)data[6U] << 48U) |
+		((uint64_t)data[7U] << 56U);
+}
+
 static inline uint32_t read_be4(const uint8_t *const buffer, const size_t offset)
 {
 	uint8_t data[4U];
