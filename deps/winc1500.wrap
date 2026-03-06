@@ -1,7 +1,0 @@
-[wrap-git]
-url = https://github.com/sidprice/ctxlink_winc1500
-revision = head
-depth = 1
-
-[provide]
-dependency_names = winc1500
