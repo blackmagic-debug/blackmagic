@@ -9,11 +9,11 @@ a debugger-in-a-dongle that provides multi-voltage debug with no other external 
 or as Black Magic Debug App (BMDA) which is the project built for the host machine, more details below.
 
 The project allows debugging of devices connected over JTAG or SWD, and via the companion tool
-[bmpflash](https://github.com/blackmagic-debug/bmpflash) the programming of SPI Flash devices.
+[bmpflash](https://codeberg.org/blackmagic-debug/bmpflash) the programming of SPI Flash devices.
 This includes support for ARM and RISC-V devices, the complete list can be found on the website.
 
 [![Discord](https://img.shields.io/discord/613131135903596547?logo=discord)](https://discord.gg/P7FYThy)
-[![Current release](https://img.shields.io/github/v/release/blackmagic-debug/blackmagic.svg?logo=github)](https://github.com/blackmagic-debug/blackmagic/releases)
+[![Current release](https://codeberg.org/blackmagic-debug/blackmagic/badges/release.svg)](https://codeberg.org/blackmagic-debug/blackmagic/releases)
 [![CI flow status](https://github.com/blackmagic-debug/blackmagic/actions/workflows/build-and-upload.yml/badge.svg)](https://github.com/blackmagic-debug/blackmagic/actions/workflows/build-and-upload.yml)
 [![AI free project](https://badges.ws/badge/NO-AI-ff0000)](https://github.com/blackmagic-debug/blackmagic/blob/main/CONTRIBUTING.md#contributing)
 
