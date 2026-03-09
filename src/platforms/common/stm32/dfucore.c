@@ -28,21 +28,21 @@
 #include <libopencm3/stm32/desig.h>
 
 #if defined(STM32F1HD)
-#define DFU_IFACE_STRING        "@Internal Flash   /0x08000000/4*002Ka,000*002Kg"
-#define DFU_IFACE_STRING_OFFSET 38
+#define DFU_IFACE_STRING        "@Internal Flash/0x08000000/4*002Ka,000*002Kg"
+#define DFU_IFACE_STRING_OFFSET 35
 #define DFU_IFACE_PAGESIZE      2
 #elif defined(STM32F1)
-#define DFU_IFACE_STRING        "@Internal Flash   /0x08000000/8*001Ka,000*001Kg"
-#define DFU_IFACE_STRING_OFFSET 38
+#define DFU_IFACE_STRING        "@Internal Flash/0x08000000/8*001Ka,000*001Kg"
+#define DFU_IFACE_STRING_OFFSET 35
 #define DFU_IFACE_PAGESIZE      1
 #elif defined(STM32F4) || defined(STM32F7)
 #define DFU_IFACE_PAGESIZE 128
 #if APP_START == 0x08020000
-#define DFU_IFACE_STRING_OFFSET 62
-#define DFU_IFACE_STRING        "@Internal Flash   /0x08000000/1*016Ka,3*016Ka,1*064Ka,1*128Kg,002*128Kg"
+#define DFU_IFACE_STRING_OFFSET 59
+#define DFU_IFACE_STRING        "@Internal Flash/0x08000000/1*016Ka,3*016Ka,1*064Ka,1*128Kg,002*128Kg"
 #elif APP_START == 0x08004000
-#define DFU_IFACE_STRING_OFFSET 54
-#define DFU_IFACE_STRING        "@Internal Flash   /0x08000000/1*016Ka,3*016Kg,1*064Kg,000*128Kg"
+#define DFU_IFACE_STRING_OFFSET 51
+#define DFU_IFACE_STRING        "@Internal Flash/0x08000000/1*016Ka,3*016Kg,1*064Kg,000*128Kg"
 #endif
 #elif defined(STM32U5)
 #define DFU_IFACE_STRING        "@Internal Flash/0x08000000/2*8Ka,000*8Kg"
