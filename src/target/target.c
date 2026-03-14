@@ -256,10 +256,10 @@ bool target_enter_flash_mode_stub(target_s *target)
 	return true;
 }
 
-static ssize_t map_ram(char *buf, size_t len, target_ram_s *ram)
+static ssize_t mem_map_ram(char *buffer, size_t length, target_ram_s *ram)
 {
-	return snprintf(buf, len, "<memory type=\"ram\" start=\"0x%08" PRIx32 "\" length=\"0x%" PRIx32 "\"/>", ram->start,
-		(uint32_t)ram->length);
+	return snprintf(buffer, length, "<memory type=\"ram\" start=\"0x%08" PRIx32 "\" length=\"0x%" PRIx32 "\"/>",
+		ram->start, (uint32_t)ram->length);
 }
 
 static ssize_t map_flash(char *buf, size_t len, target_flash_s *flash)
@@ -290,12 +290,12 @@ size_t target_mem_map_chunk(
 		for (target_ram_s *ram = target->ram; ram; ram = ram->next) {
 			/* If this is the entry we're at, format it out and return */
 			if (offset == target->map_transfer_offset) {
-				size_t entry_length = map_ram(buffer, length, ram);
+				size_t entry_length = mem_map_ram(buffer, length, ram);
 				target->map_transfer_offset += entry_length;
 				return entry_length;
 			}
 			/* Otherwise see how long it is and skip past it */
-			offset += map_ram(NULL, 0U, ram);
+			offset += mem_map_ram(NULL, 0U, ram);
 		}
 		/* Now the Flash */
 		for (target_flash_s *flash = target->flash; flash; flash = flash->next) {
