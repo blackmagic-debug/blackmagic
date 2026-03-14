@@ -264,13 +264,10 @@ static ssize_t mem_map_ram(char *buffer, size_t length, target_ram_s *ram)
 
 static ssize_t mem_map_flash(char *buffer, size_t length, target_flash_s *flash)
 {
-	ssize_t offset = 0;
-	offset += snprintf(buffer + offset, length - offset,
-		"<memory type=\"flash\" start=\"0x%08" PRIx32 "\" length=\"0x%" PRIx32 "\">", flash->start,
-		(uint32_t)flash->length);
-	offset += snprintf(buffer + offset, length - offset,
-		"<property name=\"blocksize\">0x%" PRIx32 "</property></memory>", (uint32_t)flash->blocksize);
-	return offset;
+	return snprintf(buffer, length,
+		"<memory type=\"flash\" start=\"0x%08" PRIx32 "\" length=\"0x%" PRIx32
+		"\"><property name=\"blocksize\">0x%" PRIx32 "</property></memory>",
+		flash->start, (uint32_t)flash->length, (uint32_t)flash->blocksize);
 }
 
 size_t target_mem_map_chunk(
