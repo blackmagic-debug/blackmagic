@@ -262,14 +262,14 @@ static ssize_t mem_map_ram(char *buffer, size_t length, target_ram_s *ram)
 		ram->start, (uint32_t)ram->length);
 }
 
-static ssize_t map_flash(char *buf, size_t len, target_flash_s *flash)
+static ssize_t mem_map_flash(char *buffer, size_t length, target_flash_s *flash)
 {
 	ssize_t offset = 0;
-	offset += snprintf(&buf[offset], len - offset,
+	offset += snprintf(buffer + offset, length - offset,
 		"<memory type=\"flash\" start=\"0x%08" PRIx32 "\" length=\"0x%" PRIx32 "\">", flash->start,
 		(uint32_t)flash->length);
-	offset += snprintf(buf + offset, len - offset, "<property name=\"blocksize\">0x%" PRIx32 "</property></memory>",
-		(uint32_t)flash->blocksize);
+	offset += snprintf(buffer + offset, length - offset,
+		"<property name=\"blocksize\">0x%" PRIx32 "</property></memory>", (uint32_t)flash->blocksize);
 	return offset;
 }
 
@@ -301,12 +301,12 @@ size_t target_mem_map_chunk(
 		for (target_flash_s *flash = target->flash; flash; flash = flash->next) {
 			/* If this is the entry we're at, format it out and return */
 			if (offset == target->map_transfer_offset) {
-				size_t entry_length = map_flash(buffer, length, flash);
+				size_t entry_length = mem_map_flash(buffer, length, flash);
 				target->map_transfer_offset += entry_length;
 				return entry_length;
 			}
 			/* Otherwise see how long it is and skip past it */
-			offset += map_flash(NULL, 0U, flash);
+			offset += mem_map_flash(NULL, 0U, flash);
 		}
 		/* If we've processed all that, then it's an end of map request */
 		memcpy(buffer, map_end, ARRAY_LENGTH(map_end));
