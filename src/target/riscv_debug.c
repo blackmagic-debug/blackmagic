@@ -293,7 +293,7 @@ void riscv_dmi_init(riscv_dmi_s *const dmi)
 	/*
 	 * The DMI version does not actually matter here, the implementation details have already been
 	 * abstracted away at this point and we have a generic DMI to work with
-	 * 
+	 *
 	 * But the dminfo register (at 0x11) of v0.11 DM is incompatible with dmstatus (also at 0x11) of
 	 * later versions, meaning we can't easily/reliably determine the version of the DM.
 	 * We ignore all v0.11 DMI's in the hope we don't encounter a v0.11 DM with a later version DMI.
@@ -1319,14 +1319,14 @@ static size_t riscv_build_target_description(
 		const char *const name = riscv_gpr_names[i];
 		const gdb_reg_type_e type = riscv_gpr_types[i];
 
-		offset += (size_t)snprintf(buffer + offset, print_size, "<reg name=\"%s\" bitsize=\"%u\"%s%s/>", name,
-			address_width, gdb_reg_type_strings[type], i == 0 ? " regnum=\"0\"" : "");
+		offset += snprintf(buffer + offset, print_size, "<reg name=\"%s\" bitsize=\"%u\"%s%s/>", name, address_width,
+			gdb_reg_type_strings[type], i == 0 ? " regnum=\"0\"" : "");
 	}
 
 	/* Then build the program counter register description, which has the same bitsize as the GPRs. */
 	if (max_length != 0)
 		print_size = max_length - offset;
-	offset += (size_t)snprintf(buffer + offset, print_size, "<reg name=\"pc\" bitsize=\"%u\"%s/>", address_width,
+	offset += snprintf(buffer + offset, print_size, "<reg name=\"pc\" bitsize=\"%u\"%s/>", address_width,
 		gdb_reg_type_strings[GDB_TYPE_CODE_PTR]);
 
 	/* If the target has basic single precision support, generate a block for that */
@@ -1341,13 +1341,13 @@ static size_t riscv_build_target_description(
 	/* Add main CSR registers*/
 	if (max_length != 0)
 		print_size = max_length - offset;
-	offset += (size_t)snprintf(buffer + offset, print_size, "</feature><feature name=\"org.gnu.gdb.riscv.csr\">");
+	offset += snprintf(buffer + offset, print_size, "</feature><feature name=\"org.gnu.gdb.riscv.csr\">");
 	for (size_t i = 0; i < ARRAY_LENGTH(riscv_csrs); i++) {
 		if (max_length != 0)
 			print_size = max_length - offset;
-		offset += (size_t)snprintf(buffer + offset, print_size,
-			" <reg name=\"%s\" bitsize=\"%u\" regnum=\"%" PRIu32 "\" %s/>", riscv_csrs[i].name, address_width,
-			riscv_csrs[i].csr_number + RV_CSR_GDB_OFFSET, gdb_reg_save_restore_strings[GDB_SAVE_RESTORE_NO]);
+		offset += snprintf(buffer + offset, print_size, " <reg name=\"%s\" bitsize=\"%u\" regnum=\"%" PRIu32 "\" %s/>",
+			riscv_csrs[i].name, address_width, riscv_csrs[i].csr_number + RV_CSR_GDB_OFFSET,
+			gdb_reg_save_restore_strings[GDB_SAVE_RESTORE_NO]);
 	}
 	/* Add the closing tags required */
 	if (max_length != 0)
