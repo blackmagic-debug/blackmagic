@@ -256,13 +256,13 @@ bool target_enter_flash_mode_stub(target_s *target)
 	return true;
 }
 
-static ssize_t mem_map_ram(char *buffer, size_t length, target_ram_s *ram)
+static ssize_t mem_map_ram(char *const buffer, const size_t length, const target_ram_s *const ram)
 {
 	return snprintf(buffer, length, "<memory type=\"ram\" start=\"0x%08" PRIx32 "\" length=\"0x%" PRIx32 "\"/>",
 		ram->start, (uint32_t)ram->length);
 }
 
-static ssize_t mem_map_flash(char *buffer, size_t length, target_flash_s *flash)
+static ssize_t mem_map_flash(char *const buffer, const size_t length, const target_flash_s *const flash)
 {
 	return snprintf(buffer, length,
 		"<memory type=\"flash\" start=\"0x%08" PRIx32 "\" length=\"0x%" PRIx32
