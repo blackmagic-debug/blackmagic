@@ -1,0 +1,34 @@
+# SPDX-License-Identifier: MIT OR Apache-2.0
+# SPDX-FileCopyrightText: 2026 1BitSquared <info@1bitsquared.com>
+# SPDX-FileContributor: Written by Rachel Mant <git@dragonmux.network>
+
+# Controls when the workflow will run
+when:
+  # Triggers the workflow on pull request events
+  - event: pull_request
+  # Triggers the workflow on push events, but only for the main branch
+  - event: push
+    branch: main
+  # Allows us to trigger the workflow manually from in Woodpecker for any branch
+  - event: manual
+
+matrix:
+  # Define a matrix of compilers to build BMDA with
+  C_COMPILER:
+    - gcc
+    - clang
+
+steps:
+  # Build BMDA with a given compiler from the matrix w/ `-Werror` so warnings are errors
+  - name: build
+    image: codeberg.org/blackmagic-debug/blackmagic-ci-images/blackmagic-c
+    pull: true
+    commands: |
+      export CC="${C_COMPILER}"
+
+      $$CC --version
+      meson --version
+      ninja --version
+
+      meson setup build --werror
+      meson compile -C build
