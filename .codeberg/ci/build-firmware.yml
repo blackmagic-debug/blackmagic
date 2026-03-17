@@ -1,0 +1,53 @@
+# SPDX-License-Identifier: MIT OR Apache-2.0
+# SPDX-FileCopyrightText: 2026 1BitSquared <info@1bitsquared.com>
+# SPDX-FileContributor: Written by Rachel Mant <git@dragonmux.network>
+
+# Controls when the workflow will run
+when:
+  # Triggers the workflow on pull request events
+  - event: pull_request
+  # Triggers the workflow on push events, but only for the main branch
+  - event: push
+    branch: main
+  # Allows us to trigger the workflow manually from in Woodpecker for any branch
+  - event: manual
+
+matrix:
+  # Define a matrix of all the probe platforms to get full build coverage for all the firmware possibilities
+  BMD_PROBE:
+    - '96b_carbon'
+    - 'blackpill-f401cc'
+    - 'blackpill-f401ce'
+    - 'blackpill-f411ce'
+    - 'bluepill'
+    - 'bmp-v3'
+    - 'ctxlink'
+    - 'f072'
+    - 'f3'
+    - 'f4discovery'
+    - 'hydrabus'
+    - 'launchpad-icdi'
+    - 'native'
+    - 'native-uncommon'
+    - 'native-st-clones'
+    - 'native-riscv'
+    - 'native-remote'
+    - 'stlink'
+    - 'stlinkv3'
+    - 'swlink'
+
+steps:
+  # Build the firmware for a given probe platform w/ `-Werror` so warnings are errors
+  - name: build
+    image: codeberg.org/blackmagic-debug/blackmagic-ci-images/blackmagic-c
+    pull: true
+    commands: |
+      export PATH="$$HOME/arm-gnu-toolchain-15.2.rel1-x86_64-arm-none-eabi/bin:$$PATH"
+
+      cc --version
+      arm-none-eabi-gcc --version
+      meson --version
+      ninja --version
+
+      meson setup build --cross-file cross-file/${BMD_PROBE}.ini --werror
+      meson compile -C build
