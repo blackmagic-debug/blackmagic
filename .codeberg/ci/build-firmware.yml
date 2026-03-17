@@ -43,6 +43,8 @@ steps:
     pull: true
     commands: |
       export PATH="$$HOME/arm-gnu-toolchain-15.2.rel1-x86_64-arm-none-eabi/bin:$$PATH"
+      apt update
+      apt install -y libftdi1-dev libhidapi-dev libusb-1.0-0-dev
 
       cc --version
       arm-none-eabi-gcc --version
