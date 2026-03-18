@@ -30,5 +30,5 @@ steps:
       meson --version
       ninja --version
 
-      meson setup build
+      meson setup build -Db_lto=true
       meson compile -C build
