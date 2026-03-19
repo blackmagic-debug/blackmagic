@@ -524,9 +524,13 @@ bool cortexm_attach(target_s *target)
 
 	/* Try to halt the core, and then check that it worked (which also resets the halt reason) */
 	target_halt_request(target);
-	const target_halt_reason_e halt_result = target_halt_poll(target, NULL);
-	/* If we failed to halt the target somehow, bail */
-	if (halt_result == TARGET_HALT_ERROR || halt_result == TARGET_HALT_RUNNING)
+	platform_timeout_s timeout;
+	platform_timeout_set(&timeout, 250);
+	target_halt_reason_e reason = TARGET_HALT_RUNNING;
+	while (!platform_timeout_is_expired(&timeout) && reason == TARGET_HALT_RUNNING)
+		reason = target_halt_poll(target, NULL);
+	/* If we did not succeed, we must abort at this point. */
+	if (reason == TARGET_HALT_FAULT || reason == TARGET_HALT_ERROR)
 		return false;
 
 	/* Request halt on reset */
@@ -570,7 +574,6 @@ bool cortexm_attach(target_s *target)
 	(void)target_mem32_read32(target, CORTEXM_DHCSR);
 	if (target_mem32_read32(target, CORTEXM_DHCSR) & CORTEXM_DHCSR_S_RESET_ST) {
 		platform_nrst_set_val(false);
-		platform_timeout_s timeout;
 		platform_timeout_set(&timeout, 1000);
 		while (true) {
 			const uint32_t reset_status = target_mem32_read32(target, CORTEXM_DHCSR);
