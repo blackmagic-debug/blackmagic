@@ -111,8 +111,13 @@
 /* tdata2 -> selected trigger configuration register 2 */
 #define RV_TRIG_DATA_2 0x7a2U
 
-/* GPR a0, aka x10 is used as a bounce buffer for our progbuf CSR I/O */
+/*
+ * GPR a0, aka x10 is used as a bounce buffer for our progbuf CSR I/O,
+ * as semihosting syscall number and result register per ABI
+ */
 #define RV_GPR_A0 0x100aU
+/* GPR a1, aka x11, is used as semihosting argument */
+#define RV_GPR_A1 0x100bU
 
 /*
  * Instructions for reading and writing CSRs through a0
@@ -124,6 +129,15 @@
 #define RV_CSRR_A0 0x00002573U
 #define RV_CSRW_A0 0x00051073U
 #define RV_EBREAK  0x00100073U
+
+/*
+ * A semihosting call is three consecutive uncompressed instructions:
+ * 0x01f01013 slli zero, zero 0x1f;
+ * 0x00100073 ebreak;
+ * 0x40705013 srai zero, zero, 7.
+ */
+#define RV_ENTRY_NOP 0x01f01013U
+#define RV_EXIT_NOP  0x40705013U
 
 #define RV_VENDOR_JEP106_CONT_MASK 0x7fffff80U
 #define RV_VENDOR_JEP106_CODE_MASK 0x7fU
@@ -907,15 +921,15 @@ static bool riscv_hostio_request(target_s *const target)
 {
 	/* Read out syscall number from a0/x10 and first argument from a1/x11 */
 	uint32_t syscall = 0U;
-	target_reg_read(target, 10, &syscall, sizeof(syscall));
+	target_reg_read(target, RV_GPR_A0 - RV_GPR_BASE, &syscall, sizeof(syscall));
 	uint32_t a1 = 0U;
-	target_reg_read(target, 11, &a1, sizeof(a1));
+	target_reg_read(target, RV_GPR_A1 - RV_GPR_BASE, &a1, sizeof(a1));
 
 	/* Hand off to the main semihosting implementation */
 	const int32_t result = semihosting_request(target, syscall, a1);
 
 	/* Write the result back to the target */
-	target_reg_write(target, 10, &result, sizeof(result));
+	target_reg_write(target, RV_GPR_A0 - RV_GPR_BASE, &result, sizeof(result));
 	/* Return if the request was in any way interrupted */
 	return target->tc->interrupted;
 }
@@ -1197,7 +1211,7 @@ static target_halt_reason_e riscv_halt_poll(target_s *const target, target_addr6
 		uint32_t instructions[3] = {0};
 		target_mem32_read(target, &instructions, program_counter - 4U, 12);
 		/* A semihosting call is three consecutive uncompressed instructions: slli zero, zero 0x1f; ebreak, srai zero, zero, 7. */
-		if (instructions[0] == 0x01f01013 && instructions[1] == RV_EBREAK && instructions[2] == 0x40705013) {
+		if (instructions[0] == RV_ENTRY_NOP && instructions[1] == RV_EBREAK && instructions[2] == RV_EXIT_NOP) {
 			if (riscv_hostio_request(target))
 				return TARGET_HALT_REQUEST;
 
