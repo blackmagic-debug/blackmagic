@@ -909,11 +909,10 @@ bool riscv_csr_write(riscv_hart_s *const hart, const uint16_t reg, const void *c
 	return true;
 }
 
-static target_addr_t riscv_pc_read(riscv_hart_s *const hart)
+static target_addr64_t riscv_pc_read(riscv_hart_s *const hart)
 {
-	target_addr_t data = 0;
+	target_addr64_t data = 0U;
 	riscv_csr_read(hart, RV_DPC, &data);
-	//riscv32_reg_read(target, 32, &data, sizeof(data));
 	return data;
 }
 
@@ -1171,7 +1170,7 @@ static void riscv_halt_resume(target_s *target, const bool step)
 	dcsr_cause &= RV_DCSR_CAUSE_MASK;
 	if (dcsr_cause == RV_HALT_CAUSE_EBREAK) {
 		/* Read the instruction to resume on */
-		uint32_t program_counter = riscv_pc_read(hart);
+		target_addr64_t program_counter = riscv_pc_read(hart);
 		/* If it actually is a breakpoint instruction, update the program counter one past it. */
 		if (target_mem32_read32(target, program_counter) == RV_EBREAK) {
 			program_counter += 4U;
@@ -1207,9 +1206,9 @@ static target_halt_reason_e riscv_halt_poll(target_s *const target, target_addr6
 	switch (status) {
 	case RV_HALT_CAUSE_EBREAK: {
 		/* If we've hit a programmed breakpoint, check for semihosting call. */
-		const target_addr_t program_counter = riscv_pc_read(hart);
+		const target_addr64_t program_counter = riscv_pc_read(hart);
 		uint32_t instructions[3] = {0};
-		target_mem32_read(target, &instructions, program_counter - 4U, 12);
+		target_mem64_read(target, &instructions, program_counter - 4U, sizeof(instructions));
 		/* A semihosting call is three consecutive uncompressed instructions: slli zero, zero 0x1f; ebreak, srai zero, zero, 7. */
 		if (instructions[0] == RV_ENTRY_NOP && instructions[1] == RV_EBREAK && instructions[2] == RV_EXIT_NOP) {
 			if (riscv_hostio_request(target))
