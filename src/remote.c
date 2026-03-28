@@ -214,7 +214,7 @@ static void remote_packet_process_jtag(const char *const packet, const size_t pa
 		break;
 	}
 
-	case REMOTE_CYCLE: { /* JC = clock cycle ============================ */
+	case REMOTE_CYCLE: { /* Jc = clock cycle ============================ */
 		const size_t clock_cycles = hex_string_to_num(8, packet + 4);
 		const bool tms = packet[2] != '0';
 		const bool tdi = packet[3] != '0';

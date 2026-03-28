@@ -69,7 +69,6 @@ target_s *target_attach_n(size_t n, target_controller_s *controller);
 void target_detach(target_s *target);
 
 /* Memory access functions */
-bool target_mem_map(target_s *target, char *buf, size_t len);
 bool target_mem32_read(target_s *target, void *dest, target_addr_t src, size_t len);
 bool target_mem64_read(target_s *target, void *dest, target_addr64_t src, size_t len);
 bool target_mem32_write(target_s *target, target_addr_t dest, const void *src, size_t len);
@@ -82,12 +81,15 @@ bool target_flash_complete(target_s *target);
 bool target_flash_mass_erase(target_s *target);
 
 /* Register access functions */
-size_t target_regs_size(target_s *target);
-const char *target_regs_description(target_s *target);
 void target_regs_read(target_s *target, void *data);
 void target_regs_write(target_s *target, const void *data);
 size_t target_reg_read(target_s *target, uint32_t reg, void *data, size_t max);
 size_t target_reg_write(target_s *target, uint32_t reg, const void *data, size_t size);
+
+/* Target metadata functions */
+size_t target_mem_map_chunk(target_s *target, char *buffer, size_t length, uint32_t start_offset);
+size_t target_regs_size(target_s *target);
+const char *target_regs_description(target_s *target);
 
 /* Halt/resume functions */
 typedef enum target_halt_reason {
