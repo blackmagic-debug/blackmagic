@@ -919,16 +919,17 @@ static target_addr64_t riscv_pc_read(riscv_hart_s *const hart)
 static bool riscv_hostio_request(target_s *const target)
 {
 	/* Read out syscall number from a0/x10 and first argument from a1/x11 */
-	uint32_t syscall = 0U;
-	target_reg_read(target, RV_GPR_A0 - RV_GPR_BASE, &syscall, sizeof(syscall));
-	uint32_t a1 = 0U;
-	target_reg_read(target, RV_GPR_A1 - RV_GPR_BASE, &a1, sizeof(a1));
+	riscv_hart_s *const hart = riscv_hart_struct(target);
+	uint64_t syscall = 0U;
+	riscv_csr_read(hart, RV_GPR_A0, &syscall);
+	uint64_t a1 = 0U;
+	riscv_csr_read(hart, RV_GPR_A1, &a1);
 
 	/* Hand off to the main semihosting implementation */
 	const int32_t result = semihosting_request(target, syscall, a1);
 
 	/* Write the result back to the target */
-	target_reg_write(target, RV_GPR_A0 - RV_GPR_BASE, &result, sizeof(result));
+	riscv_csr_write(hart, RV_GPR_A0, &result);
 	/* Return if the request was in any way interrupted */
 	return target->tc->interrupted;
 }
