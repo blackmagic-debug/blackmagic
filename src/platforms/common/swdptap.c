@@ -66,6 +66,13 @@ void swdptap_init(void)
 	swd_proc.seq_in_parity = swdptap_seq_in_parity;
 	swd_proc.seq_out = swdptap_seq_out;
 	swd_proc.seq_out_parity = swdptap_seq_out_parity;
+	/*
+	 * IEEE 1149.1-2013, 4.4 Test Data Input (TDI)
+	 * b) The design of the circuitry fed from TDI shall be such that
+	 * an undriven input produces a logical response
+	 * identical to the application of a logic 1.
+	 */
+	gpio_set(TDI_PORT, TDI_PIN);
 }
 
 static void swdptap_turnaround(const swdio_status_t dir)
