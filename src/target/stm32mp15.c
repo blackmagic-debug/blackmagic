@@ -82,6 +82,7 @@
 
 typedef struct stm32mp15_priv {
 	uint32_t dbgmcu_config;
+	adiv5_access_port_s *ap;
 } stm32mp15_priv_s;
 
 static bool stm32mp15_uid(target_s *target, int argc, const char **argv);
@@ -169,7 +170,8 @@ static void stm32mp15_cm4_setup_apbd_ap(target_s *const target)
 	ap1->csw = adiv5_ap_read(ap1, ADIV5_AP_CSW);
 
 	adiv5_ap_ref(ap1);
-	target->target_storage = ap1;
+	stm32mp15_priv_s *const priv = (stm32mp15_priv_s *)target->target_storage;
+	priv->ap = ap1;
 }
 
 static bool stm32mp15_cm4_configure_dbgmcu(target_s *const target)
@@ -227,18 +229,30 @@ bool stm32mp15_cm4_probe(target_s *const target)
  */
 static void stm32mp15_ca7_mem_read(target_s *target, void *dest, target_addr64_t src, size_t len)
 {
-	adiv5_access_port_s *const ap0 = (adiv5_access_port_s *)target->target_storage;
-	adiv5_mem_read(ap0, dest, src, len);
+	stm32mp15_priv_s *const priv = (stm32mp15_priv_s *)target->target_storage;
+	adiv5_mem_read(priv->ap, dest, src, len);
 }
 
 static void stm32mp15_ca7_mem_write(target_s *target, target_addr64_t dest, const void *src, size_t len)
 {
-	adiv5_access_port_s *const ap0 = (adiv5_access_port_s *)target->target_storage;
-	adiv5_mem_write(ap0, dest, src, len);
+	stm32mp15_priv_s *const priv = (stm32mp15_priv_s *)target->target_storage;
+	adiv5_mem_write(priv->ap, dest, src, len);
 }
 
 static void stm32mp15_ca7_setup_axi_ap(target_s *const target)
 {
+	stm32mp15_priv_s *priv_storage = (stm32mp15_priv_s *)target->target_storage;
+	if (!priv_storage) {
+		/* Allocate target-specific storage */
+		priv_storage = calloc(1, sizeof(*priv_storage));
+		if (!priv_storage) { /* calloc failed: heap exhaustion */
+			DEBUG_ERROR("calloc: failed in %s\n", __func__);
+			return;
+		}
+		target->target_storage = priv_storage;
+	}
+	if (priv_storage->ap)
+		return;
 	adiv5_access_port_s *ap0 = calloc(1, sizeof(*ap0));
 	if (!ap0) { /* calloc failed: heap exhaustion */
 		DEBUG_ERROR("calloc: failed in %s\n", __func__);
@@ -254,7 +268,7 @@ static void stm32mp15_ca7_setup_axi_ap(target_s *const target)
 	ap0->csw = adiv5_ap_read(ap0, ADIV5_AP_CSW);
 
 	adiv5_ap_ref(ap0);
-	target->target_storage = ap0;
+	priv_storage->ap = ap0;
 }
 
 static bool stm32mp15_ca7_attach(target_s *const target)
@@ -273,10 +287,10 @@ static bool stm32mp15_ca7_attach(target_s *const target)
 static void stm32mp15_ca7_detach(target_s *target)
 {
 	/* Deallocate any extra AP */
-	adiv5_access_port_s *ap0 = (adiv5_access_port_s *)target->target_storage;
-	if (ap0) {
-		adiv5_ap_unref(ap0);
-		ap0 = NULL;
+	stm32mp15_priv_s *const priv = (stm32mp15_priv_s *)target->target_storage;
+	if (priv && priv->ap) {
+		adiv5_ap_unref(priv->ap);
+		priv->ap = NULL;
 	}
 	cortexar_detach(target);
 }
@@ -328,9 +342,8 @@ static void stm32mp15_cm4_detach(target_s *const target)
 	target_mem32_write32(target, STM32MP15_DBGMCU_CONFIG, priv->dbgmcu_config);
 
 	/* Deallocate any extra AP */
-	adiv5_access_port_s *ap1 = (adiv5_access_port_s *)target->target_storage;
-	adiv5_ap_unref(ap1);
-	target->target_storage = NULL;
+	adiv5_ap_unref(priv->ap);
+	priv->ap = NULL;
 
 	/* Now defer to the normal Cortex-M detach routine to complete the detach */
 	cortexm_detach(target);
