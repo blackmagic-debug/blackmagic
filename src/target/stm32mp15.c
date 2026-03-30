@@ -262,6 +262,7 @@ static void stm32mp15_ca7_detach(target_s *target)
 	/* Deallocate any extra AP */
 	adiv5_access_port_s *ap0 = (adiv5_access_port_s *)target->target_storage;
 	adiv5_ap_unref(ap0);
+	target->target_storage = NULL;
 	cortexar_detach(target);
 }
 
@@ -316,6 +317,7 @@ static void stm32mp15_cm4_detach(target_s *const target)
 	/* Deallocate any extra AP */
 	adiv5_access_port_s *ap1 = (adiv5_access_port_s *)target->target_storage;
 	adiv5_ap_unref(ap1);
+	target->target_storage = NULL;
 
 	/* Now defer to the normal Cortex-M detach routine to complete the detach */
 	cortexm_detach(target);
