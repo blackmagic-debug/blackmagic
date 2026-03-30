@@ -257,12 +257,27 @@ static void stm32mp15_ca7_setup_axi_ap(target_s *const target)
 	target->target_storage = ap0;
 }
 
+static bool stm32mp15_ca7_attach(target_s *const target)
+{
+	if (!cortexar_attach(target))
+		return false;
+	stm32mp15_ca7_setup_axi_ap(target);
+	adiv5_access_port_s *ap0 = (adiv5_access_port_s *)target->target_storage;
+	if (ap0) {
+		target->mem_read = stm32mp15_ca7_mem_read;
+		target->mem_write = stm32mp15_ca7_mem_write;
+	}
+	return true;
+}
+
 static void stm32mp15_ca7_detach(target_s *target)
 {
 	/* Deallocate any extra AP */
 	adiv5_access_port_s *ap0 = (adiv5_access_port_s *)target->target_storage;
-	adiv5_ap_unref(ap0);
-	target->target_storage = NULL;
+	if (ap0) {
+		adiv5_ap_unref(ap0);
+		ap0 = NULL;
+	}
 	cortexar_detach(target);
 }
 
@@ -272,9 +287,7 @@ bool stm32mp15_ca7_probe(target_s *const target)
 		return false;
 
 	target->driver = "STM32MP15";
-	stm32mp15_ca7_setup_axi_ap(target);
-	target->mem_read = stm32mp15_ca7_mem_read;
-	target->mem_write = stm32mp15_ca7_mem_write;
+	target->attach = stm32mp15_ca7_attach;
 	target->detach = stm32mp15_ca7_detach;
 	target_add_commands(target, stm32mp15_cmd_list, target->driver);
 
