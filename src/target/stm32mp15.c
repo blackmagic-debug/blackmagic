@@ -291,6 +291,8 @@ static void stm32mp15_ca7_detach(target_s *target)
 	if (priv && priv->ap) {
 		adiv5_ap_unref(priv->ap);
 		priv->ap = NULL;
+		target->mem_read = cortexar_mem_read;
+		target->mem_write = cortexar_mem_write;
 	}
 	cortexar_detach(target);
 }
