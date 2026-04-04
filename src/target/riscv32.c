@@ -162,6 +162,10 @@ static size_t riscv32_reg_read(target_s *target, const uint32_t reg, void *data,
 		return riscv32_bool_to_4(riscv_csr_read(hart, RV_DPC, data));
 	if (reg >= RV_CSR_GDB_OFFSET)
 		return riscv32_bool_to_4(riscv_csr_read(hart, reg - RV_CSR_GDB_OFFSET, data));
+	/* GDB registers 66..68 map to FPU CSR 0x001..0x003 */
+	if (reg >= RV_FPU_GDB_CSR_OFFSET)
+		return riscv32_bool_to_4(riscv_csr_read(hart, RV_FP_CTRL_BASE + reg - RV_FPU_GDB_CSR_OFFSET, data));
+	/* GDB registers 33..65 map to FPU GPR 0x1020..0x1033 */
 	if (reg >= RV_FPU_GDB_OFFSET)
 		return riscv32_bool_to_4(riscv_csr_read(hart, RV_FP_BASE + reg - RV_FPU_GDB_OFFSET, data));
 	return 0;
@@ -179,6 +183,8 @@ static size_t riscv32_reg_write(target_s *const target, const uint32_t reg, cons
 		return riscv32_bool_to_4(riscv_csr_write(hart, RV_DPC, data));
 	if (reg >= RV_CSR_GDB_OFFSET)
 		return riscv32_bool_to_4(riscv_csr_write(hart, reg - RV_CSR_GDB_OFFSET, data));
+	if (reg >= RV_FPU_GDB_CSR_OFFSET)
+		return riscv32_bool_to_4(riscv_csr_write(hart, RV_FP_CTRL_BASE + reg - RV_FPU_GDB_CSR_OFFSET, data));
 	if (reg >= RV_FPU_GDB_OFFSET)
 		return riscv32_bool_to_4(riscv_csr_write(hart, RV_FP_BASE + reg - RV_FPU_GDB_OFFSET, data));
 	return 0;
