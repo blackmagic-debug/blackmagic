@@ -132,7 +132,9 @@ static bool stm32mp15_cmd_swo(target_s *target, int argc, const char **argv)
 	(void)argc;
 	(void)argv;
 	/* TODO: argv parsing for mode and baudrate */
-	adiv5_access_port_s *const ap1 = (adiv5_access_port_s *)target->target_storage;
+	stm32mp15_priv_s *priv = (stm32mp15_priv_s *)target->target_storage;
+	/* Prefer AP1 over AP0 when attached to CA7 (because no CoreSight components are on AP0) */
+	adiv5_access_port_s *const ap1 = (priv->ap->apsel == 1U) ? priv->ap : cortex_ap(target);
 	/* Pin Protocol: change Manchester to UART */
 	uint32_t sppr = 0;
 	adiv5_mem_read(ap1, &sppr, SWO_SPPR, 4);
