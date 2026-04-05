@@ -384,8 +384,6 @@ static_assert(ARRAY_LENGTH(cortexr_spr_types) == ARRAY_LENGTH(cortexr_spr_names)
 /* clang-format on */
 
 static bool cortexar_check_error(target_s *target);
-static void cortexar_mem_read(target_s *target, void *dest, target_addr64_t src, size_t len);
-static void cortexar_mem_write(target_s *target, target_addr64_t dest, const void *src, size_t len);
 
 static void cortexar_regs_read(target_s *target, void *data);
 static void cortexar_regs_write(target_s *target, const void *data);
@@ -1098,7 +1096,7 @@ static void cortexar_mem_handle_fault(target_s *const target, const char *const 
  * If core is not halted, temporarily halts target and resumes at the end
  * of the function.
  */
-static void cortexar_mem_read(target_s *const target, void *const dest, const target_addr64_t src, const size_t len)
+void cortexar_mem_read(target_s *const target, void *const dest, const target_addr64_t src, const size_t len)
 {
 	/* If system is not halted, halt temporarily within this function. */
 	const bool halted_in_function = cortexar_halt_and_wait(target);
@@ -1220,8 +1218,7 @@ static bool cortexar_mem_write_slow(
  * If core is not halted, temporarily halts target and resumes at the end
  * of the function.
  */
-static void cortexar_mem_write(
-	target_s *const target, const target_addr64_t dest, const void *const src, const size_t len)
+void cortexar_mem_write(target_s *const target, const target_addr64_t dest, const void *const src, const size_t len)
 {
 	/* If system is not halted, halt temporarily within this function. */
 	const bool halted_in_function = cortexar_halt_and_wait(target);
