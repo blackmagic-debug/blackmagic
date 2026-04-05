@@ -79,9 +79,25 @@ bool platform_spi_deinit(spi_bus_e bus);
 
 bool platform_spi_chip_select(uint8_t device_select);
 uint8_t platform_spi_xfer(spi_bus_e bus, uint8_t value);
+void platform_spi_xfer_block(spi_bus_e bus, const uint8_t *tx_buf, uint8_t *rx_buf, size_t count);
 
 #ifdef PLATFORM_IDENT_DYNAMIC
 const char *platform_ident(void);
+#endif
+
+#ifdef PLATFORM_MULTI_UART
+typedef enum uart_state {
+	UART_STATE_UNKNOWN,
+	UART_STATE_IDLE,
+	UART_STATE_LOST,
+} uart_state_e;
+
+void platform_enable_uart2(void);
+void platform_disable_uart2(void);
+bool platform_is_uart2_enabled(void);
+void platform_switch_dir_uart2(void);
+void platform_uart2_state_change(uint32_t state);
+uart_state_e platform_uart2_state(void);
 #endif
 
 #endif /* INCLUDE_PLATFORM_SUPPORT_H */
