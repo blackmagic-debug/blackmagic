@@ -121,16 +121,26 @@ static bool onboard_flash_add(target_s *const target)
 	spi_flash_id_s flash_id;
 	onboard_spi_read(target, SPI_FLASH_CMD_READ_JEDEC_ID, 0, &flash_id, sizeof(flash_id));
 
+#if defined(BLACKMAGIC) || defined(BLACKMAGICPROBE_V3)
 	/* If it doesn't match up to being the expected device (a Winbond Flash), bail */
 	if (flash_id.manufacturer != 0xefU) {
 		DEBUG_ERROR(
 			"%s: Expecting Winbond SPI Flash device, manufacturer ID is %02x\n", __func__, flash_id.manufacturer);
 		return false;
+	} else {
+		target->core = "Winbond";
 	}
+#else
+	if (flash_id.manufacturer == 0xffU || flash_id.type == 0xffU || flash_id.capacity == 0xffU) {
+		DEBUG_ERROR("Flash identification failed\n");
+		return false;
+	} else {
+		target->core = "25-series";
+	}
+#endif
 
 	DEBUG_INFO(
 		"Found Flash chip w/ ID: 0x%02x 0x%02x 0x%02x\n", flash_id.manufacturer, flash_id.type, flash_id.capacity);
-	target->core = "Windbond";
 	/* Otherwise add it to the providied target */
 	bmp_spi_add_flash(
 		target, 0U, 1U << flash_id.capacity, onboard_spi_read, onboard_spi_write, onboard_spi_run_command);

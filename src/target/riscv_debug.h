@@ -218,6 +218,8 @@ typedef struct riscv_hart {
 #define RV_GPR_BASE 0x1000U
 /* The FP base defines the starting register space address for the floating point registers */
 #define RV_FP_BASE 0x1020U
+/* The FP control base defines the starting register space address for the floating point modes and flags */
+#define RV_FP_CTRL_BASE 0x001U
 
 /**
  * The MXL (Machine XLEN) field encodes the native base integer ISA width
