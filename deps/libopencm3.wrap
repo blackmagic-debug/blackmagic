@@ -1,5 +1,5 @@
 [wrap-git]
-url = https://github.com/blackmagic-debug/libopencm3
+url = https://codeberg.org/blackmagic-debug/libopencm3
 revision = head
 depth = 1
 
