@@ -80,6 +80,8 @@
 #define SWO_ACPR (SWO_BASE + 0x00010)
 #define SWO_SPPR (SWO_BASE + 0x000f0)
 
+#define STM32MP15_AP1_DBGMCU_IDCODE 0xe0081000U
+
 typedef struct stm32mp15_priv {
 	uint32_t dbgmcu_config;
 	adiv5_access_port_s *ap;
@@ -101,7 +103,7 @@ static void stm32mp15_cm4_detach(target_s *target);
 
 static bool stm32mp15_ident(target_s *const target, const bool cortexm)
 {
-	const adiv5_access_port_s *const ap = cortex_ap(target);
+	adiv5_access_port_s *const ap = cortex_ap(target);
 	/* Check if the part's a STM32MP15 */
 	if (ap->partno != ID_STM32MP15x) {
 		/* If it's not a Cortex-M core or it doesn't match the errata ID code, return false */
@@ -109,6 +111,20 @@ static bool stm32mp15_ident(target_s *const target, const bool cortexm)
 			return false;
 	}
 
+	if (!cortexm) {
+		/*
+		 * After Linux has booted on CA7, 0x50081000 (system bus alias)
+		 * becomes unreadable via cortexar_mem_read, so use debug APB on AP1
+		 */
+		uint32_t idcode = 0;
+		adiv5_mem_read(ap, &idcode, STM32MP15_AP1_DBGMCU_IDCODE, sizeof(idcode));
+		const uint16_t dev_id = idcode & STM32MP15_DBGMCU_IDCODE_DEV_MASK;
+		DEBUG_TARGET("%s: looking at device ID 0x%03x at 0x%08" PRIx32 "\n", __func__, dev_id,
+			(uint32_t)STM32MP15_AP1_DBGMCU_IDCODE);
+		if (dev_id == ID_STM32MP15x) {
+			return true;
+		}
+	}
 	/* By now it's established that this is likely an MP15x_CM4, but check that it's not an H74x */
 	const uint32_t idcode = target_mem32_read32(target, STM32MP15_DBGMCU_IDCODE);
 	const uint16_t dev_id = idcode & STM32MP15_DBGMCU_IDCODE_DEV_MASK;
