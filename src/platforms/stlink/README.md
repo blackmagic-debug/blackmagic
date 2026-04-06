@@ -62,6 +62,7 @@ NB: SWDIO/TMS is on P**B**14, not P**A**14.
 SUBSYSTEM=="usb", ATTRS{idVendor}=="0483", ATTRS{idProduct}=="3748", ACTION=="add", RUN+="<path-to>/stlink-tool"
 EOF
 ```
+* For ST-Link v2-1 instead run `stlink-tool -m blackmagic_stlink_firmware.bin` to make the bootloader recognize the firmware as valid thus allowing it to boot on replug
 
 ## Reverting to original ST Firmware with running BMP firmware
 
@@ -145,3 +146,15 @@ UART RX/TX
 
 On ST-Link v2/2-1 boards with the original bootloader, you can force
 bootloader entry with asserting [NRST](https://www.carminenoviello.com/2016/02/26/restore-st-link-interface-bad-update-2-26-15-firmware/) of the STM32F103CB of the USB powered board. Several attempts may be needed.
+
+## ST-Link V2-1 Bootloader Magic
+
+On boot, the ST-Link V2-1 bootloader checks two conditions to decide whether to jump directly to the application:
+
+1. Whether the device was reset via Power-on Reset (PoR). If not, it enters DFU mode.
+2. Whether the top word of ROM contains the magic number 0xA50027D3. If not, it enters DFU mode.
+
+For more details, see [this article](https://github.com/GMMan/st-link-hack/blob/master/paper/paper.md#main-function).
+
+You can either patch this check or include the required value directly in your application. [stlink-tool](https://codeberg.org/blackmagic-debug/stlink-tool) provides the ```-m``` flag to patch the value during firmware upload.
+
