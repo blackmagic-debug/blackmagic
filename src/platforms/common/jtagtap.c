@@ -340,6 +340,10 @@ static void jtagtap_cycle_no_delay(const size_t clock_cycles)
 
 static void jtagtap_cycle(const bool tms, const bool tdi, const size_t clock_cycles)
 {
+	/* If `clock_cycles` is 0, do nothing so we don't wind up doing UINT32_MAX things */
+	if (clock_cycles == 0U)
+		return;
+
 	jtagtap_next(tms, tdi);
 	if (target_clk_divider != UINT32_MAX)
 		jtagtap_cycle_clk_delay(clock_cycles - 1U);

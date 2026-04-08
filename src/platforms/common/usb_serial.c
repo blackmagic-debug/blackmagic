@@ -3,7 +3,7 @@
  *
  * Copyright (C) 2011 Black Sphere Technologies Ltd.
  * Written by Gareth McMullin <gareth@blacksphere.co.nz>
- * Copyright (C) 2022-2024 1BitSquared <info@1bitsquared.com>
+ * Copyright (C) 2022-2025 1BitSquared <info@1bitsquared.com>
  * Written by Rachel Mant <git@dragonmux.network>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -56,9 +56,15 @@
 #include <libopencm3/cm3/cortex.h>
 #include <libopencm3/cm3/nvic.h>
 #include <libopencm3/usb/cdc.h>
-#if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4) || defined(STM32F7)
+#if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4) || defined(STM32F7) || defined(STM32U5)
 #include <libopencm3/stm32/rcc.h>
 #include <libopencm3/stm32/dma.h>
+#endif
+
+#ifdef USB_HS
+#define DEBUG_SERIAL_RECEIVE_SIZE CDCACM_PACKET_SIZE
+#else
+#define DEBUG_SERIAL_RECEIVE_SIZE (CDCACM_PACKET_SIZE / 2U)
 #endif
 
 static bool gdb_serial_dtr = true;
@@ -68,7 +74,7 @@ static void usb_serial_set_state(usbd_device *dev, uint16_t iface, uint8_t ep);
 static void debug_serial_send_callback(usbd_device *dev, uint8_t ep);
 static void debug_serial_receive_callback(usbd_device *dev, uint8_t ep);
 
-#if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4) || defined(STM32F7)
+#if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4) || defined(STM32F7) || defined(STM32U5)
 static bool debug_serial_send_complete = true;
 #endif
 
@@ -102,12 +108,14 @@ static usbd_request_return_codes_e gdb_serial_control_request(usbd_device *dev, 
 			return USBD_REQ_NOTSUPP;
 		usb_cdc_line_coding_s *line_coding = (usb_cdc_line_coding_s *)*buf;
 		/* This tells the host that we talk 1MBaud, 8-bit no parity w/ 1 stop bit */
-		line_coding->dwDTERate = 1 * 1000 * 1000;
+		line_coding->dwDTERate = UINT32_C(1) * 1000U * 1000U;
 		line_coding->bCharFormat = USB_CDC_1_STOP_BITS;
 		line_coding->bParityType = USB_CDC_NO_PARITY;
-		line_coding->bDataBits = 8;
+		line_coding->bDataBits = 8U;
 		return USBD_REQ_HANDLED;
 	}
+	default:
+		break;
 	}
 	return USBD_REQ_NOTSUPP;
 }
@@ -146,6 +154,8 @@ static usbd_request_return_codes_e debug_serial_control_request(usbd_device *dev
 			return USBD_REQ_NOTSUPP;
 		aux_serial_get_encoding((usb_cdc_line_coding_s *)*buf);
 		return USBD_REQ_HANDLED;
+	default:
+		break;
 	}
 	return USBD_REQ_NOTSUPP;
 }
@@ -159,46 +169,43 @@ void usb_serial_set_state(usbd_device *const dev, const uint16_t iface, const ui
 	uint8_t buf[10];
 	usb_cdc_notification_s *notif = (void *)buf;
 	/* We echo signals back to host as notification */
-	notif->bmRequestType = 0xa1;
+	notif->bmRequestType = 0xa1U;
 	notif->bNotification = USB_CDC_NOTIFY_SERIAL_STATE;
-	notif->wValue = 0;
+	notif->wValue = 0U;
 	notif->wIndex = iface;
-	notif->wLength = 2;
+	notif->wLength = 2U;
 	buf[8] = 3U;
 	buf[9] = 0U;
 	usbd_ep_write_packet(dev, ep, buf, sizeof(buf));
 }
 
-void usb_serial_set_config(usbd_device *dev, uint16_t value)
+void usb_serial_set_config(usbd_device *const dev, const uint16_t value)
 {
 	usb_config = value;
 
 	/* GDB interface */
-#if defined(STM32F4) || defined(LM4F) || defined(STM32F7)
-	usbd_ep_setup(dev, CDCACM_GDB_ENDPOINT, USB_ENDPOINT_ATTR_BULK, CDCACM_PACKET_SIZE, gdb_usb_out_cb);
+#if defined(STM32F4) || defined(LM4F) || defined(STM32F7) || defined(STM32U5)
+	usbd_ep_setup(dev, CDCACM_GDB_ENDPOINT | USB_REQ_TYPE_OUT, USB_ENDPOINT_ATTR_BULK, CDCACM_PACKET_SIZE,
+		gdb_usb_receive_callback);
 #else
-	usbd_ep_setup(dev, CDCACM_GDB_ENDPOINT, USB_ENDPOINT_ATTR_BULK, CDCACM_PACKET_SIZE, NULL);
+	usbd_ep_setup(dev, CDCACM_GDB_ENDPOINT | USB_REQ_TYPE_OUT, USB_ENDPOINT_ATTR_BULK, CDCACM_PACKET_SIZE, NULL);
 #endif
 	usbd_ep_setup(dev, CDCACM_GDB_ENDPOINT | USB_REQ_TYPE_IN, USB_ENDPOINT_ATTR_BULK, CDCACM_PACKET_SIZE, NULL);
 #if defined(STM32F4) && CDCACM_GDB_NOTIF_ENDPOINT >= 4
 	/* skip setup for unimplemented EP */
 #else
-	usbd_ep_setup(dev, CDCACM_GDB_NOTIF_ENDPOINT | USB_REQ_TYPE_IN, USB_ENDPOINT_ATTR_INTERRUPT, 16, NULL);
+	usbd_ep_setup(dev, CDCACM_GDB_NOTIF_ENDPOINT | USB_REQ_TYPE_IN, USB_ENDPOINT_ATTR_INTERRUPT, 16U, NULL);
 #endif
 
 	/* Serial interface */
-#if defined(USB_HS)
-	const uint16_t uart_epout_size = CDCACM_PACKET_SIZE;
-#else
-	const uint16_t uart_epout_size = CDCACM_PACKET_SIZE / 2U;
-#endif
-	usbd_ep_setup(dev, CDCACM_UART_ENDPOINT, USB_ENDPOINT_ATTR_BULK, uart_epout_size, debug_serial_receive_callback);
+	usbd_ep_setup(dev, CDCACM_UART_ENDPOINT | USB_REQ_TYPE_OUT, USB_ENDPOINT_ATTR_BULK, DEBUG_SERIAL_RECEIVE_SIZE,
+		debug_serial_receive_callback);
 	usbd_ep_setup(dev, CDCACM_UART_ENDPOINT | USB_REQ_TYPE_IN, USB_ENDPOINT_ATTR_BULK, CDCACM_PACKET_SIZE,
 		debug_serial_send_callback);
 #if defined(STM32F4) && CDCACM_UART_NOTIF_ENDPOINT >= 4
 	/* skip setup for unimplemented EP */
 #else
-	usbd_ep_setup(dev, CDCACM_UART_NOTIF_ENDPOINT | USB_REQ_TYPE_IN, USB_ENDPOINT_ATTR_INTERRUPT, 16, NULL);
+	usbd_ep_setup(dev, CDCACM_UART_NOTIF_ENDPOINT | USB_REQ_TYPE_IN, USB_ENDPOINT_ATTR_INTERRUPT, 16U, NULL);
 #endif
 
 #ifdef PLATFORM_HAS_TRACESWO
@@ -256,7 +263,7 @@ static bool debug_serial_fifo_buffer_empty(void)
 }
 #endif
 
-#if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4) || defined(STM32F7)
+#if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4) || defined(STM32F7) || defined(STM32U5)
 /*
  * Runs deferred processing for AUX serial RX, draining RX FIFO by sending
  * characters to host PC via the debug serial interface.
@@ -304,7 +311,7 @@ static void debug_serial_send_callback(usbd_device *dev, uint8_t ep)
 {
 	(void)ep;
 	(void)dev;
-#if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4) || defined(STM32F7)
+#if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4) || defined(STM32F7) || defined(STM32U5)
 	debug_serial_send_data();
 #endif
 }
@@ -331,7 +338,7 @@ static void debug_serial_receive_callback(usbd_device *dev, uint8_t ep)
 
 	aux_serial_send(len);
 
-#if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4) || defined(STM32F7)
+#if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4) || defined(STM32F7) || defined(STM32U5)
 	/* Disable USBUART TX packet reception if buffer does not have enough space */
 	if (AUX_UART_BUFFER_SIZE - aux_serial_transmit_buffer_fullness() < CDCACM_PACKET_SIZE)
 		usbd_ep_nak_set(dev, ep, 1);
@@ -348,7 +355,14 @@ static void debug_serial_append_char(const char c)
 
 size_t debug_serial_debug_write(const char *buf, const size_t len)
 {
-	if (nvic_get_active_irq(USB_IRQ) || nvic_get_active_irq(USBUSART_IRQ) || nvic_get_active_irq(USBUSART_DMA_RX_IRQ))
+	if (nvic_get_active_irq(USB_IRQ) ||
+#ifndef PLATFORM_MULTI_UART
+		nvic_get_active_irq(USBUSART_IRQ) || nvic_get_active_irq(USBUSART_DMA_RX_IRQ)
+#else
+		nvic_get_active_irq(AUX_UART1_IRQ) || nvic_get_active_irq(AUX_UART2_IRQ) ||
+		nvic_get_active_irq(AUX_UART_DMA_RX_IRQ)
+#endif
+	)
 		return 0;
 
 	CM_ATOMIC_CONTEXT();

@@ -498,16 +498,30 @@ static void exec_q_memory_map(const char *packet, const size_t length)
 	(void)length;
 	target_s *target = cur_target;
 
-	/* Read target XML memory map */
+	/* Figure out which target to read the map for, if there is a valid one */
 	if (!target)
 		target = last_target;
 	if (!target) {
 		gdb_put_packet_error(1U);
 		return;
 	}
-	char buf[1024];
-	target_mem_map(target, buf, sizeof(buf)); /* Fixme: Check size!*/
-	handle_q_string_reply(buf, packet);
+
+	/* Decode the offset into the map being requested */
+	uint32_t offset = 0;
+	if (!read_hex32(packet, NULL, &offset, ',')) {
+		gdb_put_packet_error(1U);
+		return;
+	}
+
+	/* Grab not more than a GDB packet buffer's worth of data */
+	char buffer[GDB_PACKET_BUFFER_SIZE];
+	const size_t chunk_length = target_mem_map_chunk(target, buffer, ARRAY_LENGTH(buffer), offset);
+
+	/* Determine if this was the last chunk so we generate the right kind of packet */
+	const bool end = target->map_transfer_offset == 0U;
+
+	/* And now send the chunk back to the host */
+	gdb_put_packet(end ? "l" : "m", 1U, buffer, chunk_length, false);
 }
 
 static void exec_q_feature_read(const char *packet, const size_t length)
@@ -557,7 +571,7 @@ static void exec_q_c(const char *packet, const size_t length)
 {
 	(void)packet;
 	(void)length;
-	gdb_put_packet_str("QC1");
+	gdb_put_packet_str("QCp1.1");
 }
 
 /*
@@ -571,7 +585,7 @@ static void exec_q_thread_info(const char *packet, const size_t length)
 {
 	(void)length;
 	if (packet[-11] == 'f' && cur_target)
-		gdb_put_packet_str("m1");
+		gdb_put_packet_str("mp1.1");
 	else
 		gdb_put_packet_str("l");
 }
@@ -674,7 +688,7 @@ static void exec_v_attach(const char *const packet, const size_t length)
 			 * https://sourceware.org/pipermail/gdb-patches/2022-April/188058.html
 			 * https://sourceware.org/pipermail/gdb-patches/2022-July/190869.html
 			 */
-			gdb_putpacket_str_f("T%02Xthread:1;", GDB_SIGTRAP);
+			gdb_putpacket_str_f("T%02Xthread:p1.1;", GDB_SIGTRAP);
 		} else
 			gdb_put_packet_error(1U);
 
@@ -967,16 +981,16 @@ void gdb_poll_target(void)
 		morse("TARGET LOST.", true);
 		break;
 	case TARGET_HALT_REQUEST:
-		gdb_putpacket_str_f("T%02Xthread:1;", GDB_SIGINT);
+		gdb_putpacket_str_f("T%02Xthread:p1.1;", GDB_SIGINT);
 		break;
 	case TARGET_HALT_WATCHPOINT:
 		gdb_putpacket_str_f(
 			"T%02Xwatch:%0" PRIX32 "%08" PRIX32 ";", GDB_SIGTRAP, (uint32_t)(watch >> 32U), (uint32_t)watch);
 		break;
 	case TARGET_HALT_FAULT:
-		gdb_putpacket_str_f("T%02Xthread:1;", GDB_SIGSEGV);
+		gdb_putpacket_str_f("T%02Xthread:p1.1;", GDB_SIGSEGV);
 		break;
 	default:
-		gdb_putpacket_str_f("T%02Xthread:1;", GDB_SIGTRAP);
+		gdb_putpacket_str_f("T%02Xthread:p1.1;", GDB_SIGTRAP);
 	}
 }
