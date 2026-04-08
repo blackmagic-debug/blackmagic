@@ -370,7 +370,7 @@ target_ti_cortexm = declare_dependency(
 		'msp432e4.c',
 		'msp432p4.c',
 		'mspm0.c'
-	) + lmi_stub,
+	) + lmi_stub + mspm0_stub,
 	compile_args: ['-DCONFIG_TI=1'],
 	dependencies: target_cortexm,
 )
