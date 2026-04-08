@@ -384,8 +384,6 @@ static_assert(ARRAY_LENGTH(cortexr_spr_types) == ARRAY_LENGTH(cortexr_spr_names)
 /* clang-format on */
 
 static bool cortexar_check_error(target_s *target);
-static void cortexar_mem_read(target_s *target, void *dest, target_addr64_t src, size_t len);
-static void cortexar_mem_write(target_s *target, target_addr64_t dest, const void *src, size_t len);
 
 static void cortexar_regs_read(target_s *target, void *data);
 static void cortexar_regs_write(target_s *target, const void *data);
@@ -401,9 +399,6 @@ static bool cortexar_halt_and_wait(target_s *target);
 static int cortexar_breakwatch_set(target_s *target, breakwatch_s *breakwatch);
 static int cortexar_breakwatch_clear(target_s *target, breakwatch_s *breakwatch);
 static void cortexar_config_breakpoint(target_s *target, size_t slot, uint32_t mode, target_addr_t addr);
-
-bool cortexar_attach(target_s *target);
-void cortexar_detach(target_s *target);
 
 static const char *cortexar_target_description(target_s *target);
 
@@ -1101,7 +1096,7 @@ static void cortexar_mem_handle_fault(target_s *const target, const char *const 
  * If core is not halted, temporarily halts target and resumes at the end
  * of the function.
  */
-static void cortexar_mem_read(target_s *const target, void *const dest, const target_addr64_t src, const size_t len)
+void cortexar_mem_read(target_s *const target, void *const dest, const target_addr64_t src, const size_t len)
 {
 	/* If system is not halted, halt temporarily within this function. */
 	const bool halted_in_function = cortexar_halt_and_wait(target);
@@ -1223,8 +1218,7 @@ static bool cortexar_mem_write_slow(
  * If core is not halted, temporarily halts target and resumes at the end
  * of the function.
  */
-static void cortexar_mem_write(
-	target_s *const target, const target_addr64_t dest, const void *const src, const size_t len)
+void cortexar_mem_write(target_s *const target, const target_addr64_t dest, const void *const src, const size_t len)
 {
 	/* If system is not halted, halt temporarily within this function. */
 	const bool halted_in_function = cortexar_halt_and_wait(target);
@@ -1864,8 +1858,9 @@ static const char *cortexar_target_description(target_s *const target)
 	const size_t description_length =
 		cortexar_build_target_description(NULL, 0, target->target_options & TOPT_FLAVOUR_FLOAT) + 1U;
 	char *const description = malloc(description_length);
-	if (description)
-		(void)cortexar_build_target_description(
-			description, description_length, target->target_options & TOPT_FLAVOUR_FLOAT);
+	if (!description) /* malloc failed: heap exhaustion */
+		DEBUG_ERROR("malloc: failed in %s\n", __func__);
+	else
+		cortexar_build_target_description(description, description_length, target->target_options & TOPT_FLAVOUR_FLOAT);
 	return description;
 }

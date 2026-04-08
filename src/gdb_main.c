@@ -498,16 +498,30 @@ static void exec_q_memory_map(const char *packet, const size_t length)
 	(void)length;
 	target_s *target = cur_target;
 
-	/* Read target XML memory map */
+	/* Figure out which target to read the map for, if there is a valid one */
 	if (!target)
 		target = last_target;
 	if (!target) {
 		gdb_put_packet_error(1U);
 		return;
 	}
-	char buf[1024];
-	target_mem_map(target, buf, sizeof(buf)); /* Fixme: Check size!*/
-	handle_q_string_reply(buf, packet);
+
+	/* Decode the offset into the map being requested */
+	uint32_t offset = 0;
+	if (!read_hex32(packet, NULL, &offset, ',')) {
+		gdb_put_packet_error(1U);
+		return;
+	}
+
+	/* Grab not more than a GDB packet buffer's worth of data */
+	char buffer[GDB_PACKET_BUFFER_SIZE];
+	const size_t chunk_length = target_mem_map_chunk(target, buffer, ARRAY_LENGTH(buffer), offset);
+
+	/* Determine if this was the last chunk so we generate the right kind of packet */
+	const bool end = target->map_transfer_offset == 0U;
+
+	/* And now send the chunk back to the host */
+	gdb_put_packet(end ? "l" : "m", 1U, buffer, chunk_length, false);
 }
 
 static void exec_q_feature_read(const char *packet, const size_t length)
