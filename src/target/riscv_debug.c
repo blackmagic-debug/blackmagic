@@ -119,7 +119,6 @@
  */
 #define RV_CSRR_A0 0x00002573U
 #define RV_CSRW_A0 0x00051073U
-#define RV_EBREAK  0x00100073U
 
 /*
  * A semihosting call is three consecutive uncompressed instructions:

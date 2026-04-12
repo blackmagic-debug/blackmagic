@@ -230,6 +230,8 @@ typedef struct riscv_hart {
 /* GPR a1, aka x11, is used as semihosting argument */
 #define RV_GPR_A1 0x100bU
 
+#define RV_EBREAK 0x00100073U
+
 /**
  * The MXL (Machine XLEN) field encodes the native base integer ISA width
  * 

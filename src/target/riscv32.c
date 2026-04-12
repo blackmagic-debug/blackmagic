@@ -578,8 +578,6 @@ static void riscv32_sysbus_mem_write(
 		riscv32_sysbus_mem_adjusted_write(hart, address, data, remainder, native_access_width, native_access_length);
 }
 
-#define RV_EBREAK 0x00100073U
-
 static void riscv32_progbuf_mem_read(
 	riscv_hart_s *const hart, void *const dest, const target_addr_t src, const size_t len)
 {
