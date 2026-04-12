@@ -624,7 +624,7 @@ static void riscv32_progbuf_mem_read(
 	uint32_t a0_save = 0;
 	uint32_t a1_save = 0;
 	riscv_csr_read(hart, RV_GPR_A0, &a0_save);
-	riscv_csr_read(hart, RV_GPR_A0 + 1, &a1_save);
+	riscv_csr_read(hart, RV_GPR_A1, &a1_save);
 
 	uint8_t *const data = (uint8_t *)dest;
 	for (size_t offset = 0; offset < len; offset += access_length) {
@@ -642,7 +642,7 @@ static void riscv32_progbuf_mem_read(
 #if 1
 		/* Copy the read value from GPR A1 to DATA0 */
 		const uint32_t abstract_command2 =
-			RV_DM_ABST_CMD_ACCESS_REG | RV_ABST_READ | RV_REG_XFER | RV_REG_ACCESS_32_BIT | (RV_GPR_A0 + 1);
+			RV_DM_ABST_CMD_ACCESS_REG | RV_ABST_READ | RV_REG_XFER | RV_REG_ACCESS_32_BIT | RV_GPR_A1;
 		result = riscv_dm_write(hart->dbg_module, RV_DM_ABST_COMMAND, abstract_command2);
 		result &= riscv_command_wait_complete(hart);
 		if (!result)
@@ -659,7 +659,7 @@ static void riscv32_progbuf_mem_read(
 	}
 
 	riscv_csr_write(hart, RV_GPR_A0, &a0_save);
-	riscv_csr_write(hart, RV_GPR_A0 + 1, &a1_save);
+	riscv_csr_write(hart, RV_GPR_A1, &a1_save);
 }
 
 static void riscv32_progbuf_mem_write(
@@ -707,7 +707,7 @@ static void riscv32_progbuf_mem_write(
 	uint32_t a0_save = 0;
 	uint32_t a1_save = 0;
 	riscv_csr_read(hart, RV_GPR_A0, &a0_save);
-	riscv_csr_read(hart, RV_GPR_A0 + 1, &a1_save);
+	riscv_csr_read(hart, RV_GPR_A1, &a1_save);
 
 	const uint8_t *const data = (const uint8_t *)src;
 	for (size_t offset = 0; offset < len; offset += access_length) {
@@ -730,7 +730,7 @@ static void riscv32_progbuf_mem_write(
 		/* Copy the write value from DATA0 to GPR A1 and launch the progbuf postexec */
 		result = riscv_dm_write(hart->dbg_module, RV_DM_ABST_COMMAND,
 			RV_DM_ABST_CMD_ACCESS_REG | RV_ABST_WRITE | RV_REG_XFER | RV_ABST_POSTEXEC | RV_REG_ACCESS_32_BIT |
-				(RV_GPR_A0 + 1));
+				RV_GPR_A1);
 		result &= riscv_command_wait_complete(hart);
 		if (!result)
 			return;
@@ -738,7 +738,7 @@ static void riscv32_progbuf_mem_write(
 	}
 
 	riscv_csr_write(hart, RV_GPR_A0, &a0_save);
-	riscv_csr_write(hart, RV_GPR_A0 + 1, &a1_save);
+	riscv_csr_write(hart, RV_GPR_A1, &a1_save);
 }
 
 void riscv32_mem_read(target_s *const target, void *const dest, const target_addr64_t src, const size_t len)
