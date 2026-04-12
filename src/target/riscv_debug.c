@@ -51,10 +51,9 @@
  * https://github.com/riscv/riscv-debug-spec/blob/master/riscv-debug-stable.pdf
  */
 
-#define RV_DM_CONTROL      0x10U
-#define RV_DM_STATUS       0x11U
-#define RV_DM_NEXT_DM      0x1dU
-#define RV_DM_PROGBUF_BASE 0x20U
+#define RV_DM_CONTROL 0x10U
+#define RV_DM_STATUS  0x11U
+#define RV_DM_NEXT_DM 0x1dU
 
 #define RV_DM_CTRL_ACTIVE          (1U << 0U)
 #define RV_DM_CTRL_SYSTEM_RESET    (1U << 1U)

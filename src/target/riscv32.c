@@ -578,8 +578,6 @@ static void riscv32_sysbus_mem_write(
 		riscv32_sysbus_mem_adjusted_write(hart, address, data, remainder, native_access_width, native_access_length);
 }
 
-#define RV_DM_PROGBUF_BASE 0x20U
-
 #define RV_GPR_A0 0x100aU
 
 #define RV_EBREAK 0x00100073U
