@@ -639,22 +639,10 @@ static void riscv32_progbuf_mem_read(
 		result &= riscv_command_wait_complete(hart);
 		if (!result)
 			return;
-#if 1
-		/* Copy the read value from GPR A1 to DATA0 */
-		const uint32_t abstract_command2 =
-			RV_DM_ABST_CMD_ACCESS_REG | RV_ABST_READ | RV_REG_XFER | RV_REG_ACCESS_32_BIT | RV_GPR_A1;
-		result = riscv_dm_write(hart->dbg_module, RV_DM_ABST_COMMAND, abstract_command2);
-		result &= riscv_command_wait_complete(hart);
+		uint32_t value = 0;
+		result = riscv_csr_read(hart, RV_GPR_A1, &value);
 		if (!result)
 			return;
-		/* Extract the read value from DATA0 */
-		uint32_t value = 0;
-		if (!riscv_dm_read(hart->dbg_module, RV_DM_DATA0, &value))
-			return;
-#else
-		uint32_t value = 0;
-		riscv_csr_read(hart, RV_GPR_A0, &value);
-#endif
 		riscv32_unpack_data(data + offset, value, access_width);
 	}
 
@@ -711,30 +699,22 @@ static void riscv32_progbuf_mem_write(
 
 	const uint8_t *const data = (const uint8_t *)src;
 	for (size_t offset = 0; offset < len; offset += access_length) {
-		/* Copy the destination address from DATA0 to GPR A0 */
-		if (!riscv_dm_write(hart->dbg_module, RV_DM_DATA0, dest + offset))
+		/* Prepare the destination address in GPR A0 */
+		const uint32_t dest_a0 = dest + offset;
+		if (!riscv_csr_write(hart, RV_GPR_A0, &dest_a0))
 			return;
-		/* Copy the source address from DATA0 to GPR A0 */
-		const uint32_t abstract_command1 =
-			RV_DM_ABST_CMD_ACCESS_REG | RV_ABST_WRITE | RV_REG_XFER | RV_REG_ACCESS_32_BIT | RV_GPR_A0;
-		bool result = riscv_dm_write(hart->dbg_module, RV_DM_ABST_COMMAND, abstract_command1);
-		result &= riscv_command_wait_complete(hart);
-		if (!result)
-			return;
-		//riscv_csr_write(hart, RV_GPR_A0, dest + offset);
 
 		/* Pack the data to write into GPR A1 */
 		uint32_t value = riscv32_pack_data(data + offset, access_width);
 		if (!riscv_dm_write(hart->dbg_module, RV_DM_DATA0, value))
 			return;
 		/* Copy the write value from DATA0 to GPR A1 and launch the progbuf postexec */
-		result = riscv_dm_write(hart->dbg_module, RV_DM_ABST_COMMAND,
+		bool result = riscv_dm_write(hart->dbg_module, RV_DM_ABST_COMMAND,
 			RV_DM_ABST_CMD_ACCESS_REG | RV_ABST_WRITE | RV_REG_XFER | RV_ABST_POSTEXEC | RV_REG_ACCESS_32_BIT |
 				RV_GPR_A1);
 		result &= riscv_command_wait_complete(hart);
 		if (!result)
 			return;
-		//riscv_csr_write(hart, RV_GPR_A1, value);
 	}
 
 	riscv_csr_write(hart, RV_GPR_A0, &a0_save);
