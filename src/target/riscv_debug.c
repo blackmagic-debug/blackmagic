@@ -111,14 +111,6 @@
 #define RV_TRIG_DATA_2 0x7a2U
 
 /*
- * GPR a0, aka x10 is used as a bounce buffer for our progbuf CSR I/O,
- * as semihosting syscall number and result register per ABI
- */
-#define RV_GPR_A0 0x100aU
-/* GPR a1, aka x11, is used as semihosting argument */
-#define RV_GPR_A1 0x100bU
-
-/*
  * Instructions for reading and writing CSRs through a0
  * CSRR -> CSR Read, abuses the CSRRS atomic read and set bits instruction
  * CSRW -> CSR Write, abuses the CSRRW atomic read/write instruction

@@ -222,6 +222,13 @@ typedef struct riscv_hart {
 #define RV_FP_BASE 0x1020U
 /* The FP control base defines the starting register space address for the floating point modes and flags */
 #define RV_FP_CTRL_BASE 0x001U
+/*
+ * GPR a0, aka x10 is used as a bounce buffer for our progbuf CSR I/O,
+ * as semihosting syscall number and result register per ABI
+ */
+#define RV_GPR_A0 0x100aU
+/* GPR a1, aka x11, is used as semihosting argument */
+#define RV_GPR_A1 0x100bU
 
 /**
  * The MXL (Machine XLEN) field encodes the native base integer ISA width
