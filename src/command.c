@@ -153,10 +153,6 @@ const command_s cmd_list[] = {
 	{NULL, NULL, NULL},
 };
 
-#ifdef PLATFORM_HAS_CUSTOM_COMMANDS
-extern const command_s platform_cmd_list[];
-#endif
-
 bool connect_assert_nrst;
 #if defined(PLATFORM_HAS_DEBUG) && CONFIG_BMDA == 0
 bool debug_bmp;
