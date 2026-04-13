@@ -630,7 +630,7 @@ static void riscv32_progbuf_mem_read(
 	for (size_t offset = 0; offset < len; offset += access_length) {
 		/* Write the source address to DATA0 */
 		if (!riscv_dm_write(hart->dbg_module, RV_DM_DATA0, src + offset))
-			return;
+			break;
 		/* Copy the source address from DATA0 to GPR A0 and launch the progbuf postexec */
 		bool result = riscv_dm_write(hart->dbg_module, RV_DM_ABST_COMMAND,
 			RV_DM_ABST_CMD_ACCESS_REG | RV_ABST_WRITE | RV_REG_XFER | RV_ABST_POSTEXEC | RV_REG_ACCESS_32_BIT |
@@ -638,11 +638,11 @@ static void riscv32_progbuf_mem_read(
 		/* Wait for both the register write and progbuf execution to complete */
 		result &= riscv_command_wait_complete(hart);
 		if (!result)
-			return;
+			break;
 		uint32_t value = 0;
 		result = riscv_csr_read(hart, RV_GPR_A1, &value);
 		if (!result)
-			return;
+			break;
 		riscv32_unpack_data(data + offset, value, access_width);
 	}
 
@@ -702,19 +702,19 @@ static void riscv32_progbuf_mem_write(
 		/* Prepare the destination address in GPR A0 */
 		const uint32_t dest_a0 = dest + offset;
 		if (!riscv_csr_write(hart, RV_GPR_A0, &dest_a0))
-			return;
+			break;
 
 		/* Pack the data to write into GPR A1 */
 		uint32_t value = riscv32_pack_data(data + offset, access_width);
 		if (!riscv_dm_write(hart->dbg_module, RV_DM_DATA0, value))
-			return;
+			break;
 		/* Copy the write value from DATA0 to GPR A1 and launch the progbuf postexec */
 		bool result = riscv_dm_write(hart->dbg_module, RV_DM_ABST_COMMAND,
 			RV_DM_ABST_CMD_ACCESS_REG | RV_ABST_WRITE | RV_REG_XFER | RV_ABST_POSTEXEC | RV_REG_ACCESS_32_BIT |
 				RV_GPR_A1);
 		result &= riscv_command_wait_complete(hart);
 		if (!result)
-			return;
+			break;
 	}
 
 	riscv_csr_write(hart, RV_GPR_A0, &a0_save);
