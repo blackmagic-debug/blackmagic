@@ -152,15 +152,8 @@ void sys_tick_handler(void)
 #endif
 
 #ifdef PLATFORM_MULTI_UART
-	/* Only do the toggling if the UART is not currently enabled */
-	if (!platform_is_uart2_enabled()) {
-		/* Every 10th tick, swap the direction of the UART */
-		if (++uart_ticks == 10U) {
-			platform_switch_dir_uart2();
-			/* And reset the counter back to 0 */
-			uart_ticks = 0U;
-		}
-	} else {
+	/* If one of the UARTs is presently enabled but we loose lock, consider disabling it */
+	if (platform_is_uart2_enabled()) {
 		/*
 		 * If the UART goes into framing error and that persists for more than a milisecond or two, then
 		 * it's probably safe to assume that the wires became disconnected and the UART is no longer active
