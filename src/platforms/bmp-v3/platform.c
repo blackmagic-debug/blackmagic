@@ -457,7 +457,10 @@ void platform_enable_uart2(void)
 void platform_disable_uart(void)
 {
 	/* Disable the UART (so we can go back into being able to change the pin swapping) */
-	usart_disable(AUX_UART2);
+	if ((USART_CR1(AUX_UART1) & USART_CR1_UE) != 0U)
+		usart_disable(AUX_UART1);
+	else if ((USART_CR1(AUX_UART2) & USART_CR1_UE) != 0U)
+		usart_disable(AUX_UART2);
 	uart_state = UART_STATE_UNKNOWN;
 	/* Reconfigure the GPIOs back to inputs so we can listen for which is high to watch for new connections */
 	gpio_mode_setup(AUX_UART2_PORT, GPIO_MODE_INPUT, GPIO_PUPD_NONE, AUX_UART2_TX_PIN | AUX_UART2_RX_PIN);
