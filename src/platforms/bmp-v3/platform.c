@@ -36,6 +36,9 @@
 #include "usb.h"
 #include "rcc_clocking.h"
 #include "aux_serial.h"
+#include "command.h"
+#include "gdb_packet.h"
+#include "target_internal.h"
 
 #include <libopencm3/cm3/vector.h>
 #include <libopencm3/cm3/scb.h>
@@ -60,6 +63,13 @@ static void adc_init(void);
 int hwversion = -1;
 
 static uart_state_e uart_state = UART_STATE_UNKNOWN;
+
+static bool cmd_switched_txrx(target_s *target, int argc, const char **argv);
+
+const command_s platform_cmd_list[] = {
+	{"switched_txrx", cmd_switched_txrx, "Switched TX/RX on BMDU connector: [enable|disable]"},
+	{NULL, NULL, NULL},
+};
 
 void platform_init(void)
 {
@@ -489,4 +499,34 @@ void platform_uart_state_change(const uint32_t state)
 uart_state_e platform_uart_state(void)
 {
 	return uart_state;
+}
+
+static bool cmd_switched_txrx(target_s *target, int argc, const char **argv)
+{
+	(void)target;
+	/* If invoked without arguments, display the state of the switching */
+	if (argc == 1) {
+		gdb_outf("BMDU connector UART pin swapping %s\n",
+			gpio_get(AUX_UART2_DIR_PORT, AUX_UART2_DIR_PIN) ? "disabled" : "enabled");
+		return true;
+	}
+	if (argc == 2) {
+		bool swap_pins = false;
+		/* Try and parse the state to put the pins into, failing if we can't */
+		if (!parse_enable_or_disable(argv[1], &swap_pins))
+			return false;
+		/* Check and see if the UART is presently enabled, disabling it if it is */
+		const bool uart2_state = (USART_CR1(AUX_UART2) & USART_CR1_UE) != 0U;
+		if (uart2_state)
+			usart_disable(AUX_UART2);
+		/* Set the pin swapping up */
+		gpio_set_val(AUX_UART2_DIR_PORT, AUX_UART2_DIR_PIN, !swap_pins);
+		usart_set_swap_tx_rx(AUX_UART2, swap_pins);
+		/* If the UART was previously enabled, re-enable it */
+		if (uart2_state)
+			usart_enable(AUX_UART2);
+		return true;
+	}
+	gdb_out("Unrecognized command format\n");
+	return false;
 }
