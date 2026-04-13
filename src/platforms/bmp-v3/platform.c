@@ -59,7 +59,7 @@ static void adc_init(void);
 
 int hwversion = -1;
 
-static uart_state_e uart2_state = UART_STATE_UNKNOWN;
+static uart_state_e uart_state = UART_STATE_UNKNOWN;
 
 void platform_init(void)
 {
@@ -454,18 +454,18 @@ void platform_enable_uart2(void)
 	usart_enable(AUX_UART2);
 }
 
-void platform_disable_uart2(void)
+void platform_disable_uart(void)
 {
 	/* Disable the UART (so we can go back into being able to change the pin swapping) */
 	usart_disable(AUX_UART2);
-	uart2_state = UART_STATE_UNKNOWN;
+	uart_state = UART_STATE_UNKNOWN;
 	/* Reconfigure the GPIOs back to inputs so we can listen for which is high to watch for new connections */
 	gpio_mode_setup(AUX_UART2_PORT, GPIO_MODE_INPUT, GPIO_PUPD_NONE, AUX_UART2_TX_PIN | AUX_UART2_RX_PIN);
 }
 
-bool platform_is_uart2_enabled(void)
+bool platform_are_uarts_enabled(void)
 {
-	return (USART_CR1(AUX_UART2) & USART_CR1_UE) != 0U;
+	return (USART_CR1(AUX_UART1) & USART_CR1_UE) != 0U || (USART_CR1(AUX_UART2) & USART_CR1_UE) != 0U;
 }
 
 void platform_switch_dir_uart2(void)
@@ -474,16 +474,16 @@ void platform_switch_dir_uart2(void)
 	gpio_toggle(AUX_UART2_DIR_PORT, AUX_UART2_DIR_PIN);
 }
 
-void platform_uart2_state_change(const uint32_t state)
+void platform_uart_state_change(const uint32_t state)
 {
 	/* Make a note of whether either Idle or Framing Error have occured */
 	if (state & USART_ISR_IDLE)
-		uart2_state = UART_STATE_IDLE;
+		uart_state = UART_STATE_IDLE;
 	else if (state & USART_ISR_FE)
-		uart2_state = UART_STATE_LOST;
+		uart_state = UART_STATE_LOST;
 }
 
-uart_state_e platform_uart2_state(void)
+uart_state_e platform_uart_state(void)
 {
-	return uart2_state;
+	return uart_state;
 }

@@ -153,17 +153,17 @@ void sys_tick_handler(void)
 
 #ifdef PLATFORM_MULTI_UART
 	/* If one of the UARTs is presently enabled but we loose lock, consider disabling it */
-	if (platform_is_uart2_enabled()) {
+	if (platform_are_uarts_enabled()) {
 		/*
 		 * If the UART goes into framing error and that persists for more than a milisecond or two, then
 		 * it's probably safe to assume that the wires became disconnected and the UART is no longer active
 		 * in which case we then want to disable the UART and go back into swap scanning. Additionally, we'll
 		 * want to either make the other UART active, or make all UARTs inactive.
 		 */
-		const uart_state_e state = platform_uart2_state();
+		const uart_state_e state = platform_uart_state();
 		if (state == UART_STATE_LOST) {
 			if (++uart_ticks == 2U) {
-				platform_disable_uart2();
+				platform_disable_uart();
 				uart_ticks = 0U;
 			}
 		} else

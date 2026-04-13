@@ -634,8 +634,7 @@ static void aux_serial_receive_isr(const uintptr_t uart, const uint8_t dma_irq)
 	}
 
 #ifdef PLATFORM_MULTI_UART
-	if (uart == AUX_UART2)
-		platform_uart2_state_change(status);
+	platform_uart_state_change(status);
 #endif
 #ifndef STM32U5
 	nvic_enable_irq(dma_irq);
