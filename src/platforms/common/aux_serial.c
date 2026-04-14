@@ -367,7 +367,7 @@ void aux_serial_init(void)
 	usart_enable_rx_dma(USBUSART);
 #else
 	usart_enable(AUX_UART1);
-	/* Don't enable UART2 though because it has switchable TX/RX and must be handled differently */
+	usart_enable(AUX_UART2);
 	usart_enable_tx_dma(AUX_UART1);
 	usart_enable_rx_dma(AUX_UART1);
 	usart_enable_tx_dma(AUX_UART2);
@@ -822,7 +822,6 @@ void aux_uart2_rx_detect_isr(void)
 	 * UART2 just became active, so bring it up and disable the EXTI for it, making sure UART1's is
 	 * active in case the user swaps UARTs over
 	 */
-	platform_enable_uart2();
 	aux_serial_activate_uart(AUX_UART2);
 	exti_reset_request(AUX_UART2_RX_DETECT_EXTI);
 	exti_disable_request(AUX_UART2_RX_DETECT_EXTI);
