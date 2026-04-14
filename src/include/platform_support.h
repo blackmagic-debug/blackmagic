@@ -91,10 +91,8 @@ typedef enum uart_state {
 	UART_STATE_LOST,
 } uart_state_e;
 
-void platform_enable_uart2(void);
 void platform_disable_uart(void);
 bool platform_are_uarts_enabled(void);
-void platform_switch_dir_uart2(void);
 void platform_uart_state_change(uint32_t state);
 uart_state_e platform_uart_state(void);
 #endif

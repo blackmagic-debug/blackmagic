@@ -163,7 +163,7 @@ static void gpio_init(void)
 	/* Configure the second UART used for the AUX serial interface */
 	gpio_set_af(AUX_UART2_PORT, GPIO_AF7, AUX_UART2_TX_PIN | AUX_UART2_RX_PIN);
 	gpio_set_output_options(AUX_UART2_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_100MHZ, AUX_UART2_TX_PIN | AUX_UART2_RX_PIN);
-	gpio_mode_setup(AUX_UART2_PORT, GPIO_MODE_INPUT, GPIO_PUPD_NONE, AUX_UART2_TX_PIN | AUX_UART2_RX_PIN);
+	gpio_mode_setup(AUX_UART2_PORT, GPIO_MODE_AF, GPIO_PUPD_NONE, AUX_UART2_TX_PIN | AUX_UART2_RX_PIN);
 	/* Start with the pins configured the "correct" way around (unswapped) */
 	gpio_set(AUX_UART2_DIR_PORT, AUX_UART2_DIR_PIN);
 	gpio_set_output_options(AUX_UART2_DIR_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_25MHZ, AUX_UART2_DIR_PIN);
@@ -451,19 +451,6 @@ uint8_t platform_spi_xfer(const spi_bus_e bus, const uint8_t value)
 	return spi_xfer8(EXT_SPI, value);
 }
 
-void platform_enable_uart2(void)
-{
-	/* Reconfigure the GPIOs to connect to the UART */
-	gpio_mode_setup(AUX_UART2_PORT, GPIO_MODE_AF, GPIO_PUPD_NONE, AUX_UART2_TX_PIN | AUX_UART2_RX_PIN);
-	/* Use the current direction setting to determine how to enable the UART */
-	if (gpio_get(AUX_UART2_DIR_PORT, AUX_UART2_DIR_PIN))
-		usart_set_swap_tx_rx(AUX_UART2, false);
-	else
-		usart_set_swap_tx_rx(AUX_UART2, true);
-	/* Now pin swapping is configured, enable the UART */
-	usart_enable(AUX_UART2);
-}
-
 void platform_disable_uart(void)
 {
 	/* Disable the UART (so we can go back into being able to change the pin swapping) */
@@ -472,19 +459,11 @@ void platform_disable_uart(void)
 	else if ((USART_CR1(AUX_UART2) & USART_CR1_UE) != 0U)
 		usart_disable(AUX_UART2);
 	uart_state = UART_STATE_UNKNOWN;
-	/* Reconfigure the GPIOs back to inputs so we can listen for which is high to watch for new connections */
-	gpio_mode_setup(AUX_UART2_PORT, GPIO_MODE_INPUT, GPIO_PUPD_NONE, AUX_UART2_TX_PIN | AUX_UART2_RX_PIN);
 }
 
 bool platform_are_uarts_enabled(void)
 {
 	return (USART_CR1(AUX_UART1) & USART_CR1_UE) != 0U || (USART_CR1(AUX_UART2) & USART_CR1_UE) != 0U;
-}
-
-void platform_switch_dir_uart2(void)
-{
-	/* Swap the directions of the BMPU connector UART pins */
-	gpio_toggle(AUX_UART2_DIR_PORT, AUX_UART2_DIR_PIN);
 }
 
 void platform_uart_state_change(const uint32_t state)
