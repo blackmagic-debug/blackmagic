@@ -4,7 +4,7 @@
  * Copyright (C) 2011 Black Sphere Technologies Ltd.
  * Written by Gareth McMullin <gareth@blacksphere.co.nz>
  * Copyright (C) 2021 Uwe Bonnes (bon@elektron.ikp.physik.tu-darmstadt.de)
- * Copyright (C) 2023-2025 1BitSquared <info@1bitsquared.com>
+ * Copyright (C) 2023-2026 1BitSquared <info@1bitsquared.com>
  * Modified by Rachel Mant <git@dragonmux.network>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -100,7 +100,7 @@ static bool cmd_shutdown_bmda(target_s *target, int argc, const char **argv);
 #define strtok_r strtok_s
 #endif
 
-const command_s cmd_list[] = {
+static const command_s cmd_list[] = {
 	{"version", cmd_version, "Display firmware version info"},
 	{"help", cmd_help, "Display help for monitor commands"},
 	{"jtag_scan", cmd_jtag_scan, "Scan JTAG chain for devices"},
@@ -111,7 +111,7 @@ const command_s cmd_list[] = {
 #endif
 	{"spi_scan", cmd_onboard_flash_scan, "Scan for on-board SPI Flash devices"},
 	{"auto_scan", cmd_auto_scan, "Automatically scan all chain types for devices"},
-	{"frequency", cmd_frequency, "set minimum high and low times: [FREQ]"},
+	{"frequency", cmd_frequency, "Set minimum high and low times: [FREQ]"},
 	{"targets", cmd_targets, "Display list of available targets"},
 	{"morse", cmd_morse, "Display morse error message"},
 	{"halt_timeout", cmd_halt_timeout, "Timeout to wait until Cortex-M is halted: [TIMEOUT, default 2000ms]"},
