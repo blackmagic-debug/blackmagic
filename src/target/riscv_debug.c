@@ -1024,7 +1024,7 @@ static void riscv_hart_memory_access_type(target_s *const target)
 		!(sysbus_status & RV_DM_SYSBUS_STATUS_ADDR_WIDTH_MASK))
 		return;
 	/* If all the checks passed, we now have a valid system bus so can proceed with using it for memory access */
-	hart->flags = RV_HART_FLAG_MEMORY_SYSBUS | (sysbus_status & RV_HART_FLAG_ACCESS_WIDTH_MASK);
+	hart->flags |= RV_HART_FLAG_MEMORY_SYSBUS | (sysbus_status & RV_HART_FLAG_ACCESS_WIDTH_MASK);
 	/* System Bus also means the target can have memory read without halting */
 	target->target_options |= TOPT_NON_HALTING_MEM_IO;
 	/* Make sure the system bus is not in any kind of error state */
