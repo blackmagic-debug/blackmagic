@@ -1,7 +1,7 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
- * Copyright (C) 2025 1BitSquared <info@1bitsquared.com>
+ * Copyright (C) 2025-2026 1BitSquared <info@1bitsquared.com>
  * Written by Rachel Mant <git@dragonmux.network>
  * All rights reserved.
  *
@@ -61,8 +61,6 @@ static void power_timer_init(void);
 static void adc_init(void);
 
 int hwversion = -1;
-
-static uart_state_e uart_state = UART_STATE_UNKNOWN;
 
 static bool cmd_switched_txrx(target_s *target, int argc, const char **argv);
 
@@ -451,35 +449,6 @@ uint8_t platform_spi_xfer(const spi_bus_e bus, const uint8_t value)
 	return spi_xfer8(EXT_SPI, value);
 }
 
-void platform_disable_uart(void)
-{
-	/* Disable the UART (so we can go back into being able to change the pin swapping) */
-	if ((USART_CR1(AUX_UART1) & USART_CR1_UE) != 0U)
-		usart_disable(AUX_UART1);
-	else if ((USART_CR1(AUX_UART2) & USART_CR1_UE) != 0U)
-		usart_disable(AUX_UART2);
-	uart_state = UART_STATE_UNKNOWN;
-}
-
-bool platform_are_uarts_enabled(void)
-{
-	return (USART_CR1(AUX_UART1) & USART_CR1_UE) != 0U || (USART_CR1(AUX_UART2) & USART_CR1_UE) != 0U;
-}
-
-void platform_uart_state_change(const uint32_t state)
-{
-	/* Make a note of whether either Idle or Framing Error have occured */
-	if (state & USART_ISR_IDLE)
-		uart_state = UART_STATE_IDLE;
-	else if (state & USART_ISR_FE)
-		uart_state = UART_STATE_LOST;
-}
-
-uart_state_e platform_uart_state(void)
-{
-	return uart_state;
-}
-
 static bool cmd_switched_txrx(target_s *target, int argc, const char **argv)
 {
 	(void)target;
@@ -494,16 +463,13 @@ static bool cmd_switched_txrx(target_s *target, int argc, const char **argv)
 		/* Try and parse the state to put the pins into, failing if we can't */
 		if (!parse_enable_or_disable(argv[1], &swap_pins))
 			return false;
-		/* Check and see if the UART is presently enabled, disabling it if it is */
-		const bool uart2_state = (USART_CR1(AUX_UART2) & USART_CR1_UE) != 0U;
-		if (uart2_state)
-			usart_disable(AUX_UART2);
+		/* Disable the UART so we can alter the pin swapping settings */
+		usart_disable(AUX_UART2);
 		/* Set the pin swapping up */
 		gpio_set_val(AUX_UART2_DIR_PORT, AUX_UART2_DIR_PIN, !swap_pins);
 		usart_set_swap_tx_rx(AUX_UART2, swap_pins);
-		/* If the UART was previously enabled, re-enable it */
-		if (uart2_state)
-			usart_enable(AUX_UART2);
+		/* Re-enable it now that configuration is updated */
+		usart_enable(AUX_UART2);
 		return true;
 	}
 	gdb_out("Unrecognized command format\n");

@@ -101,6 +101,9 @@ static char aux_serial_transmit_buffer[AUX_UART_BUFFER_SIZE];
 #else
 static uintptr_t active_uart = 0U;
 #define AUX_UART active_uart
+
+/* UART state tracking so we can properly handle when a UART goes into error and might need disengaging from */
+static uart_state_e uart_state = UART_STATE_UNKNOWN;
 #endif
 
 #ifdef STM32U5
@@ -166,7 +169,7 @@ void aux_serial_uart_init(const uintptr_t uart_base)
 }
 
 #ifdef PLATFORM_MULTI_UART
-void aux_serial_activate_uart(const uintptr_t uart_base)
+static void aux_serial_activate_uart(const uintptr_t uart_base)
 {
 	dma_set_destination_address(AUX_UART_DMA_BUS, AUX_UART_DMA_TX_CHAN, (uintptr_t)&USART_TDR(uart_base));
 	if (uart_base == AUX_UART1)
@@ -183,6 +186,17 @@ void aux_serial_activate_uart(const uintptr_t uart_base)
 	dma_enable_channel(USBUSART_DMA_BUS, USBUSART_DMA_RX_CHAN);
 
 	active_uart = uart_base;
+}
+
+void aux_serial_deactivate_uart(void)
+{
+	active_uart = 0U;
+	uart_state = UART_STATE_UNKNOWN;
+}
+
+uart_state_e aux_serial_uart_state(void)
+{
+	return uart_state;
 }
 #endif
 
@@ -634,7 +648,11 @@ static void aux_serial_receive_isr(const uintptr_t uart, const uint8_t dma_irq)
 	}
 
 #ifdef PLATFORM_MULTI_UART
-	platform_uart_state_change(status);
+	/* Make a note of whether either Idle or Framing Error have occured */
+	if (status & USART_ISR_IDLE)
+		uart_state = UART_STATE_IDLE;
+	else if (status & USART_ISR_FE)
+		uart_state = UART_STATE_LOST;
 #endif
 #ifndef STM32U5
 	nvic_enable_irq(dma_irq);

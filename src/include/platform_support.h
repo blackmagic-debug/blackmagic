@@ -2,7 +2,7 @@
  * This file is part of the Black Magic Debug project.
  *
  * Copyright (C) 2015 Gareth McMullin <gareth@blacksphere.co.nz>
- * Copyright (C) 2022-2025 1BitSquared <info@1bitsquared.com>
+ * Copyright (C) 2022-2026 1BitSquared <info@1bitsquared.com>
  * Modified by Rachel Mant <git@dragonmux.network>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -82,19 +82,6 @@ uint8_t platform_spi_xfer(spi_bus_e bus, uint8_t value);
 
 #ifdef PLATFORM_IDENT_DYNAMIC
 const char *platform_ident(void);
-#endif
-
-#ifdef PLATFORM_MULTI_UART
-typedef enum uart_state {
-	UART_STATE_UNKNOWN,
-	UART_STATE_IDLE,
-	UART_STATE_LOST,
-} uart_state_e;
-
-void platform_disable_uart(void);
-bool platform_are_uarts_enabled(void);
-void platform_uart_state_change(uint32_t state);
-uart_state_e platform_uart_state(void);
 #endif
 
 #endif /* INCLUDE_PLATFORM_SUPPORT_H */

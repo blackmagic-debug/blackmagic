@@ -1,7 +1,7 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
- * Copyright (C) 2022 1BitSquared <info@1bitsquared.com>
+ * Copyright (C) 2022-2026 1BitSquared <info@1bitsquared.com>
  * Written by Rachel Mant <git@dragonmux.network>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -20,6 +20,7 @@
 #ifndef PLATFORMS_COMMON_AUX_SERIAL_H
 #define PLATFORMS_COMMON_AUX_SERIAL_H
 
+#include "general.h"
 #include <stddef.h>
 #include <libopencm3/usb/usbd.h>
 #include <libopencm3/usb/cdc.h>
@@ -76,6 +77,17 @@ void aux_serial_drain_receive_buffer(void);
 void aux_serial_stage_debug_buffer(void);
 #endif
 void aux_serial_stage_receive_buffer(void);
+#endif
+
+#ifdef PLATFORM_MULTI_UART
+typedef enum uart_state {
+	UART_STATE_UNKNOWN,
+	UART_STATE_IDLE,
+	UART_STATE_LOST,
+} uart_state_e;
+
+uart_state_e aux_serial_uart_state(void);
+void aux_serial_deactivate_uart(void);
 #endif
 
 #endif /* PLATFORMS_COMMON_AUX_SERIAL_H */
