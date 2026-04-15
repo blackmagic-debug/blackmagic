@@ -648,11 +648,14 @@ static void aux_serial_receive_isr(const uintptr_t uart, const uint8_t dma_irq)
 	}
 
 #ifdef PLATFORM_MULTI_UART
-	/* Make a note of whether either Idle or Framing Error have occured */
-	if (status & USART_ISR_IDLE)
-		uart_state = UART_STATE_IDLE;
-	else if (status & USART_ISR_FE)
-		uart_state = UART_STATE_LOST;
+	/* If this is a state change on the active UART */
+	if (active_uart == uart) {
+		/* Make a note of whether either Idle or Framing Error have occured */
+		if (status & USART_ISR_IDLE)
+			uart_state = UART_STATE_IDLE;
+		else if (status & USART_ISR_FE)
+			uart_state = UART_STATE_LOST;
+	}
 #endif
 #ifndef STM32U5
 	nvic_enable_irq(dma_irq);
