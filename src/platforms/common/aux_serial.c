@@ -110,6 +110,11 @@ static uart_state_e uart_state = UART_STATE_UNKNOWN;
 /* NOLINTBEGIN(clang-diagnostic-error, clang-diagnostic-pointer-to-int-cast) */
 /* Defines a linked list of things to be done at the completion of RX DMA */
 static const uintptr_t aux_serial_dma_receive_ll[] = {
+	/*
+	 * Make sure we reset the number of bytes we can write so that if we've been doing UART swapping we don't
+	 * wind up screwed and unable to take more data
+	 */
+	(uintptr_t)AUX_UART_BUFFER_SIZE,
 	/* This controls the next RX destination address to use */
 	(uintptr_t)aux_serial_receive_buffer,
 };
@@ -302,7 +307,8 @@ void aux_serial_init(void)
 	dma_set_number_of_data(AUX_UART_DMA_BUS, AUX_UART_DMA_RX_CHAN, AUX_UART_BUFFER_SIZE);
 	dma_disable_source_increment_mode(AUX_UART_DMA_BUS, AUX_UART_DMA_RX_CHAN);
 	dma_enable_destination_increment_mode(AUX_UART_DMA_BUS, AUX_UART_DMA_RX_CHAN);
-	dma_setup_linked_list(AUX_UART_DMA_BUS, AUX_UART_DMA_RX_CHAN, aux_serial_dma_receive_ll, DMA_CxLLR_UDA);
+	dma_setup_linked_list(
+		AUX_UART_DMA_BUS, AUX_UART_DMA_RX_CHAN, aux_serial_dma_receive_ll, DMA_CxLLR_UDA | DMA_CxLLR_UB1);
 	dma_set_source_width(AUX_UART_DMA_BUS, AUX_UART_DMA_RX_CHAN, DMA_CxTR1_DW_BYTE);
 	dma_set_destination_width(AUX_UART_DMA_BUS, AUX_UART_DMA_RX_CHAN, DMA_CxTR1_DW_BYTE);
 
