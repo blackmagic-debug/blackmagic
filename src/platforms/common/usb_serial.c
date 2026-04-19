@@ -346,15 +346,20 @@ static void debug_serial_receive_callback(usbd_device *dev, uint8_t ep)
 }
 
 #if ENABLE_DEBUG == 1 && defined(PLATFORM_HAS_DEBUG)
-static void debug_serial_append_char(const char c)
+static void debug_serial_append_char(const char ch)
 {
-	debug_serial_debug_buffer[debug_serial_debug_write_index] = c;
+	debug_serial_debug_buffer[debug_serial_debug_write_index] = ch;
 	++debug_serial_debug_write_index;
 	debug_serial_debug_write_index %= AUX_UART_BUFFER_SIZE;
 }
 
 size_t debug_serial_debug_write(const char *buf, const size_t len)
 {
+	/*
+	 * Gate actually writing the byte if there are pending USB or UART interrupts
+	 * XXX: Why? What's the point of these checks - that's not to say they're wrong, just
+	 * this needs documenting why this is okay and what its purpose is.
+	 */
 	if (nvic_get_active_irq(USB_IRQ) ||
 #ifndef PLATFORM_MULTI_UART
 		nvic_get_active_irq(USBUSART_IRQ) || nvic_get_active_irq(USBUSART_DMA_RX_IRQ)
@@ -365,9 +370,14 @@ size_t debug_serial_debug_write(const char *buf, const size_t len)
 	)
 		return 0;
 
+	/* Do something to make this atomic? */
 	CM_ATOMIC_CONTEXT();
 	size_t offset = 0;
 
+	/*
+	 * Loop through all the bytes in the buffer to send, and if there would be a new line, insert the carridge return
+	 * too so that terminal emulation on the receiving end works correctly.
+	 */
 	for (;
 		 offset < len && (debug_serial_debug_write_index + 1U) % AUX_UART_BUFFER_SIZE != debug_serial_debug_read_index;
 		 ++offset) {
@@ -380,6 +390,7 @@ size_t debug_serial_debug_write(const char *buf, const size_t len)
 		debug_serial_append_char(buf[offset]);
 	}
 
+	/* Try to send out the resulting buffer of data now that as much as we've got space for has been queued */
 	debug_serial_run();
 	return offset;
 }
