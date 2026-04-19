@@ -591,6 +591,7 @@ void aux_serial_send(const size_t len)
 
 void aux_serial_update_receive_buffer_fullness(void)
 {
+	/* Extract from the DMA controller where it is in the FIFO buffer and turn that back into a write index */
 	aux_serial_receive_write_index =
 		AUX_UART_BUFFER_SIZE - dma_get_number_of_data(USBUSART_DMA_BUS, USBUSART_DMA_RX_CHAN);
 	aux_serial_receive_write_index %= AUX_UART_BUFFER_SIZE;

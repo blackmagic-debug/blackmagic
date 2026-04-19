@@ -274,22 +274,25 @@ static void debug_serial_send_data(void)
 	aux_serial_update_receive_buffer_fullness();
 
 	/* Forcibly empty fifo if no USB endpoint. If fifo empty, nothing further to do. */
-	if (usb_get_config() != 1 ||
+	if (usb_get_config() != 1U ||
 		(aux_serial_receive_buffer_empty()
 #if ENABLE_DEBUG == 1 && defined(PLATFORM_HAS_DEBUG)
 			&& debug_serial_fifo_buffer_empty()
 #endif
 				)) {
+		/* Mark the FIFOs as empty */
 #if ENABLE_DEBUG == 1 && defined(PLATFORM_HAS_DEBUG)
 		debug_serial_debug_read_index = debug_serial_debug_write_index;
 #endif
 		aux_serial_drain_receive_buffer();
 		debug_serial_send_complete = true;
 	} else {
+		/* We have a good USB link and data to send, so queue up anything that's in the debug buffer */
 #if ENABLE_DEBUG == 1 && defined(PLATFORM_HAS_DEBUG)
 		debug_serial_debug_read_index = debug_serial_fifo_send(
 			debug_serial_debug_buffer, debug_serial_debug_read_index, debug_serial_debug_write_index);
 #endif
+		/* And anything that's in the AUX serial buffer */
 		aux_serial_stage_receive_buffer();
 	}
 }
@@ -348,8 +351,10 @@ static void debug_serial_receive_callback(usbd_device *dev, uint8_t ep)
 #if ENABLE_DEBUG == 1 && defined(PLATFORM_HAS_DEBUG)
 static void debug_serial_append_char(const char ch)
 {
+	/* Write the character into the buffer and increment the write index */
 	debug_serial_debug_buffer[debug_serial_debug_write_index] = ch;
 	++debug_serial_debug_write_index;
+	/* Bound the index on the size of the buffer so it remains a FIFO */
 	debug_serial_debug_write_index %= AUX_UART_BUFFER_SIZE;
 }
 
