@@ -75,7 +75,7 @@ static void debug_serial_send_callback(usbd_device *dev, uint8_t ep);
 static void debug_serial_receive_callback(usbd_device *dev, uint8_t ep);
 
 #if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4) || defined(STM32F7) || defined(STM32U5)
-static bool debug_serial_send_complete = true;
+static _Atomic bool debug_serial_send_complete = true;
 #endif
 
 #if ENABLE_DEBUG == 1 && defined(PLATFORM_HAS_DEBUG)
@@ -299,14 +299,11 @@ static void debug_serial_send_data(void)
 
 void debug_serial_run(void)
 {
-	nvic_disable_irq(USB_IRQ);
 	aux_serial_set_led(AUX_SERIAL_LED_RX);
 
 	/* Try to send a packet if usb is idle */
 	if (debug_serial_send_complete)
 		debug_serial_send_data();
-
-	nvic_enable_irq(USB_IRQ);
 }
 #endif
 
