@@ -162,6 +162,9 @@ static const uint8_t ecp5_spi_unlock[2U] = {0xfeU, 0x68U};
 
 typedef struct ecp5_ctx {
 	uint8_t device_index;
+	uint8_t *cmd_buffer;
+	uint8_t *data_buffer;
+	uint16_t buffer_len;
 } ecp5_ctx_s;
 
 static bool ecp5_read_reg_status(target_s *target, int argc, const char **argv);
@@ -200,11 +203,11 @@ void lattice_ecp5_handler(const uint8_t dev_index)
 	target->priv = calloc(1U, sizeof(ecp5_ctx_s));
 
 	if (!target->priv) {
-		DEBUG_ERROR("calloc: %s: failed to allocate target context\n", __func__);
+		DEBUG_ERROR("calloc: failed in %s\n", __func__);
 		return;
 	}
 
-	target->priv_free = free;
+	target->priv_free = ecp5_free_ctx;
 	target->attach = ecp5_attach;
 	target->check_error = ecp5_check_error;
 	target->reset = ecp5_reset;
@@ -214,6 +217,22 @@ void lattice_ecp5_handler(const uint8_t dev_index)
 
 	ecp5_ctx_s *ctx = target->priv;
 	ctx->device_index = dev_index;
+	// Setup the command/data buffers
+	ctx->buffer_len = 4100U;
+	ctx->data_buffer = calloc(1, ctx->buffer_len);
+	ctx->cmd_buffer = calloc(1, ctx->buffer_len);
+
+	if (!ctx->data_buffer || ctx->cmd_buffer)
+		DEBUG_ERROR("calloc: failed in %s\n", __func__);
+}
+
+static void ecp5_free_ctx(void *const priv)
+{
+	const ecp5_ctx_s *const ctx = (ecp5_ctx_s *)priv;
+
+	free(ctx->cmd_buffer);
+	free(ctx->data_buffer);
+	free(priv);
 }
 
 static uint32_t ecp5_read32(const uint8_t dev_index, const uint8_t cmd)
@@ -318,47 +337,46 @@ static bool ecp5_exit_flash(target_s *const target)
 static void ecp5_spi_read(target_s *const target, const uint16_t command, const target_addr_t address,
 	void *const buffer, const size_t length)
 {
+	const ecp5_ctx_s *ctx = (ecp5_ctx_s *)target->priv;
 	size_t offset = 0U;
-	uint8_t cmd_buf[4100U];
-	uint8_t data_buf[4100U];
-	cmd_buf[offset++] = SPI_FLASH_OPCODE(command);
+	ctx->cmd_buffer[offset++] = SPI_FLASH_OPCODE(command);
 	if ((command & SPI_FLASH_OPCODE_MODE_MASK) == SPI_FLASH_OPCODE_3B_ADDR) {
-		cmd_buf[offset++] = (address & 0xff0000U) >> 16U;
-		cmd_buf[offset++] = (address & 0x00ff00U) >> 8U;
-		cmd_buf[offset++] = address & 0x0000ffU;
+		ctx->cmd_buffer[offset++] = (address & 0xff0000U) >> 16U;
+		ctx->cmd_buffer[offset++] = (address & 0x00ff00U) >> 8U;
+		ctx->cmd_buffer[offset++] = address & 0x0000ffU;
 	}
 
 	const size_t dummy_len = (command & SPI_FLASH_DUMMY_MASK) >> SPI_FLASH_DUMMY_SHIFT;
 	for (size_t dummy = 0U; dummy < dummy_len; ++dummy)
-		cmd_buf[offset++] = 0U;
+		ctx->cmd_buffer[offset++] = 0U;
 
-	memset(cmd_buf + offset, 0, length);
+	memset(ctx->cmd_buffer + offset, 0, length);
 
-	ecp5_spi_xfr_jtag(target, data_buf, cmd_buf, length + offset);
-	memcpy(buffer, data_buf + offset, length);
+	ecp5_spi_xfr_jtag(target, ctx->data_buffer, ctx->cmd_buffer, length + offset);
+	memcpy(buffer, ctx->data_buffer + offset, length);
 }
 
 static void ecp5_spi_write(target_s *const target, const uint16_t command, const target_addr_t address,
 	const void *const buffer, const size_t length)
 {
+	const ecp5_ctx_s *ctx = (ecp5_ctx_s *)target->priv;
 	size_t offset = 0U;
-	uint8_t cmd_buf[4100U];
-	cmd_buf[offset++] = SPI_FLASH_OPCODE(command);
+	ctx->cmd_buffer[offset++] = SPI_FLASH_OPCODE(command);
 	if ((command & SPI_FLASH_OPCODE_MODE_MASK) == SPI_FLASH_OPCODE_3B_ADDR) {
-		cmd_buf[offset++] = (address & 0xff0000U) >> 16U;
-		cmd_buf[offset++] = (address & 0x00ff00U) >> 8U;
-		cmd_buf[offset++] = address & 0x0000ffU;
+		ctx->cmd_buffer[offset++] = (address & 0xff0000U) >> 16U;
+		ctx->cmd_buffer[offset++] = (address & 0x00ff00U) >> 8U;
+		ctx->cmd_buffer[offset++] = address & 0x0000ffU;
 	}
 
 	const size_t dummy_len = (command & SPI_FLASH_DUMMY_MASK) >> SPI_FLASH_DUMMY_SHIFT;
 	for (size_t dummy = 0U; dummy < dummy_len; ++dummy)
-		cmd_buf[offset++] = 0U;
+		ctx->cmd_buffer[offset++] = 0U;
 
 	// Guard in the case buffer is `NULL`
 	if (buffer)
-		memcpy(cmd_buf + offset, buffer, length);
+		memcpy(ctx->cmd_buffer + offset, buffer, length);
 
-	ecp5_spi_xfr_jtag(target, NULL, cmd_buf, length + offset);
+	ecp5_spi_xfr_jtag(target, NULL, ctx->cmd_buffer, length + offset);
 }
 
 static void ecp5_spi_run_command(target_s *const target, const uint16_t command, const target_addr_t address)
