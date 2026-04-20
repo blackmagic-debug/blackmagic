@@ -178,8 +178,6 @@ const command_s ecp5_cmd_list[] = {
 	{NULL, NULL, NULL},
 };
 
-static uint8_t reverse_bits(uint8_t data);
-
 static void ecp5_free_ctx(void *priv);
 static uint32_t ecp5_read32(uint8_t dev_index, uint8_t cmd);
 
@@ -398,10 +396,10 @@ static void ecp5_spi_xfr_jtag(
 
 	uint8_t tap_out;
 	for (size_t idx = 0U; idx < length; ++idx) {
-		const uint8_t tap_in = reverse_bits(data_in[idx]);
+		const uint8_t tap_in = reverse_bits8(data_in[idx]);
 		jtag_proc.jtagtap_tdi_tdo_seq(&tap_out, (idx + 1U) == length && !device->dr_postscan, &tap_in, 8U);
 		if (data_out)
-			data_out[idx] = reverse_bits(tap_out);
+			data_out[idx] = reverse_bits8(tap_out);
 	}
 
 	DEBUG_PROTO("%s: %" PRIu32 " cycles\n", __func__, (uint32_t)length);
@@ -524,11 +522,4 @@ static bool ecp5_read_reg_usercode(target_s *target, int argc, const char **argv
 
 	gdb_outf("USERCODE: %08" PRIx32 "\n", usercode);
 	return true;
-}
-
-static uint8_t reverse_bits(uint8_t data)
-{
-	return (((data & 0x01U) >> 0U) << 7U) | (((data & 0x02U) >> 1U) << 6U) | (((data & 0x04U) >> 2U) << 5U) |
-		(((data & 0x08U) >> 3U) << 4U) | (((data & 0x10U) >> 4U) << 3U) | (((data & 0x20U) >> 5U) << 2U) |
-		(((data & 0x40U) >> 6U) << 1U) | (((data & 0x80U) >> 7U) << 0U);
 }
