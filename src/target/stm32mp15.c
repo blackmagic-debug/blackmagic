@@ -33,6 +33,8 @@
 #include "target_internal.h"
 #include "cortexm.h"
 #include "stm32_common.h"
+#include "adiv5.h"
+#include "cortexar.h"
 
 /* Memory map constants for STM32MP15x */
 #define STM32MP15_CM4_RETRAM_BASE        0x00000000U
@@ -45,6 +47,8 @@
 #define STM32MP15_SYSRAM_SIZE            0x00040000U
 #define STM32MP15_CAN_SRAM_BASE          0x44011000U
 #define STM32MP15_CAN_SRAM_SIZE          0x00002800U
+#define STM32MP15_DRAM_BASE              0xc0000000U
+#define STM32MP15_CA7_BOOTROM_BASE       0x00000000U
 
 /* Access from processor address space.
  * Access via the debug APB is at 0xe0081000 over AP1. */
@@ -74,16 +78,25 @@
 /* Taken from CM4ROM_PIDRx in 2.3.21 of ES0438 rev 7, pg18 */
 #define ID_STM32MP15x_ERRATA 0x450U
 
+#define SWO_BASE 0xe0083000
+#define SWO_ACPR (SWO_BASE + 0x00010)
+#define SWO_SPPR (SWO_BASE + 0x000f0)
+
+#define STM32MP15_AP1_DBGMCU_IDCODE 0xe0081000U
+
 typedef struct stm32mp15_priv {
 	uint32_t dbgmcu_config;
+	adiv5_access_port_s *ap;
 } stm32mp15_priv_s;
 
 static bool stm32mp15_uid(target_s *target, int argc, const char **argv);
 static bool stm32mp15_cmd_rev(target_s *target, int argc, const char **argv);
+static bool stm32mp15_cmd_swo(target_s *target, int argc, const char **argv);
 
 const command_s stm32mp15_cmd_list[] = {
 	{"uid", stm32mp15_uid, "Print unique device ID"},
 	{"revision", stm32mp15_cmd_rev, "Returns the Device ID and Revision"},
+	{"conf_swo", stm32mp15_cmd_swo, "Set up SWO mode <1/2> and divisor <0x42>"},
 	{NULL, NULL, NULL},
 };
 
@@ -92,7 +105,7 @@ static void stm32mp15_cm4_detach(target_s *target);
 
 static bool stm32mp15_ident(target_s *const target, const bool cortexm)
 {
-	const adiv5_access_port_s *const ap = cortex_ap(target);
+	adiv5_access_port_s *const ap = cortex_ap(target);
 	/* Check if the part's a STM32MP15 */
 	if (ap->partno != ID_STM32MP15x) {
 		/* If it's not a Cortex-M core or it doesn't match the errata ID code, return false */
@@ -100,6 +113,20 @@ static bool stm32mp15_ident(target_s *const target, const bool cortexm)
 			return false;
 	}
 
+	if (!cortexm) {
+		/*
+		 * After Linux has booted on CA7, 0x50081000 (system bus alias)
+		 * becomes unreadable via cortexar_mem_read, so use debug APB on AP1
+		 */
+		uint32_t idcode = 0;
+		adiv5_mem_read(ap, &idcode, STM32MP15_AP1_DBGMCU_IDCODE, sizeof(idcode));
+		const uint16_t dev_id = idcode & STM32MP15_DBGMCU_IDCODE_DEV_MASK;
+		DEBUG_TARGET("%s: looking at device ID 0x%03x at 0x%08" PRIx32 "\n", __func__, dev_id,
+			(uint32_t)STM32MP15_AP1_DBGMCU_IDCODE);
+		if (dev_id == ID_STM32MP15x) {
+			return true;
+		}
+	}
 	/* By now it's established that this is likely an MP15x_CM4, but check that it's not an H74x */
 	const uint32_t idcode = target_mem32_read32(target, STM32MP15_DBGMCU_IDCODE);
 	const uint16_t dev_id = idcode & STM32MP15_DBGMCU_IDCODE_DEV_MASK;
@@ -116,6 +143,55 @@ static bool stm32mp15_ident(target_s *const target, const bool cortexm)
 	 */
 	target->part_id = ap->partno;
 	return true;
+}
+
+static bool stm32mp15_cmd_swo(target_s *target, int argc, const char **argv)
+{
+	(void)argc;
+	(void)argv;
+	/* TODO: argv parsing for mode and baudrate */
+	stm32mp15_priv_s *priv = (stm32mp15_priv_s *)target->target_storage;
+	/* Prefer AP1 over AP0 when attached to CA7 (because no CoreSight components are on AP0) */
+	adiv5_access_port_s *const ap1 = (priv->ap->apsel == 1U) ? priv->ap : cortex_ap(target);
+	/* Pin Protocol: change Manchester to UART */
+	uint32_t sppr = 0;
+	adiv5_mem_read(ap1, &sppr, SWO_SPPR, 4);
+	sppr &= ~(0x3U);
+	sppr |= 0x2U;
+	adiv5_mem_write(ap1, SWO_SPPR, &sppr, 4);
+
+	/*
+	 * Prescaler: set to fixed 66; trace clk freq of 133/(66+1) gives ~2Mbaud (+-0.7%)
+	 * assuming AXI clk of 266 and default divisor of 2
+	 * Or, if you are not restricted by swlink 2.25M, set to fixed 32; 133/(32+1) is ~4Mbaud (+-0.7%)
+	 */
+	uint32_t acpr = 0;
+	adiv5_mem_read(ap1, &acpr, SWO_ACPR, 4);
+	acpr = 32;
+	adiv5_mem_write(ap1, SWO_ACPR, &acpr, 4);
+
+	return true;
+}
+
+static void stm32mp15_cm4_setup_apbd_ap(target_s *const target)
+{
+	adiv5_access_port_s *ap1 = calloc(1, sizeof(*ap1));
+	if (!ap1) { /* calloc failed: heap exhaustion */
+		DEBUG_ERROR("calloc: failed in %s\n", __func__);
+		return;
+	}
+	adiv5_access_port_s *const ap2 = cortex_ap(target);
+	memcpy(ap1, ap2, sizeof(*ap1));
+	ap1->refcnt = 0;
+
+	ap1->apsel = 1; // Set to APB-D AP
+	ap1->idr = adiv5_ap_read(ap1, ADIV5_AP_IDR);
+	ap1->base = adiv5_ap_read(ap1, ADIV5_AP_BASE_LOW);
+	ap1->csw = adiv5_ap_read(ap1, ADIV5_AP_CSW);
+
+	adiv5_ap_ref(ap1);
+	stm32mp15_priv_s *const priv = (stm32mp15_priv_s *)target->target_storage;
+	priv->ap = ap1;
 }
 
 static bool stm32mp15_cm4_configure_dbgmcu(target_s *const target)
@@ -167,12 +243,88 @@ bool stm32mp15_cm4_probe(target_s *const target)
 }
 
 #ifdef CONFIG_CORTEXAR
+/*
+ * Override memory r/w operations to go via the AXI (AP0) MEM-AP
+ * (instead of halting the core and using DTRTX, which cortexar_mem_read/write do by default)
+ */
+static void stm32mp15_ca7_mem_read(target_s *target, void *dest, target_addr64_t src, size_t len)
+{
+	stm32mp15_priv_s *const priv = (stm32mp15_priv_s *)target->target_storage;
+	adiv5_mem_read(priv->ap, dest, src, len);
+}
+
+static void stm32mp15_ca7_mem_write(target_s *target, target_addr64_t dest, const void *src, size_t len)
+{
+	stm32mp15_priv_s *const priv = (stm32mp15_priv_s *)target->target_storage;
+	adiv5_mem_write(priv->ap, dest, src, len);
+}
+
+static void stm32mp15_ca7_setup_axi_ap(target_s *const target)
+{
+	stm32mp15_priv_s *priv_storage = (stm32mp15_priv_s *)target->target_storage;
+	if (!priv_storage) {
+		/* Allocate target-specific storage */
+		priv_storage = calloc(1, sizeof(*priv_storage));
+		if (!priv_storage) { /* calloc failed: heap exhaustion */
+			DEBUG_ERROR("calloc: failed in %s\n", __func__);
+			return;
+		}
+		target->target_storage = priv_storage;
+	}
+	if (priv_storage->ap)
+		return;
+	adiv5_access_port_s *ap0 = calloc(1, sizeof(*ap0));
+	if (!ap0) { /* calloc failed: heap exhaustion */
+		DEBUG_ERROR("calloc: failed in %s\n", __func__);
+		return;
+	}
+	adiv5_access_port_s *const ap = cortex_ap(target);
+	memcpy(ap0, ap, sizeof(*ap0));
+	ap0->refcnt = 0;
+
+	ap0->apsel = 0; // Set to AXI-AP
+	ap0->idr = adiv5_ap_read(ap0, ADIV5_AP_IDR);
+	ap0->base = adiv5_ap_read(ap0, ADIV5_AP_BASE_LOW);
+	ap0->csw = adiv5_ap_read(ap0, ADIV5_AP_CSW);
+
+	adiv5_ap_ref(ap0);
+	priv_storage->ap = ap0;
+}
+
+static bool stm32mp15_ca7_attach(target_s *const target)
+{
+	if (!cortexar_attach(target))
+		return false;
+	stm32mp15_ca7_setup_axi_ap(target);
+	adiv5_access_port_s *ap0 = (adiv5_access_port_s *)target->target_storage;
+	if (ap0) {
+		target->mem_read = stm32mp15_ca7_mem_read;
+		target->mem_write = stm32mp15_ca7_mem_write;
+	}
+	return true;
+}
+
+static void stm32mp15_ca7_detach(target_s *target)
+{
+	/* Deallocate any extra AP */
+	stm32mp15_priv_s *const priv = (stm32mp15_priv_s *)target->target_storage;
+	if (priv && priv->ap) {
+		adiv5_ap_unref(priv->ap);
+		priv->ap = NULL;
+		target->mem_read = cortexar_mem_read;
+		target->mem_write = cortexar_mem_write;
+	}
+	cortexar_detach(target);
+}
+
 bool stm32mp15_ca7_probe(target_s *const target)
 {
 	if (!stm32mp15_ident(target, false))
 		return false;
 
 	target->driver = "STM32MP15";
+	target->attach = stm32mp15_ca7_attach;
+	target->detach = stm32mp15_ca7_detach;
 	target_add_commands(target, stm32mp15_cmd_list, target->driver);
 
 	/* Figure 4. Memory map from §2.5.2 in RM0436 rev 6, pg158 */
@@ -186,6 +338,12 @@ bool stm32mp15_ca7_probe(target_s *const target)
 	target_add_ram32(target, STM32MP15_CA7_AHBSRAM_ALIAS_BASE, STM32MP15_AHBSRAM_SIZE);
 	target_add_ram32(target, STM32MP15_SYSRAM_BASE, STM32MP15_SYSRAM_SIZE);
 	target_add_ram32(target, STM32MP15_CAN_SRAM_BASE, STM32MP15_CAN_SRAM_SIZE);
+
+	/* DRAM 512 MiB at identity mapping base */
+	target_add_ram32(target, STM32MP15_DRAM_BASE, 512U * 1024U * 1024U);
+	/* Boot ROM (CA7 stays here in Engi boot) */
+	target_add_ram32(target, STM32MP15_CA7_BOOTROM_BASE, 128U * 1024U);
+
 	return true;
 }
 #endif
@@ -196,7 +354,13 @@ static bool stm32mp15_cm4_attach(target_s *const target)
 	 * Try to attach to the part, and then ensure that the WDTs + WFI and WFE
 	 * instructions can't cause problems (this is duplicated as it's undone by detach.)
 	 */
-	return cortexm_attach(target) && stm32mp15_cm4_configure_dbgmcu(target);
+	if (!cortexm_attach(target))
+		return false;
+	if (!stm32mp15_cm4_configure_dbgmcu(target))
+		return false;
+	/* Reference the APB-D in target storage for External PPB (0xe0000000) manipulations */
+	stm32mp15_cm4_setup_apbd_ap(target);
+	return true;
 }
 
 static void stm32mp15_cm4_detach(target_s *const target)
@@ -204,6 +368,11 @@ static void stm32mp15_cm4_detach(target_s *const target)
 	stm32mp15_priv_s *priv = (stm32mp15_priv_s *)target->target_storage;
 	/* Reverse all changes to the DBGMCU config register */
 	target_mem32_write32(target, STM32MP15_DBGMCU_CONFIG, priv->dbgmcu_config);
+
+	/* Deallocate any extra AP */
+	adiv5_ap_unref(priv->ap);
+	priv->ap = NULL;
+
 	/* Now defer to the normal Cortex-M detach routine to complete the detach */
 	cortexm_detach(target);
 }

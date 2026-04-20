@@ -108,6 +108,7 @@ bool remote_v4_adiv5_init(adiv5_debug_port_s *const dp)
 	dp->ap_write = remote_v4_adiv5_ap_write;
 	dp->mem_read = remote_v4_adiv5_mem_read_bytes;
 	dp->mem_write = remote_v4_adiv5_mem_write_bytes;
+	dp->ensure_idle = remote_v4_jtag_ensure_idle;
 	return true;
 }
 
@@ -171,4 +172,18 @@ uint64_t remote_v4_supported_families(void)
 	else
 		return remote_decode_response(buffer + 1U, 8U);
 	return 0U;
+}
+
+void remote_v4_jtag_ensure_idle(adiv5_debug_port_s *dp)
+{
+	/* Ask remote_dp !JI# to set IR cache to BYPASS (because a reset happened) */
+	platform_buffer_write(REMOTE_JTAG_ENSURE_IDLE_STR, sizeof(REMOTE_JTAG_ENSURE_IDLE_STR));
+	char buffer[REMOTE_MAX_MSG_SIZE];
+	/* Read back the answer and check for errors */
+	const int length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
+	if (length < 1 || buffer[0U] != REMOTE_RESP_OK) {
+		DEBUG_ERROR("%s failed, error %s\n", __func__, length ? buffer + 1 : "with communication");
+		return;
+	}
+	jtag_devs[dp->dev_index].current_ir = 0xffU;
 }

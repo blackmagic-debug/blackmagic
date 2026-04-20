@@ -1,5 +1,5 @@
 [wrap-git]
-url = https://github.com/blackmagic-debug/hidapi
+url = https://codeberg.org/blackmagic-debug/hidapi
 revision = hidapi-0.14.0-meson
 clone-recursive = false
 

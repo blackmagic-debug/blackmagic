@@ -25,6 +25,7 @@
 
 #include <stddef.h>
 #include "general.h"
+#include "gdb_packet.h"
 
 #define REMOTE_HL_VERSION 4
 
@@ -302,6 +303,7 @@
  * need new bits as they are already covered). We will co-ordinate with you in making sure the bit
  * is unique when going through the PR'ing process.
  */
+#define REMOTE_JTAG_ENSURE_IDLE 'I'
 
 /* ADIv5 accleration protocol elements */
 #define REMOTE_ADIV5_PACKET     'A'
@@ -512,6 +514,6 @@
 			REMOTE_UINT24, REMOTE_EOM, 0                                                                  \
 	}
 
-void remote_packet_process(char *packet, size_t packet_length);
+void remote_packet_process(gdb_packet_s *packet);
 
 #endif /* REMOTE_H */
