@@ -171,7 +171,7 @@ static bool ecp5_read_reg_status(target_s *target, int argc, const char **argv);
 static bool ecp5_read_reg_control(target_s *target, int argc, const char **argv);
 static bool ecp5_read_reg_usercode(target_s *target, int argc, const char **argv);
 
-const command_s ecp5_cmd_list[] = {
+static const command_s ecp5_cmd_list[] = {
 	{"status", ecp5_read_reg_status, "Read FPGA status register"},
 	{"control", ecp5_read_reg_control, "Read FPGA control register"},
 	{"usercode", ecp5_read_reg_usercode, "Read FPGA USERCODE register"},
