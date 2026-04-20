@@ -38,6 +38,8 @@
 #include <stddef.h>
 #include <string.h>
 
+#include <general.h>
+
 static inline void write_le2(uint8_t *const buffer, const size_t offset, const uint16_t value)
 {
 	buffer[offset + 0U] = value & 0xffU;
@@ -104,6 +106,80 @@ static inline size_t write_char(char *const buffer, const size_t buffer_size, co
 	if (buffer && offset < buffer_size)
 		buffer[offset] = c;
 	return offset + 1U;
+}
+
+static inline uint8_t reverse_bits8(const uint8_t data)
+{
+	if (!BMD_CONSTANT_P(data)) {
+#if defined(__arm__) || defined(__aarch64__)
+		uint32_t result;
+		__asm__("rbit %0, %1" : "=r"(result) : "r"(data));
+		return (result & 0xff000000U) >> 24U;
+#endif
+	}
+	// We don't have an optimized routine for this, so just use the fallback
+	return ((data & 0x01U) << 7U) | ((data & 0x02U) << 5U) | ((data & 0x04U) << 3U) | ((data & 0x08U) << 1U) |
+		((data & 0x10U) >> 1U) | ((data & 0x20U) >> 3U) | ((data & 0x40U) >> 5U) | ((data & 0x80U) >> 7U);
+}
+
+static inline uint16_t reverse_bits16(const uint16_t data)
+{
+	if (!BMD_CONSTANT_P(data)) {
+#if defined(__arm__) || defined(__aarch64__)
+		uint32_t result;
+		__asm__("rbit %0, %1" : "=r"(result) : "r"(data));
+		return (result & 0xffff0000U) >> 16U;
+#endif
+	}
+	// We don't have an optimized routine for this, so just use the fallback
+	return ((data & 0x0001U) << 15U) | ((data & 0x0002U) << 13U) | ((data & 0x0004U) << 11U) |
+		((data & 0x0008U) << 9U) | ((data & 0x0010U) << 7U) | ((data & 0x0020U) << 5U) | ((data & 0x0040U) << 3U) |
+		((data & 0x0080U) << 1U) | ((data & 0x0100U) >> 1U) | ((data & 0x0200U) >> 3U) | ((data & 0x0400U) >> 5U) |
+		((data & 0x0800U) >> 7U) | ((data & 0x1000U) >> 9U) | ((data & 0x2000U) >> 11U) | ((data & 0x4000U) >> 13U) |
+		((data & 0x8000U) >> 15U);
+}
+
+static inline uint32_t reverse_bits24(const uint32_t data)
+{
+	if (!BMD_CONSTANT_P(data)) {
+#if defined(__arm__) || defined(__aarch64__)
+		uint32_t result;
+		__asm__("rbit %0, %1" : "=r"(result) : "r"(data));
+		return (result & 0xffffff00U) >> 8U;
+#endif
+	}
+	// We don't have an optimized routine for this, so just use the fallback
+	return ((data & 0x00000001U) << 23U) | ((data & 0x00000002U) << 21U) | ((data & 0x00000004U) << 19U) |
+		((data & 0x00000008U) << 17U) | ((data & 0x00000010U) << 15U) | ((data & 0x00000020U) << 13U) |
+		((data & 0x00000040U) << 11U) | ((data & 0x00000080U) << 9U) | ((data & 0x00000100U) << 7U) |
+		((data & 0x00000200U) << 5U) | ((data & 0x00000400U) << 3U) | ((data & 0x00000800U) << 1U) |
+		((data & 0x00001000U) >> 1U) | ((data & 0x00002000U) >> 3U) | ((data & 0x00004000U) >> 5U) |
+		((data & 0x00008000U) >> 7U) | ((data & 0x00010000U) >> 9U) | ((data & 0x00020000U) >> 11U) |
+		((data & 0x00040000U) >> 13U) | ((data & 0x00080000U) >> 15U) | ((data & 0x00100000U) >> 17U) |
+		((data & 0x00200000U) >> 19U) | ((data & 0x00400000U) >> 21U) | ((data & 0x00800000U) >> 23U);
+}
+
+static inline uint32_t reverse_bits32(const uint32_t data)
+{
+	if (!BMD_CONSTANT_P(data)) {
+#if defined(__arm__) || defined(__aarch64__)
+		uint32_t result;
+		__asm__("rbit %0, %1" : "=r"(result) : "r"(data));
+		return result;
+#endif
+	}
+	// We don't have an optimized routine for this, so just use the fallback
+	return ((data & 0x00000001U) << 31U) | ((data & 0x00000002U) << 29U) | ((data & 0x00000004U) << 27U) |
+		((data & 0x00000008U) << 25U) | ((data & 0x00000010U) << 23U) | ((data & 0x00000020U) << 21U) |
+		((data & 0x00000040U) << 19U) | ((data & 0x00000080U) << 17U) | ((data & 0x00000100U) << 15U) |
+		((data & 0x00000200U) << 13U) | ((data & 0x00000400U) << 11U) | ((data & 0x00000800U) << 9U) |
+		((data & 0x00001000U) << 7U) | ((data & 0x00002000U) << 5U) | ((data & 0x00004000U) << 3U) |
+		((data & 0x00008000U) << 1U) | ((data & 0x00010000U) >> 1U) | ((data & 0x00020000U) >> 3U) |
+		((data & 0x00040000U) >> 5U) | ((data & 0x00080000U) >> 7U) | ((data & 0x00100000U) >> 9U) |
+		((data & 0x00200000U) >> 11U) | ((data & 0x00400000U) >> 13U) | ((data & 0x00800000U) >> 15U) |
+		((data & 0x01000000U) >> 17U) | ((data & 0x02000000U) >> 19U) | ((data & 0x04000000U) >> 21U) |
+		((data & 0x08000000U) >> 23U) | ((data & 0x10000000U) >> 25U) | ((data & 0x20000000U) >> 27U) |
+		((data & 0x40000000U) >> 29U) | ((data & 0x80000000U) >> 31U);
 }
 
 #endif /*INCLUDE_BUFFER_UTILS_H*/
