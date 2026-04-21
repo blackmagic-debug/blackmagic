@@ -50,7 +50,7 @@ probe_info_s *probe_info_add_by_id(probe_info_s *const list, const probe_type_e 
 #endif
 	probe_info_s *probe_info = malloc(sizeof(*probe_info));
 	if (!probe_info) {
-		DEBUG_INFO("Fatal: Failed to allocate memory for a probe info structure\n");
+		DEBUG_ERROR("Fatal: Failed to allocate memory for a probe info structure\n");
 		return NULL;
 	}
 
