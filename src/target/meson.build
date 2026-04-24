@@ -201,11 +201,16 @@ target_hc32 = declare_dependency(
 	dependencies: target_cortexm,
 )
 
+target_lattice_defs = ['-DCONFIG_LATTICE=1']
+if get_option('ecp5_decode_registers')
+	target_lattice_defs += '-DCONFIG_LATTICE_ECP5_DECODE=1'
+endif
+
 target_lattice = declare_dependency(
 	sources: files(
 		'lattice_ecp5.c',
 	),
-	compile_args: ['-DCONFIG_LATTICE=1'],
+	compile_args: [target_lattice_defs],
 )
 
 target_lpc = declare_dependency(

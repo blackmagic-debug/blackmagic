@@ -157,3 +157,9 @@ option(
 	type: 'boolean',
 	value: false
 )
+option(
+	'ecp5_decode_registers',
+	type: 'boolean',
+	value: true,
+	description: 'Enable decoding of Lattice ECP5 registers where applicable, rather than printing them raw'
+)

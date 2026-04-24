@@ -418,6 +418,7 @@ static bool ecp5_read_reg_status(target_s *target, int argc, const char **argv)
 	const ecp5_ctx_s *const ctx = (ecp5_ctx_s *)target->priv;
 	const uint32_t status_register = ecp5_read32(ctx->device_index, CMD_LSC_READ_STATUS);
 
+#if CONFIG_LATTICE_ECP5_DECODE
 	gdb_outf("Transparent: %" PRIu32 "\n", ECP5_STATUS_TRANSPARENT(status_register));
 	gdb_outf("Configuration Target: %s\n", ECP5_STATUS_TARGET(status_register) ? "eFUSE" : "SRAM");
 	gdb_outf("JTAG Active: %" PRIu32 "\n", ECP5_STATUS_JTAG_ACTIVE(status_register));
@@ -470,6 +471,9 @@ static bool ecp5_read_reg_status(target_s *target, int argc, const char **argv)
 	gdb_outf("SED Error: %" PRIu32 "\n", ECP5_STATUS_SED_ERROR(status_register));
 	gdb_outf("Bypass Mode: %" PRIu32 "\n", ECP5_STATUS_BYPASS_MODE(status_register));
 	gdb_outf("Flow Through Mode: %" PRIu32 "\n", ECP5_STATUS_FLOW_MODE(status_register));
+#else /* CONFIG_LATTICE_ECP5_DECODE */
+	gdb_outf("Status: %08" PRIx32 "\n", status_register);
+#endif
 
 	return true;
 }
@@ -482,6 +486,7 @@ static bool ecp5_read_reg_control(target_s *target, int argc, const char **argv)
 	const ecp5_ctx_s *const ctx = (ecp5_ctx_s *)target->priv;
 	const uint32_t control_register = ecp5_read32(ctx->device_index, CMD_LSC_READ_CTRL0);
 
+#if CONFIG_LATTICE_ECP5_DECODE
 	gdb_outf("MSPI Clock Divider: %" PRIu32 "\n", ECP5_CTRL0_MSPI_CLK(control_register));
 	gdb_outf("\tSlew Rate: ");
 	switch (ECP5_CTRL0_SLEW(control_register)) {
@@ -509,6 +514,11 @@ static bool ecp5_read_reg_control(target_s *target, int argc, const char **argv)
 	}
 	gdb_outf("\tNDR/TransFR: %" PRIu32 "\n", ECP5_CTRL0_NDR(control_register));
 	gdb_outf("Wakeup Transparent: %" PRIu32 "\n", ECP5_CTRL0_WAKEUP_TRANS(control_register));
+
+#else /* CONFIG_LATTICE_ECP5_DECODE */
+	gdb_outf("Control: %08" PRIx32 "\n", control_register);
+#endif
+
 	return true;
 }
 
@@ -521,5 +531,6 @@ static bool ecp5_read_reg_usercode(target_s *target, int argc, const char **argv
 	const uint32_t usercode = ecp5_read32(ctx->device_index, CMD_USERCODE);
 
 	gdb_outf("USERCODE: %08" PRIx32 "\n", usercode);
+
 	return true;
 }
