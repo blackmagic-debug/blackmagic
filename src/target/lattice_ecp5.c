@@ -156,6 +156,7 @@
 #define ECP5_CTRL0_RSVD2_SHIFT        30U
 #define ECP5_CTRL0_RSVD2(reg)         REGISTER_FIELD(reg, ECP5_CTRL0_RSVD2_MASK, ECP5_CTRL0_RSVD2_SHIFT)
 
+#define ECP5_SRAM_BASE  0x00000000U
 #define ECP5_FLASH_BASE 0x04000000U
 
 static const uint8_t ecp5_spi_unlock[2U] = {0xfeU, 0x68U};
@@ -165,7 +166,37 @@ typedef struct ecp5_ctx {
 	uint8_t *cmd_buffer;
 	uint8_t *data_buffer;
 	uint16_t buffer_len;
+	bool wrote_to_sram;
 } ecp5_ctx_s;
+
+typedef struct ecp5_device {
+	uint32_t idcode;
+	uint32_t bitstream_len;
+	uint8_t frame_len;
+} ecp5_device_s;
+
+static const ecp5_device_s devices[] = {
+	// LEF5-12
+	{.idcode = 0x21111043U, .bitstream_len = 677500U, .frame_len = 74U},
+	// LEF5-25
+	{.idcode = 0x41111043U, .bitstream_len = 677500U, .frame_len = 74U},
+	// LEF5UM-25
+	{.idcode = 0x01111043U, .bitstream_len = 677500U, .frame_len = 74U},
+	// LEF5UM5G-25
+	{.idcode = 0x81111043U, .bitstream_len = 677500U, .frame_len = 74U},
+	// LEF5-45
+	{.idcode = 0x41112043U, .bitstream_len = 1217500U, .frame_len = 106U},
+	// LEF5UM-45
+	{.idcode = 0x01112043U, .bitstream_len = 1217500U, .frame_len = 106U},
+	// LEF5UM5G-45
+	{.idcode = 0x81112043U, .bitstream_len = 1217500U, .frame_len = 106U},
+	// LEF5-85
+	{.idcode = 0x41113043U, .bitstream_len = 2293750U, .frame_len = 142U},
+	// LEF5UM-85
+	{.idcode = 0x01113043U, .bitstream_len = 2293750U, .frame_len = 142U},
+	// LEF5UM5G-85
+	{.idcode = 0x81113043U, .bitstream_len = 2293750U, .frame_len = 142U},
+};
 
 static bool ecp5_read_reg_status(target_s *target, int argc, const char **argv);
 static bool ecp5_read_reg_control(target_s *target, int argc, const char **argv);
@@ -187,11 +218,18 @@ static void ecp5_reset(target_s *target);
 static bool ecp5_enter_flash(target_s *target);
 static bool ecp5_exit_flash(target_s *target);
 
+static bool ecp5_spi_flash_prepare(target_flash_s *flash);
+static bool ecp5_spi_flash_done(target_flash_s *flash);
 static void ecp5_spi_read(target_s *target, uint16_t command, target_addr_t address, void *buffer, size_t length);
 static void ecp5_spi_write(
 	target_s *target, uint16_t command, target_addr_t address, const void *buffer, size_t length);
 static void ecp5_spi_run_command(target_s *target, uint16_t command, target_addr_t address);
 static void ecp5_spi_xfr_jtag(target_s *target, uint8_t *data_out, const uint8_t *data_in, size_t length);
+
+static bool ecp5_sram_prepare(target_flash_s *flash);
+static bool ecp5_sram_done(target_flash_s *flash);
+static bool ecp5_sram_erase(target_flash_s *flash, target_addr_t addr, size_t length);
+static bool ecp5_sram_write(target_flash_s *flash, target_addr_t dest, const void *buffer, size_t length);
 
 void lattice_ecp5_handler(const uint8_t dev_index)
 {
@@ -212,6 +250,28 @@ void lattice_ecp5_handler(const uint8_t dev_index)
 	target->enter_flash_mode = ecp5_enter_flash;
 	target->exit_flash_mode = ecp5_exit_flash;
 	target_add_commands(target, ecp5_cmd_list, target->driver);
+
+	for (size_t dev = 0U; dev < ARRAY_LENGTH(devices); ++dev) {
+		if (devices[dev].idcode == jtag_devs[dev_index].jd_idcode) {
+			target_flash_s *flash = calloc(1U, sizeof(*flash));
+
+			if (!flash) {
+				DEBUG_ERROR("calloc: %s: failed to allocate flash\n", __func__);
+				return;
+			}
+
+			flash->length = devices[dev].bitstream_len;
+			flash->start = ECP5_SRAM_BASE;
+			flash->blocksize = flash->length;
+			flash->writesize = flash->length; // devices[dev].frame_len;
+			flash->prepare = ecp5_sram_prepare;
+			flash->done = ecp5_sram_done;
+			flash->erase = ecp5_sram_erase;
+			flash->write = ecp5_sram_write;
+
+			target_add_flash(target, flash);
+		}
+	}
 
 	ecp5_ctx_s *ctx = target->priv;
 	ctx->device_index = dev_index;
@@ -262,7 +322,11 @@ static bool ecp5_attach(target_s *const target)
 		const uint32_t capacity = 1U << flash_id.capacity;
 		DEBUG_INFO("SPI Flash: mfr = %02" PRIx8 ", type = %02" PRIx8 ", capacity = %08" PRIx32 "\n",
 			flash_id.manufacturer, flash_id.type, capacity);
-		bmp_spi_add_flash(target, ECP5_FLASH_BASE, capacity, ecp5_spi_read, ecp5_spi_write, ecp5_spi_run_command);
+		spi_flash_s *const spi_flash =
+			bmp_spi_add_flash(target, ECP5_FLASH_BASE, capacity, ecp5_spi_read, ecp5_spi_write, ecp5_spi_run_command);
+		target_flash_s *const flash = &spi_flash->flash;
+		flash->prepare = ecp5_spi_flash_prepare;
+		flash->done = ecp5_spi_flash_done;
 	} else
 		DEBUG_INFO("Flash identification failed\n");
 
@@ -282,11 +346,15 @@ static bool ecp5_check_error(target_s *const target)
 
 static void ecp5_reset(target_s *const target)
 {
-	const ecp5_ctx_s *const ctx = (ecp5_ctx_s *)target->priv;
+	ecp5_ctx_s *const ctx = (ecp5_ctx_s *)target->priv;
 	const uint8_t dev_index = ctx->device_index;
 
-	jtag_dev_write_ir(dev_index, CMD_LSC_REFRESH);
-	jtag_proc.jtagtap_cycle(false, false, 50U);
+	// If we wrote to the device SRAM, then exit out of programming mode
+	// otherwise do the normal reset
+	if (!ctx->wrote_to_sram) {
+		jtag_dev_write_ir(dev_index, CMD_LSC_REFRESH);
+		jtag_proc.jtagtap_cycle(false, false, 50U);
+	}
 }
 
 static bool ecp5_enter_flash(target_s *const target)
@@ -300,10 +368,45 @@ static bool ecp5_enter_flash(target_s *const target)
 	// Erase configuration SRAM
 	jtag_dev_write_ir(dev_index, CMD_ISC_ERASE);
 	jtag_proc.jtagtap_cycle(false, false, 50U);
+	// Reset the CRC
+	jtag_dev_write_ir(dev_index, CMD_LSC_READ_CRC);
+	jtag_proc.jtagtap_cycle(false, false, 50U);
 
 	// Wait for the configuration to be erased
 	while (ECP5_STATUS_BUSY(ecp5_read32(dev_index, CMD_LSC_READ_STATUS)))
 		platform_delay(100U);
+
+	return true;
+}
+
+static bool ecp5_exit_flash(target_s *const target)
+{
+	const ecp5_ctx_s *const ctx = (ecp5_ctx_s *)target->priv;
+	const uint8_t dev_index = ctx->device_index;
+
+	if (ctx->wrote_to_sram) {
+		// Exit configuration mode
+		jtag_dev_write_ir(dev_index, CMD_ISC_DISABLE);
+		jtag_proc.jtagtap_cycle(false, false, 50U);
+	}
+
+	const uint32_t status = ecp5_read32(dev_index, CMD_LSC_READ_STATUS);
+
+	const uint32_t result =
+		(ECP5_STATUS_BSE_ERROR(status) || ECP5_STATUS_ID_ERROR(status) || ECP5_STATUS_EXEC_ERROR(status) ||
+			ECP5_STATUS_PRIMARY_CFG_FAIL(status) || ECP5_STATUS_FAILURE(status) || ECP5_STATUS_INVALID_COMMAND(status));
+
+	if (result != 0) {
+		DEBUG_ERROR("Bitstream programming failed: %" PRIu32 "\n", result);
+	}
+
+	return result != 0;
+}
+
+static bool ecp5_spi_flash_prepare(target_flash_s *flash)
+{
+	const ecp5_ctx_s *const ctx = (ecp5_ctx_s *)flash->t->priv;
+	const uint8_t dev_index = ctx->device_index;
 
 	// Exit Offline configuration mode
 	jtag_dev_write_ir(dev_index, CMD_ISC_DISABLE);
@@ -317,17 +420,13 @@ static bool ecp5_enter_flash(target_s *const target)
 	return true;
 }
 
-static bool ecp5_exit_flash(target_s *const target)
+static bool ecp5_spi_flash_done(target_flash_s *flash)
 {
 	/*
-	 * NOTE: The ECP5 doesn't have a known way to exit SPI background mode, so we need to reset the
-	 * whole device.
-	 *
-	 * This is fine for SPI passthrough, but when doing SRAM programming this flushes the SRAM and
-	 * causes the device to load from flash again, so we need to eventually check if we're
-	 * writing to SRAM or not.
+	 * The ECP5 doesn't have a known way to exit SPI background mode, so we need to reset the whole
+	 * device.
 	 */
-	ecp5_reset(target);
+	ecp5_reset(flash->t);
 
 	return true;
 }
@@ -408,6 +507,84 @@ static void ecp5_spi_xfr_jtag(
 	jtag_proc.jtagtap_tdi_seq(true, ones, device->dr_postscan);
 	/* Now go through Update-DR and back to Idle */
 	jtagtap_return_idle(1U);
+}
+
+static bool ecp5_sram_prepare(target_flash_s *const flash)
+{
+	const target_s *const target = flash->t;
+	ecp5_ctx_s *const ctx = (ecp5_ctx_s *)target->priv;
+
+	ctx->wrote_to_sram = true;
+
+	return true;
+}
+
+static bool ecp5_sram_done(target_flash_s *const flash)
+{
+	(void)flash;
+	return true;
+}
+
+static bool ecp5_sram_erase(target_flash_s *const flash, const target_addr_t addr, const size_t length)
+{
+	(void)addr;
+	(void)length;
+
+	const target_s *const target = flash->t;
+	const ecp5_ctx_s *const ctx = (ecp5_ctx_s *)target->priv;
+	const uint8_t dev_index = ctx->device_index;
+
+	// Erase configuration SRAM
+	jtag_dev_write_ir(dev_index, CMD_ISC_ERASE);
+	jtag_proc.jtagtap_cycle(false, false, 50U);
+
+	// Wait for the configuration to be erased
+	while (ECP5_STATUS_BUSY(ecp5_read32(dev_index, CMD_LSC_READ_STATUS)))
+		platform_delay(100U);
+
+	// Reset the configuration CRC SRAM
+	jtag_dev_write_ir(dev_index, CMD_LSC_RESET_CRC);
+	jtag_proc.jtagtap_cycle(false, false, 50U);
+
+	return true;
+}
+
+static bool ecp5_sram_write(
+	target_flash_s *const flash, const target_addr_t dest, const void *const buffer, const size_t length)
+{
+	(void)dest;
+
+	const target_s *const target = flash->t;
+	const ecp5_ctx_s *const ctx = (ecp5_ctx_s *)target->priv;
+	const uint8_t dev_index = ctx->device_index;
+	const jtag_dev_s *const device = &jtag_devs[dev_index];
+
+	// Write bitstream to SRAM
+	jtag_dev_write_ir(dev_index, CMD_LSC_BITSTREAM_BURST);
+	jtag_proc.jtagtap_cycle(false, false, 50U);
+
+	/* Switch into Shift-DR */
+	jtagtap_shift_dr();
+	/* Now we're in Shift-DR, clock out 1's till we hit the right device in the chain */
+	jtag_proc.jtagtap_tdi_seq(false, ones, device->dr_prescan);
+
+	uint8_t tap_out;
+	const uint8_t *const data_in = buffer;
+	for (size_t idx = 0U; idx < length; ++idx) {
+		const uint8_t tap_in = reverse_bits8(data_in[idx]);
+		jtag_proc.jtagtap_tdi_tdo_seq(&tap_out, (idx + 1U) == length && !device->dr_postscan, &tap_in, 8U);
+
+		if (idx % 8192U) {
+			DEBUG_PROTO("%s: %zu/%zu bytes written\n", __func__, idx, length);
+		}
+	}
+
+	/* Make sure we're in Exit1-DR having clocked out 1's for any more devices on the chain */
+	jtag_proc.jtagtap_tdi_seq(true, ones, device->dr_postscan);
+	/* Now go through Update-DR and back to Idle */
+	jtagtap_return_idle(1U);
+
+	return true;
 }
 
 static bool ecp5_read_reg_status(target_s *target, int argc, const char **argv)
