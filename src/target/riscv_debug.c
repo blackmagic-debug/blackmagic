@@ -790,7 +790,7 @@ static bool riscv_csr_progbuf_read(riscv_hart_s *const hart, const uint16_t reg,
 	/* Wait for both the register read and progbuf execution to complete */
 	result &= riscv_command_wait_complete(hart);
 	/* Extract the data read out by the GPR read */
-	uint32_t a0_value[3];
+	uint32_t a0_value[4];
 	result &= riscv_csr_read_data(hart, a0_value, hart->access_width);
 	/* Now try to read out the requested data from a0 at the requested size */
 	result &= riscv_csr_read(hart, RV_GPR_A0 | (reg & RV_CSR_FORCE_MASK), data);
@@ -845,7 +845,7 @@ static bool riscv_csr_write_data(riscv_hart_s *const hart, const void *const dat
 static bool riscv_csr_progbuf_write(riscv_hart_s *const hart, const uint16_t reg, const void *const data)
 {
 	/* Read out a0 to keep it safe as the actions below clobber it */
-	uint32_t a0_value[3];
+	uint32_t a0_value[4];
 	if (!riscv_csr_read(hart, RV_GPR_A0, a0_value))
 		return false;
 
