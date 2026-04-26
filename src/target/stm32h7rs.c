@@ -3,7 +3,8 @@
  *
  * Copyright (C) 2017-2020 Uwe Bonnes bon@elektron.ikp.physik.tu-darmstadt.de
  * Copyright (C) 2022-2023 1BitSquared <info@1bitsquared.com>
- * Modified by Rachel Mant <git@dragonmux.network>
+ * Copyright (C) 2025-2026 Eric Brombaugh <ebrombaugh1@cox.net> based on initial
+ *               work done by Rachel Mant and zyp.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -130,12 +131,12 @@
 
 typedef struct stm32h7rs_flash {
 	target_flash_s target_flash;
-	align_e psize;
 	uint32_t regbase;
 } stm32h7rs_flash_s;
 
 typedef struct stm32h7rs_priv {
 	uint32_t dbg_cr;
+	align_e psize;
 } stm32h7rs_priv_s;
 
 static bool stm32h7rs_uid(target_s *target, int argc, const char **argv);
@@ -178,7 +179,6 @@ static void stm32h7rs_add_flash(target_s *target, uint32_t addr, size_t length, 
 	target_flash->writesize = 2048;
 	target_flash->erased = 0xffU;
 	flash->regbase = FPEC1_BASE;
-	flash->psize = ALIGN_64BIT;
 	target_add_flash(target, target_flash);
 }
 
@@ -197,8 +197,11 @@ bool stm32h7rs_probe(target_s *target)
 		return false;
 	}
 	target->target_storage = priv;
+	/* Get the current value of the debug control register (and store it for later) */
 	priv->dbg_cr = target_mem32_read32(target, DBGMCU_CR);
-
+	/* Set up the Flash write/erase parallelism to 64-bit default */
+	priv->psize = ALIGN_64BIT;
+	
 	target->driver = "STM32H7R/S";
 	target->attach = stm32h7rs_attach;
 	target->detach = stm32h7rs_detach;
@@ -491,31 +494,13 @@ static bool stm32h7rs_crc(target_s *target, int argc, const char **argv)
 static bool stm32h7rs_cmd_psize(target_s *target, int argc, const char **argv)
 {
 	if (argc == 1) {
-		align_e psize = ALIGN_64BIT;
-		/*
-		 * XXX: What is this and why does it exist?
-		 * A dry-run walk-through says it'll pull out the psize for the first Flash region added by stm32h7rs_probe()
-		 * because all Flash regions added by stm32h7rs_add_flash match the if condition. This looks redundant and wrong.
-		 */
-		for (target_flash_s *flash = target->flash; flash; flash = flash->next) {
-			if (flash->write == stm32h7rs_flash_write)
-				psize = ((stm32h7rs_flash_s *)flash)->psize;
-		}
+		align_e psize = ((const stm32h7rs_priv_s *)target->target_storage)->psize;;
 		tc_printf(target, "Flash write parallelism: %s\n", stm32_psize_to_string(psize));
 	} else {
-		align_e psize;
+		align_e psize = ALIGN_64BIT;
 		if (!stm32_psize_from_string(target, argv[1], &psize))
 			return false;
-
-		/*
-		 * XXX: What is this and why does it exist?
-		 * A dry-run walk-through says it'll overwrite psize for every Flash region added by stm32h7rs_probe()
-		 * because all Flash regions added by stm32h7rs_add_flash match the if condition. This looks redundant and wrong.
-		 */
-		for (target_flash_s *flash = target->flash; flash; flash = flash->next) {
-			if (flash->write == stm32h7rs_flash_write)
-				((stm32h7rs_flash_s *)flash)->psize = psize;
-		}
+		((stm32h7rs_priv_s *)target->target_storage)->psize = psize;
 	}
 	return true;
 }
