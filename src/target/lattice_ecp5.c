@@ -267,6 +267,7 @@ void lattice_ecp5_handler(const uint8_t dev_index)
 			flash->write = ecp5_sram_write;
 
 			target_add_flash(target, flash);
+			break;
 		}
 	}
 
@@ -384,15 +385,14 @@ static bool ecp5_exit_flash(target_s *const target)
 
 	const uint32_t status = ecp5_read32(dev_index, CMD_LSC_READ_STATUS);
 
-	const uint32_t result =
+	const bool result =
 		(ECP5_STATUS_BSE_ERROR(status) || ECP5_STATUS_ID_ERROR(status) || ECP5_STATUS_EXEC_ERROR(status) ||
 			ECP5_STATUS_PRIMARY_CFG_FAIL(status) || ECP5_STATUS_FAILURE(status) || ECP5_STATUS_INVALID_COMMAND(status));
 
-	if (result != 0) {
-		DEBUG_ERROR("Bitstream programming failed: %" PRIu32 "\n", result);
-	}
+	if (result)
+		DEBUG_ERROR("Bitstream programming failed: %" PRIu32 "\n", status);
 
-	return result != 0;
+	return !result;
 }
 
 static bool ecp5_spi_flash_prepare(target_flash_s *flash)
@@ -570,9 +570,8 @@ static bool ecp5_sram_write(
 		const uint8_t tap_in = reverse_bits8(data_in[idx]);
 		jtag_proc.jtagtap_tdi_tdo_seq(&tap_out, (idx + 1U) == length && !device->dr_postscan, &tap_in, 8U);
 
-		if (idx % 8192U) {
-			DEBUG_TARGET("%s: %" PRIu32 "/%" PRIu32 " bytes written\n", __func__, idx, length);
-		}
+		if (idx % 8192U)
+			DEBUG_TARGET("%s: %" PRIu32 "/%" PRIu32 " bytes written\n", __func__, (uint32_t)idx, (uint32_t)length);
 	}
 
 	/* Make sure we're in Exit1-DR having clocked out 1's for any more devices on the chain */
