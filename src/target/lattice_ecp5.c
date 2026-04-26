@@ -311,6 +311,11 @@ static bool ecp5_attach(target_s *const target)
 
 	ecp5_enter_flash(target);
 
+	// Create a synthetic flash object so we can shell out to `spi_flash_prepare` to enter transparent SPI mode
+	target_flash_s flash;
+	flash.t = target;
+	ecp5_spi_flash_prepare(&flash);
+
 	spi_flash_id_s flash_id;
 	ecp5_spi_read(target, SPI_FLASH_CMD_READ_JEDEC_ID, 0U, &flash_id, sizeof(flash_id));
 
@@ -321,9 +326,9 @@ static bool ecp5_attach(target_s *const target)
 			flash_id.manufacturer, flash_id.type, capacity);
 		spi_flash_s *const spi_flash =
 			bmp_spi_add_flash(target, ECP5_FLASH_BASE, capacity, ecp5_spi_read, ecp5_spi_write, ecp5_spi_run_command);
-		target_flash_s *const flash = &spi_flash->flash;
-		flash->prepare = ecp5_spi_flash_prepare;
-		flash->done = ecp5_spi_flash_done;
+		target_flash_s *const target_flash = &spi_flash->flash;
+		target_flash->prepare = ecp5_spi_flash_prepare;
+		target_flash->done = ecp5_spi_flash_done;
 	} else
 		DEBUG_INFO("Flash identification failed\n");
 
