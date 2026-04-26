@@ -278,7 +278,7 @@ void lattice_ecp5_handler(const uint8_t dev_index)
 	ctx->data_buffer = calloc(1, ctx->buffer_len);
 	ctx->cmd_buffer = calloc(1, ctx->buffer_len);
 
-	if (!ctx->data_buffer || ctx->cmd_buffer)
+	if (!ctx->data_buffer || !ctx->cmd_buffer)
 		DEBUG_ERROR("calloc: failed in %s\n", __func__);
 }
 
@@ -370,7 +370,7 @@ static bool ecp5_enter_flash(target_s *const target)
 	jtag_dev_write_ir(dev_index, CMD_ISC_ERASE);
 	jtag_proc.jtagtap_cycle(false, false, 50U);
 	// Reset the CRC
-	jtag_dev_write_ir(dev_index, CMD_LSC_READ_CRC);
+	jtag_dev_write_ir(dev_index, CMD_LSC_RESET_CRC);
 	jtag_proc.jtagtap_cycle(false, false, 50U);
 
 	// Wait for the configuration to be erased
