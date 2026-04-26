@@ -111,7 +111,7 @@ static inline size_t write_char(char *const buffer, const size_t buffer_size, co
 static inline uint8_t reverse_bits8(const uint8_t data)
 {
 	if (!BMD_CONSTANT_P(data)) {
-#if defined(__arm__) || defined(__aarch64__)
+#if (defined(__ARM_ARCH_ISA_THUMB) && __ARM_ARCH_ISA_THUMB >= 2) || defined(__aarch64__)
 		uint32_t result;
 		__asm__("rbit %0, %1" : "=r"(result) : "r"(data));
 		return (result & 0xff000000U) >> 24U;
@@ -125,7 +125,7 @@ static inline uint8_t reverse_bits8(const uint8_t data)
 static inline uint16_t reverse_bits16(const uint16_t data)
 {
 	if (!BMD_CONSTANT_P(data)) {
-#if defined(__arm__) || defined(__aarch64__)
+#if (defined(__ARM_ARCH_ISA_THUMB) && __ARM_ARCH_ISA_THUMB >= 2) || defined(__aarch64__)
 		uint32_t result;
 		__asm__("rbit %0, %1" : "=r"(result) : "r"(data));
 		return (result & 0xffff0000U) >> 16U;
@@ -142,7 +142,7 @@ static inline uint16_t reverse_bits16(const uint16_t data)
 static inline uint32_t reverse_bits24(const uint32_t data)
 {
 	if (!BMD_CONSTANT_P(data)) {
-#if defined(__arm__) || defined(__aarch64__)
+#if (defined(__ARM_ARCH_ISA_THUMB) && __ARM_ARCH_ISA_THUMB >= 2) || defined(__aarch64__)
 		uint32_t result;
 		__asm__("rbit %0, %1" : "=r"(result) : "r"(data));
 		return (result & 0xffffff00U) >> 8U;
@@ -162,7 +162,7 @@ static inline uint32_t reverse_bits24(const uint32_t data)
 static inline uint32_t reverse_bits32(const uint32_t data)
 {
 	if (!BMD_CONSTANT_P(data)) {
-#if defined(__arm__) || defined(__aarch64__)
+#if (defined(__ARM_ARCH_ISA_THUMB) && __ARM_ARCH_ISA_THUMB >= 2) || defined(__aarch64__)
 		uint32_t result;
 		__asm__("rbit %0, %1" : "=r"(result) : "r"(data));
 		return result;
