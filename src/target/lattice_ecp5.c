@@ -166,7 +166,6 @@ typedef struct ecp5_ctx {
 	uint8_t *cmd_buffer;
 	uint8_t *data_buffer;
 	uint16_t buffer_len;
-	bool wrote_to_sram;
 } ecp5_ctx_s;
 
 typedef struct ecp5_device {
@@ -226,7 +225,6 @@ static void ecp5_spi_write(
 static void ecp5_spi_run_command(target_s *target, uint16_t command, target_addr_t address);
 static void ecp5_spi_xfr_jtag(target_s *target, uint8_t *data_out, const uint8_t *data_in, size_t length);
 
-static bool ecp5_sram_prepare(target_flash_s *flash);
 static bool ecp5_sram_done(target_flash_s *flash);
 static bool ecp5_sram_erase(target_flash_s *flash, target_addr_t addr, size_t length);
 static bool ecp5_sram_write(target_flash_s *flash, target_addr_t dest, const void *buffer, size_t length);
@@ -264,7 +262,6 @@ void lattice_ecp5_handler(const uint8_t dev_index)
 			flash->start = ECP5_SRAM_BASE;
 			flash->blocksize = flash->length;
 			flash->writesize = flash->length; // devices[dev].frame_len;
-			flash->prepare = ecp5_sram_prepare;
 			flash->done = ecp5_sram_done;
 			flash->erase = ecp5_sram_erase;
 			flash->write = ecp5_sram_write;
@@ -346,14 +343,10 @@ static bool ecp5_check_error(target_s *const target)
 
 static void ecp5_reset(target_s *const target)
 {
-	ecp5_ctx_s *const ctx = (ecp5_ctx_s *)target->priv;
-	const uint8_t dev_index = ctx->device_index;
-
-	// If we wrote to the device SRAM, then exit out of programming mode
-	// otherwise do the normal reset
-	if (!ctx->wrote_to_sram) {
-		jtag_dev_write_ir(dev_index, CMD_LSC_REFRESH);
-		jtag_proc.jtagtap_cycle(false, false, 50U);
+	// NOTE: BMDA doesn't handle flash finalization properly when in CLI mode, so we need to do so manually
+	for (target_flash_s *flash = target->flash; flash != NULL; flash = flash->next) {
+		if (flash->operation != FLASH_OPERATION_NONE)
+			flash->done(flash);
 	}
 }
 
@@ -383,12 +376,6 @@ static bool ecp5_exit_flash(target_s *const target)
 {
 	const ecp5_ctx_s *const ctx = (ecp5_ctx_s *)target->priv;
 	const uint8_t dev_index = ctx->device_index;
-
-	if (ctx->wrote_to_sram) {
-		// Exit configuration mode
-		jtag_dev_write_ir(dev_index, CMD_ISC_DISABLE);
-		jtag_proc.jtagtap_cycle(false, false, 50U);
-	}
 
 	const uint32_t status = ecp5_read32(dev_index, CMD_LSC_READ_STATUS);
 
@@ -422,13 +409,18 @@ static bool ecp5_spi_flash_prepare(target_flash_s *flash)
 
 static bool ecp5_spi_flash_done(target_flash_s *flash)
 {
+	target_s *const target = flash->t;
+	ecp5_ctx_s *const ctx = (ecp5_ctx_s *)target->priv;
+	const uint8_t dev_index = ctx->device_index;
+
 	/*
-	 * The ECP5 doesn't have a known way to exit SPI background mode, so we need to reset the whole
+	 * The ECP5 doesn't have any way to exit SPI background mode, so we need to reset the whole
 	 * device.
 	 */
-	ecp5_reset(flash->t);
+	jtag_dev_write_ir(dev_index, CMD_LSC_REFRESH);
+	jtag_proc.jtagtap_cycle(false, false, 50U);
 
-	return true;
+	return ecp5_check_error(target);
 }
 
 static void ecp5_spi_read(target_s *const target, const uint16_t command, const target_addr_t address,
@@ -509,20 +501,19 @@ static void ecp5_spi_xfr_jtag(
 	jtagtap_return_idle(1U);
 }
 
-static bool ecp5_sram_prepare(target_flash_s *const flash)
-{
-	const target_s *const target = flash->t;
-	ecp5_ctx_s *const ctx = (ecp5_ctx_s *)target->priv;
-
-	ctx->wrote_to_sram = true;
-
-	return true;
-}
-
 static bool ecp5_sram_done(target_flash_s *const flash)
 {
-	(void)flash;
-	return true;
+	target_s *const target = flash->t;
+	ecp5_ctx_s *const ctx = (ecp5_ctx_s *)target->priv;
+	const uint8_t dev_index = ctx->device_index;
+
+	if (flash->operation == FLASH_OPERATION_WRITE) {
+		// Exit configuration mode
+		jtag_dev_write_ir(dev_index, CMD_ISC_DISABLE);
+		jtag_proc.jtagtap_cycle(false, false, 50U);
+	}
+
+	return ecp5_check_error(target);
 }
 
 static bool ecp5_sram_erase(target_flash_s *const flash, const target_addr_t addr, const size_t length)
@@ -575,7 +566,7 @@ static bool ecp5_sram_write(
 		jtag_proc.jtagtap_tdi_tdo_seq(&tap_out, (idx + 1U) == length && !device->dr_postscan, &tap_in, 8U);
 
 		if (idx % 8192U) {
-			DEBUG_PROTO("%s: %zu/%zu bytes written\n", __func__, idx, length);
+			DEBUG_TARGET("%s: %" PRIu32 "/%" PRIu32 " bytes written\n", __func__, idx, length);
 		}
 	}
 
