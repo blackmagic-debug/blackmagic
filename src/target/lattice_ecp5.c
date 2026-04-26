@@ -333,6 +333,8 @@ static bool ecp5_attach(target_s *const target)
 	} else
 		DEBUG_INFO("Flash identification failed\n");
 
+	// Make sure to reset the FPGA so we don't leave it in a coma
+	ecp5_spi_flash_done(&flash);
 	ecp5_exit_flash(target);
 
 	return true;
