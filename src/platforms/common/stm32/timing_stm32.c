@@ -2,7 +2,7 @@
  * This file is part of the Black Magic Debug project.
  *
  * Copyright (C) 2015 Gareth McMullin <gareth@blacksphere.co.nz>
- * Copyright (C) 2023 1BitSquared <info@1bitsquared.com>
+ * Copyright (C) 2023-2026 1BitSquared <info@1bitsquared.com>
  * Modified by Rachel Mant <git@dragonmux.network>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -22,6 +22,7 @@
 #include "platform.h"
 #include "morse.h"
 #include "usb.h"
+#include "aux_serial.h"
 
 #include <libopencm3/cm3/systick.h>
 #include <libopencm3/cm3/nvic.h>
@@ -29,13 +30,13 @@
 #include <libopencm3/stm32/adc.h>
 
 bool running_status = false;
-static volatile uint32_t time_ms = 0;
+static _Atomic uint32_t time_ms = 0;
 uint32_t target_clk_divider = 0;
 
 static size_t morse_tick = 0;
 #if defined(PLATFORM_HAS_POWER_SWITCH) && defined(STM32F1)
-static uint8_t monitor_ticks = 0;
-static uint8_t monitor_error_count = 0;
+static uint8_t monitor_ticks = 0U;
+static uint8_t monitor_error_count = 0U;
 
 /* Derived from calculating (1.2V / 3.0V) * 4096 */
 #define ADC_VREFINT_MAX 1638U
@@ -44,6 +45,9 @@ static uint8_t monitor_error_count = 0;
  * then applying an offset to adjust for being 10-20mV over
  */
 #define ADC_VREFINT_MIN 1404U
+#endif
+#ifdef PLATFORM_MULTI_UART
+static uint8_t uart_ticks = 0U;
 #endif
 
 static void usb_config_morse_msg_update(void)
@@ -61,9 +65,18 @@ static void usb_config_morse_msg_update(void)
 void platform_timing_init(void)
 {
 	/* Setup heartbeat timer */
+#ifndef STM32U5
 	systick_set_clocksource(STK_CSR_CLKSOURCE_AHB_DIV8);
+#else
+	rcc_set_peripheral_clk_sel(SYS_TICK_BASE, RCC_CCIPR1_SYSTICKSEL_HCLK_DIV8);
+	systick_set_clocksource(STK_CSR_CLKSOURCE_EXT);
+#endif
 	/* Interrupt us at 1kHz */
+#ifndef STM32U5
 	systick_set_reload((rcc_ahb_frequency / (8U * SYSTICKHZ)) - 1U);
+#else
+	systick_set_reload((rcc_get_bus_clk_freq(RCC_SYSTICKCLK) / SYSTICKHZ) - 1U);
+#endif
 	/* SYSTICK_IRQ with low priority */
 	nvic_set_priority(NVIC_SYSTICK_IRQ, 14U << 4U);
 	systick_interrupt_enable();
@@ -84,7 +97,11 @@ void sys_tick_handler(void)
 
 	if (morse_tick >= MORSECNT) {
 		if (running_status)
+#ifdef LED_IDLE_RUN_PORT
+			gpio_toggle(LED_IDLE_RUN_PORT, LED_IDLE_RUN_PIN);
+#else
 			gpio_toggle(LED_PORT, LED_IDLE_RUN);
+#endif
 		usb_config_morse_msg_update();
 		SET_ERROR_STATE(morse_update());
 		morse_tick = 0;
@@ -134,6 +151,23 @@ void sys_tick_handler(void)
 	} else
 		monitor_ticks = 0;
 #endif
+
+#ifdef PLATFORM_MULTI_UART
+	/*
+	 * If a UART goes into framing error and that persists for more than a milisecond or two, then
+	 * it's probably safe to assume that the wires became disconnected and the UART is no longer active
+	 * in which case we then want to disable that UART and go back to waiting for a UART to become active.
+	 */
+	const uart_state_e state = aux_serial_uart_state();
+	if (state == UART_STATE_LOST) {
+		if (++uart_ticks == 2U) {
+			aux_serial_deactivate_uart();
+			uart_ticks = 0U;
+		}
+	} else
+		/* Otherwise if the UART state is either not known or the UART is idle, reset the tick counter */
+		uart_ticks = 0U;
+#endif
 }
 
 uint32_t platform_time_ms(void)
@@ -178,7 +212,11 @@ void platform_max_frequency_set(const uint32_t frequency)
 		target_clk_divider = (ratio - BITBANG_DIVIDER_OFFSET) / BITBANG_DIVIDER_FACTOR;
 	}
 #else
+#ifndef STM32U5
 	uint32_t divisor = rcc_ahb_frequency - USED_SWD_CYCLES * frequency;
+#else
+	uint32_t divisor = rcc_get_bus_clk_freq(RCC_AHBCLK) - USED_SWD_CYCLES * frequency;
+#endif
 	/* If we now have an insanely big divisor, the above operation wrapped to a negative signed number. */
 	if (divisor >= 0x80000000U) {
 		target_clk_divider = UINT32_MAX;
@@ -206,7 +244,11 @@ uint32_t platform_max_frequency_get(void)
 	const uint32_t ratio = (target_clk_divider * BITBANG_DIVIDER_FACTOR) + BITBANG_DIVIDER_OFFSET;
 	return rcc_ahb_frequency / ratio;
 #else
+#ifndef STM32U5
 	uint32_t result = rcc_ahb_frequency;
+#else
+	uint32_t result = rcc_get_bus_clk_freq(RCC_AHBCLK);
+#endif
 	result /= USED_SWD_CYCLES + CYCLES_PER_CNT * target_clk_divider;
 	return result;
 #endif

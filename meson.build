@@ -320,7 +320,7 @@ elif bmda_platform.found()
 	bmda = executable(
 		'blackmagic',
 		dependencies: [libbmd_core, bmda_platform],
-		native: is_cross_build,
+		native: is_cross_build and is_firmware_build,
 	)
 	alias_target('bmda', bmda)
 elif not is_firmware_build

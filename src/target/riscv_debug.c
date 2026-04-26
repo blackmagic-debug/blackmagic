@@ -37,6 +37,7 @@
 #include "gdb_reg.h"
 #include "riscv_debug.h"
 #include "buffer_utils.h"
+#include "semihosting.h"
 
 #include <assert.h>
 
@@ -50,10 +51,9 @@
  * https://github.com/riscv/riscv-debug-spec/blob/master/riscv-debug-stable.pdf
  */
 
-#define RV_DM_CONTROL      0x10U
-#define RV_DM_STATUS       0x11U
-#define RV_DM_NEXT_DM      0x1dU
-#define RV_DM_PROGBUF_BASE 0x20U
+#define RV_DM_CONTROL 0x10U
+#define RV_DM_STATUS  0x11U
+#define RV_DM_NEXT_DM 0x1dU
 
 #define RV_DM_CTRL_ACTIVE          (1U << 0U)
 #define RV_DM_CTRL_SYSTEM_RESET    (1U << 1U)
@@ -110,9 +110,6 @@
 /* tdata2 -> selected trigger configuration register 2 */
 #define RV_TRIG_DATA_2 0x7a2U
 
-/* GPR a0, aka x10 is used as a bounce buffer for our progbuf CSR I/O */
-#define RV_GPR_A0 0x100aU
-
 /*
  * Instructions for reading and writing CSRs through a0
  * CSRR -> CSR Read, abuses the CSRRS atomic read and set bits instruction
@@ -122,7 +119,15 @@
  */
 #define RV_CSRR_A0 0x00002573U
 #define RV_CSRW_A0 0x00051073U
-#define RV_EBREAK  0x00100073U
+
+/*
+ * A semihosting call is three consecutive uncompressed instructions:
+ * 0x01f01013 slli zero, zero 0x1f;
+ * 0x00100073 ebreak;
+ * 0x40705013 srai zero, zero, 7.
+ */
+#define RV_ENTRY_NOP 0x01f01013U
+#define RV_EXIT_NOP  0x40705013U
 
 #define RV_VENDOR_JEP106_CONT_MASK 0x7fffff80U
 #define RV_VENDOR_JEP106_CODE_MASK 0x7fU
@@ -293,7 +298,7 @@ void riscv_dmi_init(riscv_dmi_s *const dmi)
 	/*
 	 * The DMI version does not actually matter here, the implementation details have already been
 	 * abstracted away at this point and we have a generic DMI to work with
-	 * 
+	 *
 	 * But the dminfo register (at 0x11) of v0.11 DM is incompatible with dmstatus (also at 0x11) of
 	 * later versions, meaning we can't easily/reliably determine the version of the DM.
 	 * We ignore all v0.11 DMI's in the hope we don't encounter a v0.11 DM with a later version DMI.
@@ -674,6 +679,9 @@ static uint32_t riscv_hart_discover_isa(riscv_hart_s *const hart)
 	/* Now use the data count bits to divine an initial guess on the platform width */
 	data_registers &= RV_DM_ABST_STATUS_DATA_COUNT;
 	DEBUG_INFO("Hart has %" PRIu32 " data registers and %u progbuf registers\n", data_registers, hart->progbuf_size);
+	/* Memory access using just 1 progbuf slot is possible */
+	if (hart->progbuf_size >= 1U)
+		hart->flags |= RV_HART_FLAG_MEMORY_PROGBUF;
 	/* Check we have at least enough data registers for arg0 */
 	if (data_registers >= 4)
 		hart->access_width = 128U;
@@ -894,6 +902,31 @@ bool riscv_csr_write(riscv_hart_s *const hart, const uint16_t reg, const void *c
 	return true;
 }
 
+static target_addr64_t riscv_pc_read(riscv_hart_s *const hart)
+{
+	target_addr64_t data = 0U;
+	riscv_csr_read(hart, RV_DPC, &data);
+	return data;
+}
+
+static bool riscv_hostio_request(target_s *const target)
+{
+	/* Read out syscall number from a0/x10 and first argument from a1/x11 */
+	riscv_hart_s *const hart = riscv_hart_struct(target);
+	uint64_t syscall = 0U;
+	riscv_csr_read(hart, RV_GPR_A0, &syscall);
+	uint64_t a1 = 0U;
+	riscv_csr_read(hart, RV_GPR_A1, &a1);
+
+	/* Hand off to the main semihosting implementation */
+	const int32_t result = semihosting_request(target, syscall, a1);
+
+	/* Write the result back to the target */
+	riscv_csr_write(hart, RV_GPR_A0, &result);
+	/* Return if the request was in any way interrupted */
+	return target->tc->interrupted;
+}
+
 uint8_t riscv_mem_access_width(const riscv_hart_s *const hart, const target_addr_t address, const size_t length)
 {
 	/* Grab the Hart's most maxmimally aligned possible write width */
@@ -968,6 +1001,13 @@ static void riscv_hart_discover_triggers(riscv_hart_s *const hart)
 		/* Now info's bottom 16 bits contain the supported trigger modes, so write this info to the slot in the hart */
 		hart->trigger_uses[trigger] = info;
 		DEBUG_TARGET("Hart trigger slot %" PRIu32 " modes: %04" PRIx32 "\n", trigger, info);
+#ifndef DEBUG_TARGET_IS_NOOP
+		/* Display whatever contents of tdata2 (normally address to match for stale trigger) */
+		target_addr64_t tdata2 = 0;
+		riscv_csr_read(hart, RV_TRIG_DATA_2, &tdata2);
+		DEBUG_TARGET("Hart trigger slot %" PRIu32 " tdata2 = %08" PRIx32 "%08" PRIx32 "\n", trigger,
+			(uint32_t)(tdata2 >> 32U), (uint32_t)tdata2);
+#endif
 	}
 }
 
@@ -984,7 +1024,7 @@ static void riscv_hart_memory_access_type(target_s *const target)
 		!(sysbus_status & RV_DM_SYSBUS_STATUS_ADDR_WIDTH_MASK))
 		return;
 	/* If all the checks passed, we now have a valid system bus so can proceed with using it for memory access */
-	hart->flags = RV_HART_FLAG_MEMORY_SYSBUS | (sysbus_status & RV_HART_FLAG_ACCESS_WIDTH_MASK);
+	hart->flags |= RV_HART_FLAG_MEMORY_SYSBUS | (sysbus_status & RV_HART_FLAG_ACCESS_WIDTH_MASK);
 	/* System Bus also means the target can have memory read without halting */
 	target->target_options |= TOPT_NON_HALTING_MEM_IO;
 	/* Make sure the system bus is not in any kind of error state */
@@ -1047,12 +1087,24 @@ bool riscv_attach(target_s *const target)
 		return false;
 	/* We then need to halt the hart so the attach process can function */
 	riscv_halt_request(target);
+	/* Clear any stale triggers (after halting) */
+	for (size_t trigger = 0U; trigger < hart->triggers; trigger++) {
+		const uint32_t tdata1 = 0U;
+		const uint32_t tdata2 = 0U;
+		riscv_config_trigger(hart, trigger, RISCV_TRIGGER_MODE_UNUSED, &tdata1, &tdata2);
+	}
 	return true;
 }
 
 void riscv_detach(target_s *const target)
 {
 	riscv_hart_s *const hart = riscv_hart_struct(target);
+	/* Clear any stale triggers */
+	for (size_t trigger = 0U; trigger < hart->triggers; trigger++) {
+		const uint32_t tdata1 = 0U;
+		const uint32_t tdata2 = 0U;
+		riscv_config_trigger(hart, trigger, RISCV_TRIGGER_MODE_UNUSED, &tdata1, &tdata2);
+	}
 	/* Once we get done and the user's asked us to detach, we need to resume the hart */
 	riscv_halt_resume(target, false);
 	/* If the DMI needs steps done to quiesce it, finsh up with that */
@@ -1106,6 +1158,19 @@ static void riscv_halt_resume(target_s *target, const bool step)
 	}
 	if (!riscv_csr_write(hart, RV_DCSR | RV_CSR_FORCE_32_BIT, &stepping_config))
 		return;
+	/* Step over coded breakpoints */
+	uint32_t dcsr_cause = 0U;
+	riscv_csr_read(hart, RV_DCSR | RV_CSR_FORCE_32_BIT, &dcsr_cause);
+	dcsr_cause &= RV_DCSR_CAUSE_MASK;
+	if (dcsr_cause == RV_HALT_CAUSE_EBREAK) {
+		/* Read the instruction to resume on */
+		target_addr64_t program_counter = riscv_pc_read(hart);
+		/* If it actually is a breakpoint instruction, update the program counter one past it. */
+		if (target_mem32_read32(target, program_counter) == RV_EBREAK) {
+			program_counter += 4U;
+			riscv_csr_write(hart, RV_DPC, &program_counter);
+		}
+	}
 	/* Request the hart to resume */
 	if (!riscv_dm_write(hart->dbg_module, RV_DM_CONTROL, hart->hartsel | RV_DM_CTRL_RESUME_REQ))
 		return;
@@ -1133,6 +1198,21 @@ static target_halt_reason_e riscv_halt_poll(target_s *const target, target_addr6
 	status &= RV_DCSR_CAUSE_MASK;
 	/* Dispatch on the cause code */
 	switch (status) {
+	case RV_HALT_CAUSE_EBREAK: {
+		/* If we've hit a programmed breakpoint, check for semihosting call. */
+		const target_addr64_t program_counter = riscv_pc_read(hart);
+		uint32_t instructions[3] = {0};
+		target_mem64_read(target, &instructions, program_counter - 4U, sizeof(instructions));
+		/* A semihosting call is three consecutive uncompressed instructions: slli zero, zero 0x1f; ebreak, srai zero, zero, 7. */
+		if (instructions[0] == RV_ENTRY_NOP && instructions[1] == RV_EBREAK && instructions[2] == RV_EXIT_NOP) {
+			if (riscv_hostio_request(target))
+				return TARGET_HALT_REQUEST;
+
+			riscv_halt_resume(target, false);
+			return TARGET_HALT_RUNNING;
+		}
+		return TARGET_HALT_BREAKPOINT;
+	}
 	case RV_HALT_CAUSE_TRIGGER:
 		/* XXX: Need to read out the triggers to find the one causing this, and grab the watch value */
 		return TARGET_HALT_BREAKPOINT;
@@ -1319,14 +1399,14 @@ static size_t riscv_build_target_description(
 		const char *const name = riscv_gpr_names[i];
 		const gdb_reg_type_e type = riscv_gpr_types[i];
 
-		offset += (size_t)snprintf(buffer + offset, print_size, "<reg name=\"%s\" bitsize=\"%u\"%s%s/>", name,
-			address_width, gdb_reg_type_strings[type], i == 0 ? " regnum=\"0\"" : "");
+		offset += snprintf(buffer + offset, print_size, "<reg name=\"%s\" bitsize=\"%u\"%s%s/>", name, address_width,
+			gdb_reg_type_strings[type], i == 0 ? " regnum=\"0\"" : "");
 	}
 
 	/* Then build the program counter register description, which has the same bitsize as the GPRs. */
 	if (max_length != 0)
 		print_size = max_length - offset;
-	offset += (size_t)snprintf(buffer + offset, print_size, "<reg name=\"pc\" bitsize=\"%u\"%s/>", address_width,
+	offset += snprintf(buffer + offset, print_size, "<reg name=\"pc\" bitsize=\"%u\"%s/>", address_width,
 		gdb_reg_type_strings[GDB_TYPE_CODE_PTR]);
 
 	/* If the target has basic single precision support, generate a block for that */
@@ -1341,13 +1421,13 @@ static size_t riscv_build_target_description(
 	/* Add main CSR registers*/
 	if (max_length != 0)
 		print_size = max_length - offset;
-	offset += (size_t)snprintf(buffer + offset, print_size, "</feature><feature name=\"org.gnu.gdb.riscv.csr\">");
+	offset += snprintf(buffer + offset, print_size, "</feature><feature name=\"org.gnu.gdb.riscv.csr\">");
 	for (size_t i = 0; i < ARRAY_LENGTH(riscv_csrs); i++) {
 		if (max_length != 0)
 			print_size = max_length - offset;
-		offset += (size_t)snprintf(buffer + offset, print_size,
-			" <reg name=\"%s\" bitsize=\"%u\" regnum=\"%" PRIu32 "\" %s/>", riscv_csrs[i].name, address_width,
-			riscv_csrs[i].csr_number + RV_CSR_GDB_OFFSET, gdb_reg_save_restore_strings[GDB_SAVE_RESTORE_NO]);
+		offset += snprintf(buffer + offset, print_size, " <reg name=\"%s\" bitsize=\"%u\" regnum=\"%" PRIu32 "\" %s/>",
+			riscv_csrs[i].name, address_width, riscv_csrs[i].csr_number + RV_CSR_GDB_OFFSET,
+			gdb_reg_save_restore_strings[GDB_SAVE_RESTORE_NO]);
 	}
 	/* Add the closing tags required */
 	if (max_length != 0)
