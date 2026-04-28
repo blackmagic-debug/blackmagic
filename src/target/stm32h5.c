@@ -600,7 +600,7 @@ static bool stm32h5_cmd_rev(target_s *target, int argc, const char **argv)
 	} else {
 		for (size_t i = 0; i < ARRAY_LENGTH(stm32c5_revisions); ++i) {
 			if (stm32c5_revisions[i].rev_id == rev_id)
-				revision = stm32h5_revisions[i].revision;
+				revision = stm32c5_revisions[i].revision;
 		}
 	}
 	tc_printf(target, "Revision %c\n", revision);
