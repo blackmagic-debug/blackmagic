@@ -85,38 +85,38 @@
 #define STM32H523_SRAM123_SIZE     (STM32H523_SRAM1_SIZE + STM32H523_SRAM2_SIZE + STM32H523_SRAM3_SIZE)
 
 /* Memory map constants for STM32C53x/C54x */
-#define STM32C53X_FLASH_BANK1_BASE 0x08000000U
-#define STM32C53X_FLASH_BANK2_BASE 0x08020000U
-#define STM32C53X_FLASH_BANK_SIZE  0x00020000U
-#define STM32C53X_SECTORS_PER_BANK 0x00000010U
-#define STM32C53X_SRAM1_BASE       0x0a000000U
-#define STM32C53X_SRAM1_SIZE       0x00008000U
-#define STM32C53X_SRAM2_BASE       0x0a008000U
-#define STM32C53X_SRAM2_SIZE       0x00008000U
-#define STM32C53X_SRAM_ALIAS_BASE  0x20000000U
-#define STM32C53X_SRAM12_SIZE     (STM32C53X_SRAM1_SIZE + STM32C53X_SRAM2_SIZE)
+#define STM32C53x_FLASH_BANK1_BASE 0x08000000U
+#define STM32C53x_FLASH_BANK2_BASE 0x08020000U
+#define STM32C53x_FLASH_BANK_SIZE  0x00020000U
+#define STM32C53x_SECTORS_PER_BANK 0x00000010U
+#define STM32C53x_SRAM1_BASE       0x0a000000U
+#define STM32C53x_SRAM1_SIZE       0x00008000U
+#define STM32C53x_SRAM2_BASE       0x0a008000U
+#define STM32C53x_SRAM2_SIZE       0x00008000U
+#define STM32C53x_SRAM_ALIAS_BASE  0x20000000U
+#define STM32C53x_SRAM12_SIZE     (STM32C53x_SRAM1_SIZE + STM32C53x_SRAM2_SIZE)
 /* Memory map constants for STM32C55x/C56x */
-#define STM32C55X_FLASH_BANK1_BASE 0x08000000U
-#define STM32C55X_FLASH_BANK2_BASE 0x08040000U
-#define STM32C55X_FLASH_BANK_SIZE  0x00040000U
-#define STM32C55X_SECTORS_PER_BANK 0x00000020U
-#define STM32C55X_SRAM1_BASE       0x0a000000U
-#define STM32C55X_SRAM1_SIZE       0x00010000U
-#define STM32C55X_SRAM2_BASE       0x0a010000U
-#define STM32C55X_SRAM2_SIZE       0x00010000U
-#define STM32C55X_SRAM_ALIAS_BASE  0x20000000U
-#define STM32C55X_SRAM12_SIZE     (STM32C55X_SRAM1_SIZE + STM32C55X_SRAM2_SIZE)
+#define STM32C55x_FLASH_BANK1_BASE 0x08000000U
+#define STM32C55x_FLASH_BANK2_BASE 0x08040000U
+#define STM32C55x_FLASH_BANK_SIZE  0x00040000U
+#define STM32C55x_SECTORS_PER_BANK 0x00000020U
+#define STM32C55x_SRAM1_BASE       0x0a000000U
+#define STM32C55x_SRAM1_SIZE       0x00010000U
+#define STM32C55x_SRAM2_BASE       0x0a010000U
+#define STM32C55x_SRAM2_SIZE       0x00010000U
+#define STM32C55x_SRAM_ALIAS_BASE  0x20000000U
+#define STM32C55x_SRAM12_SIZE     (STM32C55x_SRAM1_SIZE + STM32C55x_SRAM2_SIZE)
 /* Memory map constants for STM32C59x/C5Ax */
-#define STM32C59X_FLASH_BANK1_BASE 0x08000000U
-#define STM32C59X_FLASH_BANK2_BASE 0x08080000U
-#define STM32C59X_FLASH_BANK_SIZE  0x00080000U
-#define STM32C59X_SECTORS_PER_BANK 0x00000040U
-#define STM32C59X_SRAM1_BASE       0x0a000000U
-#define STM32C59X_SRAM1_SIZE       0x00020000U
-#define STM32C59X_SRAM2_BASE       0x0a020000U
-#define STM32C59X_SRAM2_SIZE       0x00020000U
-#define STM32C59X_SRAM_ALIAS_BASE  0x20000000U
-#define STM32C59X_SRAM12_SIZE     (STM32C59X_SRAM1_SIZE + STM32C59X_SRAM2_SIZE)
+#define STM32C59x_FLASH_BANK1_BASE 0x08000000U
+#define STM32C59x_FLASH_BANK2_BASE 0x08080000U
+#define STM32C59x_FLASH_BANK_SIZE  0x00080000U
+#define STM32C59x_SECTORS_PER_BANK 0x00000040U
+#define STM32C59x_SRAM1_BASE       0x0a000000U
+#define STM32C59x_SRAM1_SIZE       0x00020000U
+#define STM32C59x_SRAM2_BASE       0x0a020000U
+#define STM32C59x_SRAM2_SIZE       0x00020000U
+#define STM32C59x_SRAM_ALIAS_BASE  0x20000000U
+#define STM32C59x_SRAM12_SIZE     (STM32C59x_SRAM1_SIZE + STM32C59x_SRAM2_SIZE)
 
 /* Flash Program and Erase Controller (FPEC) Register Map */
 #define STM32H5_FPEC_BASE        0x40022000
@@ -349,7 +349,7 @@ bool stm32c5_probe(target_s *const target)
 	if (!stm32h5_configure_dbgmcu(target))
 		return false;
 
-	target->driver = "STM32H5";
+	target->driver = "STM32C5";
 	target->attach = stm32h5_attach;
 	target->detach = stm32h5_detach;
 	target->mass_erase = stm32h5_mass_erase;
@@ -363,54 +363,54 @@ bool stm32c5_probe(target_s *const target)
 		 * Build the RAM map. 32+32=64.
 		 * This uses the addresses and sizes found in §2.2.2, Figure 2, pg91 of RM0522 Rev. 1
 		 */
-		target_add_ram32(target, STM32C53X_SRAM1_BASE, STM32C53X_SRAM1_SIZE);
-		target_add_ram32(target, STM32C53X_SRAM2_BASE, STM32C53X_SRAM2_SIZE);
-		target_add_ram32(target, STM32C53X_SRAM_ALIAS_BASE, STM32C53X_SRAM12_SIZE);
+		target_add_ram32(target, STM32C53x_SRAM1_BASE, STM32C53x_SRAM1_SIZE);
+		target_add_ram32(target, STM32C53x_SRAM2_BASE, STM32C53x_SRAM2_SIZE);
+		target_add_ram32(target, STM32C53x_SRAM_ALIAS_BASE, STM32C53x_SRAM12_SIZE);
 
 		/*
 		 * Build the Flash map. C53X/C54X has one of:
 		 * Flash: 256 KiB as two equal banks (16 sectors of 8 KiB each)
 		 */
-		stm32h5_add_flash(target, STM32C53X_FLASH_BANK1_BASE, STM32C53X_FLASH_BANK_SIZE,
-			STM32C53X_SECTORS_PER_BANK | STM32H5_FPEC_CTRL_BANK1);
-		stm32h5_add_flash(target, STM32C53X_FLASH_BANK2_BASE, STM32C53X_FLASH_BANK_SIZE,
-			STM32C53X_SECTORS_PER_BANK | STM32H5_FPEC_CTRL_BANK2);
+		stm32h5_add_flash(target, STM32C53x_FLASH_BANK1_BASE, STM32C53x_FLASH_BANK_SIZE,
+			STM32C53x_SECTORS_PER_BANK | STM32H5_FPEC_CTRL_BANK1);
+		stm32h5_add_flash(target, STM32C53x_FLASH_BANK2_BASE, STM32C53x_FLASH_BANK_SIZE,
+			STM32C53x_SECTORS_PER_BANK | STM32H5_FPEC_CTRL_BANK2);
 		break;
 	case ID_STM32C55x:
 		/*
 		 * Build the RAM map. 64+64=128.
 		 * This uses the addresses and sizes found in §2.2.2, Figure 3, pg92 of RM0522 Rev. 1
 		 */
-		target_add_ram32(target, STM32C55X_SRAM1_BASE, STM32C55X_SRAM1_SIZE);
-		target_add_ram32(target, STM32C55X_SRAM2_BASE, STM32C55X_SRAM2_SIZE);
-		target_add_ram32(target, STM32C55X_SRAM_ALIAS_BASE, STM32C55X_SRAM12_SIZE);
+		target_add_ram32(target, STM32C55x_SRAM1_BASE, STM32C55x_SRAM1_SIZE);
+		target_add_ram32(target, STM32C55x_SRAM2_BASE, STM32C55x_SRAM2_SIZE);
+		target_add_ram32(target, STM32C55x_SRAM_ALIAS_BASE, STM32C55x_SRAM12_SIZE);
 
 		/*
 		 * Build the Flash map. C55X/C56X has one of:
 		 * Flash: 512 KiB as two equal banks (32 sectors of 8 KiB each)
 		 */
-		stm32h5_add_flash(target, STM32C55X_FLASH_BANK1_BASE, STM32C55X_FLASH_BANK_SIZE,
-			STM32C55X_SECTORS_PER_BANK | STM32H5_FPEC_CTRL_BANK1);
-		stm32h5_add_flash(target, STM32C55X_FLASH_BANK2_BASE, STM32C55X_FLASH_BANK_SIZE,
-			STM32C55X_SECTORS_PER_BANK | STM32H5_FPEC_CTRL_BANK2);
+		stm32h5_add_flash(target, STM32C55x_FLASH_BANK1_BASE, STM32C55x_FLASH_BANK_SIZE,
+			STM32C55x_SECTORS_PER_BANK | STM32H5_FPEC_CTRL_BANK1);
+		stm32h5_add_flash(target, STM32C55x_FLASH_BANK2_BASE, STM32C55x_FLASH_BANK_SIZE,
+			STM32C55x_SECTORS_PER_BANK | STM32H5_FPEC_CTRL_BANK2);
 		break;
 	case ID_STM32C59x:
 		/*
 		 * Build the RAM map. 128+128=256.
 		 * This uses the addresses and sizes found in §2.2.2, Figure 4, pg93 of RM0522 Rev. 1
 		 */
-		target_add_ram32(target, STM32C59X_SRAM1_BASE, STM32C59X_SRAM1_SIZE);
-		target_add_ram32(target, STM32C59X_SRAM2_BASE, STM32C59X_SRAM2_SIZE);
-		target_add_ram32(target, STM32C59X_SRAM_ALIAS_BASE, STM32C59X_SRAM12_SIZE);
+		target_add_ram32(target, STM32C59x_SRAM1_BASE, STM32C59x_SRAM1_SIZE);
+		target_add_ram32(target, STM32C59x_SRAM2_BASE, STM32C59x_SRAM2_SIZE);
+		target_add_ram32(target, STM32C59x_SRAM_ALIAS_BASE, STM32C59x_SRAM12_SIZE);
 
 		/*
 		 * Build the Flash map. C59X has
 		 * Flash: 1 MiB as two equal banks (64 sectors of 8 KiB each)
 		 */
-		stm32h5_add_flash(target, STM32C59X_FLASH_BANK1_BASE, STM32C59X_FLASH_BANK_SIZE,
-			STM32C55X_SECTORS_PER_BANK | STM32H5_FPEC_CTRL_BANK1);
-		stm32h5_add_flash(target, STM32C59X_FLASH_BANK2_BASE, STM32C59X_FLASH_BANK_SIZE,
-			STM32C55X_SECTORS_PER_BANK | STM32H5_FPEC_CTRL_BANK2);
+		stm32h5_add_flash(target, STM32C59x_FLASH_BANK1_BASE, STM32C59x_FLASH_BANK_SIZE,
+			STM32C55x_SECTORS_PER_BANK | STM32H5_FPEC_CTRL_BANK1);
+		stm32h5_add_flash(target, STM32C59x_FLASH_BANK2_BASE, STM32C59x_FLASH_BANK_SIZE,
+			STM32C55x_SECTORS_PER_BANK | STM32H5_FPEC_CTRL_BANK2);
 		break;
 	default:
 		return false;
@@ -563,7 +563,7 @@ static bool stm32h5_cmd_rev(target_s *target, int argc, const char **argv)
 	const uint32_t idcode = target_mem32_read32(target, STM32H5_DBGMCU_IDCODE);
 	const uint16_t rev_id = (idcode & STM32H5_DBGMCU_IDCODE_REV_MASK) >> STM32H5_DBGMCU_IDCODE_REV_SHIFT;
 	const uint16_t dev_id = idcode & STM32H5_DBGMCU_IDCODE_DEV_MASK;
-	uint8_t isC5 = 0;
+	bool isc5 = false;
 	
 	/* Display the device ID */
 	switch (dev_id) {
@@ -578,21 +578,21 @@ static bool stm32h5_cmd_rev(target_s *target, int argc, const char **argv)
 		break;
 	case ID_STM32C53x:
 		tc_printf(target, "STM32C53x/54x\n");
-		isC5 = 1;
+		isc5 = true;
 		break;
 	case ID_STM32C55x:
 		tc_printf(target, "STM32C55x/56x\n");
-		isC5 = 1;
+		isc5 = true;
 		break;
 	case ID_STM32C59x:
 		tc_printf(target, "STM32C59x/5Ax\n");
-		isC5 = 1;
+		isc5 = true;
 		break;
 	default:
 		tc_printf(target, "Unknown %s. BMP may not correctly support it!\n", target->driver);
 	}
 	char revision = '?';
-	if(!isC5) {
+	if(!isc5) {
 		for (size_t i = 0; i < ARRAY_LENGTH(stm32h5_revisions); ++i) {
 			if (stm32h5_revisions[i].rev_id == rev_id)
 				revision = stm32h5_revisions[i].revision;
