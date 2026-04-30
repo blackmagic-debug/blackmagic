@@ -5,6 +5,7 @@
  * Copyright (C) 2022-2025 1BitSquared <info@1bitsquared.com>
  * Written by Uwe Bonnes <bon@elektron.ikp.physik.tu-darmstadt.de>
  * Modified by Rachel Mant <git@dragonmux.network>
+ * Modified by Eric Brombaugh <ebrombaugh1@cox.net>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -46,6 +47,8 @@
  * RM0434 - Multiprotocol wireless 32-bit MCU Arm®-based Cortex®-M4 with
  *        FPU, Bluetooth® Low-Energy and 802.15.4 radio solution Rev 10
  * - https://www.st.com/resource/en/reference_manual/rm0434-multiprotocol-wireless-32bit-mcu-armbased-cortexm4-with-fpu-bluetooth-lowenergy-and-802154-radio-solution-stmicroelectronics.pdf
+ * RM0487 - STM32U3 Series Arm®-based 32-bit MCUs - Reference manual Rev 3
+ * - https://www.st.com/resource/en/reference_manual/rm0487-stm32u3-series-armbased-32bit-mcus-stmicroelectronics.pdf
  */
 
 #include "general.h"
@@ -198,6 +201,10 @@
  * - RM0478, Rev.8 §31.4.8 DP_TARGETID pg 980
  * - RM0478, Rev.8 §31.8.1 DBGMCU_IDCODE pg 1011 (at address 0xe0042000)
  * - RM0478, Rev.8 §31.13.3 CPU1 ROM table PIDR pg 1057
+ * References for the U3 parts:
+ * - RM0487, Rev.3 §57.3.3 DP_TARGETID pg 2745
+ * - RM0487, Rev.3 §57.5.1 MCU ROM table PIDR pg 2754
+ * - RM0487, Rev.3 §57.12.4 DBGMCU_IDCODE pg 2848 (at address 0xe0044000)
  *
  * NB: For WL5x parts, core 2's AP requires using DBGMCU_IDCODE for identification.
  * The outer ROM table for this core carries the ARM core ID, not the part ID.
@@ -213,6 +220,9 @@
 #define ID_STM32WLxx 0x497U
 #define ID_STM32WB35 0x495U /* STM32WB35/55 */
 #define ID_STM32WB1x 0x494U
+#define ID_STM32U3B5 0x42AU /* STM32U3B5/3C5 */
+#define ID_STM32U356 0x42BU /* STM32U356/366 */
+#define ID_STM32U375 0x454U /* STM32U375/385 */
 
 static bool stm32l4_cmd_erase_bank1(target_s *target, int argc, const char **argv);
 static bool stm32l4_cmd_erase_bank2(target_s *target, int argc, const char **argv);
@@ -241,6 +251,7 @@ typedef enum stm32l4_family {
 	STM32L4_FAMILY_L55x,
 	STM32L4_FAMILY_U5xx,
 	STM32L4_FAMILY_WLxx,
+	STM32L4_FAMILY_U3xx,
 } stm32l4_family_e;
 
 /*
@@ -482,6 +493,33 @@ static stm32l4_device_info_s const stm32l4_device_info[] = {
 		.flags = 2U,
 		.flash_regs_map = stm32wb_flash_regs_map,
 		.flash_size_reg = STM32L4_FLASH_SIZE_REG,
+	},
+	{
+		.device_id = ID_STM32U3B5,
+		.family = STM32L4_FAMILY_U3xx,
+		.designator = "STM32U3B5/3C5",
+		.sram1 = 192U + 64U + 320U, /* SRAM1+2+3 continuous */
+		.flags = 2U | STM32L4_FLAG_DUAL_BANK,
+		.flash_regs_map = stm32l5_flash_regs_map,
+		.flash_size_reg = STM32U5_FLASH_SIZE_REG,
+	},
+	{
+		.device_id = ID_STM32U356,
+		.family = STM32L4_FAMILY_U3xx,
+		.designator = "STM32U356/366",
+		.sram1 = 128U + 64U, /* SRAM1+2 continuous */
+		.flags = 2U | STM32L4_FLAG_DUAL_BANK,
+		.flash_regs_map = stm32l5_flash_regs_map,
+		.flash_size_reg = STM32U5_FLASH_SIZE_REG,
+	},
+	{
+		.device_id = ID_STM32U375,
+		.family = STM32L4_FAMILY_U3xx,
+		.designator = "STM32U375/385",
+		.sram1 = 192U + 64U, /* SRAM1+2 continuous */
+		.flags = 2U | STM32L4_FLAG_DUAL_BANK,
+		.flash_regs_map = stm32l5_flash_regs_map,
+		.flash_size_reg = STM32U5_FLASH_SIZE_REG,
 	},
 	{
 		/* Sentinel entry */
@@ -1110,6 +1148,18 @@ static bool stm32l4_cmd_option(target_s *const target, const int argc, const cha
 	}
 	if (target->part_id == ID_STM32WLxx) {
 		tc_printf(target, "%s options not implemented!\n", "STM32WLxx");
+		return false;
+	}
+	if (target->part_id == ID_STM32U3B5) {
+		tc_printf(target, "%s options not implemented!\n", "STM32U3B5/3C5");
+		return false;
+	}
+	if (target->part_id == ID_STM32U356) {
+		tc_printf(target, "%s options not implemented!\n", "STM32U356/366");
+		return false;
+	}
+	if (target->part_id == ID_STM32U375) {
+		tc_printf(target, "%s options not implemented!\n", "STM32U375/385");
 		return false;
 	}
 
