@@ -94,7 +94,7 @@
 #define STM32C53x_SRAM2_BASE       0x0a008000U
 #define STM32C53x_SRAM2_SIZE       0x00008000U
 #define STM32C53x_SRAM_ALIAS_BASE  0x20000000U
-#define STM32C53x_SRAM12_SIZE     (STM32C53x_SRAM1_SIZE + STM32C53x_SRAM2_SIZE)
+#define STM32C53x_SRAM12_SIZE      (STM32C53x_SRAM1_SIZE + STM32C53x_SRAM2_SIZE)
 /* Memory map constants for STM32C55x/C56x */
 #define STM32C55x_FLASH_BANK1_BASE 0x08000000U
 #define STM32C55x_FLASH_BANK2_BASE 0x08040000U
@@ -105,7 +105,7 @@
 #define STM32C55x_SRAM2_BASE       0x0a010000U
 #define STM32C55x_SRAM2_SIZE       0x00010000U
 #define STM32C55x_SRAM_ALIAS_BASE  0x20000000U
-#define STM32C55x_SRAM12_SIZE     (STM32C55x_SRAM1_SIZE + STM32C55x_SRAM2_SIZE)
+#define STM32C55x_SRAM12_SIZE      (STM32C55x_SRAM1_SIZE + STM32C55x_SRAM2_SIZE)
 /* Memory map constants for STM32C59x/C5Ax */
 #define STM32C59x_FLASH_BANK1_BASE 0x08000000U
 #define STM32C59x_FLASH_BANK2_BASE 0x08080000U
@@ -116,7 +116,7 @@
 #define STM32C59x_SRAM2_BASE       0x0a020000U
 #define STM32C59x_SRAM2_SIZE       0x00020000U
 #define STM32C59x_SRAM_ALIAS_BASE  0x20000000U
-#define STM32C59x_SRAM12_SIZE     (STM32C59x_SRAM1_SIZE + STM32C59x_SRAM2_SIZE)
+#define STM32C59x_SRAM12_SIZE      (STM32C59x_SRAM1_SIZE + STM32C59x_SRAM2_SIZE)
 
 /* Flash Program and Erase Controller (FPEC) Register Map */
 #define STM32H5_FPEC_BASE        0x40022000
@@ -177,7 +177,7 @@
 /* Taken from DBGMCU_IDCODE in §59.12.4 of RM0481 rev 2, pg3116 */
 #define ID_STM32H523 0x478U
 /* Taken from DBGMCU_IDCODE in §49.12.4 of RM0522 rev 1, pg2542 */
-#define ID_STM32C53x 0x44FU	
+#define ID_STM32C53x 0x44FU
 #define ID_STM32C55x 0x44EU
 #define ID_STM32C59x 0x45AU
 
@@ -356,7 +356,7 @@ bool stm32c5_probe(target_s *const target)
 	target->enter_flash_mode = stm32h5_enter_flash_mode;
 	target->exit_flash_mode = stm32h5_exit_flash_mode;
 	target_add_commands(target, stm32h5_cmd_list, target->driver);
-	
+
 	switch (target->part_id) {
 	case ID_STM32C53x:
 		/*
@@ -564,7 +564,7 @@ static bool stm32h5_cmd_rev(target_s *target, int argc, const char **argv)
 	const uint16_t rev_id = (idcode & STM32H5_DBGMCU_IDCODE_REV_MASK) >> STM32H5_DBGMCU_IDCODE_REV_SHIFT;
 	const uint16_t dev_id = idcode & STM32H5_DBGMCU_IDCODE_DEV_MASK;
 	bool isc5 = false;
-	
+
 	/* Display the device ID */
 	switch (dev_id) {
 	case ID_STM32H5xx:
@@ -592,7 +592,7 @@ static bool stm32h5_cmd_rev(target_s *target, int argc, const char **argv)
 		tc_printf(target, "Unknown %s. BMP may not correctly support it!\n", target->driver);
 	}
 	char revision = '?';
-	if(!isc5) {
+	if (!isc5) {
 		for (size_t i = 0; i < ARRAY_LENGTH(stm32h5_revisions); ++i) {
 			if (stm32h5_revisions[i].rev_id == rev_id)
 				revision = stm32h5_revisions[i].revision;
