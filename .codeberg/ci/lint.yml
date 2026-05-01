@@ -1,0 +1,25 @@
+# SPDX-License-Identifier: MIT OR Apache-2.0
+# SPDX-FileCopyrightText: 2026 1BitSquared <info@1bitsquared.com>
+# SPDX-FileContributor: Written by Rachel Mant <git@dragonmux.network>
+
+# Controls when the workflow will run
+when:
+  # Triggers the workflow on pull request events
+  - event: pull_request
+  # Allows us to trigger the workflow manually from in Woodpecker for any branch
+  - event: manual
+
+steps:
+  - name: lint
+    image: debian:trixie
+    pull: true
+    commands: |
+      # Get Python installed
+      apt update
+      apt install -y python3 python3-venv git
+      # Create a Python venv for pre-commit to be run from and activate it
+      python3 -m venv --upgrade-deps env
+      . env/bin/activate
+      # Now install pre-commit and run it for BMD
+      pip install pre-commit
+      pre-commit run --show-diff-on-failure --color=always --all-files
