@@ -690,31 +690,19 @@ static void stm32l5_flash_enable(target_s *const target)
 /* stm32u3 needs to be put in VOS 1 after reset in order to flash */
 static bool stm32u3_enter_flash_mode(target_s *target)
 {
-	DEBUG_INFO("in %s\n", __func__);
-	if (target->flash_mode)
-		return true;
-
-	bool result = true;
-	
 	/* Reset target on flash command */
 	/* This saves us if we're interrupted in IRQ context */
 	target_reset(target);
-	
 	/* enable PWR */
 	target_mem32_write32(target, STM32U3_RCC_AHB1ENR2, STM32U3_RCC_AHB1ENR2_PWREN);
-
 	/* switch to VOS 1 */
 	target_mem32_write32(target, STM32U3_PWR_VOSR, STM32U3_PWR_VOSR_R1EN);
-	
 	/* wait for R1RDY */
 	uint32_t vosr = 0;
 	while((vosr & STM32U3_PWR_VOSR_R1RDY) == 0U) {
 		vosr = target_mem32_read32(target, STM32U3_PWR_VOSR);
 	}
-	
-	if (result == true)
-		target->flash_mode = true;
-	return result;
+	return true;
 }
 
 static uint32_t stm32l4_main_sram_length(const target_s *const target)
@@ -880,7 +868,7 @@ static bool stm32l4_attach(target_s *const target)
 	/* And rebuild the RAM map */
 	if (device->family == STM32L4_FAMILY_L55x || device->family == STM32L4_FAMILY_U5xx)
 		target_add_ram32(target, 0x0a000000, (device->sram1 + device->sram2) * 1024U);
-	else
+	else if(device->sram2 != 0U)
 		target_add_ram32(target, 0x10000000, device->sram2 * 1024U);
 	target_add_ram32(target, 0x20000000, stm32l4_main_sram_length(target));
 	/* Every STM32U5xx has 16 KiB of SRAM4 in SmartRun domain */
