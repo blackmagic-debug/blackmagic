@@ -177,9 +177,9 @@
 /* Taken from DBGMCU_IDCODE in §59.12.4 of RM0481 rev 2, pg3116 */
 #define ID_STM32H523 0x478U
 /* Taken from DBGMCU_IDCODE in §49.12.4 of RM0522 rev 1, pg2542 */
-#define ID_STM32C53x 0x44FU
-#define ID_STM32C55x 0x44EU
-#define ID_STM32C59x 0x45AU
+#define ID_STM32C53x 0x44fU
+#define ID_STM32C55x 0x44eU
+#define ID_STM32C59x 0x45aU
 
 typedef struct stm32h5_flash {
 	target_flash_s target_flash;
