@@ -866,9 +866,9 @@ static bool stm32l4_attach(target_s *const target)
 	/* Free any previously built memory map */
 	target_mem_map_free(target);
 	/* And rebuild the RAM map */
-	if (device->family == STM32L4_FAMILY_L55x || device->family == STM32L4_FAMILY_U5xx)
+	if (device->family == STM32L4_FAMILY_L55x || device->family == STM32L4_FAMILY_U5xx || device->family == STM32L4_FAMILY_U3xx)
 		target_add_ram32(target, 0x0a000000, (device->sram1 + device->sram2) * 1024U);
-	else if(device->sram2 != 0U)
+	else
 		target_add_ram32(target, 0x10000000, device->sram2 * 1024U);
 	target_add_ram32(target, 0x20000000, stm32l4_main_sram_length(target));
 	/* Every STM32U5xx has 16 KiB of SRAM4 in SmartRun domain */
