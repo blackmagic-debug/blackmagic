@@ -142,6 +142,13 @@
 #define STM32L5_PWR_CR1            0x50007000U
 #define STM32L5_PWR_CR1_VOS        (3U << 9U)
 
+#define STM32U3_RCC_AHB1ENR2       0x40030C94U
+#define STM32U3_RCC_AHB1ENR2_PWREN (1U << 2U)
+#define STM32U3_PWR_VOSR           0x4003080CU
+#define STM32U3_PWR_VOSR_R1EN      (1 << 0U)
+#define STM32U3_PWR_VOSR_R2EN      (1 << 1U)
+#define STM32U3_PWR_VOSR_R1RDY     (1 << 16U)
+
 #define STM32L4_FLAG_DUAL_BANK 0x80U
 
 /* TODO: add block size constants for other MCUs */
@@ -680,6 +687,36 @@ static void stm32l5_flash_enable(target_s *const target)
 	target_mem32_write32(target, STM32L5_PWR_CR1, pwr_ctrl1);
 }
 
+/* stm32u3 needs to be put in VOS 1 after reset in order to flash */
+static bool stm32u3_enter_flash_mode(target_s *target)
+{
+	DEBUG_INFO("in %s\n", __func__);
+	if (target->flash_mode)
+		return true;
+
+	bool result = true;
+	
+	/* Reset target on flash command */
+	/* This saves us if we're interrupted in IRQ context */
+	target_reset(target);
+	
+	/* enable PWR */
+	target_mem32_write32(target, STM32U3_RCC_AHB1ENR2, STM32U3_RCC_AHB1ENR2_PWREN);
+
+	/* switch to VOS 1 */
+	target_mem32_write32(target, STM32U3_PWR_VOSR, STM32U3_PWR_VOSR_R1EN);
+	
+	/* wait for R1RDY */
+	uint32_t vosr = 0;
+	while((vosr & STM32U3_PWR_VOSR_R1RDY) == 0U) {
+		vosr = target_mem32_read32(target, STM32U3_PWR_VOSR);
+	}
+	
+	if (result == true)
+		target->flash_mode = true;
+	return result;
+}
+
 static uint32_t stm32l4_main_sram_length(const target_s *const target)
 {
 	const stm32l4_priv_s *const priv = (const stm32l4_priv_s *)target->target_storage;
@@ -807,6 +844,12 @@ bool stm32l4_probe(target_s *const target)
 	case ID_STM32U5Fx:
 	case ID_STM32U59x:
 	case ID_STM32U575:
+		target->target_options |= TOPT_NON_HALTING_MEM_IO;
+		break;
+	case ID_STM32U3B5:
+	case ID_STM32U356:
+	case ID_STM32U375:
+		target->enter_flash_mode = stm32u3_enter_flash_mode;
 		target->target_options |= TOPT_NON_HALTING_MEM_IO;
 		break;
 	default:
