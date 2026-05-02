@@ -458,7 +458,6 @@ void adiv5_dp_init(adiv5_debug_port_s *const dp)
 				DEBUG_WARN("Failed to read TARGETID partno after 128 attempts\n");
 				break;
 			}
-
 		};
 
 		/*
