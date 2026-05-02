@@ -3,8 +3,9 @@
  *
  * Copyright (C) 2017-2020 Uwe Bonnes bon@elektron.ikp.physik.tu-darmstadt.de
  * Copyright (C) 2022-2023 1BitSquared <info@1bitsquared.com>
- * Copyright (C) 2025-2026 Eric Brombaugh <ebrombaugh1@cox.net> based on initial
- *               work done by Rachel Mant and zyp.
+ * Copyright (C) 2025-2026 Eric Brombaugh <ebrombaugh1@cox.net>
+ * Written by Eric Brombaugh <ebrombaugh1@cox.net>
+ * Based on initial work done by Rachel Mant and zyp.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -98,7 +99,7 @@
 #define STM32H7RS_IWDG_KEY       (STM32H7RS_IWDG_BASE + 0x00U)
 #define STM32H7RS_IWDG_KEY_RESET 0x0000aaaaU
 
-/* 
+/*
  * Access from processor address space.
  * Access via the APB-D is at 0xe00e1000
  */
@@ -144,7 +145,7 @@ static bool stm32h7rs_crc(target_s *target, int argc, const char **argv);
 static bool stm32h7rs_cmd_psize(target_s *target, int argc, const char **argv);
 static bool stm32h7rs_cmd_rev(target_s *target, int argc, const char **argv);
 
-const command_s stm32h7rs_cmd_list[] = {
+static const command_s stm32h7rs_cmd_list[] = {
 	{"psize", stm32h7rs_cmd_psize, "Configure flash write parallelism: (x8|x16|x32|x64(default))"},
 	{"uid", stm32h7rs_uid, "Print unique device ID"},
 	{"crc", stm32h7rs_crc, "Print CRC of bank 1"},
@@ -158,7 +159,7 @@ static bool stm32h7rs_flash_erase(target_flash_s *target_flash, target_addr_t ad
 static bool stm32h7rs_flash_write(target_flash_s *target_flash, target_addr_t dest, const void *src, size_t len);
 static bool stm32h7rs_flash_prepare(target_flash_s *target_flash);
 static bool stm32h7rs_flash_done(target_flash_s *target_flash);
-static bool stm32h7rs_mass_erase(target_s *target, platform_timeout_s *const print_progess);
+static bool stm32h7rs_mass_erase(target_s *target, platform_timeout_s *print_progess);
 
 static void stm32h7rs_add_flash(target_s *target, uint32_t addr, size_t length, size_t blocksize)
 {
@@ -201,7 +202,7 @@ bool stm32h7rs_probe(target_s *target)
 	priv->dbg_cr = target_mem32_read32(target, DBGMCU_CR);
 	/* Set up the Flash write/erase parallelism to 64-bit default */
 	priv->psize = ALIGN_64BIT;
-	
+
 	target->driver = "STM32H7R/S";
 	target->attach = stm32h7rs_attach;
 	target->detach = stm32h7rs_detach;
@@ -494,7 +495,7 @@ static bool stm32h7rs_crc(target_s *target, int argc, const char **argv)
 static bool stm32h7rs_cmd_psize(target_s *target, int argc, const char **argv)
 {
 	if (argc == 1) {
-		align_e psize = ((const stm32h7rs_priv_s *)target->target_storage)->psize;;
+		const align_e psize = ((const stm32h7rs_priv_s *)target->target_storage)->psize;
 		tc_printf(target, "Flash write parallelism: %s\n", stm32_psize_to_string(psize));
 	} else {
 		align_e psize = ALIGN_64BIT;
