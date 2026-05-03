@@ -1,8 +1,10 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
- * Copyright (C) 2011  Black Sphere Technologies Ltd.
+ * Copyright (C) 2011 Black Sphere Technologies Ltd.
  * Written by Gareth McMullin <gareth@blacksphere.co.nz>
+ * Copyright (C) 2022-2026 1BitSquared <info@1bitsquared.com>
+ * Modified by Rachel Mant <git@dragonmux.network>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -184,6 +186,6 @@ void adiv5_jtag_ensure_idle(adiv5_debug_port_s *dp)
 	 * from DPACC/APACC to IDCODE. We want BYPASS in case of daisy-chaining.
 	 */
 	jtag_devs[dp->dev_index].current_ir = 0xffU;
-	/* Go from TLR to RTI. */
-	jtagtap_return_idle(1);
+	/* Ensure the TAP state machine is back in Run/Test Idle */
+	jtagtap_soft_reset();
 }
