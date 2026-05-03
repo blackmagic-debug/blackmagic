@@ -2,7 +2,7 @@
  * This file is part of the Black Magic Debug project.
  *
  * Copyright (C) 2015, 2017-2022 Uwe Bonnes <bon@elektron.ikp.physik.tu-darmstadt.de>
- * Copyright (C) 2022-2025 1BitSquared <info@1bitsquared.com>
+ * Copyright (C) 2022-2026 1BitSquared <info@1bitsquared.com>
  * Written by Uwe Bonnes <bon@elektron.ikp.physik.tu-darmstadt.de>
  * Modified by Rachel Mant <git@dragonmux.network>
  * Modified by Eric Brombaugh <ebrombaugh1@cox.net>
@@ -142,9 +142,9 @@
 #define STM32L5_PWR_CR1            0x50007000U
 #define STM32L5_PWR_CR1_VOS        (3U << 9U)
 
-#define STM32U3_RCC_AHB1ENR2       0x40030C94U
+#define STM32U3_RCC_AHB1ENR2       0x40030c94U
 #define STM32U3_RCC_AHB1ENR2_PWREN (1U << 2U)
-#define STM32U3_PWR_VOSR           0x4003080CU
+#define STM32U3_PWR_VOSR           0x4003080cU
 #define STM32U3_PWR_VOSR_R1EN      (1 << 0U)
 #define STM32U3_PWR_VOSR_R2EN      (1 << 1U)
 #define STM32U3_PWR_VOSR_R1RDY     (1 << 16U)
@@ -227,8 +227,8 @@
 #define ID_STM32WLxx 0x497U
 #define ID_STM32WB35 0x495U /* STM32WB35/55 */
 #define ID_STM32WB1x 0x494U
-#define ID_STM32U3B5 0x42AU /* STM32U3B5/3C5 */
-#define ID_STM32U356 0x42BU /* STM32U356/366 */
+#define ID_STM32U3B5 0x42aU /* STM32U3B5/3C5 */
+#define ID_STM32U356 0x42bU /* STM32U356/366 */
 #define ID_STM32U375 0x454U /* STM32U375/385 */
 
 static bool stm32l4_cmd_erase_bank1(target_s *target, int argc, const char **argv);
@@ -699,9 +699,8 @@ static bool stm32u3_enter_flash_mode(target_s *target)
 	target_mem32_write32(target, STM32U3_PWR_VOSR, STM32U3_PWR_VOSR_R1EN);
 	/* wait for R1RDY */
 	uint32_t vosr = 0;
-	while((vosr & STM32U3_PWR_VOSR_R1RDY) == 0U) {
+	while ((vosr & STM32U3_PWR_VOSR_R1RDY) == 0U)
 		vosr = target_mem32_read32(target, STM32U3_PWR_VOSR);
-	}
 	return true;
 }
 
@@ -866,7 +865,8 @@ static bool stm32l4_attach(target_s *const target)
 	/* Free any previously built memory map */
 	target_mem_map_free(target);
 	/* And rebuild the RAM map */
-	if (device->family == STM32L4_FAMILY_L55x || device->family == STM32L4_FAMILY_U5xx || device->family == STM32L4_FAMILY_U3xx)
+	if (device->family == STM32L4_FAMILY_L55x || device->family == STM32L4_FAMILY_U5xx ||
+		device->family == STM32L4_FAMILY_U3xx)
 		target_add_ram32(target, 0x0a000000, (device->sram1 + device->sram2) * 1024U);
 	else
 		target_add_ram32(target, 0x10000000, device->sram2 * 1024U);
