@@ -408,9 +408,9 @@ bool stm32c5_probe(target_s *const target)
 		 * Flash: 1 MiB as two equal banks (64 sectors of 8 KiB each)
 		 */
 		stm32h5_add_flash(target, STM32C59x_FLASH_BANK1_BASE, STM32C59x_FLASH_BANK_SIZE,
-			STM32C55x_SECTORS_PER_BANK | STM32H5_FPEC_CTRL_BANK1);
+			STM32C59x_SECTORS_PER_BANK | STM32H5_FPEC_CTRL_BANK1);
 		stm32h5_add_flash(target, STM32C59x_FLASH_BANK2_BASE, STM32C59x_FLASH_BANK_SIZE,
-			STM32C55x_SECTORS_PER_BANK | STM32H5_FPEC_CTRL_BANK2);
+			STM32C59x_SECTORS_PER_BANK | STM32H5_FPEC_CTRL_BANK2);
 		break;
 	default:
 		return false;
