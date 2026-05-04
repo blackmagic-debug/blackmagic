@@ -791,7 +791,7 @@ static void cortexm_reset(target_s *const target)
 	if (!(target->target_options & TOPT_INHIBIT_NRST)) {
 		platform_nrst_set_val(true);
 		platform_nrst_set_val(false);
-		/* Some NRF52840 users saw invalid SWD transaction with native/firmware without this delay.*/
+		/* Some NRF52840 users saw invalid SWD transaction with bmp-v2/firmware without this delay.*/
 		platform_delay(10);
 		if (dp->ensure_idle)
 			dp->ensure_idle(dp);

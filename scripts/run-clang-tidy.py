@@ -34,7 +34,7 @@ def gatherFiles():
 
 extraArgs = [
 	'-Isrc/target', '-Isrc', '-Isrc/include', '-Isrc/platforms/common',
-	'-Isrc/platforms/native', '-Ideps/libopencm3/include', '-Isrc/platforms/stm32'
+	'-Isrc/platforms/bmp-v2', '-Ideps/libopencm3/include', '-Isrc/platforms/stm32'
 ] + args.includePaths
 
 for i, arg in enumerate(extraArgs):

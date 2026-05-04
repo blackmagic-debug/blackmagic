@@ -131,4 +131,4 @@ SPI ports are set to Pclk/8 each (use with `bmpflash`). As SPI1 pins may conflic
     a) has a fixed per-board PLL config, no autodetection;
     b) understands buttons, drives LED, does not touch other GPIOs, talks USB DfuSe, ~~has MS OS descriptors for automatic driver installation on Windows~~, uses same libopencm3 code so you can verify hardware config via a smaller binary;
     c) erases and writes to internal Flash ~2.4x faster than MaskROM;
-    d) all of that in first 8-9 KiB of first page of 16 KiB (of F2/F4/F7 flash), just like on `native`/`stlink`/`swlink` etc.
+    d) all of that in first 8-9 KiB of first page of 16 KiB (of F2/F4/F7 flash), just like on `bmp-v2`/`stlink`/`swlink` etc.

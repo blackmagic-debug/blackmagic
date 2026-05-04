@@ -46,11 +46,11 @@ jobs:
           - 'f4discovery'
           - 'hydrabus'
           - 'launchpad-icdi'
-          - 'native'
-          - 'native-uncommon'
-          - 'native-st-clones'
-          - 'native-riscv'
-          - 'native-remote'
+          - 'bmp-v2'
+          - 'bmp-v2-uncommon'
+          - 'bmp-v2-st-clones'
+          - 'bmp-v2-riscv'
+          - 'bmp-v2-remote'
           - 'stlink'
           - 'stlinkv3'
           - 'swlink'
@@ -104,7 +104,7 @@ jobs:
           meson compile -C build
           mkdir src/artefacts
           case "${{ matrix.probe }}" in
-            native-*)
+            bmp-v2-*)
               mv build/blackmagic_native_firmware.elf build/blackmagic_${{ matrix.probe }}_firmware.elf
               mv build/blackmagic_native_firmware.bin build/blackmagic_${{ matrix.probe }}_firmware.bin
               ;;

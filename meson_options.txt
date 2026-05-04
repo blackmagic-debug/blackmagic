@@ -16,7 +16,7 @@ option(
 		'f4discovery',
 		'hydrabus',
 		'launchpad-icdi',
-		'native',
+		'bmp-v2',
 		'stlink',
 		'stlinkv3',
 		'swlink'

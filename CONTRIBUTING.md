@@ -64,7 +64,7 @@ When writing commit messages, please prefix the component being modified using t
 * If the commit modifies target support, prefix with the path under src/target including the name of the file minus
   its extension - for example, "adiv5:", "stm32f1:" or "flashstub/lmi:"
 * If the commit modifies a platform, prefix with the name of that platform followed by the file - for example,
-  "hosted/cli:" or "native/platform:"
+  "hosted/cli:" or "bmp-v2/platform:"
 * If the commit modifies a significant number of files, us the overarching theme - for example if it's a platform API
   change then use "platform:"
 * If the commit modifies files such as the build system, the main project readme, or any other files about the project

@@ -2,6 +2,7 @@
 #
 # Copyright (C) 2023 1BitSquared <info@1bitsquared.com>
 # Written by Rafael Silva <perigoso@riseup.net>
+# Modified by Kat Mitchell <kat@northernpaws.io>
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -76,7 +77,7 @@ probe_bootloader = declare_dependency(
 
 summary(
 	{
-		'Name': 'Black Magic Probe (native)',
+		'Name': 'Black Magic Probe (bmp-v2)',
 		'Platform': 'STM32F1',
 		'Bootloader': 'Black Magic Debug Bootloader',
 		'Load Address': '0x8002000',

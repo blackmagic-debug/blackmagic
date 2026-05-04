@@ -21,7 +21,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* This file provides the platform specific declarations for the native implementation. */
+/* This file provides the platform specific declarations for the bmp-v2 implementation. */
 
 #ifndef PLATFORMS_NATIVE_PLATFORM_H
 #define PLATFORMS_NATIVE_PLATFORM_H
