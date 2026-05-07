@@ -197,7 +197,7 @@ configuration for it.
 The build configuration command for the native probe may look like:
 
 ```sh
-meson setup build --cross-file cross-file/native.ini
+meson setup build --cross-file cross-file/bmp-v2.ini
 ```
 
 Note that even if you are using the pre-configured cross-file, you may still override it's defaults with
@@ -208,7 +208,7 @@ Alternatively (for advanced users), if you wish to configure manually, for insta
 for a new probe, or a different toolchain, you can run something similar to this:
 
 ```sh
-meson setup build --cross-file cross-file/arm-none-eabi.ini -Dprobe=native -Dtargets=cortexm,stm
+meson setup build --cross-file cross-file/arm-none-eabi.ini -Dprobe=bmp-v2 -Dtargets=cortexm,stm
 ```
 
 After following one of these two paths, you now should have a `build` directory from where you can build
@@ -223,8 +223,8 @@ meson compile -C build
 
 You should now see the resulting binaries in `build`, in this case:
 
-* `blackmagic_native_firmware.bin`
-* `blackmagic_native_firmware.elf`
+* `blackmagic_bmp-v2_firmware.bin`
+* `blackmagic_bmp-v2_firmware.elf`
 
 These are the binary files you will use to flash to your probe.
 
