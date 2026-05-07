@@ -38,7 +38,7 @@ In the example command lines for building and flashing the firmware to the Black
 0. Clone the repo and libopencm3 submodule, install toolchains, meson, etc.
 
 ```sh
-git clone https://github.com/blackmagic-debug/blackmagic.git
+git clone https://codeberg.org/blackmagic-debug/blackmagic.git
 cd blackmagic
 ```
 
@@ -53,7 +53,7 @@ meson setup build --cross-file=cross-file/blackpill-xxxxxx.ini -Dbmd_bootloader=
   Also Note: If the bootloader and firmware are going to be built for a Blackpill connected to a "Blackpill Carrier", the above
   setup MUST have "-Don_carrier_board=true" added to it. This is required to ensure the LEDs are correctly mapped to
   the Blackpill Carrier Board.
-  
+
 2. Compile the firmware and bootloader
 
 ```sh
@@ -99,7 +99,7 @@ If you flashed the bootloader using the above instructions, it may be invoked us
   - Wait a moment
   - Release KEY
 
-Once activated the BMD bootloader may be used to flash the device using 'bmputil,' available [here](https://github.com/blackmagic-debug/bmputil).
+Once activated the BMD bootloader may be used to flash the device using 'bmputil,' available [here](https://codeberg.org/blackmagic-debug/bmputil).
 
 ## SWD/JTAG frequency setting
 
@@ -131,4 +131,4 @@ SPI ports are set to Pclk/8 each (use with `bmpflash`). As SPI1 pins may conflic
     a) has a fixed per-board PLL config, no autodetection;
     b) understands buttons, drives LED, does not touch other GPIOs, talks USB DfuSe, ~~has MS OS descriptors for automatic driver installation on Windows~~, uses same libopencm3 code so you can verify hardware config via a smaller binary;
     c) erases and writes to internal Flash ~2.4x faster than MaskROM;
-    d) all of that in first 8-9 KiB of first page of 16 KiB (of F2/F4/F7 flash), just like on `native`/`stlink`/`swlink` etc.
+    d) all of that in first 8-9 KiB of first page of 16 KiB (of F2/F4/F7 flash), just like on `bmp-v2`/`stlink`/`swlink` etc.

@@ -32,24 +32,25 @@ jobs:
         os:
           - {id: ubuntu-24.04, name: noble}
         compiler:
-          - '14.3.Rel1'
+          - '15.2.Rel1'
         probe:
           - '96b_carbon'
           - 'blackpill-f401cc'
           - 'blackpill-f401ce'
           - 'blackpill-f411ce'
           - 'bluepill'
+          - 'bmp-v3'
           - 'ctxlink'
           - 'f072'
           - 'f3'
           - 'f4discovery'
           - 'hydrabus'
           - 'launchpad-icdi'
-          - 'native'
-          - 'native-uncommon'
-          - 'native-st-clones'
-          - 'native-riscv'
-          - 'native-remote'
+          - 'bmp-v2'
+          - 'bmp-v2-uncommon'
+          - 'bmp-v2-st-clones'
+          - 'bmp-v2-riscv'
+          - 'bmp-v2-remote'
           - 'stlink'
           - 'stlinkv3'
           - 'swlink'
@@ -90,7 +91,7 @@ jobs:
 
       # Checkout the repository and branch to build under the default location
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
           fetch-tags: true
@@ -103,7 +104,7 @@ jobs:
           meson compile -C build
           mkdir src/artefacts
           case "${{ matrix.probe }}" in
-            native-*)
+            bmp-v2-*)
               mv build/blackmagic_native_firmware.elf build/blackmagic_${{ matrix.probe }}_firmware.elf
               mv build/blackmagic_native_firmware.bin build/blackmagic_${{ matrix.probe }}_firmware.bin
               ;;
@@ -112,7 +113,7 @@ jobs:
 
       # Package up the artefacts and upload them
       - name: Archive
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: blackmagic_firmware-${{ matrix.probe }}
           path: src/artefacts/*
@@ -121,7 +122,7 @@ jobs:
       # Package and upload logs if the build fails so we can dissect why
       - name: Upload failure logs
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: logs-firmware-${{ matrix.probe }}
           path: ${{ github.workspace }}/build/meson-logs/*
@@ -132,7 +133,7 @@ jobs:
     needs: build-firmware
     steps:
       - name: Merge firmware artefacts
-        uses: actions/upload-artifact/merge@v4
+        uses: actions/upload-artifact/merge@v6
         with:
           name: blackmagic_firmware
           pattern: blackmagic_firmware-*
@@ -150,9 +151,9 @@ jobs:
           - {id: ubuntu-24.04, name: noble}
         compiler:
           - 'clang-17' # Native Clang compiler for the CI image
-          - 'clang-20' # Latest Clang compiler from the apt mirror
+          - 'clang-21' # Latest Clang compiler from the apt mirror
           - 'gcc-12' # Native GCC compiler for the CI image
-          - 'gcc-13' # Latest GCC compiler from the toolchain PPA
+          - 'gcc-14' # Latest GCC compiler from the toolchain PPA
       fail-fast: false
 
     # Steps represent a sequence of tasks that will be executed as part of the job
@@ -172,7 +173,7 @@ jobs:
         shell: bash
         run: |
           CXX=${CC/#gcc/g++}
-          sudo apt-add-repository ppa:ubuntu-toolchain-r/test
+          sudo apt-add-repository ppa:ubuntu-toolchain-r/ppa
           sudo apt-get update
           sudo apt-get install $CC $CXX
           echo "CC=$CC" >> $GITHUB_ENV
@@ -219,7 +220,7 @@ jobs:
 
       # Checkout the repository and branch to build under the default location
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
           fetch-tags: true
@@ -235,7 +236,7 @@ jobs:
 
       # Package up the artefact and upload it
       - name: Archive
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: blackmagic_linux-${{ matrix.os.id }}-${{ matrix.compiler }}
           path: src/artefacts/*
@@ -244,7 +245,7 @@ jobs:
       # Package and upload logs if the build fails so we can dissect why
       - name: Upload failure logs
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: logs-linux-${{ matrix.os.id }}-${{ matrix.compiler }}
           path: ${{ github.workspace }}/build/meson-logs/*
@@ -266,7 +267,7 @@ jobs:
     strategy:
       matrix:
         os:
-          - windows-2022
+          - windows-2025
         sys:
           - {abi: ucrt64, env: ucrt-x86_64, compiler: gcc}
       fail-fast: false
@@ -319,7 +320,7 @@ jobs:
 
       # Checkout the repository and branch to build under the default location
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
           fetch-tags: true
@@ -336,7 +337,7 @@ jobs:
 
       # Package up all the artefacts and upload them
       - name: Archive firmware build artefacts as a zip
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: blackmagic_${{ matrix.os }}-${{ matrix.sys.abi }}-${{ matrix.sys.compiler }}
           path: src/artefacts/*
@@ -345,7 +346,7 @@ jobs:
       # Package and upload logs if the build fails so we can dissect why
       - name: Upload failure logs
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: logs-${{ matrix.os }}-${{ matrix.sys.abi }}-${{ matrix.sys.compiler }}
           path: ${{ github.workspace }}/build/meson-logs/*
@@ -368,8 +369,9 @@ jobs:
     strategy:
       matrix:
         os:
-          - {id: macos-13, name: '13'}
           - {id: macos-14, name: '14'}
+          - {id: macos-15, name: '15'}
+          - {id: macos-26, name: '26'}
       fail-fast: false
 
     # Steps represent a sequence of tasks that will be executed as part of the job
@@ -397,7 +399,7 @@ jobs:
 
       # Checkout the repository and branch to build under the default location
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
           fetch-tags: true
@@ -413,7 +415,7 @@ jobs:
 
       # Package up the artefact and upload it
       - name: Archive
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: blackmagic_macos-${{ matrix.os.name }}
           path: src/artefacts/*
@@ -422,7 +424,7 @@ jobs:
       # Package and upload logs if the build fails so we can dissect why
       - name: Upload failure logs
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: logs-macos-${{ matrix.os.name }}
           path: ${{ github.workspace }}/build/meson-logs/*

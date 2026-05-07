@@ -395,12 +395,14 @@ bool cortexm_probe(adiv5_access_port_s *ap)
 		PROBE(stm32f4_probe);
 		PROBE(stm32h5_probe);
 		PROBE(stm32h7_probe);
+		PROBE(stm32h7rs_probe);
 		PROBE(stm32mp15_cm4_probe);
 		PROBE(stm32l0_probe);
 		PROBE(stm32l1_probe);
 		PROBE(stm32l4_probe);
 		PROBE(stm32g0_probe);
 		PROBE(stm32wb0_probe);
+		PROBE(stm32c5_probe);
 		break;
 	case JEP106_MANUFACTURER_CYPRESS:
 		DEBUG_WARN("Unhandled Cypress device\n");
@@ -524,9 +526,13 @@ bool cortexm_attach(target_s *target)
 
 	/* Try to halt the core, and then check that it worked (which also resets the halt reason) */
 	target_halt_request(target);
-	const target_halt_reason_e halt_result = target_halt_poll(target, NULL);
-	/* If we failed to halt the target somehow, bail */
-	if (halt_result == TARGET_HALT_ERROR || halt_result == TARGET_HALT_RUNNING)
+	platform_timeout_s timeout;
+	platform_timeout_set(&timeout, 250);
+	target_halt_reason_e reason = TARGET_HALT_RUNNING;
+	while (!platform_timeout_is_expired(&timeout) && reason == TARGET_HALT_RUNNING)
+		reason = target_halt_poll(target, NULL);
+	/* If we did not succeed, we must abort at this point. */
+	if (reason == TARGET_HALT_FAULT || reason == TARGET_HALT_ERROR)
 		return false;
 
 	/* Request halt on reset */
@@ -570,7 +576,6 @@ bool cortexm_attach(target_s *target)
 	(void)target_mem32_read32(target, CORTEXM_DHCSR);
 	if (target_mem32_read32(target, CORTEXM_DHCSR) & CORTEXM_DHCSR_S_RESET_ST) {
 		platform_nrst_set_val(false);
-		platform_timeout_s timeout;
 		platform_timeout_set(&timeout, 1000);
 		while (true) {
 			const uint32_t reset_status = target_mem32_read32(target, CORTEXM_DHCSR);
@@ -777,14 +782,19 @@ static void cortexm_pc_write(target_s *target, const uint32_t val)
  */
 static void cortexm_reset(target_s *const target)
 {
+	adiv5_access_port_s *ap = cortex_ap(target);
+	adiv5_debug_port_s *dp = ap->dp;
+
 	/* Read DHCSR here to clear S_RESET_ST bit before reset */
 	target_mem32_read32(target, CORTEXM_DHCSR);
 	/* If the physical reset pin is not inhibited, use it */
 	if (!(target->target_options & TOPT_INHIBIT_NRST)) {
 		platform_nrst_set_val(true);
 		platform_nrst_set_val(false);
-		/* Some NRF52840 users saw invalid SWD transaction with native/firmware without this delay.*/
+		/* Some NRF52840 users saw invalid SWD transaction with bmp-v2/firmware without this delay.*/
 		platform_delay(10);
+		if (dp->ensure_idle)
+			dp->ensure_idle(dp);
 	}
 
 	/* Check if the reset succeeded */
@@ -795,6 +805,9 @@ static void cortexm_reset(target_s *const target)
 		 * Trigger reset by AIRCR.
 		 */
 		target_mem32_write32(target, CORTEXM_AIRCR, CORTEXM_AIRCR_VECTKEY | CORTEXM_AIRCR_SYSRESETREQ);
+		platform_delay(10);
+		if (dp->ensure_idle)
+			dp->ensure_idle(dp);
 	}
 
 	/* If target needs to do something extra (see Atmel SAM4L for example) */
@@ -864,21 +877,21 @@ static target_halt_reason_e cortexm_halt_poll(target_s *target, target_addr64_t 
 	priv->dcache_enabled = ccr & CORTEXM_CCR_DCACHE_ENABLE;
 	priv->icache_enabled = ccr & CORTEXM_CCR_ICACHE_ENABLE;
 
-	bool fault_state = false;
-	// the V8 may stop before actually executing the instruction
-	// so reading dfsr might not work.
-	// Instead, we check if there are pending faults on ICSR
-	// meaning we stopped while trying to execute a fault
-	// but maybe did not execute it
-	if ((target->target_options & CORTEXM_TOPT_FLAVOUR_V8M)) {
+	bool fault = false;
+	/*
+	 * On ARMv8-M, execution may stop before actually retiring the instruction related to a fault,
+	 * so reading DFSR might not work - instead we check if there are pending faults in ICSR,
+	 * meaning we stopped while trying to execute a faulting instruction but maybe that didn't retire
+	 */
+	if (target->target_options & CORTEXM_TOPT_FLAVOUR_V8M) {
 		const uint32_t icsr = target_mem32_read32(target, CORTEXM_ICSR);
 		const uint32_t pending = CORTEXM_ICSR_VEC_PENDING(icsr);
-		//  catch all pending faults
-		if (pending > 0U && pending < 8U)
-			fault_state = true;
+		/* Catch all pending exceptions, but not IRQs */
+		fault = pending > 0U && pending < 8U;
 	} else
-		fault_state = (dfsr & CORTEXM_DFSR_VCATCH) != 0U;
-	if (fault_state && cortexm_fault_unwind(target))
+		fault = (dfsr & CORTEXM_DFSR_VCATCH) != 0U;
+	/* If there was a fault of some kind, unwind and report */
+	if (fault && cortexm_fault_unwind(target))
 		return TARGET_HALT_FAULT;
 
 	/* Remember if we stopped on a breakpoint */

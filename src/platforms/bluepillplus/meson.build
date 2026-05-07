@@ -1,7 +1,7 @@
 # This file is part of the Black Magic Debug project.
 #
-# Copyright (C) 2023 1BitSquared <info@1bitsquared.com>
-# Written by Rafael Silva <perigoso@riseup.net>
+# Copyright (C) 2024 1BitSquared <info@1bitsquared.com>
+# Written by ALTracer <11005378+ALTracer@users.noreply.github.com>
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -28,55 +28,54 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-probe_native_includes = include_directories('.')
+probe_bluepillplus_includes = include_directories('.')
 
-probe_native_sources = files('platform.c')
+probe_bluepillplus_sources = files('platform.c')
 
-probe_native_dfu_sources = files('usbdfu.c')
+probe_bluepillplus_dfu_sources = files('usbdfu.c')
 
-probe_native_args = [
+probe_bluepillplus_args = [
 	'-DDFU_SERIAL_LENGTH=9',
-	'-DBLACKMAGIC',
 ]
 
 trace_protocol = get_option('trace_protocol')
-probe_native_args += [f'-DSWO_ENCODING=@trace_protocol@']
-probe_native_dependencies = [platform_stm32_swo]
+probe_bluepillplus_args += [f'-DSWO_ENCODING=@trace_protocol@']
+probe_bluepillplus_dependencies = [platform_stm32_swo]
 if trace_protocol in ['1', '3']
-	probe_native_dependencies += platform_stm32_swo_manchester
+	probe_bluepillplus_dependencies += platform_stm32_swo_manchester
 endif
 if trace_protocol in ['2', '3']
-	probe_native_dependencies += platform_stm32_swo_uart
+	probe_bluepillplus_dependencies += platform_stm32_swo_uart
 endif
 
-probe_native_common_link_args = [
+probe_bluepillplus_common_link_args = [
 	'-L@0@'.format(meson.current_source_dir()),
-	'-T@0@'.format('native.ld'),
+	'-T@0@'.format('stm32f103cb.ld'),
 ]
 
-probe_native_link_args = [
+probe_bluepillplus_link_args = [
 	'-Wl,-Ttext=0x8002000',
 ]
 
 probe_host = declare_dependency(
-	include_directories: probe_native_includes,
-	sources: probe_native_sources,
-	compile_args: probe_native_args,
-	link_args: probe_native_common_link_args + probe_native_link_args,
-	dependencies: [platform_common, platform_stm32f1, probe_native_dependencies],
+	include_directories: probe_bluepillplus_includes,
+	sources: probe_bluepillplus_sources,
+	compile_args: probe_bluepillplus_args,
+	link_args: probe_bluepillplus_common_link_args + probe_bluepillplus_link_args,
+	dependencies: [platform_common, platform_stm32f1, probe_bluepillplus_dependencies],
 )
 
 probe_bootloader = declare_dependency(
-	include_directories: [platform_common_includes, probe_native_includes],
-	sources: probe_native_dfu_sources,
-	compile_args: probe_native_args,
-	link_args: probe_native_common_link_args,
+	include_directories: [platform_common_includes, probe_bluepillplus_includes],
+	sources: probe_bluepillplus_dfu_sources,
+	compile_args: probe_bluepillplus_args,
+	link_args: probe_bluepillplus_common_link_args,
 	dependencies: platform_stm32f1_dfu,
 )
 
 summary(
 	{
-		'Name': 'Black Magic Probe (native)',
+		'Name': 'Black Magic Probe (BluePill-Plus)',
 		'Platform': 'STM32F1',
 		'Bootloader': 'Black Magic Debug Bootloader',
 		'Load Address': '0x8002000',

@@ -440,10 +440,25 @@ void adiv5_dp_init(adiv5_debug_port_s *const dp)
 	adiv5_dp_clear_sticky_errors(dp);
 
 	if (dp->version >= 2) {
-		/* TARGETID is on bank 2 */
-		adiv5_dp_write(dp, ADIV5_DP_SELECT, ADIV5_DP_BANK2);
-		const uint32_t targetid = adiv5_dp_read(dp, ADIV5_DP_TARGETID);
-		adiv5_dp_write(dp, ADIV5_DP_SELECT, ADIV5_DP_BANK0);
+		uint32_t targetid = 0U;
+		uint8_t read_attempts = 0U;
+		/*
+	 	 * Retry reading TARGETID until partno is non zero
+		 * On some Nordic devices the TARGETID register isn't fully read on the first attempt
+		 * resulting in the designer code being set while the part no. is still 0x0
+		 */
+		while (targetid == 0U || dp->target_partno == 0U) {
+			/* TARGETID is on bank 2 */
+			adiv5_dp_write(dp, ADIV5_DP_SELECT, ADIV5_DP_BANK2);
+			targetid = adiv5_dp_read(dp, ADIV5_DP_TARGETID);
+			adiv5_dp_write(dp, ADIV5_DP_SELECT, ADIV5_DP_BANK0);
+
+			dp->target_partno = (targetid & ADIV5_DP_TARGETID_TPARTNO_MASK) >> ADIV5_DP_TARGETID_TPARTNO_OFFSET;
+			if (++read_attempts >= 128U && dp->target_partno == 0U) {
+				DEBUG_WARN("Failed to read TARGETID partno after 128 attempts\n");
+				break;
+			}
+		};
 
 		/*
 		 * Use TARGETID register to identify target and convert it
@@ -451,9 +466,6 @@ void adiv5_dp_init(adiv5_debug_port_s *const dp)
 		 */
 		dp->target_designer_code =
 			adi_decode_designer((targetid & ADIV5_DP_TARGETID_TDESIGNER_MASK) >> ADIV5_DP_TARGETID_TDESIGNER_OFFSET);
-
-		dp->target_partno = (targetid & ADIV5_DP_TARGETID_TPARTNO_MASK) >> ADIV5_DP_TARGETID_TPARTNO_OFFSET;
-
 		DEBUG_INFO("TARGETID 0x%08" PRIx32 " designer 0x%x partno 0x%x\n", targetid, dp->target_designer_code,
 			dp->target_partno);
 

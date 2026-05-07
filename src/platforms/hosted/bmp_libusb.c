@@ -177,7 +177,7 @@ void bmp_read_product_version(libusb_device_descriptor_s *device_descriptor, lib
 
 	/* Let's start out easy - check to see if the string contains an opening paren (alternate platform) */
 	const char *const opening_paren = strchr(description + BMP_PRODUCT_STRING_LENGTH, '(');
-	/* If there isn't one, we're dealing with nominally a native probe */
+	/* If there isn't one, we're dealing with nominally a BMPv1 or v2 probe */
 	if (!opening_paren) {
 		/* Knowing this, let's see if there are enough bytes for a version string, and if there are.. extract it */
 		if (description_len > BMP_PRODUCT_STRING_LENGTH) {
@@ -192,7 +192,7 @@ void bmp_read_product_version(libusb_device_descriptor_s *device_descriptor, lib
 			*product = strdup(description);
 		}
 	} else {
-		/* Otherwise, we've got a non-native probe, so find the closing paren for the probe type */
+		/* Otherwise, we've got a non-bmp probe, so find the closing paren for the probe type */
 		const char *const closing_paren = strchr(opening_paren, ')');
 		/* If we didn't find one, we've got a problem */
 		if (!closing_paren) {
@@ -537,10 +537,18 @@ static bool process_vid_pid_table_probe(
 	if (version == NULL)
 		version = strdup("---");
 
-	*probe_list = probe_info_add_by_id(*probe_list, debugger_device->type, device, device_descriptor->idVendor,
-		device_descriptor->idProduct, manufacturer, product, serial, version);
+	probe_info_s *probe_info = probe_info_add_by_id(*probe_list, debugger_device->type, device,
+		device_descriptor->idVendor, device_descriptor->idProduct, manufacturer, product, serial, version);
+	if (probe_info)
+		*probe_list = probe_info;
+	else {
+		free(product);
+		free(manufacturer);
+		free(serial);
+		free(version);
+	}
 	libusb_close(handle);
-	return true;
+	return probe_info != NULL;
 }
 
 static const probe_info_s *scan_for_devices(bmda_probe_s *info)
