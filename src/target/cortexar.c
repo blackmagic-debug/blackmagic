@@ -1354,6 +1354,7 @@ static void cortexar_reset(target_s *const target)
 	/* If the physical reset pin is not inhibited, use it */
 	if (!(target->target_options & TOPT_INHIBIT_NRST)) {
 		platform_nrst_set_val(true);
+		platform_delay(1);
 		platform_nrst_set_val(false);
 		/* Precautionary delay as with the Cortex-M code for targets that take a hot minute to come back */
 		platform_delay(10);

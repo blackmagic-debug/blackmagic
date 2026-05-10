@@ -790,6 +790,7 @@ static void cortexm_reset(target_s *const target)
 	/* If the physical reset pin is not inhibited, use it */
 	if (!(target->target_options & TOPT_INHIBIT_NRST)) {
 		platform_nrst_set_val(true);
+		platform_delay(1);
 		platform_nrst_set_val(false);
 		/* Some NRF52840 users saw invalid SWD transaction with bmp-v2/firmware without this delay.*/
 		platform_delay(10);
