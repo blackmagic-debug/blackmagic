@@ -254,11 +254,6 @@ void platform_nrst_set_val(bool assert)
 {
 	gpio_set(TMS_PORT, TMS_PIN);
 	gpio_set_val(NRST_PORT, NRST_PIN, assert);
-
-	if (assert) {
-		for (volatile size_t i = 0; i < 10000U; ++i)
-			continue;
-	}
 }
 
 bool platform_nrst_get_val(void)
