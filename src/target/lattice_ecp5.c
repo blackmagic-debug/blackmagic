@@ -489,21 +489,52 @@ static void ecp5_spi_xfr_jtag(
 
 	/* Switch into Shift-DR */
 	jtagtap_shift_dr();
-	/* Now we're in Shift-DR, clock out 1's till we hit the right device in the chain */
-	jtag_proc.jtagtap_tdi_seq(false, ones, device->dr_prescan);
 
 	uint8_t tap_out;
 	for (size_t idx = 0U; idx < length; ++idx) {
 		const uint8_t tap_in = reverse_bits8(data_in[idx]);
-		jtag_proc.jtagtap_tdi_tdo_seq(&tap_out, (idx + 1U) == length && !device->dr_postscan, &tap_in, 8U);
+		jtag_proc.jtagtap_tdi_tdo_seq(&tap_out, (idx + 1U) == length && !device->dr_prescan, &tap_in, 8U);
 		if (data_out)
 			data_out[idx] = reverse_bits8(tap_out);
 	}
 
-	DEBUG_PROTO("%s: %" PRIu32 " cycles\n", __func__, (uint32_t)length);
+	if (data_out) {
+		/* Fixup the TDO to TDI skew caused by extra devices on the JTAG chain in bypass mode */
+		for (size_t scan = 0U; scan < device->dr_prescan; ++scan) {
+			uint8_t trailing_bit = 0U;
+			for (size_t offset = 0U; offset < length; ++offset) {
+				const size_t index = length - 1U - offset;
+				const uint8_t carry_bit = data_out[index] & 0x80U;
+				data_out[index] <<= 1U;
+				data_out[index] |= trailing_bit >> 7U;
+				trailing_bit = carry_bit;
+			}
+		}
+	}
 
-	/* Make sure we're in Exit1-DR having clocked out 1's for any more devices on the chain */
-	jtag_proc.jtagtap_tdi_seq(true, ones, device->dr_postscan);
+	DEBUG_PROTO("%s: %" PRIu32 " cycles\n", __func__, (uint32_t)length * 8U);
+
+	if (device->dr_prescan) {
+		/* Squeeze the trailing bits from the SPI transaction out of the chain */
+		uint8_t trailing_bits[4];
+		jtag_proc.jtagtap_tdi_tdo_seq(trailing_bits, true, NULL, device->dr_prescan);
+
+		if (data_out) {
+			/* forcibly re-align the data buffer's chakra */
+			size_t bit_len = length * 8U;
+			for (size_t offset = bit_len - device->dr_prescan, idx = 0; offset < bit_len; ++offset, ++idx) {
+				const size_t output_byte = offset >> 3U; /* Divide by 8 */
+				const size_t output_bit = 7U - (offset & 7U);
+
+				const size_t input_byte = idx >> 3U;
+				const size_t input_bit = idx & 7U;
+
+				const uint8_t trailing_bit = trailing_bits[input_byte] >> input_bit;
+				data_out[output_byte] |= trailing_bit << output_bit;
+			}
+		}
+	}
+
 	/* Now go through Update-DR and back to Idle */
 	jtagtap_return_idle(1U);
 }
