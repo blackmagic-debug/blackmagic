@@ -303,12 +303,18 @@ static bool ecp5_attach(target_s *const target)
 {
 	const ecp5_ctx_s *const ctx = (ecp5_ctx_s *)target->priv;
 	const uint32_t status = ecp5_read32(ctx->device_index, CMD_LSC_READ_STATUS);
+	const jtag_dev_s *const device = &jtag_devs[ctx->device_index];
 
 	if (ECP5_STATUS_ENCRYPTED_ONLY(status))
 		DEBUG_WARN("This FPGA only accepts encrypted bitstreams!\n");
 
 	if (ECP5_STATUS_DONE(status))
 		DEBUG_INFO("FPGA is configured\n");
+
+	if (device->dr_postscan) {
+		DEBUG_WARN("Transparent SPI Flash not possible, not first device in the chain\n");
+		return true;
+	}
 
 	ecp5_enter_flash(target);
 
