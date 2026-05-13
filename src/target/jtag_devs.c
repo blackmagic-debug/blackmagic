@@ -445,7 +445,7 @@ const jtag_dev_descr_s dev_descr[] = {
 		.ir_quirks =
 			{
 				.ir_length = 8U,
-				.ir_value = 0x5U,
+				.ir_value = 0x1U,
 			},
 	},
 	{
@@ -458,7 +458,7 @@ const jtag_dev_descr_s dev_descr[] = {
 		.ir_quirks =
 			{
 				.ir_length = 8U,
-				.ir_value = 0x5U,
+				.ir_value = 0x1U,
 			},
 	},
 	{
@@ -471,7 +471,7 @@ const jtag_dev_descr_s dev_descr[] = {
 		.ir_quirks =
 			{
 				.ir_length = 8U,
-				.ir_value = 0x5U,
+				.ir_value = 0x1U,
 			},
 	},
 	{
@@ -484,7 +484,7 @@ const jtag_dev_descr_s dev_descr[] = {
 		.ir_quirks =
 			{
 				.ir_length = 8U,
-				.ir_value = 0x5U,
+				.ir_value = 0x1U,
 			},
 	},
 	{
@@ -497,7 +497,7 @@ const jtag_dev_descr_s dev_descr[] = {
 		.ir_quirks =
 			{
 				.ir_length = 8U,
-				.ir_value = 0x5U,
+				.ir_value = 0x1U,
 			},
 	},
 	{
@@ -510,7 +510,7 @@ const jtag_dev_descr_s dev_descr[] = {
 		.ir_quirks =
 			{
 				.ir_length = 8U,
-				.ir_value = 0x5U,
+				.ir_value = 0x1U,
 			},
 	},
 	{
@@ -523,7 +523,7 @@ const jtag_dev_descr_s dev_descr[] = {
 		.ir_quirks =
 			{
 				.ir_length = 8U,
-				.ir_value = 0x5U,
+				.ir_value = 0x1U,
 			},
 	},
 	{
@@ -536,7 +536,7 @@ const jtag_dev_descr_s dev_descr[] = {
 		.ir_quirks =
 			{
 				.ir_length = 8U,
-				.ir_value = 0x5U,
+				.ir_value = 0x1U,
 			},
 	},
 	{
@@ -549,7 +549,7 @@ const jtag_dev_descr_s dev_descr[] = {
 		.ir_quirks =
 			{
 				.ir_length = 8U,
-				.ir_value = 0x5U,
+				.ir_value = 0x1U,
 			},
 	},
 	{
@@ -562,7 +562,7 @@ const jtag_dev_descr_s dev_descr[] = {
 		.ir_quirks =
 			{
 				.ir_length = 8U,
-				.ir_value = 0x5U,
+				.ir_value = 0x1U,
 			},
 	},
 #endif
