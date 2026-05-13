@@ -835,7 +835,7 @@ void ftdi_jtag_tdi_tdo_seq(uint8_t *data_out, const bool final_tms, const uint8_
 		if (bytes)
 			ftdi_buffer_read(data_out, bytes);
 		/* Read the residual bits */
-		if (bits) {
+		if (bits - (final_tms ? 1U : 0U)) {
 			ftdi_buffer_read_val(data_out[bytes]);
 			/* Because of a quirk in how the FTDI device works, the bits will be MSb aligned, so shift them down */
 			const size_t shift = bits - (final_tms ? 1U : 0U);
