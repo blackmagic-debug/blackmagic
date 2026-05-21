@@ -203,6 +203,7 @@ struct adiv5_debug_port {
 	uint32_t (*error)(adiv5_debug_port_s *dp, bool protocol_recovery);
 	uint32_t (*low_access)(adiv5_debug_port_s *dp, uint8_t RnW, uint16_t addr, uint32_t value);
 	void (*abort)(adiv5_debug_port_s *dp, uint32_t abort);
+	void (*ensure_idle)(adiv5_debug_port_s *dp);
 
 #if CONFIG_BMDA == 1
 	void (*ap_regs_read)(adiv5_access_port_s *ap, void *data);

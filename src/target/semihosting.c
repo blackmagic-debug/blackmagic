@@ -337,6 +337,10 @@ int32_t semihosting_open(target_s *const target, const semihosting_s *const requ
 {
 	const target_addr_t file_name_taddr = request->params[0];
 	const uint32_t file_name_length = request->params[2];
+	/* Explicit bounds check for open_mode_flags */
+	const uint32_t open_mode_libc = request->params[1];
+	if (open_mode_libc > 11)
+		return -1;
 
 	/*
 	 * Translation table of fopen() modes to GDB-compatible open flags

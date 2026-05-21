@@ -101,6 +101,7 @@ typedef enum riscv_match_size {
 #define RV_HART_FLAG_MEMORY_ABSTRACT    (0U << 4U)
 #define RV_HART_FLAG_MEMORY_SYSBUS      (1U << 4U)
 #define RV_HART_FLAG_DATA_GPR_ONLY      (1U << 5U) /* Hart supports Abstract Data commands for GPRs only */
+#define RV_HART_FLAG_MEMORY_PROGBUF     (1U << 6U)
 
 typedef struct riscv_dmi riscv_dmi_s;
 
@@ -180,6 +181,7 @@ typedef struct riscv_hart {
 #define RV_DM_DATA3             0x07U
 #define RV_DM_ABST_CTRLSTATUS   0x16U
 #define RV_DM_ABST_COMMAND      0x17U
+#define RV_DM_PROGBUF_BASE      0x20U
 #define RV_DM_SYSBUS_CTRLSTATUS 0x38U
 #define RV_DM_SYSBUS_ADDR0      0x39U
 #define RV_DM_SYSBUS_ADDR1      0x3aU
@@ -218,6 +220,17 @@ typedef struct riscv_hart {
 #define RV_GPR_BASE 0x1000U
 /* The FP base defines the starting register space address for the floating point registers */
 #define RV_FP_BASE 0x1020U
+/* The FP control base defines the starting register space address for the floating point modes and flags */
+#define RV_FP_CTRL_BASE 0x001U
+/*
+ * GPR a0, aka x10 is used as a bounce buffer for our progbuf CSR I/O,
+ * as semihosting syscall number and result register per ABI
+ */
+#define RV_GPR_A0 0x100aU
+/* GPR a1, aka x11, is used as semihosting argument */
+#define RV_GPR_A1 0x100bU
+
+#define RV_EBREAK 0x00100073U
 
 /**
  * The MXL (Machine XLEN) field encodes the native base integer ISA width

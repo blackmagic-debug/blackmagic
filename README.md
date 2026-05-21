@@ -9,12 +9,12 @@ a debugger-in-a-dongle that provides multi-voltage debug with no other external 
 or as Black Magic Debug App (BMDA) which is the project built for the host machine, more details below.
 
 The project allows debugging of devices connected over JTAG or SWD, and via the companion tool
-[bmpflash](https://github.com/blackmagic-debug/bmpflash) the programming of SPI Flash devices.
+[bmpflash](https://codeberg.org/blackmagic-debug/bmpflash) the programming of SPI Flash devices.
 This includes support for ARM and RISC-V devices, the complete list can be found on the website.
 
 [![Discord](https://img.shields.io/discord/613131135903596547?logo=discord)](https://discord.gg/P7FYThy)
-[![Current release](https://img.shields.io/github/v/release/blackmagic-debug/blackmagic.svg?logo=github)](https://github.com/blackmagic-debug/blackmagic/releases)
-[![CI flow status](https://github.com/blackmagic-debug/blackmagic/actions/workflows/build-and-upload.yml/badge.svg)](https://github.com/blackmagic-debug/blackmagic/actions/workflows/build-and-upload.yml)
+[![Current release](https://codeberg.org/blackmagic-debug/blackmagic/badges/release.svg)](https://codeberg.org/blackmagic-debug/blackmagic/releases)
+[![CI status](https://ci.codeberg.org/api/badges/16587/status.svg)](https://ci.codeberg.org/repos/16587)
 [![AI free project](https://badges.ws/badge/NO-AI-ff0000)](https://github.com/blackmagic-debug/blackmagic/blob/main/CONTRIBUTING.md#contributing)
 
 Table of contents:
@@ -197,7 +197,7 @@ configuration for it.
 The build configuration command for the native probe may look like:
 
 ```sh
-meson setup build --cross-file cross-file/native.ini
+meson setup build --cross-file cross-file/bmp-v2.ini
 ```
 
 Note that even if you are using the pre-configured cross-file, you may still override it's defaults with
@@ -208,7 +208,7 @@ Alternatively (for advanced users), if you wish to configure manually, for insta
 for a new probe, or a different toolchain, you can run something similar to this:
 
 ```sh
-meson setup build --cross-file cross-file/arm-none-eabi.ini -Dprobe=native -Dtargets=cortexm,stm
+meson setup build --cross-file cross-file/arm-none-eabi.ini -Dprobe=bmp-v2 -Dtargets=cortexm,stm
 ```
 
 After following one of these two paths, you now should have a `build` directory from where you can build
@@ -223,8 +223,8 @@ meson compile -C build
 
 You should now see the resulting binaries in `build`, in this case:
 
-* `blackmagic_native_firmware.bin`
-* `blackmagic_native_firmware.elf`
+* `blackmagic_bmp-v2_firmware.bin`
+* `blackmagic_bmp-v2_firmware.elf`
 
 These are the binary files you will use to flash to your probe.
 

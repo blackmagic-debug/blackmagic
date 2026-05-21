@@ -95,11 +95,12 @@ if is_firmware_build
 		'stm': 'STM32 (and clones) parts',
 		'ti': 'Texas Instruments parts',
 		'xilinx': 'Xilinx parts',
+		'lattice': 'Lattice parts',
 	}
 
 	# Check to see if the set of enabled targets is all of them and the
 	# firmware is to be built for a STM32F1 based probe (requires a restriction)
-	if probe in ['bluepill', 'native', 'stlink', 'swlink'] and enabled_targets.length() == target_names.keys().length()
+	if probe in ['bluepill', 'bmp-v2', 'stlink', 'swlink'] and enabled_targets.length() == target_names.keys().length()
 		warning('Disabling some targets as your build will not fit the target probe otherwise')
 		enabled_targets = ['cortexm', 'lpc', 'nrf', 'nxp', 'renesas', 'rp', 'sam', 'stm', 'ti']
 	elif probe in ['f072'] and enabled_targets.length() == target_names.keys().length()
@@ -198,6 +199,18 @@ target_hc32 = declare_dependency(
 	sources: files('hc32l110.c'),
 	compile_args: ['-DCONFIG_HC32=1'],
 	dependencies: target_cortexm,
+)
+
+target_lattice_defs = ['-DCONFIG_LATTICE=1']
+if get_option('ecp5_decode_registers')
+	target_lattice_defs += '-DCONFIG_LATTICE_ECP5_DECODE=1'
+endif
+
+target_lattice = declare_dependency(
+	sources: files(
+		'lattice_ecp5.c',
+	),
+	compile_args: [target_lattice_defs],
 )
 
 target_lpc = declare_dependency(
@@ -330,6 +343,7 @@ target_stm = declare_dependency(
 		'stm32g0.c',
 		'stm32h5.c',
 		'stm32h7.c',
+		'stm32h7rs.c',
 		'stm32l0.c',
 		'stm32l4.c',
 		'stm32mp15.c',
@@ -370,7 +384,7 @@ target_ti_cortexm = declare_dependency(
 		'msp432e4.c',
 		'msp432p4.c',
 		'mspm0.c'
-	) + lmi_stub,
+	) + lmi_stub + mspm0_stub,
 	compile_args: ['-DCONFIG_TI=1'],
 	dependencies: target_cortexm,
 )
@@ -439,6 +453,7 @@ libbmd_target_deps = [
 	target_efm,
 	target_gd32,
 	target_hc32,
+	target_lattice,
 	target_lpc,
 	target_mm32,
 	target_nrf,

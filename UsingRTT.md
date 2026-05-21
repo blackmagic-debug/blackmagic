@@ -206,7 +206,7 @@ to the RTT input of the target.
 ### Linux
 
 On Linux, install udev rules as described in the [driver
-documentation](https://github.com/blackmagic-debug/blackmagic/blob/main/driver/README.md).
+documentation](https://codeberg.org/blackmagic-debug/blackmagic/src/driver/README.md).
 Disconnect and re-connect the BMP. Check the device shows up in `/dev/`:
 
 ```sh

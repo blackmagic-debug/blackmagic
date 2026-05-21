@@ -99,8 +99,6 @@ void platform_nrst_set_val(bool assert)
 {
 	if (assert) {
 		gpio_clear(NRST_PORT, NRST_PIN);
-		for (volatile size_t i = 0; i < 10000U; ++i)
-			continue;
 	} else
 		gpio_set(NRST_PORT, NRST_PIN);
 }

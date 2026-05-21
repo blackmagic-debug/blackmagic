@@ -70,7 +70,10 @@ bmda_args = [
 bmda_link_args = []
 bmda_deps = []
 
-cc = is_cross_build ? cc_native : cc_host
+bmda_native_build = is_cross_build and is_firmware_build
+bmda_machine = bmda_native_build ? build_machine : host_machine
+
+cc = bmda_native_build ? cc_native : cc_host
 
 # Ensure that MSVC is switched to standards compliant mode
 if cc.get_define('_MSC_VER') != ''
@@ -84,7 +87,7 @@ endif
 
 # Determine if we're on a MSYS2 environment of some kind
 # If the compiler is MSYS2 GCC or Clang (but not Clang-cl)
-if build_machine.system() == 'windows' and cc.get_define('__MINGW32__') == '1'
+if bmda_machine.system() == 'windows' and cc.get_define('__MINGW32__') == '1'
 	# It needs custom location for some MinGWs
 	# See https://github.com/msys2/MINGW-packages/issues/10275
 	ucrt_check = '''
@@ -117,18 +120,18 @@ libusb = dependency(
 	version: '>=1.0.13',
 	method: 'pkg-config',
 	fallback: 'libusb',
-	native: is_cross_build,
+	native: bmda_native_build,
 	default_options: [
 		'default_library=static',
 		'install_targets=false',
 		'docs=disabled',
-		'build_native=true',
+		'build_native=@0@'.format(bmda_native_build),
 	],
-	required: not is_cross_build,
+	required: not bmda_native_build,
 	disabler: true,
 )
 
-if build_machine.system() in ['windows', 'cygwin']
+if bmda_machine.system() in ['windows', 'cygwin']
 	subdir('windows')
 
 	# Make sure we build for Windows Vista and above, where the
@@ -150,7 +153,7 @@ else
 		'libftdi1',
 		method: 'pkg-config',
 		fallback: 'libftdi',
-		native: is_cross_build,
+		native: bmda_native_build,
 		default_options: [
 			'default_library=static',
 			'install_targets=false',
@@ -159,29 +162,29 @@ else
 			'examples=disabled',
 			'ftdi_eeprom=disabled',
 			#'python_bindings=disabled',
-			'build_native=true',
+			'build_native=@0@'.format(bmda_native_build),
 		],
-		required: not is_cross_build,
+		required: not bmda_native_build,
 		disabler: true,
 	)
 	bmda_sources += files('serial_unix.c')
 endif
 
 # Pick the appropriate HIDAPI depending on platform
-if build_machine.system() == 'linux'
+if bmda_machine.system() == 'linux'
 	hidapi = dependency(
 		'hidapi-hidraw',
 		method: 'pkg-config',
 		fallback: ['hidapi', 'hidapi_hidraw_dep'],
-		native: is_cross_build,
+		native: bmda_native_build,
 		default_options: [
 			'c_std=gnu99',
 			'default_library=static',
 			'install_targets=false',
 			'with_libusb=false',
-			'build_native=true',
+			'build_native=@0@'.format(bmda_native_build),
 		],
-		required: not is_cross_build,
+		required: not bmda_native_build,
 		disabler: true,
 	)
 else
@@ -189,24 +192,24 @@ else
 		'hidapi',
 		method: 'pkg-config',
 		fallback: 'hidapi',
-		native: is_cross_build,
+		native: bmda_native_build,
 		default_options: [
 			'c_std=c99',
 			'default_library=static',
 			'install_targets=false',
-			'build_native=true',
+			'build_native=@0@'.format(bmda_native_build),
 		],
-		required: not is_cross_build,
+		required: not bmda_native_build,
 		disabler: true,
 	)
 endif
 
-if build_machine.system() == 'linux'
+if bmda_machine.system() == 'linux'
 	libgpiod = dependency(
 		'libgpiod',
 		version: ['>=1.0.0', '<2.0.0'],
 		required: get_option('enable_gpiod'),
-		native: is_cross_build,
+		native: bmda_native_build,
 	)
 
 	if libgpiod.found()

@@ -157,6 +157,8 @@ bool nrf51_probe(target_s *const target)
 		uint32_t ram_size = target_mem32_read32(target, NRF52_INFO_RAM);
 		target->driver = "nRF52";
 		target->target_options |= TOPT_INHIBIT_NRST;
+		/* On nRF52 SoC, Cortex-M4F allows SRAM access without halting */
+		target->target_options |= TOPT_NON_HALTING_MEM_IO;
 		target_add_ram32(target, 0x20000000U, ram_size * 1024U);
 		nrf51_add_flash(target, 0, page_size * code_size, page_size);
 		nrf51_add_flash(target, NRF51_UICR, page_size, page_size);
