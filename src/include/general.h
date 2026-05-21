@@ -163,6 +163,16 @@ void debug_serial_send_stdout(const uint8_t *data, size_t len);
 #define BMD_UNUSED __attribute__((unused))
 #endif
 
+#ifndef __has_builtin
+#define __has_builtin(x) 0
+#endif
+
+#if __has_builtin(__builtin_constant_p)
+#define BMD_CONSTANT_P __builtin_constant_p
+#else
+#define BMD_CONSTANT_P(x) 0
+#endif
+
 #ifdef _MSC_VER
 #define strcasecmp  _stricmp
 #define strncasecmp _strnicmp

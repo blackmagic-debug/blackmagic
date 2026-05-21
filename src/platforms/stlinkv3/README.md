@@ -77,7 +77,7 @@ use soldered connections to CN3. For [STLINK-V3MINI](https://www.st.com/resource
 It is a good idea to keep a full image of the original flash content as backup!
 
 If you want to keep the original bootloader or access via SWD is disabled, clone
-https://github.com/blackmagic-debug/stlink-tool
+https://codeberg.org/blackmagic-debug/stlink-tool
 make and use like
 `stlink-tool blackmagic_stlinkv3_firmware.bin`
 Revert to original ST firmware with

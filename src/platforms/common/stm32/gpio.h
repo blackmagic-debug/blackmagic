@@ -58,7 +58,7 @@ static inline void bmp_gpio_clear(const uint32_t gpioport, const uint16_t gpios)
 static inline uint16_t bmp_gpio_get(const uint32_t gpioport, const uint16_t gpios)
 {
 	/* NOLINTNEXTLINE(clang-diagnostic-int-to-pointer-cast) */
-	return GPIO_IDR(gpioport) & gpios;
+	return (uint16_t)GPIO_IDR(gpioport) & gpios;
 }
 
 #define gpio_get bmp_gpio_get

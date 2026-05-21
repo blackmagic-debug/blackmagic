@@ -395,9 +395,28 @@ const cable_desc_s cable_desc[] = {
 		.vendor = 0x15baU,
 		.product = 0x0003U,
 		.interface = INTERFACE_A,
+		.init.data[0] = 0U,
 		.init.dirs[0] = PIN4,
 		.description = "Olimex OpenOCD JTAG",
 		.name = "arm-usb-ocd",
+	},
+	{
+		/*
+		 * https://www.latticesemi.com/view_document?document_id=51396
+		 * This interface is JTAG-only.
+		 * DBUS 4 is an activity indicator
+		 * MPSSE_SK (DB0) ----------- TCK
+		 * MPSSE-DO (DB1) ----------- TDI
+		 * MPSSE-DI (DB2) ----------- TDO
+		 * MPSSE-CS (DB3) ----------- TMS
+		 */
+		.vendor = 0x0403U,
+		.product = 0x6010U,
+		.interface = INTERFACE_A,
+		.init.data[0] = 0U,
+		.init.dirs[0] = PIN4,
+		.description = "Lattice ECP5_5G VERSA Board",
+		.name = "ecp5-versa",
 	},
 	{0},
 };
@@ -816,7 +835,7 @@ void ftdi_jtag_tdi_tdo_seq(uint8_t *data_out, const bool final_tms, const uint8_
 		if (bytes)
 			ftdi_buffer_read(data_out, bytes);
 		/* Read the residual bits */
-		if (bits) {
+		if (bits - (final_tms ? 1U : 0U)) {
 			ftdi_buffer_read_val(data_out[bytes]);
 			/* Because of a quirk in how the FTDI device works, the bits will be MSb aligned, so shift them down */
 			const size_t shift = bits - (final_tms ? 1U : 0U);

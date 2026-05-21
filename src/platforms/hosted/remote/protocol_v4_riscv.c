@@ -51,8 +51,15 @@ bool remote_v4_riscv_check_error(
 		const uint64_t response_code = remote_decode_response(buffer + 1, (size_t)length - 1U);
 		const uint8_t error = response_code & 0xffU;
 		/* If the error part of the response code indicates a fault, store the fault value */
-		if (error == REMOTE_ERROR_FAULT)
+		if (error == REMOTE_ERROR_FAULT) {
 			dmi->fault = response_code >> 8U;
+			/*
+			 * If we got RV_DMI_TOO_SOON and we're under 8 idle cycles, increase the number
+			 * of idle cycles used to compensate and have the outer code re-run the transfers
+			 */
+			if (dmi->fault == RV_DMI_TOO_SOON && dmi->idle_cycles < 8U)
+				++dmi->idle_cycles;
+		}
 		/* If the error part indicates an exception had occurred, make that happen here too */
 		else if (error == REMOTE_ERROR_EXCEPTION)
 			raise_exception(response_code >> 8U, "Remote protocol exception");
@@ -65,6 +72,8 @@ bool remote_v4_riscv_check_error(
 	/* Check if the firmware is reporting some other kind of error */
 	else if (buffer[0U] != REMOTE_RESP_OK)
 		DEBUG_ERROR("%s: Firmware reported unexpected error: %c\n", func, buffer[0]);
+	else
+		dmi->fault = RV_DMI_SUCCESS;
 	/* Return whether the remote indicated the request was successful */
 	return buffer[0U] == REMOTE_RESP_OK;
 }

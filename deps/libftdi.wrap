@@ -1,5 +1,5 @@
 [wrap-git]
-url = https://github.com/blackmagic-debug/libftdi
+url = https://codeberg.org/blackmagic-debug/libftdi
 revision = v1.5-meson
 clone-recursive = false
 

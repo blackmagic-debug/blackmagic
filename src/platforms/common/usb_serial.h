@@ -1,7 +1,7 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
- * Copyright (C) 2022 1BitSquared <info@1bitsquared.com>
+ * Copyright (C) 2022-2025 1BitSquared <info@1bitsquared.com>
  * Written by Rachel Mant <git@dragonmux.network>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -33,7 +33,7 @@ void debug_serial_run(void);
 uint32_t debug_serial_fifo_send(const char *fifo, uint32_t fifo_begin, uint32_t fifo_end);
 
 #if ENABLE_DEBUG == 1 && defined(PLATFORM_HAS_DEBUG)
-size_t debug_serial_debug_write(const char *buf, const size_t len);
+size_t debug_serial_debug_write(const char *buf, size_t len);
 #endif
 
 #endif /* PLATFORMS_COMMON_USB_SERIAL_H */

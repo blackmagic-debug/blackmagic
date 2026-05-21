@@ -2,9 +2,10 @@
  * This file is part of the Black Magic Debug project.
  *
  * Copyright (C) 2015, 2017-2022 Uwe Bonnes <bon@elektron.ikp.physik.tu-darmstadt.de>
- * Copyright (C) 2022-2025 1BitSquared <info@1bitsquared.com>
+ * Copyright (C) 2022-2026 1BitSquared <info@1bitsquared.com>
  * Written by Uwe Bonnes <bon@elektron.ikp.physik.tu-darmstadt.de>
  * Modified by Rachel Mant <git@dragonmux.network>
+ * Modified by Eric Brombaugh <ebrombaugh1@cox.net>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -46,6 +47,8 @@
  * RM0434 - Multiprotocol wireless 32-bit MCU Arm®-based Cortex®-M4 with
  *        FPU, Bluetooth® Low-Energy and 802.15.4 radio solution Rev 10
  * - https://www.st.com/resource/en/reference_manual/rm0434-multiprotocol-wireless-32bit-mcu-armbased-cortexm4-with-fpu-bluetooth-lowenergy-and-802154-radio-solution-stmicroelectronics.pdf
+ * RM0487 - STM32U3 Series Arm®-based 32-bit MCUs - Reference manual Rev 3
+ * - https://www.st.com/resource/en/reference_manual/rm0487-stm32u3-series-armbased-32bit-mcus-stmicroelectronics.pdf
  */
 
 #include "general.h"
@@ -139,6 +142,13 @@
 #define STM32L5_PWR_CR1            0x50007000U
 #define STM32L5_PWR_CR1_VOS        (3U << 9U)
 
+#define STM32U3_RCC_AHB1ENR2       0x40030c94U
+#define STM32U3_RCC_AHB1ENR2_PWREN (1U << 2U)
+#define STM32U3_PWR_VOSR           0x4003080cU
+#define STM32U3_PWR_VOSR_R1EN      (1 << 0U)
+#define STM32U3_PWR_VOSR_R2EN      (1 << 1U)
+#define STM32U3_PWR_VOSR_R1RDY     (1 << 16U)
+
 #define STM32L4_FLAG_DUAL_BANK 0x80U
 
 /* TODO: add block size constants for other MCUs */
@@ -198,6 +208,10 @@
  * - RM0478, Rev.8 §31.4.8 DP_TARGETID pg 980
  * - RM0478, Rev.8 §31.8.1 DBGMCU_IDCODE pg 1011 (at address 0xe0042000)
  * - RM0478, Rev.8 §31.13.3 CPU1 ROM table PIDR pg 1057
+ * References for the U3 parts:
+ * - RM0487, Rev.3 §57.3.3 DP_TARGETID pg 2745
+ * - RM0487, Rev.3 §57.5.1 MCU ROM table PIDR pg 2754
+ * - RM0487, Rev.3 §57.12.4 DBGMCU_IDCODE pg 2848 (at address 0xe0044000)
  *
  * NB: For WL5x parts, core 2's AP requires using DBGMCU_IDCODE for identification.
  * The outer ROM table for this core carries the ARM core ID, not the part ID.
@@ -213,6 +227,9 @@
 #define ID_STM32WLxx 0x497U
 #define ID_STM32WB35 0x495U /* STM32WB35/55 */
 #define ID_STM32WB1x 0x494U
+#define ID_STM32U3B5 0x42aU /* STM32U3B5/3C5 */
+#define ID_STM32U356 0x42bU /* STM32U356/366 */
+#define ID_STM32U375 0x454U /* STM32U375/385 */
 
 static bool stm32l4_cmd_erase_bank1(target_s *target, int argc, const char **argv);
 static bool stm32l4_cmd_erase_bank2(target_s *target, int argc, const char **argv);
@@ -241,6 +258,7 @@ typedef enum stm32l4_family {
 	STM32L4_FAMILY_L55x,
 	STM32L4_FAMILY_U5xx,
 	STM32L4_FAMILY_WLxx,
+	STM32L4_FAMILY_U3xx,
 } stm32l4_family_e;
 
 /*
@@ -484,6 +502,33 @@ static stm32l4_device_info_s const stm32l4_device_info[] = {
 		.flash_size_reg = STM32L4_FLASH_SIZE_REG,
 	},
 	{
+		.device_id = ID_STM32U3B5,
+		.family = STM32L4_FAMILY_U3xx,
+		.designator = "STM32U3B5/3C5",
+		.sram1 = 192U + 64U + 320U, /* SRAM1+2+3 continuous */
+		.flags = 2U | STM32L4_FLAG_DUAL_BANK,
+		.flash_regs_map = stm32l5_flash_regs_map,
+		.flash_size_reg = STM32U5_FLASH_SIZE_REG,
+	},
+	{
+		.device_id = ID_STM32U356,
+		.family = STM32L4_FAMILY_U3xx,
+		.designator = "STM32U356/366",
+		.sram1 = 128U + 64U, /* SRAM1+2 continuous */
+		.flags = 2U | STM32L4_FLAG_DUAL_BANK,
+		.flash_regs_map = stm32l5_flash_regs_map,
+		.flash_size_reg = STM32U5_FLASH_SIZE_REG,
+	},
+	{
+		.device_id = ID_STM32U375,
+		.family = STM32L4_FAMILY_U3xx,
+		.designator = "STM32U375/385",
+		.sram1 = 192U + 64U, /* SRAM1+2 continuous */
+		.flags = 2U | STM32L4_FLAG_DUAL_BANK,
+		.flash_regs_map = stm32l5_flash_regs_map,
+		.flash_size_reg = STM32U5_FLASH_SIZE_REG,
+	},
+	{
 		/* Sentinel entry */
 		.device_id = 0,
 	},
@@ -493,6 +538,8 @@ static const uint8_t stm32l4_opt_reg_offsets[9] = {0x20, 0x24, 0x28, 0x2c, 0x30,
 static const uint8_t stm32g4_opt_reg_offsets[11] = {0x20, 0x24, 0x28, 0x2c, 0x30, 0x70, 0x44, 0x48, 0x4c, 0x50, 0x74};
 static const uint8_t stm32wl_opt_reg_offsets[7] = {0x20, 0x24, 0x28, 0x2c, 0x30, 0x34, 0x38};
 static const uint8_t stm32wb_opt_reg_offsets[10] = {0x20, 0x24, 0x28, 0x2c, 0x30, 0x34, 0x38, 0x3c, 0x80, 0x84};
+static const uint8_t stm32u5_opt_reg_offsets[16] = {
+	0x40, 0x44, 0x48, 0x4c, 0x50, 0x54, 0x58, 0x5c, 0x60, 0x64, 0x68, 0x6c, 0x70, 0x74, 0x78, 0x7c};
 
 static const uint32_t stm32l4_default_options_values[9] = {
 	0xffeff8aaU,
@@ -548,6 +595,25 @@ static const uint32_t stm32wb_default_options_values[10] = {
 	0x00000000U, // Secure SRAM2 start address and CPU2 reset vector option bytes
 };
 
+static const uint32_t stm32u575_default_options_values[16] = {
+	0x1feff8aaU,
+	0x0800007fU,
+	0x0bf9007fU,
+	0x0c00007cU,
+	0xffffff80U,
+	0x7f807f80U,
+	0xff80ffffU,
+	0xff80ffffU,
+	0xffffff80U,
+	0x7f807f80U,
+	0xff80ffffU,
+	0xff80ffffU,
+	0x00000000U,
+	0x00000000U,
+	0x00000000U,
+	0x00000000U,
+};
+
 static_assert(ARRAY_LENGTH(stm32l4_opt_reg_offsets) == ARRAY_LENGTH(stm32l4_default_options_values),
 	"Number of stm32l4 option registers must match number of default values");
 static_assert(ARRAY_LENGTH(stm32g4_opt_reg_offsets) == ARRAY_LENGTH(stm32g4_default_options_values),
@@ -556,6 +622,8 @@ static_assert(ARRAY_LENGTH(stm32wl_opt_reg_offsets) == ARRAY_LENGTH(stm32wl_defa
 	"Number of stm32wl option registers must match number of default values");
 static_assert(ARRAY_LENGTH(stm32wb_opt_reg_offsets) == ARRAY_LENGTH(stm32wb_default_options_values),
 	"Number of stm32wb option registers must match number of default values");
+static_assert(ARRAY_LENGTH(stm32u5_opt_reg_offsets) == ARRAY_LENGTH(stm32u575_default_options_values),
+	"Number of stm32u5 option registers must match number of default values");
 
 /* Retrieve device basic information, just add to the vector to extend */
 static const stm32l4_device_info_s *stm32l4_get_device_info(const uint16_t device_id)
@@ -617,6 +685,23 @@ static void stm32l5_flash_enable(target_s *const target)
 	target_mem32_write32(target, STM32L5_RCC_APB1ENR1, STM32L5_RCC_APB1ENR1_PWREN);
 	const uint32_t pwr_ctrl1 = target_mem32_read32(target, STM32L5_PWR_CR1) & ~STM32L5_PWR_CR1_VOS;
 	target_mem32_write32(target, STM32L5_PWR_CR1, pwr_ctrl1);
+}
+
+/* stm32u3 needs to be put in VOS 1 after reset in order to flash */
+static bool stm32u3_enter_flash_mode(target_s *target)
+{
+	/* Reset target on flash command */
+	/* This saves us if we're interrupted in IRQ context */
+	target_reset(target);
+	/* enable PWR */
+	target_mem32_write32(target, STM32U3_RCC_AHB1ENR2, STM32U3_RCC_AHB1ENR2_PWREN);
+	/* switch to VOS 1 */
+	target_mem32_write32(target, STM32U3_PWR_VOSR, STM32U3_PWR_VOSR_R1EN);
+	/* wait for R1RDY */
+	uint32_t vosr = 0;
+	while ((vosr & STM32U3_PWR_VOSR_R1RDY) == 0U)
+		vosr = target_mem32_read32(target, STM32U3_PWR_VOSR);
+	return true;
 }
 
 static uint32_t stm32l4_main_sram_length(const target_s *const target)
@@ -742,6 +827,18 @@ bool stm32l4_probe(target_s *const target)
 			target->core = "M33+TZ";
 		}
 		break;
+	case ID_STM32U535:
+	case ID_STM32U5Fx:
+	case ID_STM32U59x:
+	case ID_STM32U575:
+		target->target_options |= TOPT_NON_HALTING_MEM_IO;
+		break;
+	case ID_STM32U3B5:
+	case ID_STM32U356:
+	case ID_STM32U375:
+		target->enter_flash_mode = stm32u3_enter_flash_mode;
+		target->target_options |= TOPT_NON_HALTING_MEM_IO;
+		break;
 	default:
 		break;
 	}
@@ -768,7 +865,8 @@ static bool stm32l4_attach(target_s *const target)
 	/* Free any previously built memory map */
 	target_mem_map_free(target);
 	/* And rebuild the RAM map */
-	if (device->family == STM32L4_FAMILY_L55x || device->family == STM32L4_FAMILY_U5xx)
+	if (device->family == STM32L4_FAMILY_L55x || device->family == STM32L4_FAMILY_U5xx ||
+		device->family == STM32L4_FAMILY_U3xx)
 		target_add_ram32(target, 0x0a000000, (device->sram1 + device->sram2) * 1024U);
 	else
 		target_add_ram32(target, 0x10000000, device->sram2 * 1024U);
@@ -847,6 +945,10 @@ static bool stm32l4_attach(target_s *const target)
 	} else
 		stm32l4_add_flash(target, STM32L4_FLASH_BANK1_BASE, flash_len * 1024U, 0x800, UINT32_MAX);
 
+	/* On STM32G47x SoC, Cortex-M4F allows SRAM access without halting */
+	if (device->device_id == ID_STM32G47)
+		target->target_options |= TOPT_NON_HALTING_MEM_IO;
+
 	/* Clear all errors in the status register. */
 	stm32l4_flash_write32(target, STM32L4_FPEC_STATUS, stm32l4_flash_read32(target, STM32L4_FPEC_STATUS));
 	return true;
@@ -886,6 +988,7 @@ static bool stm32l4_flash_busy_wait(target_s *const target, platform_timeout_s *
 
 static bool stm32l4_flash_erase(target_flash_s *const flash, const target_addr_t addr, const size_t len)
 {
+	(void)len;
 	target_s *target = flash->t;
 	const stm32l4_flash_s *const sf = (stm32l4_flash_s *)flash;
 
@@ -897,21 +1000,17 @@ static bool stm32l4_flash_erase(target_flash_s *const flash, const target_addr_t
 	if (!stm32l4_flash_busy_wait(target, NULL))
 		return false;
 
-	/* Erase the requested chunk of flash, one page at a time. */
-	for (size_t offset = 0; offset < len; offset += flash->blocksize) {
-		const uint32_t page = (addr + offset - STM32L4_FLASH_BANK1_BASE) / flash->blocksize;
-		const uint32_t bank_flags = addr + offset >= sf->bank1_start ? STM32L4_FPEC_CTRL_BANK_ERASE : 0;
-		const uint32_t ctrl = STM32L4_FPEC_CTRL_PAGE_ERASE | (page << STM32L4_FPEC_CTRL_PAGE_SHIFT) | bank_flags;
-		/* Flash page erase instruction */
-		stm32l4_flash_write32(target, STM32L4_FPEC_CTRL, ctrl);
-		/* write address to FMA */
-		stm32l4_flash_write32(target, STM32L4_FPEC_CTRL, ctrl | STM32L4_FPEC_CTRL_START);
+	/* Erase the requested chunk of flash */
+	const uint32_t page = (addr - STM32L4_FLASH_BANK1_BASE) / flash->blocksize;
+	const uint32_t bank_flags = addr >= sf->bank1_start ? STM32L4_FPEC_CTRL_BANK_ERASE : 0;
+	const uint32_t ctrl = STM32L4_FPEC_CTRL_PAGE_ERASE | (page << STM32L4_FPEC_CTRL_PAGE_SHIFT) | bank_flags;
+	/* Flash page erase instruction */
+	stm32l4_flash_write32(target, STM32L4_FPEC_CTRL, ctrl);
+	/* write address to FMA */
+	stm32l4_flash_write32(target, STM32L4_FPEC_CTRL, ctrl | STM32L4_FPEC_CTRL_START);
 
-		/* Wait for completion or an error */
-		if (!stm32l4_flash_busy_wait(target, NULL))
-			return false;
-	}
-	return true;
+	/* Wait for completion or an error */
+	return stm32l4_flash_busy_wait(target, NULL);
 }
 
 static bool stm32l4_flash_write(
@@ -1036,6 +1135,12 @@ static stm32l4_option_bytes_info_s stm32l4_get_opt_bytes_info(const uint16_t par
 			.offsets = stm32wb_opt_reg_offsets,
 			.default_values = stm32wb_default_options_values,
 		};
+	case ID_STM32U575:
+		return (stm32l4_option_bytes_info_s){
+			.word_count = ARRAY_LENGTH(stm32u575_default_options_values),
+			.offsets = stm32u5_opt_reg_offsets,
+			.default_values = stm32u575_default_options_values,
+		};
 	default:
 		return (stm32l4_option_bytes_info_s){
 			.word_count = ARRAY_LENGTH(stm32l4_default_options_values),
@@ -1074,6 +1179,18 @@ static bool stm32l4_cmd_option(target_s *const target, const int argc, const cha
 	}
 	if (target->part_id == ID_STM32WLxx) {
 		tc_printf(target, "%s options not implemented!\n", "STM32WLxx");
+		return false;
+	}
+	if (target->part_id == ID_STM32U3B5) {
+		tc_printf(target, "%s options not implemented!\n", "STM32U3B5/3C5");
+		return false;
+	}
+	if (target->part_id == ID_STM32U356) {
+		tc_printf(target, "%s options not implemented!\n", "STM32U356/366");
+		return false;
+	}
+	if (target->part_id == ID_STM32U375) {
+		tc_printf(target, "%s options not implemented!\n", "STM32U375/385");
 		return false;
 	}
 

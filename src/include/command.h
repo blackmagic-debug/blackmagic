@@ -25,7 +25,7 @@
 
 #include "target.h"
 
-int command_process(target_s *t, char *cmd_buffer);
+int command_process(target_s *target, char *cmd_buffer);
 
 /*
  * Attempts to parse a string as either being "enable" or "disable".
@@ -33,7 +33,7 @@ int command_process(target_s *t, char *cmd_buffer);
  * indicate what was parsed. If not successful, emits a warning to the
  * gdb port, returns false and leaves out untouched.
  */
-bool parse_enable_or_disable(const char *s, bool *out);
+bool parse_enable_or_disable(const char *value, bool *out);
 
 #if CONFIG_BMDA == 1
 extern bool shutdown_bmda;

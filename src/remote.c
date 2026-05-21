@@ -43,7 +43,7 @@
 #include "hex_utils.h"
 
 #if CONFIG_BMDA == 0
-static void remote_packet_process_adiv6(const char *packet, size_t packet_len);
+static void remote_packet_process_adiv6(gdb_packet_s *packet);
 
 /* hex-ify and send a buffer of data */
 static void remote_send_buf(const void *const buffer, const size_t len)
@@ -128,11 +128,11 @@ static adiv5_debug_port_s remote_dp = {
 	.mem_write = adiv5_mem_write_bytes,
 };
 
-static void remote_packet_process_swd(const char *const packet, const size_t packet_len)
+static void remote_packet_process_swd(gdb_packet_s *const packet)
 {
-	switch (packet[1]) {
+	switch (packet->data[1]) {
 	case REMOTE_INIT: /* SS = initialise =============================== */
-		if (packet_len == 2) {
+		if (packet->size == 2) {
 			remote_dp.write_no_check = adiv5_swd_write_no_check;
 			remote_dp.read_no_check = adiv5_swd_read_no_check;
 			remote_dp.dp_read = adiv5_swd_read;
@@ -146,7 +146,7 @@ static void remote_packet_process_swd(const char *const packet, const size_t pac
 		break;
 
 	case REMOTE_IN_PAR: { /* SI = In parity ============================= */
-		const size_t clock_cycles = hex_string_to_num(2, packet + 2);
+		const size_t clock_cycles = hex_string_to_num(2, packet->data + 2);
 		uint32_t result = 0;
 		const bool parity_ok = swd_proc.seq_in_parity(&result, clock_cycles);
 		remote_respond(parity_ok ? REMOTE_RESP_OK : REMOTE_RESP_PARERR, result);
@@ -154,23 +154,23 @@ static void remote_packet_process_swd(const char *const packet, const size_t pac
 	}
 
 	case REMOTE_IN: { /* Si = In ======================================= */
-		const size_t clock_cycles = hex_string_to_num(2, packet + 2);
+		const size_t clock_cycles = hex_string_to_num(2, packet->data + 2);
 		const uint32_t result = swd_proc.seq_in(clock_cycles);
 		remote_respond(REMOTE_RESP_OK, result);
 		break;
 	}
 
 	case REMOTE_OUT: { /* So = Out ====================================== */
-		const size_t clock_cycles = hex_string_to_num(2, packet + 2);
-		const uint32_t data = hex_string_to_num(-1, packet + 4);
+		const size_t clock_cycles = hex_string_to_num(2, packet->data + 2);
+		const uint32_t data = hex_string_to_num(-1, packet->data + 4);
 		swd_proc.seq_out(data, clock_cycles);
 		remote_respond(REMOTE_RESP_OK, 0);
 		break;
 	}
 
 	case REMOTE_OUT_PAR: { /* SO = Out parity ========================== */
-		const size_t clock_cycles = hex_string_to_num(2, packet + 2);
-		const uint32_t data = hex_string_to_num(-1, packet + 4);
+		const size_t clock_cycles = hex_string_to_num(2, packet->data + 2);
+		const uint32_t data = hex_string_to_num(-1, packet->data + 4);
 		swd_proc.seq_out_parity(data, clock_cycles);
 		remote_respond(REMOTE_RESP_OK, 0);
 		break;
@@ -182,9 +182,9 @@ static void remote_packet_process_swd(const char *const packet, const size_t pac
 	}
 }
 
-static void remote_packet_process_jtag(const char *const packet, const size_t packet_len)
+static void remote_packet_process_jtag(gdb_packet_s *const packet)
 {
-	switch (packet[1]) {
+	switch (packet->data[1]) {
 	case REMOTE_INIT: /* JS = initialise ============================= */
 		remote_dp.write_no_check = NULL;
 		remote_dp.read_no_check = NULL;
@@ -192,6 +192,7 @@ static void remote_packet_process_jtag(const char *const packet, const size_t pa
 		remote_dp.error = adiv5_jtag_clear_error;
 		remote_dp.low_access = adiv5_jtag_raw_access;
 		remote_dp.abort = adiv5_jtag_abort;
+		remote_dp.ensure_idle = adiv5_jtag_ensure_idle;
 		jtagtap_init();
 		remote_respond(REMOTE_RESP_OK, 0);
 		break;
@@ -202,10 +203,10 @@ static void remote_packet_process_jtag(const char *const packet, const size_t pa
 		break;
 
 	case REMOTE_TMS: { /* JT = TMS Sequence ============================ */
-		const size_t clock_cycles = hex_string_to_num(2, packet + 2);
-		const uint32_t tms_states = hex_string_to_num(2, packet + 4);
+		const size_t clock_cycles = hex_string_to_num(2, packet->data + 2);
+		const uint32_t tms_states = hex_string_to_num(2, packet->data + 4);
 
-		if (packet_len < 4U)
+		if (packet->size < 4U)
 			remote_respond(REMOTE_RESP_ERR, REMOTE_ERROR_WRONGLEN);
 		else {
 			jtag_proc.jtagtap_tms_seq(tms_states, clock_cycles);
@@ -214,10 +215,10 @@ static void remote_packet_process_jtag(const char *const packet, const size_t pa
 		break;
 	}
 
-	case REMOTE_CYCLE: { /* JC = clock cycle ============================ */
-		const size_t clock_cycles = hex_string_to_num(8, packet + 4);
-		const bool tms = packet[2] != '0';
-		const bool tdi = packet[3] != '0';
+	case REMOTE_CYCLE: { /* Jc = clock cycle ============================ */
+		const size_t clock_cycles = hex_string_to_num(8, packet->data + 4);
+		const bool tms = packet->data[2] != '0';
+		const bool tdi = packet->data[3] != '0';
 		jtag_proc.jtagtap_cycle(tms, tdi, clock_cycles);
 		remote_respond(REMOTE_RESP_OK, 0);
 		break;
@@ -225,14 +226,14 @@ static void remote_packet_process_jtag(const char *const packet, const size_t pa
 
 	case REMOTE_TDITDO_TMS: /* JD = TDI/TDO  ========================================= */
 	case REMOTE_TDITDO_NOTMS: {
-		if (packet_len < 5U)
+		if (packet->size < 5U)
 			remote_respond(REMOTE_RESP_ERR, REMOTE_ERROR_WRONGLEN);
 		else {
-			const size_t clock_cycles = hex_string_to_num(2, packet + 2);
-			const uint64_t data_in = hex_string_to_num(-1, packet + 4);
+			const size_t clock_cycles = hex_string_to_num(2, packet->data + 2);
+			const uint64_t data_in = hex_string_to_num(-1, packet->data + 4);
 			uint64_t data_out = 0;
 			jtag_proc.jtagtap_tdi_tdo_seq(
-				(uint8_t *)&data_out, packet[1] == REMOTE_TDITDO_TMS, (const uint8_t *)&data_in, clock_cycles);
+				(uint8_t *)&data_out, packet->data[1] == REMOTE_TDITDO_TMS, (const uint8_t *)&data_in, clock_cycles);
 
 			remote_respond(REMOTE_RESP_OK, data_out);
 		}
@@ -240,14 +241,19 @@ static void remote_packet_process_jtag(const char *const packet, const size_t pa
 	}
 
 	case REMOTE_NEXT: { /* JN = NEXT ======================================== */
-		if (packet_len != 4U)
+		if (packet->size != 4U)
 			remote_respond(REMOTE_RESP_ERR, REMOTE_ERROR_WRONGLEN);
 		else {
-			const bool tdo = jtag_proc.jtagtap_next(packet[2] == '1', packet[3] == '1');
+			const bool tdo = jtag_proc.jtagtap_next(packet->data[2] == '1', packet->data[3] == '1');
 			remote_respond(REMOTE_RESP_OK, tdo ? 1U : 0U);
 		}
 		break;
 	}
+
+	case REMOTE_JTAG_ENSURE_IDLE: /* JI = re-cycle IR after indirect resets */
+		remote_dp.ensure_idle(&remote_dp);
+		remote_respond(REMOTE_RESP_OK, 0);
+		break;
 
 	default:
 		remote_respond(REMOTE_RESP_ERR, REMOTE_ERROR_UNRECOGNISED);
@@ -255,22 +261,21 @@ static void remote_packet_process_jtag(const char *const packet, const size_t pa
 	}
 }
 
-static void remote_packet_process_general(char *packet, const size_t packet_len)
+static void remote_packet_process_general(gdb_packet_s *const packet)
 {
-	(void)packet_len;
-	switch (packet[1]) {
+	switch (packet->data[1]) {
 	case REMOTE_VOLTAGE:
 		remote_respond_string(REMOTE_RESP_OK, platform_target_voltage());
 		break;
 	case REMOTE_NRST_SET:
-		platform_nrst_set_val(packet[2] == '1');
+		platform_nrst_set_val(packet->data[2] == '1');
 		remote_respond(REMOTE_RESP_OK, 0);
 		break;
 	case REMOTE_NRST_GET:
 		remote_respond(REMOTE_RESP_OK, platform_nrst_get_val());
 		break;
 	case REMOTE_FREQ_SET:
-		platform_max_frequency_set(hex_string_to_num(8U, packet + 2U));
+		platform_max_frequency_set(hex_string_to_num(8U, packet->data + 2U));
 		remote_respond(REMOTE_RESP_OK, 0);
 		break;
 	case REMOTE_FREQ_GET: {
@@ -280,14 +285,14 @@ static void remote_packet_process_general(char *packet, const size_t packet_len)
 	}
 	case REMOTE_PWR_SET:
 #ifdef PLATFORM_HAS_POWER_SWITCH
-		if (packet[2] == '1' && !platform_target_get_power() &&
+		if (packet->data[2] == '1' && !platform_target_get_power() &&
 			platform_target_voltage_sense() > POWER_CONFLICT_THRESHOLD) {
 			/* want to enable target power, but voltage > 0.5V sensed
 			 * on the pin -> cancel
 			 */
 			remote_respond(REMOTE_RESP_ERR, 0);
 		} else {
-			const bool result = platform_target_set_power(packet[2] == '1');
+			const bool result = platform_target_set_power(packet->data[2] == '1');
 			remote_respond(result ? REMOTE_RESP_OK : REMOTE_RESP_ERR, 0U);
 		}
 #else
@@ -308,12 +313,12 @@ static void remote_packet_process_general(char *packet, const size_t packet_len)
 #ifndef PLATFORM_IDENT_DYNAMIC
 		remote_respond_string(REMOTE_RESP_OK, BOARD_IDENT);
 #else
-		snprintf(packet, GDB_PACKET_BUFFER_SIZE, BOARD_IDENT, platform_ident());
-		remote_respond_string(REMOTE_RESP_OK, packet);
+		snprintf(packet->data, GDB_PACKET_BUFFER_SIZE, BOARD_IDENT, platform_ident());
+		remote_respond_string(REMOTE_RESP_OK, packet->data);
 #endif
 		break;
 	case REMOTE_TARGET_CLK_OE:
-		platform_target_clk_output_enable(packet[2] != '0');
+		platform_target_clk_output_enable(packet->data[2] != '0');
 		remote_respond(REMOTE_RESP_OK, 0);
 		break;
 	default:
@@ -322,29 +327,29 @@ static void remote_packet_process_general(char *packet, const size_t packet_len)
 	}
 }
 
-static void remote_packet_process_high_level(const char *packet, const size_t packet_len)
+static void remote_packet_process_high_level(gdb_packet_s *const packet)
 {
 	SET_IDLE_STATE(0);
-	switch (packet[1]) {
+	switch (packet->data[1]) {
 	case REMOTE_HL_CHECK: /* HC = check the version of the protocol */
 		remote_respond(REMOTE_RESP_OK, REMOTE_HL_VERSION);
 		break;
 
 	case REMOTE_HL_ADD_JTAG_DEV: { /* HJ = fill firmware jtag_devs */
 		/* Check the packet is an appropriate length */
-		if (packet_len < 22U) {
+		if (packet->size < 22U) {
 			remote_respond(REMOTE_RESP_ERR, REMOTE_ERROR_WRONGLEN);
 			break;
 		}
 
 		jtag_dev_s jtag_dev = {0};
-		const uint8_t index = hex_string_to_num(2, packet + 2);
-		jtag_dev.dr_prescan = hex_string_to_num(2, packet + 4);
-		jtag_dev.dr_postscan = hex_string_to_num(2, packet + 6);
-		jtag_dev.ir_len = hex_string_to_num(2, packet + 8);
-		jtag_dev.ir_prescan = hex_string_to_num(2, packet + 10);
-		jtag_dev.ir_postscan = hex_string_to_num(2, packet + 12);
-		jtag_dev.current_ir = hex_string_to_num(8, packet + 14);
+		const uint8_t index = hex_string_to_num(2, packet->data + 2);
+		jtag_dev.dr_prescan = hex_string_to_num(2, packet->data + 4);
+		jtag_dev.dr_postscan = hex_string_to_num(2, packet->data + 6);
+		jtag_dev.ir_len = hex_string_to_num(2, packet->data + 8);
+		jtag_dev.ir_prescan = hex_string_to_num(2, packet->data + 10);
+		jtag_dev.ir_postscan = hex_string_to_num(2, packet->data + 12);
+		jtag_dev.current_ir = hex_string_to_num(8, packet->data + 14);
 		jtag_add_device(index, &jtag_dev);
 		remote_respond(REMOTE_RESP_OK, 0);
 		break;
@@ -459,20 +464,20 @@ static void remote_adiv5_respond(const void *const data, const size_t length)
 	}
 }
 
-static void remote_packet_process_adiv5(const char *const packet, const size_t packet_len)
+static void remote_packet_process_adiv5(gdb_packet_s *const packet)
 {
 	/* Check there's at least an ADI command byte */
-	if (packet_len < 2U) {
+	if (packet->size < 2U) {
 		remote_respond(REMOTE_RESP_ERR, REMOTE_ERROR_WRONGLEN);
 		return;
 	}
 
 	/* Check if this is a DP version packet and handle it if it is */
-	if (packet[1] == REMOTE_DP_VERSION) {
+	if (packet->data[1] == REMOTE_DP_VERSION) {
 		/* Check there are enough bytes for the request */
-		if (packet_len == 4U) {
+		if (packet->size == 4U) {
 			/* Extract the new version information into the DP */
-			remote_dp.version = hex_string_to_num(2U, packet + 2U);
+			remote_dp.version = hex_string_to_num(2U, packet->data + 2U);
 			remote_respond(REMOTE_RESP_OK, 0);
 		} else
 			/* There weren't enough bytes, so tell the host and get out of here */
@@ -480,11 +485,11 @@ static void remote_packet_process_adiv5(const char *const packet, const size_t p
 		return;
 	}
 	/* Check if this is a DP targetsel packet and handle it if it is */
-	if (packet[1] == REMOTE_DP_TARGETSEL) {
+	if (packet->data[1] == REMOTE_DP_TARGETSEL) {
 		/* Check if there are enough bytes for the request */
-		if (packet_len == 10U) {
+		if (packet->size == 10U) {
 			/* Extract the new targetsel information into the DP */
-			remote_dp.targetsel = hex_string_to_num(8U, packet + 2U);
+			remote_dp.targetsel = hex_string_to_num(8U, packet->data + 2U);
 			remote_respond(REMOTE_RESP_OK, 0);
 		} else
 			/* There weren't enough bytes, so tell the host and get out of here */
@@ -493,30 +498,30 @@ static void remote_packet_process_adiv5(const char *const packet, const size_t p
 	}
 
 	/* Our shortest ADIv5 packet is 8 bytes long, check that we have at least that */
-	if (packet_len < 8U) {
+	if (packet->size < 8U) {
 		remote_respond(REMOTE_RESP_PARERR, 0);
 		return;
 	}
 
 	/* Check if this is actually an ADIv6 acceleration packet and dispatch */
-	if (packet[1] == REMOTE_ADIV6_PACKET) {
-		remote_packet_process_adiv6(packet, packet_len);
+	if (packet->data[1] == REMOTE_ADIV6_PACKET) {
+		remote_packet_process_adiv6(packet);
 		return;
 	}
 
 	/* Set up the DP and a fake AP structure to perform the access with */
-	remote_dp.dev_index = hex_string_to_num(2, packet + 2);
+	remote_dp.dev_index = hex_string_to_num(2, packet->data + 2);
 	remote_dp.fault = 0U;
 	adiv5_access_port_s remote_ap;
-	remote_ap.apsel = hex_string_to_num(2, packet + 4);
+	remote_ap.apsel = hex_string_to_num(2, packet->data + 4);
 	remote_ap.dp = &remote_dp;
 
 	SET_IDLE_STATE(0);
-	switch (packet[1]) {
+	switch (packet->data[1]) {
 	/* DP access commands */
 	case REMOTE_DP_READ: { /* Ad = Read from DP register */
 		/* Grab the address to read from and try to perform the access */
-		const uint16_t addr = hex_string_to_num(4, packet + 6);
+		const uint16_t addr = hex_string_to_num(4, packet->data + 6);
 		const uint32_t data =
 			adiv5_dp_read(&remote_dp, (addr & REMOTE_ADIV5_APnDP ? ADIV5_APnDP : 0U) | (addr & 0x00ffU));
 		remote_adiv5_respond(&data, 4U);
@@ -525,8 +530,8 @@ static void remote_packet_process_adiv5(const char *const packet, const size_t p
 	/* Raw access comands */
 	case REMOTE_ADIV5_RAW_ACCESS: { /* AR = Perform a raw ADIv5 access */
 		/* Grab the address to perform an access against and the value to work with */
-		const uint16_t addr = hex_string_to_num(4, packet + 6);
-		const uint32_t value = hex_string_to_num(8, packet + 10);
+		const uint16_t addr = hex_string_to_num(4, packet->data + 6);
+		const uint32_t value = hex_string_to_num(8, packet->data + 10);
 		/* Try to perform the access using the AP selection value as R/!W */
 		const uint32_t data = adiv5_dp_low_access(
 			&remote_dp, remote_ap.apsel, (addr & REMOTE_ADIV5_APnDP ? ADIV5_APnDP : 0U) | (addr & 0x00ffU), value);
@@ -536,7 +541,7 @@ static void remote_packet_process_adiv5(const char *const packet, const size_t p
 	/* AP access commands */
 	case REMOTE_AP_READ: { /* Aa = Read from AP register */
 		/* Grab the AP address to read from and try to perform the access */
-		const uint16_t addr = hex_string_to_num(4, packet + 6);
+		const uint16_t addr = hex_string_to_num(4, packet->data + 6);
 		const uint32_t data =
 			adiv5_ap_read(&remote_ap, (addr & REMOTE_ADIV5_APnDP ? ADIV5_APnDP : 0U) | (addr & 0x00ffU));
 		remote_adiv5_respond(&data, 4U);
@@ -544,8 +549,8 @@ static void remote_packet_process_adiv5(const char *const packet, const size_t p
 	}
 	case REMOTE_AP_WRITE: { /* AA = Write to AP register */
 		/* Grab the AP address to write to and the data to write then try to perform the access */
-		const uint16_t addr = hex_string_to_num(4, packet + 6);
-		const uint32_t value = hex_string_to_num(8, packet + 10);
+		const uint16_t addr = hex_string_to_num(4, packet->data + 6);
+		const uint32_t value = hex_string_to_num(8, packet->data + 10);
 		adiv5_ap_write(&remote_ap, (addr & REMOTE_ADIV5_APnDP ? ADIV5_APnDP : 0U) | (addr & 0x00ffU), value);
 		remote_adiv5_respond(NULL, 0U);
 		break;
@@ -553,11 +558,11 @@ static void remote_packet_process_adiv5(const char *const packet, const size_t p
 	/* Memory access commands */
 	case REMOTE_MEM_READ: { /* Am = Read from memory */
 		/* Grab the CSW value to use in the access */
-		remote_ap.csw = hex_string_to_num(8, packet + 6);
+		remote_ap.csw = hex_string_to_num(8, packet->data + 6);
 		/* Grab the start address for the read */
-		const target_addr64_t address = hex_string_to_num(16, packet + 14U);
+		const target_addr64_t address = hex_string_to_num(16, packet->data + 14U);
 		/* And how many bytes to read, validating it for buffer overflows */
-		const uint32_t length = hex_string_to_num(8, packet + 30U);
+		const uint32_t length = hex_string_to_num(8, packet->data + 30U);
 		/* NB: Hex encoding on the response data halfs the available buffer capacity */
 		if (length > (GDB_PACKET_BUFFER_SIZE - REMOTE_ADIV5_MEM_READ_LENGTH) >> 1U) {
 			remote_respond(REMOTE_RESP_PARERR, 0);
@@ -572,13 +577,13 @@ static void remote_packet_process_adiv5(const char *const packet, const size_t p
 	}
 	case REMOTE_MEM_WRITE: { /* AM = Write to memory */
 		/* Grab the CSW value to use in the access */
-		remote_ap.csw = hex_string_to_num(8, packet + 6);
+		remote_ap.csw = hex_string_to_num(8, packet->data + 6);
 		/* Grab the alignment for the access */
-		const align_e align = hex_string_to_num(2, packet + 14U);
+		const align_e align = hex_string_to_num(2, packet->data + 14U);
 		/* Grab the start address for the write */
-		const target_addr64_t address = hex_string_to_num(16, packet + 16U);
+		const target_addr64_t address = hex_string_to_num(16, packet->data + 16U);
 		/* And how many bytes to read, validating it for buffer overflows */
-		const uint32_t length = hex_string_to_num(8, packet + 32U);
+		const uint32_t length = hex_string_to_num(8, packet->data + 32U);
 		/* NB: Hex encoding on the response data halfs the available buffer capacity */
 		if (length > (GDB_PACKET_BUFFER_SIZE - REMOTE_ADIV5_MEM_WRITE_LENGTH) >> 1U) {
 			remote_respond(REMOTE_RESP_PARERR, 0);
@@ -592,7 +597,7 @@ static void remote_packet_process_adiv5(const char *const packet, const size_t p
 		/* Get the aligned packet buffer to reuse for the data to write */
 		void *data = gdb_packet_buffer();
 		/* And decode the data from the packet into it */
-		unhexify(data, packet + 40U, length);
+		unhexify(data, packet->data + 40U, length);
 		/* Perform the write and report success/failures */
 		adiv5_mem_write_aligned(&remote_ap, address, data, length, align);
 		remote_adiv5_respond(NULL, 0);
@@ -606,10 +611,10 @@ static void remote_packet_process_adiv5(const char *const packet, const size_t p
 	SET_IDLE_STATE(1);
 }
 
-static void remote_packet_process_adiv6(const char *const packet, const size_t packet_len)
+static void remote_packet_process_adiv6(gdb_packet_s *const packet)
 {
 	/* Our shortest ADIv5 packet is 15 bytes long, check that we have at least that */
-	if (packet_len < 15U) {
+	if (packet->size < 15U) {
 		remote_respond(REMOTE_RESP_PARERR, 0);
 		return;
 	}
@@ -624,26 +629,26 @@ static void remote_packet_process_adiv6(const char *const packet, const size_t p
 	dp.ap_write = adiv6_ap_reg_write;
 
 	/* Set up the DP and a fake AP structure to perform the access with */
-	remote_dp.dev_index = hex_string_to_num(2, packet + 3);
+	remote_dp.dev_index = hex_string_to_num(2, packet->data + 3);
 	remote_dp.fault = 0U;
 	adiv6_access_port_s remote_ap;
-	remote_ap.ap_address = hex_string_to_num(16, packet + 5);
+	remote_ap.ap_address = hex_string_to_num(16, packet->data + 5);
 	remote_ap.base.dp = &dp;
 
 	SET_IDLE_STATE(0);
-	switch (packet[2]) {
+	switch (packet->data[2]) {
 	/* AP access commands */
 	case REMOTE_AP_READ: { /* A6a = Read from APv2 register */
 		/* Grab the AP address to read from and try to perform the access */
-		const uint16_t addr = hex_string_to_num(4, packet + 21);
+		const uint16_t addr = hex_string_to_num(4, packet->data + 21);
 		const uint32_t data = adiv5_ap_read(&remote_ap.base, addr);
 		remote_adiv5_respond(&data, 4U);
 		break;
 	}
 	case REMOTE_AP_WRITE: { /* A6A = Write to APv2 register */
 		/* Grab the AP address to write to and the data to write then try to perform the access */
-		const uint16_t addr = hex_string_to_num(4, packet + 21);
-		const uint32_t value = hex_string_to_num(8, packet + 25);
+		const uint16_t addr = hex_string_to_num(4, packet->data + 21);
+		const uint32_t value = hex_string_to_num(8, packet->data + 25);
 		adiv5_ap_write(&remote_ap.base, addr, value);
 		remote_adiv5_respond(NULL, 0U);
 		break;
@@ -651,11 +656,11 @@ static void remote_packet_process_adiv6(const char *const packet, const size_t p
 	/* Memory access commands */
 	case REMOTE_MEM_READ: { /* Am = Read from memory */
 		/* Grab the CSW value to use in the access */
-		remote_ap.base.csw = hex_string_to_num(8, packet + 21);
+		remote_ap.base.csw = hex_string_to_num(8, packet->data + 21);
 		/* Grab the start address for the read */
-		const target_addr64_t address = hex_string_to_num(16, packet + 29U);
+		const target_addr64_t address = hex_string_to_num(16, packet->data + 29U);
 		/* And how many bytes to read, validating it for buffer overflows */
-		const uint32_t length = hex_string_to_num(8, packet + 45U);
+		const uint32_t length = hex_string_to_num(8, packet->data + 45U);
 		/* NB: Hex encoding on the response data halfs the available buffer capacity */
 		if (length > (GDB_PACKET_BUFFER_SIZE - REMOTE_ADIV6_MEM_READ_LENGTH) >> 1U) {
 			remote_respond(REMOTE_RESP_PARERR, 0);
@@ -670,13 +675,13 @@ static void remote_packet_process_adiv6(const char *const packet, const size_t p
 	}
 	case REMOTE_MEM_WRITE: { /* AM = Write to memory */
 		/* Grab the CSW value to use in the access */
-		remote_ap.base.csw = hex_string_to_num(8, packet + 21);
+		remote_ap.base.csw = hex_string_to_num(8, packet->data + 21);
 		/* Grab the alignment for the access */
-		const align_e align = hex_string_to_num(2, packet + 29U);
+		const align_e align = hex_string_to_num(2, packet->data + 29U);
 		/* Grab the start address for the write */
-		const target_addr64_t address = hex_string_to_num(16, packet + 31U);
+		const target_addr64_t address = hex_string_to_num(16, packet->data + 31U);
 		/* And how many bytes to read, validating it for buffer overflows */
-		const uint32_t length = hex_string_to_num(8, packet + 47U);
+		const uint32_t length = hex_string_to_num(8, packet->data + 47U);
 		/* NB: Hex encoding on the request data halfs the available buffer capacity */
 		if (length > (GDB_PACKET_BUFFER_SIZE - REMOTE_ADIV5_MEM_WRITE_LENGTH) >> 1U) {
 			remote_respond(REMOTE_RESP_PARERR, 0);
@@ -690,7 +695,7 @@ static void remote_packet_process_adiv6(const char *const packet, const size_t p
 		/* Get the aligned packet buffer to reuse for the data to write */
 		void *data = gdb_packet_buffer();
 		/* And decode the data from the packet into it */
-		unhexify(data, packet + 55U, length);
+		unhexify(data, packet->data + 55U, length);
 		/* Perform the write and report success/failures */
 		adiv5_mem_write_aligned(&remote_ap.base, address, data, length, align);
 		remote_adiv5_respond(NULL, 0);
@@ -718,33 +723,33 @@ static riscv_dmi_s remote_dmi = {
 	.write = NULL,
 };
 
-void remote_packet_process_riscv(const char *const packet, const size_t packet_len)
+void remote_packet_process_riscv(gdb_packet_s *const packet)
 {
 	/* Our shortest RISC-V Debug protocol packet is 2 bytes long, check that we have at least that */
-	if (packet_len < 2U) {
+	if (packet->size < 2U) {
 		remote_respond(REMOTE_RESP_PARERR, 0);
 		return;
 	}
 
 	/* Check for and handle the protocols packet */
-	if (packet[1U] == REMOTE_RISCV_PROTOCOLS) {
+	if (packet->data[1U] == REMOTE_RISCV_PROTOCOLS) {
 		/* Validate the length of the packet, then handle it if that checks out */
-		if (packet_len != 2U)
+		if (packet->size != 2U)
 			remote_respond(REMOTE_RESP_PARERR, 0);
 		else
 			remote_respond(REMOTE_RESP_OK, REMOTE_RISCV_PROTOCOL_JTAG);
 		return;
 	}
 	/* Check for and handle the initialisation packet */
-	else if (packet[1U] == REMOTE_INIT) {
+	else if (packet->data[1U] == REMOTE_INIT) {
 		/* Check the length of the packet */
-		if (packet_len != 3U) {
+		if (packet->size != 3U) {
 			remote_respond(REMOTE_RESP_PARERR, 0);
 			return;
 		}
 
 		/* We got a good packet, so handle initialisation accordingly */
-		switch (packet[2U]) {
+		switch (packet->data[2U]) {
 		case REMOTE_RISCV_JTAG:
 			remote_dmi.read = riscv_jtag_dmi_read;
 			remote_dmi.write = riscv_jtag_dmi_write;
@@ -758,21 +763,21 @@ void remote_packet_process_riscv(const char *const packet, const size_t packet_l
 		return;
 	}
 	/* Our shortest RISC-V protocol packet is 16 bytes long, check that we have at least that */
-	else if (packet_len < 16U) {
+	else if (packet->size < 16U) {
 		remote_respond(REMOTE_RESP_PARERR, 0);
 		return;
 	}
 
 	/* Having dealt with the other requests, set up the fake DMI structure to perform the access with */
-	remote_dmi.dev_index = hex_string_to_num(2, packet + 2);
-	remote_dmi.idle_cycles = hex_string_to_num(2, packet + 4);
-	remote_dmi.address_width = hex_string_to_num(2, packet + 6);
+	remote_dmi.dev_index = hex_string_to_num(2, packet->data + 2);
+	remote_dmi.idle_cycles = hex_string_to_num(2, packet->data + 4);
+	remote_dmi.address_width = hex_string_to_num(2, packet->data + 6);
 	remote_dmi.fault = 0U;
 
-	switch (packet[1U]) {
+	switch (packet->data[1U]) {
 	case REMOTE_RISCV_DMI_READ: {
 		/* Grab the DMI address to read from and try to perform the access */
-		const uint32_t addr = hex_string_to_num(8, packet + 8);
+		const uint32_t addr = hex_string_to_num(8, packet->data + 8);
 		uint32_t value = 0;
 		if (!remote_dmi.read(&remote_dmi, addr, &value))
 			/* If the request didn't work, and caused a fault, tell the host */
@@ -784,13 +789,13 @@ void remote_packet_process_riscv(const char *const packet, const size_t packet_l
 	}
 	case REMOTE_RISCV_DMI_WRITE: {
 		/* Write packets are 24 bytes long, verify we have enough bytes */
-		if (packet_len != 24U) {
+		if (packet->size != 24U) {
 			remote_respond(REMOTE_RESP_PARERR, 0);
 			break;
 		}
 		/* Grab the DMI address to write to and the data to write then try to perform the access */
-		const uint32_t addr = hex_string_to_num(8, packet + 8);
-		const uint32_t value = hex_string_to_num(8, packet + 16);
+		const uint32_t addr = hex_string_to_num(8, packet->data + 8);
+		const uint32_t value = hex_string_to_num(8, packet->data + 16);
 		if (!remote_dmi.write(&remote_dmi, addr, value))
 			/* If the request didn't work, and caused a fault, tell the host */
 			remote_respond(REMOTE_RESP_ERR, REMOTE_ERROR_FAULT | ((uint16_t)remote_dmi.fault << 8U));
@@ -816,17 +821,17 @@ static void remote_spi_respond(const bool result)
 		remote_respond(REMOTE_RESP_ERR, REMOTE_ERROR_FAULT);
 }
 
-void remote_packet_process_spi(const char *const packet, const size_t packet_len)
+void remote_packet_process_spi(gdb_packet_s *const packet)
 {
 	/* Our shortest SPI packet is 4 bytes long, check that we have at least that */
-	if (packet_len < 4U) {
+	if (packet->size < 4U) {
 		remote_respond(REMOTE_RESP_PARERR, 0);
 		return;
 	}
 
-	const uint8_t spi_bus = hex_string_to_num(2, packet + 2);
+	const uint8_t spi_bus = hex_string_to_num(2, packet->data + 2);
 
-	switch (packet[1]) {
+	switch (packet->data[1]) {
 	/* Bus initialisation/deinitialisation commands */
 	case REMOTE_SPI_BEGIN:
 		remote_spi_respond(platform_spi_init(spi_bus));
@@ -841,7 +846,7 @@ void remote_packet_process_spi(const char *const packet, const size_t packet_len
 		break;
 	/* Performs a single byte SPI transfer */
 	case REMOTE_SPI_TRANSFER: {
-		const uint8_t data_in = hex_string_to_num(2, packet + 4);
+		const uint8_t data_in = hex_string_to_num(2, packet->data + 4);
 		const uint8_t data_out = platform_spi_xfer(spi_bus, data_in);
 		remote_respond(REMOTE_RESP_OK, data_out);
 		break;
@@ -852,10 +857,10 @@ void remote_packet_process_spi(const char *const packet, const size_t packet_len
 		 * Decode the device to talk to, what command to send, and the addressing
 		 * and length information for that command
 		 */
-		const uint8_t spi_device = hex_string_to_num(2, packet + 4);
-		const uint16_t command = hex_string_to_num(4, packet + 6);
-		const target_addr_t address = hex_string_to_num(6, packet + 10);
-		const size_t length = hex_string_to_num(4, packet + 16);
+		const uint8_t spi_device = hex_string_to_num(2, packet->data + 4);
+		const uint16_t command = hex_string_to_num(4, packet->data + 6);
+		const target_addr_t address = hex_string_to_num(6, packet->data + 10);
+		const size_t length = hex_string_to_num(4, packet->data + 16);
 		/* Validate the data length isn't overly long */
 		if (length > 256U) {
 			remote_respond(REMOTE_RESP_PARERR, 0);
@@ -874,10 +879,10 @@ void remote_packet_process_spi(const char *const packet, const size_t packet_len
 		 * Decode the device to talk to, what command to send, and the addressing
 		 * and length information for that command
 		 */
-		const uint8_t spi_device = hex_string_to_num(2, packet + 4);
-		const uint16_t command = hex_string_to_num(4, packet + 6);
-		const target_addr_t address = hex_string_to_num(6, packet + 10);
-		const size_t length = hex_string_to_num(4, packet + 16);
+		const uint8_t spi_device = hex_string_to_num(2, packet->data + 4);
+		const uint16_t command = hex_string_to_num(4, packet->data + 6);
+		const target_addr_t address = hex_string_to_num(6, packet->data + 10);
+		const size_t length = hex_string_to_num(4, packet->data + 16);
 		/* Validate the data length isn't overly long */
 		if (length > 256U) {
 			remote_respond(REMOTE_RESP_PARERR, 0);
@@ -886,7 +891,7 @@ void remote_packet_process_spi(const char *const packet, const size_t packet_len
 		/* Get the aligned packet buffer to reuse for the data to write */
 		void *data = gdb_packet_buffer();
 		/* And decode the data from the packet into it */
-		unhexify(data, packet + 20U, length);
+		unhexify(data, packet->data + 20U, length);
 		/* Perform the write cycle */
 		bmp_spi_write(spi_bus, spi_device, command, address, data, length);
 		remote_respond(REMOTE_RESP_OK, 0);
@@ -895,7 +900,7 @@ void remote_packet_process_spi(const char *const packet, const size_t packet_len
 	/* Get the JEDEC device ID for a Flash device */
 	case REMOTE_SPI_CHIP_ID: {
 		/* Decoder the device to talk to */
-		const uint8_t spi_device = hex_string_to_num(2, packet + 4);
+		const uint8_t spi_device = hex_string_to_num(2, packet->data + 4);
 		/* Set up a suitable buffer for and read the JEDEC ID */
 		spi_flash_id_s flash_id;
 		bmp_spi_read(spi_bus, spi_device, SPI_FLASH_CMD_READ_JEDEC_ID, 0, &flash_id, sizeof(flash_id));
@@ -906,9 +911,9 @@ void remote_packet_process_spi(const char *const packet, const size_t packet_len
 	/* Run a command against a SPI Flash device */
 	case REMOTE_SPI_RUN_COMMAND: {
 		/* Decode the device to talk to, what command to send, and the addressing information for that command */
-		const uint8_t spi_device = hex_string_to_num(2, packet + 4);
-		const uint16_t command = hex_string_to_num(4, packet + 6);
-		const target_addr_t address = hex_string_to_num(6, packet + 10);
+		const uint8_t spi_device = hex_string_to_num(2, packet->data + 4);
+		const uint16_t command = hex_string_to_num(4, packet->data + 6);
+		const target_addr_t address = hex_string_to_num(6, packet->data + 10);
 		/* Execute the command and signal success */
 		bmp_spi_run_command(spi_bus, spi_device, command, address);
 		remote_respond(REMOTE_RESP_OK, 0);
@@ -920,34 +925,34 @@ void remote_packet_process_spi(const char *const packet, const size_t packet_len
 	}
 }
 
-void remote_packet_process(char *const packet, const size_t packet_length)
+void remote_packet_process(gdb_packet_s *const packet)
 {
 	/* Check there's at least a request byte */
-	if (packet_length < 1U) {
+	if (packet->size < 1U) {
 		remote_respond(REMOTE_RESP_ERR, REMOTE_ERROR_WRONGLEN);
 		return;
 	}
-	switch (packet[0]) {
+	switch (packet->data[0]) {
 	case REMOTE_SWDP_PACKET:
-		remote_packet_process_swd(packet, packet_length);
+		remote_packet_process_swd(packet);
 		break;
 
 	case REMOTE_JTAG_PACKET:
-		remote_packet_process_jtag(packet, packet_length);
+		remote_packet_process_jtag(packet);
 		break;
 
 	case REMOTE_GEN_PACKET:
-		remote_packet_process_general(packet, packet_length);
+		remote_packet_process_general(packet);
 		break;
 
 	case REMOTE_HL_PACKET:
-		remote_packet_process_high_level(packet, packet_length);
+		remote_packet_process_high_level(packet);
 		break;
 
 	case REMOTE_ADIV5_PACKET: {
 		/* Setup an exception frame to try the ADIv5 operation in */
 		TRY (EXCEPTION_ALL) {
-			remote_packet_process_adiv5(packet, packet_length);
+			remote_packet_process_adiv5(packet);
 		}
 		CATCH () {
 		/* Handle any exception we've caught by translating it into a remote protocol response */
@@ -959,12 +964,12 @@ void remote_packet_process(char *const packet, const size_t packet_length)
 
 #if defined(CONFIG_RISCV_ACCEL) && CONFIG_RISCV_ACCEL == 1
 	case REMOTE_RISCV_PACKET:
-		remote_packet_process_riscv(packet, packet_length);
+		remote_packet_process_riscv(packet);
 		break;
 #endif
 
 	case REMOTE_SPI_PACKET:
-		remote_packet_process_spi(packet, packet_length);
+		remote_packet_process_spi(packet);
 		break;
 
 	default: /* Oh dear, unrecognised, return an error */
