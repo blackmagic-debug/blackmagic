@@ -23,6 +23,10 @@
 
 #include <stdint.h>
 
+/// Set the highest bit of the `jtag_ir_quirks.ir_length` to indicate that the
+/// `jtag_ir_quirks.ir_value` is  to be ignored
+#define BMD_QUIRK_IGNORE_IR_VALUE(ir_length) ((ir_length) | 0x80U)
+
 typedef struct jtag_ir_quirks {
 	uint32_t ir_value;
 	uint8_t ir_length;

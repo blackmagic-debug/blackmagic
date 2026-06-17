@@ -137,3 +137,63 @@ __attribute__((weak)) void __aeabi_unwind_cpp_pr1(void)
 __attribute__((weak)) void __aeabi_unwind_cpp_pr2(void)
 {
 }
+
+#include "morse.h"
+#include <libopencm3/cm3/nvic.h>
+#include <libopencm3/cm3/scb.h>
+#include <libopencm3/cm3/systick.h>
+
+static void systick_spinner(void)
+{
+	uint32_t time_ms_reset = platform_time_ms() + 10000U;
+	while (platform_time_ms() < time_ms_reset) {
+		if (systick_get_countflag())
+			sys_tick_handler();
+	}
+}
+
+void hard_fault_handler(void)
+{
+	morse("HF", true);
+#if defined(__ARM_ARCH_7M__) || defined(__ARM_ARCH_7EM__)
+	volatile uint32_t hfsr = SCB_HFSR;
+	if (hfsr & SCB_HFSR_FORCED)
+		morse("HF FORCED", true);
+#endif
+
+	systick_spinner();
+	scb_reset_system();
+}
+
+#if defined(__ARM_ARCH_7M__) || defined(__ARM_ARCH_7EM__)
+
+void mem_manage_handler(void)
+{
+	morse("MPU", true);
+	volatile uint32_t mmfar = SCB_MMFAR;
+	(void)mmfar;
+
+	systick_spinner();
+	scb_reset_system();
+}
+
+void bus_fault_handler(void)
+{
+	morse("BUS", true);
+	volatile uint32_t bfar = SCB_BFAR;
+	(void)bfar;
+
+	systick_spinner();
+	scb_reset_system();
+}
+
+void usage_fault_handler(void)
+{
+	morse("USAGE", true);
+	volatile uint32_t cfsr = SCB_CFSR;
+	(void)cfsr;
+
+	systick_spinner();
+	scb_reset_system();
+}
+#endif

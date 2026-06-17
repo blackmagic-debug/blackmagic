@@ -58,10 +58,12 @@ const command_s ch32vx_cmd_list[] = {
 	{NULL, NULL, NULL},
 };
 
+#ifndef DEBUG_INFO_IS_NOOP
 static size_t ch32vx_read_flash_size(target_s *const target)
 {
 	return target_mem32_read16(target, CH32VX_ESIG_FLASH_CAP) * 1024U;
 }
+#endif
 
 static void ch32vx_read_uid(target_s *const target, uint8_t *const uid)
 {

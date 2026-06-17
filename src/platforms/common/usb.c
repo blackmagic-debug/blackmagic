@@ -32,7 +32,7 @@ usbd_device *usbdev = NULL;
 uint16_t usb_config;
 
 /* We need a special large control buffer for this device: */
-static uint8_t usbd_control_buffer[512];
+static uint8_t usbd_control_buffer[512U];
 
 /*
  * Please note, if you change the descriptors and any result exceeds this buffer size

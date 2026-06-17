@@ -113,14 +113,10 @@ void platform_nrst_set_val(bool assert)
 	/* We reuse nTRST as nRST. */
 	if (assert) {
 		gpio_set_mode(TRST_PORT, GPIO_MODE_OUTPUT_2_MHZ, GPIO_CNF_OUTPUT_OPENDRAIN, TRST_PIN);
-		/* Wait until requested value is active. */
-		while (gpio_get(TRST_PORT, TRST_PIN))
-			gpio_clear(TRST_PORT, TRST_PIN);
+		gpio_clear(TRST_PORT, TRST_PIN);
 	} else {
 		gpio_set_mode(TRST_PORT, GPIO_MODE_INPUT, GPIO_CNF_INPUT_PULL_UPDOWN, TRST_PIN);
-		/* Wait until requested value is active .*/
-		while (!gpio_get(TRST_PORT, TRST_PIN))
-			gpio_set(TRST_PORT, TRST_PIN);
+		gpio_set(TRST_PORT, TRST_PIN);
 	}
 }
 
