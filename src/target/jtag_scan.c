@@ -244,20 +244,26 @@ static bool jtag_read_irs(void)
 	/* Grab the first device's quirks, if any */
 	jtag_ir_quirks_s ir_quirks = jtag_device_get_quirks(jtag_devs[0].jd_idcode);
 
+	bool ir_ignore = ir_quirks.ir_length & 0x80U;
+	ir_quirks.ir_length &= ~0x80U;
+
 	/* Try scanning out the IR for the device */
 	while (ir_len <= JTAG_MAX_IR_LEN) {
 		/* Read the next IR bit */
 		const bool next_bit = jtag_proc.jtagtap_next(false, true);
-		/* If we have quirks, validate the bit against the expected IR */
-		if (ir_quirks.ir_length && ((ir_quirks.ir_value >> ir_len) & 1U) != next_bit) {
-			DEBUG_ERROR("jtag_scan: IR does not match the expected value, bailing out\n");
-			jtag_dev_count = 0;
-			return false;
-		}
-		/* IEEE 1149.1 requires the first bit to be a 1, but not all devices conform (see #1130 on GH) */
-		if (ir_len == 0 && !next_bit)
-			DEBUG_WARN("jtag_scan: Sanity check failed: IR[0] shifted out as 0\n");
 
+		/* Only check the quirk value if we know and care about it */
+		if (!ir_ignore) {
+			/* If we have quirks, validate the bit against the expected IR */
+			if (ir_quirks.ir_length && ((ir_quirks.ir_value >> ir_len) & 1U) != next_bit) {
+				DEBUG_ERROR("jtag_scan: IR does not match the expected value, bailing out\n");
+				jtag_dev_count = 0;
+				return false;
+			}
+			/* IEEE 1149.1 requires the first bit to be a 1, but not all devices conform (see #1130 on GH) */
+			if (ir_len == 0 && !next_bit)
+				DEBUG_WARN("jtag_scan: Sanity check failed: IR[0] shifted out as 0\n");
+		}
 		/* The bit validated ok, so increment the counter */
 		++ir_len;
 
@@ -286,6 +292,10 @@ static bool jtag_read_irs(void)
 			ir_len = overrun;
 			/* Grab the device quirks for this new device, if any */
 			ir_quirks = jtag_device_get_quirks(jtag_devs[device].jd_idcode);
+
+			/* Check to see if we care about the value from the IR or not */
+			ir_ignore = ir_quirks.ir_length & 0x80U;
+			ir_quirks.ir_length &= ~0x80U;
 		}
 	}
 
