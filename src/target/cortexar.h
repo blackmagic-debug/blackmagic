@@ -36,6 +36,10 @@
 
 #include "general.h"
 
+bool cortexar_attach(target_s *target);
+void cortexar_detach(target_s *target);
+void cortexar_mem_read(target_s *target, void *dest, target_addr64_t src, size_t len);
+void cortexar_mem_write(target_s *target, target_addr64_t dest, const void *src, size_t len);
 void cortexar_invalidate_all_caches(target_s *target);
 
 #endif /* TARGET_CORTEXAR_H */

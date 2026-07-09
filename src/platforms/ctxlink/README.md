@@ -36,7 +36,7 @@ ctxLink uses the common 2 x 5 0.05" pin-header.
 1. Clone the Blackmagic Debug Repository
 
 ```sh
-git clone https://github.com/blackmagic-debug/blackmagic.git
+git clone https://codeberg.org/blackmagic-debug/blackmagic.git
 cd blackmagic
 ```
 
