@@ -36,17 +36,17 @@ When reporting issues, be as specific as possible!
 
 ### If contributing for the first time
 
- 1. [Fork](https://github.com/blackmagic-debug/blackmagic/fork) and clone the repository
+ 1. [Fork](https://codeberg.org/blackmagic-debug/blackmagic/fork) and clone the repository
  2. Create a new branch: `git switch -c type/branch-name` (`git checkout -b type/branch-name` in the old syntax)
  3. Make your change
- 4. Push to your fork and submit a [pull request](https://github.com/blackmagic-debug/blackmagic/compare)
+ 4. Push to your fork and submit a [pull request](https://codeberg.org/blackmagic-debug/blackmagic/compare)
 
 If you wish to fix a bug, `type` in the new branch name should be `fix`, otherwise if you wish to implement a new
 feature, `type` should be `feature`.
 
 ### If you are working from an existing clone of the repository
 
-1. Ensure you have our repo as a remote (`git remote add upstream https://github.com/blackmagic-debug/blackmagic`)
+1. Ensure you have our repo as a remote (`git remote add upstream https://codeberg.org/blackmagic-debug/blackmagic`)
 2. Switch back to `main` (`git switch main`/`git checkout main`)
 3. Pull to ensure you're up to date (`git pull upstream`)
 4. Push to your fork (`git push`)

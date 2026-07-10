@@ -176,6 +176,8 @@ struct target {
 	target_ram_s *ram;
 	target_flash_s *flash;
 
+	uint32_t map_transfer_offset;
+
 	/* Other stuff */
 	const char *driver;
 	uint32_t cpuid;
@@ -197,6 +199,8 @@ struct target {
 	 * fallback to AP partno
 	 */
 	uint16_t part_id;
+	/* Which of available targets are we attached to */
+	uint16_t number;
 };
 
 void target_print_progress(platform_timeout_s *timeout);

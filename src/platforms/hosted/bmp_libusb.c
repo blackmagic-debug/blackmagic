@@ -537,10 +537,18 @@ static bool process_vid_pid_table_probe(
 	if (version == NULL)
 		version = strdup("---");
 
-	*probe_list = probe_info_add_by_id(*probe_list, debugger_device->type, device, device_descriptor->idVendor,
-		device_descriptor->idProduct, manufacturer, product, serial, version);
+	probe_info_s *probe_info = probe_info_add_by_id(*probe_list, debugger_device->type, device,
+		device_descriptor->idVendor, device_descriptor->idProduct, manufacturer, product, serial, version);
+	if (probe_info)
+		*probe_list = probe_info;
+	else {
+		free(product);
+		free(manufacturer);
+		free(serial);
+		free(version);
+	}
 	libusb_close(handle);
-	return true;
+	return probe_info != NULL;
 }
 
 static const probe_info_s *scan_for_devices(bmda_probe_s *info)

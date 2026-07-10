@@ -36,6 +36,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include <string.h>
 
 static inline void write_le2(uint8_t *const buffer, const size_t offset, const uint16_t value)
 {

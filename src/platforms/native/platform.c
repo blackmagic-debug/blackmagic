@@ -1,8 +1,11 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
- * Copyright (C) 2011  Black Sphere Technologies Ltd.
+ * Copyright (C) 2011 Black Sphere Technologies Ltd.
+ * Copyright (C) 2022-2025 1BitSquared <info@1bitsquared.com>
  * Written by Gareth McMullin <gareth@blacksphere.co.nz>
+ * Modified by Piotr Esden-Tempski <piotr@1bitsquared.com>
+ * Modified by Rachel Mant <git@dragonmux.network>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,7 +30,6 @@
 #include "morse.h"
 
 #include <libopencm3/cm3/vector.h>
-#include <libopencm3/stm32/rcc.h>
 #include <libopencm3/cm3/scb.h>
 #include <libopencm3/cm3/scs.h>
 #include <libopencm3/cm3/nvic.h>
@@ -391,7 +393,7 @@ uint32_t platform_target_voltage_sense(void)
 	if (hwversion == 0)
 		return 0;
 
-	uint8_t channel = 8;
+	const uint8_t channel = 8U;
 	adc_set_regular_sequence(ADC1, 1, &channel);
 
 	adc_start_conversion_direct(ADC1);
@@ -400,10 +402,10 @@ uint32_t platform_target_voltage_sense(void)
 	while (!adc_eoc(ADC1))
 		continue;
 
-	uint32_t val = adc_read_regular(ADC1); /* 0-4095 */
+	uint32_t voltage = adc_read_regular(ADC1); /* 0-4095 */
 	/* Clear EOC bit. The GD32F103 does not automatically reset it on ADC read. */
 	ADC_SR(ADC1) &= ~ADC_SR_EOC;
-	return (val * 99U) / 8191U;
+	return (voltage * 99U) / 8191U;
 }
 
 const char *platform_target_voltage(void)
@@ -411,12 +413,12 @@ const char *platform_target_voltage(void)
 	if (hwversion == 0)
 		return gpio_get(GPIOB, GPIO0) ? "Present" : "Absent";
 
-	static char ret[] = "0.0V";
-	uint32_t val = platform_target_voltage_sense();
-	ret[0] = '0' + val / 10U;
-	ret[2] = '0' + val % 10U;
+	static char result[] = "0.0V";
+	uint32_t voltage = platform_target_voltage_sense();
+	result[0] = (char)('0' + (voltage / 10U));
+	result[2] = (char)('0' + (voltage % 10U));
 
-	return ret;
+	return result;
 }
 
 void platform_request_boot(void)

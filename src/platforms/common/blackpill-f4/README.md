@@ -38,7 +38,7 @@ In the example command lines for building and flashing the firmware to the Black
 0. Clone the repo and libopencm3 submodule, install toolchains, meson, etc.
 
 ```sh
-git clone https://github.com/blackmagic-debug/blackmagic.git
+git clone https://codeberg.org/blackmagic-debug/blackmagic.git
 cd blackmagic
 ```
 
@@ -53,7 +53,7 @@ meson setup build --cross-file=cross-file/blackpill-xxxxxx.ini -Dbmd_bootloader=
   Also Note: If the bootloader and firmware are going to be built for a Blackpill connected to a "Blackpill Carrier", the above
   setup MUST have "-Don_carrier_board=true" added to it. This is required to ensure the LEDs are correctly mapped to
   the Blackpill Carrier Board.
-  
+
 2. Compile the firmware and bootloader
 
 ```sh
@@ -99,7 +99,7 @@ If you flashed the bootloader using the above instructions, it may be invoked us
   - Wait a moment
   - Release KEY
 
-Once activated the BMD bootloader may be used to flash the device using 'bmputil,' available [here](https://github.com/blackmagic-debug/bmputil).
+Once activated the BMD bootloader may be used to flash the device using 'bmputil,' available [here](https://codeberg.org/blackmagic-debug/bmputil).
 
 ## SWD/JTAG frequency setting
 

@@ -404,6 +404,8 @@ bool stm32g0_probe(target_s *const target)
 	target->attach = stm32g0_attach;
 	target->detach = stm32g0_detach;
 
+	/* On this SoC, Cortex-M0+ allows SRAM access without halting */
+	target->target_options |= TOPT_NON_HALTING_MEM_IO;
 	target_add_ram32(target, STM32G0_SRAM_BASE, ram_size);
 	/* Even dual Flash bank devices have a contiguous Flash memory space */
 	stm32g0_add_flash(target, STM32G0_FLASH_BASE, flash_size, STM32G0_FLASH_PAGE_SIZE);
