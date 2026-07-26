@@ -1,7 +1,7 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
- * Copyright (C) 2023 1BitSquared <info@1bitsquared.com>
+ * Copyright (C) 2023-2026 1BitSquared <info@1bitsquared.com>
  * Written by Rachel Mant <git@dragonmux.network>
  * All rights reserved.
  *
@@ -170,10 +170,11 @@ void remote_v3_adiv5_mem_read_bytes(
 	DEBUG_PROBE("%s: @%08" PRIx64 "+%zx\n", __func__, src, read_length);
 	char buffer[REMOTE_MAX_MSG_SIZE];
 	/*
-	 * As we do, calculate how large a transfer we can do to the firmware.
-	 * there are 2 leader bytes around responses and the data is hex-encoded taking 2 bytes a byte
+	 * As we do, calculate how large a transfer we can do from the firmware.
+	 * Aim for an integer multiple of 4 bytes for optimal 32-bit transfers.
+	 * there are 2 leader bytes around responses, 1 trailer, and the data is hex-encoded taking 2 bytes a byte
 	 */
-	const size_t blocksize = (REMOTE_MAX_MSG_SIZE - 2U) / 2U;
+	const size_t blocksize = ((REMOTE_MAX_MSG_SIZE - REMOTE_ADIV5_MEM_READ_LENGTH) >> 1U) & ~3U;
 	/* For each transfer block size, ask the firmware to read that block of bytes */
 	for (size_t offset = 0; offset < read_length; offset += blocksize) {
 		/* Pick the amount left to read or the block size, whichever is smaller */

@@ -236,6 +236,7 @@ adiv5_access_port_s *adiv5_new_ap(adiv5_debug_port_s *const dp, const uint8_t ap
 }
 
 /* No real AP on RP2040. Special setup.*/
+#ifdef CONFIG_RP
 static void rp2040_rescue_setup(adiv5_debug_port_s *dp)
 {
 	adiv5_access_port_s *ap = calloc(1, sizeof(*ap));
@@ -247,6 +248,7 @@ static void rp2040_rescue_setup(adiv5_debug_port_s *dp)
 
 	rp2040_rescue_probe(ap);
 }
+#endif
 
 static void adiv5_dp_clear_sticky_errors(adiv5_debug_port_s *dp)
 {
@@ -283,6 +285,7 @@ uint32_t adiv5_dp_read_dpidr(adiv5_debug_port_s *const dp)
 	return dpidr;
 }
 
+#ifdef CONFIG_NXP
 static bool s32k3xx_dp_prepare(adiv5_debug_port_s *const dp)
 {
 	/* Is this an S32K344? */
@@ -325,6 +328,7 @@ static bool s32k3xx_dp_prepare(adiv5_debug_port_s *const dp)
 
 	return true;
 }
+#endif
 
 static bool adiv5_power_cycle_aps(adiv5_debug_port_s *const dp)
 {
@@ -429,7 +433,7 @@ void adiv5_dp_init(adiv5_debug_port_s *const dp)
 			dp->partno = 0U;
 			dp->quirks = 0U;
 		}
-	} else if (dp->version == 0)
+	} else if (dp->version == 0U)
 		/* DP v0 */
 		DEBUG_WARN("DPv0 detected based on JTAG IDCode\n");
 
@@ -440,10 +444,25 @@ void adiv5_dp_init(adiv5_debug_port_s *const dp)
 	adiv5_dp_clear_sticky_errors(dp);
 
 	if (dp->version >= 2) {
-		/* TARGETID is on bank 2 */
-		adiv5_dp_write(dp, ADIV5_DP_SELECT, ADIV5_DP_BANK2);
-		const uint32_t targetid = adiv5_dp_read(dp, ADIV5_DP_TARGETID);
-		adiv5_dp_write(dp, ADIV5_DP_SELECT, ADIV5_DP_BANK0);
+		uint32_t targetid = 0U;
+		uint8_t read_attempts = 0U;
+		/*
+	 	 * Retry reading TARGETID until partno is non zero
+		 * On some Nordic devices the TARGETID register isn't fully read on the first attempt
+		 * resulting in the designer code being set while the part no. is still 0x0
+		 */
+		while (targetid == 0U || dp->target_partno == 0U) {
+			/* TARGETID is on bank 2 */
+			adiv5_dp_write(dp, ADIV5_DP_SELECT, ADIV5_DP_BANK2);
+			targetid = adiv5_dp_read(dp, ADIV5_DP_TARGETID);
+			adiv5_dp_write(dp, ADIV5_DP_SELECT, ADIV5_DP_BANK0);
+
+			dp->target_partno = (targetid & ADIV5_DP_TARGETID_TPARTNO_MASK) >> ADIV5_DP_TARGETID_TPARTNO_OFFSET;
+			if (++read_attempts >= 128U && dp->target_partno == 0U) {
+				DEBUG_WARN("Failed to read TARGETID partno after 128 attempts\n");
+				break;
+			}
+		};
 
 		/*
 		 * Use TARGETID register to identify target and convert it
@@ -451,9 +470,6 @@ void adiv5_dp_init(adiv5_debug_port_s *const dp)
 		 */
 		dp->target_designer_code =
 			adi_decode_designer((targetid & ADIV5_DP_TARGETID_TDESIGNER_MASK) >> ADIV5_DP_TARGETID_TDESIGNER_OFFSET);
-
-		dp->target_partno = (targetid & ADIV5_DP_TARGETID_TPARTNO_MASK) >> ADIV5_DP_TARGETID_TPARTNO_OFFSET;
-
 		DEBUG_INFO("TARGETID 0x%08" PRIx32 " designer 0x%x partno 0x%x\n", targetid, dp->target_designer_code,
 			dp->target_partno);
 
@@ -461,10 +477,12 @@ void adiv5_dp_init(adiv5_debug_port_s *const dp)
 			(targetid & (ADIV5_DP_TARGETID_TDESIGNER_MASK | ADIV5_DP_TARGETID_TPARTNO_MASK)) | 1U;
 	}
 
+#ifdef CONFIG_RP
 	if (dp->designer_code == JEP106_MANUFACTURER_RASPBERRY && dp->partno == 0x2U) {
 		rp2040_rescue_setup(dp);
 		return;
 	}
+#endif
 
 	/* Try to power cycle the APs, affecting a reset on them */
 	if (!adiv5_power_cycle_aps(dp)) {
@@ -482,13 +500,16 @@ void adiv5_dp_init(adiv5_debug_port_s *const dp)
 		return;
 	}
 
+#ifdef CONFIG_NXP
 	if (dp->target_designer_code == JEP106_MANUFACTURER_NXP)
 		lpc55_dp_prepare(dp);
+#endif
 
 	/* Probe for APs on this DP */
 	size_t invalid_aps = 0U;
 	dp->refcnt++;
 
+#ifdef CONFIG_NXP
 	if (dp->target_designer_code == JEP106_MANUFACTURER_FREESCALE) {
 		/* S32K3XX will requires special handling, do so and skip the AP enumeration */
 		if (s32k3xx_dp_prepare(dp)) {
@@ -496,6 +517,7 @@ void adiv5_dp_init(adiv5_debug_port_s *const dp)
 			return;
 		}
 	}
+#endif
 
 	for (size_t i = 0; i < 256U && invalid_aps < 8U; ++i) {
 		adiv5_access_port_s *ap = adiv5_new_ap(dp, i);
@@ -512,11 +534,19 @@ void adiv5_dp_init(adiv5_debug_port_s *const dp)
 			continue;
 		}
 
+#ifdef CONFIG_NXP
 		kinetis_mdm_probe(ap);
+#endif
+#ifdef CONFIG_NRF
 		nrf51_ctrl_ap_probe(ap);
 		nrf54l_ctrl_ap_probe(ap);
+#endif
+#ifdef CONFIG_EFM32
 		efm32_aap_probe(ap);
+#endif
+#ifdef CONFIG_NXP
 		lpc55_dmap_probe(ap);
+#endif
 
 		if (ADIV5_AP_IDR_CLASS(ap->idr) == ADIV5_AP_IDR_CLASS_MEM) {
 			/* Try to prepare the AP if it seems to be a AHB3 MEM-AP */

@@ -1,8 +1,10 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
- * Copyright (C) 2015  Black Sphere Technologies Ltd.
+ * Copyright (C) 2015 Black Sphere Technologies Ltd.
+ * Copyright (C) 2022-2026 1BitSquared <info@1bitsquared.com>
  * Written by Gareth McMullin <gareth@blacksphere.co.nz>
+ * Modified by Rachel Mant <git@dragonmux.network>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -109,7 +111,7 @@
 
 static bool kinetis_cmd_unsafe(target_s *target, int argc, const char **argv);
 
-const command_s kinetis_cmd_list[] = {
+static const command_s kinetis_cmd_list[] = {
 	{"unsafe", kinetis_cmd_unsafe, "Allow programming security byte (enable|disable)"},
 	{NULL, NULL, NULL},
 };
@@ -533,7 +535,7 @@ static bool kinetis_cmd_unsafe(target_s *target, int argc, const char **argv)
 static bool kinetis_mdm_mass_erase(target_s *target, platform_timeout_s *print_progess);
 static bool kinetis_mdm_cmd_ke04_mode(target_s *target, int argc, const char **argv);
 
-const command_s kinetis_mdm_cmd_list[] = {
+static const command_s kinetis_mdm_cmd_list[] = {
 	{"ke04_mode", kinetis_mdm_cmd_ke04_mode, "Allow erase for KE04"},
 	{NULL, NULL, NULL},
 };

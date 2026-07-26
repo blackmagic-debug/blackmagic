@@ -117,6 +117,8 @@ struct breakwatch {
 #endif
 };
 
+_Static_assert(sizeof(breakwatch_s) == 40U, "Breakwatch size unexpected");
+
 #define MAX_CMDLINE 81
 
 typedef void (*priv_free_func)(void *flash);
@@ -176,6 +178,8 @@ struct target {
 	target_ram_s *ram;
 	target_flash_s *flash;
 
+	uint32_t map_transfer_offset;
+
 	/* Other stuff */
 	const char *driver;
 	uint32_t cpuid;
@@ -198,6 +202,10 @@ struct target {
 	 */
 	uint16_t part_id;
 };
+
+#ifdef PLATFORM_HAS_CUSTOM_COMMANDS
+extern const command_s platform_cmd_list[];
+#endif
 
 void target_print_progress(platform_timeout_s *timeout);
 void target_ram_map_free(target_s *target);

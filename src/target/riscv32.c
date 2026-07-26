@@ -63,6 +63,27 @@
 #define RV32_MATCH_BEFORE 0x00000000U
 #define RV32_MATCH_AFTER  0x00040000U
 
+/* Uncompressed instruction encodings for progbuf-based memory access */
+#define RV_LOAD_BYTE  0x00000003U
+#define RV_LOAD_HALF  0x00001003U
+#define RV_LOAD_WORD  0x00002003U
+#define RV_STORE_BYTE 0x00000023U
+#define RV_STORE_HALF 0x00001023U
+#define RV_STORE_WORD 0x00002023U
+/* Only GPR A0 & A1 are used for source/destination (and saved-restored) */
+#define RV_RS1_A0 0x00050000U
+#define RV_RS2_A1 0x00b00000U
+#define RV_RD_A0  0x00000500U
+#define RV_RD_A1  0x00000580U
+/* RV32I opcodes: load word/half/byte from address pointed-by a0 into a1 */
+#define RV_LW_A1_A0 (RV_LOAD_WORD | RV_RD_A1 | RV_RS1_A0) // 0x00052583U // lw a1, 0(a0)
+#define RV_LH_A1_A0 (RV_LOAD_HALF | RV_RD_A1 | RV_RS1_A0) // 0x00051583U // lh a1, 0(a0)
+#define RV_LB_A1_A0 (RV_LOAD_BYTE | RV_RD_A1 | RV_RS1_A0) // 0x00050583U // lb a1, 0(a0)
+/* RV32I opcodes: store word/half/byte from a1 into address pointed-by a0 */
+#define RV_SW_A1_A0 (RV_STORE_WORD | RV_RS2_A1 | RV_RS1_A0) // 0x00b52023U // sw a1, 0(a0)
+#define RV_SH_A1_A0 (RV_STORE_HALF | RV_RS2_A1 | RV_RS1_A0) // 0x00b51023U // sh a1, 0(a0)
+#define RV_SB_A1_A0 (RV_STORE_BYTE | RV_RS2_A1 | RV_RS1_A0) // 0x00b50023U // sb a1, 0(a0)
+
 static size_t riscv32_reg_read(target_s *target, uint32_t reg, void *data, size_t max);
 static size_t riscv32_reg_write(target_s *target, uint32_t reg, const void *data, size_t max);
 static void riscv32_regs_read(target_s *target, void *data);
@@ -162,6 +183,13 @@ static size_t riscv32_reg_read(target_s *target, const uint32_t reg, void *data,
 		return riscv32_bool_to_4(riscv_csr_read(hart, RV_DPC, data));
 	if (reg >= RV_CSR_GDB_OFFSET)
 		return riscv32_bool_to_4(riscv_csr_read(hart, reg - RV_CSR_GDB_OFFSET, data));
+	/* GDB register numbers between 69 and 127 don't map to anything */
+	if (reg >= RV_FPU_GDB_CSR_OFFSET + 3U)
+		return 0;
+	/* GDB registers 66..68 map to FPU CSR 0x001..0x003 */
+	if (reg >= RV_FPU_GDB_CSR_OFFSET)
+		return riscv32_bool_to_4(riscv_csr_read(hart, RV_FP_CTRL_BASE + reg - RV_FPU_GDB_CSR_OFFSET, data));
+	/* GDB registers 33..65 map to FPU GPR 0x1020..0x1033 */
 	if (reg >= RV_FPU_GDB_OFFSET)
 		return riscv32_bool_to_4(riscv_csr_read(hart, RV_FP_BASE + reg - RV_FPU_GDB_OFFSET, data));
 	return 0;
@@ -179,6 +207,10 @@ static size_t riscv32_reg_write(target_s *const target, const uint32_t reg, cons
 		return riscv32_bool_to_4(riscv_csr_write(hart, RV_DPC, data));
 	if (reg >= RV_CSR_GDB_OFFSET)
 		return riscv32_bool_to_4(riscv_csr_write(hart, reg - RV_CSR_GDB_OFFSET, data));
+	if (reg >= RV_FPU_GDB_CSR_OFFSET + 3U)
+		return 0;
+	if (reg >= RV_FPU_GDB_CSR_OFFSET)
+		return riscv32_bool_to_4(riscv_csr_write(hart, RV_FP_CTRL_BASE + reg - RV_FPU_GDB_CSR_OFFSET, data));
 	if (reg >= RV_FPU_GDB_OFFSET)
 		return riscv32_bool_to_4(riscv_csr_write(hart, RV_FP_BASE + reg - RV_FPU_GDB_OFFSET, data));
 	return 0;
@@ -567,6 +599,124 @@ static void riscv32_sysbus_mem_write(
 		riscv32_sysbus_mem_adjusted_write(hart, address, data, remainder, native_access_width, native_access_length);
 }
 
+static void riscv32_progbuf_mem_read(
+	riscv_hart_s *const hart, void *const dest, const target_addr_t src, const size_t len)
+{
+	/* Figure out the maximal width of access to perform, up to the bitness of the target */
+	const uint8_t access_width = riscv_mem_access_width(hart, src, len);
+	const uint8_t access_length = 1U << access_width;
+
+	uint32_t progbuf_read = RV_LOAD_BYTE;
+	switch (access_width) {
+	case RV_MEM_ACCESS_8_BIT:
+		progbuf_read = RV_LB_A1_A0;
+		break;
+	case RV_MEM_ACCESS_16_BIT:
+		progbuf_read = RV_LH_A1_A0;
+		break;
+	case RV_MEM_ACCESS_32_BIT:
+		progbuf_read = RV_LW_A1_A0;
+		break;
+	default:
+		return;
+	}
+	/* Fill the program buffer */
+	if (!riscv_dm_write(hart->dbg_module, RV_DM_PROGBUF_BASE, progbuf_read))
+		return;
+	/* Append literal ebreak (if impebreak is not reached) */
+	if (hart->progbuf_size > 1U) {
+		if (!riscv_dm_write(hart->dbg_module, RV_DM_PROGBUF_BASE + 1U, RV_EBREAK))
+			return;
+	}
+
+	uint32_t a0_save = 0;
+	uint32_t a1_save = 0;
+	riscv_csr_read(hart, RV_GPR_A0, &a0_save);
+	riscv_csr_read(hart, RV_GPR_A1, &a1_save);
+
+	uint8_t *const data = (uint8_t *)dest;
+	for (size_t offset = 0; offset < len; offset += access_length) {
+		/* Write the source address to DATA0 */
+		if (!riscv_dm_write(hart->dbg_module, RV_DM_DATA0, src + offset))
+			break;
+		/* Copy the source address from DATA0 to GPR A0 and launch the progbuf postexec */
+		bool result = riscv_dm_write(hart->dbg_module, RV_DM_ABST_COMMAND,
+			RV_DM_ABST_CMD_ACCESS_REG | RV_ABST_WRITE | RV_REG_XFER | RV_ABST_POSTEXEC | RV_REG_ACCESS_32_BIT |
+				RV_GPR_A0);
+		/* Wait for both the register write and progbuf execution to complete */
+		result &= riscv_command_wait_complete(hart);
+		if (!result)
+			break;
+		uint32_t value = 0;
+		result = riscv_csr_read(hart, RV_GPR_A1, &value);
+		if (!result)
+			break;
+		riscv32_unpack_data(data + offset, value, access_width);
+	}
+
+	riscv_csr_write(hart, RV_GPR_A0, &a0_save);
+	riscv_csr_write(hart, RV_GPR_A1, &a1_save);
+}
+
+static void riscv32_progbuf_mem_write(
+	riscv_hart_s *const hart, const target_addr_t dest, const void *const src, const size_t len)
+{
+	/* Figure out the maxmial width of access to perform, up to the bitness of the target */
+	const uint8_t access_width = riscv_mem_access_width(hart, dest, len);
+	const uint8_t access_length = 1U << access_width;
+
+	uint32_t progbuf_write = RV_STORE_BYTE;
+	switch (access_width) {
+	case RV_MEM_ACCESS_8_BIT:
+		progbuf_write = RV_SB_A1_A0;
+		break;
+	case RV_MEM_ACCESS_16_BIT:
+		progbuf_write = RV_SH_A1_A0;
+		break;
+	case RV_MEM_ACCESS_32_BIT:
+		progbuf_write = RV_SW_A1_A0;
+		break;
+	default:
+		return;
+	}
+	/* Fill the program buffer */
+	if (!riscv_dm_write(hart->dbg_module, RV_DM_PROGBUF_BASE, progbuf_write))
+		return;
+	/* Append literal ebreak (if impebreak is not reached) */
+	if (hart->progbuf_size > 1U) {
+		if (!riscv_dm_write(hart->dbg_module, RV_DM_PROGBUF_BASE + 1U, RV_EBREAK))
+			return;
+	}
+
+	uint32_t a0_save = 0;
+	uint32_t a1_save = 0;
+	riscv_csr_read(hart, RV_GPR_A0, &a0_save);
+	riscv_csr_read(hart, RV_GPR_A1, &a1_save);
+
+	const uint8_t *const data = (const uint8_t *)src;
+	for (size_t offset = 0; offset < len; offset += access_length) {
+		/* Prepare the destination address in GPR A0 */
+		const uint32_t dest_a0 = dest + offset;
+		if (!riscv_csr_write(hart, RV_GPR_A0, &dest_a0))
+			break;
+
+		/* Pack the data to write into GPR A1 */
+		uint32_t value = riscv32_pack_data(data + offset, access_width);
+		if (!riscv_dm_write(hart->dbg_module, RV_DM_DATA0, value))
+			break;
+		/* Copy the write value from DATA0 to GPR A1 and launch the progbuf postexec */
+		bool result = riscv_dm_write(hart->dbg_module, RV_DM_ABST_COMMAND,
+			RV_DM_ABST_CMD_ACCESS_REG | RV_ABST_WRITE | RV_REG_XFER | RV_ABST_POSTEXEC | RV_REG_ACCESS_32_BIT |
+				RV_GPR_A1);
+		result &= riscv_command_wait_complete(hart);
+		if (!result)
+			break;
+	}
+
+	riscv_csr_write(hart, RV_GPR_A0, &a0_save);
+	riscv_csr_write(hart, RV_GPR_A1, &a1_save);
+}
+
 void riscv32_mem_read(target_s *const target, void *const dest, const target_addr64_t src, const size_t len)
 {
 	/* If we're asked to do a 0-byte read, do nothing */
@@ -578,6 +728,8 @@ void riscv32_mem_read(target_s *const target, void *const dest, const target_add
 	riscv_hart_s *const hart = riscv_hart_struct(target);
 	if (hart->flags & RV_HART_FLAG_MEMORY_SYSBUS)
 		riscv32_sysbus_mem_read(hart, dest, src, len);
+	else if (hart->flags & RV_HART_FLAG_MEMORY_PROGBUF)
+		riscv32_progbuf_mem_read(hart, dest, src, len);
 	else
 		riscv32_abstract_mem_read(hart, dest, src, len);
 
@@ -620,6 +772,8 @@ void riscv32_mem_write(target_s *const target, const target_addr64_t dest, const
 	riscv_hart_s *const hart = riscv_hart_struct(target);
 	if (hart->flags & RV_HART_FLAG_MEMORY_SYSBUS)
 		riscv32_sysbus_mem_write(hart, dest, src, len);
+	else if (hart->flags & RV_HART_FLAG_MEMORY_PROGBUF)
+		riscv32_progbuf_mem_write(hart, dest, src, len);
 	else
 		riscv32_abstract_mem_write(hart, dest, src, len);
 }

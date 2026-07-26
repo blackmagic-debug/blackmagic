@@ -109,7 +109,7 @@ static const char *read_value_str_from_path(HKEY path_handle, const char *const 
 {
 	DWORD value_len = 0U;
 	/* Start by trying to discover how long the string held by the key is */
-	const LSTATUS result = RegGetValue(path_handle, NULL, value_name, RRF_RT_REG_SZ, NULL, NULL, &value_len);
+	LSTATUS result = RegGetValue(path_handle, NULL, value_name, RRF_RT_REG_SZ, NULL, NULL, &value_len);
 	/* If that didn't work, we have no hoope, so bail */
 	if (result != ERROR_SUCCESS && result != ERROR_MORE_DATA) {
 		display_error(result, "retrieving registry value", value_name);
@@ -126,7 +126,8 @@ static const char *read_value_str_from_path(HKEY path_handle, const char *const 
 	}
 
 	/* Finally, try reading the value and return it to the user if this didn't explode */
-	assert(RegGetValue(path_handle, NULL, value_name, RRF_RT_REG_SZ, NULL, value, &value_len) == ERROR_SUCCESS);
+	result = RegGetValue(path_handle, NULL, value_name, RRF_RT_REG_SZ, NULL, value, &value_len);
+	assert(result == ERROR_SUCCESS);
 	return value;
 }
 

@@ -35,24 +35,25 @@ jobs:
         os:
           - {id: ubuntu-24.04, name: noble}
         arm-compiler:
-          - '14.3.Rel1'
+          - '15.2.Rel1'
         probe:
           - '96b_carbon'
           - 'blackpill-f401cc'
           - 'blackpill-f401ce'
           - 'blackpill-f411ce'
           - 'bluepill'
+          - 'bmp-v3'
           - 'ctxlink'
           - 'f072'
           - 'f3'
           - 'f4discovery'
           - 'hydrabus'
           - 'launchpad-icdi'
-          - 'native'
-          - 'native-uncommon'
-          - 'native-st-clones'
-          - 'native-riscv'
-          - 'native-remote'
+          - 'bmp-v2'
+          - 'bmp-v2-uncommon'
+          - 'bmp-v2-st-clones'
+          - 'bmp-v2-riscv'
+          - 'bmp-v2-remote'
           - 'stlink'
           - 'stlinkv3'
           - 'swlink'
@@ -98,7 +99,7 @@ jobs:
 
       # Checkout the repository and branch to build under the default location
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           submodules: true
 
@@ -125,7 +126,8 @@ jobs:
     strategy:
       matrix:
         os:
-          - windows-2025
+          - windows-2025 # Currently latest
+          - windows-2025-vs2026
       fail-fast: false
 
     # Steps represent a sequence of tasks that will be executed as part of the job
@@ -159,7 +161,7 @@ jobs:
 
       # Checkout the repository and branch to build under the default location
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       # Build the default BMDA configuration
       - name: Build full BMDA
@@ -239,7 +241,7 @@ jobs:
 
       # Checkout the repository and branch to build under the default location
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       # Install the dependencies needed for BMDA build
       - name: Install extra BMDA dependencies
@@ -269,10 +271,9 @@ jobs:
     strategy:
       matrix:
         os:
-          - macos-13
           - macos-14
-          - macos-15
-          - macos-latest
+          - macos-15 # Currently latest
+          - macos-26
       fail-fast: false
 
     # Steps represent a sequence of tasks that will be executed as part of the job
@@ -300,7 +301,7 @@ jobs:
 
       # Checkout the repository and branch to build under the default location
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       # Build the default BMDA configuration
       - name: Build full BMDA
@@ -377,7 +378,7 @@ jobs:
 
       # Checkout the repository and branch to build under the default location
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       # Build the default BMDA configuration
       - name: Build full BMDA
@@ -402,7 +403,7 @@ jobs:
       - name: Setup ARM GCC
         uses: carlosperate/arm-none-eabi-gcc-action@v1
         with:
-          release: '14.3.Rel1'
+          release: '15.2.Rel1'
 
       # Install and setup a suitable Meson + Ninja
       - name: Setup Meson + Ninja
@@ -411,12 +412,12 @@ jobs:
           sudo python3 -m pip install meson ninja
         working-directory: ${{ runner.temp }}
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           ref: ${{ github.base_ref }}
           path: base
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           path: head
@@ -424,14 +425,14 @@ jobs:
       # Build the base ref firmware for the largest Flash target available
       - name: Build base
         run: |
-          meson setup build --cross-file=cross-file/blackpill-f411ce.ini
+          meson setup build --cross-file=cross-file/bmp-v3.ini
           meson compile -C build > build.log
         working-directory: base
 
       # Build the PR `HEAD` ref firmware for the largest Flash target available
       - name: Build head
         run: |
-          meson setup build --cross-file=cross-file/blackpill-f411ce.ini
+          meson setup build --cross-file=cross-file/bmp-v3.ini
           meson compile -C build > build.log
         working-directory: head
 

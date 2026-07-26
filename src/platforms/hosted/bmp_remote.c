@@ -63,7 +63,7 @@ bool remote_init(const bool power_up)
 	ssize_t length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
 	/* Check if the launch failed for any reason */
 	if (length < 1 || buffer[0] == REMOTE_RESP_ERR) {
-		DEBUG_ERROR("Remote Start failed, error %s\n", length ? buffer + 1 : "unknown");
+		DEBUG_ERROR("Remote Start failed, error %s\n", length > 1 ? buffer + 1 : "unknown");
 		return false;
 	}
 	/* If it did not, we now have the firmware version string so log it */
@@ -122,7 +122,7 @@ bool remote_target_get_power(void)
 	platform_buffer_write(buffer, length);
 	length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
 	if (length < 1 || buffer[0] == REMOTE_RESP_ERR) {
-		DEBUG_ERROR("platform_target_get_power failed, error %s\n", length ? buffer + 1 : "unknown");
+		DEBUG_ERROR("platform_target_get_power failed, error %s\n", length > 1 ? buffer + 1 : "unknown");
 		exit(-1);
 	}
 	return buffer[1] == '1';
@@ -135,7 +135,7 @@ bool remote_target_set_power(const bool power)
 	platform_buffer_write(buffer, length);
 	length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
 	if (length < 1 || buffer[0] == REMOTE_RESP_ERR)
-		DEBUG_ERROR("platform_target_set_power failed, error %s\n", length ? buffer + 1 : "unknown");
+		DEBUG_ERROR("platform_target_set_power failed, error %s\n", length > 1 ? buffer + 1 : "unknown");
 	return length > 0 && buffer[0] == REMOTE_RESP_OK;
 }
 
@@ -146,7 +146,7 @@ void remote_nrst_set_val(bool assert)
 	platform_buffer_write(buffer, length);
 	length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
 	if (length < 1 || buffer[0] == REMOTE_RESP_ERR) {
-		DEBUG_ERROR("platform_nrst_set_val failed, error %s\n", length ? buffer + 1 : "unknown");
+		DEBUG_ERROR("platform_nrst_set_val failed, error %s\n", length > 1 ? buffer + 1 : "unknown");
 		exit(-1);
 	}
 }
@@ -158,7 +158,7 @@ bool remote_nrst_get_val(void)
 	platform_buffer_write(buffer, length);
 	length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
 	if (length < 1 || buffer[0] == REMOTE_RESP_ERR) {
-		DEBUG_ERROR("platform_nrst_get_val failed, error %s\n", length ? buffer + 1 : "unknown");
+		DEBUG_ERROR("platform_nrst_get_val failed, error %s\n", length > 1 ? buffer + 1 : "unknown");
 		exit(-1);
 	}
 	return buffer[1] == '1';
@@ -186,7 +186,7 @@ const char *remote_target_voltage(void)
 	platform_buffer_write(buffer, length);
 	length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
 	if (length < 1 || buffer[0] == REMOTE_RESP_ERR) {
-		DEBUG_ERROR("platform_target_voltage failed, error %s\n", length ? buffer + 1 : "unknown");
+		DEBUG_ERROR("platform_target_voltage failed, error %s\n", length > 1 ? buffer + 1 : "unknown");
 		exit(-1);
 	}
 	return buffer + 1;
