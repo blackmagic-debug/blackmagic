@@ -22,10 +22,11 @@
 #define PLATFORMS_COMMON_USB_H
 
 #include <stdint.h>
+#include <stdatomic.h>
 #include <libopencm3/usb/usbd.h>
 
 extern usbd_device *usbdev;
-extern uint16_t usb_config;
+extern _Atomic uint16_t usb_config;
 
 #if defined(USB_HS)
 #define CDCACM_PACKET_SIZE  512U

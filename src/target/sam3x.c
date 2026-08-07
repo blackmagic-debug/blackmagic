@@ -2,7 +2,7 @@
  * This file is part of the Black Magic Debug project.
  *
  * Copyright (C) 2015 Black Sphere Technologies Ltd.
- * Copyright (C) 2022-2025 1BitSquared <info@1bitsquared.com>
+ * Copyright (C) 2022-2026 1BitSquared <info@1bitsquared.com>
  * Written by Gareth McMullin <gareth@blacksphere.co.nz>
  * Modified by Rachel Mant <git@dragonmux.network>
  *
@@ -151,7 +151,7 @@
 
 static bool sam_cmd_gpnvm(target_s *target, int argc, const char **argv);
 
-const command_s sam_cmd_list[] = {
+static const command_s sam_cmd_list[] = {
 	{"gpnvm", sam_cmd_gpnvm, "Set/Get GPVNM bits"},
 	{NULL, NULL, NULL},
 };

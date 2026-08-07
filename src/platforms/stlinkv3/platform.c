@@ -38,7 +38,6 @@
 #include <libopencm3/usb/usbd.h>
 #include <libopencm3/stm32/adc.h>
 #include <libopencm3/stm32/spi.h>
-#include <libopencm3/stm32/adc.h>
 #include <libopencm3/stm32/syscfg.h>
 
 uint16_t srst_pin;
@@ -116,10 +115,6 @@ int platform_hwversion(void)
 void platform_nrst_set_val(bool assert)
 {
 	gpio_set_val(NRST_PORT, NRST_PIN, !assert);
-	if (assert) {
-		for (volatile size_t i = 0; i < 10000; i++)
-			continue;
-	}
 }
 
 bool platform_nrst_get_val()

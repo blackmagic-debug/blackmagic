@@ -1,7 +1,7 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
- * Copyright (C) 2022-2025 1BitSquared <info@1bitsquared.com>
+ * Copyright (C) 2022-2026 1BitSquared <info@1bitsquared.com>
  * Written by Rafael Silva <perigoso@riseup.net>
  * Modified by Rachel Mant <git@dragonmux.network>
  *
@@ -53,15 +53,17 @@
 
 static bool ch32vx_uid_cmd(target_s *target, int argc, const char **argv);
 
-const command_s ch32vx_cmd_list[] = {
+static const command_s ch32vx_cmd_list[] = {
 	{"uid", ch32vx_uid_cmd, "Prints 96 bit unique id"},
 	{NULL, NULL, NULL},
 };
 
+#ifndef DEBUG_INFO_IS_NOOP
 static size_t ch32vx_read_flash_size(target_s *const target)
 {
 	return target_mem32_read16(target, CH32VX_ESIG_FLASH_CAP) * 1024U;
 }
+#endif
 
 static void ch32vx_read_uid(target_s *const target, uint8_t *const uid)
 {

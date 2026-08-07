@@ -15,6 +15,9 @@ mkShell {
     gcc-arm-embedded
     dfu-util
 
+    meson
+    ninja
+
     blackmagic
     pkg-config
     libftdi1

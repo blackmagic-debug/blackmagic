@@ -47,20 +47,26 @@ void remote_v0_jtag_reset(void)
 	char buffer[REMOTE_MAX_MSG_SIZE];
 	const int length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
 	if (!length || buffer[0] == REMOTE_RESP_ERR) {
-		DEBUG_ERROR("remote_jtag_reset failed, error %s\n", length ? buffer + 1 : "unknown");
+		DEBUG_ERROR("remote_jtag_reset failed, error %s\n", length > 1 ? buffer + 1 : "unknown");
 		exit(-1);
 	}
 }
 
 void remote_v0_jtag_tms_seq(uint32_t tms_states, size_t clock_cycles)
 {
+	// If too many clock cycles are requested, refuse
+	if (clock_cycles >= 256) {
+		DEBUG_ERROR("%s: Too many cycles requested - got %zu, max is 255\n", __func__, clock_cycles);
+		return;
+	}
+
 	char buffer[REMOTE_MAX_MSG_SIZE];
 	int length = snprintf(buffer, REMOTE_MAX_MSG_SIZE, REMOTE_JTAG_TMS_STR, clock_cycles, tms_states);
 	platform_buffer_write(buffer, length);
 
 	length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
 	if (!length || buffer[0] == REMOTE_RESP_ERR) {
-		DEBUG_ERROR("remote_jtag_tms_seq failed, error %s\n", length ? buffer + 1 : "unknown");
+		DEBUG_ERROR("remote_jtag_tms_seq failed, error %s\n", length > 1 ? buffer + 1 : "unknown");
 		exit(-1);
 	}
 }
@@ -100,7 +106,7 @@ void remote_v0_jtag_tdi_tdo_seq(uint8_t *data_out, bool final_tms, const uint8_t
 		/* Receive the response and check if it's an error response */
 		length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
 		if (!length || buffer[0] == REMOTE_RESP_ERR) {
-			DEBUG_ERROR("remote_jtag_tdi_tdo_seq failed, error %s\n", length ? buffer + 1 : "unknown");
+			DEBUG_ERROR("remote_jtag_tdi_tdo_seq failed, error %s\n", length > 1 ? buffer + 1 : "unknown");
 			exit(-1);
 		}
 		if (data_out) {
@@ -125,7 +131,7 @@ bool remote_v0_jtag_next(bool tms, bool tdi)
 
 	length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
 	if (!length || buffer[0] == REMOTE_RESP_ERR) {
-		DEBUG_ERROR("jtagtap_next failed, error %s\n", length ? buffer + 1 : "unknown");
+		DEBUG_ERROR("jtagtap_next failed, error %s\n", length > 1 ? buffer + 1 : "unknown");
 		exit(-1);
 	}
 

@@ -2,7 +2,7 @@
  * This file is part of the Black Magic Debug project.
  *
  * Copyright (C) 2015 Richard Meadows <richardeoin>
- * Copyright (C) 2022-2025 1BitSquared <info@1bitsquared.com>
+ * Copyright (C) 2022-2026 1BitSquared <info@1bitsquared.com>
  * Written by Richard Meadows <richardeoin>
  * Modified by Rachel Mant <git@dragonmux.network>
  *
@@ -339,7 +339,7 @@ static bool efm32_cmd_serial(target_s *target, int argc, const char **argv);
 static bool efm32_cmd_efm_info(target_s *target, int argc, const char **argv);
 static bool efm32_cmd_bootloader(target_s *target, int argc, const char **argv);
 
-const command_s efm32_cmd_list[] = {
+static const command_s efm32_cmd_list[] = {
 	{"serial", efm32_cmd_serial, "Print unique device ID"},
 	{"efm_info", efm32_cmd_efm_info, "Prints information about the device"},
 	{"bootloader", efm32_cmd_bootloader, "Bootloader status in CLW0"},
@@ -905,7 +905,7 @@ static bool efm32_cmd_bootloader(target_s *target, int argc, const char **argv)
 
 #define CMDKEY 0xcfacc118U
 
-static bool efm32_aap_mass_erase(target_s *t, platform_timeout_s *print_progess);
+static bool efm32_aap_mass_erase(target_s *target, platform_timeout_s *print_progess);
 
 /* AAP Probe */
 typedef struct efm32_aap_priv {
