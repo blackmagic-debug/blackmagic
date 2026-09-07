@@ -59,6 +59,8 @@
 #define RP_BOOTROM_MAGIC         ((uint32_t)'M' | ((uint32_t)'u' << 8U) | (1U << 16U))
 #define RP_BOOTROM_MAGIC_MASK    0x00ffffffU
 #define RP_BOOTROM_VERSION_SHIFT 24U
+#define RP_BOOTROM_BASE          0x00000000U
+#define RP_BOOTROM_SIZE          0x4000U
 #define RP_XIP_FLASH_BASE        0x10000000U
 #define RP_SRAM_BASE             0x20000000U
 #define RP_SRAM_SIZE             0x42000U
@@ -262,6 +264,7 @@ static bool rp_attach(target_s *const target)
 	target_mem_map_free(target);
 	rp_add_flash(target);
 	target_add_ram32(target, RP_SRAM_BASE, RP_SRAM_SIZE);
+	target_add_rom32(target, RP_BOOTROM_BASE, RP_BOOTROM_SIZE);
 
 	return true;
 }

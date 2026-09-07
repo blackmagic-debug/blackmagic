@@ -1,7 +1,7 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
- * Copyright (C) 2024 1BitSquared <info@1bitsquared.com>
+ * Copyright (C) 2024-2026 1BitSquared <info@1bitsquared.com>
  * Written by Rachel Mant <git@dragonmux.network>
  * All rights reserved.
  *
@@ -128,13 +128,14 @@ void remote_v4_adiv5_mem_read_bytes(
 	remote_v4_adiv5_dp_version(ap->dp);
 	remote_v4_adiv5_dp_targetsel(ap->dp);
 	char *const data = (char *)dest;
-	DEBUG_PROBE("%s: @%08" PRIx64 "+%zx\n", __func__, src, read_length);
+	DEBUG_PROBE("%s: @%016" PRIx64 "+%zx\n", __func__, src, read_length);
 	char buffer[REMOTE_MAX_MSG_SIZE];
 	/*
 	 * As we do, calculate how large a transfer we can do from the firmware.
+	 * Aim for an integer multiple of 4 bytes for optimal 32-bit transfers.
 	 * there are 2 leader bytes around responses, 1 trailer, and the data is hex-encoded taking 2 bytes a byte
 	 */
-	const size_t blocksize = (REMOTE_MAX_MSG_SIZE - REMOTE_ADIV5_MEM_READ_LENGTH) >> 1U;
+	const size_t blocksize = ((REMOTE_MAX_MSG_SIZE - REMOTE_ADIV5_MEM_READ_LENGTH) >> 1U) & ~3U;
 	/* For each transfer block size, ask the firmware to read that block of bytes */
 	for (size_t offset = 0; offset < read_length; offset += blocksize) {
 		/* Pick the amount left to read or the block size, whichever is smaller */
@@ -147,7 +148,7 @@ void remote_v4_adiv5_mem_read_bytes(
 		/* Read back the answer and check for errors */
 		length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
 		if (!remote_v3_adiv5_check_error(__func__, ap->dp, buffer, length)) {
-			DEBUG_ERROR("%s error around 0x%08zx\n", __func__, (size_t)src + offset);
+			DEBUG_ERROR("%s error around 0x%016" PRIx64 "\n", __func__, src + offset);
 			return;
 		}
 		/* If the response indicates all's OK, decode the data read */
@@ -164,7 +165,7 @@ void remote_v4_adiv5_mem_write_bytes(adiv5_access_port_s *const ap, const target
 	remote_v4_adiv5_dp_version(ap->dp);
 	remote_v4_adiv5_dp_targetsel(ap->dp);
 	const char *data = (const char *)src;
-	DEBUG_PROBE("%s: @%08" PRIx64 "+%zx alignment %u\n", __func__, dest, write_length, align);
+	DEBUG_PROBE("%s: @%016" PRIx64 "+%zx alignment %u\n", __func__, dest, write_length, align);
 	/* + 1 for terminating NUL character */
 	char buffer[REMOTE_MAX_MSG_SIZE + 1U];
 	/* As we do, calculate how large a transfer we can do to the firmware */
@@ -189,7 +190,7 @@ void remote_v4_adiv5_mem_write_bytes(adiv5_access_port_s *const ap, const target
 		/* Read back the answer and check for errors */
 		length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
 		if (!remote_v3_adiv5_check_error(__func__, ap->dp, buffer, length)) {
-			DEBUG_ERROR("%s error around 0x%08zx\n", __func__, (size_t)dest + offset);
+			DEBUG_ERROR("%s error around 0x%016" PRIx64 "\n", __func__, dest + offset);
 			return;
 		}
 	}

@@ -72,7 +72,7 @@ bool remote_v0_swd_init(void)
 	char buffer[REMOTE_MAX_MSG_SIZE];
 	const int length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
 	if (!length || buffer[0] == REMOTE_RESP_ERR) {
-		DEBUG_ERROR("remote_swd_init failed, error %s\n", length ? buffer + 1 : "unknown");
+		DEBUG_ERROR("remote_swd_init failed, error %s\n", length > 1 ? buffer + 1 : "unknown");
 		return false;
 	}
 
@@ -91,7 +91,7 @@ bool remote_v0_jtag_init(void)
 	char buffer[REMOTE_MAX_MSG_SIZE];
 	const int length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
 	if (!length || buffer[0] == REMOTE_RESP_ERR) {
-		DEBUG_ERROR("remote_jtag_init failed, error %s\n", length ? buffer + 1 : "unknown");
+		DEBUG_ERROR("remote_jtag_init failed, error %s\n", length > 1 ? buffer + 1 : "unknown");
 		return false;
 	}
 

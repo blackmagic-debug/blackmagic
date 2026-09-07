@@ -404,6 +404,8 @@ bool stm32g0_probe(target_s *const target)
 	target->attach = stm32g0_attach;
 	target->detach = stm32g0_detach;
 
+	/* On this SoC, Cortex-M0+ allows SRAM access without halting */
+	target->target_options |= TOPT_NON_HALTING_MEM_IO;
 	target_add_ram32(target, STM32G0_SRAM_BASE, ram_size);
 	/* Even dual Flash bank devices have a contiguous Flash memory space */
 	stm32g0_add_flash(target, STM32G0_FLASH_BASE, flash_size, STM32G0_FLASH_PAGE_SIZE);
@@ -638,6 +640,25 @@ static void write_registers(target_s *const target, const stm32g0_option_registe
 	}
 }
 
+/*
+ * STM32G0 Option Byte Launch triggers a reset.
+ * After AP write FPEC_CTRL the next DP read RDBUFF will get a 7/NOREPLY.
+ * After SWD protocol recovery, RDBUFF is 0 and CTRL/STAT reads 0.
+ * This trips up the ADIv5 SWD recovery logic and dp->fault gets stuck at 7,
+ * resulting in an exception SWD invalid ack.
+ * Deal with it (catch the expected exception) and move on.
+ */
+static void stm32g0_option_launch_discard_errors(target_s *const target)
+{
+	TRY (EXCEPTION_ERROR) {
+		target_mem32_write32(target, STM32G0_FPEC_CTRL, STM32G0_FPEC_CTRL_OBL_LAUNCH);
+	}
+	CATCH () {
+	default:
+		break;
+	}
+}
+
 /* Program the option bytes. */
 static bool stm32g0_option_write(target_s *const target, const stm32g0_option_register_s *const options_req)
 {
@@ -658,7 +679,7 @@ static bool stm32g0_option_write(target_s *const target, const stm32g0_option_re
 		goto exit_error;
 
 	/* Ask the device to reload its options bytes */
-	target_mem32_write32(target, STM32G0_FPEC_CTRL, STM32G0_FPEC_CTRL_OBL_LAUNCH);
+	stm32g0_option_launch_discard_errors(target);
 	/* Option bytes loading generates a system reset */
 	tc_printf(target, "Scan and attach again\n");
 	return true;

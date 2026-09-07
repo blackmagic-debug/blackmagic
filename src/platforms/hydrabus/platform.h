@@ -28,7 +28,7 @@
 #include "timing.h"
 #include "timing_stm32.h"
 
-#define PLATFORM_HAS_TRACESWO
+#define PLATFORM_HAS_SWO
 #define SWO_ENCODING 1 /* Use only Manchester mode SWO recovery */
 
 #define PLATFORM_IDENT "(HydraBus) "
@@ -103,7 +103,7 @@
 #define USB_ISR(x) otg_fs_isr(x)
 /*
  * Interrupt priorities. Low numbers are high priority.
- * TIM3 is used for traceswo capture and must be highest priority.
+ * TIM3 is used for swo capture and must be highest priority.
  */
 #define IRQ_PRI_USB          (1U << 4U)
 #define IRQ_PRI_USBUSART     (2U << 4U)

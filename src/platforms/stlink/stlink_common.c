@@ -49,10 +49,12 @@ uint32_t detect_rev(void)
 	rcc_periph_clock_enable(RCC_AFIO);
 	rcc_periph_clock_enable(RCC_CRC);
 
-#if defined(STLINK_FORCE_CLONE)
-	/* PA12 is USB D+ pin */
-	gpio_clear(GPIOA, GPIO12);
+	/* Clean up after ourselves on all boards: */
 	gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ, GPIO_CNF_OUTPUT_OPENDRAIN, GPIO12);
+	/* We need to pull PA12(USB D+) briefly to GND to trigger re-enumeration */
+	gpio_clear(GPIOA, GPIO12);
+
+#if defined(STLINK_FORCE_CLONE)
 	/* Override detection to use clone pinmap (i.e. PB6 as nRST). */
 	return 0x101;
 #elif defined(STLINK_V2_ISOL)
@@ -103,11 +105,6 @@ uint32_t detect_rev(void)
 		gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, GPIO8);
 	}
 
-	/* Clean up after ourself on boards that aren't identified as ST-Link v2.1's */
-	if ((revision & 0xff) < 2U) {
-		gpio_clear(GPIOA, GPIO12);
-		gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ, GPIO_CNF_OUTPUT_OPENDRAIN, GPIO12);
-	}
 	return revision;
 #endif
 }

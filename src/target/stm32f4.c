@@ -486,6 +486,10 @@ static bool stm32f4_attach(target_s *const target)
 		}
 	}
 
+	/* On STM32F4 SoC, Cortex-M4F allows SRAM access without halting */
+	if (!is_f7 && target->part_id != ID_STM32F20X)
+		target->target_options |= TOPT_NON_HALTING_MEM_IO;
+
 	/* Now we have a base RAM map, rebuild the Flash map */
 	uint8_t split = 0;
 	uint32_t bank_length;
@@ -849,9 +853,11 @@ static bool stm32f4_cmd_option(target_s *const target, const int argc, const cha
 			stm32f4_option_write(target, val, count);
 		else
 			tc_printf(target, "error\n");
-	} else
-		tc_printf(target, "usage: monitor option erase\nusage: monitor option write <OPTCR>%s%s\n",
-			opt_bytes > 1U ? " <OPTCR1>" : "", opt_bytes == 3U ? " <OPTCR2>" : "");
+	} else {
+		tc_printf(target, "usage: monitor option erase\n");
+		tc_printf(target, "usage: monitor option write <OPTCR>%s%s\n", opt_bytes > 1U ? " <OPTCR1>" : "",
+			opt_bytes == 3U ? " <OPTCR2>" : "");
+	}
 
 	uint32_t val[3] = {0};
 	val[0] = target_mem32_read32(target, STM32F4_FPEC_OPTION_CTRL);

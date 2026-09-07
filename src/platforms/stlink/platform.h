@@ -32,7 +32,7 @@
 #include <libopencm3/usb/usbd.h>
 
 #ifndef SWIM_AS_UART
-#define PLATFORM_HAS_TRACESWO
+#define PLATFORM_HAS_SWO
 #endif
 
 #if ENABLE_DEBUG == 1

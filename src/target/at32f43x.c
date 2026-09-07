@@ -30,6 +30,8 @@
  *   https://www.arterychip.com/download/RM/RM_AT32F402_405_EN_V2.01.pdf
  * AT32F423 Series Reference Manual
  *   https://www.arterychip.com/download/RM/RM_AT32F423_EN_V2.03.pdf
+ * AT32F455/456/457 Series Reference Manual
+ *   https://arterytek.com/download/RM/RM_AT32F455_456_457_V2.01_EN.pdf
  */
 
 #include "general.h"
@@ -115,16 +117,25 @@
 #define AT32F423_SERIES_256KB      0x700a3000U
 #define AT32F423_SERIES_128KB      0x700a2000U
 #define AT32F423_SERIES_64KB       0x70032000U
+#define AT32F45_SERIES_512KB       0x70063000U
+#define AT32F45_SERIES_256KB       0x70053000U
 
 #define AT32F4x_UID_BASE   0x1ffff7e8U
 #define AT32F4x_PROJECT_ID 0x1ffff7f3U
 #define AT32F4x_FLASHSIZE  0x1ffff7e0U
 
+static bool at32f405_cmd_option(target_s *target, int argc, const char **argv);
 static bool at32f43_cmd_option(target_s *target, int argc, const char **argv);
 static bool at32f43_cmd_uid(target_s *target, int argc, const char **argv);
 
-const command_s at32f43_cmd_list[] = {
+static const command_s at32f43_cmd_list[] = {
 	{"option", at32f43_cmd_option, "Manipulate option bytes"},
+	{"uid", at32f43_cmd_uid, "Print unique device ID"},
+	{NULL, NULL, NULL},
+};
+
+static const command_s at32f405_cmd_list[] = {
+	{"option", at32f405_cmd_option, "Manipulate option bytes"},
 	{"uid", at32f43_cmd_uid, "Print unique device ID"},
 	{NULL, NULL, NULL},
 };
@@ -300,6 +311,9 @@ static bool at32f43_detect(target_s *const target, const uint16_t part_id)
 	target->attach = at32f43_attach;
 	target->detach = at32f43_detach;
 
+	/* On AT32F435/F437 SoC, Cortex-M4F allows SRAM access without halting */
+	target->target_options |= TOPT_NON_HALTING_MEM_IO;
+
 	at32f43_configure_dbgmcu(target);
 	return true;
 }
@@ -325,7 +339,7 @@ static bool at32f405_detect(target_s *const target, const uint32_t series)
 	target->mass_erase = at32f43_mass_erase;
 
 	/* 512 byte User System Data area at 0x1fff_f800 (different USD_BASE, no EOPB0) */
-	//target_add_commands(target, at32f43_cmd_list, target->driver);
+	target_add_commands(target, at32f405_cmd_list, target->driver);
 
 	/* Same registers and freeze bits in DBGMCU as F437 */
 	target->attach = at32f43_attach;
@@ -353,7 +367,42 @@ static bool at32f423_detect(target_s *const target, const uint32_t series)
 	target->mass_erase = at32f43_mass_erase;
 
 	/* 512 byte User System Data area at 0x1fff_f800 (different USD_BASE, no EOPB0) */
-	//target_add_commands(target, at32f43_cmd_list, target->driver);
+	target_add_commands(target, at32f405_cmd_list, target->driver);
+
+	/* Same registers and freeze bits in DBGMCU as F437 */
+	target->attach = at32f43_attach;
+	target->detach = at32f43_detach;
+	at32f43_configure_dbgmcu(target);
+
+	return true;
+}
+
+/* Identify AT32F45x Mainstream devices */
+static bool at32f45_detect(target_s *const target, const uint32_t series)
+{
+	/*
+	 * AT32F455/456/457 always contain 1 bank with 2 KiB per sector
+	 * Flash (E): 512 KiB, 256 sectors, 0x7006_4000, SRAM 128 + 16 KiB
+	 * Flash (C): 256 KiB, 128 sectors, 0x7005_3000, SRAM  96 + 12 KiB
+	 */
+	const uint16_t flash_size = target_mem32_read16(target, AT32F4x_FLASHSIZE);
+	if (flash_size != 0xffffU)
+		at32f43_add_flash(target, 0x08000000U, flash_size * 1024U, 2048U, AT32F43x_FLASH_BANK1_REG_OFFSET);
+	const uint16_t ram_size = series == AT32F45_SERIES_512KB ? 128U : 96U;
+	target_add_ram32(target, 0x20000000U, ram_size * 1024U);
+
+	/*
+	 * Parity check disabled by default, controlled by USD bit 7 nRAM_PRT_CHK:
+	 * when first 64 KiB are protected by odd parity, last 16 KiB are reserved for this purpose
+	 */
+	const uint16_t ram_parity_size = ram_size / 8U;
+	target_add_ram32(target, 0x20000000U + ram_size * 1024U, ram_parity_size * 1024U);
+	target->driver = "AT32F455";
+	/* Mass erase time is just 8.2 ms (typ) */
+	target->mass_erase = at32f43_mass_erase;
+
+	/* 512 byte User System Data area at 0x1fff_f800 (different USD_BASE, no EOPB0) */
+	target_add_commands(target, at32f405_cmd_list, target->driver);
 
 	/* Same registers and freeze bits in DBGMCU as F437 */
 	target->attach = at32f43_attach;
@@ -400,6 +449,10 @@ bool at32f43x_probe(target_s *const target)
 	if ((series == AT32F423_SERIES_256KB || series == AT32F423_SERIES_128KB || series == AT32F423_SERIES_64KB) &&
 		project_id == 0x12U)
 		return at32f423_detect(target, series);
+	/* 0x15: F455 (CAN2.0), 0x16: F456 (CANFD), 0x17: F457 (CANFD & EMAC). All have OTGFS. */
+	if ((series == AT32F45_SERIES_512KB || series == AT32F45_SERIES_256KB) &&
+		(project_id == 0x15U || project_id == 0x16U || project_id == 0x17U))
+		return at32f45_detect(target, series);
 
 	return false;
 }
@@ -688,8 +741,10 @@ static bool at32f43_cmd_option(target_s *const target, const int argc, const cha
 		const uint16_t val_new = target_mem32_read16(target, addr);
 		tc_printf(target, "0x%08" PRIX32 ": 0x%04X\n", addr, val_new);
 		return true;
-	} else
-		tc_printf(target, "usage: monitor option erase\nusage: monitor option <addr> <value>\n");
+	} else {
+		tc_printf(target, "usage: monitor option erase\n");
+		tc_printf(target, "usage: monitor option <addr> <value>\n");
+	}
 
 	/* When all gets said and done, display the current option bytes values */
 	const target_flash_s *target_flash = target->flash;
@@ -702,6 +757,34 @@ static bool at32f43_cmd_option(target_s *const target, const int argc, const cha
 			values[1], values[2], values[3], values[4], values[5], values[6], values[7]);
 	}
 
+	return true;
+}
+
+static bool at32f405_cmd_option(target_s *const target, const int argc, const char **const argv)
+{
+	(void)argv;
+	const uint32_t read_protected = target_mem32_read32(target, AT32F43x_FLASH_USD) & AT32F43x_FLASH_USD_RDP;
+	/* Fast-exit if the Flash is not readable */
+	if (read_protected) {
+		tc_printf(target, "Device is Read Protected\n");
+		return true;
+	}
+
+	if (argc > 1) {
+		const uint32_t idcode = target_mem32_read32(target, AT32F43x_DBGMCU_IDCODE);
+		const uint32_t series = idcode & AT32F4x_IDCODE_SERIES_MASK;
+		tc_printf(target, "Option Byte manipulation not supported for series 0x%08" PRIX32 "\n", series);
+		return false;
+	}
+
+	/* Display the current option bytes values */
+	uint16_t values[8] = {0};
+	for (size_t i = 0U; i < AT32F405_OB_COUNT * 2U; i += 16U) {
+		const uint32_t addr = AT32F405_USD_BASE + i;
+		target_mem32_read(target, values, addr, 8 * sizeof(uint16_t));
+		tc_printf(target, "0x%08" PRIX32 ": 0x%04X 0x%04X 0x%04X 0x%04X 0x%04X 0x%04X 0x%04X 0x%04X\n", addr, values[0],
+			values[1], values[2], values[3], values[4], values[5], values[6], values[7]);
+	}
 	return true;
 }
 

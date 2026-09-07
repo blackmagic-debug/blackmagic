@@ -154,6 +154,13 @@
 		REMOTE_SOM, REMOTE_ADIV5_PACKET, REMOTE_DP_TARGETSEL, REMOTE_ADIV5_DATA, REMOTE_EOM, 0 \
 	}
 
+#define REMOTE_JTAG_ENSURE_IDLE 'I'
+#define REMOTE_JTAG_ENSURE_IDLE_STR                                            \
+	(char[])                                                                   \
+	{                                                                          \
+		REMOTE_SOM, REMOTE_JTAG_PACKET, REMOTE_JTAG_ENSURE_IDLE, REMOTE_EOM, 0 \
+	}
+
 /* ADIv6 acceleration protocol elements */
 #define REMOTE_ADIV6_PACKET '6'
 
@@ -185,7 +192,7 @@
 			REMOTE_ADIV5_ADDR64, REMOTE_ADIV5_CSW, REMOTE_ADIV5_ALIGNMENT, REMOTE_ADIV5_ADDR64, REMOTE_ADIV5_COUNT, 0 \
 	}
 /*
- * 3 leader bytes + 2 bytes for dev index + 16 bytes for the DP resource bus AP base address + 8 for CSW +
+ * 4 leader bytes + 2 bytes for dev index + 16 bytes for the DP resource bus AP base address + 8 for CSW +
  * 2 for the alignment + 16 for the address and 8 for the count and one trailer gives 57 bytes request overhead
  */
 #define REMOTE_ADIV6_MEM_WRITE_LENGTH 57U

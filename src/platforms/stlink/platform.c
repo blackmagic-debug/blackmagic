@@ -209,3 +209,13 @@ uint8_t platform_spi_xfer(const spi_bus_e bus, const uint8_t value)
 	(void)bus;
 	return value;
 }
+
+void platform_spi_xfer_block(
+	const spi_bus_e bus, const uint8_t *const tx_buf, uint8_t *const rx_buf, const size_t count)
+{
+	(void)bus;
+	(void)tx_buf;
+	(void)rx_buf;
+	(void)count;
+	return;
+}

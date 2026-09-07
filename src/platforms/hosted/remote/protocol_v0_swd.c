@@ -1,7 +1,7 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
- * Copyright (C) 2023 1BitSquared <info@1bitsquared.com>
+ * Copyright (C) 2023-2026 1BitSquared <info@1bitsquared.com>
  * Written by Rachel Mant <git@dragonmux.network>
  * All rights reserved.
  *
@@ -38,14 +38,19 @@
 
 uint32_t remote_v0_swd_seq_in(size_t clock_cycles)
 {
-	char buffer[REMOTE_MAX_MSG_SIZE];
+	// If too many clock cycles are requested, refuse
+	if (clock_cycles > 32U) {
+		DEBUG_ERROR("%s: Too many cycles requested - got %zu, max is 32\n", __func__, clock_cycles);
+		return 0;
+	}
 
+	char buffer[REMOTE_MAX_MSG_SIZE];
 	int length = sprintf(buffer, REMOTE_SWD_IN_STR, clock_cycles);
 	platform_buffer_write(buffer, length);
 
 	length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
 	if (length < 2 || buffer[0] == REMOTE_RESP_ERR) {
-		DEBUG_ERROR("%s failed, error %s\n", __func__, length ? buffer + 1 : "short response");
+		DEBUG_ERROR("%s failed, error %s\n", __func__, length > 1 ? buffer + 1 : "short response");
 		exit(-1);
 	}
 	const uint32_t result = hex_string_to_num(-1, buffer + 1);
@@ -55,14 +60,19 @@ uint32_t remote_v0_swd_seq_in(size_t clock_cycles)
 
 bool remote_v0_swd_seq_in_parity(uint32_t *result, size_t clock_cycles)
 {
-	char buffer[REMOTE_MAX_MSG_SIZE];
+	// If too many clock cycles are requested, refuse
+	if (clock_cycles > 32U) {
+		DEBUG_ERROR("%s: Too many cycles requested - got %zu, max is 32\n", __func__, clock_cycles);
+		return false;
+	}
 
+	char buffer[REMOTE_MAX_MSG_SIZE];
 	int length = sprintf(buffer, REMOTE_SWD_IN_PAR_STR, clock_cycles);
 	platform_buffer_write(buffer, length);
 
 	length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
 	if (length < 2 || buffer[0] == REMOTE_RESP_ERR) {
-		DEBUG_ERROR("%s failed, error %s\n", __func__, length ? buffer + 1 : "short response");
+		DEBUG_ERROR("%s failed, error %s\n", __func__, length > 1 ? buffer + 1 : "short response");
 		exit(-1);
 	}
 
@@ -74,30 +84,40 @@ bool remote_v0_swd_seq_in_parity(uint32_t *result, size_t clock_cycles)
 
 void remote_v0_swd_seq_out(uint32_t value, size_t clock_cycles)
 {
-	char buffer[REMOTE_MAX_MSG_SIZE];
+	// If too many clock cycles are requested, refuse
+	if (clock_cycles > 32U) {
+		DEBUG_ERROR("%s: Too many cycles requested - got %zu, max is 32\n", __func__, clock_cycles);
+		return;
+	}
 
+	char buffer[REMOTE_MAX_MSG_SIZE];
 	DEBUG_PROBE("%s %zu clock_cycles: %08" PRIx32 "\n", __func__, clock_cycles, value);
 	int length = sprintf(buffer, REMOTE_SWD_OUT_STR, clock_cycles, value);
 	platform_buffer_write(buffer, length);
 
 	length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
 	if (length < 1 || buffer[0] == REMOTE_RESP_ERR) {
-		DEBUG_ERROR("%s failed, error %s\n", __func__, length ? buffer + 1 : "short response");
+		DEBUG_ERROR("%s failed, error %s\n", __func__, length > 1 ? buffer + 1 : "short response");
 		exit(-1);
 	}
 }
 
 void remote_v0_swd_seq_out_parity(uint32_t value, size_t clock_cycles)
 {
-	char buffer[REMOTE_MAX_MSG_SIZE];
+	// If too many clock cycles are requested, refuse
+	if (clock_cycles > 32U) {
+		DEBUG_ERROR("%s: Too many cycles requested - got %zu, max is 32\n", __func__, clock_cycles);
+		return;
+	}
 
+	char buffer[REMOTE_MAX_MSG_SIZE];
 	DEBUG_PROBE("%s %zu clock_cycles: %08" PRIx32 "\n", __func__, clock_cycles, value);
 	int length = sprintf(buffer, REMOTE_SWD_OUT_PAR_STR, clock_cycles, value);
 	platform_buffer_write(buffer, length);
 
 	length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
 	if (length < 1 || buffer[1] == REMOTE_RESP_ERR) {
-		DEBUG_ERROR("%s failed, error %s\n", __func__, length ? buffer + 2 : "short response");
+		DEBUG_ERROR("%s failed, error %s\n", __func__, length > 1 ? buffer + 2 : "short response");
 		exit(-1);
 	}
 }

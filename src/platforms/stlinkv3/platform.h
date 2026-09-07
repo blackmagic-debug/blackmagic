@@ -32,7 +32,7 @@
 #include <libopencm3/stm32/f1/memorymap.h>
 #include <libopencm3/usb/usbd.h>
 
-#define PLATFORM_HAS_TRACESWO
+#define PLATFORM_HAS_SWO
 #define SWO_ENCODING 2 /* Use only UART mode SWO recovery */
 
 #if ENABLE_DEBUG == 1

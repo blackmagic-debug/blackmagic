@@ -281,9 +281,9 @@ typedef enum {
 #define RV40_FCPSR         (RV40_BASE + 0xe0U)
 #define RV40_FCPSR_ESUSPMD 1U
 
-static bool renesas_uid(target_s *t, int argc, const char **argv);
+static bool renesas_uid(target_s *target, int argc, const char **argv);
 
-const command_s renesas_cmd_list[] = {
+static const command_s renesas_cmd_list[] = {
 	{"uid", renesas_uid, "Print unique device ID"},
 	{NULL, NULL, NULL},
 };

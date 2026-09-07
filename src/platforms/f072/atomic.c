@@ -108,6 +108,28 @@ uint16_t atomic_fetch_add_2(uint16_t *const atomic_value, const uint16_t add_val
 	return current_value;
 }
 
+uint32_t atomic_fetch_add_4(uint32_t *const atomic_value, const uint32_t add_value, const int model)
+{
+	/* Create a model-appropriate sync barrier to start */
+	pre_barrier(model);
+	/* Now grab the current value of the atomic to be modified */
+	uint32_t new_value;
+	uint32_t current_value = *atomic_value;
+	/* Try, in a loop, doing the addition to the value */
+	do {
+		new_value = current_value + add_value;
+		/*
+		 * Try to replace the value store by the atomic by the updated value computed here - if this fails
+		 * then we get the new value returned in current_value and can try again.
+		 */
+	} while (!atomic_compare_exchange_weak_explicit(
+		atomic_value, &current_value, new_value, memory_order_relaxed, memory_order_relaxed));
+	/* Create a model-appropriate sync barrier to finish */
+	post_barrier(model);
+	/* Finally, return the value that was in the atomic to complete the operation's contract */
+	return current_value;
+}
+
 uint16_t atomic_fetch_sub_2(uint16_t *const atomic_value, const uint16_t sub_value, const int model)
 {
 	/* Create a model-appropriate sync barrier to start */
@@ -155,14 +177,43 @@ bool atomic_compare_exchange_2(uint16_t *const atomic_value, uint16_t *const exp
 	return result;
 }
 
+bool atomic_compare_exchange_4(uint32_t *const atomic_value, uint32_t *const expected_value, const uint32_t new_value,
+	const bool weak, const int success_model, const int failure_model)
+{
+	(void)weak;
+	(void)failure_model;
+	/* Create a model-appropriate sequence barrier to start, and begin a protected block */
+	pre_seq_barrier(success_model);
+	const uint32_t protect_state = protect_begin(atomic_value);
+
+	/* Read out the current value of the atomic, compare it to the expected */
+	const uint32_t old_value = *atomic_value;
+	const bool result = old_value == *expected_value;
+	/* If it's the expected value, write the new value to complete the RMW cycle */
+	if (result)
+		*atomic_value = new_value;
+	/* Otherwise, uphold the contract required and write the current value to the expected value pointer */
+	else
+		*expected_value = old_value;
+
+	/* Finish up with a model-appropriate sequence barrier having ended the protected block */
+	protect_end(atomic_value, protect_state);
+	post_seq_barrier(success_model);
+	return result;
+}
+
 /* Alias the functions defined to their special names to satisfy the compiler */
 /* NOLINTBEGIN(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp,readability-identifier-naming) */
 uint16_t __atomic_fetch_add_2(volatile void *atomic_value, uint16_t add_value, int swap_model)
 	__attribute__((alias("atomic_fetch_add_2")));
+unsigned int __atomic_fetch_add_4(volatile void *atomic_value, unsigned int add_value, int swap_model)
+	__attribute__((alias("atomic_fetch_add_4")));
 uint16_t __atomic_fetch_sub_2(volatile void *atomic_value, uint16_t add_value, int swap_model)
 	__attribute__((alias("atomic_fetch_sub_2")));
 bool __atomic_compare_exchange_2(volatile void *atomic_value, void *expected_value, uint16_t new_value, bool weak,
 	int success_model, int failure_model) __attribute__((alias("atomic_compare_exchange_2")));
+bool __atomic_compare_exchange_4(volatile void *atomic_value, void *expected_value, unsigned int new_value, bool weak,
+	int success_model, int failure_model) __attribute__((alias("atomic_compare_exchange_4")));
 /* NOLINTEND(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp,readability-identifier-naming) */
 
 /* GCC 14 and newer don't provide __atomic_test_and_set, so we have to here */
