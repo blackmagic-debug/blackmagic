@@ -121,6 +121,10 @@ grep 2000 HelloWorld.ino.map | grep RTT
     sets RTT ident to *string*. If *string* contains a space, replace the space with an
         underscore _. Setting ident string is optional, RTT works fine without.
 
+- `monitor rtt send string`
+
+	push *string* to the RTT down buffer. It is equivalent to pushing the string to ttyBmpTarg.
+
 - `monitor rtt ident`
 
     clears ident string. (default)
@@ -175,7 +179,7 @@ without specifying identifier string.
 
 ## Operating Systems
 
-[Configuration](https://black-magic.org/getting-started.html) instructions for Windows, Linux and MacOS.
+[Configuration](https://black-magic.org/docs/intro/getting-started/) instructions for Windows, Linux and MacOS.
 
 ### Windows
 
@@ -206,7 +210,7 @@ to the RTT input of the target.
 ### Linux
 
 On Linux, install udev rules as described in the [driver
-documentation](https://github.com/blackmagic-debug/blackmagic/blob/main/driver/README.md).
+documentation](https://codeberg.org/blackmagic-debug/blackmagic/src/driver/README.md).
 Disconnect and re-connect the BMP. Check the device shows up in `/dev/`:
 
 ```sh

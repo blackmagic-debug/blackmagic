@@ -71,5 +71,7 @@ uint32_t rtt_write(const uint32_t channel, const char *buf, uint32_t len);
 int32_t rtt_getchar(const uint32_t channel);
 /* host to target: true if no characters available for reading in the selected channel */
 bool rtt_nodata(const uint32_t channel);
+/* host to target: send len bytes from data_buf to the target down buffer */
+void rtt_load_recv_buf(const char *data_buf, size_t len);
 
 #endif /* INCLUDE_RTT_IF_H */

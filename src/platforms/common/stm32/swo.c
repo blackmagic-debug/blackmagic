@@ -36,7 +36,7 @@
  * 2: UART/NRZ coded SWO only
  * 3: Both enabled w/ the full switching mechanism provided
  *
- * It is an error for SWO_ENCODING to be undefined if PLATFORM_HAS_TRACESWO is
+ * It is an error for SWO_ENCODING to be undefined if PLATFORM_HAS_SWO is
  * defined by the platform. It is an error to include this file in the build
  * under this circumstance as it requires SWO_ENCODING to be defined and valid.
  */

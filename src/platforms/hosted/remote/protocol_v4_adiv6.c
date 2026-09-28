@@ -81,7 +81,7 @@ void remote_v4_adiv6_mem_read_bytes(
 		return;
 	adiv6_access_port_s *const ap = (adiv6_access_port_s *)base_ap;
 	char *const data = (char *)dest;
-	DEBUG_PROBE("%s: @%08" PRIx64 "+%zx\n", __func__, src, read_length);
+	DEBUG_PROBE("%s: @%016" PRIx64 "+%zx\n", __func__, src, read_length);
 	char buffer[REMOTE_MAX_MSG_SIZE];
 	/*
 	 * As we do, calculate how large a transfer we can do from the firmware.
@@ -100,7 +100,7 @@ void remote_v4_adiv6_mem_read_bytes(
 		/* Read back the answer and check for errors */
 		length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
 		if (!remote_v3_adiv5_check_error(__func__, ap->base.dp, buffer, length)) {
-			DEBUG_ERROR("%s error around 0x%08zx\n", __func__, (size_t)src + offset);
+			DEBUG_ERROR("%s error around 0x%016" PRIx64 "\n", __func__, src + offset);
 			return;
 		}
 		/* If the response indicates all's OK, decode the data read */
@@ -116,7 +116,7 @@ void remote_v4_adiv6_mem_write_bytes(adiv5_access_port_s *const base_ap, const t
 		return;
 	adiv6_access_port_s *const ap = (adiv6_access_port_s *)base_ap;
 	const char *data = (const char *)src;
-	DEBUG_PROBE("%s: @%08" PRIx64 "+%zx alignment %u\n", __func__, dest, write_length, align);
+	DEBUG_PROBE("%s: @%016" PRIx64 "+%zx alignment %u\n", __func__, dest, write_length, align);
 	/* + 1 for terminating NUL character */
 	char buffer[REMOTE_MAX_MSG_SIZE + 1U];
 	/* As we do, calculate how large a transfer we can do to the firmware */
@@ -141,7 +141,7 @@ void remote_v4_adiv6_mem_write_bytes(adiv5_access_port_s *const base_ap, const t
 		/* Read back the answer and check for errors */
 		length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
 		if (!remote_v3_adiv5_check_error(__func__, ap->base.dp, buffer, length)) {
-			DEBUG_ERROR("%s error around 0x%08zx\n", __func__, (size_t)dest + offset);
+			DEBUG_ERROR("%s error around 0x%016" PRIx64 "\n", __func__, dest + offset);
 			return;
 		}
 	}

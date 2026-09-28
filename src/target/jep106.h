@@ -68,6 +68,7 @@
 #define JEP106_MANUFACTURER_RASPBERRY    0x913U /* Raspberry Pi */
 #define JEP106_MANUFACTURER_RENESAS      0x423U /* Renesas */
 #define JEP106_MANUFACTURER_XILINX       0x309U /* Xilinx - Technically 0x049, but they use Ikanos Communications' code */
+#define JEP106_MANUFACTURER_FREMONT      0x80eU /* Fremont Micro Devices Ltd */
 /*
  * This JEP code is used on RISC-V by GigaDevice, because
  * "Note: The Bumblebee core used for this MCU is jointly developed by Nuclei System Technology and Andes Technology."

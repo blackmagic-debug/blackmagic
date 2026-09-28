@@ -26,7 +26,7 @@
 #include "timing.h"
 #include "timing_stm32.h"
 
-#define PLATFORM_HAS_TRACESWO
+#define PLATFORM_HAS_SWO
 #define SWO_ENCODING 1 /* Use only Manchester mode SWO recovery */
 
 #define PLATFORM_IDENT "(F072-IF) "
@@ -91,7 +91,7 @@
 /*
  * Interrupt priorities. Low numbers are high priority.
  * For now USART1 preempts USB which may spin while buffer is drained.
- * TIM3 is used for traceswo capture and must be highest priority.
+ * TIM3 is used for swo capture and must be highest priority.
  */
 #define IRQ_PRI_USB          (1U << 6U)
 #define IRQ_PRI_USBUSART     (2U << 6U)

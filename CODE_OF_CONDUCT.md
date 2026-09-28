@@ -37,6 +37,24 @@ Examples of unacceptable behavior include:
 * Other conduct which could reasonably be considered inappropriate in a
   professional setting
 
+## Strict No LLM / No AI Policy
+
+No LLM-generated content, whether it be code or prose.
+
+No paraphrasing LLM-generated content.
+
+No LLMs for editing, including fixing spelling or grammatical errors.
+
+No LLMs for translation. English is encouraged, but not required. You are welcome to post in your native language and rely on others to have their own translation tools of choice to interpret your words.
+
+No LLMs for brainstorming and then sharing the results of that brainstorming, even if you create the prose. If you use a chatbot to give you advice on a comment on the issue tracker, that comment is unwelcome.
+
+No LLMs for finding bugs.
+
+No talking about use of chatbot/LLM services.
+
+[Profession by Isaac Asimov](https://web.archive.org/web/20201109034130/https://www.abelard.org/asimov.php)
+
 ## Enforcement Responsibilities
 
 Community leaders are responsible for clarifying and enforcing our standards of
@@ -61,7 +79,7 @@ representative at an online or offline event.
 
 Instances of abusive, harassing, or otherwise unacceptable behavior may be
 reported to the community leaders responsible for enforcement at
-[INSERT CONTACT METHOD].
+abuse at black-magic org.
 All complaints will be reviewed and investigated promptly and fairly.
 
 All community leaders are obligated to respect the privacy and security of the
@@ -128,3 +146,4 @@ For answers to common questions about this code of conduct, see the FAQ at
 https://www.contributor-covenant.org/faq. Translations are available at
 https://www.contributor-covenant.org/translations.
 
+We incorporated the AI policy from the [Zig language CoC](https://ziglang.org/code-of-conduct/#strict-no-llm-no-ai-policy)

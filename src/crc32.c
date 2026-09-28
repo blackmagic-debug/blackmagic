@@ -23,7 +23,12 @@
 #include "gdb_if.h"
 
 #if !defined(STM32F0) && !defined(STM32F1) && !defined(STM32F2) && !defined(STM32F3) && !defined(STM32F4) && \
-	!defined(STM32F7) && !defined(STM32L0) && !defined(STM32L1) && !defined(STM32G0) && !defined(STM32G4)
+	!defined(STM32F7) && !defined(STM32L0) && !defined(STM32L1) && !defined(STM32G0) && !defined(STM32G4) && \
+	!defined(STM32U5)
+#define GENERIC_CRC32_IMPL
+#endif
+
+#if defined(GENERIC_CRC32_IMPL)
 
 /* clang-format off */
 static const uint32_t crc32_table[] = {
@@ -190,8 +195,7 @@ bool bmd_crc32(target_s *const target, uint32_t *const result, const uint32_t ba
 #ifndef DEBUG_INFO_IS_NOOP
 	const uint32_t start_time = platform_time_ms();
 #endif
-#if !defined(STM32F0) && !defined(STM32F1) && !defined(STM32F2) && !defined(STM32F3) && !defined(STM32F4) && \
-	!defined(STM32F7) && !defined(STM32L0) && !defined(STM32L1) && !defined(STM32G0) && !defined(STM32G4)
+#if defined(GENERIC_CRC32_IMPL)
 	const bool status = generic_crc32(target, result, base, len);
 	const char *const func = "generic_crc32";
 #else

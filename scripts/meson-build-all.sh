@@ -51,5 +51,9 @@ if [[ ! -d cross-file ]]; then
 fi
 
 for i in cross-file/*.ini; do
+	if [[ "$i" = "cross-file/arm-none-eabi.ini" ]]; then
+		echo "Skipping $i"
+		continue
+	fi
 	build $i
 done

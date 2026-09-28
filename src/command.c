@@ -4,7 +4,7 @@
  * Copyright (C) 2011 Black Sphere Technologies Ltd.
  * Written by Gareth McMullin <gareth@blacksphere.co.nz>
  * Copyright (C) 2021 Uwe Bonnes (bon@elektron.ikp.physik.tu-darmstadt.de)
- * Copyright (C) 2023-2025 1BitSquared <info@1bitsquared.com>
+ * Copyright (C) 2023-2026 1BitSquared <info@1bitsquared.com>
  * Modified by Rachel Mant <git@dragonmux.network>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -42,13 +42,21 @@
 
 #ifdef ENABLE_RTT
 #include "rtt.h"
+#include "rtt_if.h"
 #include "hex_utils.h"
 #endif
 
-#ifdef PLATFORM_HAS_TRACESWO
+#ifdef PLATFORM_HAS_SWO
 #include "serialno.h"
 #include "swo.h"
 #include "usb.h"
+#endif
+/*
+ * Define a default value for this macro to preserve existing functionality
+ * for platforms that do not presently set it.
+ */
+#ifndef PLATFORM_HAS_SWO_UART
+#define PLATFORM_HAS_SWO_UART true
 #endif
 
 typedef struct scan_command {
@@ -82,7 +90,7 @@ static bool cmd_target_battery(target_s *t, int argc, const char **argv);
 #ifdef PLATFORM_HAS_WIFI
 static bool cmd_wifi(target_s *t, int argc, const char **argv);
 #endif
-#ifdef PLATFORM_HAS_TRACESWO
+#ifdef PLATFORM_HAS_SWO
 static bool cmd_swo(target_s *target, int argc, const char **argv);
 #endif
 static bool cmd_heapinfo(target_s *target, int argc, const char **argv);
@@ -100,7 +108,7 @@ static bool cmd_shutdown_bmda(target_s *target, int argc, const char **argv);
 #define strtok_r strtok_s
 #endif
 
-const command_s cmd_list[] = {
+static const command_s cmd_list[] = {
 	{"version", cmd_version, "Display firmware version info"},
 	{"help", cmd_help, "Display help for monitor commands"},
 	{"jtag_scan", cmd_jtag_scan, "Scan JTAG chain for devices"},
@@ -111,7 +119,7 @@ const command_s cmd_list[] = {
 #endif
 	{"spi_scan", cmd_onboard_flash_scan, "Scan for on-board SPI Flash devices"},
 	{"auto_scan", cmd_auto_scan, "Automatically scan all chain types for devices"},
-	{"frequency", cmd_frequency, "set minimum high and low times: [FREQ]"},
+	{"frequency", cmd_frequency, "Set minimum high and low times: [FREQ]"},
 	{"targets", cmd_targets, "Display list of available targets"},
 	{"morse", cmd_morse, "Display morse error message"},
 	{"halt_timeout", cmd_halt_timeout, "Timeout to wait until Cortex-M is halted: [TIMEOUT, default 2000ms]"},
@@ -130,10 +138,10 @@ const command_s cmd_list[] = {
 #endif
 #ifdef ENABLE_RTT
 	{"rtt", cmd_rtt,
-		"[enable|disable|status|channel [0..15 ...]|ident [STR]|cblock|ram [RAM_START RAM_END]|poll [MAXMS MINMS "
-		"MAXERR]]"},
+		"[enable|disable|detect|status|channel [0..15 ...]|ident [STR]|send [STR]|cblock|ram [RAM_START RAM_END]|poll "
+		"[MAXMS MINMS MAXERR]]"},
 #endif
-#ifdef PLATFORM_HAS_TRACESWO
+#ifdef PLATFORM_HAS_SWO
 #if SWO_ENCODING == 1
 	{"swo", cmd_swo, "Start SWO capture, Manchester mode: <enable|disable> [decode [CHANNEL_NR ...]]"},
 #elif SWO_ENCODING == 2
@@ -152,10 +160,6 @@ const command_s cmd_list[] = {
 #endif
 	{NULL, NULL, NULL},
 };
-
-#ifdef PLATFORM_HAS_CUSTOM_COMMANDS
-extern const command_s platform_cmd_list[];
-#endif
 
 bool connect_assert_nrst;
 #if defined(PLATFORM_HAS_DEBUG) && CONFIG_BMDA == 0
@@ -643,94 +647,169 @@ static bool cmd_wifi(target_s *t, int argc, const char **argv)
 #endif
 
 #ifdef ENABLE_RTT
-static const char *on_or_off(const bool value)
+static bool cmd_rtt_status(target_s *const target)
 {
-	return value ? "on" : "off";
+	/* If we're not attached to anything, there's nothing to do here */
+	if (!target) {
+		gdb_out("Not attached to any target\n");
+		return true;
+	}
+	/* Otherwise start by outputting the RTT enable and identity state */
+	gdb_outf("RTT %s, control block %sfound, ident: %s\n", rtt_enabled ? "enabled" : "disabled",
+		rtt_found ? "" : "not ", rtt_ident[0] == '\0' ? "off" : rtt_ident);
+	/* Then specify whether we're halting for memory I/O and what the channel setup is */
+	gdb_outf("Using %shalting I/O, channels:", target_mem_access_needs_halt(target) ? "" : "non ");
+	for (size_t channel = 0U; channel < MAX_RTT_CHAN; ++channel) {
+		if (rtt_channel_enabled[channel])
+			gdb_outf(" %u", (unsigned)channel);
+	}
+	/* Display whether channel enables are automatic or not */
+	if (rtt_auto_channel)
+		gdb_out(" (auto)");
+	gdb_out("\n");
+	/* Now disable the RAM region being used and polling information */
+	if (rtt_flag_ram)
+		gdb_outf("Using range [%08" PRIx32 ":%08" PRIx32 ")\n", rtt_ram_start, rtt_ram_end);
+	gdb_outf("Polling at %" PRIu32 "ms to %" PRIu32 "ms intervals, %" PRIu32 " errors allowed\n", rtt_min_poll_ms,
+		rtt_max_poll_ms, rtt_max_poll_errs);
+	return true;
+}
+
+static bool cmd_rtt_detect(target_s *const target)
+{
+	if (target == NULL) {
+		gdb_outf("Not attached to target\n");
+		return true;
+	}
+	poll_rtt(target);
+	if (rtt_found)
+		gdb_outf("Found RTT control block at: %08" PRIx32 "\n", rtt_cbaddr);
+	else
+		gdb_outf("Failed to locate RTT control block\n");
+	return true;
 }
 
 static bool cmd_rtt(target_s *target, int argc, const char **argv)
 {
-	const size_t command_len = argc > 1 ? strlen(argv[1]) : 0;
-	if (argc == 1 || (argc == 2 && strncmp(argv[1], "enabled", command_len) == 0)) {
-		rtt_enabled = true;
-		rtt_found = false;
+	/* If no arguments are given, return the status information */
+	if (argc == 1)
+		return cmd_rtt_status(target);
+	/* Otherwise work out how long the command string is and dispatch to a handler */
+	const char *command = argv[1];
+	const size_t command_len = strlen(command);
+	/* First match which command, then worry about following argument counts */
+	if (!strncmp(command, "enable", command_len) && argc == 2) {
+		/* Reset RTT state and change mode */
 		memset(rtt_channel, 0, sizeof(rtt_channel));
-	} else if (argc == 2 && strncmp(argv[1], "disabled", command_len) == 0) {
-		rtt_enabled = false;
 		rtt_found = false;
-	} else if (argc == 2 && strncmp(argv[1], "status", command_len) == 0) {
-		gdb_outf("rtt: %s found: %s ident: ", on_or_off(rtt_enabled), rtt_found ? "yes" : "no");
-		if (rtt_ident[0] == '\0')
-			gdb_out("off");
-		else
-			gdb_outf("\"%s\"", rtt_ident);
-		gdb_outf(" halt: %s", on_or_off(target_mem_access_needs_halt(target)));
-		gdb_out(" channels: ");
-		if (rtt_auto_channel)
-			gdb_out("auto ");
-		for (size_t i = 0; i < MAX_RTT_CHAN; i++) {
-			if (rtt_channel_enabled[i])
-				gdb_outf("%" PRIu32 " ", (uint32_t)i);
+		rtt_enabled = true;
+		return true;
+	}
+	if (!strncmp(command, "disable", command_len) && argc == 2) {
+		/* Reset RTT state and change mode */
+		rtt_found = false;
+		rtt_enabled = false;
+		return true;
+	}
+	if (!strncmp(command, "status", command_len) && argc == 2)
+		return cmd_rtt_status(target);
+	if (!strncmp(command, "detect", command_len) && argc == 2)
+		return cmd_rtt_detect(target);
+	if (!strncmp(command, "channel", command_len)) {
+		/* Reset the enables */
+		for (size_t channel = 0; channel < MAX_RTT_CHAN; ++channel)
+			rtt_channel_enabled[channel] = false;
+		/* If invoked with no trailing arguments, put things into auto mode */
+		rtt_auto_channel = argc == 2;
+		/* Otherwise work out which channels are to enabled and mark them */
+		for (size_t i = 2; i < (size_t)argc; ++i) {
+			const uint32_t channel = strtoul(argv[i], NULL, 0);
+			if (channel < MAX_RTT_CHAN)
+				rtt_channel_enabled[channel] = true;
 		}
-		if (rtt_flag_ram)
-			gdb_outf("ram: 0x%08" PRIx32 " 0x%08" PRIx32, rtt_ram_start, rtt_ram_end);
-		gdb_outf("\nmax poll ms: %" PRIu32 " min poll ms: %" PRIu32 " max errs: %" PRIu32 "\n", rtt_max_poll_ms,
-			rtt_min_poll_ms, rtt_max_poll_errs);
-	} else if (argc >= 2 && strncmp(argv[1], "channel", command_len) == 0) {
-		/* mon rtt channel switches to auto rtt channel selection
-		   mon rtt channel number... selects channels given */
-		for (size_t i = 0; i < MAX_RTT_CHAN; i++)
-			rtt_channel_enabled[i] = false;
-		if (argc == 2)
-			rtt_auto_channel = true;
-		else {
-			rtt_auto_channel = false;
-			for (size_t i = 2; i < (size_t)argc; ++i) {
-				const uint32_t channel = strtoul(argv[i], NULL, 0);
-				if (channel < MAX_RTT_CHAN)
-					rtt_channel_enabled[channel] = true;
+		return true;
+	}
+	if (!strncmp(command, "send", command_len)) {
+		rtt_load_recv_buf(argv[2], strlen(argv[2]));
+	}
+	if (!strncmp(command, "ident", command_len)) {
+		/* If invoked with no trailing arguments, switch off the identity system */
+		if (argc == 2) {
+			rtt_ident[0] = '\0';
+			return true;
+		}
+		/* If invoked with just one, then consume this trailing value as the new identity if it fits */
+		if (argc == 3) {
+			/* Work out how long the new identity is, and how much of it'll fit the identity array */
+			const size_t new_ident_len = strlen(argv[2]);
+			const size_t ident_len = MIN(new_ident_len, ARRAY_LENGTH(rtt_ident) - 1U);
+			/* Copy what we can in and NUL terminate it */
+			memcpy(rtt_ident, argv[2], ident_len);
+			rtt_ident[ident_len] = '\0';
+			/* Now go through replacing all underscores with spaces to fix things up */
+			for (size_t offset = 0U; offset < ident_len; ++offset) {
+				if (rtt_ident[offset] == '_')
+					rtt_ident[offset] = ' ';
 			}
+			return true;
 		}
-	} else if (argc == 2 && strncmp(argv[1], "ident", command_len) == 0)
-		rtt_ident[0] = '\0';
-	else if (argc == 2 && strncmp(argv[1], "poll", command_len) == 0)
-		gdb_outf("%" PRIu32 " %" PRIu32 " %" PRIu32 "\n", rtt_max_poll_ms, rtt_min_poll_ms, rtt_max_poll_errs);
-	else if (argc == 2 && strncmp(argv[1], "cblock", command_len) == 0) {
-		gdb_outf("cbaddr: 0x%08" PRIx32 "\n", rtt_cbaddr);
-		gdb_out("ch ena i/o buffer@      size   head   tail flag\n");
-		for (uint32_t i = 0; i < rtt_num_up_chan + rtt_num_down_chan; ++i) {
-			gdb_outf("%2" PRIu32 "   %c %s 0x%08" PRIx32 " %6" PRIu32 " %6" PRIu32 " %6" PRIu32 " %4" PRIu32 "\n", i,
-				rtt_channel_enabled[i] ? 'y' : 'n', i < rtt_num_up_chan ? "out" : "in ", rtt_channel[i].buf_addr,
-				rtt_channel[i].buf_size, rtt_channel[i].head, rtt_channel[i].tail, rtt_channel[i].flag);
+		/* Otherwise it was an invalid command */
+	}
+	if (!strncmp(command, "poll", command_len)) {
+		/* If invoked with no trailing arguments, display the currently configured polling rate */
+		if (argc == 2) {
+			gdb_outf("Polling at %" PRIu32 "ms to %" PRIu32 "ms intervals, %" PRIu32 " errors allowed\n",
+				rtt_min_poll_ms, rtt_max_poll_ms, rtt_max_poll_errs);
+			return true;
 		}
-	} else if (argc == 3 && strncmp(argv[1], "ident", command_len) == 0) {
-		strncpy(rtt_ident, argv[2], sizeof(rtt_ident));
-		rtt_ident[sizeof(rtt_ident) - 1U] = '\0';
-		for (size_t i = 0; i < sizeof(rtt_ident); i++) {
-			if (rtt_ident[i] == '_')
-				rtt_ident[i] = ' ';
+		/* If invoked with 3 trailing, consume those as the 3 polling parameters */
+		if (argc == 5) {
+			rtt_max_poll_ms = strtoul(argv[2], NULL, 0);
+			rtt_min_poll_ms = strtoul(argv[3], NULL, 0);
+			rtt_max_poll_errs = strtoul(argv[4], NULL, 0);
+			return true;
 		}
-	} else if (argc == 2 && strncmp(argv[1], "ram", command_len) == 0)
-		rtt_flag_ram = false;
-	else if (argc == 4 && strncmp(argv[1], "ram", command_len) == 0) {
-		if (read_hex32(argv[2], NULL, &rtt_ram_start, READ_HEX_NO_FOLLOW) &&
-			read_hex32(argv[3], NULL, &rtt_ram_end, READ_HEX_NO_FOLLOW)) {
-			rtt_flag_ram = rtt_ram_end > rtt_ram_start;
+	}
+	if (!strncmp(command, "ram", command_len)) {
+		/* If invoked with no trailing arguments, disable RAM region limitations */
+		if (argc == 2) {
+			rtt_flag_ram = false;
+			return true;
+		}
+		/* If invoked with 2, consume them as the address start and end values */
+		if (argc == 4) {
+			rtt_ram_start = strtoul(argv[2], NULL, 16);
+			rtt_ram_end = strtoul(argv[3], NULL, 16);
+			/* Validate the start address is less than the end, and if it is enable the limitation */
+			rtt_flag_ram = rtt_ram_start < rtt_ram_end;
+			/* However, if they were not then display something to that end */
 			if (!rtt_flag_ram)
-				gdb_out("address?\n");
+				gdb_out("Start address must be less than end\n");
+			return rtt_flag_ram;
 		}
-	} else if (argc == 5 && strncmp(argv[1], "poll", command_len) == 0) {
-		/* set polling params */
-		rtt_max_poll_ms = strtoul(argv[2], NULL, 0);
-		rtt_min_poll_ms = strtoul(argv[3], NULL, 0);
-		rtt_max_poll_errs = strtoul(argv[4], NULL, 0);
-	} else
-		gdb_out("what?\n");
-	return true;
+	}
+	if (!strncmp(command, "cblock", command_len) && argc == 2) {
+		/* Display information on the control block and channel status */
+		gdb_outf("Control block at %08" PRIx32 "\n", rtt_cbaddr);
+		/* Display a header for the channel info */
+		gdb_out("Chan  En  I/O  Buffer addr  Length  Head  Tail  Flags\n");
+		for (size_t idx = 0U; idx < rtt_num_up_chan + rtt_num_down_chan; ++idx) {
+			/* Extract the channel and display its I/O state and flags*/
+			rtt_channel_s *channel = &rtt_channel[idx];
+			gdb_outf("%4" PRIu32 "  %2c  %3s   0x%08" PRIx32 "  %6" PRIu32 "  %6" PRIu32 "  %6" PRIu32 "  %5" PRIu32
+					 "\n",
+				(uint32_t)idx, rtt_channel_enabled[idx] ? 'y' : 'n', idx < rtt_num_up_chan ? "out" : "in",
+				channel->buf_addr, channel->buf_size, channel->head, channel->tail, channel->flag);
+		}
+		return true;
+	}
+	/* If we didn't get picked up in one of the above command blocks, it was an invalid request */
+	gdb_out("Unrecognized command format\n");
+	return false;
 }
 #endif
 
-#ifdef PLATFORM_HAS_TRACESWO
+#ifdef PLATFORM_HAS_SWO
 static bool cmd_swo_enable(int argc, const char **argv)
 {
 	/* Set up which mode we're going to default to */
@@ -755,8 +834,12 @@ static bool cmd_swo_enable(int argc, const char **argv)
 		const size_t arg_length = strlen(argv[decode_arg]);
 		if (!strncmp(argv[decode_arg], "manchester", arg_length))
 			capture_mode = swo_manchester;
-		if (!strncmp(argv[decode_arg], "uart", arg_length))
-			capture_mode = swo_nrz_uart;
+		if (!strncmp(argv[decode_arg], "uart", arg_length)) {
+			if (PLATFORM_HAS_SWO_UART)
+				capture_mode = swo_nrz_uart;
+			else
+				gdb_out("UART SWO not supported on this platform\n");
+		}
 	}
 	/* If a mode was given, make sure the rest of the parser skips the mode verb */
 	if (capture_mode != swo_none)
@@ -817,7 +900,7 @@ static bool cmd_swo(target_s *target, int argc, const char **argv)
 	(void)target;
 	bool enable_swo = false;
 	if (argc >= 2 && !parse_enable_or_disable(argv[1], &enable_swo)) {
-		gdb_out("Usage: traceswo <enable|disable> [2000000] [decode [0 1 3 31]]\n");
+		gdb_out("Usage: swo <enable|disable> [2000000] [decode [0 1 3 31]]\n");
 		return false;
 	}
 

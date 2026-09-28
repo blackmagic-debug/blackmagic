@@ -54,6 +54,9 @@ const command_s target_cmd_list[] = {
 	{NULL, NULL, NULL},
 };
 
+static const char map_begin[] = "<memory-map>";
+static const char map_end[] = "</memory-map>";
+
 target_s *target_new(void)
 {
 	target_s *target = calloc(1, sizeof(*target));
@@ -104,6 +107,15 @@ void target_ram_map_free(target_s *target)
 	}
 }
 
+void target_rom_map_free(target_s *target)
+{
+	while (target->rom) {
+		target_rom_s *next = target->rom->next;
+		free(target->rom);
+		target->rom = next;
+	}
+}
+
 void target_flash_map_free(target_s *target)
 {
 	while (target->flash) {
@@ -118,6 +130,7 @@ void target_flash_map_free(target_s *target)
 void target_mem_map_free(target_s *target)
 {
 	target_ram_map_free(target);
+	target_rom_map_free(target);
 	target_flash_map_free(target);
 }
 
@@ -228,6 +241,25 @@ void target_add_ram64(target_s *const target, const target_addr64_t start, const
 	target->ram = ram;
 }
 
+void target_add_rom32(target_s *const target, const target_addr32_t start, const uint32_t len)
+{
+	target_add_rom64(target, start, len);
+}
+
+void target_add_rom64(target_s *const target, const target_addr64_t start, const uint64_t len)
+{
+	target_rom_s *rom = malloc(sizeof(*rom));
+	if (!rom) { /* malloc failed: heap exhaustion */
+		DEBUG_ERROR("malloc: failed in %s\n", __func__);
+		return;
+	}
+
+	rom->start = start;
+	rom->length = len;
+	rom->next = target->rom;
+	target->rom = rom;
+}
+
 void target_add_flash(target_s *target, target_flash_s *flash)
 {
 	if (flash->writesize == 0)
@@ -253,35 +285,82 @@ bool target_enter_flash_mode_stub(target_s *target)
 	return true;
 }
 
-static ssize_t map_ram(char *buf, size_t len, target_ram_s *ram)
+static ssize_t mem_map_ram(char *const buffer, const size_t length, const target_ram_s *const ram)
 {
-	return snprintf(buf, len, "<memory type=\"ram\" start=\"0x%08" PRIx32 "\" length=\"0x%" PRIx32 "\"/>", ram->start,
-		(uint32_t)ram->length);
+	return snprintf(buffer, length, "<memory type=\"ram\" start=\"0x%08" PRIx32 "\" length=\"0x%" PRIx32 "\"/>",
+		ram->start, (uint32_t)ram->length);
 }
 
-static ssize_t map_flash(char *buf, size_t len, target_flash_s *flash)
+static ssize_t mem_map_rom(char *const buffer, const size_t length, const target_rom_s *const rom)
 {
-	ssize_t offset = 0;
-	offset += snprintf(&buf[offset], len - offset,
-		"<memory type=\"flash\" start=\"0x%08" PRIx32 "\" length=\"0x%" PRIx32 "\">", flash->start,
-		(uint32_t)flash->length);
-	offset += snprintf(buf + offset, len - offset, "<property name=\"blocksize\">0x%" PRIx32 "</property></memory>",
-		(uint32_t)flash->blocksize);
-	return offset;
+	return snprintf(buffer, length, "<memory type=\"rom\" start=\"0x%08" PRIx32 "\" length=\"0x%" PRIx32 "\"/>",
+		rom->start, (uint32_t)rom->length);
 }
 
-bool target_mem_map(target_s *target, char *tmp, size_t len)
+static ssize_t mem_map_flash(char *const buffer, const size_t length, const target_flash_s *const flash)
 {
-	size_t offset = 0;
-	offset = snprintf(tmp + offset, len - offset, "<memory-map>");
-	/* Map each defined RAM */
-	for (target_ram_s *ram = target->ram; ram; ram = ram->next)
-		offset += map_ram(tmp + offset, len - offset, ram);
-	/* Map each defined Flash */
-	for (target_flash_s *flash = target->flash; flash; flash = flash->next)
-		offset += map_flash(tmp + offset, len - offset, flash);
-	offset += snprintf(tmp + offset, len - offset, "</memory-map>");
-	return offset < len - 1U;
+	return snprintf(buffer, length,
+		"<memory type=\"flash\" start=\"0x%08" PRIx32 "\" length=\"0x%" PRIx32
+		"\"><property name=\"blocksize\">0x%" PRIx32 "</property></memory>",
+		flash->start, (uint32_t)flash->length, (uint32_t)flash->blocksize);
+}
+
+size_t target_mem_map_chunk(
+	target_s *const target, char *const buffer, const size_t length, const uint32_t start_offset)
+{
+	/* Simple case - the offset for the next block directly follows on from the last */
+	if (start_offset == target->map_transfer_offset) {
+		/* Figure out where the next chunk is - RAM, Flash or top-and-tail */
+		if (start_offset == 0U) {
+			memcpy(buffer, map_begin, ARRAY_LENGTH(map_begin));
+			target->map_transfer_offset = ARRAY_LENGTH(map_begin) - 1U;
+			return ARRAY_LENGTH(map_begin) - 1U;
+		}
+		/* It wasn't the top of the map, so let's find an object that ends past the end of the offset */
+		size_t offset = ARRAY_LENGTH(map_begin) - 1U;
+		/* Start with the RAM for the target */
+		for (target_ram_s *ram = target->ram; ram; ram = ram->next) {
+			/* If this is the entry we're at, format it out and return */
+			if (offset == target->map_transfer_offset) {
+				size_t entry_length = mem_map_ram(buffer, length, ram);
+				target->map_transfer_offset += entry_length;
+				return entry_length;
+			}
+			/* Otherwise see how long it is and skip past it */
+			offset += mem_map_ram(NULL, 0U, ram);
+		}
+		/* Now the Flash */
+		for (target_flash_s *flash = target->flash; flash; flash = flash->next) {
+			/* If this is the entry we're at, format it out and return */
+			if (offset == target->map_transfer_offset) {
+				size_t entry_length = mem_map_flash(buffer, length, flash);
+				target->map_transfer_offset += entry_length;
+				return entry_length;
+			}
+			/* Otherwise see how long it is and skip past it */
+			offset += mem_map_flash(NULL, 0U, flash);
+		}
+		/* Now ROM, if any */
+		for (target_rom_s *rom = target->rom; rom; rom = rom->next) {
+			/* If this is the entry we're at, format it out and return */
+			if (offset == target->map_transfer_offset) {
+				size_t entry_length = mem_map_rom(buffer, length, rom);
+				target->map_transfer_offset += entry_length;
+				return entry_length;
+			}
+			/* Otherwise see how long it is and skip past it */
+			offset += mem_map_rom(NULL, 0U, rom);
+		}
+		/* If we've processed all that, then it's an end of map request */
+		memcpy(buffer, map_end, ARRAY_LENGTH(map_end));
+		target->map_transfer_offset = 0U;
+		return ARRAY_LENGTH(map_end) - 1U;
+	}
+	/* For now don't bother handling the complex case - GDB itself will never invoke this */
+	DEBUG_WARN("qXfer memory map request asking for data at offset %" PRIu32 ", but last request ended at %" PRIu32
+			   " - unsupported request",
+		start_offset, target->map_transfer_offset);
+	return 0U;
 }
 
 void target_print_progress(platform_timeout_s *const timeout)

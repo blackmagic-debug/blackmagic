@@ -27,6 +27,7 @@
  * According to:
  *   * TivaTM TM4C123GH6PM Microcontroller Datasheet
  *   * TM4C1294KCPDT Datasheet (https://www.ti.com/lit/ds/symlink/tm4c1294kcpdt.pdf)
+ *   * TM4C129XNCZAD Datasheet (https://www.ti.com/lit/gpn/tm4c129xnczad)
  *   * LM3S3748 Datasheet (https://www.ti.com/lit/ds/symlink/lm3s3748.pdf)
  */
 
@@ -37,8 +38,6 @@
 
 #define LMI_SRAM_BASE        0x20000000U
 #define LMI_STUB_BUFFER_BASE ALIGN(LMI_SRAM_BASE + sizeof(lmi_flash_write_stub), 4U)
-
-#define LMI_BLOCK_SIZE 0x400U
 
 #define LMI_SCB_BASE 0x400fe000U
 #define LMI_SCB_DID0 (LMI_SCB_BASE + 0x000U)
@@ -82,16 +81,23 @@
  *       (1:0)     Qualification status
  * These part numbers here are the upper 16-bits of DID1
  */
+
+/* clang-format off */
+/* Stellaris Fury/DustDevil */
 #define LMI_DID1_LM3S3748      0x1049U
 #define LMI_DID1_LM3S5732      0x1096U
 #define LMI_DID1_LM3S8962      0x10a6U
+/* Tiva-C Blizzard (TM4C123) */
 #define LMI_DID1_TM4C123GH6PM  0x10a1U
 #define LMI_DID1_TM4C1230C3PM  0x1022U
+/* Tiva-C Snowflake (TM4C129x) */
 #define LMI_DID1_TM4C1294NCPDT 0x101fU
 #define LMI_DID1_TM4C1294KCPDT 0x1034U
+#define LMI_DID1_TM4C129XNCZAD 0x1032U
 
 #define LMI_FLASH_BASE 0x400fd000U
 #define LMI_FLASH_FMA  (LMI_FLASH_BASE + 0x000U)
+#define LMI_FLASH_FMD  (LMI_FLASH_BASE + 0x004U)
 #define LMI_FLASH_FMC  (LMI_FLASH_BASE + 0x008U)
 
 #define LMI_FLASH_FMC_WRITE  (1U << 0U)
@@ -99,15 +105,45 @@
 #define LMI_FLASH_FMC_MERASE (1U << 2U)
 #define LMI_FLASH_FMC_COMT   (1U << 3U)
 #define LMI_FLASH_FMC_WRKEY  0xa4420000U
+/* clang-format on */
+
+// The erase size can be very large.  The maximum
+// write size is limited by the memory in the probe.
+#define LMI_FLASH_WRITESIZE 0x400U
 
 static const uint16_t lmi_flash_write_stub[] = {
 #include "flashstub/lmi.stub"
 };
 
+// Put the pointer first so that its aligned on all platforms.
+typedef struct lmi_device {
+	const char *driver;
+	uint16_t did1;
+	uint16_t ram_size_k;
+	uint16_t flash_size_k;
+	uint16_t block_size_k;
+	uint32_t target_options;
+	uint8_t dp_quirks;
+} lmi_device_s;
+
+static const lmi_device_s lmi_devices[] = {
+	/* Stellaris Fury/DustDevil — 1 KiB erase blocks */
+	{"Stellaris", LMI_DID1_LM3S3748, 64U, 128U, 1U, 0, 0},
+	{"Stellaris", LMI_DID1_LM3S5732, 64U, 128U, 1U, 0, 0},
+	{"Stellaris", LMI_DID1_LM3S8962, 64U, 256U, 1U, 0, 0},
+	/* Tiva-C Blizzard (TM4C123) — 1 KiB erase blocks */
+	{"Tiva-C", LMI_DID1_TM4C123GH6PM, 64U, 512U, 1U, TOPT_INHIBIT_NRST, ADIV5_DP_QUIRK_DUPED_AP},
+	{"Tiva-C", LMI_DID1_TM4C1230C3PM, 96U, 64U, 1U, TOPT_INHIBIT_NRST, ADIV5_DP_QUIRK_DUPED_AP},
+	/* Tiva-C Snowflake (TM4C129x) — 16 KiB erase blocks */
+	{"Tiva-C", LMI_DID1_TM4C1294KCPDT, 256U, 512U, 16U, TOPT_INHIBIT_NRST, ADIV5_DP_QUIRK_DUPED_AP},
+	{"Tiva-C", LMI_DID1_TM4C1294NCPDT, 256U, 1024U, 16U, TOPT_INHIBIT_NRST, ADIV5_DP_QUIRK_DUPED_AP},
+	{"Tiva-C", LMI_DID1_TM4C129XNCZAD, 256U, 1024U, 16U, TOPT_INHIBIT_NRST, ADIV5_DP_QUIRK_DUPED_AP},
+};
+
 static bool lmi_flash_erase(target_flash_s *flash, target_addr_t addr, size_t len);
 static bool lmi_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t len);
 
-static void lmi_add_flash(target_s *target, size_t length)
+static void lmi_add_flash(target_s *target, size_t length, size_t block_size)
 {
 	target_flash_s *flash = calloc(1, sizeof(*flash));
 	if (!flash) { /* calloc failed: heap exhaustion */
@@ -117,66 +153,12 @@ static void lmi_add_flash(target_s *target, size_t length)
 
 	flash->start = 0;
 	flash->length = length;
-	flash->blocksize = LMI_BLOCK_SIZE;
+	flash->blocksize = block_size;
+	flash->writesize = LMI_FLASH_WRITESIZE;
 	flash->erase = lmi_flash_erase;
 	flash->write = lmi_flash_write;
 	flash->erased = 0xff;
 	target_add_flash(target, flash);
-}
-
-bool lm3s_probe(target_s *const target, const uint16_t did1)
-{
-	switch (did1) {
-	case LMI_DID1_LM3S3748:
-	case LMI_DID1_LM3S5732:
-		target_add_ram32(target, 0x20000000U, 0x10000U);
-		lmi_add_flash(target, 0x20000U);
-		break;
-	case LMI_DID1_LM3S8962:
-		target_add_ram32(target, 0x2000000U, 0x10000U);
-		lmi_add_flash(target, 0x40000U);
-		break;
-	default:
-		return false;
-	}
-	target->driver = "Stellaris";
-	return true;
-}
-
-bool tm4c_probe(target_s *const target, const uint16_t did1)
-{
-	switch (did1) {
-	case LMI_DID1_TM4C123GH6PM:
-		target_add_ram32(target, 0x20000000, 0x10000);
-		lmi_add_flash(target, 0x80000);
-		/*
-		 * On Tiva targets, asserting nRST results in the debug
-		 * logic also being reset. We can't assert nRST and must
-		 * only use the AIRCR SYSRESETREQ.
-		 */
-		target->target_options |= TOPT_INHIBIT_NRST;
-		break;
-	case LMI_DID1_TM4C1230C3PM:
-		target_add_ram32(target, 0x20000000, 0x6000);
-		lmi_add_flash(target, 0x10000);
-		target->target_options |= TOPT_INHIBIT_NRST;
-		break;
-	case LMI_DID1_TM4C1294KCPDT:
-		target_add_ram32(target, 0x20000000, 0x40000);
-		lmi_add_flash(target, 0x80000);
-		target->target_options |= TOPT_INHIBIT_NRST;
-		break;
-	case LMI_DID1_TM4C1294NCPDT:
-		target_add_ram32(target, 0x20000000, 0x40000);
-		lmi_add_flash(target, 0x100000);
-		target->target_options |= TOPT_INHIBIT_NRST;
-		break;
-	default:
-		return false;
-	}
-	target->driver = "Tiva-C";
-	cortex_ap(target)->dp->quirks |= ADIV5_DP_QUIRK_DUPED_AP;
-	return true;
 }
 
 bool lmi_probe(target_s *const target)
@@ -185,15 +167,30 @@ bool lmi_probe(target_s *const target)
 	const uint16_t did1 = target_mem32_read32(target, LMI_SCB_DID1) >> 16U;
 
 	switch (did0 & LMI_DID0_CLASS_MASK) {
+	case LMI_DID0_CLASS_STELLARIS_SANDSTORM:
 	case LMI_DID0_CLASS_STELLARIS_FURY:
 	case LMI_DID0_CLASS_STELLARIS_DUSTDEVIL:
-		return lm3s_probe(target, did1);
 	case LMI_DID0_CLASS_TIVA_BLIZZARD:
 	case LMI_DID0_CLASS_TIVA_SNOWFLAKE:
-		return tm4c_probe(target, did1);
+		break;
 	default:
 		return false;
 	}
+
+	// Iterate over the device list.   If we find a match, return true.
+	for (size_t i = 0U; i < ARRAY_LENGTH(lmi_devices); ++i) {
+		const lmi_device_s *const dev = &lmi_devices[i];
+		if (dev->did1 != did1)
+			continue;
+		target_add_ram32(target, LMI_SRAM_BASE, dev->ram_size_k << 10);
+		lmi_add_flash(target, dev->flash_size_k << 10, dev->block_size_k << 10);
+		target->driver = dev->driver;
+		target->target_options |= dev->target_options;
+		if (dev->dp_quirks)
+			cortex_ap(target)->dp->quirks |= dev->dp_quirks;
+		return true;
+	}
+	return false;
 }
 
 static bool lmi_flash_erase(target_flash_s *const flash, const target_addr_t addr, const size_t len)
@@ -205,7 +202,7 @@ static bool lmi_flash_erase(target_flash_s *const flash, const target_addr_t add
 	platform_timeout_s timeout;
 	platform_timeout_set(&timeout, 500);
 
-	for (size_t offset = 0; offset < len; offset += LMI_BLOCK_SIZE) {
+	for (size_t offset = 0U; offset < len; offset += flash->blocksize) {
 		target_mem32_write32(target, LMI_FLASH_FMA, addr + offset);
 		target_mem32_write32(target, LMI_FLASH_FMC, LMI_FLASH_FMC_WRKEY | LMI_FLASH_FMC_ERASE);
 

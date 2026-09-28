@@ -1,8 +1,11 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
- * Copyright (C) 2011  Black Sphere Technologies Ltd.
+ * Copyright (C) 2011 Black Sphere Technologies Ltd.
+ * Copyright (C) 2022-2026 1BitSquared <info@1bitsquared.com>
  * Written by Gareth McMullin <gareth@blacksphere.co.nz>
+ * Modified by Piotr Esden-Tempski <piotr@1bitsquared.com>
+ * Modified by Rachel Mant <git@dragonmux.network>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,7 +30,6 @@
 #include "morse.h"
 
 #include <libopencm3/cm3/vector.h>
-#include <libopencm3/stm32/rcc.h>
 #include <libopencm3/cm3/scb.h>
 #include <libopencm3/cm3/scs.h>
 #include <libopencm3/cm3/nvic.h>
@@ -166,7 +168,7 @@ void platform_init(void)
 	gpio_set_mode(USB_PU_PORT, GPIO_MODE_INPUT, GPIO_CNF_INPUT_FLOAT, USB_PU_PIN);
 
 	gpio_set_mode(JTAG_PORT, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, TMS_DIR_PIN | TCK_PIN | TDI_PIN);
-	gpio_set_mode(JTAG_PORT, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_INPUT_FLOAT, TMS_PIN);
+	gpio_set_mode(JTAG_PORT, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_OPENDRAIN, TMS_PIN);
 	gpio_set_mode(JTAG_PORT, GPIO_MODE_INPUT, GPIO_CNF_INPUT_FLOAT, TDO_PIN);
 
 	/* This needs some fixing... */
@@ -292,11 +294,6 @@ void platform_nrst_set_val(bool assert)
 		gpio_set_val(NRST_PORT, NRST_PIN, assert);
 	else
 		gpio_set_val(NRST_PORT, NRST_PIN, !assert);
-
-	if (assert) {
-		for (volatile size_t i = 0; i < 10000U; ++i)
-			continue;
-	}
 }
 
 bool platform_nrst_get_val(void)
@@ -391,7 +388,7 @@ uint32_t platform_target_voltage_sense(void)
 	if (hwversion == 0)
 		return 0;
 
-	uint8_t channel = 8;
+	const uint8_t channel = 8U;
 	adc_set_regular_sequence(ADC1, 1, &channel);
 
 	adc_start_conversion_direct(ADC1);
@@ -400,10 +397,10 @@ uint32_t platform_target_voltage_sense(void)
 	while (!adc_eoc(ADC1))
 		continue;
 
-	uint32_t val = adc_read_regular(ADC1); /* 0-4095 */
+	uint32_t voltage = adc_read_regular(ADC1); /* 0-4095 */
 	/* Clear EOC bit. The GD32F103 does not automatically reset it on ADC read. */
 	ADC_SR(ADC1) &= ~ADC_SR_EOC;
-	return (val * 99U) / 8191U;
+	return (voltage * 99U) / 8191U;
 }
 
 const char *platform_target_voltage(void)
@@ -411,12 +408,12 @@ const char *platform_target_voltage(void)
 	if (hwversion == 0)
 		return gpio_get(GPIOB, GPIO0) ? "Present" : "Absent";
 
-	static char ret[] = "0.0V";
-	uint32_t val = platform_target_voltage_sense();
-	ret[0] = '0' + val / 10U;
-	ret[2] = '0' + val % 10U;
+	static char result[] = "0.0V";
+	uint32_t voltage = platform_target_voltage_sense();
+	result[0] = (char)('0' + (voltage / 10U));
+	result[2] = (char)('0' + (voltage % 10U));
 
-	return ret;
+	return result;
 }
 
 void platform_request_boot(void)
@@ -461,9 +458,12 @@ bool platform_spi_init(const spi_bus_e bus)
 	if (bus == SPI_BUS_EXTERNAL) {
 		rcc_periph_clock_enable(RCC_SPI1);
 		rcc_periph_reset_pulse(RST_SPI1);
-		platform_target_clk_output_enable(true);
-		gpio_set_mode(TCK_PORT, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, TCK_PIN);
-		gpio_set_mode(TDI_PORT, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, TDI_PIN);
+		gpio_set_mode(EXT_SPI_SCLK_PORT, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, EXT_SPI_SCLK_PIN);
+		gpio_set_mode(EXT_SPI_CS_PORT, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, EXT_SPI_CS_PIN);
+		gpio_set_mode(EXT_SPI_POCI_PORT, GPIO_MODE_INPUT, GPIO_CNF_INPUT_FLOAT, EXT_SPI_POCI_PIN);
+		gpio_set_mode(EXT_SPI_PICO_PORT, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, EXT_SPI_PICO_PIN);
+		gpio_set(EXT_SPI_CS_PORT, EXT_SPI_CS_PIN);
+		gpio_set(TCK_DIR_PORT, TCK_DIR_PIN);
 		gpio_set(TMS_DIR_PORT, TMS_DIR_PIN);
 	} else {
 		rcc_periph_clock_enable(RCC_SPI2);
@@ -484,7 +484,9 @@ bool platform_spi_deinit(spi_bus_e bus)
 	if (bus == SPI_BUS_EXTERNAL) {
 		rcc_periph_clock_disable(RCC_SPI1);
 		gpio_set_mode(TCK_PORT, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, TCK_PIN);
+		gpio_set_mode(TMS_PORT, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_OPENDRAIN, TMS_PIN);
 		gpio_set_mode(TDI_PORT, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, TDI_PIN);
+		gpio_set_mode(TDO_PORT, GPIO_MODE_INPUT, GPIO_CNF_INPUT_FLOAT, TDO_PIN);
 		platform_target_clk_output_enable(false);
 	} else
 		rcc_periph_clock_disable(RCC_SPI2);
@@ -503,7 +505,7 @@ bool platform_spi_chip_select(const uint8_t device_select)
 		break;
 	case SPI_DEVICE_EXT_FLASH:
 		port = EXT_SPI_CS_PORT;
-		pin = EXT_SPI_CS;
+		pin = EXT_SPI_CS_PIN;
 		break;
 	case SPI_DEVICE_SDCARD:
 		pin = AUX_SDCS;

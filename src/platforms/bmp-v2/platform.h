@@ -1,8 +1,11 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
- * Copyright (C) 2011  Black Sphere Technologies Ltd.
+ * Copyright (C) 2011 Black Sphere Technologies Ltd.
+ * Copyright (C) 2021-2025 1BitSquared <info@1bitsquared.com>
  * Written by Gareth McMullin <gareth@blacksphere.co.nz>
+ * Modified by Piotr Esden-Tempski <piotr@1bitsquared.com>
+ * Modified by Rachel Mant <git@dragonmux.network>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,7 +21,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* This file provides the platform specific declarations for the native implementation. */
+/* This file provides the platform specific declarations for the bmp-v2 implementation. */
 
 #ifndef PLATFORMS_NATIVE_PLATFORM_H
 #define PLATFORMS_NATIVE_PLATFORM_H
@@ -27,7 +30,7 @@
 #include "timing.h"
 #include "timing_stm32.h"
 
-#define PLATFORM_HAS_TRACESWO
+#define PLATFORM_HAS_SWO
 #define PLATFORM_HAS_POWER_SWITCH
 
 #if ENABLE_DEBUG == 1
@@ -44,6 +47,12 @@ extern int hwversion;
  * version is smaller than ver it outputs opt1, otherwise opt2
  */
 #define HW_SWITCH(ver, opt1, opt2) (hwversion < (ver) ? (opt1) : (opt2))
+/*
+ * Hardware versions earlier than v6 do not support UART encoded SWO. This
+ * macro is used to check for UART support and inform the user
+ * the platform doesn't support it.
+ */
+#define PLATFORM_HAS_SWO_UART (hwversion >= 6)
 
 /*
  * Important pin mappings for native implementation:
@@ -69,9 +78,9 @@ extern int hwversion;
  *                                                     with other devices in the circuit
  *                                                     input low, output high
  * TDO      = PA6  (input)
- * TRACESWO = PB7  (input)  -- To allow trace decoding using USART1
- *                             Hardware 4 has a normally open jumper between TDO and TRACESWO
- *                             Hardware 5 has hardwired connection between TDO and TRACESWO
+ * SWO      = PB7  (input)  -- To allow swo decoding using USART1
+ *                             Hardware 4 has a normally open jumper between TDO and SWO
+ *                             Hardware 5 has hardwired connection between TDO and SWO
  *          = PA10 (input)  -- Hardware 6 and newer
  * nRST_SNS = PA7  (input)  -- Hardware 5 and older
  *          = PC13 (input)  -- Hardware 6 and newer
@@ -215,10 +224,16 @@ extern int hwversion;
 #define AUX_VBAT      GPIO0
 
 /* SPI bus definitions */
-#define AUX_SPI         SPI2
-#define EXT_SPI         SPI1
-#define EXT_SPI_CS_PORT GPIOA
-#define EXT_SPI_CS      GPIO4
+#define AUX_SPI           SPI2
+#define EXT_SPI           SPI1
+#define EXT_SPI_SCLK_PORT GPIOA
+#define EXT_SPI_SCLK_PIN  GPIO5
+#define EXT_SPI_CS_PORT   GPIOA
+#define EXT_SPI_CS_PIN    GPIO4
+#define EXT_SPI_POCI_PORT GPIOA
+#define EXT_SPI_POCI_PIN  GPIO6
+#define EXT_SPI_PICO_PORT GPIOA
+#define EXT_SPI_PICO_PIN  GPIO7
 
 #define SWD_CR       GPIO_CRL(SWDIO_PORT)
 #define SWD_CR_SHIFT (4U << 2U)
@@ -259,7 +274,7 @@ extern int hwversion;
 #define USB_ISR(x) usb_lp_can_rx0_isr(x)
 /*
  * Interrupt priorities. Low numbers are high priority.
- * TIM3 is used for traceswo capture and must be highest priority.
+ * TIM3 is used for swo capture and must be highest priority.
  */
 #define IRQ_PRI_USB          (1U << 4U)
 #define IRQ_PRI_USBUSART     (2U << 4U)

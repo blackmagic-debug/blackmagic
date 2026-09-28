@@ -23,7 +23,7 @@
 
 #include "timing.h"
 
-#define PLATFORM_HAS_TRACESWO
+#define PLATFORM_HAS_SWO
 #define SWO_ENCODING 2 /* Use only UART mode SWO recovery */
 
 #define PLATFORM_IDENT "(Launchpad ICDI) "

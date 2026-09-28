@@ -49,6 +49,15 @@ struct target_ram {
 	target_ram_s *next;
 };
 
+typedef struct target_rom target_rom_s;
+
+struct target_rom {
+	/* XXX: This needs adjusting for 64-bit operations */
+	target_addr32_t start;
+	size_t length;
+	target_rom_s *next;
+};
+
 typedef struct target_flash target_flash_s;
 
 typedef bool (*flash_prepare_func)(target_flash_s *flash);
@@ -108,14 +117,16 @@ struct breakwatch {
 	target_addr64_t addr;
 	size_t size;
 	target_breakwatch_e type;
-	uint32_t reserved[2]; /* For use by the implementing driver */
+	uint32_t reserved[3]; /* For use by the implementing driver */
 #else
 	target_breakwatch_e type;
 	target_addr64_t addr;
 	size_t size;
-	uint32_t reserved[4]; /* For use by the implementing driver */
+	uint32_t reserved[5]; /* For use by the implementing driver */
 #endif
 };
+
+_Static_assert(sizeof(breakwatch_s) == 40U, "Breakwatch size unexpected");
 
 #define MAX_CMDLINE 81
 
@@ -174,7 +185,10 @@ struct target {
 	bool flash_mode;
 
 	target_ram_s *ram;
+	target_rom_s *rom;
 	target_flash_s *flash;
+
+	uint32_t map_transfer_offset;
 
 	/* Other stuff */
 	const char *driver;
@@ -199,6 +213,10 @@ struct target {
 	uint16_t part_id;
 };
 
+#ifdef PLATFORM_HAS_CUSTOM_COMMANDS
+extern const command_s platform_cmd_list[];
+#endif
+
 void target_print_progress(platform_timeout_s *timeout);
 void target_ram_map_free(target_s *target);
 void target_flash_map_free(target_s *target);
@@ -206,6 +224,8 @@ void target_mem_map_free(target_s *target);
 void target_add_commands(target_s *target, const command_s *cmds, const char *name);
 void target_add_ram32(target_s *target, target_addr32_t start, uint32_t len);
 void target_add_ram64(target_s *target, target_addr64_t start, uint64_t len);
+void target_add_rom32(target_s *target, target_addr32_t start, uint32_t len);
+void target_add_rom64(target_s *target, target_addr64_t start, uint64_t len);
 void target_add_flash(target_s *target, target_flash_s *flash);
 
 /* No-op stub for enter flash mode */

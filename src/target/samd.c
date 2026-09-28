@@ -785,7 +785,7 @@ static bool samd_cmd_lock_flash(target_s *target, int argc, const char **argv)
 		}
 
 		if (val > 0xffffU) {
-			tc_printf(target, "number must be between 0 and 65535\n");
+			tc_printf(target, "number must be between 0 and %u\n", 65535U);
 			return false;
 		}
 
@@ -845,7 +845,7 @@ static bool samd_cmd_lock_bootprot(target_s *target, int argc, const char **argv
 		}
 
 		if (val > 7U) {
-			tc_printf(target, "number must be between 0 and 7\n");
+			tc_printf(target, "number must be between 0 and %u\n", 7U);
 			return false;
 		}
 

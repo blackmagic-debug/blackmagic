@@ -35,7 +35,7 @@ ftdi_includes = [
 	include_directories('.')
 ]
 
-processor = build_machine.cpu_family()
+processor = bmda_machine.cpu_family()
 if processor == 'x86_64'
 	processor = 'amd64'
 elif processor == 'x86'

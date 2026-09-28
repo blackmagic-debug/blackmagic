@@ -99,7 +99,7 @@ BMDA uses the following external libraries to function when built in full:
 ## Compiling on Windows
 
 To build BMDA on Windows,
-[please see the guide on the website](https://black-magic.org/knowledge/compiling-windows.html)
+[please see the guide on the website](https://black-magic.org/docs/knowledge/compiling-windows/)
 
 It is possible to build BMDA for Windows under Linux using Clang-cl or a MinGW compiler and combining
 in the Windows SDK headers and link libraries aquired using `xwin`, but this is outside the scope of
